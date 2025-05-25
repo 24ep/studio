@@ -29,9 +29,11 @@ import type { UserProfile } from '@/lib/types';
 
 const userRoleOptions: UserProfile['role'][] = ['Admin', 'Recruiter', 'Hiring Manager'];
 
+// Schema for editing user. Password is not included here as password changes
+// typically involve a separate, more secure flow (e.g. current password + new password).
 const editUserFormSchema = z.object({
   name: z.string().min(1, "Name is required"),
-  email: z.string().email("Invalid email address"), // Email might not be editable in some systems, or require special handling
+  email: z.string().email("Invalid email address"), 
   role: z.enum(userRoleOptions, { required_error: "Role is required" }),
 });
 
@@ -62,7 +64,7 @@ export function EditUserModal({ isOpen, onOpenChange, onEditUser, user }: EditUs
         role: user.role,
       });
     } else if (!isOpen) {
-        form.reset(); // Clear form when modal is closed
+        form.reset({ name: '', email: '', role: 'Recruiter' }); // Reset form when modal is closed
     }
   }, [user, isOpen, form]);
 
@@ -71,42 +73,44 @@ export function EditUserModal({ isOpen, onOpenChange, onEditUser, user }: EditUs
     await onEditUser(user.id, data);
   };
 
-  if (!user) return null; // Or some loading/error state if user is expected
+  if (!user && isOpen) return null; // Don't render if no user and modal is supposed to be open
 
   return (
-    <Dialog open={isOpen} onOpenChange={onOpenChange}>
+    <Dialog open={isOpen} onOpenChange={(open) => {
+      onOpenChange(open);
+      if (!open) {
+        form.reset({ name: '', email: '', role: 'Recruiter' });
+      }
+    }}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center">
-            <Edit3 className="mr-2 h-5 w-5 text-primary" /> Edit User: {user.name}
+            <Edit3 className="mr-2 h-5 w-5 text-primary" /> Edit User: {user?.name || 'N/A'}
           </DialogTitle>
           <DialogDescription>
-            Update the user's details.
+            Update the user's details. Password changes are handled separately.
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-2">
           <div>
-            <Label htmlFor="edit-name">Full Name</Label>
-            <Input id="edit-name" {...form.register('name')} className="mt-1" />
+            <Label htmlFor="name-edit">Full Name *</Label>
+            <Input id="name-edit" {...form.register('name')} className="mt-1" />
             {form.formState.errors.name && <p className="text-sm text-destructive mt-1">{form.formState.errors.name.message}</p>}
           </div>
           <div>
-            <Label htmlFor="edit-email">Email Address</Label>
-            <Input id="edit-email" type="email" {...form.register('email')} className="mt-1" 
-              // Consider making email read-only or handle changes carefully due to its unique nature
-              // readOnly 
-            />
-            {/* {form.formState.errors.email && <p className="text-sm text-destructive mt-1">{form.formState.errors.email.message}</p>} */}
-            {/* <p className="text-xs text-muted-foreground mt-1">Email address typically cannot be changed or requires verification.</p> */}
+            <Label htmlFor="email-edit">Email Address *</Label>
+            <Input id="email-edit" type="email" {...form.register('email')} className="mt-1" />
+            {form.formState.errors.email && <p className="text-sm text-destructive mt-1">{form.formState.errors.email.message}</p>}
+             <p className="text-xs text-muted-foreground mt-1">Ensure email is unique. Changing email might require re-verification in a production system.</p>
           </div>
           <div>
-            <Label htmlFor="edit-role">Role</Label>
+            <Label htmlFor="role-edit">Role *</Label>
             <Controller
               name="role"
               control={form.control}
               render={({ field }) => (
-                <Select onValueChange={field.onChange} value={field.value}>
-                  <SelectTrigger id="edit-role" className="mt-1">
+                <Select onValueChange={field.onChange} value={field.value} defaultValue={field.value}>
+                  <SelectTrigger id="role-edit" className="mt-1">
                     <SelectValue placeholder="Select a role" />
                   </SelectTrigger>
                   <SelectContent>
@@ -134,5 +138,4 @@ export function EditUserModal({ isOpen, onOpenChange, onEditUser, user }: EditUs
     </Dialog>
   );
 }
-
     

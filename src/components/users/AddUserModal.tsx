@@ -1,6 +1,7 @@
 
 "use client";
 
+import { useEffect } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -31,6 +32,7 @@ const userRoleOptions: UserProfile['role'][] = ['Admin', 'Recruiter', 'Hiring Ma
 const addUserFormSchema = z.object({
   name: z.string().min(1, "Name is required"),
   email: z.string().email("Invalid email address"),
+  password: z.string().min(6, "Password must be at least 6 characters"),
   role: z.enum(userRoleOptions, { required_error: "Role is required" }),
 });
 
@@ -48,19 +50,34 @@ export function AddUserModal({ isOpen, onOpenChange, onAddUser }: AddUserModalPr
     defaultValues: {
       name: '',
       email: '',
+      password: '',
       role: 'Recruiter', // Default role
     },
   });
 
+  useEffect(() => {
+    if (isOpen) {
+      form.reset({ // Reset form with default values when modal becomes visible
+        name: '',
+        email: '',
+        password: '',
+        role: 'Recruiter',
+      });
+    }
+  }, [isOpen, form]);
+
   const onSubmit = async (data: AddUserFormValues) => {
     await onAddUser(data);
-    // Modal closing and form reset can be handled by parent or here based on promise resolution
+    // Modal closing and further form reset can be handled by parent or here based on promise resolution
+    // Example: if onAddUser resolves, then onOpenChange(false);
   };
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => {
-      if (!open) form.reset(); // Reset form if modal is closed by 'x' or overlay click
-      onOpenChange(open);
+      onOpenChange(open); // Call the prop to update parent state
+      if (!open) {
+        form.reset(); // Also reset form when dialog is closed via X or overlay
+      }
     }}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
@@ -73,23 +90,28 @@ export function AddUserModal({ isOpen, onOpenChange, onAddUser }: AddUserModalPr
         </DialogHeader>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-2">
           <div>
-            <Label htmlFor="name">Full Name</Label>
-            <Input id="name" {...form.register('name')} className="mt-1" />
+            <Label htmlFor="name-add">Full Name *</Label>
+            <Input id="name-add" {...form.register('name')} className="mt-1" />
             {form.formState.errors.name && <p className="text-sm text-destructive mt-1">{form.formState.errors.name.message}</p>}
           </div>
           <div>
-            <Label htmlFor="email">Email Address</Label>
-            <Input id="email" type="email" {...form.register('email')} className="mt-1" />
+            <Label htmlFor="email-add">Email Address *</Label>
+            <Input id="email-add" type="email" {...form.register('email')} className="mt-1" />
             {form.formState.errors.email && <p className="text-sm text-destructive mt-1">{form.formState.errors.email.message}</p>}
           </div>
           <div>
-            <Label htmlFor="role">Role</Label>
+            <Label htmlFor="password-add">Password *</Label>
+            <Input id="password-add" type="password" {...form.register('password')} className="mt-1" />
+            {form.formState.errors.password && <p className="text-sm text-destructive mt-1">{form.formState.errors.password.message}</p>}
+          </div>
+          <div>
+            <Label htmlFor="role-add">Role *</Label>
             <Controller
               name="role"
               control={form.control}
               render={({ field }) => (
-                <Select onValueChange={field.onChange} defaultValue={field.value}>
-                  <SelectTrigger id="role" className="mt-1">
+                <Select onValueChange={field.onChange} value={field.value} defaultValue={field.value}>
+                  <SelectTrigger id="role-add" className="mt-1">
                     <SelectValue placeholder="Select a role" />
                   </SelectTrigger>
                   <SelectContent>
@@ -117,5 +139,4 @@ export function AddUserModal({ isOpen, onOpenChange, onAddUser }: AddUserModalPr
     </Dialog>
   );
 }
-
     

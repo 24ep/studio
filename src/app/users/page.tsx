@@ -2,8 +2,8 @@
 "use client";
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { PlusCircle, UsersRound, ShieldAlert, Edit3, Trash2 } from "lucide-react";
+import { Button, buttonVariants } from "@/components/ui/button"; // Import buttonVariants
+import { PlusCircle, UsersRound, ShieldAlert, Edit3, Trash2, AlertTriangle } from "lucide-react";
 import type { UserProfile } from "@/lib/types";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -22,14 +22,16 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
   AlertDialogTrigger,
-} from "@/components/ui/alert-dialog"
+} from "@/components/ui/alert-dialog";
+import { signIn, useSession } from "next-auth/react";
 
 
 export default function ManageUsersPage() {
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [isClient, setIsClient] = useState(false);
   const { toast } = useToast();
+  const { data: session, status: sessionStatus } = useSession();
+  const [authError, setAuthError] = useState(false);
 
   const [isAddUserModalOpen, setIsAddUserModalOpen] = useState(false);
   const [isEditUserModalOpen, setIsEditUserModalOpen] = useState(false);
@@ -38,27 +40,45 @@ export default function ManageUsersPage() {
 
 
   const fetchUsers = useCallback(async () => {
+    if (sessionStatus !== 'authenticated') {
+        setIsLoading(false);
+        setAuthError(true);
+        return;
+    }
     setIsLoading(true);
+    setAuthError(false);
     try {
-      // Replace with API call when backend is ready:
-      // const response = await fetch('/api/users');
-      // if (!response.ok) throw new Error('Failed to fetch users');
-      // const data = await response.json();
-      // For now, using directly imported mock data and simulating async
-      const dataModule = await import('@/lib/data');
-      setUsers(dataModule.mockAppUsers);
+      const response = await fetch('/api/users');
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ message: response.statusText || `Status: ${response.status}` }));
+        if (response.status === 401) {
+             setAuthError(true); // Unauthorized or forbidden
+             setIsLoading(false);
+             return;
+        }
+        throw new Error(errorData.message || 'Failed to fetch users');
+      }
+      const data: UserProfile[] = await response.json();
+      setUsers(data);
     } catch (error) {
       console.error("Error fetching users:", error);
-      toast({ title: "Error", description: "Could not fetch users.", variant: "destructive" });
+      if (!String((error as Error).message).includes("401") && !String((error as Error).message).includes("403")) {
+        toast({ title: "Error Fetching Users", description: (error as Error).message, variant: "destructive" });
+      }
+      setUsers([]); // Clear users on error
     } finally {
       setIsLoading(false);
     }
-  }, [toast]);
+  }, [toast, sessionStatus]);
 
   useEffect(() => {
-    setIsClient(true);
-    fetchUsers();
-  }, [fetchUsers]);
+    if (sessionStatus === 'authenticated') {
+      fetchUsers();
+    } else if (sessionStatus === 'unauthenticated') {
+      setIsLoading(false);
+      setAuthError(true);
+    }
+  }, [sessionStatus, fetchUsers]);
 
   const handleAddUser = async (data: AddUserFormValues) => {
     try {
@@ -72,12 +92,12 @@ export default function ManageUsersPage() {
         throw new Error(errorData.message || 'Failed to add user');
       }
       const newUser = await response.json();
-      setUsers(prev => [...prev, newUser]);
+      setUsers(prev => [newUser, ...prev].sort((a,b) => new Date(b.createdAt!).getTime() - new Date(a.createdAt!).getTime()));
       toast({ title: "Success", description: `User ${newUser.name} added successfully.` });
       setIsAddUserModalOpen(false);
     } catch (error) {
       console.error("Error adding user:", error);
-      toast({ title: "Error", description: (error as Error).message, variant: "destructive" });
+      toast({ title: "Error Adding User", description: (error as Error).message, variant: "destructive" });
     }
   };
 
@@ -99,7 +119,7 @@ export default function ManageUsersPage() {
       setSelectedUserForEdit(null);
     } catch (error) {
       console.error("Error updating user:", error);
-      toast({ title: "Error", description: (error as Error).message, variant: "destructive" });
+      toast({ title: "Error Updating User", description: (error as Error).message, variant: "destructive" });
     }
   };
   
@@ -110,7 +130,6 @@ export default function ManageUsersPage() {
 
   const confirmDeleteUser = (user: UserProfile) => {
     setUserToDelete(user);
-    // The AlertDialog will be triggered by the button if userToDelete is set
   };
 
   const handleDeleteUser = async () => {
@@ -125,14 +144,13 @@ export default function ManageUsersPage() {
       toast({ title: "Success", description: `User ${userToDelete.name} deleted.` });
     } catch (error) {
       console.error("Error deleting user:", error);
-      toast({ title: "Error", description: (error as Error).message, variant: "destructive" });
+      toast({ title: "Error Deleting User", description: (error as Error).message, variant: "destructive" });
     } finally {
-      setUserToDelete(null); // Close dialog
+      setUserToDelete(null); 
     }
   };
 
-
-  if (!isClient || isLoading) {
+  if (sessionStatus === 'loading' || (isLoading && !authError)) {
     return (
         <div className="space-y-6 animate-pulse">
             <div className="flex flex-col sm:flex-row justify-between items-center gap-2">
@@ -164,11 +182,23 @@ export default function ManageUsersPage() {
     );
   }
 
+  if (authError) {
+    return (
+      <div className="flex flex-col items-center justify-center h-[calc(100vh-10rem)] text-center">
+        <AlertTriangle className="w-16 h-16 text-destructive mb-4" />
+        <h2 className="text-2xl font-semibold text-foreground mb-2">Access Denied</h2>
+        <p className="text-muted-foreground mb-6">
+          You do not have permission to manage users or your session has expired.
+        </p>
+        <Button onClick={() => signIn()}>Sign In</Button>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-center gap-2">
-        <div></div> {/* Placeholder for title, handled by Header */}
+        <div></div> 
         <Button className="w-full sm:w-auto" onClick={() => setIsAddUserModalOpen(true)}> 
           <PlusCircle className="mr-2 h-4 w-4" /> Add New User
         </Button>
@@ -180,14 +210,22 @@ export default function ManageUsersPage() {
              <UsersRound className="mr-2 h-5 w-5 text-primary" /> App Users
           </CardTitle>
           <CardDescription>
-            Manage application users and their roles. These operations are placeholders and interact with mock data.
+            Manage application users and their roles. These operations interact with the PostgreSQL database.
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {users.length === 0 ? ( 
+          {isLoading && users.length === 0 ? (
+             <div className="text-center py-10">
+              <UsersRound className="mx-auto h-12 w-12 text-muted-foreground animate-spin" />
+              <p className="mt-4 text-muted-foreground">Loading users...</p>
+            </div>
+          ) : users.length === 0 ? ( 
             <div className="text-center py-10">
               <UsersRound className="mx-auto h-12 w-12 text-muted-foreground" />
-              <p className="mt-4 text-muted-foreground">No users found.</p>
+              <p className="mt-4 text-muted-foreground">No users found in the database.</p>
+                 <Button className="mt-4" onClick={() => setIsAddUserModalOpen(true)}> 
+                    <PlusCircle className="mr-2 h-4 w-4" /> Add First User
+                </Button>
             </div>
           ) : (
             <div className="border rounded-lg overflow-hidden">
@@ -214,7 +252,7 @@ export default function ManageUsersPage() {
                     </TableCell>
                     <TableCell>{user.email}</TableCell>
                     <TableCell>
-                      <Badge variant={user.role === 'Admin' ? "default" : "secondary"}>
+                      <Badge variant={user.role === 'Admin' ? "default" : "secondary"} className={user.role === 'Admin' ? 'bg-primary hover:bg-primary/90' : ''}>
                         {user.role}
                       </Badge>
                     </TableCell>
@@ -225,12 +263,12 @@ export default function ManageUsersPage() {
                       </Button>
                       <AlertDialog>
                         <AlertDialogTrigger asChild>
-                           <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive h-8 w-8" onClick={() => setUserToDelete(user)}>
+                           <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive h-8 w-8" onClick={() => confirmDeleteUser(user)}>
                             <Trash2 className="h-4 w-4" />
                             <span className="sr-only">Delete</span>
                           </Button>
                         </AlertDialogTrigger>
-                        {userToDelete && userToDelete.id === user.id && ( // Only render content if this is the user to delete
+                        {userToDelete && userToDelete.id === user.id && ( 
                            <AlertDialogContent>
                               <AlertDialogHeader>
                                 <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
@@ -255,9 +293,9 @@ export default function ManageUsersPage() {
             </div>
           )}
            <div className="mt-4 p-3 bg-secondary/30 border border-secondary/50 rounded-md flex items-start text-sm text-secondary-foreground">
-            <ShieldAlert className="h-5 w-5 mr-2 mt-0.5 text-primary" />
+            <ShieldAlert className="h-5 w-5 mr-2 mt-0.5 text-primary shrink-0" />
             <div>
-              <span className="font-semibold">Permissions Note:</span> In a production system, user creation, deletion, and role modification would require administrative privileges and backend authorization checks. These mock APIs do not enforce such roles yet.
+              <span className="font-semibold">Security Note:</span> User creation, deletion, and role modification are restricted to 'Admin' users. Passwords should be securely hashed in a production environment; this prototype stores them in plaintext.
             </div>
           </div>
         </CardContent>
@@ -272,7 +310,7 @@ export default function ManageUsersPage() {
           isOpen={isEditUserModalOpen}
           onOpenChange={(isOpen) => {
             setIsEditUserModalOpen(isOpen);
-            if (!isOpen) setSelectedUserForEdit(null); // Clear selection when modal closes
+            if (!isOpen) setSelectedUserForEdit(null); 
           }}
           onEditUser={handleEditUser}
           user={selectedUserForEdit}
@@ -281,5 +319,4 @@ export default function ManageUsersPage() {
     </div>
   );
 }
-
     

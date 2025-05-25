@@ -3,7 +3,7 @@
 import NextAuth, { type NextAuthOptions, type User as NextAuthUser } from 'next-auth';
 import AzureADProvider from 'next-auth/providers/azure-ad';
 import CredentialsProvider from 'next-auth/providers/credentials';
-import { mockAppUsers } from '@/lib/data'; 
+import pool from '../../../../lib/db'; // Import the db pool
 import type { UserProfile } from '@/lib/types';
 
 export const authOptions: NextAuthOptions = {
@@ -13,14 +13,13 @@ export const authOptions: NextAuthOptions = {
       clientSecret: process.env.AZURE_AD_CLIENT_SECRET!,
       tenantId: process.env.AZURE_AD_TENANT_ID!,
       profile(profile) {
-        // You can map additional Azure AD profile claims to the NextAuth user object here
-        // For RBAC, you might map Azure AD group memberships to application roles
+        // Map Azure AD profile claims to NextAuth user object
         return {
           id: profile.sub || profile.oid, // 'sub' or 'oid' is typically the unique ID
           name: profile.name,
           email: profile.email,
           image: profile.picture,
-          // role: mapAzureGroupsToRoles(profile.groups) // Example: custom function
+          // role: mapAzureGroupsToRoles(profile.groups) // Example: custom function to map roles
         };
       }
     }),
@@ -35,22 +34,45 @@ export const authOptions: NextAuthOptions = {
           throw new Error("Please enter both email and password.");
         }
 
-        const user = mockAppUsers.find(u => u.email === credentials.email);
+        const client = await pool.connect();
+        try {
+          const userQuery = 'SELECT id, name, email, password, role, "avatarUrl" as "image" FROM "User" WHERE email = $1';
+          const result = await client.query(userQuery, [credentials.email]);
+          
+          if (result.rows.length === 0) {
+            console.log(`No user found with email: ${credentials.email}`);
+            throw new Error("Invalid email or password.");
+          }
+          
+          const userFromDb = result.rows[0];
 
-        // --- THIS IS MOCK AUTHENTICATION - NOT FOR PRODUCTION ---
-        // In a real app, use bcrypt.compare(credentials.password, user.hashedPassword)
-        if (user && credentials.password === "password") { 
-          return {
-            id: user.id,
-            name: user.name,
-            email: user.email,
-            image: user.avatarUrl,
-            role: user.role, // Include role here
-          } as NextAuthUser & { role?: UserProfile['role'] }; 
-        } else {
-          throw new Error("Invalid email or password.");
+          // --- THIS IS PLAINTEXT PASSWORD CHECKING - NOT FOR PRODUCTION ---
+          // In a real app, use bcrypt.compare(credentials.password, userFromDb.password)
+          // where userFromDb.password is the hashed password.
+          const isPasswordValid = credentials.password === userFromDb.password; 
+          // --- END INSECURE PASSWORD CHECK ---
+
+          if (isPasswordValid) {
+            return {
+              id: userFromDb.id,
+              name: userFromDb.name,
+              email: userFromDb.email,
+              image: userFromDb.image, // from "avatarUrl"
+              role: userFromDb.role as UserProfile['role'],
+            } as NextAuthUser & { role?: UserProfile['role'] }; 
+          } else {
+            console.log(`Invalid password attempt for email: ${credentials.email}`);
+            throw new Error("Invalid email or password.");
+          }
+        } catch (error) {
+            // Log the actual error for debugging if it's not one of our thrown errors
+            if (!(error instanceof Error && (error.message === "Invalid email or password." || error.message === "Please enter both email and password."))) {
+              console.error("Error during credentials authorization:", error);
+            }
+            throw error; // Re-throw the error to be handled by NextAuth
+        } finally {
+          client.release();
         }
-        // --- END MOCK AUTHENTICATION ---
       }
     })
   ],
@@ -59,17 +81,16 @@ export const authOptions: NextAuthOptions = {
   },
   callbacks: {
     async jwt({ token, user, account, profile }) {
-      // This 'user' object comes from the provider (Azure AD profile or Credentials authorize result)
       if (user) { 
         token.id = user.id;
         token.email = user.email;
         token.name = user.name;
-        token.picture = user.image;
-        if (user.role) { // If role is present on user object (e.g., from Credentials or Azure profile mapping)
-          token.role = user.role as UserProfile['role'];
+        token.picture = user.image; // NextAuth `User` type has `image`
+        if ((user as any).role) { // Cast to any if role isn't on default User type
+          token.role = (user as any).role as UserProfile['role'];
         }
       }
-      // For Azure AD, if role wasn't mapped in profile(), you might fetch it here or from token claims
+      // For Azure AD, if role wasn't mapped in profile(), you might map it here
       // if (account?.provider === "azure-ad" && profile) {
       //   // example: token.role = mapAzureGroupsToRoles(profile.groups)
       // }
@@ -98,3 +119,4 @@ export const authOptions: NextAuthOptions = {
 const handler = NextAuth(authOptions);
 
 export { handler as GET, handler as POST };
+    
