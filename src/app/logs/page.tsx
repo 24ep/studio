@@ -49,7 +49,7 @@ const ITEMS_PER_PAGE = 20;
 export default function LogsPage() {
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [fetchError, setFetchError] = useState<string | null>(null); // Renamed from 'error' to avoid conflict
+  const [fetchError, setFetchError] = useState<string | null>(null);
   const { toast } = useToast();
   const [isClient, setIsClient] = useState(false);
 
@@ -79,34 +79,49 @@ export default function LogsPage() {
         url += `&level=${filterLevel}`;
       }
       const response = await fetch(url);
+      
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ message: `Failed to fetch logs: ${response.statusText || `Status ${response.status}`}`}));
-        if (response.status === 401) {
+        let errorJson;
+        let errorMessageFromServer;
+        try {
+          errorJson = await response.json();
+          errorMessageFromServer = errorJson.message;
+        } catch (e) {
+          // If parsing JSON fails, use a default error message based on status
+          errorMessageFromServer = `Failed to fetch logs: ${response.statusText || `Status ${response.status}`}`;
+        }
+
+        // If status is 401 OR message indicates unauthorized, treat as auth error
+        if (response.status === 401 || (errorMessageFromServer && errorMessageFromServer.toLowerCase().includes("unauthorized"))) {
             setAuthError(true);
             setIsLoading(false);
             return;
         }
-        throw new Error(errorData.message || `Failed to fetch logs: ${response.statusText || `Status ${response.status}`}`);
+        // For other errors, throw to be caught by the generic catch block
+        throw new Error(errorMessageFromServer || `An unknown error occurred. Status: ${response.status}`);
       }
+      
       const data: { logs: LogEntry[], total: number } = await response.json();
       setLogs(data.logs);
       setTotalLogs(data.total);
     } catch (err) {
       console.error("Error fetching logs:", err);
-      setFetchError((err as Error).message);
+      const errorMessage = (err as Error).message;
+      setFetchError(errorMessage);
       setLogs([]);
       setTotalLogs(0);
-      if (!(err as Error).message.includes("401")) { // Don't toast for auth errors handled by UI
+      // Avoid toasting if it's an auth error that's now handled by setAuthError
+      if (!authError && !(errorMessage && errorMessage.toLowerCase().includes("unauthorized"))) {
         toast({
             title: "Error Fetching Logs",
-            description: (err as Error).message || "Could not load log data.",
+            description: errorMessage || "Could not load log data.",
             variant: "destructive",
         });
       }
     } finally {
       setIsLoading(false);
     }
-  }, [toast, sessionStatus]);
+  }, [toast, sessionStatus, authError]); // Added authError to dependencies
 
   useEffect(() => {
     setIsClient(true);
@@ -116,24 +131,23 @@ export default function LogsPage() {
       setIsLoading(false);
       setAuthError(true);
     }
-    // If sessionStatus is 'loading', we wait.
   }, [sessionStatus, fetchLogs, currentPage, levelFilter]);
 
 
   const handleRefresh = () => {
     if (currentPage !== 1) {
-      setCurrentPage(1); // Reset to page 1 on refresh if not already there, which triggers fetchLogs
+      setCurrentPage(1); 
     } else {
-      fetchLogs(1, levelFilter); // Otherwise, just fetch page 1 with current filter
+      fetchLogs(1, levelFilter); 
     }
   };
   
   const handleLevelFilterChange = (value: string) => {
     setLevelFilter(value as LogLevel | "ALL");
-    setCurrentPage(1); // Reset to page 1 when filter changes
+    setCurrentPage(1); 
   };
 
-  if (!isClient && sessionStatus === 'loading') { // Initial server render before client takes over, or if client load fails early.
+  if (!isClient && sessionStatus === 'loading') { 
     return (
       <div className="space-y-6">
         <Card className="shadow-lg">
@@ -158,7 +172,7 @@ export default function LogsPage() {
         <AlertTriangle className="w-16 h-16 text-destructive mb-4" />
         <h2 className="text-2xl font-semibold text-foreground mb-2">Access Denied</h2>
         <p className="text-muted-foreground mb-6">
-          You need to be signed in to view application logs.
+          You need to be signed in and have 'Admin' privileges to view application logs.
         </p>
         <Button onClick={() => signIn('azure-ad')}>Sign In</Button>
       </div>
@@ -198,7 +212,7 @@ export default function LogsPage() {
           </div>
         </CardHeader>
         <CardContent>
-          {isLoading && logs.length === 0 ? ( // Show skeleton only when loading initial data or full page refresh
+          {isLoading && logs.length === 0 ? ( 
              <div className="border rounded-lg overflow-hidden">
               <Table>
                 <TableHeader>
