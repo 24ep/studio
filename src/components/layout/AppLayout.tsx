@@ -27,7 +27,8 @@ function getPageTitle(pathname: string): string {
   if (pathname.startsWith("/upload")) return "Upload Resume";
   if (pathname.startsWith("/users")) return "Manage Users";
   if (pathname.startsWith("/settings")) return "Settings";
-  if (pathname.startsWith("/api-docs")) return "API Documentation"; // Added this line
+  if (pathname.startsWith("/api-docs")) return "API Documentation";
+  if (pathname.startsWith("/logs")) return "Application Logs"; // Added this line
   return "CandiTrack";
 }
 
