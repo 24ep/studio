@@ -25,11 +25,12 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Checkbox } from "@/components/ui/checkbox";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form'; // Added Form components
 import { Edit3, ShieldCheck } from 'lucide-react';
 import type { UserProfile, PlatformModuleId } from '@/lib/types';
 import { PLATFORM_MODULES } from '@/lib/types';
 import { ScrollArea } from '../ui/scroll-area';
-import { FormField, FormControl, FormItem, FormLabel } from '../ui/form'; // Added Form components for checkbox
+
 
 const userRoleOptions: UserProfile['role'][] = ['Admin', 'Recruiter', 'Hiring Manager'];
 const platformModuleIds = PLATFORM_MODULES.map(m => m.id) as [PlatformModuleId, ...PlatformModuleId[]];
@@ -80,13 +81,14 @@ export function EditUserModal({ isOpen, onOpenChange, onEditUser, user }: EditUs
   const onSubmit = async (data: EditUserFormValues) => {
     if (!user) return;
     const payload: EditUserFormValues = { ...data };
-    if (payload.newPassword === '') {
+    // Only include newPassword in the payload if it's not an empty string
+    if (payload.newPassword === '' || payload.newPassword === undefined) {
       delete payload.newPassword;
     }
     await onEditUser(user.id, payload);
   };
   
-  if (!user && isOpen) return null; // Should not happen if modal is opened correctly
+  if (!user && isOpen) return null; 
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => {
@@ -105,91 +107,119 @@ export function EditUserModal({ isOpen, onOpenChange, onEditUser, user }: EditUs
           </DialogDescription>
         </DialogHeader>
         <ScrollArea className="flex-grow pr-2">
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-2 pl-1">
-            <div>
-              <Label htmlFor="name-edit">Full Name *</Label>
-              <Input id="name-edit" {...form.register('name')} className="mt-1" />
-              {form.formState.errors.name && <p className="text-sm text-destructive mt-1">{form.formState.errors.name.message}</p>}
-            </div>
-            <div>
-              <Label htmlFor="email-edit">Email Address *</Label>
-              <Input id="email-edit" type="email" {...form.register('email')} className="mt-1" />
-              {form.formState.errors.email && <p className="text-sm text-destructive mt-1">{form.formState.errors.email.message}</p>}
-            </div>
-            <div>
-              <Label htmlFor="role-edit">Role *</Label>
-              <Controller
-                name="role"
+          <Form {...form}> {/* Wrap form with FormProvider */}
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-2 pl-1">
+              <FormField
                 control={form.control}
+                name="name"
                 render={({ field }) => (
-                  <Select onValueChange={field.onChange} value={field.value} defaultValue={field.value}>
-                    <SelectTrigger id="role-edit" className="mt-1">
-                      <SelectValue placeholder="Select a role" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {userRoleOptions.map(roleValue => (
-                        <SelectItem key={roleValue} value={roleValue}>{roleValue}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <FormItem>
+                    <FormLabel htmlFor="name-edit">Full Name *</FormLabel>
+                    <FormControl>
+                      <Input id="name-edit" {...field} className="mt-1" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
                 )}
               />
-              {form.formState.errors.role && <p className="text-sm text-destructive mt-1">{form.formState.errors.role.message}</p>}
-            </div>
-            <div>
-              <Label htmlFor="newPassword-edit">New Password (Optional)</Label>
-              <Input id="newPassword-edit" type="password" {...form.register('newPassword')} className="mt-1" placeholder="Leave blank to keep current password" />
-              {form.formState.errors.newPassword && <p className="text-sm text-destructive mt-1">{form.formState.errors.newPassword.message}</p>}
-            </div>
+              <FormField
+                control={form.control}
+                name="email"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel htmlFor="email-edit">Email Address *</FormLabel>
+                    <FormControl>
+                      <Input id="email-edit" type="email" {...field} className="mt-1" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="role"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel htmlFor="role-edit">Role *</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value} defaultValue={field.value}>
+                      <FormControl>
+                        <SelectTrigger id="role-edit" className="mt-1">
+                          <SelectValue placeholder="Select a role" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {userRoleOptions.map(roleValue => (
+                          <SelectItem key={roleValue} value={roleValue}>{roleValue}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="newPassword"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel htmlFor="newPassword-edit">New Password (Optional)</FormLabel>
+                    <FormControl>
+                      <Input id="newPassword-edit" type="password" {...field} className="mt-1" placeholder="Leave blank to keep current password" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
-            <div className="space-y-2">
-              <Label className="flex items-center"><ShieldCheck className="mr-2 h-5 w-5 text-primary" /> Module Permissions</Label>
-              <div className="space-y-2 rounded-md border p-4 max-h-48 overflow-y-auto">
-                {PLATFORM_MODULES.map((module) => (
-                  <FormField
-                    key={module.id}
-                    control={form.control}
-                    name="modulePermissions"
-                    render={({ field }) => {
-                      return (
-                        <FormItem className="flex flex-row items-center space-x-3 space-y-0">
-                          <FormControl>
-                            <Checkbox
-                              checked={field.value?.includes(module.id)}
-                              onCheckedChange={(checked) => {
-                                return checked
-                                  ? field.onChange([...(field.value || []), module.id])
-                                  : field.onChange(
-                                      (field.value || []).filter(
-                                        (value) => value !== module.id
-                                      )
-                                    );
-                              }}
-                            />
-                          </FormControl>
-                          <FormLabel className="text-sm font-normal">
-                            {module.label}
-                          </FormLabel>
-                        </FormItem>
-                      );
-                    }}
-                  />
-                ))}
+              <div className="space-y-2">
+                <FormLabel className="flex items-center"><ShieldCheck className="mr-2 h-5 w-5 text-primary" /> Module Permissions</FormLabel>
+                <div className="space-y-2 rounded-md border p-4 max-h-48 overflow-y-auto">
+                  {PLATFORM_MODULES.map((module) => (
+                    <FormField
+                      key={module.id}
+                      control={form.control}
+                      name="modulePermissions"
+                      render={({ field }) => {
+                        return (
+                          <FormItem className="flex flex-row items-center space-x-3 space-y-0">
+                            <FormControl>
+                              <Checkbox
+                                checked={field.value?.includes(module.id)}
+                                onCheckedChange={(checked) => {
+                                  return checked
+                                    ? field.onChange([...(field.value || []), module.id])
+                                    : field.onChange(
+                                        (field.value || []).filter(
+                                          (value) => value !== module.id
+                                        )
+                                      );
+                                }}
+                              />
+                            </FormControl>
+                            <FormLabel className="text-sm font-normal">
+                              {module.label}
+                            </FormLabel>
+                          </FormItem>
+                        );
+                      }}
+                    />
+                  ))}
+                </div>
+                <FormMessage /> {/* For modulePermissions array errors, if any */}
               </div>
-               {form.formState.errors.modulePermissions && <p className="text-sm text-destructive mt-1">{form.formState.errors.modulePermissions.message}</p>}
-            </div>
 
-            <DialogFooter className="pt-4 sticky bottom-0 bg-background pb-1">
-              <DialogClose asChild>
-                <Button type="button" variant="outline">
-                  Cancel
+              <DialogFooter className="pt-4 sticky bottom-0 bg-background pb-1">
+                <DialogClose asChild>
+                  <Button type="button" variant="outline">
+                    Cancel
+                  </Button>
+                </DialogClose>
+                <Button type="submit" disabled={form.formState.isSubmitting}>
+                  {form.formState.isSubmitting ? 'Saving Changes...' : 'Save Changes'}
                 </Button>
-              </DialogClose>
-              <Button type="submit" disabled={form.formState.isSubmitting}>
-                {form.formState.isSubmitting ? 'Saving Changes...' : 'Save Changes'}
-              </Button>
-            </DialogFooter>
-          </form>
+              </DialogFooter>
+            </form>
+          </Form>
         </ScrollArea>
       </DialogContent>
     </Dialog>

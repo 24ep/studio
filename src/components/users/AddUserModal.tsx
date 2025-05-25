@@ -25,6 +25,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Checkbox } from "@/components/ui/checkbox";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form'; // Added Form components
 import { UserPlus, ShieldCheck } from 'lucide-react';
 import type { UserProfile, PlatformModuleId } from '@/lib/types';
 import { PLATFORM_MODULES } from '@/lib/types';
@@ -94,91 +95,119 @@ export function AddUserModal({ isOpen, onOpenChange, onAddUser }: AddUserModalPr
           </DialogDescription>
         </DialogHeader>
         <ScrollArea className="flex-grow pr-2">
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-2 pl-1">
-            <div>
-              <Label htmlFor="name-add">Full Name *</Label>
-              <Input id="name-add" {...form.register('name')} className="mt-1" />
-              {form.formState.errors.name && <p className="text-sm text-destructive mt-1">{form.formState.errors.name.message}</p>}
-            </div>
-            <div>
-              <Label htmlFor="email-add">Email Address *</Label>
-              <Input id="email-add" type="email" {...form.register('email')} className="mt-1" />
-              {form.formState.errors.email && <p className="text-sm text-destructive mt-1">{form.formState.errors.email.message}</p>}
-            </div>
-            <div>
-              <Label htmlFor="password-add">Password *</Label>
-              <Input id="password-add" type="password" {...form.register('password')} className="mt-1" />
-              {form.formState.errors.password && <p className="text-sm text-destructive mt-1">{form.formState.errors.password.message}</p>}
-            </div>
-            <div>
-              <Label htmlFor="role-add">Role *</Label>
-              <Controller
-                name="role"
+          <Form {...form}> {/* Wrap form with FormProvider */}
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-2 pl-1">
+              <FormField
                 control={form.control}
+                name="name"
                 render={({ field }) => (
-                  <Select onValueChange={field.onChange} value={field.value} defaultValue={field.value}>
-                    <SelectTrigger id="role-add" className="mt-1">
-                      <SelectValue placeholder="Select a role" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {userRoleOptions.map(role => (
-                        <SelectItem key={role} value={role}>{role}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <FormItem>
+                    <FormLabel htmlFor="name-add">Full Name *</FormLabel>
+                    <FormControl>
+                      <Input id="name-add" {...field} className="mt-1" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
                 )}
               />
-              {form.formState.errors.role && <p className="text-sm text-destructive mt-1">{form.formState.errors.role.message}</p>}
-            </div>
+              <FormField
+                control={form.control}
+                name="email"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel htmlFor="email-add">Email Address *</FormLabel>
+                    <FormControl>
+                      <Input id="email-add" type="email" {...field} className="mt-1" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="password"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel htmlFor="password-add">Password *</FormLabel>
+                    <FormControl>
+                      <Input id="password-add" type="password" {...field} className="mt-1" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="role"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel htmlFor="role-add">Role *</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value} defaultValue={field.value}>
+                      <FormControl>
+                        <SelectTrigger id="role-add" className="mt-1">
+                          <SelectValue placeholder="Select a role" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {userRoleOptions.map(role => (
+                          <SelectItem key={role} value={role}>{role}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
-            <div className="space-y-2">
-              <Label className="flex items-center"><ShieldCheck className="mr-2 h-5 w-5 text-primary" /> Module Permissions</Label>
-              <div className="space-y-2 rounded-md border p-4 max-h-48 overflow-y-auto">
-                {PLATFORM_MODULES.map((module) => (
-                  <FormField
-                    key={module.id}
-                    control={form.control}
-                    name="modulePermissions"
-                    render={({ field }) => {
-                      return (
-                        <FormItem className="flex flex-row items-center space-x-3 space-y-0">
-                          <FormControl>
-                            <Checkbox
-                              checked={field.value?.includes(module.id)}
-                              onCheckedChange={(checked) => {
-                                return checked
-                                  ? field.onChange([...(field.value || []), module.id])
-                                  : field.onChange(
-                                      (field.value || []).filter(
-                                        (value) => value !== module.id
-                                      )
-                                    );
-                              }}
-                            />
-                          </FormControl>
-                          <FormLabel className="text-sm font-normal">
-                            {module.label}
-                          </FormLabel>
-                        </FormItem>
-                      );
-                    }}
-                  />
-                ))}
+              <div className="space-y-2">
+                <FormLabel className="flex items-center"><ShieldCheck className="mr-2 h-5 w-5 text-primary" /> Module Permissions</FormLabel>
+                <div className="space-y-2 rounded-md border p-4 max-h-48 overflow-y-auto">
+                  {PLATFORM_MODULES.map((module) => (
+                    <FormField
+                      key={module.id}
+                      control={form.control}
+                      name="modulePermissions"
+                      render={({ field }) => {
+                        return (
+                          <FormItem className="flex flex-row items-center space-x-3 space-y-0">
+                            <FormControl>
+                              <Checkbox
+                                checked={field.value?.includes(module.id)}
+                                onCheckedChange={(checked) => {
+                                  return checked
+                                    ? field.onChange([...(field.value || []), module.id])
+                                    : field.onChange(
+                                        (field.value || []).filter(
+                                          (value) => value !== module.id
+                                        )
+                                      );
+                                }}
+                              />
+                            </FormControl>
+                            <FormLabel className="text-sm font-normal">
+                              {module.label}
+                            </FormLabel>
+                          </FormItem>
+                        );
+                      }}
+                    />
+                  ))}
+                </div>
+                <FormMessage /> {/* For modulePermissions array errors, if any */}
               </div>
-               {form.formState.errors.modulePermissions && <p className="text-sm text-destructive mt-1">{form.formState.errors.modulePermissions.message}</p>}
-            </div>
-            
-            <DialogFooter className="pt-4 sticky bottom-0 bg-background pb-1">
-              <DialogClose asChild>
-                <Button type="button" variant="outline">
-                  Cancel
+              
+              <DialogFooter className="pt-4 sticky bottom-0 bg-background pb-1">
+                <DialogClose asChild>
+                  <Button type="button" variant="outline">
+                    Cancel
+                  </Button>
+                </DialogClose>
+                <Button type="submit" disabled={form.formState.isSubmitting}>
+                  {form.formState.isSubmitting ? 'Adding User...' : 'Add User'}
                 </Button>
-              </DialogClose>
-              <Button type="submit" disabled={form.formState.isSubmitting}>
-                {form.formState.isSubmitting ? 'Adding User...' : 'Add User'}
-              </Button>
-            </DialogFooter>
-          </form>
+              </DialogFooter>
+            </form>
+          </Form>
         </ScrollArea>
       </DialogContent>
     </Dialog>
