@@ -2,7 +2,8 @@
 import { CandidatesPerPositionChart } from "@/components/dashboard/CandidatesPerPositionChart";
 import { mockCandidates, mockPositions } from "@/lib/data";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Users, Briefcase, CheckCircle2, Clock } from "lucide-react";
+import { Users, Briefcase, CheckCircle2, Clock, UserPlus } from "lucide-react"; // Added UserPlus
+import { format, isToday, parseISO } from 'date-fns';
 
 export default function DashboardPage() {
   // In a real app, data would be fetched
@@ -14,11 +15,22 @@ export default function DashboardPage() {
   const hiredCandidates = candidates.filter(c => c.status === 'Hired').length;
   const interviewsScheduled = candidates.filter(c => c.status === 'Interview Scheduled' || c.status === 'Interviewing').length;
 
+  const newCandidatesToday = candidates.filter(c => {
+    try {
+      const appDate = parseISO(c.applicationDate);
+      return isToday(appDate);
+    } catch (error) {
+      console.error("Error parsing applicationDate for candidate:", c.id, error);
+      return false;
+    }
+  }).length;
+
   const stats = [
     { title: "Total Candidates", value: totalCandidates, icon: Users, color: "text-primary" },
     { title: "Open Positions", value: totalPositions, icon: Briefcase, color: "text-accent" },
-    { title: "Hired This Month", value: hiredCandidates, icon: CheckCircle2, color: "text-green-500" }, // Example, real logic for "this month" needed
-    { title: "Interviews Today", value: interviewsScheduled, icon: Clock, color: "text-orange-500" }, // Example, real logic for "today" needed
+    { title: "New Candidates Today", value: newCandidatesToday, icon: UserPlus, color: "text-blue-500" },
+    { title: "Hired This Month", value: hiredCandidates, icon: CheckCircle2, color: "text-green-500" }, // Example, real logic for "this month" needed for this stat
+    // { title: "Interviews Today", value: interviewsScheduled, icon: Clock, color: "text-orange-500" }, // Example, real logic for "today" needed for this stat - can be re-added if needed
   ];
 
   return (
