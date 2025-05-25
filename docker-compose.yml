@@ -68,9 +68,14 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
       # Mount the entire pg-init-scripts directory.
-      # PostgreSQL will execute all .sql and .sh files found in this directory on first startup
+      # PostgreSQL will execute all .sql and .sh files found in /docker-entrypoint-initdb.d/ on first startup
       # when the postgres_data volume is empty or being newly created.
       # Ensure your init-db.sql file is inside a 'pg-init-scripts' directory in your project root.
+      # The path './pg-init-scripts' is relative to the directory where 'docker-compose' is executed.
+      # If using Portainer with a Git repository, this path is relative to the root of the checked-out repository.
+      # If Docker cannot find the source directory, it may create an empty directory in the container,
+      # leading to the "psql: ... Is a directory" error if it then tries to execute a file that isn't there
+      # or if it expects a file but finds a directory.
       - ./pg-init-scripts:/docker-entrypoint-initdb.d
     restart: unless-stopped
 
