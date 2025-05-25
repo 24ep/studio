@@ -8,16 +8,13 @@ import {
   SidebarContent,
   SidebarFooter,
   SidebarInset,
-  SidebarTrigger, // For desktop toggle if needed
+  SidebarTrigger,
 } from "@/components/ui/sidebar";
 import { SidebarNav } from "./SidebarNav";
-import { Header } from "./Header"; // Assuming Header is created
+import { Header } from "./Header";
 import Link from "next/link";
-import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { Package2 } from "lucide-react"; // Example App Icon
-
-// Determine current page title - this could be more sophisticated with a context or route matching
+import { Package2 } from "lucide-react";
 import { usePathname } from "next/navigation";
 
 function getPageTitle(pathname: string): string {
@@ -26,9 +23,11 @@ function getPageTitle(pathname: string): string {
   if (pathname.startsWith("/positions")) return "Positions";
   if (pathname.startsWith("/upload")) return "Upload Resume";
   if (pathname.startsWith("/users")) return "Manage Users";
-  if (pathname.startsWith("/settings")) return "Settings";
+  if (pathname.startsWith("/settings/preferences")) return "Preferences";
+  if (pathname.startsWith("/settings/integrations")) return "Integrations";
+  if (pathname.startsWith("/settings")) return "Settings"; // Fallback for base settings
   if (pathname.startsWith("/api-docs")) return "API Documentation";
-  if (pathname.startsWith("/logs")) return "Application Logs"; // Added this line
+  if (pathname.startsWith("/logs")) return "Application Logs";
   return "CandiTrack";
 }
 
@@ -50,7 +49,6 @@ export function AppLayout({ children }: { children: ReactNode }) {
               <Package2 className="h-6 w-6" />
             </Link>
           </div>
-          {/* Desktop sidebar toggle - can be removed if rail toggle is preferred */}
           <SidebarTrigger className="hidden md:group-data-[collapsible=icon]:hidden" />
         </SidebarHeader>
         <Separator className="my-0" />
@@ -70,3 +68,5 @@ export function AppLayout({ children }: { children: ReactNode }) {
     </SidebarProvider>
   );
 }
+
+    

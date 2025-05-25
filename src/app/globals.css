@@ -18,11 +18,11 @@ body {
     --popover: 0 0% 98%;
     --popover-foreground: 220 20% 10%;
 
-    --primary: 231 48% 48%; /* #3F51B5 Deep Blue */
-    --primary-foreground: 0 0% 100%; /* White text on Deep Blue */
-    /* Gradient for primary elements in light theme (e.g., active sidebar item) */
-    --primary-gradient-start: 231 48% 48%; /* Same as primary for a solid start */
-    --primary-gradient-end: 231 55% 55%; /* Slightly lighter/varied end */
+    /* Primary Gradient Definition for Light Theme */
+    --primary-gradient-start-l: 231 48% 48%; /* #3F51B5 Deep Blue */
+    --primary-gradient-end-l: 231 55% 60%; /* Slightly lighter/varied blue */
+    --primary: hsl(var(--primary-gradient-start-l)); /* Fallback or for text if needed */
+    --primary-foreground: 0 0% 100%; /* White text on primary */
 
 
     --secondary: 0 0% 93%; /* Lighter grey for secondary elements */
@@ -44,26 +44,25 @@ body {
     --radius: 0.5rem;
 
     /* Chart colors - can be customized further if specific chart palette is needed */
-    --chart-1: 231 48% 48%; /* Primary */
-    --chart-2: 187 100% 42%; /* Accent */
-    --chart-3: 231 48% 68%; /* Lighter Primary */
-    --chart-4: 187 100% 62%; /* Lighter Accent */
-    --chart-5: 220 14% 60%; /* Neutral Grey */
+    --chart-1: hsl(var(--primary-gradient-start-l));
+    --chart-2: hsl(var(--accent));
+    --chart-3: 231 48% 68%;
+    --chart-4: 187 100% 62%;
+    --chart-5: 220 14% 60%;
 
     /* Sidebar specific theme variables - Light Theme Updated for "2025 Trend" */
-    /* --sidebar-background will be the start of the gradient for light theme */
     --sidebar-background-start-l: 0 0% 98%; /* Very light gray - start of gradient */
     --sidebar-background-end-l: 0 0% 93%;   /* Slightly darker light gray - end of gradient */
     --sidebar-foreground-l: 220 25% 30%; /* Dark grey text for readability */
     
     /* Active item in light theme uses primary gradient vars */
-    --sidebar-primary-l: hsl(var(--primary-gradient-start)); 
+    --sidebar-primary-l: linear-gradient(to right, hsl(var(--primary-gradient-start-l)), hsl(var(--primary-gradient-end-l))); 
     --sidebar-primary-foreground-l: hsl(var(--primary-foreground));
 
     --sidebar-accent-l: 0 0% 90%;       /* Subtle darker grey for hover background on non-active items */
     --sidebar-accent-foreground-l: 220 25% 20%; /* Darker text for hover */
     --sidebar-border-l: 0 0% 85%;     /* Slightly more defined, but still light border */
-    --sidebar-ring-l: 187 100% 42%; /* Cyan for focus rings */
+    --sidebar-ring-l: hsl(var(--accent));
   }
 
   .dark {
@@ -77,11 +76,11 @@ body {
     --popover: 220 15% 16%; /* Popover a bit lighter */
     --popover-foreground: 210 30% 95%;
 
-    --primary: 210 100% 60%; /* Vibrant blue */
+    /* Primary Gradient Definition for Dark Theme */
+    --primary-gradient-start-d: 210 100% 60%; /* Vibrant blue */
+    --primary-gradient-end-d: 210 90% 70%;   /* Slightly lighter/varied vibrant blue */
+    --primary: hsl(var(--primary-gradient-start-d)); /* Fallback for text */
     --primary-foreground: 220 20% 15%; /* Dark text for contrast on vibrant blue */
-    /* Gradient for primary elements in dark theme (e.g., active sidebar item) */
-    --primary-gradient-start: 210 100% 60%; /* Same as primary */
-    --primary-gradient-end: 210 90% 65%;   /* Slightly lighter/varied end */
 
     --secondary: 220 15% 25%; /* Darker secondary elements */
     --secondary-foreground: 210 30% 85%;
@@ -97,7 +96,14 @@ body {
 
     --border: 220 15% 22%; /* Subtle borders */
     --input: 220 15% 18%; /* Input slightly different from card */
-    --ring: 210 100% 60%; /* Ring matches primary */
+    --ring: hsl(var(--primary-gradient-start-d));
+
+     /* Chart colors */
+    --chart-1: hsl(var(--primary-gradient-start-d));
+    --chart-2: hsl(var(--accent));
+    --chart-3: 210 100% 75%;
+    --chart-4: 200 100% 70%;
+    --chart-5: 220 15% 50%;
 
     /* Sidebar dark theme variables - Modernized */
     --sidebar-background-start-d: 220 15% 12%; /* Slightly different from main bg */
@@ -105,13 +111,13 @@ body {
     --sidebar-foreground-d: 210 30% 85%;
     
     /* Active item in dark theme uses dark primary gradient vars */
-    --sidebar-primary-d: hsl(var(--primary-gradient-start));
-    --sidebar-primary-foreground-d: hsl(var(--primary-foreground));
+    --sidebar-primary-d: linear-gradient(to right, hsl(var(--primary-gradient-start-d)), hsl(var(--primary-gradient-end-d)));
+    --sidebar-primary-foreground-d: hsl(var(--primary-foreground)); /* Foreground for active item */
     
     --sidebar-accent-d: 220 15% 20%; /* Hover for non-active */
     --sidebar-accent-foreground-d: 210 30% 90%; /* Text for hover non-active */
     --sidebar-border-d: 220 15% 18%;
-    --sidebar-ring-d: hsl(var(--primary));
+    --sidebar-ring-d: hsl(var(--primary-gradient-start-d));
   }
 }
 
@@ -139,14 +145,14 @@ body {
   }
   /* Light theme: Active menu item style - Primary Gradient */
   :root:not(.dark) [data-sidebar="menu-button"][data-active="true"] {
-    background-image: linear-gradient(to right, hsl(var(--primary-gradient-start)), hsl(var(--primary-gradient-end)));
-    color: hsl(var(--primary-foreground)); /* Ensure this uses the main primary foreground */
-    box-shadow: 0 2px 10px -3px hsla(var(--primary), 0.5); /* Subtle shadow for depth */
+    background-image: var(--sidebar-primary-l);
+    color: hsl(var(--sidebar-primary-foreground-l));
+    box-shadow: 0 2px 10px -3px hsla(var(--primary-gradient-start-l), 0.5);
   }
-   /* Light theme: Hover on active menu item - slightly adjust gradient */
+   /* Light theme: Hover on active menu item - slightly adjust gradient appearance if desired */
   :root:not(.dark) [data-sidebar="menu-button"][data-active="true"]:hover {
-    background-image: linear-gradient(to right, hsl(var(--primary-gradient-start) / 0.9), hsl(var(--primary-gradient-end) / 0.95));
-    color: hsl(var(--primary-foreground));
+    /* Could adjust opacity or brightness here if needed, or keep as is */
+    filter: brightness(1.05);
   }
 
 
@@ -163,18 +169,34 @@ body {
   }
   /* Dark theme: Active menu item style - Primary Dark Gradient */
   .dark [data-sidebar="menu-button"][data-active="true"] {
-    background-image: linear-gradient(to right, hsl(var(--primary-gradient-start)), hsl(var(--primary-gradient-end)));
-    color: hsl(var(--primary-foreground)); /* This is the primary-foreground for the dark theme */
-    box-shadow: 0 2px 10px -3px hsla(var(--primary), 0.4); /* Subtle shadow for depth */
+    background-image: var(--sidebar-primary-d);
+    color: hsl(var(--sidebar-primary-foreground-d));
+    box-shadow: 0 2px 10px -3px hsla(var(--primary-gradient-start-d), 0.4);
   }
-  /* Dark theme: Hover on active menu item - slightly adjust gradient */
+  /* Dark theme: Hover on active menu item - slightly adjust gradient appearance if desired */
   .dark [data-sidebar="menu-button"][data-active="true"]:hover {
-    background-image: linear-gradient(to right, hsl(var(--primary-gradient-start) / 0.9), hsl(var(--primary-gradient-end) / 0.95));
-    color: hsl(var(--primary-foreground));
+    filter: brightness(1.1);
   }
 
   /* General menu button transitions */
   [data-sidebar="menu-button"] {
-    transition: background-color 0.15s ease-in-out, color 0.15s ease-in-out, box-shadow 0.15s ease-in-out, background-image 0.15s ease-in-out;
+    transition: background-color 0.15s ease-in-out, color 0.15s ease-in-out, box-shadow 0.15s ease-in-out, background-image 0.15s ease-in-out, filter 0.15s ease-in-out;
+  }
+
+  /* Apply gradient to primary buttons */
+  .btn-primary-gradient {
+    background-image: linear-gradient(to right, hsl(var(--primary-gradient-start-l)), hsl(var(--primary-gradient-end-l)));
+    color: hsl(var(--primary-foreground));
+    border: none; /* Optional: remove border for a flatter gradient look */
+  }
+  .dark .btn-primary-gradient {
+    background-image: linear-gradient(to right, hsl(var(--primary-gradient-start-d)), hsl(var(--primary-gradient-end-d)));
+    color: hsl(var(--primary-foreground)); /* Ensure dark theme primary foreground is used */
+  }
+  .btn-primary-gradient:hover {
+    filter: brightness(1.1); /* Example hover effect */
+    box-shadow: 0 2px 10px -3px hsla(var(--primary), 0.4);
   }
 }
+
+    
