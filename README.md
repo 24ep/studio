@@ -1,5 +1,5 @@
 
-# NCC Candidate Management - Applicant Tracking System (Next.js Prototype)
+# Candidate Management - Applicant Tracking System (Next.js Prototype)
 
 This is a Next.js application prototype for NCC Candidate Management, an Applicant Tracking System, built with Firebase Studio.
 
