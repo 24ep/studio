@@ -56,8 +56,8 @@ export type CandidateStatus =
 
 export interface TransitionRecord {
   id: string;
-  candidateId?: string; // This might not be needed if fetched as part of candidate
-  date: string; // ISO date string
+  candidateId?: string; 
+  date: string; 
   stage: CandidateStatus;
   notes?: string;
   createdAt?: string;
@@ -126,23 +126,23 @@ export interface CandidateDetails {
   experience?: ExperienceEntry[];
   skills?: SkillEntry[];
   job_suitable?: JobSuitableEntry[];
-  associatedMatchDetails?: { // To store details of the top match if candidate is created via n8n
+  associatedMatchDetails?: { 
     jobTitle: string;
     fitScore: number;
     reasons: string[];
-    n8nJobId?: string; // from n8n's job_id
+    n8nJobId?: string; 
   };
 }
 
 export interface N8NWebhookPayload {
-  // Candidate PII - assuming n8n sends this from parsed resume
-  name: string; // Derived by n8n or from parsedData.personal_info.firstname + lastname
-  email: string; // Derived by n8n or from parsedData.contact_info.email
-  phone?: string | null; // Optional, from parsedData.contact_info.phone
-  parsedData: CandidateDetails; // The full candidate details from resume parsing
-
-  // Job matching info from n8n
-  top_matches?: N8NJobMatch[];
+  cv_language?: string;
+  personal_info: PersonalInfo;
+  contact_info: ContactInfo;
+  education?: EducationEntry[];
+  experience?: ExperienceEntry[];
+  skills?: SkillEntry[];
+  job_suitable?: JobSuitableEntry[];
+  job_matches?: N8NJobMatch[]; // Changed from top_matches and now root level of the payload
 }
 
 
@@ -151,8 +151,8 @@ export interface OldParsedResumeData {
   name?: string;
   email?: string;
   phone?: string;
-  education?: string[]; // Note: this was string array in old type
-  skills?: string[];    // Note: this was string array in old type
+  education?: string[]; 
+  skills?: string[];    
   experienceYears?: number;
   summary?: string;
 }
@@ -162,13 +162,12 @@ export interface Position {
   id: string;
   title: string;
   department: string;
-  description?: string | null; // Allow null for description
+  description?: string | null; 
   isOpen: boolean;
   position_level?: string | null;
-  // n8nJobId?: string | null; // Optional: For directly mapping n8n job_id to your positions
   createdAt?: string;
   updatedAt?: string;
-  candidates?: Candidate[]; // Relation for ORM/Prisma like fetching
+  candidates?: Candidate[]; 
 }
 
 export interface Candidate {
@@ -177,15 +176,14 @@ export interface Candidate {
   email: string;
   phone?: string | null;
   resumePath?: string | null;
-  // parsedData can be the new detailed structure, old simple structure, or null
   parsedData: CandidateDetails | OldParsedResumeData | null;
   positionId: string | null;
-  position?: Position | null; // Relation for ORM/Prisma like fetching
+  position?: Position | null; 
   fitScore: number;
   status: CandidateStatus;
-  applicationDate: string; // ISO date string
-  createdAt?: string; // ISO date string
-  updatedAt?: string; // ISO date string
+  applicationDate: string; 
+  createdAt?: string; 
+  updatedAt?: string; 
   transitionHistory: TransitionRecord[];
 }
 
@@ -197,8 +195,8 @@ export interface UserProfile {
   avatarUrl?: string;
   dataAiHint?: string;
   role: 'Admin' | 'Recruiter' | 'Hiring Manager';
-  password?: string; // Only used during creation/auth process, not stored in session
-  modulePermissions?: PlatformModuleId[]; // Array of allowed module IDs
+  password?: string; 
+  modulePermissions?: PlatformModuleId[]; 
   createdAt?: string;
   updatedAt?: string;
 }
@@ -207,11 +205,11 @@ export type LogLevel = 'INFO' | 'WARN' | 'ERROR' | 'DEBUG' | 'AUDIT';
 
 export interface LogEntry {
   id: string;
-  timestamp: string; // ISO date string
+  timestamp: string; 
   level: LogLevel;
   message: string;
   source?: string;
-  actingUserId?: string | null; // User ID of the person performing the action
-  details?: Record<string, any> | null; // Additional structured data for the log
-  createdAt?: string; // ISO date string
+  actingUserId?: string | null; 
+  details?: Record<string, any> | null; 
+  createdAt?: string; 
 }

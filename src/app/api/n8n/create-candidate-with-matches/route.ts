@@ -29,7 +29,7 @@ const educationEntrySchema = z.object({
   GPA: z.string().optional().default(''),
   university: z.string().optional().default(''),
   campus: z.string().optional().default(''),
-}).passthrough(); // Allow extra fields
+}).passthrough();
 
 const experienceEntrySchema = z.object({
   company: z.string().optional().default(''),
@@ -39,28 +39,21 @@ const experienceEntrySchema = z.object({
   duration: z.string().optional().default(''),
   is_current_position: z.boolean().optional().default(false),
   postition_level: z.enum(['entry level', 'mid level', 'senior level', 'lead', 'manager', 'executive']).optional(),
-}).passthrough(); // Allow extra fields
+}).passthrough();
 
 const skillEntrySchema = z.object({
   segment_skill: z.string().optional().default(''),
   skill: z.array(z.string()).optional().default([]),
-}).passthrough(); // Allow extra fields
+}).passthrough();
 
 const jobSuitableEntrySchema = z.object({
   suitable_career: z.string().optional().default(''),
   suitable_job_position: z.string().optional().default(''),
   suitable_job_level: z.string().optional().default(''),
-  suitable_salary_bath_month: z.string().optional().nullable(), // Allow null
-}).passthrough(); // Allow extra fields
+  suitable_salary_bath_month: z.string().optional().nullable(),
+}).passthrough();
 
-const associatedMatchDetailsSchema = z.object({
-  jobTitle: z.string(),
-  fitScore: z.number(),
-  reasons: z.array(z.string()),
-  n8nJobId: z.string().optional(),
-}).optional();
-
-const candidateDetailsSchema = z.object({
+const candidateDetailsSchemaForN8N = z.object({
   cv_language: z.string().optional().default(''),
   personal_info: personalInfoSchema,
   contact_info: contactInfoSchema,
@@ -68,8 +61,10 @@ const candidateDetailsSchema = z.object({
   experience: z.array(experienceEntrySchema).optional().default([]),
   skills: z.array(skillEntrySchema).optional().default([]),
   job_suitable: z.array(jobSuitableEntrySchema).optional().default([]),
-  associatedMatchDetails: associatedMatchDetailsSchema,
-}).passthrough(); // Allow extra fields
+  // associatedMatchDetails is NOT expected from n8n directly in this part of the payload
+  // it's constructed by this API if a match is found
+}).passthrough();
+
 
 const n8nJobMatchSchema = z.object({
   job_id: z.string(),
@@ -78,13 +73,11 @@ const n8nJobMatchSchema = z.object({
   match_reasons: z.array(z.string()),
 });
 
-const n8nWebhookPayloadSchema = z.object({
-  name: z.string().min(1, "Candidate name is required"),
-  email: z.string().email("Valid candidate email is required"),
-  phone: z.string().nullable().optional(),
-  parsedData: candidateDetailsSchema,
-  top_matches: z.array(n8nJobMatchSchema).optional(),
+// Updated n8nWebhookPayloadSchema to directly reflect the new JSON structure
+const n8nWebhookPayloadSchema = candidateDetailsSchemaForN8N.extend({
+  job_matches: z.array(n8nJobMatchSchema).optional(),
 });
+
 
 const candidateStatusValues: [CandidateStatus, ...CandidateStatus[]] = ['Applied', 'Screening', 'Shortlisted', 'Interview Scheduled', 'Interviewing', 'Offer Extended', 'Offer Accepted', 'Hired', 'Rejected', 'On Hold'];
 
@@ -109,10 +102,16 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const { name, email, phone, parsedData, top_matches } = validationResult.data;
+  const payload = validationResult.data;
+  const { personal_info, contact_info, job_matches, ...otherDetails } = payload;
+
+  const name = `${personal_info.firstname} ${personal_info.lastname}`.trim();
+  const email = contact_info.email;
+  const phone = contact_info.phone || null;
+
   let positionId: string | null = null;
   let fitScore: number = 0;
-  let finalParsedData: CandidateDetails = { ...parsedData }; // Start with parsedData from n8n
+  let finalParsedData: CandidateDetails = { ...otherDetails, personal_info, contact_info }; // This will be stored in the DB
 
   const client = await pool.connect();
   const newCandidateId = uuidv4();
@@ -120,7 +119,6 @@ export async function POST(request: NextRequest) {
   try {
     await client.query('BEGIN');
 
-    // Check if candidate with this email already exists
     const existingCandidateQuery = 'SELECT id FROM "Candidate" WHERE email = $1';
     const existingCandidateResult = await client.query(existingCandidateQuery, [email]);
     if (existingCandidateResult.rows.length > 0) {
@@ -130,17 +128,15 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ message: `Candidate with email ${email} already exists.`, candidateId: existingId }, { status: 409 });
     }
 
-    if (top_matches && top_matches.length > 0) {
-      const topMatch = top_matches[0]; // Assuming the first match is the best one
+    if (job_matches && job_matches.length > 0) {
+      const topMatch = job_matches[0]; 
 
-      // Try to find the position in the database by title
-      const positionQuery = 'SELECT id FROM "Position" WHERE title = $1 AND "isOpen" = TRUE LIMIT 1';
+      const positionQuery = 'SELECT id FROM "Position" WHERE title ILIKE $1 AND "isOpen" = TRUE LIMIT 1'; // Using ILIKE for case-insensitive match
       const positionResult = await client.query(positionQuery, [topMatch.job_title]);
 
       if (positionResult.rows.length > 0) {
         positionId = positionResult.rows[0].id;
         fitScore = topMatch.fit_score;
-        // Update finalParsedData with associated match details
         finalParsedData.associatedMatchDetails = {
           jobTitle: topMatch.job_title,
           fitScore: topMatch.fit_score,
@@ -162,17 +158,16 @@ export async function POST(request: NextRequest) {
       newCandidateId,
       name,
       email,
-      phone || null,
+      phone,
       positionId,
       fitScore,
-      'Applied' as CandidateStatus, // Default status
+      'Applied' as CandidateStatus, 
       new Date().toISOString(),
-      finalParsedData, // Store the potentially enriched parsedData
+      finalParsedData, 
     ];
     const candidateResult = await client.query(insertCandidateQuery, candidateValues);
     const newCandidate = candidateResult.rows[0];
 
-    // Add an initial transition record
     const insertTransitionQuery = `
       INSERT INTO "TransitionRecord" (id, "candidateId", date, stage, notes, "createdAt", "updatedAt")
       VALUES ($1, $2, NOW(), $3, $4, NOW(), NOW());

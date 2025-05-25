@@ -1,4 +1,3 @@
-
 // src/app/api-docs/page.tsx
 "use client";
 
@@ -54,15 +53,15 @@ const apiEndpoints: ApiEndpoint[] = [
     method: "POST",
     path: "/api/n8n/create-candidate-with-matches",
     description: "Webhook endpoint for n8n to create a candidate with job matching details. n8n should send candidate PII and job match data.",
-    requestBody: "JSON: `{ name: string, email: string, phone?: string, parsedData: CandidateDetails, top_matches?: N8NJobMatch[] }` (See `N8NWebhookPayload` type)",
+    requestBody: "JSON: `{ cv_language?: string, personal_info: PersonalInfo, contact_info: ContactInfo, education?: EducationEntry[], ..., job_matches?: N8NJobMatch[] }` (See `N8NWebhookPayload` type in `lib/types.ts`)",
     response: "JSON: `{ message: string, candidate: Candidate }` or error response",
     curlExample: `curl -X POST \\\n` +
                  `  -H 'Content-Type: application/json' \\\n` +
                  `  -d '{\\n` +
-                 `    "name": "Jane Parsed",\\n` +
-                 `    "email": "jane.parsed@example.com",\\n` +
-                 `    "parsedData": { \\"personal_info\\": {\\"firstname\\":\\"Jane\\", \\"lastname\\":\\"Parsed\\"}, \\"contact_info\\": {\\"email\\":\\"jane.parsed@example.com\\"} },\\n` +
-                 `    "top_matches": [ { \\"job_id\\": \\"N8N_JOB_001\\", \\"job_title\\": \\"Software Engineer\\", \\"fit_score\\": 90, \\"match_reasons\\": [\\"Strong Python\\"] } ]\\n` +
+                 `    "cv_language": "en",\\n` +
+                 `    "personal_info": { "firstname": "Jane", "lastname": "Parsed" },\\n` +
+                 `    "contact_info": { "email": "jane.parsed@example.com" },\\n` +
+                 `    "job_matches": [ { "job_id": "N8N_JOB_001", "job_title": "Software Engineer", "fit_score": 90, "match_reasons": ["Strong Python"] } ]\\n` +
                  `  }' \\\n` +
                  `  http://localhost:9002/api/n8n/create-candidate-with-matches`,
   },
@@ -214,7 +213,7 @@ const apiEndpoints: ApiEndpoint[] = [
     response: "JSON: `{ message: 'Password changed successfully.' }` or error message.",
     curlExample: `curl -X POST \\\n` +
                  `  -H 'Content-Type: application/json' \\\n` +
-                 `  -H 'Authorization: Bearer <YOUR_AUTH_TOKEN_OR_COOKIE>' \\\n` +
+                 `  -H 'Authorization: Bearer <YOUR_AUTH_TOKEN_OR_COOKIE>' \\\n` + // Kept as it's auth-related
                  `  -d '{"currentPassword":"oldPassword123", "newPassword":"newStrongPassword456"}' \\\n` +
                  `  http://localhost:9002/api/auth/change-password`,
   },
@@ -225,7 +224,7 @@ const apiEndpoints: ApiEndpoint[] = [
     requestBody: "N/A",
     response: "JSON: Session object or null.",
     curlExample: `curl http://localhost:9002/api/auth/session \\\n` +
-                 `  -H 'Authorization: Bearer <YOUR_AUTH_TOKEN_OR_COOKIE>'`,
+                 `  -H 'Authorization: Bearer <YOUR_AUTH_TOKEN_OR_COOKIE>'`, // Kept as it's auth-related
   },
   {
     method: "PUT",
@@ -277,7 +276,7 @@ const apiEndpoints: ApiEndpoint[] = [
 const getMethodBadgeVariant = (method: string) => {
   switch (method.toUpperCase()) {
     case "GET":
-    case "POST":
+    case "POST": // Changed to outline for consistency
       return "outline";
     case "PUT":
       return "secondary";
@@ -328,7 +327,7 @@ export default function ApiDocumentationPage() {
             <Code2 className="mr-2 h-6 w-6 text-primary" /> API Documentation
           </CardTitle>
           <CardDescription>
-            Overview of available API endpoints for Candidate Matching.
+            Overview of available API endpoints for NCC Candidate Management.
             The base URL is <code>http://localhost:9002</code> for these examples.
           </CardDescription>
         </CardHeader>
@@ -375,7 +374,7 @@ export default function ApiDocumentationPage() {
           </div>
 
           <div className="mt-6 text-sm text-muted-foreground space-y-2">
-            <p><strong>Authentication:</strong> Most API endpoints are currently public. Specific endpoints like <code>/api/auth/change-password</code> or those retrieving user-specific session data implicitly require user authentication (handled by NextAuth.js session cookies when interacting with the UI, or a Bearer token via an API Gateway like Kong for direct API calls).</p>
+            <p><strong>Authentication:</strong> Most API endpoints are currently public. Specific endpoints like <code>/api/auth/change-password</code> or <code>/api/auth/session</code> inherently involve an authenticated user context handled by NextAuth.js sessions or would require a Bearer token if accessed via an API Gateway like Kong.</p>
             <p><strong>Base URL:</strong> All API paths are relative to the application's base URL (e.g., <code>http://localhost:9002</code> or your production domain).</p>
             <p><strong>Error Handling:</strong> Standard HTTP status codes are used (e.g., 200 OK, 201 Created, 400 Bad Request, 401 Unauthorized, 403 Forbidden, 404 Not Found, 500 Internal Server Error). Error responses typically include a JSON body: <code>{`{ "message": "Error description", "errors?": { ... } }`}</code>.</p>
             <p><strong>Content Type:</strong> For POST and PUT requests with a body, set <code>Content-Type: application/json</code>, unless it's a file upload (<code>multipart/form-data</code> for resume uploads).</p>
@@ -422,5 +421,3 @@ export default function ApiDocumentationPage() {
     </div>
   );
 }
-
-    
