@@ -1,4 +1,33 @@
 
+// This declares the shape of the user object returned by the session callback
+// and available in useSession() or getServerSession()
+// It needs to be augmented if you add custom properties to the session token
+import type { DefaultUser } from 'next-auth';
+
+declare module 'next-auth' {
+  interface Session {
+    user: {
+      id: string; // Add id here
+      // role?: UserProfile['role']; // Example: if you add role to session
+    } & DefaultUser; // Keep existing fields like name, email, image
+  }
+
+  // Optional: If you're augmenting the User object returned by the authorize function
+  // or the profile function of an OAuth provider.
+  // interface User extends DefaultUser {
+  //   role?: UserProfile['role'];
+  // }
+}
+
+// JWT token can also be augmented if needed
+// declare module 'next-auth/jwt' {
+//   interface JWT {
+//     id?: string;
+//     role?: UserProfile['role'];
+//   }
+// }
+
+
 export type CandidateStatus =
   | 'Applied'
   | 'Screening'
@@ -113,7 +142,6 @@ export interface Candidate {
   fitScore: number; // 0-100
   status: CandidateStatus;
   applicationDate: string; // ISO date string
-  // lastUpdateDate?: string; // // Kept for compatibility, but updatedAt is primary for DB - Prisma manages updatedAt
   createdAt?: string;
   updatedAt?: string;
   transitionHistory: TransitionRecord[];
@@ -127,6 +155,7 @@ export interface UserProfile {
   avatarUrl?: string;
   dataAiHint?: string;
   role: 'Admin' | 'Recruiter' | 'Hiring Manager';
+  // password?: string; // Password should NOT be part of this type if it's for client-side/API responses
 }
 
 // LogEntry type
@@ -140,3 +169,4 @@ export interface LogEntry {
   source?: string; // e.g., 'API', 'Frontend', 'System'
   createdAt?: string;
 }
+

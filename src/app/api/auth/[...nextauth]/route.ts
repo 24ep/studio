@@ -1,27 +1,11 @@
 
 // src/app/api/auth/[...nextauth]/route.ts
-import NextAuth, { type NextAuthOptions } from 'next-auth';
+import NextAuth, { type NextAuthOptions, type User as NextAuthUser } from 'next-auth';
 import AzureADProvider from 'next-auth/providers/azure-ad';
+import CredentialsProvider from 'next-auth/providers/credentials';
+import { mockAppUsers } from '@/lib/data'; // Assuming mockAppUsers contains users with email/password for demo
 
-// IMPORTANT:
-// 1. Create a .env.local file in your project root (if it doesn't exist).
-// 2. Add the following environment variables to your .env.local file, replacing placeholder values:
-//    AZURE_AD_CLIENT_ID="your_azure_ad_application_client_id"
-//    AZURE_AD_CLIENT_SECRET="your_azure_ad_client_secret_value"
-//    AZURE_AD_TENANT_ID="your_azure_ad_directory_tenant_id"
-//    NEXTAUTH_URL="http://localhost:9002" # During development, or your production URL
-//    NEXTAUTH_SECRET="generate_a_strong_random_secret_string" 
-//    # You can generate a secret using: openssl rand -base64 32
-//
-// 3. Ensure Redirect URIs in your Azure AD App Registration are correctly configured.
-//    For local development with NEXTAUTH_URL="http://localhost:9002", add:
-//    - http://localhost:9002/api/auth/callback/azure-ad  (Type: Web)
-//
-// 4. This file sets up the NextAuth.js handler. To make authentication work across your app:
-//    - Wrap your application with <AuthProvider> (from src/components/auth/AuthProvider.tsx)
-//      in `src/app/layout.tsx`. This provider uses NextAuth's <SessionProvider>.
-//    - You can then use `useSession()`, `signIn()`, `signOut()` in your client components.
-//    - For server components, you can use `getServerSession(authOptions)`.
+// IMPORTANT: See comments in the original file for Azure AD setup.
 
 export const authOptions: NextAuthOptions = {
   providers: [
@@ -30,46 +14,88 @@ export const authOptions: NextAuthOptions = {
       clientSecret: process.env.AZURE_AD_CLIENT_SECRET!,
       tenantId: process.env.AZURE_AD_TENANT_ID!,
       // Optional: Configure profile information if needed
-      // profile(profile) {
-      //   // profile object structure depends on the scopes and claims configured in Azure AD
-      //   return {
-      //     id: profile.sub, // Typically 'sub' (subject) claim from token
-      //     name: profile.name,
-      //     email: profile.email,
-      //     image: null, // Azure AD by default might not return image, or requires graph API call
-      //     // Add custom fields from Azure AD token if necessary
-      //     // e.g., roles: profile.roles
-      //   };
-      // },
+      // profile(profile) { ... }
     }),
+    CredentialsProvider({
+      name: 'Credentials',
+      credentials: {
+        email: { label: "Email", type: "email", placeholder: "user@example.com" },
+        password: { label: "Password", type: "password" }
+      },
+      async authorize(credentials, req) {
+        if (!credentials?.email || !credentials?.password) {
+          throw new Error("Please enter both email and password.");
+        }
+
+        // --- THIS IS MOCK AUTHENTICATION - NOT FOR PRODUCTION ---
+        // In a real application, you would:
+        // 1. Query your database for a user with the provided email.
+        // 2. Compare the provided password with the hashed password stored in your database.
+        //    NEVER store plain text passwords. Use a library like bcrypt.
+        const user = mockAppUsers.find(u => u.email === credentials.email);
+
+        // For demo purposes, let's assume a mock password check
+        // In a real app, you'd compare a hashed password.
+        // Example: if (user && await bcrypt.compare(credentials.password, user.hashedPassword))
+        if (user && credentials.password === "password") { // Replace "password" with actual logic
+          // Return a user object that NextAuth expects
+          // Ensure it has at least id, name, email. Other fields are optional.
+          return {
+            id: user.id,
+            name: user.name,
+            email: user.email,
+            image: user.avatarUrl, // Optional
+            // role: user.role, // You can add custom properties here
+          } as NextAuthUser; // Cast to NextAuthUser
+        } else {
+          // If you return null then an error will be displayed advising the user to check their details.
+          // You can also Reject this callback with an Error thus the user will be sent to the error page with the error message as a query parameter
+          throw new Error("Invalid email or password.");
+        }
+        // --- END MOCK AUTHENTICATION ---
+      }
+    })
   ],
-  // Optional: Add callbacks for session, jwt, etc. if needed for custom logic
-  // callbacks: {
-  //   async jwt({ token, account, profile }) {
-  //     // Persist the OAuth access_token to the token right after signin
-  //     if (account) {
-  //       token.accessToken = account.access_token;
-  //       // You can also add user roles from profile if available
-  //       // token.roles = profile?.roles; 
-  //     }
-  //     return token;
-  //   },
-  //   async session({ session, token }) {
-  //     // Send properties to the client, like an access_token or user roles
-  //     session.accessToken = token.accessToken as string | undefined;
-  //     // session.user.roles = token.roles as string[] | undefined;
-  //     return session;
-  //   },
-  // },
+  session: {
+    strategy: "jwt",
+  },
+  callbacks: {
+    async jwt({ token, user, account, profile }) {
+      // Persist the OAuth access_token or user details from credentials to the token
+      if (account?.provider === "azure-ad" && account) {
+        token.accessToken = account.access_token;
+        token.id = profile?.sub || user?.id; // OID or sub is usually the unique identifier from Azure AD
+      }
+      if (user) { // This user object comes from the provider (Azure AD profile or Credentials authorize)
+        token.id = user.id;
+        token.email = user.email;
+        token.name = user.name;
+        token.picture = user.image;
+        // If you added custom properties like 'role' in authorize or profile, assign them here.
+        // const dbUser = mockAppUsers.find(u => u.id === user.id); // Example: Fetch role from DB/mock
+        // if (dbUser) token.role = dbUser.role;
+      }
+      return token;
+    },
+    async session({ session, token }) {
+      // Send properties to the client, like an access_token or user id from token
+      if (token) {
+        session.user.id = token.id as string;
+        session.user.email = token.email as string;
+        session.user.name = token.name as string;
+        session.user.image = token.picture as string | undefined;
+        // if (token.role) session.user.role = token.role as UserProfile['role'];
+        // session.accessToken = token.accessToken as string | undefined; // If using access tokens
+      }
+      return session;
+    },
+  },
   pages: {
-    signIn: '/auth/signin', // Custom sign-in page
-    // signOut: '/auth/signout', // Optional: Custom sign-out page
-    // error: '/auth/error', // Optional: Custom error page (e.g., for auth errors)
-    // verifyRequest: '/auth/verify-request', // Optional: For email provider
-    // newUser: '/auth/new-user' // Optional: New user (e.g., after sign up)
+    signIn: '/auth/signin',
+    error: '/auth/signin', // Redirect to signin page on error, with error query param
   },
   secret: process.env.NEXTAUTH_SECRET,
-  // debug: process.env.NODE_ENV === 'development', // Enable debug logs in development
+  // debug: process.env.NODE_ENV === 'development',
 };
 
 const handler = NextAuth(authOptions);
