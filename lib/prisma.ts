@@ -1,3 +1,4 @@
-// This file has been moved to src/lib/prisma.ts
-// This placeholder can be deleted if your build system handles file removal.
-// Otherwise, leaving it empty or with this comment prevents it from being used accidentally.
+// This is a placeholder file in the root /lib directory.
+// The active prisma.ts utility is located at src/lib/prisma.ts
+// Please ensure your imports point to @/lib/prisma
+export {};
