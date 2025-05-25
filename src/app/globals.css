@@ -20,8 +20,9 @@ body {
 
     --primary: 231 48% 48%; /* #3F51B5 Deep Blue */
     --primary-foreground: 0 0% 100%; /* White text on Deep Blue */
-    --primary-gradient-start: 231 48% 48%;
-    --primary-gradient-end: 231 55% 55%;
+    /* Gradient for primary elements in light theme (e.g., active sidebar item) */
+    --primary-gradient-start: 231 48% 48%; /* Same as primary for a solid start */
+    --primary-gradient-end: 231 55% 55%; /* Slightly lighter/varied end */
 
 
     --secondary: 0 0% 93%; /* Lighter grey for secondary elements */
@@ -50,56 +51,67 @@ body {
     --chart-5: 220 14% 60%; /* Neutral Grey */
 
     /* Sidebar specific theme variables - Light Theme Updated for "2025 Trend" */
-    --sidebar-background: 0 0% 97%; /* Off-white, soft background */
-    --sidebar-foreground: 220 25% 30%; /* Dark grey text for readability */
-    --sidebar-primary: 231 48% 48%; /* Using app's primary for active item */
-    --sidebar-primary-foreground: 0 0% 100%; /* Using app's primary-fg for active item text */
-    --sidebar-accent: 0 0% 92%;       /* Subtle darker grey for hover background on non-active items */
-    --sidebar-accent-foreground: 220 25% 25%; /* Dark text for hover */
-    --sidebar-border: 0 0% 88%;     /* Slightly more defined, but still light border */
-    --sidebar-ring: 187 100% 42%; /* Cyan for focus rings, can be changed to var(--primary) if desired */
+    /* --sidebar-background will be the start of the gradient for light theme */
+    --sidebar-background-start-l: 0 0% 98%; /* Very light gray - start of gradient */
+    --sidebar-background-end-l: 0 0% 93%;   /* Slightly darker light gray - end of gradient */
+    --sidebar-foreground-l: 220 25% 30%; /* Dark grey text for readability */
+    
+    /* Active item in light theme uses primary gradient vars */
+    --sidebar-primary-l: hsl(var(--primary-gradient-start)); 
+    --sidebar-primary-foreground-l: hsl(var(--primary-foreground));
+
+    --sidebar-accent-l: 0 0% 90%;       /* Subtle darker grey for hover background on non-active items */
+    --sidebar-accent-foreground-l: 220 25% 20%; /* Darker text for hover */
+    --sidebar-border-l: 0 0% 85%;     /* Slightly more defined, but still light border */
+    --sidebar-ring-l: 187 100% 42%; /* Cyan for focus rings */
   }
 
   .dark {
-    --background: 231 20% 12%; /* Dark blue-grey */
-    --foreground: 210 20% 90%; /* Light grey text */
+    /* Modern Dark Theme 2025 */
+    --background: 220 15% 10%; /* Deep dark blue/charcoal */
+    --foreground: 210 30% 95%; /* Very light gray, almost white */
 
-    --card: 231 20% 15%;
-    --card-foreground: 210 20% 90%;
+    --card: 220 15% 13%; /* Slightly lighter than background */
+    --card-foreground: 210 30% 95%;
 
-    --popover: 231 20% 15%;
-    --popover-foreground: 210 20% 90%;
+    --popover: 220 15% 16%; /* Popover a bit lighter */
+    --popover-foreground: 210 30% 95%;
 
-    --primary: 187 100% 42%; /* Cyan as primary in dark mode */
-    --primary-foreground: 231 15% 10%; /* Dark text on Cyan */
-    --primary-gradient-start: 187 100% 42%;
-    --primary-gradient-end: 187 90% 50%;
+    --primary: 210 100% 60%; /* Vibrant blue */
+    --primary-foreground: 220 20% 15%; /* Dark text for contrast on vibrant blue */
+    /* Gradient for primary elements in dark theme (e.g., active sidebar item) */
+    --primary-gradient-start: 210 100% 60%; /* Same as primary */
+    --primary-gradient-end: 210 90% 65%;   /* Slightly lighter/varied end */
 
-    --secondary: 231 20% 25%;
-    --secondary-foreground: 210 20% 90%;
+    --secondary: 220 15% 25%; /* Darker secondary elements */
+    --secondary-foreground: 210 30% 85%;
 
-    --muted: 231 20% 22%;
-    --muted-foreground: 210 20% 65%;
+    --muted: 220 15% 20%;
+    --muted-foreground: 210 25% 70%;
 
-    --accent: 231 48% 55%; /* Lighter Deep Blue for accent in dark mode */
-    --accent-foreground: 0 0% 100%;
+    --accent: 200 100% 55%; /* A complementary vibrant accent, e.g., a lighter blue or teal */
+    --accent-foreground: 220 15% 10%; /* Dark text on accent */
 
-    --destructive: 0 70% 50%;
+    --destructive: 0 70% 55%; /* Slightly adjusted destructive */
     --destructive-foreground: 0 0% 98%;
 
-    --border: 231 20% 28%;
-    --input: 231 20% 28%;
-    --ring: 187 100% 42%; /* Cyan for rings */
+    --border: 220 15% 22%; /* Subtle borders */
+    --input: 220 15% 18%; /* Input slightly different from card */
+    --ring: 210 100% 60%; /* Ring matches primary */
 
-    /* Sidebar dark theme variables - kept as dark blue gradient */
-    --sidebar-background: 231 20% 10%; /* Darker sidebar (used by gradient fallback) */
-    --sidebar-foreground: 210 20% 80%;
-    --sidebar-primary: 187 100% 42%; /* Primary for active item in dark mode (can be same as app primary or specific) */
-    --sidebar-primary-foreground: 231 15% 10%; /* Text for active item in dark mode */
-    --sidebar-accent: 231 20% 25%; /* Hover for non-active in dark mode */
-    --sidebar-accent-foreground: 210 20% 90%; /* Text for hover non-active in dark mode */
-    --sidebar-border: 231 20% 20%;
-    --sidebar-ring: 187 100% 42%;
+    /* Sidebar dark theme variables - Modernized */
+    --sidebar-background-start-d: 220 15% 12%; /* Slightly different from main bg */
+    --sidebar-background-end-d: 220 15% 9%;    /* Darker end for subtle gradient */
+    --sidebar-foreground-d: 210 30% 85%;
+    
+    /* Active item in dark theme uses dark primary gradient vars */
+    --sidebar-primary-d: hsl(var(--primary-gradient-start));
+    --sidebar-primary-foreground-d: hsl(var(--primary-foreground));
+    
+    --sidebar-accent-d: 220 15% 20%; /* Hover for non-active */
+    --sidebar-accent-foreground-d: 210 30% 90%; /* Text for hover non-active */
+    --sidebar-border-d: 220 15% 18%;
+    --sidebar-ring-d: hsl(var(--primary));
   }
 }
 
@@ -114,44 +126,55 @@ body {
 
 /* Updated styles for sidebar and active menu item */
 @layer components {
-  /* Sidebar base style for light theme */
-  [data-sidebar="sidebar"] {
-    background-color: hsl(var(--sidebar-background));
-    color: hsl(var(--sidebar-foreground));
-    border-right: 1px solid hsl(var(--sidebar-border)); /* Add a border for separation */
+  /* Sidebar base style for light theme - Light Gray Gradient */
+  :root:not(.dark) [data-sidebar="sidebar"] {
+    background-image: linear-gradient(to bottom, hsl(var(--sidebar-background-start-l)), hsl(var(--sidebar-background-end-l)));
+    color: hsl(var(--sidebar-foreground-l));
+    border-right: 1px solid hsl(var(--sidebar-border-l));
+  }
+  /* Light theme: Hover on non-active items */
+  :root:not(.dark) [data-sidebar="menu-button"]:not([data-active="true"]):hover {
+    background-color: hsl(var(--sidebar-accent-l));
+    color: hsl(var(--sidebar-accent-foreground-l));
+  }
+  /* Light theme: Active menu item style - Primary Gradient */
+  :root:not(.dark) [data-sidebar="menu-button"][data-active="true"] {
+    background-image: linear-gradient(to right, hsl(var(--primary-gradient-start)), hsl(var(--primary-gradient-end)));
+    color: hsl(var(--primary-foreground)); /* Ensure this uses the main primary foreground */
+    box-shadow: 0 2px 10px -3px hsla(var(--primary), 0.5); /* Subtle shadow for depth */
+  }
+   /* Light theme: Hover on active menu item - slightly adjust gradient */
+  :root:not(.dark) [data-sidebar="menu-button"][data-active="true"]:hover {
+    background-image: linear-gradient(to right, hsl(var(--primary-gradient-start) / 0.9), hsl(var(--primary-gradient-end) / 0.95));
+    color: hsl(var(--primary-foreground));
   }
 
-  /* Sidebar base style for dark theme (retains gradient) */
+
+  /* Sidebar base style for dark theme - Modern Dark Gradient */
   .dark [data-sidebar="sidebar"] {
-    background-image: linear-gradient(to bottom, hsl(240, 60%, 25%), hsl(230, 40%, 15%));
-    color: hsl(var(--sidebar-foreground)); /* Uses dark theme's --sidebar-foreground */
-    border-right: 1px solid hsl(var(--sidebar-border)); /* Uses dark theme's --sidebar-border */
+    background-image: linear-gradient(to bottom, hsl(var(--sidebar-background-start-d)), hsl(var(--sidebar-background-end-d)));
+    color: hsl(var(--sidebar-foreground-d));
+    border-right: 1px solid hsl(var(--sidebar-border-d));
+  }
+  /* Dark theme: Hover on non-active items */
+  .dark [data-sidebar="menu-button"]:not([data-active="true"]):hover {
+    background-color: hsl(var(--sidebar-accent-d));
+    color: hsl(var(--sidebar-accent-foreground-d));
+  }
+  /* Dark theme: Active menu item style - Primary Dark Gradient */
+  .dark [data-sidebar="menu-button"][data-active="true"] {
+    background-image: linear-gradient(to right, hsl(var(--primary-gradient-start)), hsl(var(--primary-gradient-end)));
+    color: hsl(var(--primary-foreground)); /* This is the primary-foreground for the dark theme */
+    box-shadow: 0 2px 10px -3px hsla(var(--primary), 0.4); /* Subtle shadow for depth */
+  }
+  /* Dark theme: Hover on active menu item - slightly adjust gradient */
+  .dark [data-sidebar="menu-button"][data-active="true"]:hover {
+    background-image: linear-gradient(to right, hsl(var(--primary-gradient-start) / 0.9), hsl(var(--primary-gradient-end) / 0.95));
+    color: hsl(var(--primary-foreground));
   }
 
   /* General menu button transitions */
   [data-sidebar="menu-button"] {
-    transition: background-color 0.15s ease-in-out, color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
-  }
-
-  /* Light theme: Active menu item style - now with gradient */
-  :root:not(.dark) [data-sidebar="menu-button"][data-active="true"] {
-    background-image: linear-gradient(to right, hsl(var(--primary-gradient-start)), hsl(var(--primary-gradient-end)));
-    color: hsl(var(--primary-foreground));
-  }
-  /* Light theme: Hover on active menu item */
-  :root:not(.dark) [data-sidebar="menu-button"][data-active="true"]:hover {
-    background-image: linear-gradient(to right, hsl(var(--primary-gradient-start) / 0.9), hsl(var(--primary-gradient-end) / 0.9)); /* Slightly darken */
-    color: hsl(var(--primary-foreground));
-  }
-
-  /* Dark theme: Active menu item style (retains existing gradient, or can be updated) */
-  .dark [data-sidebar="menu-button"][data-active="true"] {
-    background-image: linear-gradient(to right, hsl(var(--primary-gradient-start)), hsl(var(--primary-gradient-end))); /* Use themeable gradient vars */
-    color: hsl(var(--sidebar-primary-foreground));
-  }
-  /* Dark theme: Hover on active menu item (adjusts gradient) */
-  .dark [data-sidebar="menu-button"][data-active="true"]:hover {
-    background-image: linear-gradient(to right, hsl(var(--primary-gradient-start) / 0.9), hsl(var(--primary-gradient-end) / 0.9)); /* Slightly darken */
-    color: hsl(var(--sidebar-primary-foreground));
+    transition: background-color 0.15s ease-in-out, color 0.15s ease-in-out, box-shadow 0.15s ease-in-out, background-image 0.15s ease-in-out;
   }
 }
