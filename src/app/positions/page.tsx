@@ -21,7 +21,8 @@ export default function PositionsPage() {
       try {
         const response = await fetch('/api/positions');
         if (!response.ok) {
-          throw new Error(`Failed to fetch positions: ${response.statusText}`);
+          const errorText = response.statusText || `Status: ${response.status}`;
+          throw new Error(`Failed to fetch positions: ${errorText}`);
         }
         const data: Position[] = await response.json();
         setPositions(data);
