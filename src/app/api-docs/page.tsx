@@ -28,7 +28,6 @@ const apiEndpoints: ApiEndpoint[] = [
     requestBody: "FormData: `resume`: File (PDF, DOC, DOCX)",
     response: "JSON: `{ message: 'Resume uploaded successfully', filePath: '...', candidate: Candidate, n8nResponse?: {success: boolean, data?: any, error?: string} }`",
     curlExample: `curl -X POST \\\n` +
-                 `  -H 'Authorization: Bearer <YOUR_AUTH_TOKEN_OR_COOKIE>' \\\n` +
                  `  -F 'resume=@resume.pdf' \\\n` +
                  `  'http://localhost:9002/api/resumes/upload?candidateId=your-candidate-id'`,
   },
@@ -38,8 +37,7 @@ const apiEndpoints: ApiEndpoint[] = [
     description: "Retrieve a list of candidates. Supports filtering by name, position, fit score, education.",
     requestBody: "N/A (Query params: `name`, `positionId`, `minFitScore`, `maxFitScore`, `education`)",
     response: "JSON: `Candidate[]` (Array of candidate objects)",
-    curlExample: `curl -H 'Authorization: Bearer <YOUR_AUTH_TOKEN_OR_COOKIE>' \\\n` +
-                 `  'http://localhost:9002/api/candidates?positionId=your-position-id'`,
+    curlExample: `curl 'http://localhost:9002/api/candidates?positionId=your-position-id'`,
   },
   {
     method: "POST",
@@ -48,7 +46,6 @@ const apiEndpoints: ApiEndpoint[] = [
     requestBody: "JSON: See `createCandidateSchema` in API route; requires `name`, `email`, `status`. `parsedData` (CandidateDetails) is optional. `positionId` (nullable).",
     response: "JSON: `Candidate` (Newly created candidate object)",
     curlExample: `curl -X POST \\\n` +
-                 `  -H 'Authorization: Bearer <YOUR_AUTH_TOKEN_OR_COOKIE>' \\\n` +
                  `  -H 'Content-Type: application/json' \\\n` +
                  `  -d '{"name":"John Doe", "email":"john@example.com", "status":"Applied", "parsedData": { "personal_info": {"firstname":"John", "lastname":"Doe"}, "contact_info": {"email":"john@example.com"}}, "positionId": null}' \\\n` +
                  `  http://localhost:9002/api/candidates`,
@@ -59,8 +56,7 @@ const apiEndpoints: ApiEndpoint[] = [
     description: "Retrieve details for a specific candidate, including transition history.",
     requestBody: "N/A (Path parameter: `id`)",
     response: "JSON: `Candidate` (Single candidate object with transition history)",
-    curlExample: `curl -H 'Authorization: Bearer <YOUR_AUTH_TOKEN_OR_COOKIE>' \\\n` +
-                 `  http://localhost:9002/api/candidates/your-candidate-id`,
+    curlExample: `curl http://localhost:9002/api/candidates/your-candidate-id`,
   },
   {
     method: "PUT",
@@ -69,7 +65,6 @@ const apiEndpoints: ApiEndpoint[] = [
     requestBody: "JSON: `{ name?: string, status?: CandidateStatus, parsedData?: CandidateDetails, ... }` (See `updateCandidateSchema`)",
     response: "JSON: `Candidate` (Updated candidate object with transition history)",
     curlExample: `curl -X PUT \\\n` +
-                 `  -H 'Authorization: Bearer <YOUR_AUTH_TOKEN_OR_COOKIE>' \\\n` +
                  `  -H 'Content-Type: application/json' \\\n` +
                  `  -d '{"status":"Interviewing"}' \\\n` +
                  `  http://localhost:9002/api/candidates/your-candidate-id`,
@@ -80,9 +75,7 @@ const apiEndpoints: ApiEndpoint[] = [
     description: "Delete a candidate. Also deletes associated transition records.",
     requestBody: "N/A (Path parameter: `id`)",
     response: "JSON: `{ message: 'Candidate deleted successfully' }`",
-    curlExample: `curl -X DELETE \\\n` +
-                 `  -H 'Authorization: Bearer <YOUR_AUTH_TOKEN_OR_COOKIE>' \\\n` +
-                 `  http://localhost:9002/api/candidates/your-candidate-id`,
+    curlExample: `curl -X DELETE http://localhost:9002/api/candidates/your-candidate-id`,
   },
   {
     method: "POST",
@@ -91,7 +84,6 @@ const apiEndpoints: ApiEndpoint[] = [
     requestBody: "FormData: `pdfFile`: File (PDF)",
     response: "JSON: `{ message: 'PDF successfully sent to n8n workflow for candidate creation.', n8nResponse?: any }`",
     curlExample: `curl -X POST \\\n` +
-                 `  -H 'Authorization: Bearer <YOUR_AUTH_TOKEN_OR_COOKIE>' \\\n` +
                  `  -F 'pdfFile=@new_candidate_resume.pdf' \\\n` +
                  `  http://localhost:9002/api/candidates/upload-for-n8n`,
   },
@@ -101,8 +93,7 @@ const apiEndpoints: ApiEndpoint[] = [
     description: "Retrieve a list of job positions.",
     requestBody: "N/A",
     response: "JSON: `Position[]` (Array of position objects)",
-    curlExample: `curl -H 'Authorization: Bearer <YOUR_AUTH_TOKEN_OR_COOKIE>' \\\n` +
-                 `  http://localhost:9002/api/positions`,
+    curlExample: `curl http://localhost:9002/api/positions`,
   },
   {
     method: "POST",
@@ -111,7 +102,6 @@ const apiEndpoints: ApiEndpoint[] = [
     requestBody: "JSON: `{ title: string, department: string, description?: string, isOpen: boolean, position_level?: string }`",
     response: "JSON: `Position` (Newly created position object)",
     curlExample: `curl -X POST \\\n` +
-                 `  -H 'Authorization: Bearer <YOUR_AUTH_TOKEN_OR_COOKIE>' \\\n` +
                  `  -H 'Content-Type: application/json' \\\n` +
                  `  -d '{"title":"New Role", "department":"Engineering", "isOpen":true, "position_level":"Senior"}' \\\n` +
                  `  http://localhost:9002/api/positions`,
@@ -122,8 +112,7 @@ const apiEndpoints: ApiEndpoint[] = [
     description: "Retrieve details for a specific position.",
     requestBody: "N/A (Path parameter: `id`)",
     response: "JSON: `Position` (Single position object)",
-    curlExample: `curl -H 'Authorization: Bearer <YOUR_AUTH_TOKEN_OR_COOKIE>' \\\n` +
-                 `  http://localhost:9002/api/positions/your-position-id`,
+    curlExample: `curl http://localhost:9002/api/positions/your-position-id`,
   },
   {
     method: "PUT",
@@ -132,7 +121,6 @@ const apiEndpoints: ApiEndpoint[] = [
     requestBody: "JSON: `{ title?: string, department?: string, isOpen?: boolean, position_level?: string, ... }` (See `updatePositionSchema`)",
     response: "JSON: `Position` (Updated position object)",
     curlExample: `curl -X PUT \\\n` +
-                 `  -H 'Authorization: Bearer <YOUR_AUTH_TOKEN_OR_COOKIE>' \\\n` +
                  `  -H 'Content-Type: application/json' \\\n` +
                  `  -d '{"isOpen":false, "position_level":"Lead"}' \\\n` +
                  `  http://localhost:9002/api/positions/your-position-id`,
@@ -143,27 +131,23 @@ const apiEndpoints: ApiEndpoint[] = [
     description: "Delete a position. Denied if candidates are associated.",
     requestBody: "N/A (Path parameter: `id`)",
     response: "JSON: `{ message: 'Position deleted successfully' }` (or 409 if candidates are associated)",
-    curlExample: `curl -X DELETE \\\n` +
-                 `  -H 'Authorization: Bearer <YOUR_AUTH_TOKEN_OR_COOKIE>' \\\n` +
-                 `  http://localhost:9002/api/positions/your-position-id`,
+    curlExample: `curl -X DELETE http://localhost:9002/api/positions/your-position-id`,
   },
   {
     method: "GET",
     path: "/api/users",
-    description: "Retrieve a list of application users (Admin only).",
+    description: "Retrieve a list of application users.",
     requestBody: "N/A",
     response: "JSON: `UserProfile[]` (Array of user profile objects)",
-    curlExample: `curl -H 'Authorization: Bearer <YOUR_AUTH_TOKEN_OR_COOKIE>' \\\n` +
-                 `  http://localhost:9002/api/users`,
+    curlExample: `curl http://localhost:9002/api/users`,
   },
   {
     method: "POST",
     path: "/api/users",
-    description: "Create a new application user (Admin only). Passwords are hashed with bcrypt.",
+    description: "Create a new application user. Passwords are hashed with bcrypt.",
     requestBody: "JSON: `{ name: string, email: string, password: string, role: UserRole, modulePermissions?: PlatformModuleId[] }`",
     response: "JSON: `UserProfile` (Newly created user profile object, password not returned)",
     curlExample: `curl -X POST \\\n` +
-                 `  -H 'Authorization: Bearer <YOUR_AUTH_TOKEN_OR_COOKIE>' \\\n` +
                  `  -H 'Content-Type: application/json' \\\n` +
                  `  -d '{"name":"Test User", "email":"test@example.com", "password":"strongpassword123", "role":"Recruiter"}' \\\n` +
                  `  http://localhost:9002/api/users`,
@@ -171,11 +155,10 @@ const apiEndpoints: ApiEndpoint[] = [
   {
     method: "PUT",
     path: "/api/users/{id}",
-    description: "Update an application user (Admin only). Can include newPassword (hashed with bcrypt if provided).",
+    description: "Update an application user. Can include newPassword (hashed with bcrypt if provided).",
     requestBody: "JSON: `{ name?: string, email?: string, newPassword?: string, role?: UserRole, modulePermissions?: PlatformModuleId[] }`",
     response: "JSON: `UserProfile` (Updated user profile object, password not returned)",
     curlExample: `curl -X PUT \\\n` +
-                 `  -H 'Authorization: Bearer <YOUR_AUTH_TOKEN_OR_COOKIE>' \\\n` +
                  `  -H 'Content-Type: application/json' \\\n` +
                  `  -d '{"role":"Admin"}' \\\n` +
                  `  http://localhost:9002/api/users/user-id-to-update`,
@@ -183,12 +166,10 @@ const apiEndpoints: ApiEndpoint[] = [
   {
     method: "DELETE",
     path: "/api/users/{id}",
-    description: "Delete an application user (Admin only). Cannot delete self.",
+    description: "Delete an application user.",
     requestBody: "N/A (Path parameter: `id`)",
     response: "JSON: `{ message: 'User deleted successfully' }`",
-    curlExample: `curl -X DELETE \\\n` +
-                 `  -H 'Authorization: Bearer <YOUR_AUTH_TOKEN_OR_COOKIE>' \\\n` +
-                 `  http://localhost:9002/api/users/user-id-to-delete`,
+    curlExample: `curl -X DELETE http://localhost:9002/api/users/user-id-to-delete`,
   },
   {
     method: "POST",
@@ -197,7 +178,6 @@ const apiEndpoints: ApiEndpoint[] = [
     requestBody: "JSON: `{ level: LogLevel, message: string, source?: string, timestamp?: ISOString, actingUserId?: string, details?: object }`",
     response: "JSON: `LogEntry` (Newly created log entry object)",
     curlExample: `curl -X POST \\\n` +
-                 `  -H 'Authorization: Bearer <YOUR_AUTH_TOKEN_OR_COOKIE_IF_APPLICABLE_FOR_LOGGING>' \\\n` +
                  `  -H 'Content-Type: application/json' \\\n` +
                  `  -d '{"level":"AUDIT", "message":"User logged in", "source":"AuthAPI", "actingUserId":"user-id-123"}' \\\n` +
                  `  http://localhost:9002/api/logs`,
@@ -205,11 +185,10 @@ const apiEndpoints: ApiEndpoint[] = [
   {
     method: "GET",
     path: "/api/logs",
-    description: "Retrieve a list of log entries (Admin only). Supports pagination and level filtering.",
+    description: "Retrieve a list of log entries. Supports pagination and level filtering.",
     requestBody: "N/A (Query params: `limit`, `offset`, `level`)",
     response: "JSON: `{ logs: LogEntry[], total: number }`",
-    curlExample: `curl -H 'Authorization: Bearer <YOUR_AUTH_TOKEN_OR_COOKIE>' \\\n` +
-                 `  'http://localhost:9002/api/logs?level=ERROR&limit=10'`,
+    curlExample: `curl 'http://localhost:9002/api/logs?level=ERROR&limit=10'`,
   },
   {
     method: "POST",
@@ -235,11 +214,10 @@ const apiEndpoints: ApiEndpoint[] = [
   {
     method: "PUT",
     path: "/api/transitions/{id}",
-    description: "Update the notes of a specific transition record (Admin/Recruiter only).",
+    description: "Update the notes of a specific transition record.",
     requestBody: "JSON: `{ notes?: string }`",
     response: "JSON: `TransitionRecord` (Updated transition record)",
     curlExample: `curl -X PUT \\\n` +
-                 `  -H 'Authorization: Bearer <YOUR_AUTH_TOKEN_OR_COOKIE>' \\\n` +
                  `  -H 'Content-Type: application/json' \\\n` +
                  `  -d '{"notes":"Updated notes for this stage."}' \\\n` +
                  `  http://localhost:9002/api/transitions/transition-record-id`,
@@ -247,37 +225,43 @@ const apiEndpoints: ApiEndpoint[] = [
   {
     method: "DELETE",
     path: "/api/transitions/{id}",
-    description: "Delete a specific transition record (Admin/Recruiter only).",
+    description: "Delete a specific transition record.",
     requestBody: "N/A (Path parameter: `id`)",
     response: "JSON: `{ message: 'Transition record deleted successfully' }`",
-    curlExample: `curl -X DELETE \\\n` +
-                 `  -H 'Authorization: Bearer <YOUR_AUTH_TOKEN_OR_COOKIE>' \\\n` +
-                 `  http://localhost:9002/api/transitions/transition-record-id`,
+    curlExample: `curl -X DELETE http://localhost:9002/api/transitions/transition-record-id`,
   },
   {
     method: "GET",
     path: "/api/setup/check-db-schema",
-    description: "Checks if essential database tables exist (Admin only).",
+    description: "Checks if essential database tables exist.",
     requestBody: "N/A",
     response: "JSON: `{ status: 'ok' | 'partial' | 'error', message: string, missingTables?: string[] }`",
-    curlExample: `curl -H 'Authorization: Bearer <YOUR_AUTH_TOKEN_OR_COOKIE>' \\\n` +
-                 `  http://localhost:9002/api/setup/check-db-schema`,
+    curlExample: `curl http://localhost:9002/api/setup/check-db-schema`,
   },
   {
     method: "GET",
     path: "/api/setup/check-minio-bucket",
-    description: "Checks if the configured MinIO resume bucket exists (Admin only).",
+    description: "Checks if the configured MinIO resume bucket exists.",
     requestBody: "N/A",
     response: "JSON: `{ status: 'ok' | 'error', message: string }` or 404 if bucket not found.",
-    curlExample: `curl -H 'Authorization: Bearer <YOUR_AUTH_TOKEN_OR_COOKIE>' \\\n` +
-                 `  http://localhost:9002/api/setup/check-minio-bucket`,
+    curlExample: `curl http://localhost:9002/api/setup/check-minio-bucket`,
+  },
+  {
+    method: "POST",
+    path: "/api/n8n/webhook-proxy",
+    description: "Proxies a PDF file upload (as data URI) to the generic n8n webhook (`N8N_GENERIC_PDF_WEBHOOK_URL`).",
+    requestBody: "FormData: `pdfFile`: File (PDF)",
+    response: "JSON: `{ message: 'PDF successfully sent to n8n workflow.', n8nResponse?: any }`",
+    curlExample: `curl -X POST \\\n` +
+                 `  -F 'pdfFile=@generic_document.pdf' \\\n` +
+                 `  http://localhost:9002/api/n8n/webhook-proxy`,
   },
 ];
 
 const getMethodBadgeVariant = (method: string) => {
   switch (method.toUpperCase()) {
     case "GET":
-    case "POST":
+    case "POST": // Changed to match GET
       return "outline";
     case "PUT":
       return "secondary";
@@ -329,7 +313,7 @@ export default function ApiDocumentationPage() {
           </CardTitle>
           <CardDescription>
             Overview of available API endpoints for NCC Candidate Management.
-            Replace localhost:9002 with your actual domain.
+            The base URL is assumed to be <code>http://localhost:9002</code> for these examples.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
@@ -375,7 +359,7 @@ export default function ApiDocumentationPage() {
           </div>
 
           <div className="mt-6 text-sm text-muted-foreground space-y-2">
-            <p><strong>Authentication:</strong> Most API endpoints require authentication. When interacting with the UI, this is handled by NextAuth.js session cookies. For direct API calls (e.g., from external tools), authentication should be handled by your API Gateway (like Kong), which would typically issue and validate Bearer tokens. The example cURL commands include a placeholder for an `Authorization: Bearer &lt;YOUR_AUTH_TOKEN_OR_COOKIE&gt;` header. Ensure your API Gateway is configured to work with your application's session management or token validation as needed.</p>
+            <p><strong>Authentication:</strong> Most API endpoints are currently public. Specific endpoints like <code>/api/auth/change-password</code> require user authentication (handled by NextAuth.js session cookies when interacting with the UI, or a Bearer token from an API Gateway like Kong for direct calls). Your application's user interface relies on NextAuth.js for managing user sessions.</p>
             <p><strong>Base URL:</strong> All API paths are relative to the application's base URL (e.g., <code>http://localhost:9002</code> or your production domain).</p>
             <p><strong>Error Handling:</strong> Standard HTTP status codes are used (e.g., 200 OK, 201 Created, 400 Bad Request, 401 Unauthorized, 403 Forbidden, 404 Not Found, 500 Internal Server Error). Error responses typically include a JSON body: <code>{`{ "message": "Error description", "errors?": { ... } }`}</code>.</p>
             <p><strong>Content Type:</strong> For POST and PUT requests with a body, set <code>Content-Type: application/json</code>, unless it's a file upload (<code>multipart/form-data</code> for resume uploads).</p>
@@ -392,7 +376,7 @@ export default function ApiDocumentationPage() {
               </DialogTitle>
               <DialogDescription>
                 Example cURL command for <strong>{selectedCurlEndpoint.method}</strong> <code>{selectedCurlEndpoint.path}</code>.
-                Remember to replace placeholders like <code>&lt;YOUR_AUTH_TOKEN_OR_COOKIE&gt;</code> with actual values. For direct API calls, this would be a token provided by your API Gateway (Kong).
+                Remember to replace placeholders. For endpoints that require authentication (like changing a password), a proper session cookie or Bearer token (if using an API Gateway) would be needed.
               </DialogDescription>
             </DialogHeader>
             <div className="my-4 relative group">
