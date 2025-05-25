@@ -58,14 +58,22 @@ export default function IntegrationsSettingsPage() {
         <div className="space-y-6">
           <Card className="w-full max-w-xl mx-auto shadow-lg animate-pulse">
             <CardHeader>
-              <CardTitle className="h-8 bg-muted rounded"></CardTitle>
-              <CardDescription className="h-4 bg-muted rounded mt-1"></CardDescription>
+              <div className="h-8 bg-muted rounded w-1/2 mb-1"></div>
+              <div className="h-4 bg-muted rounded w-3/4"></div>
             </CardHeader>
             <CardContent className="space-y-8">
               <div>
                 <div className="h-6 bg-muted rounded w-1/4 mb-2"></div>
                 <div className="h-10 bg-muted rounded"></div>
               </div>
+            </CardContent>
+          </Card>
+           <Card className="w-full max-w-xl mx-auto shadow-lg animate-pulse mt-6">
+            <CardHeader>
+              <div className="h-8 bg-muted rounded w-1/2 mb-1"></div>
+              <div className="h-4 bg-muted rounded w-3/4"></div>
+            </CardHeader>
+            <CardContent className="space-y-8">
               <div>
                 <div className="h-6 bg-muted rounded w-1/3 mb-2"></div>
                 <div className="h-10 bg-muted rounded mb-4"></div>
@@ -83,19 +91,15 @@ export default function IntegrationsSettingsPage() {
   }
 
   return (
-    <div className="space-y-8">
-      <Card className="w-full max-w-xl mx-auto shadow-lg">
+    <div className="space-y-8 max-w-xl mx-auto">
+       <Card className="shadow-lg">
         <CardHeader>
           <CardTitle className="flex items-center">
-            <Settings className="mr-2 h-6 w-6 text-primary" /> Integrations
+            <Zap className="mr-2 h-6 w-6 text-orange-500" /> Workflow Automation (n8n)
           </CardTitle>
-          <CardDescription>Manage connections to external services like n8n and SMTP for email. Settings are saved locally.</CardDescription>
+          <CardDescription>Configure your n8n webhook for automated workflows.</CardDescription>
         </CardHeader>
-        <CardContent className="space-y-6">
-          <section>
-            <h3 className="text-lg font-semibold text-foreground mb-2 flex items-center">
-              <Zap className="mr-2 h-5 w-5 text-orange-500" /> Workflow Automation (n8n)
-            </h3>
+        <CardContent>
             <div>
               <Label htmlFor="n8n-webhook-url">n8n Webhook URL</Label>
               <Input
@@ -110,74 +114,74 @@ export default function IntegrationsSettingsPage() {
                 Enter the URL for your n8n webhook to process resume uploads or other automations.
               </p>
             </div>
-          </section>
-
-          <section>
-            <h3 className="text-lg font-semibold text-foreground mb-2 flex items-center">
-              <Mail className="mr-2 h-5 w-5 text-blue-500" /> SMTP Configuration (Email Sending)
-            </h3>
-            <div className="space-y-4">
-              <div>
-                <Label htmlFor="smtp-host">SMTP Host</Label>
-                <Input
-                  id="smtp-host"
-                  type="text"
-                  placeholder="smtp.example.com"
-                  value={smtpHost}
-                  onChange={(e) => setSmtpHost(e.target.value)}
-                  className="mt-1"
-                />
-              </div>
-              <div>
-                <Label htmlFor="smtp-port">SMTP Port</Label>
-                <Input
-                  id="smtp-port"
-                  type="number"
-                  placeholder="587"
-                  value={smtpPort}
-                  onChange={(e) => setSmtpPort(e.target.value)}
-                  className="mt-1"
-                />
-              </div>
-              <div>
-                <Label htmlFor="smtp-user">SMTP Username</Label>
-                <Input
-                  id="smtp-user"
-                  type="text"
-                  placeholder="your-email@example.com"
-                  value={smtpUser}
-                  onChange={(e) => setSmtpUser(e.target.value)}
-                  className="mt-1"
-                />
-              </div>
-              <div>
-                <Label htmlFor="smtp-password">SMTP Password</Label>
-                <Input
-                  id="smtp-password"
-                  type="password"
-                  placeholder="••••••••"
-                  value={smtpPassword}
-                  onChange={(e) => setSmtpPassword(e.target.value)}
-                  className="mt-1"
-                />
-                 <p className="text-xs text-muted-foreground mt-1">
-                  Note: Password is not saved in this prototype. Use environment variables in production.
-                </p>
-              </div>
-            </div>
-             <p className="text-sm text-muted-foreground mt-2">
-                These settings are for sending emails (e.g., notifications). Use environment variables for secure storage in production.
-              </p>
-          </section>
         </CardContent>
-        <CardFooter>
+      </Card>
+
+      <Card className="shadow-lg">
+        <CardHeader>
+          <CardTitle className="flex items-center">
+            <Mail className="mr-2 h-6 w-6 text-blue-500" /> SMTP Configuration
+          </CardTitle>
+          <CardDescription>Set up your SMTP server for sending application emails.</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+            <div>
+              <Label htmlFor="smtp-host">SMTP Host</Label>
+              <Input
+                id="smtp-host"
+                type="text"
+                placeholder="smtp.example.com"
+                value={smtpHost}
+                onChange={(e) => setSmtpHost(e.target.value)}
+                className="mt-1"
+              />
+            </div>
+            <div>
+              <Label htmlFor="smtp-port">SMTP Port</Label>
+              <Input
+                id="smtp-port"
+                type="number"
+                placeholder="587"
+                value={smtpPort}
+                onChange={(e) => setSmtpPort(e.target.value)}
+                className="mt-1"
+              />
+            </div>
+            <div>
+              <Label htmlFor="smtp-user">SMTP Username</Label>
+              <Input
+                id="smtp-user"
+                type="text"
+                placeholder="your-email@example.com"
+                value={smtpUser}
+                onChange={(e) => setSmtpUser(e.target.value)}
+                className="mt-1"
+              />
+            </div>
+            <div>
+              <Label htmlFor="smtp-password">SMTP Password</Label>
+              <Input
+                id="smtp-password"
+                type="password"
+                placeholder="••••••••"
+                value={smtpPassword}
+                onChange={(e) => setSmtpPassword(e.target.value)}
+                className="mt-1"
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                Note: Password is not saved in this prototype. Use environment variables in production.
+              </p>
+            </div>
+             <p className="text-sm text-muted-foreground pt-2">
+                These settings are for sending emails (e.g., notifications). Use environment variables for secure storage in production.
+            </p>
+        </CardContent>
+         <CardFooter>
           <Button onClick={handleSaveIntegrations}>
-            <Save className="mr-2 h-4 w-4" /> Save Integrations
+            <Save className="mr-2 h-4 w-4" /> Save All Integration Settings
           </Button>
         </CardFooter>
       </Card>
     </div>
   );
 }
-
-    
