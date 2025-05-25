@@ -1,6 +1,6 @@
 
 "use client";
-import React, { type ReactNode, useState, useEffect } from "react"; // Added React, useState, useEffect
+import React, { type ReactNode, useState, useEffect } from "react";
 import {
   SidebarProvider,
   Sidebar,
@@ -17,14 +17,19 @@ import { Separator } from "@/components/ui/separator";
 import { Package2 } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { SetupFlowHandler } from './SetupFlowHandler';
-import Image from 'next/image'; // For better image handling
+import Image from 'next/image';
 
 const APP_LOGO_DATA_URL_KEY = 'appLogoDataUrl';
 
 function getPageTitle(pathname: string): string {
   if (pathname === "/") return "Dashboard";
-  if (pathname.startsWith("/candidates")) return "Candidates";
-  if (pathname.startsWith("/positions")) return "Positions";
+  if (pathname.startsWith("/candidates")) {
+    if (pathname.split('/').length === 3 && pathname.split('/')[2] !== '') {
+        return "Candidate Details"; // Or fetch candidate name for more specific title
+    }
+    return "Candidates";
+  }
+  if (pathname.startsWith("/positions")) return "Job Positions";
   if (pathname.startsWith("/users")) return "Manage Users";
   if (pathname.startsWith("/settings/preferences")) return "Preferences";
   if (pathname.startsWith("/settings/integrations")) return "Integrations";
@@ -60,14 +65,14 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
 
 
   if (pathname === "/auth/signin") {
-    return <>{children}</>; 
+    return <>{children}</>;
   }
 
   return (
-    <SetupFlowHandler> 
+    <SetupFlowHandler>
       <SidebarProvider defaultOpen>
         <Sidebar collapsible="icon" variant="sidebar" className="border-r" data-sidebar="sidebar">
-          <SidebarHeader className="p-4 flex items-center justify-center h-16"> {/* Changed justify-between to justify-center */}
+          <SidebarHeader className="p-4 flex items-center justify-center h-16">
             <Link href="/" className="flex items-center gap-2 font-semibold text-primary group-data-[collapsible=icon]:hidden">
               {isClient && appLogoUrl ? (
                 <Image src={appLogoUrl} alt="App Logo" width={32} height={32} className="h-8 w-8 object-contain" />
@@ -105,6 +110,3 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
     </SetupFlowHandler>
   );
 }
-    
-
-    

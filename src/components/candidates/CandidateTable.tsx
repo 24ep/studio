@@ -20,24 +20,26 @@ import type { Candidate, CandidateStatus, TransitionRecord } from '@/lib/types';
 import { ManageTransitionsModal } from './ManageTransitionsModal';
 import { format, parseISO } from 'date-fns';
 import { useToast } from "@/hooks/use-toast";
+import Link from 'next/link'; // Import Link
 
 interface CandidateTableProps {
   candidates: Candidate[];
-  onUpdateCandidate: (candidateId: string, status: CandidateStatus, newTransitionHistory: TransitionRecord[]) => Promise<void>;
-  onDeleteCandidate: (candidateId: string) => Promise<void>; 
+  onUpdateCandidate: (candidateId: string, status: CandidateStatus, newTransitionHistory?: TransitionRecord[]) => Promise<void>;
+  onDeleteCandidate: (candidateId: string) => Promise<void>;
   onOpenUploadModal: (candidate: Candidate) => void;
   isLoading?: boolean;
+  onRefreshCandidateData: (candidateId: string) => Promise<void>;
 }
 
 const getStatusBadgeVariant = (status: CandidateStatus): "default" | "secondary" | "destructive" | "outline" => {
   switch (status) {
     case 'Hired':
     case 'Offer Accepted':
-      return 'default'; 
+      return 'default';
     case 'Interview Scheduled':
     case 'Interviewing':
     case 'Offer Extended':
-      return 'secondary'; 
+      return 'secondary';
     case 'Rejected':
       return 'destructive';
     case 'Applied':
@@ -50,7 +52,7 @@ const getStatusBadgeVariant = (status: CandidateStatus): "default" | "secondary"
   }
 };
 
-export function CandidateTable({ candidates, onUpdateCandidate, onDeleteCandidate, onOpenUploadModal, isLoading }: CandidateTableProps) {
+export function CandidateTable({ candidates, onUpdateCandidate, onDeleteCandidate, onOpenUploadModal, isLoading, onRefreshCandidateData }: CandidateTableProps) {
   const [selectedCandidateForModal, setSelectedCandidateForModal] = useState<Candidate | null>(null);
   const [isTransitionsModalOpen, setIsTransitionsModalOpen] = useState(false);
   const { toast } = useToast();
@@ -60,25 +62,17 @@ export function CandidateTable({ candidates, onUpdateCandidate, onDeleteCandidat
     setIsTransitionsModalOpen(true);
   };
 
-  const handleViewDetails = (candidate: Candidate) => {
-    toast({ title: "View Details", description: `Viewing details for ${candidate.name}. (Not implemented)` });
-  };
-  
   const handleDeleteClick = async (candidate: Candidate) => {
-    if (window.confirm(`Are you sure you want to delete ${candidate.name}?`)) {
-      try {
-        await onDeleteCandidate(candidate.id);
-        toast({ title: "Candidate Deleted", description: `${candidate.name} has been deleted.` });
-      } catch (error) {
-        // Parent component (CandidatesPage) should show a toast on error from onDeleteCandidate
-      }
-    }
+    // This confirmation will be handled by an AlertDialog in CandidatesPage
+    // For now, directly call onDeleteCandidate if confirmation is managed by parent
+    onDeleteCandidate(candidate.id);
   };
 
-  const handleTransitionsModalUpdateCandidate = async (updatedCandidate: Candidate) => {
+  const handleTransitionsModalUpdateCandidate = async (candidateId: string, status: CandidateStatus, newTransitionHistory?: TransitionRecord[]) => {
     try {
-      await onUpdateCandidate(updatedCandidate.id, updatedCandidate.status, updatedCandidate.transitionHistory);
-      setIsTransitionsModalOpen(false); 
+      await onUpdateCandidate(candidateId, status, newTransitionHistory);
+      setIsTransitionsModalOpen(false);
+      // Parent (CandidatesPage) will handle UI update and toast
     } catch (error) {
       // Error is toasted by parent
     }
@@ -126,7 +120,7 @@ export function CandidateTable({ candidates, onUpdateCandidate, onDeleteCandidat
                 <TableCell>
                   <div className="flex items-center gap-3">
                     <Avatar className="h-10 w-10">
-                      <AvatarImage src={`https://placehold.co/40x40.png?text=${candidate.name.charAt(0)}`} alt={candidate.name} data-ai-hint="person avatar" />
+                      <AvatarImage src={candidate.parsedData?.personal_info?.avatar_url || `https://placehold.co/40x40.png?text=${candidate.name.charAt(0)}`} alt={candidate.name} data-ai-hint="person avatar" />
                       <AvatarFallback>{candidate.name.charAt(0).toUpperCase()}</AvatarFallback>
                     </Avatar>
                     <div>
@@ -138,9 +132,7 @@ export function CandidateTable({ candidates, onUpdateCandidate, onDeleteCandidat
                 <TableCell>
                   <div className="font-medium text-foreground">{candidate.position?.title || 'N/A'}</div>
                    <div className="text-xs text-muted-foreground">
-                    { (candidate.parsedData as any)?.education?.[0]?.university || 
-                      ((candidate.parsedData as any)?.education?.[0] as string) || // Handle old string array format
-                      'Education N/A'}
+                    { candidate.parsedData?.education?.[0]?.university || 'Education N/A'}
                   </div>
                 </TableCell>
                 <TableCell>
@@ -158,10 +150,10 @@ export function CandidateTable({ candidates, onUpdateCandidate, onDeleteCandidat
                   {format(parseISO(candidate.updatedAt || candidate.createdAt!), "MMM d, yyyy")}
                 </TableCell>
                 <TableCell className="text-xs">
-                  {candidate.resumePath ? 
+                  {candidate.resumePath ?
                     <span className="text-green-600 truncate block max-w-[100px] hover:underline cursor-pointer" title={candidate.resumePath}>
-                      {candidate.resumePath.split('-').pop() || candidate.resumePath}
-                    </span> 
+                      {candidate.resumePath.split('-').pop()?.split('.').slice(0,-1).join('.') || candidate.resumePath.split('-').pop()}
+                    </span>
                     : <span className="text-muted-foreground">No resume</span>}
                 </TableCell>
                 <TableCell className="text-right">
@@ -173,8 +165,10 @@ export function CandidateTable({ candidates, onUpdateCandidate, onDeleteCandidat
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={() => handleViewDetails(candidate)}>
-                        <Eye className="mr-2 h-4 w-4" /> View Details
+                      <DropdownMenuItem asChild>
+                        <Link href={`/candidates/${candidate.id}`}>
+                          <Eye className="mr-2 h-4 w-4" /> View Details
+                        </Link>
                       </DropdownMenuItem>
                       <DropdownMenuItem onClick={() => handleManageTransitionsClick(candidate)}>
                         <FileEdit className="mr-2 h-4 w-4" /> Manage Transitions
@@ -183,7 +177,7 @@ export function CandidateTable({ candidates, onUpdateCandidate, onDeleteCandidat
                         <UploadCloud className="mr-2 h-4 w-4" /> Upload Resume
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />
-                      <DropdownMenuItem onClick={() => handleDeleteClick(candidate)} className="text-destructive hover:!bg-destructive/10 focus:!bg-destructive/10 focus:!text-destructive">
+                      <DropdownMenuItem onClick={() => onDeleteCandidate(candidate.id)} className="text-destructive hover:!bg-destructive/10 focus:!bg-destructive/10 focus:!text-destructive">
                         <Trash2 className="mr-2 h-4 w-4" /> Delete
                       </DropdownMenuItem>
                     </DropdownMenuContent>
@@ -203,6 +197,7 @@ export function CandidateTable({ candidates, onUpdateCandidate, onDeleteCandidat
             if (!isOpen) setSelectedCandidateForModal(null);
           }}
           onUpdateCandidate={handleTransitionsModalUpdateCandidate}
+          onRefreshCandidateData={onRefreshCandidateData}
         />
       )}
     </>

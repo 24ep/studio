@@ -1,0 +1,415 @@
+
+// src/app/candidates/[id]/page.tsx
+"use client";
+
+import { useState, useEffect, useCallback } from 'react';
+import { useParams, useRouter } from 'next/navigation';
+import type { Candidate, CandidateDetails, TransitionRecord, EducationEntry, ExperienceEntry, SkillEntry, JobSuitableEntry } from '@/lib/types';
+import { useToast } from "@/hooks/use-toast";
+import { signIn, useSession } from 'next-auth/react';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Badge } from '@/components/ui/badge';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Separator } from '@/components/ui/separator';
+import { Progress } from '@/components/ui/progress';
+import { format, parseISO } from 'date-fns';
+import { ArrowLeft, Briefcase, CalendarDays, DollarSign, Download, Edit, GraduationCap, HardDrive, Info, LinkIcon, Loader2, Mail, MapPin, MessageSquare, Percent, Phone, ServerCrash, ShieldAlert, Star, Tag, Trash2, UploadCloud, UserCircle, UserCog, Zap } from 'lucide-react';
+import { UploadResumeModal } from '@/components/candidates/UploadResumeModal';
+import { ManageTransitionsModal } from '@/components/candidates/ManageTransitionsModal';
+
+const getStatusBadgeVariant = (status: Candidate['status']): "default" | "secondary" | "destructive" | "outline" => {
+  // (Same as in CandidateTable, can be centralized later)
+  switch (status) {
+    case 'Hired': case 'Offer Accepted': return 'default';
+    case 'Interview Scheduled': case 'Interviewing': case 'Offer Extended': return 'secondary';
+    case 'Rejected': return 'destructive';
+    default: return 'outline';
+  }
+};
+
+export default function CandidateDetailPage() {
+  const params = useParams();
+  const router = useRouter();
+  const candidateId = params.id as string;
+
+  const [candidate, setCandidate] = useState<Candidate | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [fetchError, setFetchError] = useState<string | null>(null);
+  const [authError, setAuthError] = useState(false);
+
+  const { data: session, status: sessionStatus } = useSession();
+  const { toast } = useToast();
+
+  const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
+  const [isTransitionsModalOpen, setIsTransitionsModalOpen] = useState(false);
+
+  const fetchCandidateDetails = useCallback(async () => {
+    if (!candidateId || sessionStatus !== 'authenticated') return;
+    setIsLoading(true);
+    setFetchError(null);
+    setAuthError(false);
+
+    try {
+      const response = await fetch(`/api/candidates/${candidateId}`);
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        const errorMessage = errorData.message || `Failed to fetch candidate: ${response.statusText || `Status ${response.status}`}`;
+        if (response.status === 401) {
+          setAuthError(true);
+          signIn(undefined, { callbackUrl: `/candidates/${candidateId}` });
+        } else {
+          setFetchError(errorMessage);
+        }
+        setCandidate(null);
+        return;
+      }
+      const data: Candidate = await response.json();
+      setCandidate(data);
+    } catch (error) {
+      console.error("Error fetching candidate details:", error);
+      setFetchError((error as Error).message || "Could not load candidate data.");
+      setCandidate(null);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [candidateId, sessionStatus, toast]);
+
+  useEffect(() => {
+    if (sessionStatus === 'loading') return;
+    if (sessionStatus === 'unauthenticated') {
+      signIn(undefined, { callbackUrl: `/candidates/${candidateId}` });
+      return;
+    }
+    if (candidateId) {
+      fetchCandidateDetails();
+    }
+  }, [candidateId, sessionStatus, fetchCandidateDetails]);
+
+  const handleUploadSuccess = (updatedCandidate: Candidate) => {
+    setCandidate(updatedCandidate); // Refresh with updated data
+    setIsUploadModalOpen(false);
+    toast({ title: "Resume Uploaded", description: "Resume successfully updated for this candidate." });
+  };
+
+  const handleTransitionsUpdate = async (id: string, newStatus: Candidate['status'], newTransitionHistory?: TransitionRecord[]) => {
+    if (!candidate) return;
+    // Make API call to update candidate status (this might be part of a broader update function)
+    // For now, assume the parent on CandidateTable handles it, or this function makes the API call.
+    // Here, we'll just refresh the candidate data from the server.
+    await fetchCandidateDetails();
+    setIsTransitionsModalOpen(false);
+    toast({ title: "Status Updated", description: `Candidate status updated to ${newStatus}.` });
+  };
+
+
+  if (isLoading) {
+    return (
+      <div className="flex h-[calc(100vh-8rem)] items-center justify-center">
+        <Loader2 className="h-16 w-16 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (authError) {
+    return (
+      <div className="flex flex-col items-center justify-center h-[calc(100vh-8rem)] text-center p-6">
+        <ShieldAlert className="w-16 h-16 text-destructive mb-4" />
+        <h2 className="text-2xl font-semibold text-foreground mb-2">Access Denied</h2>
+        <p className="text-muted-foreground mb-6">You need to be signed in to view candidate details.</p>
+        <Button onClick={() => signIn(undefined, { callbackUrl: `/candidates/${candidateId}` })}>Sign In</Button>
+      </div>
+    );
+  }
+
+  if (fetchError) {
+    return (
+      <div className="flex flex-col items-center justify-center h-[calc(100vh-8rem)] text-center p-6">
+        <ServerCrash className="w-16 h-16 text-destructive mb-4" />
+        <h2 className="text-2xl font-semibold text-foreground mb-2">Error Loading Candidate</h2>
+        <p className="text-muted-foreground mb-6">{fetchError}</p>
+        <Button onClick={fetchCandidateDetails}>Try Again</Button>
+      </div>
+    );
+  }
+
+  if (!candidate) {
+    return (
+      <div className="flex flex-col items-center justify-center h-[calc(100vh-8rem)] text-center p-6">
+        <UserCircle className="w-16 h-16 text-muted-foreground mb-4" />
+        <h2 className="text-xl font-semibold text-foreground">Candidate Not Found</h2>
+        <p className="text-muted-foreground">The requested candidate could not be found.</p>
+        <Button onClick={() => router.push('/candidates')} className="mt-4">
+          <ArrowLeft className="mr-2 h-4 w-4" /> Back to Candidates
+        </Button>
+      </div>
+    );
+  }
+
+  const parsed = candidate.parsedData as CandidateDetails | null; // Type assertion
+
+  const renderField = (label: string, value?: string | number | null, icon?: React.ElementType) => {
+    if (value === undefined || value === null || value === '') return null;
+    const IconComponent = icon;
+    return (
+      <div className="flex items-start text-sm">
+        {IconComponent && <IconComponent className="h-4 w-4 mr-2 mt-0.5 text-muted-foreground shrink-0" />}
+        <span className="font-medium text-muted-foreground mr-1">{label}:</span>
+        <span className="text-foreground break-words">{value}</span>
+      </div>
+    );
+  };
+
+  return (
+    <div className="space-y-6">
+      <Button variant="outline" onClick={() => router.push('/candidates')} className="mb-4">
+        <ArrowLeft className="mr-2 h-4 w-4" /> Back to All Candidates
+      </Button>
+
+      <Card className="shadow-lg">
+        <CardHeader className="flex flex-row items-start justify-between gap-4">
+          <div className="flex items-center gap-4">
+            <Avatar className="h-20 w-20 border-2 border-primary">
+              <AvatarImage src={parsed?.personal_info?.avatar_url || `https://placehold.co/80x80.png?text=${candidate.name.charAt(0)}`} alt={candidate.name} data-ai-hint="person avatar" />
+              <AvatarFallback className="text-3xl">{candidate.name.charAt(0).toUpperCase()}</AvatarFallback>
+            </Avatar>
+            <div>
+              <CardTitle className="text-3xl">{candidate.name}</CardTitle>
+              {renderField("Email", candidate.email, Mail)}
+              {renderField("Phone", candidate.phone, Phone)}
+            </div>
+          </div>
+          <div className="flex flex-col items-end gap-2">
+            <Badge variant={getStatusBadgeVariant(candidate.status)} className="text-base px-3 py-1 capitalize">{candidate.status}</Badge>
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Percent className="h-4 w-4" /> Fit Score: <span className="font-semibold text-foreground">{candidate.fitScore}%</span>
+            </div>
+            <Progress value={candidate.fitScore} className="w-32 h-2" />
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-2">
+            {renderField("Applied for", candidate.position?.title, Briefcase)}
+            {renderField("Application Date", format(parseISO(candidate.applicationDate), "PPP"), CalendarDays)}
+            {renderField("CV Language", parsed?.cv_language, Tag)}
+            {candidate.resumePath && (
+                <div className="flex items-start text-sm">
+                    <HardDrive className="h-4 w-4 mr-2 mt-0.5 text-muted-foreground shrink-0" />
+                    <span className="font-medium text-muted-foreground mr-1">Resume:</span>
+                    <span className="text-primary hover:underline cursor-pointer break-all" title={candidate.resumePath}>
+                        {candidate.resumePath.split('-').pop()?.split('.').slice(0,-1).join('.') || candidate.resumePath.split('-').pop()}
+                    </span>
+                    {/* <Button variant="link" size="sm" className="h-auto p-0 ml-2"><Download className="h-3.5 w-3.5 mr-1" /> Download</Button> */}
+                </div>
+            )}
+        </CardContent>
+        <CardFooter className="gap-2">
+            <Button variant="outline" onClick={() => setIsUploadModalOpen(true)}><UploadCloud className="mr-2 h-4 w-4" /> Upload New Resume</Button>
+            <Button variant="outline" onClick={() => setIsTransitionsModalOpen(true)}><Edit className="mr-2 h-4 w-4" /> Manage Transitions</Button>
+        </CardFooter>
+      </Card>
+
+      {parsed?.associatedMatchDetails && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center"><Zap className="mr-2 h-5 w-5 text-orange-500" /> n8n Match Details</CardTitle>
+            <CardDescription>Details from automated matching process.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            {renderField("Matched Job Title", parsed.associatedMatchDetails.jobTitle)}
+            {renderField("Fit Score (n8n)", parsed.associatedMatchDetails.fitScore + "%")}
+            {parsed.associatedMatchDetails.n8nJobId && renderField("n8n Job ID", parsed.associatedMatchDetails.n8nJobId)}
+            {parsed.associatedMatchDetails.reasons && parsed.associatedMatchDetails.reasons.length > 0 && (
+              <div>
+                <h4 className="text-sm font-medium text-muted-foreground">Match Reasons:</h4>
+                <ul className="list-disc list-inside pl-4 text-sm text-foreground">
+                  {parsed.associatedMatchDetails.reasons.map((reason, i) => <li key={i}>{reason}</li>)}
+                </ul>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+      
+      {/* Parsed Resume Data Sections */}
+      {parsed && (
+        <div className="grid md:grid-cols-2 gap-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center"><UserCircle className="mr-2 h-5 w-5 text-primary"/>Personal Information</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-1.5">
+              {renderField("Title", parsed.personal_info?.title_honorific)}
+              {renderField("First Name", parsed.personal_info?.firstname)}
+              {renderField("Last Name", parsed.personal_info?.lastname)}
+              {renderField("Nickname", parsed.personal_info?.nickname)}
+              {renderField("Location", parsed.personal_info?.location, MapPin)}
+              {parsed.personal_info?.introduction_aboutme && (
+                <div>
+                  <h4 className="text-sm font-medium text-muted-foreground mb-1 flex items-center"><Info className="h-4 w-4 mr-2"/>About Me:</h4>
+                  <p className="text-sm text-foreground whitespace-pre-wrap bg-muted/50 p-3 rounded-md">{parsed.personal_info.introduction_aboutme}</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle  className="flex items-center"><GraduationCap className="mr-2 h-5 w-5 text-primary"/>Education</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {parsed.education && parsed.education.length > 0 ? (
+                <ScrollArea className="h-60">
+                  <ul className="space-y-4">
+                    {parsed.education.map((edu, index) => (
+                      <li key={index} className="p-3 border rounded-md bg-muted/30">
+                        {renderField("University", edu.university)}
+                        {renderField("Major", edu.major)}
+                        {renderField("Field", edu.field)}
+                        {renderField("Campus", edu.campus)}
+                        {renderField("Period", edu.period, CalendarDays)}
+                        {renderField("Duration", edu.duration)}
+                        {renderField("GPA", edu.GPA)}
+                        {index < parsed.education!.length - 1 && <Separator className="my-3" />}
+                      </li>
+                    ))}
+                  </ul>
+                </ScrollArea>
+              ) : <p className="text-sm text-muted-foreground">No education details provided.</p>}
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {parsed?.experience && parsed.experience.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center"><Briefcase className="mr-2 h-5 w-5 text-primary"/>Experience</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ScrollArea className="max-h-[500px]"> {/* Increased max height for experience */}
+              <ul className="space-y-4">
+                {parsed.experience.map((exp, index) => (
+                  <li key={index} className="p-3 border rounded-md bg-muted/30">
+                    {renderField("Company", exp.company)}
+                    {renderField("Position", exp.position)}
+                    {renderField("Level", exp.postition_level)}
+                    {renderField("Period", exp.period, CalendarDays)}
+                    {renderField("Duration", exp.duration)}
+                    {exp.is_current_position !== undefined && renderField("Current Position", exp.is_current_position ? "Yes" : "No")}
+                    {exp.description && (
+                        <div>
+                            <h4 className="text-sm font-medium text-muted-foreground mt-2 mb-1">Description:</h4>
+                            <p className="text-sm text-foreground whitespace-pre-wrap bg-background p-2 rounded">{exp.description}</p>
+                        </div>
+                    )}
+                     {index < parsed.experience!.length - 1 && <Separator className="my-3" />}
+                  </li>
+                ))}
+              </ul>
+            </ScrollArea>
+          </CardContent>
+        </Card>
+      )}
+      
+      {parsed?.skills && parsed.skills.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center"><Star className="mr-2 h-5 w-5 text-primary"/>Skills</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ScrollArea className="h-60">
+              <ul className="space-y-4">
+                {parsed.skills.map((skillEntry, index) => (
+                  <li key={index} className="p-3 border rounded-md bg-muted/30">
+                    {renderField("Segment", skillEntry.segment_skill)}
+                    {skillEntry.skill && skillEntry.skill.length > 0 && (
+                      <div>
+                        <h4 className="text-sm font-medium text-muted-foreground mt-1.5">Skills:</h4>
+                        <div className="flex flex-wrap gap-1.5 mt-1">
+                          {skillEntry.skill.map((s, i) => <Badge key={i} variant="secondary">{s}</Badge>)}
+                        </div>
+                      </div>
+                    )}
+                    {index < parsed.skills!.length - 1 && <Separator className="my-3" />}
+                  </li>
+                ))}
+              </ul>
+            </ScrollArea>
+          </CardContent>
+        </Card>
+      )}
+
+      {parsed?.job_suitable && parsed.job_suitable.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center"><UserCog className="mr-2 h-5 w-5 text-primary"/>Job Suitability</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ScrollArea className="h-60">
+            <ul className="space-y-4">
+                {parsed.job_suitable.map((job, index) => (
+                  <li key={index} className="p-3 border rounded-md bg-muted/30">
+                    {renderField("Career Path", job.suitable_career)}
+                    {renderField("Job Position", job.suitable_job_position)}
+                    {renderField("Job Level", job.suitable_job_level)}
+                    {renderField("Desired Salary (Bath/Month)", job.suitable_salary_bath_month, DollarSign)}
+                    {index < parsed.job_suitable!.length - 1 && <Separator className="my-3" />}
+                  </li>
+                ))}
+              </ul>
+            </ScrollArea>
+          </CardContent>
+        </Card>
+      )}
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center"><MessageSquare className="mr-2 h-5 w-5 text-primary"/>Transition History</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {candidate.transitionHistory && candidate.transitionHistory.length > 0 ? (
+            <ScrollArea className="h-60">
+            <ul className="space-y-0">
+              {candidate.transitionHistory.sort((a,b) => parseISO(b.date).getTime() - parseISO(a.date).getTime()).map((record, index) => (
+                <li key={record.id} className="p-3 hover:bg-muted/50 transition-colors">
+                  <div className="flex items-start space-x-3">
+                    <CalendarDays className="h-4 w-4 text-muted-foreground mt-1" />
+                    <div className="flex-1">
+                      <p className="text-sm font-semibold text-foreground">{record.stage}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {format(parseISO(record.date), "MMM d, yyyy 'at' h:mm a")}
+                      </p>
+                      {record.notes && <p className="text-sm text-foreground mt-1.5 whitespace-pre-wrap">{record.notes}</p>}
+                    </div>
+                  </div>
+                   {index < candidate.transitionHistory.length - 1 && <Separator className="my-3" />}
+                </li>
+              ))}
+            </ul>
+            </ScrollArea>
+          ) : <p className="text-sm text-muted-foreground">No transition history available.</p>}
+        </CardContent>
+      </Card>
+
+      {candidate && (
+        <>
+        <UploadResumeModal
+            isOpen={isUploadModalOpen}
+            onOpenChange={setIsUploadModalOpen}
+            candidate={candidate}
+            onUploadSuccess={handleUploadSuccess}
+        />
+        <ManageTransitionsModal
+            candidate={candidate}
+            isOpen={isTransitionsModalOpen}
+            onOpenChange={setIsTransitionsModalOpen}
+            onUpdateCandidate={handleTransitionsUpdate}
+            onRefreshCandidateData={fetchCandidateDetails}
+        />
+        </>
+      )}
+    </div>
+  );
+}
