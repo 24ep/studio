@@ -3,7 +3,7 @@
 import * as React from "react"; 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Users, Briefcase, Settings, UsersRound, Code2, ListOrdered, Palette, Zap, Settings2, CheckSquare, DatabaseBackup } from "lucide-react"; 
+import { LayoutDashboard, Users, Briefcase, Settings, UsersRound, Code2, ListOrdered, Palette, Zap, Settings2, CheckSquare, HardDrive, DatabaseBackup } from "lucide-react"; 
 import { cn } from "@/lib/utils";
 import {
   SidebarMenu,
@@ -30,10 +30,10 @@ const mainNavItems = [
   { href: "/positions", label: "Positions", icon: Briefcase },
 ];
 
-const settingsSubItems = [
+const baseSettingsSubItems = [
   { href: "/settings/preferences", label: "Preferences", icon: Palette },
   { href: "/settings/integrations", label: "Integrations", icon: Zap },
-  { href: "/setup", label: "Application Setup", icon: Settings2 }, // Updated label
+  { href: "/setup", label: "Application Setup", icon: Settings2, id: "setup-link" },
   { href: "/system-status", label: "System Status", icon: CheckSquare },
   { href: "/users", label: "Manage Users", icon: UsersRound },
   { href: "/api-docs", label: "API Docs", icon: Code2 },
@@ -43,6 +43,23 @@ const settingsSubItems = [
 export function SidebarNav() {
   const pathname = usePathname();
   const { state: sidebarState, isMobile } = useSidebar();
+  const [isClient, setIsClient] = React.useState(false);
+  const [isSetupDone, setIsSetupDone] = React.useState(false);
+
+  React.useEffect(() => {
+    setIsClient(true);
+    if (typeof window !== 'undefined') {
+      const setupComplete = localStorage.getItem('setupComplete') === 'true';
+      setIsSetupDone(setupComplete);
+    }
+  }, []);
+
+  const settingsSubItems = React.useMemo(() => {
+    if (isClient && isSetupDone) {
+      return baseSettingsSubItems.filter(item => item.id !== "setup-link");
+    }
+    return baseSettingsSubItems;
+  }, [isClient, isSetupDone]);
 
   const isSettingsSectionActive = settingsSubItems.some(item => pathname.startsWith(item.href));
   const isAnyMainNavItemActive = mainNavItems.some(item => pathname === item.href || (item.href !== "/" && pathname.startsWith(item.href)));
@@ -57,7 +74,6 @@ export function SidebarNav() {
     } else if (isAnyMainNavItemActive) {
       setAccordionValue(undefined); // Close accordion if a main nav item is active
     }
-    // If no main nav item is active and settings are not active, accordion remains as is (or closed if initially undefined)
   }, [pathname, isSettingsSectionActive, isAnyMainNavItemActive]);
 
 
@@ -71,7 +87,7 @@ export function SidebarNav() {
                 isActive={pathname === item.href || (item.href !== "/" && pathname.startsWith(item.href))}
                 className="w-full justify-start"
                 tooltip={item.label}
-                onClick={() => setAccordionValue(undefined)} // Close accordion when main item clicked
+                onClick={() => setAccordionValue(undefined)} 
               >
                 <a>
                   <item.icon className="h-5 w-5" />
