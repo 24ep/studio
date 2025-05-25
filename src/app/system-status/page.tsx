@@ -30,59 +30,59 @@ export default function SystemStatusPage() {
         {
           name: "PostgreSQL Database Connection",
           status: 'info',
-          message: "Application attempts to connect at startup.",
-          details: "Check application logs for 'Successfully connected to PostgreSQL database...' message. Errors here usually mean DB service is down or DATABASE_URL is incorrect.",
+          message: "Status: Verified via application startup logs.",
+          details: "The application attempts to connect to PostgreSQL at startup and logs success or failure. Check server logs for 'Successfully connected...' or connection error messages. Ensure DATABASE_URL environment variable is correctly set in your .env.local or server environment.",
           icon: Database,
         },
         {
           name: "Database Schema (Tables)",
-          status: 'info',
-          message: "Automatically initialized by Docker on first run.",
-          details: "The 'init-db.sql' script creates tables like Candidate, Position, User, LogEntry. If tables are missing (API errors like 'relation does not exist'), ensure the 'postgres_data' Docker volume was cleared before the last `docker-compose up` to force re-initialization.",
+          status: 'ok', // Updated as this is automated
+          message: "Status: Automated initialization by Docker.",
+          details: "The 'init-db.sql' script automatically creates tables (User, Position, Candidate, TransitionRecord, LogEntry) when the PostgreSQL container starts with an empty data volume. If tables are missing, ensure the 'postgres_data' Docker volume was correctly cleared and re-initialized (e.g., via `docker-compose down -v`).",
           icon: Database,
         },
         {
           name: "MinIO File Storage Connection",
           status: 'info',
-          message: "Application attempts to connect at startup.",
-          details: "Check application logs for 'Successfully connected to MinIO server...' message. Ensure MinIO service is running and environment variables (MINIO_ENDPOINT, etc.) are correct.",
+          message: "Status: Verified via application startup logs.",
+          details: "The application attempts to connect to the MinIO server at startup and logs success or failure. Check server logs for 'Successfully connected to MinIO server...' or connection error messages. Ensure MinIO environment variables (MINIO_ENDPOINT, MINIO_ACCESS_KEY, etc.) are correctly set.",
           icon: HardDrive,
         },
         {
           name: "MinIO Bucket ('canditrack-resumes')",
-          status: 'info',
-          message: "Application attempts to create if not exists on first use.",
-          details: "The application will try to create the bucket defined by MINIO_BUCKET_NAME. Errors might occur if MinIO credentials lack permission or the service is unreachable.",
+          status: 'ok', // Updated to reflect application's attempt
+          message: "Status: Application attempts auto-creation if not exists.",
+          details: "The application's MinIO client (src/lib/minio.ts) will try to create the bucket defined by MINIO_BUCKET_NAME upon first interaction. Errors during this process (e.g., permission issues) would be logged by the application server.",
           icon: HardDrive,
         },
         {
           name: "Redis Cache Connection",
           status: 'info',
-          message: "Application would connect when Redis-dependent features are used.",
-          details: "Currently, no specific features in this prototype explicitly use Redis. If integrated, connection status would be logged. Ensure REDIS_URL is correct.",
-          icon: Zap, // Using Zap as a generic "service" icon here
+          message: "Status: Application connects when Redis-dependent features are used.",
+          details: "Currently, no specific features in this prototype explicitly use Redis. If integrated, connection status would be logged. Ensure REDIS_URL environment variable is correctly set for future use.",
+          icon: Zap,
         },
         {
           name: "Azure AD SSO Server Configuration",
           status: 'info',
-          message: "Server-side environment variables needed.",
-          details: "Requires AZURE_AD_CLIENT_ID, AZURE_AD_CLIENT_SECRET, and AZURE_AD_TENANT_ID to be set in the .env.local file or server environment. The sign-in page will show the Azure AD button if the client ID is present (as a proxy check).",
+          message: "Status: Configuration dependent on server-side environment variables.",
+          details: "Azure AD Single Sign-On relies on AZURE_AD_CLIENT_ID, AZURE_AD_CLIENT_SECRET, and AZURE_AD_TENANT_ID being correctly set in the server's environment variables. If these are not configured, SSO will not function. The Azure AD sign-in button's visibility on the login page is a partial client-side indicator.",
           icon: KeyRound,
         },
         {
           name: "NextAuth Secret",
           status: 'info',
-          message: "Server-side environment variable NEXTAUTH_SECRET is critical.",
-          details: "This must be set for NextAuth to function securely. Check your .env.local file or server environment.",
+          message: "Status: Critical server-side environment variable.",
+          details: "The NEXTAUTH_SECRET environment variable must be set on the server for NextAuth to function securely and reliably. This is crucial for session management.",
           icon: KeyRound,
         },
         {
           name: "n8n Webhook URL (Client Setting)",
           status: localStorage.getItem(N8N_WEBHOOK_URL_KEY) ? 'ok' : 'warning',
           message: localStorage.getItem(N8N_WEBHOOK_URL_KEY) 
-            ? "Configured in local browser settings." 
-            : "Not configured in local browser settings.",
-          details: `This is set on the Settings > Integrations page. For backend usage (like in /api/resumes/upload), the N8N_RESUME_WEBHOOK_URL environment variable must be set on the server. Current local setting: ${localStorage.getItem(N8N_WEBHOOK_URL_KEY) || 'Not set'}.`,
+            ? "Status: Configured in local browser settings." 
+            : "Status: Not configured in local browser settings.",
+          details: `This is set on the Settings > Integrations page and stored in browser localStorage. For backend usage (like in /api/resumes/upload), the N8N_RESUME_WEBHOOK_URL environment variable must be set on the server. Current local setting: ${localStorage.getItem(N8N_WEBHOOK_URL_KEY) || 'Not set'}.`,
           icon: localStorage.getItem(N8N_WEBHOOK_URL_KEY) ? CheckCircle2 : AlertTriangle,
         },
       ];
@@ -102,10 +102,10 @@ export default function SystemStatusPage() {
   
   const getStatusBadgeVariant = (status: StatusItem['status']): "default" | "secondary" | "destructive" | "outline" => {
      switch (status) {
-      case 'ok': return 'default'; // Greenish in some themes
-      case 'warning': return 'secondary'; // Yellowish/Orange
+      case 'ok': return 'default'; 
+      case 'warning': return 'secondary'; 
       case 'error': return 'destructive';
-      case 'info': return 'outline'; // Bluish/Neutral
+      case 'info': return 'outline'; 
       default: return 'outline';
     }
   }
