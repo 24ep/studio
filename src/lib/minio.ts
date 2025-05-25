@@ -33,13 +33,13 @@ export async function ensureBucketExists(bucketName: string = MINIO_BUCKET_NAME,
     const bucketExists = await minioClient.bucketExists(bucketName);
     if (!bucketExists) {
       await minioClient.makeBucket(bucketName, region); // MinIO makeBucket often requires a region string, though it might be ignored by some S3-compat services
-      console.log(`Bucket ${bucketName} created successfully in region ${region}.`);
+      console.log(`Bucket \${bucketName} created successfully in region \${region}.`);
       // Optionally set a bucket policy if needed, e.g., for public read access on uploaded files.
       // const policy = { ... }; // define your policy
       // await minioClient.setBucketPolicy(bucketName, JSON.stringify(policy));
     }
   } catch (err) {
-    console.error(`Error during MinIO bucket check/creation for ${bucketName}:`, err);
+    console.error(`Error during MinIO bucket check/creation for \${bucketName}:`, err);
     // Depending on your error handling strategy, you might re-throw or handle this.
     // For production, ensure robust error handling and logging.
   }
