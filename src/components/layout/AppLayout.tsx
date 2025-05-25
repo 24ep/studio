@@ -1,3 +1,4 @@
+
 "use client";
 import type { ReactNode } from "react";
 import {
@@ -25,7 +26,6 @@ function getPageTitle(pathname: string): string {
   if (pathname.startsWith("/settings/preferences")) return "Preferences";
   if (pathname.startsWith("/settings/integrations")) return "Integrations";
   if (pathname.startsWith("/setup")) return "Application Setup";
-  // if (pathname.startsWith("/docker-deployment")) return "Docker & Deployment"; // Removed
   if (pathname.startsWith("/system-status")) return "System Status";
   if (pathname.startsWith("/settings")) return "Settings"; 
   if (pathname.startsWith("/api-docs")) return "API Documentation";

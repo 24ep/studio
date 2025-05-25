@@ -1,8 +1,9 @@
+
 "use client"
 import * as React from "react"; 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Users, Briefcase, Settings, UsersRound, Code2, ListOrdered, Palette, Zap, Settings2, CheckSquare } from "lucide-react"; 
+import { LayoutDashboard, Users, Briefcase, Settings, UsersRound, Code2, ListOrdered, Palette, Zap, Settings2, CheckSquare, DatabaseBackup } from "lucide-react"; 
 import { cn } from "@/lib/utils";
 import {
   SidebarMenu,
@@ -22,9 +23,6 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 
-// Custom Docker icon as SVG component - This is no longer needed here
-// const DockerIcon = (props: React.SVGProps<SVGSVGElement>) => ( ... );
-
 
 const mainNavItems = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
@@ -35,9 +33,8 @@ const mainNavItems = [
 const settingsSubItems = [
   { href: "/settings/preferences", label: "Preferences", icon: Palette },
   { href: "/settings/integrations", label: "Integrations", icon: Zap },
-  { href: "/setup", label: "Setup Guide", icon: Settings2 },
+  { href: "/setup", label: "Application Setup", icon: Settings2 }, // Updated label
   { href: "/system-status", label: "System Status", icon: CheckSquare },
-  // { href: "/docker-deployment", label: "Docker & Deployment", icon: DockerIcon }, // Removed
   { href: "/users", label: "Manage Users", icon: UsersRound },
   { href: "/api-docs", label: "API Docs", icon: Code2 },
   { href: "/logs", label: "Logs", icon: ListOrdered },
@@ -58,8 +55,9 @@ export function SidebarNav() {
     if (isSettingsSectionActive) {
       setAccordionValue("settings-group");
     } else if (isAnyMainNavItemActive) {
-      setAccordionValue(undefined);
+      setAccordionValue(undefined); // Close accordion if a main nav item is active
     }
+    // If no main nav item is active and settings are not active, accordion remains as is (or closed if initially undefined)
   }, [pathname, isSettingsSectionActive, isAnyMainNavItemActive]);
 
 
@@ -73,7 +71,7 @@ export function SidebarNav() {
                 isActive={pathname === item.href || (item.href !== "/" && pathname.startsWith(item.href))}
                 className="w-full justify-start"
                 tooltip={item.label}
-                onClick={() => setAccordionValue(undefined)} 
+                onClick={() => setAccordionValue(undefined)} // Close accordion when main item clicked
               >
                 <a>
                   <item.icon className="h-5 w-5" />
@@ -97,9 +95,10 @@ export function SidebarNav() {
                 <TooltipTrigger asChild>
                   <AccordionTrigger
                     className={cn(
-                      "flex w-full items-center gap-2 overflow-hidden rounded-md p-2 text-left text-sm outline-none ring-sidebar-ring transition-all hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-2 active:bg-sidebar-accent active:text-sidebar-accent-foreground disabled:pointer-events-none disabled:opacity-50",
+                      "flex w-full items-center gap-2 overflow-hidden rounded-md p-2 text-left text-sm outline-none ring-sidebar-ring transition-all focus-visible:ring-2 active:bg-sidebar-accent active:text-sidebar-accent-foreground disabled:pointer-events-none disabled:opacity-50",
                       "justify-between group-data-[collapsible=icon]:!size-8 group-data-[collapsible=icon]:!p-2",
-                      isSettingsSectionActive && "bg-sidebar-accent text-sidebar-accent-foreground", 
+                      isSettingsSectionActive && "bg-sidebar-active-background-l dark:bg-sidebar-active-background-d text-sidebar-active-foreground-l dark:text-sidebar-active-foreground-d", 
+                      !isSettingsSectionActive && "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
                       "hover:no-underline py-2"
                     )}
                   >
@@ -141,4 +140,3 @@ export function SidebarNav() {
       </SidebarMenu>
   );
 }
-    
