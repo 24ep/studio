@@ -156,7 +156,7 @@ const getMethodBadgeVariant = (method: string) => {
     case "GET":
       return "outline"; 
     case "POST":
-      return "outline"; // Changed from "default" to "outline"
+      return "outline"; 
     case "PUT":
       return "secondary"; 
     case "DELETE":
@@ -193,7 +193,7 @@ export default function ApiDocumentationPage() {
             <Code2 className="mr-2 h-6 w-6 text-primary" /> API Documentation
           </CardTitle>
           <CardDescription>
-            Overview of available API endpoints for CandiTrack.
+            Overview of available API endpoints for NCC Candidate Management.
             Replace localhost:9002 with your actual domain. All protected routes require authentication.
           </CardDescription>
         </CardHeader>

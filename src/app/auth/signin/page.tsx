@@ -48,13 +48,13 @@ export default async function SignInPage({
         <CardHeader className="text-center">
           <Image 
             src="/_next/image?url=https%3A%2F%2Fplacehold.co%2F100x100.png&w=128&q=75" // Placeholder logo
-            alt="CandiTrack Logo"
+            alt="NCC Candidate Management Logo"
             width={80}
             height={80}
             className="mx-auto mb-4 rounded-full"
             data-ai-hint="company logo"
           />
-          <CardTitle className="text-3xl font-bold tracking-tight">Welcome to CandiTrack</CardTitle>
+          <CardTitle className="text-3xl font-bold tracking-tight">Welcome to NCC Candidate Management</CardTitle>
           <CardDescription className="text-muted-foreground">
             Sign in to manage your recruitment pipeline.
           </CardDescription>
@@ -104,7 +104,7 @@ export default async function SignInPage({
         </CardContent>
       </Card>
       <footer className="mt-8 text-center text-sm text-muted-foreground">
-        © {new Date().getFullYear()} CandiTrack. All rights reserved.
+        © {new Date().getFullYear()} NCC Candidate Management. All rights reserved.
       </footer>
     </div>
   );

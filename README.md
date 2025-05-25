@@ -1,7 +1,7 @@
 
-# CandiTrack - Applicant Tracking System (Next.js Prototype)
+# NCC Candidate Management - Applicant Tracking System (Next.js Prototype)
 
-This is a Next.js application prototype for CandiTrack, an Applicant Tracking System, built with Firebase Studio.
+This is a Next.js application prototype for NCC Candidate Management, an Applicant Tracking System, built with Firebase Studio.
 
 ## Features
 
@@ -48,7 +48,7 @@ This is a Next.js application prototype for CandiTrack, an Applicant Tracking Sy
 1.  **Clone the repository:**
     ```bash
     git clone <repository_url>
-    cd canditrack-app 
+    cd ncc-candidate-management 
     ```
 
 2.  **Install dependencies:**
@@ -113,7 +113,7 @@ This is the recommended way to run the application along with its backend servic
     *   You can use the provided `start.sh` script as well: `./start.sh` (make it executable: `chmod +x start.sh`).
 
 4.  **Accessing Services:**
-    *   **CandiTrack App:** `http://localhost:9002`
+    *   **NCC Candidate Management App:** `http://localhost:9002`
     *   **PostgreSQL:** Accessible on `localhost:5432` from your host machine (or `postgres:5432` from within the Docker network).
     *   **MinIO API:** `http://localhost:9000`
     *   **MinIO Console:** `http://localhost:9001` (Login with `MINIO_ROOT_USER` and `MINIO_ROOT_PASSWORD` from your `.env.local` or `docker-compose.yml`).

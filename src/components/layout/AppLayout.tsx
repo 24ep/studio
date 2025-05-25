@@ -30,7 +30,7 @@ function getPageTitle(pathname: string): string {
   if (pathname.startsWith("/api-docs")) return "API Documentation";
   if (pathname.startsWith("/logs")) return "Application Logs";
   if (pathname.startsWith("/auth/signin")) return "Sign In";
-  return "CandiTrack";
+  return "NCC Candidate Management";
 }
 
 
@@ -50,7 +50,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
         <SidebarHeader className="p-4 flex items-center justify-between">
            <Link href="/" className="flex items-center gap-2 font-semibold text-primary group-data-[collapsible=icon]:hidden">
             <Package2 className="h-6 w-6" />
-            <span>CandiTrack</span>
+            <span>NCC Candidate Management</span>
           </Link>
           <div className="group-data-[collapsible=icon]:flex group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:w-full hidden">
              <Link href="/" className="flex items-center gap-2 font-semibold text-primary">
@@ -64,7 +64,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
           <SidebarNav />
         </SidebarContent>
         <SidebarFooter className="p-4 border-t group-data-[collapsible=icon]:hidden">
-          <p className="text-xs text-muted-foreground">© {new Date().getFullYear()} CandiTrack</p>
+          <p className="text-xs text-muted-foreground">© {new Date().getFullYear()} NCC Candidate Management</p>
         </SidebarFooter>
       </Sidebar>
       <SidebarInset className="flex flex-col bg-background">

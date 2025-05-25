@@ -17,8 +17,8 @@ const openSans = Open_Sans({
 });
 
 export const metadata: Metadata = {
-  title: 'CandiTrack - Applicant Tracking System',
-  description: 'Streamline your hiring process with CandiTrack.',
+  title: 'NCC Candidate Management - Applicant Tracking System',
+  description: 'Streamline your hiring process with NCC Candidate Management.',
 };
 
 export default async function RootLayout({ // Note: 'async' if using getServerSession
