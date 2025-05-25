@@ -90,7 +90,9 @@ This is the recommended way to run the application along with its backend servic
     *   This automatic initialization **only happens once when the `postgres_data` Docker volume is first created** (or if the volume is empty/being newly created).
 
 4.  **IMPORTANT: If Database Tables Are Missing (e.g., "relation ... does not exist" errors):**
-    If your application logs errors indicating that tables like "Candidate", "Position", or "User" do not exist, it means the `init-db.sql` script did not run or did not complete successfully during the last PostgreSQL container startup. This is almost always because the `postgres_data` volume already existed with data.
+    If your application logs errors indicating that tables like "Candidate", "Position", or "User" do not exist, it means the `init-db.sql` script did not run or did not complete successfully during the last PostgreSQL container startup.
+    **This is almost always because the `postgres_data` volume already existed with data, or there was an issue mounting `init-db.sql` into the container.**
+
     **To force a fresh database initialization and ensure `init-db.sql` runs:**
     *   **For Local Docker Compose:**
         1.  **Stop all services:** `docker-compose down`
@@ -106,25 +108,30 @@ This is the recommended way to run the application along with its backend servic
     *   **When Deploying/Managing with Portainer:**
         1.  When deploying or updating your stack in Portainer, if you need the `init-db.sql` script to run (e.g., for a fresh setup or if tables are missing), you **must ensure that Portainer does not reuse an existing `postgres_data` volume that already contains a database.**
         2.  You may need to:
-            *   Manually delete the `postgres_data` volume associated with your stack via Portainer's "Volumes" section before redeploying the stack.
+            *   Manually delete the `postgres_data` volume associated with your stack via Portainer's "Volumes" section before redeploying the stack. Ensure this volume is named according to your `docker-compose.yml` (e.g., `yourstackname_postgres_data`).
             *   Or, if Portainer provides an option during stack update/redeployment to "recreate" containers and specify "do not persist volumes" or "use new volumes" for the PostgreSQL service, select that.
         3.  After ensuring the volume will be fresh, deploy/update your stack in Portainer. The PostgreSQL container will initialize a new database and execute `init-db.sql`.
-    *   **Check PostgreSQL Logs:** After startup, if you still suspect issues, check the logs of the PostgreSQL container for any errors during the execution of `init-db.sql`:
-        *   Local Docker: `docker logs <your_postgres_container_name>` (Find `<your_postgres_container_name>` with `docker ps`)
-        *   Portainer: View the logs for the PostgreSQL container within the Portainer UI.
-        Look for messages indicating scripts from `/docker-entrypoint-initdb.d/` are being run, or any SQL errors.
-    *   **Specific Error: `psql:/docker-entrypoint-initdb.d/init-db.sql: error: could not read from input file: Is a directory`**
-        If you see this error in the PostgreSQL container logs, it means that when Docker (via `docker-compose` or Portainer) tried to mount your local `init-db.sql` file into the container at `/docker-entrypoint-initdb.d/init-db.sql`, it was incorrectly interpreted as a directory *inside the container*. This usually happens if Docker cannot find or access the *source* file (`./init-db.sql`) on the host system.
-        **Troubleshooting Steps for "Is a directory" error:**
-        1.  **Verify Host File:** Ensure that `init-db.sql` in your project root directory (the same directory as `docker-compose.yml`) is indeed a **file** and not a directory.
-        2.  **Execution Context:**
-            *   If running `docker-compose` commands manually, ensure you are running them from the **root directory of your project** (where `docker-compose.yml` and `init-db.sql` are located). The path `./init-db.sql` is relative to the directory where `docker-compose` is executed.
-            *   **If using Portainer from a Git repository:** Portainer checks out your repository to a temporary location on the Portainer server or agent. Ensure `init-db.sql` is present at the root of your repository and that there are no issues with how Portainer is accessing these files. If the file is missing or inaccessible in the checkout path Portainer uses, Docker will create an empty directory for the mount target.
-        3.  **File Permissions (Less Common):** On Linux/macOS, ensure that `init-db.sql` has read permissions for the user running the Docker daemon.
-        4.  **Clean Docker State:** Even if you think the file is correct, try the full `docker-compose down -v` and `docker-compose up --build -d` again. This can resolve issues related to Docker's cached state of volumes or mounts.
-        5.  **If the issue persists with Portainer specifically:**
-            *   Try deploying the stack using `docker-compose` directly on the host where Portainer runs its containers (if possible) to see if the issue is specific to Portainer's interpretation of the compose file or its file access.
-            *   Consider alternative ways to get the `init-db.sql` into the container for Portainer, such as building a custom PostgreSQL image that `COPY`s the `init-db.sql` file into `/docker-entrypoint-initdb.d/` during the image build, though this adds complexity.
+
+    **Check PostgreSQL Container Logs for Errors:**
+    After startup, if you still suspect issues (especially if tables are missing), **check the logs of the PostgreSQL container**.
+    *   Local Docker: `docker logs <your_postgres_container_name>` (Find `<your_postgres_container_name>` with `docker ps`)
+    *   Portainer: View the logs for the PostgreSQL container within the Portainer UI.
+    Look for messages indicating scripts from `/docker-entrypoint-initdb.d/` are being run, or any SQL errors.
+
+    **Specific Error: `psql:/docker-entrypoint-initdb.d/init-db.sql: error: could not read from input file: Is a directory`**
+    If you see this error in the PostgreSQL container logs, it means that when Docker (via `docker-compose` or Portainer) tried to mount your local `init-db.sql` file into the container at `/docker-entrypoint-initdb.d/init-db.sql`, it was incorrectly interpreted as a directory *inside the container*. This usually happens if Docker cannot find or access the *source* file (`./init-db.sql`) on the host system *from the context where `docker-compose` or Portainer is operating*.
+
+    **Troubleshooting Steps for "Is a directory" error:**
+    1.  **Verify Host File:** Ensure that `init-db.sql` in your project root directory (the same directory as `docker-compose.yml`) is indeed a **file** and not a directory. Check for typos in the filename.
+    2.  **Execution Context & Portainer:**
+        *   If running `docker-compose` commands manually, ensure you are running them from the **root directory of your project** (where `docker-compose.yml` and `init-db.sql` are located). The path `./init-db.sql` is relative to the directory where `docker-compose` is executed.
+        *   **If using Portainer from a Git repository:** Portainer checks out your repository to a temporary location on the Portainer server or agent. Ensure `init-db.sql` is present at the **root of your Git repository**. If the file is missing or inaccessible in the checkout path Portainer uses, Docker will create an empty directory for the mount target inside the container. Double-check your repository structure.
+        *   **If using Portainer's Web Editor for the stack:** Providing relative host paths like `./init-db.sql` from Portainer's web editor can be problematic as Portainer doesn't inherently know where "`.`" is on your local machine. For web editor deployments, you'd typically need to use absolute paths on the Portainer host machine where Docker is running, or use a method where `init-db.sql` is already part of a custom image or accessible via a shared Docker volume pre-populated by other means. **Using Portainer with a Git repository is generally more reliable for such file mounts.**
+    3.  **File Permissions (Less Common):** On Linux/macOS, ensure that `init-db.sql` has read permissions for the user running the Docker daemon or the user Portainer operates as.
+    4.  **Clean Docker State:** Even if you think the file is correct, try the full `docker-compose down -v` and `docker-compose up --build -d` again. This can resolve issues related to Docker's cached state of volumes or mounts.
+    5.  **If the issue persists with Portainer specifically:**
+        *   Try deploying the stack using `docker-compose` directly on the host where Portainer runs its containers (if possible) to see if the issue is specific to Portainer's interpretation of the compose file or its file access.
+        *   Consider alternative ways to get the `init-db.sql` into the container if Portainer's file mounting from your setup is consistently problematic. One advanced method is to build a custom PostgreSQL Docker image that `COPY`s the `init-db.sql` file into `/docker-entrypoint-initdb.d/` during the image build process. This makes the script part of the image itself, removing reliance on runtime volume mounts for this specific file.
 
 5.  **MinIO Bucket Creation (Automated by Application):**
     *   The MinIO bucket specified by `MINIO_BUCKET_NAME` (default: `canditrack-resumes`) will be **attempted to be created automatically by the application** when it first tries to interact with MinIO (e.g., during a resume upload via the `ensureBucketExists` function in `src/lib/minio.ts`).
@@ -136,11 +143,11 @@ This is the recommended way to run the application along with its backend servic
     *   If you see connection error messages, verify your `.env.local` settings, Docker networking, and that the backend services are running correctly.
 
 7.  **Accessing Services:**
-    *   **NCC Candidate Management App:** `http://localhost:9002` (or your configured host/port in Portainer)
+    *   **NCC Candidate Management App:** `http://localhost:9002` (or your configured host/port in Portainer, default exposed on host port 9846)
     *   **PostgreSQL:** Accessible on `localhost:5432` from your host machine (or `postgres:5432` from within the Docker network, or as exposed by Portainer).
-    *   **MinIO API:** `http://localhost:9000` (from host, or as exposed by Portainer on port 9847).
-    *   **MinIO Console:** `http://localhost:9001` (Login with `MINIO_ROOT_USER` and `MINIO_ROOT_PASSWORD` from your `.env.local` or `docker-compose.yml` defaults. Exposed on port 9848 by default).
-    *   **Redis:** Accessible on `localhost:6379` from your host machine (or `redis:6379` from within the Docker network, or as exposed by Portainer on port 9849).
+    *   **MinIO API:** `http://localhost:9000` (from host, or as exposed by Portainer on host port 9847).
+    *   **MinIO Console:** `http://localhost:9001` (Login with `MINIO_ROOT_USER` and `MINIO_ROOT_PASSWORD` from your `.env.local` or `docker-compose.yml` defaults. Exposed on host port 9848 by default).
+    *   **Redis:** Accessible on `localhost:6379` from your host machine (or `redis:6379` from within the Docker network, or as exposed by Portainer on host port 9849).
 
 8.  **Starting the services using the script (for local development):**
     (Ensure the script is executable: `chmod +x start.sh`)
@@ -183,4 +190,3 @@ This application is a prototype. For production readiness, consider the followin
 
 *   **PostgreSQL:** The application attempts to connect and execute a test query (`SELECT NOW()`) when the `src/lib/db.ts` module is initialized. Check your application server's console logs for "Successfully connected to PostgreSQL database..." or connection error messages.
 *   **MinIO:** The application attempts to connect and check/create the resume bucket when `src/lib/minio.ts` is initialized. Check application server logs for "Successfully connected to MinIO server..." or "MinIO: Bucket ... already exists/created..." or related error messages.
-
