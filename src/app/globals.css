@@ -46,15 +46,15 @@ body {
     --chart-4: 187 100% 62%; /* Lighter Accent */
     --chart-5: 220 14% 60%; /* Neutral Grey */
 
-    /* Sidebar specific theme variables */
-    --sidebar-background: 0 0% 100%; /* White sidebar background */
-    --sidebar-foreground: 220 20% 10%; /* Dark text for white sidebar */
-    --sidebar-primary: 231 48% 48%; /* Deep Blue for active item (used by cva if no gradient) */
-    --sidebar-primary-foreground: 0 0% 100%; /* White text for active item */
-    --sidebar-accent: 187 100% 42%; /* Accent color (cyan) - used for non-active hover */
-    --sidebar-accent-foreground: 0 0% 100%; /* White text for non-active hover on cyan */
-    --sidebar-border: 0 0% 90%; /* Light grey border for sidebar */
-    --sidebar-ring: 187 100% 42%; /* Cyan for focus rings */
+    /* Sidebar specific theme variables - Light Theme Updated for "2025 Trend" */
+    --sidebar-background: 0 0% 97%; /* Off-white, soft background */
+    --sidebar-foreground: 220 25% 30%; /* Dark grey text for readability */
+    --sidebar-primary: 231 48% 48%; /* Using app's primary for active item */
+    --sidebar-primary-foreground: 0 0% 100%; /* Using app's primary-fg for active item text */
+    --sidebar-accent: 0 0% 92%;       /* Subtle darker grey for hover background on non-active items */
+    --sidebar-accent-foreground: 220 25% 25%; /* Dark text for hover */
+    --sidebar-border: 0 0% 88%;     /* Slightly more defined, but still light border */
+    --sidebar-ring: 187 100% 42%; /* Cyan for focus rings, can be changed to var(--primary) if desired */
   }
 
   .dark {
@@ -87,12 +87,12 @@ body {
     --ring: 187 100% 42%; /* Cyan for rings */
 
     /* Sidebar dark theme variables - kept as dark blue gradient */
-    --sidebar-background: 231 20% 10%; /* Darker sidebar */
+    --sidebar-background: 231 20% 10%; /* Darker sidebar (used by gradient fallback) */
     --sidebar-foreground: 210 20% 80%;
-    --sidebar-primary: 187 100% 42%; 
-    --sidebar-primary-foreground: 231 15% 10%;
-    --sidebar-accent: 231 48% 55%;
-    --sidebar-accent-foreground: 0 0% 100%;
+    --sidebar-primary: 187 100% 42%; /* Primary for active item in dark mode (can be same as app primary or specific) */
+    --sidebar-primary-foreground: 231 15% 10%; /* Text for active item in dark mode */
+    --sidebar-accent: 231 20% 25%; /* Hover for non-active in dark mode */
+    --sidebar-accent-foreground: 210 20% 90%; /* Text for hover non-active in dark mode */
     --sidebar-border: 231 20% 20%;
     --sidebar-ring: 187 100% 42%;
   }
@@ -107,28 +107,48 @@ body {
   }
 }
 
-/* Added styles for sidebar and active menu item */
+/* Updated styles for sidebar and active menu item */
 @layer components {
+  /* Sidebar base style for light theme */
   [data-sidebar="sidebar"] {
-    background-color: hsl(var(--sidebar-background)); /* Use variable for sidebar background */
-    color: hsl(var(--sidebar-foreground)); /* Use variable for sidebar text */
+    background-color: hsl(var(--sidebar-background));
+    color: hsl(var(--sidebar-foreground));
+    border-right: 1px solid hsl(var(--sidebar-border)); /* Add a border for separation */
   }
 
-  .dark [data-sidebar="sidebar"] { /* Keep dark blue gradient for dark mode sidebar */
+  /* Sidebar base style for dark theme (retains gradient) */
+  .dark [data-sidebar="sidebar"] {
     background-image: linear-gradient(to bottom, hsl(240, 60%, 25%), hsl(230, 40%, 15%));
-    color: hsl(var(--sidebar-foreground)); 
+    color: hsl(var(--sidebar-foreground)); /* Uses dark theme's --sidebar-foreground */
+    border-right: 1px solid hsl(var(--sidebar-border)); /* Uses dark theme's --sidebar-border */
   }
-  
 
-  /* Style for the active/selected sidebar menu item (applies to both light and dark theme as gradient is specific) */
-  [data-sidebar="menu-button"][data-active="true"] {
-    background-image: linear-gradient(to right, hsl(225, 55%, 40%), hsl(235, 65%, 50%)); /* Dark blue gradient for active */
-    color: hsl(var(--sidebar-primary-foreground)); /* Ensure text is white (or specified primary foreground for active) */
+  /* General menu button transitions */
+  [data-sidebar="menu-button"] {
+    transition: background-color 0.15s ease-in-out, color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
   }
-  /* Hover state for the active item to slightly change the gradient */
-  [data-sidebar="menu-button"][data-active="true"]:hover {
-    background-image: linear-gradient(to right, hsl(225, 55%, 45%), hsl(235, 65%, 55%)); /* Slightly lighter/brighter on hover */
-    color: hsl(var(--sidebar-primary-foreground)); /* Ensure text remains white */
+
+  /* Light theme: Active menu item style */
+  :root:not(.dark) [data-sidebar="menu-button"][data-active="true"] {
+    background-color: hsl(var(--primary)); /* Use app's primary color */
+    color: hsl(var(--primary-foreground));
+    background-image: none; /* Remove any previous gradient */
+  }
+  /* Light theme: Hover on active menu item */
+  :root:not(.dark) [data-sidebar="menu-button"][data-active="true"]:hover {
+    background-color: hsl(var(--primary) / 0.9); /* Slightly darken the primary color for hover */
+    color: hsl(var(--primary-foreground));
+    background-image: none; /* Ensure no gradient on hover */
+  }
+
+  /* Dark theme: Active menu item style (retains gradient) */
+  .dark [data-sidebar="menu-button"][data-active="true"] {
+    background-image: linear-gradient(to right, hsl(225, 55%, 40%), hsl(235, 65%, 50%));
+    color: hsl(var(--sidebar-primary-foreground)); /* Ensure light text for dark gradient */
+  }
+  /* Dark theme: Hover on active menu item (adjusts gradient) */
+  .dark [data-sidebar="menu-button"][data-active="true"]:hover {
+    background-image: linear-gradient(to right, hsl(225, 55%, 45%), hsl(235, 65%, 55%));
+    color: hsl(var(--sidebar-primary-foreground));
   }
 }
-
