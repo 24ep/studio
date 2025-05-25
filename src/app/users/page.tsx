@@ -3,7 +3,7 @@
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button, buttonVariants } from "@/components/ui/button"; 
-import { PlusCircle, UsersRound, ShieldAlert, Edit3, Trash2, ServerCrash, Loader2, KeyRound, MoreHorizontal } from "lucide-react";
+import { PlusCircle, UsersRound, ShieldAlert, Edit3, Trash2, ServerCrash, Loader2, MoreHorizontal } from "lucide-react"; // Removed KeyRound
 import type { UserProfile } from "@/lib/types";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -49,7 +49,7 @@ export default function ManageUsersPage() {
 
   const fetchUsers = useCallback(async () => {
     if (sessionStatus !== 'authenticated') {
-        // This will be caught by the useEffect below to redirect
+        signIn(undefined, { callbackUrl: window.location.pathname });
         return;
     }
     setIsLoading(true);
@@ -70,14 +70,15 @@ export default function ManageUsersPage() {
       setUsers(data);
     } catch (error) {
       console.error("Error fetching users:", error);
-      if (!String((error as Error).message).includes("401") && !String((error as Error).message).includes("403")) {
-        setFetchError((error as Error).message);
+      const errorMessage = (error as Error).message || "An unexpected error occurred.";
+      if (!errorMessage.toLowerCase().includes("unauthorized") && !errorMessage.toLowerCase().includes("forbidden")) {
+        setFetchError(errorMessage);
       }
       setUsers([]); 
     } finally {
       setIsLoading(false);
     }
-  }, [sessionStatus, router]);
+  }, [sessionStatus, router]); // Removed signIn from dependencies as it's stable
 
   useEffect(() => {
     if (sessionStatus === 'unauthenticated') {
@@ -85,7 +86,7 @@ export default function ManageUsersPage() {
     } else if (sessionStatus === 'authenticated') {
       fetchUsers();
     }
-  }, [sessionStatus, fetchUsers, router]);
+  }, [sessionStatus, fetchUsers, router]); // Removed signIn
 
   const handleAddUser = async (data: AddUserFormValues) => {
     try {
@@ -167,16 +168,6 @@ export default function ManageUsersPage() {
     }
   };
 
-  const handleGenerateApiToken = (user: UserProfile) => {
-    // This is a placeholder. Real token generation would involve a backend call.
-    const mockToken = `mock_token_for_${user.id}_${Date.now()}`;
-    toast({
-      title: "API Token Generated (Mock)",
-      description: `Token for ${user.name}: ${mockToken}. (This is a mock token for UI demonstration only and is not stored or usable).`,
-      duration: 10000, // Show longer for copying
-    });
-  };
-
   if (sessionStatus === 'loading' || (sessionStatus === 'unauthenticated' && !router.asPath.startsWith('/auth/signin')) || (isLoading && !fetchError)) {
     return (
       <div className="flex h-screen w-screen items-center justify-center bg-background fixed inset-0 z-50">
@@ -200,7 +191,7 @@ export default function ManageUsersPage() {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-center gap-2">
         <div></div> 
-        <Button className="w-full sm:w-auto" onClick={() => setIsAddUserModalOpen(true)}> 
+        <Button className="w-full sm:w-auto btn-primary-gradient" onClick={() => setIsAddUserModalOpen(true)}> 
           <PlusCircle className="mr-2 h-4 w-4" /> Add New User
         </Button>
       </div>
@@ -211,7 +202,7 @@ export default function ManageUsersPage() {
              <UsersRound className="mr-2 h-5 w-5 text-primary" /> App Users
           </CardTitle>
           <CardDescription>
-            Manage application users, their roles, and module permissions. These operations interact with the PostgreSQL database.
+            Manage application users, their roles, and module permissions.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -224,7 +215,7 @@ export default function ManageUsersPage() {
             <div className="text-center py-10">
               <UsersRound className="mx-auto h-12 w-12 text-muted-foreground" />
               <p className="mt-4 text-muted-foreground">No users found in the database.</p>
-                 <Button className="mt-4" onClick={() => setIsAddUserModalOpen(true)}> 
+                 <Button className="mt-4 btn-primary-gradient" onClick={() => setIsAddUserModalOpen(true)}> 
                     <PlusCircle className="mr-2 h-4 w-4" /> Add First User
                 </Button>
             </div>
@@ -236,7 +227,6 @@ export default function ManageUsersPage() {
                   <TableHead>Name</TableHead>
                   <TableHead>Email</TableHead>
                   <TableHead>Role</TableHead>
-                  <TableHead>API Access</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -258,10 +248,6 @@ export default function ManageUsersPage() {
                         {user.role}
                       </Badge>
                     </TableCell>
-                    <TableCell className="text-xs text-muted-foreground">
-                      {/* Placeholder for API token info or management */}
-                      N/A
-                    </TableCell>
                     <TableCell className="text-right">
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
@@ -273,9 +259,6 @@ export default function ManageUsersPage() {
                         <DropdownMenuContent align="end">
                           <DropdownMenuItem onClick={() => openEditModal(user)}>
                             <Edit3 className="mr-2 h-4 w-4" /> Edit User
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => handleGenerateApiToken(user)}>
-                            <KeyRound className="mr-2 h-4 w-4" /> Generate API Token (Mock)
                           </DropdownMenuItem>
                           <DropdownMenuSeparator />
                           <DropdownMenuItem 

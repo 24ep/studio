@@ -314,7 +314,7 @@ export default function ApiDocumentationPage() {
       console.error("Failed to copy cURL command:", err);
       toast({
         title: "Failed to copy",
-        description: "Could not copy cURL command. This might be due to browser permissions or if the page is not served over HTTPS.",
+        description: "Could not copy cURL command. This might be due to browser permissions, or if the page is not served over HTTPS, or other browser security restrictions.",
         variant: "destructive",
       });
     }
@@ -329,7 +329,7 @@ export default function ApiDocumentationPage() {
           </CardTitle>
           <CardDescription>
             Overview of available API endpoints for NCC Candidate Management.
-            Replace localhost:9002 with your actual domain. All protected routes require authentication.
+            Replace localhost:9002 with your actual domain.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
@@ -375,7 +375,7 @@ export default function ApiDocumentationPage() {
           </div>
 
           <div className="mt-6 text-sm text-muted-foreground space-y-2">
-            <p><strong>Authentication:</strong> Most endpoints require authentication via Azure AD or Credentials (NextAuth.js). API requests should include the session cookie or a valid authorization token (e.g., <code>Authorization: Bearer &lt;YOUR_TOKEN&gt;</code>). Unauthenticated requests to protected routes will receive a 401 Unauthorized response.</p>
+            <p><strong>Authentication:</strong> Most API endpoints require authentication. When interacting with the UI, this is handled by NextAuth.js session cookies. For direct API calls (e.g., from external tools), authentication should be handled by your API Gateway (like Kong), which would typically issue and validate Bearer tokens. The example cURL commands include a placeholder for an `Authorization: Bearer &lt;YOUR_AUTH_TOKEN_OR_COOKIE&gt;` header. Ensure your API Gateway is configured to work with your application's session management or token validation as needed.</p>
             <p><strong>Base URL:</strong> All API paths are relative to the application's base URL (e.g., <code>http://localhost:9002</code> or your production domain).</p>
             <p><strong>Error Handling:</strong> Standard HTTP status codes are used (e.g., 200 OK, 201 Created, 400 Bad Request, 401 Unauthorized, 403 Forbidden, 404 Not Found, 500 Internal Server Error). Error responses typically include a JSON body: <code>{`{ "message": "Error description", "errors?": { ... } }`}</code>.</p>
             <p><strong>Content Type:</strong> For POST and PUT requests with a body, set <code>Content-Type: application/json</code>, unless it's a file upload (<code>multipart/form-data</code> for resume uploads).</p>
@@ -392,7 +392,7 @@ export default function ApiDocumentationPage() {
               </DialogTitle>
               <DialogDescription>
                 Example cURL command for <strong>{selectedCurlEndpoint.method}</strong> <code>{selectedCurlEndpoint.path}</code>.
-                Remember to replace placeholders like <code>&lt;YOUR_AUTH_TOKEN_OR_COOKIE&gt;</code> with actual values and ensure your session cookie is included for authenticated requests if not using a bearer token.
+                Remember to replace placeholders like <code>&lt;YOUR_AUTH_TOKEN_OR_COOKIE&gt;</code> with actual values. For direct API calls, this would be a token provided by your API Gateway (Kong).
               </DialogDescription>
             </DialogHeader>
             <div className="my-4 relative group">
