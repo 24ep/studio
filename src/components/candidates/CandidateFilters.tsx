@@ -25,9 +25,11 @@ interface CandidateFiltersProps {
   onFilterChange: (filters: CandidateFilterValues) => void;
 }
 
+const ALL_POSITIONS_SELECT_VALUE = "__ALL_POSITIONS__"; // Special value for "All Positions"
+
 export function CandidateFilters({ initialFilters = {}, onFilterChange }: CandidateFiltersProps) {
   const [name, setName] = useState(initialFilters.name || '');
-  const [positionId, setPositionId] = useState(initialFilters.positionId || '');
+  const [positionId, setPositionId] = useState(initialFilters.positionId || ''); // Internally, '' means all positions
   const [education, setEducation] = useState(initialFilters.education || '');
   const [fitScoreRange, setFitScoreRange] = useState<[number, number]>([
     initialFilters.minFitScore || 0,
@@ -39,7 +41,7 @@ export function CandidateFilters({ initialFilters = {}, onFilterChange }: Candid
   const handleApplyFilters = () => {
     onFilterChange({
       name: name || undefined,
-      positionId: positionId || undefined,
+      positionId: positionId || undefined, // positionId is already '' or an ID
       education: education || undefined,
       minFitScore: fitScoreRange[0],
       maxFitScore: fitScoreRange[1],
@@ -48,10 +50,11 @@ export function CandidateFilters({ initialFilters = {}, onFilterChange }: Candid
 
   const handleResetFilters = () => {
     setName('');
-    setPositionId('');
+    setPositionId(''); // Reset to all positions
     setEducation('');
     setFitScoreRange([0, 100]);
     onFilterChange({
+      positionId: undefined, // Reset to all
       minFitScore: 0,
       maxFitScore: 100,
     });
@@ -72,12 +75,21 @@ export function CandidateFilters({ initialFilters = {}, onFilterChange }: Candid
         </div>
         <div>
           <Label htmlFor="position-select">Position</Label>
-          <Select value={positionId} onValueChange={setPositionId}>
+          <Select
+            value={positionId === '' ? ALL_POSITIONS_SELECT_VALUE : positionId}
+            onValueChange={(selectedValue) => {
+              if (selectedValue === ALL_POSITIONS_SELECT_VALUE) {
+                setPositionId(''); // Set internal state to empty string for "All Positions"
+              } else {
+                setPositionId(selectedValue);
+              }
+            }}
+          >
             <SelectTrigger id="position-select" className="w-full mt-1">
               <SelectValue placeholder="All Positions" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">All Positions</SelectItem>
+              <SelectItem value={ALL_POSITIONS_SELECT_VALUE}>All Positions</SelectItem>
               {positions.map((pos) => (
                 <SelectItem key={pos.id} value={pos.id}>
                   {pos.title}
