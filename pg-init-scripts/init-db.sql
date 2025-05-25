@@ -18,7 +18,7 @@ CREATE INDEX IF NOT EXISTS idx_user_email ON "User"(email);
 -- Note: For an initial admin user, you might insert one manually after hashing the password,
 -- or temporarily modify the POST /api/users endpoint to allow first admin creation without auth.
 -- Example (ensure password_hash is a bcrypt hash):
--- INSERT INTO "User" (name, email, password, role) VALUES ('Admin User', 'admin@canditrack.com', 'your_bcrypt_hashed_password_here', 'Admin') ON CONFLICT (email) DO NOTHING;
+INSERT INTO "User" (name, email, password, role) VALUES ('Admin User', 'admin@canditrack.com', 'your_bcrypt_hashed_password_here', 'Admin') ON CONFLICT (email) DO NOTHING;
 
 
 -- Position Table
