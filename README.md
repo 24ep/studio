@@ -7,7 +7,7 @@ This is a Next.js application prototype for NCC Candidate Management, an Applica
 
 *   Dashboard Overview
 *   Candidate Management (View, Add, Update Status, Delete, Resume Upload via Modal)
-*   Position Management (View, Mock Add/Edit/Delete)
+*   Position Management (View, Add/Edit/Delete)
 *   User Management (View, Add/Edit/Delete via Modals - interacts with PostgreSQL)
 *   Settings:
     *   Preferences (Theme, App Logo - conceptual)
@@ -114,13 +114,17 @@ This is the recommended way to run the application along with its backend servic
         *   Portainer: View the logs for the PostgreSQL container within the Portainer UI.
         Look for messages indicating scripts from `/docker-entrypoint-initdb.d/` are being run, or any SQL errors.
     *   **Specific Error: `psql:/docker-entrypoint-initdb.d/init-db.sql: error: could not read from input file: Is a directory`**
-        If you see this error in the PostgreSQL container logs, it means that when `docker-compose` mounted the `init-db.sql` file, it was incorrectly interpreted as a directory inside the container. This can happen if:
-        *   The `./init-db.sql` path on your host machine (where `docker-compose` is run) was somehow a directory at the time of mounting. Ensure it is a file.
-        *   There's a very subtle issue with how Docker is handling the file mount in your specific environment.
-        **Solution:**
-        1.  Triple-check that `init-db.sql` in your project root is a file.
-        2.  Execute the `docker-compose down -v` and `docker-compose up --build -d` commands as described above. This often resolves issues related to Docker's cached state of volumes or mounts.
-        3.  If the issue persists, ensure there are no permission problems with `init-db.sql` on your host system that might prevent Docker from correctly mounting it as a file.
+        If you see this error in the PostgreSQL container logs, it means that when Docker (via `docker-compose` or Portainer) tried to mount your local `init-db.sql` file into the container at `/docker-entrypoint-initdb.d/init-db.sql`, it was incorrectly interpreted as a directory *inside the container*. This usually happens if Docker cannot find or access the *source* file (`./init-db.sql`) on the host system.
+        **Troubleshooting Steps for "Is a directory" error:**
+        1.  **Verify Host File:** Ensure that `init-db.sql` in your project root directory (the same directory as `docker-compose.yml`) is indeed a **file** and not a directory.
+        2.  **Execution Context:**
+            *   If running `docker-compose` commands manually, ensure you are running them from the **root directory of your project** (where `docker-compose.yml` and `init-db.sql` are located). The path `./init-db.sql` is relative to the directory where `docker-compose` is executed.
+            *   **If using Portainer from a Git repository:** Portainer checks out your repository to a temporary location on the Portainer server or agent. Ensure `init-db.sql` is present at the root of your repository and that there are no issues with how Portainer is accessing these files. If the file is missing or inaccessible in the checkout path Portainer uses, Docker will create an empty directory for the mount target.
+        3.  **File Permissions (Less Common):** On Linux/macOS, ensure that `init-db.sql` has read permissions for the user running the Docker daemon.
+        4.  **Clean Docker State:** Even if you think the file is correct, try the full `docker-compose down -v` and `docker-compose up --build -d` again. This can resolve issues related to Docker's cached state of volumes or mounts.
+        5.  **If the issue persists with Portainer specifically:**
+            *   Try deploying the stack using `docker-compose` directly on the host where Portainer runs its containers (if possible) to see if the issue is specific to Portainer's interpretation of the compose file or its file access.
+            *   Consider alternative ways to get the `init-db.sql` into the container for Portainer, such as building a custom PostgreSQL image that `COPY`s the `init-db.sql` file into `/docker-entrypoint-initdb.d/` during the image build, though this adds complexity.
 
 5.  **MinIO Bucket Creation (Automated by Application):**
     *   The MinIO bucket specified by `MINIO_BUCKET_NAME` (default: `canditrack-resumes`) will be **attempted to be created automatically by the application** when it first tries to interact with MinIO (e.g., during a resume upload via the `ensureBucketExists` function in `src/lib/minio.ts`).
@@ -179,3 +183,4 @@ This application is a prototype. For production readiness, consider the followin
 
 *   **PostgreSQL:** The application attempts to connect and execute a test query (`SELECT NOW()`) when the `src/lib/db.ts` module is initialized. Check your application server's console logs for "Successfully connected to PostgreSQL database..." or connection error messages.
 *   **MinIO:** The application attempts to connect and check/create the resume bucket when `src/lib/minio.ts` is initialized. Check application server logs for "Successfully connected to MinIO server..." or "MinIO: Bucket ... already exists/created..." or related error messages.
+
