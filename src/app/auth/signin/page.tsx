@@ -54,7 +54,9 @@ export default async function SignInPage({
             className="mx-auto mb-4 rounded-full"
             data-ai-hint="company logo"
           />
-          <CardTitle className="text-3xl font-bold tracking-tight">Welcome to NCC Candidate Management</CardTitle>
+          <CardTitle className="text-3xl font-bold tracking-tight">
+            Welcome to<br />NCC Candidate Management
+          </CardTitle>
           <CardDescription className="text-muted-foreground">
             Sign in to manage your recruitment pipeline.
           </CardDescription>
@@ -83,7 +85,6 @@ export default async function SignInPage({
                 </div>
               </div>
               <AzureAdSignInButton />
-              {/* The "Azure AD Available" alert was here and has been removed */}
             </>
           )}
            {!isAzureAdConfigured && !errorMessage && ( // Show this only if Azure is not configured AND there's no other login error
