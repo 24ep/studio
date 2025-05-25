@@ -1,4 +1,3 @@
-
 // src/app/api-docs/page.tsx
 "use client";
 
@@ -42,13 +41,29 @@ const apiEndpoints: ApiEndpoint[] = [
   {
     method: "POST",
     path: "/api/candidates",
-    description: "Create a new candidate.",
-    requestBody: "JSON: See `createCandidateSchema` in API route; requires `name`, `email`, `status`. `parsedData` (CandidateDetails) is optional. `positionId` (nullable).",
+    description: "Create a new candidate manually.",
+    requestBody: "JSON: See `createCandidateSchema` in API route; `name`, `email`, `status` can be top-level. `parsedData` (CandidateDetails) holds detailed info. `positionId` (nullable).",
     response: "JSON: `Candidate` (Newly created candidate object)",
     curlExample: `curl -X POST \\\n` +
                  `  -H 'Content-Type: application/json' \\\n` +
                  `  -d '{"name":"John Doe", "email":"john@example.com", "status":"Applied", "parsedData": { "personal_info": {"firstname":"John", "lastname":"Doe"}, "contact_info": {"email":"john@example.com"}}, "positionId": null}' \\\n` +
                  `  http://localhost:9002/api/candidates`,
+  },
+  {
+    method: "POST",
+    path: "/api/n8n/create-candidate-with-matches",
+    description: "Webhook endpoint for n8n to create a candidate with job matching details. n8n should send candidate PII and job match data.",
+    requestBody: "JSON: `{ name: string, email: string, phone?: string, parsedData: CandidateDetails, top_matches?: N8NJobMatch[] }` (See `N8NWebhookPayload` type)",
+    response: "JSON: `{ message: string, candidate: Candidate }` or error response",
+    curlExample: `curl -X POST \\\n` +
+                 `  -H 'Content-Type: application/json' \\\n` +
+                 `  -d '{\\n` +
+                 `    "name": "Jane Parsed",\\n` +
+                 `    "email": "jane.parsed@example.com",\\n` +
+                 `    "parsedData": { \\"personal_info\\": {\\"firstname\\":\\"Jane\\", \\"lastname\\":\\"Parsed\\"}, \\"contact_info\\": {\\"email\\":\\"jane.parsed@example.com\\"} },\\n` +
+                 `    "top_matches": [ { \\"job_id\\": \\"N8N_JOB_001\\", \\"job_title\\": \\"Software Engineer\\", \\"fit_score\\": 90, \\"match_reasons\\": [\\"Strong Python\\"] } ]\\n` +
+                 `  }' \\\n` +
+                 `  http://localhost:9002/api/n8n/create-candidate-with-matches`,
   },
   {
     method: "GET",
@@ -80,7 +95,7 @@ const apiEndpoints: ApiEndpoint[] = [
   {
     method: "POST",
     path: "/api/candidates/upload-for-n8n",
-    description: "Upload a PDF resume to be sent to an n8n workflow for new candidate creation. Requires N8N_GENERIC_PDF_WEBHOOK_URL set on server.",
+    description: "Upload a PDF resume to be sent to an n8n workflow for new candidate creation (n8n uses /api/n8n/create-candidate-with-matches to post back). Requires N8N_GENERIC_PDF_WEBHOOK_URL set on server.",
     requestBody: "FormData: `pdfFile`: File (PDF)",
     response: "JSON: `{ message: 'PDF successfully sent to n8n workflow for candidate creation.', n8nResponse?: any }`",
     curlExample: `curl -X POST \\\n` +
@@ -197,8 +212,8 @@ const apiEndpoints: ApiEndpoint[] = [
     requestBody: "JSON: `{ currentPassword: string, newPassword: string }`",
     response: "JSON: `{ message: 'Password changed successfully.' }` or error message.",
     curlExample: `curl -X POST \\\n` +
-                 `  -H 'Authorization: Bearer <YOUR_AUTH_TOKEN_OR_COOKIE>' \\\n` +
                  `  -H 'Content-Type: application/json' \\\n` +
+                 `  # Requires authentication cookie/token in the request for session \n` +
                  `  -d '{"currentPassword":"oldPassword123", "newPassword":"newStrongPassword456"}' \\\n` +
                  `  http://localhost:9002/api/auth/change-password`,
   },
@@ -249,7 +264,7 @@ const apiEndpoints: ApiEndpoint[] = [
   {
     method: "POST",
     path: "/api/n8n/webhook-proxy",
-    description: "Proxies a PDF file upload (as data URI) to the generic n8n webhook (`N8N_GENERIC_PDF_WEBHOOK_URL`).",
+    description: "Proxies a PDF file upload to the generic n8n webhook (`N8N_GENERIC_PDF_WEBHOOK_URL`). Uploaded as FormData, n8n receives file as base64 data URI in JSON.",
     requestBody: "FormData: `pdfFile`: File (PDF)",
     response: "JSON: `{ message: 'PDF successfully sent to n8n workflow.', n8nResponse?: any }`",
     curlExample: `curl -X POST \\\n` +
@@ -261,7 +276,7 @@ const apiEndpoints: ApiEndpoint[] = [
 const getMethodBadgeVariant = (method: string) => {
   switch (method.toUpperCase()) {
     case "GET":
-    case "POST": // Changed to match GET
+    case "POST":
       return "outline";
     case "PUT":
       return "secondary";
@@ -298,7 +313,7 @@ export default function ApiDocumentationPage() {
       console.error("Failed to copy cURL command:", err);
       toast({
         title: "Failed to copy",
-        description: "Could not copy cURL command. This might be due to browser permissions, or if the page is not served over HTTPS, or other browser security restrictions.",
+        description: "Could not copy cURL command. This might be due to browser permissions or if the page is not served over HTTPS.",
         variant: "destructive",
       });
     }
@@ -313,7 +328,7 @@ export default function ApiDocumentationPage() {
           </CardTitle>
           <CardDescription>
             Overview of available API endpoints for NCC Candidate Management.
-            The base URL is assumed to be <code>http://localhost:9002</code> for these examples.
+            The base URL is <code>http://localhost:9002</code> for these examples.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
@@ -359,7 +374,7 @@ export default function ApiDocumentationPage() {
           </div>
 
           <div className="mt-6 text-sm text-muted-foreground space-y-2">
-            <p><strong>Authentication:</strong> Most API endpoints are currently public. Specific endpoints like <code>/api/auth/change-password</code> require user authentication (handled by NextAuth.js session cookies when interacting with the UI, or a Bearer token from an API Gateway like Kong for direct calls). Your application's user interface relies on NextAuth.js for managing user sessions.</p>
+            <p><strong>Authentication:</strong> Most API endpoints are currently public. Specific endpoints like <code>/api/auth/change-password</code> require user authentication (handled by NextAuth.js session cookies when interacting with the UI). For direct API calls if authentication were needed, you would use an API Gateway like Kong to manage tokens.</p>
             <p><strong>Base URL:</strong> All API paths are relative to the application's base URL (e.g., <code>http://localhost:9002</code> or your production domain).</p>
             <p><strong>Error Handling:</strong> Standard HTTP status codes are used (e.g., 200 OK, 201 Created, 400 Bad Request, 401 Unauthorized, 403 Forbidden, 404 Not Found, 500 Internal Server Error). Error responses typically include a JSON body: <code>{`{ "message": "Error description", "errors?": { ... } }`}</code>.</p>
             <p><strong>Content Type:</strong> For POST and PUT requests with a body, set <code>Content-Type: application/json</code>, unless it's a file upload (<code>multipart/form-data</code> for resume uploads).</p>
@@ -376,7 +391,7 @@ export default function ApiDocumentationPage() {
               </DialogTitle>
               <DialogDescription>
                 Example cURL command for <strong>{selectedCurlEndpoint.method}</strong> <code>{selectedCurlEndpoint.path}</code>.
-                Remember to replace placeholders. For endpoints that require authentication (like changing a password), a proper session cookie or Bearer token (if using an API Gateway) would be needed.
+                Remember to replace placeholders.
               </DialogDescription>
             </DialogHeader>
             <div className="my-4 relative group">

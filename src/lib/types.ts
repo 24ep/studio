@@ -20,10 +20,10 @@ export type PlatformModuleId = typeof PLATFORM_MODULES[number]['id'];
 declare module 'next-auth' {
   interface Session {
     user: {
-      id: string; 
-      role?: UserProfile['role']; 
+      id: string;
+      role?: UserProfile['role'];
       modulePermissions?: PlatformModuleId[];
-    } & DefaultUser; 
+    } & DefaultUser;
   }
 
   interface User extends DefaultUser {
@@ -81,8 +81,8 @@ export interface ContactInfo {
 export interface EducationEntry {
   major?: string;
   field?: string;
-  period?: string; 
-  duration?: string; 
+  period?: string;
+  duration?: string;
   GPA?: string;
   university?: string;
   campus?: string;
@@ -92,7 +92,7 @@ export interface ExperienceEntry {
   company?: string;
   position?: string;
   description?: string;
-  period?: string; 
+  period?: string;
   duration?: string;
   is_current_position?: boolean;
   postition_level?: 'entry level' | 'mid level' | 'senior level' | 'lead' | 'manager' | 'executive';
@@ -100,14 +100,22 @@ export interface ExperienceEntry {
 
 export interface SkillEntry {
   segment_skill?: string;
-  skill?: string[]; 
+  skill?: string[];
 }
 
 export interface JobSuitableEntry {
   suitable_career?: string;
   suitable_job_position?: string;
   suitable_job_level?: string;
-  suitable_salary_bath_month?: string; 
+  suitable_salary_bath_month?: string;
+}
+
+// For n8n webhook payload
+export interface N8NJobMatch {
+  job_id: string;
+  job_title: string;
+  fit_score: number;
+  match_reasons: string[];
 }
 
 export interface CandidateDetails {
@@ -118,7 +126,25 @@ export interface CandidateDetails {
   experience?: ExperienceEntry[];
   skills?: SkillEntry[];
   job_suitable?: JobSuitableEntry[];
+  associatedMatchDetails?: { // To store details of the top match if candidate is created via n8n
+    jobTitle: string;
+    fitScore: number;
+    reasons: string[];
+    n8nJobId?: string; // from n8n's job_id
+  };
 }
+
+export interface N8NWebhookPayload {
+  // Candidate PII - assuming n8n sends this from parsed resume
+  name: string; // Derived by n8n or from parsedData.personal_info.firstname + lastname
+  email: string; // Derived by n8n or from parsedData.contact_info.email
+  phone?: string | null; // Optional, from parsedData.contact_info.phone
+  parsedData: CandidateDetails; // The full candidate details from resume parsing
+
+  // Job matching info from n8n
+  top_matches?: N8NJobMatch[];
+}
+
 
 // Kept for potential backward compatibility if some candidates have old data structure
 export interface OldParsedResumeData {
@@ -138,7 +164,8 @@ export interface Position {
   department: string;
   description?: string | null; // Allow null for description
   isOpen: boolean;
-  position_level?: string | null; // Allow null
+  position_level?: string | null;
+  // n8nJobId?: string | null; // Optional: For directly mapping n8n job_id to your positions
   createdAt?: string;
   updatedAt?: string;
   candidates?: Candidate[]; // Relation for ORM/Prisma like fetching
@@ -146,15 +173,15 @@ export interface Position {
 
 export interface Candidate {
   id: string;
-  name: string; 
-  email: string; 
-  phone?: string | null; 
+  name: string;
+  email: string;
+  phone?: string | null;
   resumePath?: string | null;
   // parsedData can be the new detailed structure, old simple structure, or null
-  parsedData: CandidateDetails | OldParsedResumeData | null; 
+  parsedData: CandidateDetails | OldParsedResumeData | null;
   positionId: string | null;
   position?: Position | null; // Relation for ORM/Prisma like fetching
-  fitScore: number; 
+  fitScore: number;
   status: CandidateStatus;
   applicationDate: string; // ISO date string
   createdAt?: string; // ISO date string
@@ -183,7 +210,7 @@ export interface LogEntry {
   timestamp: string; // ISO date string
   level: LogLevel;
   message: string;
-  source?: string; 
+  source?: string;
   actingUserId?: string | null; // User ID of the person performing the action
   details?: Record<string, any> | null; // Additional structured data for the log
   createdAt?: string; // ISO date string
