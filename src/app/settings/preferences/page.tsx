@@ -8,9 +8,10 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter }
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useToast } from '@/hooks/use-toast';
 import { Save, Palette, ImageUp, Trash2 } from 'lucide-react';
+import Image from 'next/image'; // For better image handling if needed
 
 const APP_THEME_KEY = 'appThemePreference';
-const APP_LOGO_FILENAME_KEY = 'appLogoFilename';
+const APP_LOGO_DATA_URL_KEY = 'appLogoDataUrl'; // New key for data URL
 
 type ThemePreference = "light" | "dark" | "system";
 
@@ -23,8 +24,8 @@ export default function PreferencesSettingsPage() {
 
   // App Logo state
   const [selectedLogoFile, setSelectedLogoFile] = useState<File | null>(null);
-  const [logoPreviewUrl, setLogoPreviewUrl] = useState<string | null>(null);
-  const [savedLogoFilename, setSavedLogoFilename] = useState<string | null>(null);
+  const [logoPreviewUrl, setLogoPreviewUrl] = useState<string | null>(null); // This will be the data URL for preview and storage
+  const [savedLogoDataUrl, setSavedLogoDataUrl] = useState<string | null>(null);
 
 
   useEffect(() => {
@@ -33,42 +34,51 @@ export default function PreferencesSettingsPage() {
       const storedTheme = localStorage.getItem(APP_THEME_KEY) as ThemePreference | null;
       if (storedTheme) setThemePreference(storedTheme);
 
-      const storedLogoFilename = localStorage.getItem(APP_LOGO_FILENAME_KEY);
-      if (storedLogoFilename) setSavedLogoFilename(storedLogoFilename);
+      const storedLogoDataUrl = localStorage.getItem(APP_LOGO_DATA_URL_KEY);
+      if (storedLogoDataUrl) {
+        setSavedLogoDataUrl(storedLogoDataUrl);
+        setLogoPreviewUrl(storedLogoDataUrl); // Show saved logo on initial load
+      }
     }
   }, []);
-
-  useEffect(() => {
-    if (selectedLogoFile) {
-      const objectUrl = URL.createObjectURL(selectedLogoFile);
-      setLogoPreviewUrl(objectUrl);
-      return () => URL.revokeObjectURL(objectUrl);
-    } else {
-      setLogoPreviewUrl(null);
-    }
-  }, [selectedLogoFile]);
 
   const handleLogoFileChange = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
       if (file.type.startsWith('image/')) {
         setSelectedLogoFile(file);
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          setLogoPreviewUrl(reader.result as string);
+        };
+        reader.readAsDataURL(file);
       } else {
         toast({ title: "Invalid File Type", description: "Please select an image file.", variant: "destructive" });
         setSelectedLogoFile(null);
+        setLogoPreviewUrl(savedLogoDataUrl); // Revert to saved logo if selection is invalid
         event.target.value = ''; 
       }
     } else {
       setSelectedLogoFile(null);
+      setLogoPreviewUrl(savedLogoDataUrl); // Revert to saved logo if selection is cleared
     }
   };
   
-  const removeSelectedLogo = () => {
+  const removeSelectedLogo = (clearSaved: boolean = false) => {
     setSelectedLogoFile(null);
-    setLogoPreviewUrl(null);
     const fileInput = document.getElementById('app-logo-upload') as HTMLInputElement;
     if (fileInput) {
         fileInput.value = '';
+    }
+    if (clearSaved) {
+        localStorage.removeItem(APP_LOGO_DATA_URL_KEY);
+        setSavedLogoDataUrl(null);
+        setLogoPreviewUrl(null);
+        toast({ title: "Logo Cleared", description: "The application logo has been reset." });
+        // Force a re-render or notify AppLayout to update
+        window.dispatchEvent(new Event('logoChanged'));
+    } else {
+        setLogoPreviewUrl(savedLogoDataUrl); // Revert to displaying the saved logo
     }
   };
 
@@ -76,48 +86,22 @@ export default function PreferencesSettingsPage() {
     if (!isClient) return;
     localStorage.setItem(APP_THEME_KEY, themePreference);
 
-    if (selectedLogoFile) {
-      localStorage.setItem(APP_LOGO_FILENAME_KEY, selectedLogoFile.name);
-      setSavedLogoFilename(selectedLogoFile.name); 
-      setSelectedLogoFile(null); 
+    if (logoPreviewUrl && logoPreviewUrl !== savedLogoDataUrl) { // If there's a new preview URL (from new file or cleared)
+      if (selectedLogoFile) { // New file was selected
+        localStorage.setItem(APP_LOGO_DATA_URL_KEY, logoPreviewUrl);
+        setSavedLogoDataUrl(logoPreviewUrl);
+      }
     }
+    // If logoPreviewUrl is null and savedLogoDataUrl was not, it means it was cleared by removeSelectedLogo(true)
+    // which already handles localStorage.removeItem.
     
     toast({
       title: 'Preferences Saved',
       description: 'Your preferences have been updated locally.',
     });
+    // Force a re-render or notify AppLayout to update the logo in the header
+    window.dispatchEvent(new Event('logoChanged'));
   };
-
-  if (!isClient) {
-    return (
-        <div className="space-y-6">
-          <Card className="w-full max-w-xl mx-auto shadow-lg animate-pulse">
-            <CardHeader>
-              <CardTitle className="h-8 bg-muted rounded"></CardTitle>
-              <CardDescription className="h-4 bg-muted rounded mt-1"></CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-8">
-              <div>
-                <div className="h-6 bg-muted rounded w-1/4 mb-2"></div>
-                <div className="space-y-2">
-                    <div className="h-8 bg-muted rounded"></div>
-                    <div className="h-8 bg-muted rounded"></div>
-                    <div className="h-8 bg-muted rounded"></div>
-                </div>
-              </div>
-              <div>
-                <div className="h-6 bg-muted rounded w-1/3 mb-2"></div>
-                <div className="h-10 bg-muted rounded"></div>
-                 <div className="h-20 bg-muted rounded mt-2"></div>
-              </div>
-            </CardContent>
-            <CardFooter>
-              <div className="h-10 bg-muted rounded w-32"></div>
-            </CardFooter>
-          </Card>
-        </div>
-    );
-  }
 
   return (
     <div className="space-y-8">
@@ -159,7 +143,7 @@ export default function PreferencesSettingsPage() {
               <ImageUp className="mr-2 h-5 w-5" /> App Logo
             </h3>
             <div>
-              <Label htmlFor="app-logo-upload">Change App Logo</Label>
+              <Label htmlFor="app-logo-upload">Change App Logo (Recommended: square, max 50KB)</Label>
               <Input
                 id="app-logo-upload"
                 type="file"
@@ -169,21 +153,24 @@ export default function PreferencesSettingsPage() {
               />
               {logoPreviewUrl && (
                 <div className="mt-3 p-2 border rounded-md inline-flex items-center gap-3 bg-muted/50">
-                  <img src={logoPreviewUrl} alt="Logo preview" className="h-12 w-12 object-contain rounded" />
-                  <span className="text-sm text-foreground truncate max-w-xs">{selectedLogoFile?.name}</span>
-                  <Button variant="ghost" size="icon" onClick={removeSelectedLogo} className="h-7 w-7">
-                    <Trash2 className="h-4 w-4 text-destructive"/>
-                    <span className="sr-only">Remove selected logo</span>
+                  <Image src={logoPreviewUrl} alt="Logo preview" width={48} height={48} className="h-12 w-12 object-contain rounded" />
+                  {selectedLogoFile && <span className="text-sm text-foreground truncate max-w-xs">{selectedLogoFile.name}</span>}
+                  <Button variant="ghost" size="icon" onClick={() => removeSelectedLogo(false)} className="h-7 w-7">
+                    <XCircle className="h-4 w-4 text-muted-foreground hover:text-destructive"/>
+                    <span className="sr-only">Cancel selection</span>
                   </Button>
                 </div>
               )}
-              {savedLogoFilename && !selectedLogoFile && !logoPreviewUrl && (
-                 <p className="text-sm text-muted-foreground mt-1">
-                  Current conceptually "saved" logo: <strong>{savedLogoFilename}</strong>. Select a new file to change.
-                </p>
+              {savedLogoDataUrl && (
+                 <div className="mt-2">
+                    <Button variant="outline" size="sm" onClick={() => removeSelectedLogo(true)}>
+                        <Trash2 className="mr-2 h-4 w-4"/> Reset to Default Logo
+                    </Button>
+                 </div>
               )}
               <p className="text-xs text-muted-foreground mt-1">
-                Select an image to replace the application logo (conceptual for this prototype).
+                Select an image to replace the application logo. Changes apply after saving preferences.
+                Stored in browser localStorage (not suitable for large images or production).
               </p>
             </div>
           </section>
@@ -197,5 +184,3 @@ export default function PreferencesSettingsPage() {
     </div>
   );
 }
-
-    

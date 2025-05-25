@@ -1,6 +1,6 @@
 
 "use client";
-import type { ReactNode } from "react";
+import React, { type ReactNode, useState, useEffect } from "react"; // Added React, useState, useEffect
 import {
   SidebarProvider,
   Sidebar,
@@ -16,7 +16,10 @@ import Link from "next/link";
 import { Separator } from "@/components/ui/separator";
 import { Package2 } from "lucide-react";
 import { usePathname } from "next/navigation";
-import { SetupFlowHandler } from './SetupFlowHandler'; // Import the new handler
+import { SetupFlowHandler } from './SetupFlowHandler';
+import Image from 'next/image'; // For better image handling
+
+const APP_LOGO_DATA_URL_KEY = 'appLogoDataUrl';
 
 function getPageTitle(pathname: string): string {
   if (pathname === "/") return "Dashboard";
@@ -37,23 +40,50 @@ function getPageTitle(pathname: string): string {
 export function AppLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const pageTitle = getPageTitle(pathname);
+  const [appLogoUrl, setAppLogoUrl] = useState<string | null>(null);
+  const [isClient, setIsClient] = useState(false);
+
+  const updateLogo = () => {
+    const storedLogo = localStorage.getItem(APP_LOGO_DATA_URL_KEY);
+    setAppLogoUrl(storedLogo);
+  };
+
+  useEffect(() => {
+    setIsClient(true);
+    updateLogo(); // Initial load
+
+    // Listen for custom event to update logo
+    window.addEventListener('logoChanged', updateLogo);
+    return () => {
+      window.removeEventListener('logoChanged', updateLogo);
+    };
+  }, []);
+
 
   if (pathname === "/auth/signin") {
-    return <>{children}</>; // Signin page bypasses full AppLayout and SetupFlowHandler
+    return <>{children}</>; 
   }
 
   return (
-    <SetupFlowHandler> {/* Wrap the main layout content */}
+    <SetupFlowHandler> 
       <SidebarProvider defaultOpen>
         <Sidebar collapsible="icon" variant="sidebar" className="border-r" data-sidebar="sidebar">
-          <SidebarHeader className="p-4 flex items-center justify-between">
+          <SidebarHeader className="p-4 flex items-center justify-between h-16"> {/* Ensure consistent height */}
             <Link href="/" className="flex items-center gap-2 font-semibold text-primary group-data-[collapsible=icon]:hidden">
-              <Package2 className="h-6 w-6" />
-              <span>NCC Candidate Management</span>
+              {isClient && appLogoUrl ? (
+                <Image src={appLogoUrl} alt="App Logo" width={32} height={32} className="h-8 w-8 object-contain" />
+              ) : (
+                <Package2 className="h-6 w-6" />
+              )}
+              <span className="ml-1">NCC Candidate Management</span>
             </Link>
             <div className="hidden items-center justify-center group-data-[collapsible=icon]:flex group-data-[collapsible=icon]:w-full">
               <Link href="/" className="flex items-center gap-2 font-semibold text-primary">
-                <Package2 className="h-6 w-6" />
+                 {isClient && appLogoUrl ? (
+                  <Image src={appLogoUrl} alt="App Logo" width={32} height={32} className="h-8 w-8 object-contain" />
+                ) : (
+                  <Package2 className="h-6 w-6" />
+                )}
               </Link>
             </div>
             <SidebarTrigger className="hidden md:group-data-[collapsible=icon]:hidden" />
