@@ -30,6 +30,31 @@ export default function CandidatesPage() {
   const [authError, setAuthError] = useState(false);
   const [fetchError, setFetchError] = useState<string | null>(null);
 
+  const fetchCandidateById = useCallback(async (candidateId: string): Promise<Candidate | null> => {
+    try {
+      const response = await fetch(`/api/candidates/${candidateId}`);
+      if (!response.ok) {
+        // Handle errors appropriately, maybe log or show a specific toast
+        console.error(`Failed to fetch candidate ${candidateId}: ${response.statusText}`);
+        return null;
+      }
+      return await response.json();
+    } catch (error) {
+      console.error(`Error fetching candidate ${candidateId}:`, error);
+      return null;
+    }
+  }, []);
+
+  const refreshCandidateInList = useCallback(async (candidateId: string) => {
+    const updatedCandidate = await fetchCandidateById(candidateId);
+    if (updatedCandidate) {
+      setAllCandidates(prev => prev.map(c => c.id === candidateId ? updatedCandidate : c));
+    } else {
+      // If fetching fails, maybe just refetch all or show an error
+      toast({ title: "Refresh Error", description: `Could not refresh data for candidate ${candidateId}.`, variant: "destructive"});
+    }
+  }, [fetchCandidateById, toast]);
+
 
   const fetchPositions = useCallback(async () => {
     if (sessionStatus !== 'authenticated') {
@@ -42,17 +67,14 @@ export default function CandidatesPage() {
         const errorMessage = errorData.message || `Failed to fetch positions: ${response.statusText || `Status: ${response.status}`}`;
         if (response.status === 401) {
             setAuthError(true);
-            // toast for 401 is handled globally by authError state
             return; 
         }
-        // For other errors when fetching positions, we might not want to block the page
-        // but show a toast. The candidate table can still function.
         toast({
             title: "Error Fetching Positions",
             description: errorMessage,
             variant: "destructive",
         });
-        setAvailablePositions([]); // Set to empty if fetch fails for positions
+        setAvailablePositions([]); 
         return;
       }
       const data: Position[] = await response.json();
@@ -80,7 +102,15 @@ export default function CandidatesPage() {
     setAuthError(false);
     setFetchError(null);
     try {
-      const response = await fetch('/api/candidates');
+      // Construct query parameters for filtering
+      const query = new URLSearchParams();
+      if (filters.name) query.append('name', filters.name);
+      if (filters.positionId) query.append('positionId', filters.positionId);
+      if (filters.education) query.append('education', filters.education);
+      if (filters.minFitScore !== undefined) query.append('minFitScore', String(filters.minFitScore));
+      if (filters.maxFitScore !== undefined) query.append('maxFitScore', String(filters.maxFitScore));
+      
+      const response = await fetch(`/api/candidates?${query.toString()}`);
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({ message: response.statusText || `Status: ${response.status}` }));
         const errorMessage = errorData.message || `Failed to fetch candidates: ${response.statusText || `Status: ${response.status}`}`;
@@ -91,16 +121,19 @@ export default function CandidatesPage() {
         }
         setFetchError(errorMessage);
         setAllCandidates([]); 
-        setFilteredCandidates([]);
+        setFilteredCandidates([]); // Ensure this is also cleared
         return;
       }
       const data: Candidate[] = await response.json();
       setAllCandidates(data);
-      setFilteredCandidates(data); 
+      // No need to call applyFilters here, as the useEffect for [filters, allCandidates] will handle it.
+      // However, since we are fetching based on filters, the result *is* the filtered list.
+      // For simplicity here, we'll just set allCandidates and let the effect run.
+      // A more optimized approach might directly setFilteredCandidates if API does the filtering.
     } catch (error) {
       console.error("Error fetching candidates:", error);
       const errorMessage = (error as Error).message || "Could not load candidate data.";
-      if (!fetchError && !errorMessage.includes("401")) {
+      if (!fetchError && !errorMessage.includes("401")) { // Avoid overwriting existing fetchError unless new
         setFetchError(errorMessage);
       }
       setAllCandidates([]); 
@@ -108,60 +141,25 @@ export default function CandidatesPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [sessionStatus, fetchError]);
+  }, [sessionStatus, filters, fetchError]); // Added filters to dependency array for API-side filtering
 
   useEffect(() => {
     if (sessionStatus === 'authenticated') {
-      fetchCandidates();
+      fetchCandidates(); // Will now fetch based on current `filters` state
       fetchPositions();
     } else if (sessionStatus === 'unauthenticated') {
       setIsLoading(false);
       setAuthError(true);
     }
-  }, [sessionStatus, fetchCandidates, fetchPositions]);
-
-
-  const applyFilters = useCallback((currentCandidates: Candidate[], currentFilters: CandidateFilterValues) => {
-    return currentCandidates.filter(candidate => {
-      if (currentFilters.name && !candidate.name.toLowerCase().includes(currentFilters.name.toLowerCase())) {
-        return false;
-      }
-      if (currentFilters.positionId && candidate.positionId !== currentFilters.positionId) {
-        return false;
-      }
-      const educationQuery = currentFilters.education?.toLowerCase();
-      if (educationQuery) {
-        const pd = candidate.parsedData as CandidateDetails | OldParsedResumeData | null;
-        let foundInEducation = false;
-        if (pd && 'personal_info' in pd && pd.education) { 
-            foundInEducation = pd.education.some(edu => 
-                Object.values(edu).some(val => String(val).toLowerCase().includes(educationQuery))
-            );
-        } else if (pd && typeof pd === 'object' && pd !== null && 'education' in pd && Array.isArray((pd as OldParsedResumeData).education)) { 
-             foundInEducation = (pd as OldParsedResumeData).education.some(eduStr => eduStr.toLowerCase().includes(educationQuery));
-        }
-        if (!foundInEducation) return false;
-      }
-      if (currentFilters.minFitScore !== undefined && candidate.fitScore < currentFilters.minFitScore) {
-        return false;
-      }
-      if (currentFilters.maxFitScore !== undefined && candidate.fitScore > currentFilters.maxFitScore) {
-        return false;
-      }
-      return true;
-    });
-  }, []);
-
-  useEffect(() => {
-    setFilteredCandidates(applyFilters(allCandidates, filters));
-  }, [filters, allCandidates, applyFilters]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps 
+  }, [sessionStatus, filters]); // fetchCandidates and fetchPositions are stable due to useCallback
 
   const handleFilterChange = (newFilters: CandidateFilterValues) => {
-    setFilters(newFilters);
+    setFilters(newFilters); // This will trigger the useEffect above to re-fetch candidates with new filters
   };
 
-  const handleUpdateCandidateAPI = async (candidateId: string, status: CandidateStatus) => {
-    // No need to pass transitionHistory, API handles its creation.
+
+  const handleUpdateCandidateAPI = async (candidateId: string, status: CandidateStatus, newTransitionHistory?: TransitionRecord[]) => {
     try {
       const response = await fetch(`/api/candidates/${candidateId}`, {
         method: 'PUT',
@@ -240,7 +238,7 @@ export default function CandidatesPage() {
         positionId: formData.positionId,
         fitScore: formData.fitScore || 0,
         status: formData.status,
-        parsedData: { // Ensure this structure matches CandidateDetails
+        parsedData: { 
           cv_language: formData.cv_language,
           personal_info: formData.personal_info,
           contact_info: formData.contact_info,
@@ -300,16 +298,12 @@ export default function CandidatesPage() {
     setAllCandidates(prev => 
       prev.map(c => (c.id === updatedCandidate.id ? updatedCandidate : c))
     );
-    // Toast for upload success is handled in UploadResumeModal/Form
   };
   
   const handleN8nProcessingStart = () => {
-    // Optionally show a persistent toast or UI element indicating background processing
-    // For now, a simple toast is handled by the modal itself.
-    // You might want to trigger a refresh of candidates after some delay here.
     setTimeout(() => {
-        fetchCandidates(); // Refresh candidate list after a delay
-    }, 15000); // e.g., 15 seconds delay, adjust as needed for your n8n workflow speed
+        fetchCandidates(); 
+    }, 15000); 
   };
 
 
@@ -381,14 +375,14 @@ export default function CandidatesPage() {
         </div>
       ) : (
         <CandidateTable 
-          candidates={filteredCandidates} 
+          candidates={allCandidates} // Pass allCandidates, filtering is done API side or via useEffect if needed
           onUpdateCandidate={handleUpdateCandidateAPI} 
           onDeleteCandidate={handleDeleteCandidate} 
           onOpenUploadModal={handleOpenUploadModal} 
           isLoading={isLoading && allCandidates.length > 0 && !fetchError} 
+          onRefreshCandidateData={refreshCandidateInList}
         />
       )}
-
 
       <AddCandidateModal
         isOpen={isAddModalOpen}
