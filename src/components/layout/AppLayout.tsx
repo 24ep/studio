@@ -32,7 +32,7 @@ function getPageTitle(pathname: string): string {
   if (pathname.startsWith("/api-docs")) return "API Documentation";
   if (pathname.startsWith("/logs")) return "Application Logs";
   if (pathname.startsWith("/auth/signin")) return "Sign In";
-  return "NCC Candidate Management";
+  return "Candidate Matching";
 }
 
 
@@ -74,7 +74,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
               ) : (
                 <Package2 className="h-6 w-6" />
               )}
-              <span className="ml-1">NCC Candidate Management</span>
+              <span className="ml-1">Candidate Matching</span>
             </Link>
             <div className="hidden items-center justify-center group-data-[collapsible=icon]:flex group-data-[collapsible=icon]:w-full">
               <Link href="/" className="flex items-center gap-2 font-semibold text-primary">
@@ -92,7 +92,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
             <SidebarNav />
           </SidebarContent>
           <SidebarFooter className="p-4 border-t group-data-[collapsible=icon]:hidden">
-            <p className="text-xs text-muted-foreground">© {new Date().getFullYear()} NCC Candidate Management</p>
+            <p className="text-xs text-muted-foreground">© {new Date().getFullYear()} Candidate Matching</p>
           </SidebarFooter>
         </Sidebar>
         <SidebarInset className="flex flex-col bg-background">
@@ -105,4 +105,6 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
     </SetupFlowHandler>
   );
 }
+    
+
     

@@ -1,3 +1,4 @@
+
 // src/app/api-docs/page.tsx
 "use client";
 
@@ -213,7 +214,7 @@ const apiEndpoints: ApiEndpoint[] = [
     response: "JSON: `{ message: 'Password changed successfully.' }` or error message.",
     curlExample: `curl -X POST \\\n` +
                  `  -H 'Content-Type: application/json' \\\n` +
-                 `  # Requires authentication cookie/token in the request for session \n` +
+                 `  -H 'Authorization: Bearer <YOUR_AUTH_TOKEN_OR_COOKIE>' \\\n` +
                  `  -d '{"currentPassword":"oldPassword123", "newPassword":"newStrongPassword456"}' \\\n` +
                  `  http://localhost:9002/api/auth/change-password`,
   },
@@ -224,7 +225,7 @@ const apiEndpoints: ApiEndpoint[] = [
     requestBody: "N/A",
     response: "JSON: Session object or null.",
     curlExample: `curl http://localhost:9002/api/auth/session \\\n` +
-                 `  # (Requires authentication cookie/token in the request)`,
+                 `  -H 'Authorization: Bearer <YOUR_AUTH_TOKEN_OR_COOKIE>'`,
   },
   {
     method: "PUT",
@@ -327,7 +328,7 @@ export default function ApiDocumentationPage() {
             <Code2 className="mr-2 h-6 w-6 text-primary" /> API Documentation
           </CardTitle>
           <CardDescription>
-            Overview of available API endpoints for NCC Candidate Management.
+            Overview of available API endpoints for Candidate Matching.
             The base URL is <code>http://localhost:9002</code> for these examples.
           </CardDescription>
         </CardHeader>
@@ -374,7 +375,7 @@ export default function ApiDocumentationPage() {
           </div>
 
           <div className="mt-6 text-sm text-muted-foreground space-y-2">
-            <p><strong>Authentication:</strong> Most API endpoints are currently public. Specific endpoints like <code>/api/auth/change-password</code> require user authentication (handled by NextAuth.js session cookies when interacting with the UI). For direct API calls if authentication were needed, you would use an API Gateway like Kong to manage tokens.</p>
+            <p><strong>Authentication:</strong> Most API endpoints are currently public. Specific endpoints like <code>/api/auth/change-password</code> or those retrieving user-specific session data implicitly require user authentication (handled by NextAuth.js session cookies when interacting with the UI, or a Bearer token via an API Gateway like Kong for direct API calls).</p>
             <p><strong>Base URL:</strong> All API paths are relative to the application's base URL (e.g., <code>http://localhost:9002</code> or your production domain).</p>
             <p><strong>Error Handling:</strong> Standard HTTP status codes are used (e.g., 200 OK, 201 Created, 400 Bad Request, 401 Unauthorized, 403 Forbidden, 404 Not Found, 500 Internal Server Error). Error responses typically include a JSON body: <code>{`{ "message": "Error description", "errors?": { ... } }`}</code>.</p>
             <p><strong>Content Type:</strong> For POST and PUT requests with a body, set <code>Content-Type: application/json</code>, unless it's a file upload (<code>multipart/form-data</code> for resume uploads).</p>
@@ -421,3 +422,5 @@ export default function ApiDocumentationPage() {
     </div>
   );
 }
+
+    

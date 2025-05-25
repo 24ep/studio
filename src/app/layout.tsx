@@ -17,8 +17,8 @@ const openSans = Open_Sans({
 });
 
 export const metadata: Metadata = {
-  title: 'NCC Candidate Management - Applicant Tracking System',
-  description: 'Streamline your hiring process with NCC Candidate Management.',
+  title: 'Candidate Matching - Applicant Tracking System',
+  description: 'Streamline your hiring process with Candidate Matching.',
 };
 
 export default async function RootLayout({ // Note: 'async' if using getServerSession
@@ -42,3 +42,5 @@ export default async function RootLayout({ // Note: 'async' if using getServerSe
     </html>
   );
 }
+
+    

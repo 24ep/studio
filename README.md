@@ -1,7 +1,7 @@
 
-# NCC Candidate Management - Applicant Tracking System (Next.js Prototype)
+# Candidate Matching - Applicant Tracking System (Next.js Prototype)
 
-This is a Next.js application prototype for NCC Candidate Management, an Applicant Tracking System, built with Firebase Studio.
+This is a Next.js application prototype for Candidate Matching, an Applicant Tracking System, built with Firebase Studio.
 
 ## Features
 
@@ -59,7 +59,7 @@ This is a Next.js application prototype for NCC Candidate Management, an Applica
 1.  **Clone the repository:**
     ```bash
     git clone <repository_url>
-    cd ncc-candidate-management
+    cd candidate-matching-app # Assuming project directory name might change
     ```
 
 2.  **Install dependencies:**
@@ -172,7 +172,7 @@ This is the recommended way to run the application along with its backend servic
     *   If you see connection error messages, verify your `.env.local` settings, Docker networking, and that the backend services are running correctly.
 
 7.  **Accessing Services:**
-    *   **NCC Candidate Management App:** `http://localhost:9002` (or your configured host/port in Portainer, default exposed on host port 9846)
+    *   **Candidate Matching App:** `http://localhost:9002` (or your configured host/port in Portainer, default exposed on host port 9846)
     *   **PostgreSQL:** Accessible on `localhost:5432` from your host machine (or `postgres:5432` from within the Docker network, or as exposed by Portainer).
     *   **MinIO API:** `http://localhost:9000` (from host, or as exposed by Portainer on host port 9847).
     *   **MinIO Console:** `http://localhost:9001` (Login with `MINIO_ROOT_USER` and `MINIO_ROOT_PASSWORD` from your `.env.local` or `docker-compose.yml` defaults. Exposed on host port 9848 by default).
@@ -219,4 +219,5 @@ This application is a prototype. For production readiness, consider the followin
 
 *   **PostgreSQL:** The application attempts to connect and execute a test query (`SELECT NOW()`) when the `src/lib/db.ts` module is initialized. Check your application server's console logs for "Successfully connected to PostgreSQL database..." or connection error messages.
 *   **MinIO:** The application attempts to connect and check/create the resume bucket when `src/lib/minio.ts` is initialized. Check application server logs for "Successfully connected to MinIO server..." or "MinIO: Bucket ... already exists/created..." or related error messages.
-```
+
+    

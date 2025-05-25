@@ -1,6 +1,6 @@
 
 {
-  "name": "ncc-candidate-management",
+  "name": "candidate-matching",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -74,3 +74,5 @@
     "typescript": "^5"
   }
 }
+
+    
