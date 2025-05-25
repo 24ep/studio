@@ -42,9 +42,10 @@ export default function DashboardPage() {
           setAuthError(true);
           criticalAuthFailure = true;
         } else {
+          // Corrected: Accumulate error instead of throwing
           accumulatedFetchError += `Failed to fetch candidates: ${errorText}. `;
         }
-        setCandidates([]);
+        setCandidates([]); // Clear data on error
       } else {
         const candidatesData: Candidate[] = await candidatesRes.json();
         setCandidates(candidatesData);
@@ -57,9 +58,10 @@ export default function DashboardPage() {
           setAuthError(true);
           criticalAuthFailure = true;
         } else {
+          // Corrected: Accumulate error instead of throwing
           accumulatedFetchError += `Failed to fetch positions: ${errorText}. `;
         }
-        setPositions([]);
+        setPositions([]); // Clear data on error
       } else {
         const positionsData: Position[] = await positionsRes.json();
         setPositions(positionsData);
@@ -76,17 +78,21 @@ export default function DashboardPage() {
       }
 
     } catch (error) { 
-      // This catch block handles network errors or JSON parsing errors from successful responses
-      // that might not be valid JSON, or other unexpected JS errors during fetch.
       console.error("Unexpected error fetching dashboard data:", error);
       const genericMessage = (error as Error).message || "An unexpected error occurred while loading dashboard data.";
-      setFetchError(prev => prev ? `${prev} ${genericMessage}` : genericMessage);
+      // Ensure accumulatedFetchError from try block is preserved if error is from JSON parsing etc.
+      setFetchError(prev => {
+        let newError = prev || "";
+        if (fetchError) newError += `${fetchError} `; // Append error from inside try if it was set
+        newError += genericMessage;
+        return newError.trim();
+      });
       setCandidates([]);
       setPositions([]);
     } finally {
       setIsLoading(false);
     }
-  }, [sessionStatus]); // Removed toast, authError dependencies. sessionStatus drives initial fetch.
+  }, [sessionStatus]); // Removed toast from dependencies as it's not used in fetchData
 
   useEffect(() => {
     if (sessionStatus === 'authenticated') {
@@ -94,9 +100,8 @@ export default function DashboardPage() {
     } else if (sessionStatus === 'unauthenticated') {
       setIsLoading(false);
       setAuthError(true);
-      setFetchError(null); // Clear fetch error if auth is the issue
+      setFetchError(null); 
     }
-    // If sessionStatus is 'loading', we wait.
   }, [sessionStatus, fetchData]);
 
 
