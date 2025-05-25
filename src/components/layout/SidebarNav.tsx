@@ -2,7 +2,7 @@
 "use client"
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Users, UploadCloud, Briefcase } from "lucide-react";
+import { LayoutDashboard, Users, UploadCloud, Briefcase, Settings, UsersRound } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   SidebarMenu,
@@ -15,6 +15,8 @@ const navItems = [
   { href: "/candidates", label: "Candidates", icon: Users },
   { href: "/positions", label: "Positions", icon: Briefcase },
   { href: "/upload", label: "Upload Resume", icon: UploadCloud },
+  { href: "/users", label: "Manage Users", icon: UsersRound },
+  { href: "/settings", label: "Settings", icon: Settings },
 ];
 
 export function SidebarNav() {

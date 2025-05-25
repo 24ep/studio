@@ -10,11 +10,13 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { UploadCloud, FileText, XCircle } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useToast } from "@/hooks/use-toast";
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 const ACCEPTED_FILE_TYPES = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
+const N8N_WEBHOOK_URL_KEY = 'n8nWebhookUrl';
+
 
 const resumeUploadSchema = z.object({
   resumes: z
@@ -29,6 +31,12 @@ type ResumeUploadFormValues = z.infer<typeof resumeUploadSchema>;
 export function ResumeUploadForm() {
   const { toast } = useToast();
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [isClient, setIsClient] = useState(false);
+
+
+  useEffect(() => {
+    setIsClient(true); // Component has mounted
+  }, []);
 
   const form = useForm<ResumeUploadFormValues>({
     resolver: zodResolver(resumeUploadSchema),
@@ -38,18 +46,31 @@ export function ResumeUploadForm() {
   });
 
   const onSubmit = async (data: ResumeUploadFormValues) => {
-    console.log('Uploading resumes:', data.resumes);
-    // Here you would typically:
-    // 1. Loop through data.resumes (which is a FileList)
-    // 2. For each file, create FormData and send to your backend/n8n webhook
-    // Example:
-    // const formData = new FormData();
-    // formData.append('resume', file);
-    // await fetch('/api/upload-resume-webhook', { method: 'POST', body: formData });
+    let webhookUrl = null;
+    if (isClient) { // Only access localStorage on client
+        webhookUrl = localStorage.getItem(N8N_WEBHOOK_URL_KEY);
+    }
+
+    if (webhookUrl) {
+      console.log(`Simulating resume submission to n8n webhook: ${webhookUrl} for ${data.resumes.length} files.`);
+      // In a real scenario, you would loop and send each file:
+      // for (const file of Array.from(data.resumes)) {
+      //   const formData = new FormData();
+      //   formData.append('resume', file);
+      //   try {
+      //     // const response = await fetch(webhookUrl, { method: 'POST', body: formData });
+      //     // console.log(`File ${file.name} sent, status: ${response.status}`);
+      //   } catch (error) {
+      //     // console.error(`Error sending ${file.name}:`, error);
+      //   }
+      // }
+    } else {
+      console.log('n8n webhook URL not configured in Settings. Skipping webhook submission.');
+    }
 
     toast({
       title: "Resumes Submitted (Simulated)",
-      description: `${data.resumes.length} resume(s) would be sent for processing. Check console.`,
+      description: `${data.resumes.length} resume(s) processed. ${webhookUrl ? 'Webhook step simulated (check console).' : 'n8n webhook not configured.'}`,
     });
     form.reset();
     setSelectedFiles([]);
@@ -71,8 +92,9 @@ export function ResumeUploadForm() {
     
     const dataTransfer = new DataTransfer();
     newFiles.forEach(file => dataTransfer.items.add(file));
-    form.setValue('resumes', dataTransfer.files.length > 0 ? dataTransfer.files : new FileList(), { shouldValidate: true });
-
+    // Use new FileList() if newFiles is empty to correctly clear the input
+    const newFileList = newFiles.length > 0 ? dataTransfer.files : new FileList(); 
+    form.setValue('resumes', newFileList, { shouldValidate: true });
   };
 
 
@@ -92,7 +114,7 @@ export function ResumeUploadForm() {
             <FormField
               control={form.control}
               name="resumes"
-              render={({ fieldState }) => ( // field is not directly used here due to custom file handling
+              render={({ fieldState }) => ( 
                 <FormItem>
                   <FormLabel htmlFor="resume-upload" className="text-base">Resume Files</FormLabel>
                   <FormControl>
@@ -112,6 +134,7 @@ export function ResumeUploadForm() {
                                 multiple 
                                 accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
                                 onChange={handleFileChange}
+                                // value is uncontrolled here; managed by selectedFiles state and removeFile logic
                               />
                             </Label>
                             <p className="pl-1">or drag and drop</p>
@@ -155,4 +178,3 @@ export function ResumeUploadForm() {
     </Card>
   );
 }
-

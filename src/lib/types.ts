@@ -52,10 +52,11 @@ export interface Position {
   isOpen: boolean;
 }
 
-export interface UserProfile {
+export interface UserProfile { // Represents an application user (recruiter, admin)
   id: string;
   name: string;
   email: string;
   avatarUrl?: string;
+  dataAiHint?: string; // For placeholder images if avatarUrl is missing
   role: 'Admin' | 'Recruiter' | 'Hiring Manager';
 }

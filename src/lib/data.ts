@@ -98,6 +98,8 @@ export const mockCandidates: Candidate[] = [
   },
 ];
 
+// This mockUserProfile is for the currently "logged-in" user if not using real auth.
+// With NextAuth, session.user will be preferred.
 export const mockUserProfile: UserProfile = {
   id: 'user1',
   name: 'Jane Recruiter',
@@ -106,3 +108,32 @@ export const mockUserProfile: UserProfile = {
   dataAiHint: 'profile woman',
   role: 'Recruiter',
 };
+
+
+// Mock data for the /users page (application users)
+export const mockAppUsers: UserProfile[] = [
+  {
+    id: 'user1', // Matches mockUserProfile for consistency in this example
+    name: 'Jane Recruiter',
+    email: 'jane.recruiter@canditrack.com',
+    avatarUrl: 'https://placehold.co/100x100.png',
+    dataAiHint: 'profile woman',
+    role: 'Recruiter',
+  },
+  {
+    id: 'user2',
+    name: 'Admin User',
+    email: 'admin@canditrack.com',
+    avatarUrl: 'https://placehold.co/100x100.png',
+    dataAiHint: 'profile person',
+    role: 'Admin',
+  },
+  {
+    id: 'user3',
+    name: 'Mike Manager',
+    email: 'mike.manager@canditrack.com',
+    // avatarUrl: 'https://placehold.co/100x100.png', // Example of user without avatar
+    dataAiHint: 'profile man',
+    role: 'Hiring Manager',
+  },
+];

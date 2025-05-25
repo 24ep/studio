@@ -25,6 +25,8 @@ function getPageTitle(pathname: string): string {
   if (pathname.startsWith("/candidates")) return "Candidates";
   if (pathname.startsWith("/positions")) return "Positions";
   if (pathname.startsWith("/upload")) return "Upload Resume";
+  if (pathname.startsWith("/users")) return "Manage Users";
+  if (pathname.startsWith("/settings")) return "Settings";
   return "CandiTrack";
 }
 
