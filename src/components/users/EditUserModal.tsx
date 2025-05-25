@@ -29,12 +29,11 @@ import type { UserProfile } from '@/lib/types';
 
 const userRoleOptions: UserProfile['role'][] = ['Admin', 'Recruiter', 'Hiring Manager'];
 
-// Schema for editing user. Password is not included here as password changes
-// typically involve a separate, more secure flow (e.g. current password + new password).
 const editUserFormSchema = z.object({
   name: z.string().min(1, "Name is required"),
   email: z.string().email("Invalid email address"), 
   role: z.enum(userRoleOptions, { required_error: "Role is required" }),
+  newPassword: z.string().min(6, "New password must be at least 6 characters").optional().or(z.literal('')), // Optional, but if provided, min 6 chars
 });
 
 export type EditUserFormValues = z.infer<typeof editUserFormSchema>;
@@ -53,6 +52,7 @@ export function EditUserModal({ isOpen, onOpenChange, onEditUser, user }: EditUs
       name: '',
       email: '',
       role: 'Recruiter',
+      newPassword: '',
     },
   });
 
@@ -62,24 +62,30 @@ export function EditUserModal({ isOpen, onOpenChange, onEditUser, user }: EditUs
         name: user.name,
         email: user.email,
         role: user.role,
+        newPassword: '', // Always reset password field for security/UX
       });
     } else if (!isOpen) {
-        form.reset({ name: '', email: '', role: 'Recruiter' }); // Reset form when modal is closed
+        form.reset({ name: '', email: '', role: 'Recruiter', newPassword: '' });
     }
   }, [user, isOpen, form]);
 
   const onSubmit = async (data: EditUserFormValues) => {
     if (!user) return;
-    await onEditUser(user.id, data);
+    // If newPassword is an empty string, don't send it in the payload or handle it server-side
+    const payload: EditUserFormValues = { ...data };
+    if (payload.newPassword === '') {
+      delete payload.newPassword;
+    }
+    await onEditUser(user.id, payload);
   };
-
-  if (!user && isOpen) return null; // Don't render if no user and modal is supposed to be open
+  
+  if (!user && isOpen) return null;
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => {
       onOpenChange(open);
       if (!open) {
-        form.reset({ name: '', email: '', role: 'Recruiter' });
+        form.reset({ name: '', email: '', role: 'Recruiter', newPassword: '' });
       }
     }}>
       <DialogContent className="sm:max-w-md">
@@ -88,7 +94,7 @@ export function EditUserModal({ isOpen, onOpenChange, onEditUser, user }: EditUs
             <Edit3 className="mr-2 h-5 w-5 text-primary" /> Edit User: {user?.name || 'N/A'}
           </DialogTitle>
           <DialogDescription>
-            Update the user's details. Password changes are handled separately.
+            Update the user's details. Leave "New Password" blank to keep the current password.
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-2">
@@ -122,6 +128,11 @@ export function EditUserModal({ isOpen, onOpenChange, onEditUser, user }: EditUs
               )}
             />
             {form.formState.errors.role && <p className="text-sm text-destructive mt-1">{form.formState.errors.role.message}</p>}
+          </div>
+          <div>
+            <Label htmlFor="newPassword-edit">New Password (Optional)</Label>
+            <Input id="newPassword-edit" type="password" {...form.register('newPassword')} className="mt-1" placeholder="Leave blank to keep current password" />
+            {form.formState.errors.newPassword && <p className="text-sm text-destructive mt-1">{form.formState.errors.newPassword.message}</p>}
           </div>
           <DialogFooter className="pt-4">
             <DialogClose asChild>

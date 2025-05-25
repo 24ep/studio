@@ -7,6 +7,7 @@ import { z } from 'zod';
 import pool from '../../../../lib/db';
 import type { UserProfile } from '@/lib/types';
 import { logAudit } from '@/lib/auditLog';
+import bcrypt from 'bcrypt';
 
 const userRoleEnum = z.enum(['Admin', 'Recruiter', 'Hiring Manager']);
 
@@ -14,7 +15,7 @@ const updateUserSchema = z.object({
   name: z.string().min(1, "Name is required").optional(),
   email: z.string().email("Invalid email address").optional(),
   role: userRoleEnum.optional(),
-  // Password updates are not handled here.
+  newPassword: z.string().min(6, "Password must be at least 6 characters").optional(),
 });
 
 export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
@@ -34,7 +35,6 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
     if (result.rows.length === 0) {
       return NextResponse.json({ message: "User not found" }, { status: 404 });
     }
-    // await logAudit('AUDIT', `User details (ID: ${params.id}) retrieved by ${session.user.name} (ID: ${session.user.id}).`, 'API:Users', session.user.id, { targetUserId: params.id }); // Can be too verbose
     return NextResponse.json(result.rows[0], { status: 200 });
   } catch (error) {
     console.error(`Failed to fetch user ${params.id}:`, error);
@@ -102,13 +102,28 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
     const updateFields: string[] = [];
     const updateValues: any[] = [];
     let paramIndex = 1;
+    const auditChanges: string[] = [];
 
-    Object.entries(updates).forEach(([key, value]) => {
+    for (const [key, value] of Object.entries(updates)) {
       if (value !== undefined) {
-        updateFields.push(`"${key}" = $${paramIndex++}`);
-        updateValues.push(value);
+        auditChanges.push(key);
+        if (key === 'newPassword') {
+          if (value && typeof value === 'string' && value.length > 0) {
+            const hashedPassword = await bcrypt.hash(value, 10);
+            updateFields.push(`"password" = $${paramIndex++}`); // Store as "password" in DB
+            updateValues.push(hashedPassword);
+            auditChanges.push('password (hashed)'); // Indicate password was changed
+          }
+          // Don't add newPassword field itself to auditChanges if it was just for password
+          const newPasswordIndex = auditChanges.indexOf('newPassword');
+          if (newPasswordIndex > -1) auditChanges.splice(newPasswordIndex, 1);
+        } else {
+          updateFields.push(`"${key}" = $${paramIndex++}`);
+          updateValues.push(value);
+        }
       }
-    });
+    }
+
 
     if (updateFields.length === 0) {
       await client.query('ROLLBACK');
@@ -123,13 +138,13 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
     const updatedUser = updatedResult.rows[0];
     await client.query('COMMIT');
 
-    await logAudit('AUDIT', `User account '${updatedUser.name}' (ID: ${updatedUser.id}) updated by ${session.user.name} (ID: ${session.user.id}).`, 'API:Users', session.user.id, { targetUserId: updatedUser.id, changes: Object.keys(updates) });
+    await logAudit('AUDIT', `User account '${updatedUser.name}' (ID: ${updatedUser.id}) updated by Admin '${session.user.name}' (ID: ${session.user.id}).`, 'API:Users', session.user.id, { targetUserId: updatedUser.id, changes: auditChanges });
     return NextResponse.json(updatedUser, { status: 200 });
 
   } catch (error: any) {
     await client.query('ROLLBACK'); 
     console.error(`Failed to update user ${params.id}:`, error);
-    await logAudit('ERROR', `Failed to update user ${params.id}. Error: ${error.message}`, 'API:Users', session.user.id, { targetUserId: params.id });
+    await logAudit('ERROR', `Failed to update user ${params.id} by Admin '${session.user.name}'. Error: ${error.message}`, 'API:Users', session.user.id, { targetUserId: params.id });
      if (error.code === '23505' && error.constraint === 'User_email_key') {
       return NextResponse.json({ message: "Another user with this email already exists." }, { status: 409 });
     }
@@ -156,17 +171,20 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
   }
 
   try {
-    const deleteQuery = 'DELETE FROM "User" WHERE id = $1 RETURNING id, name'; // Return name for logging
+    // Check if user is associated with any logs as actingUserId before deleting, to avoid foreign key issues if logs are critical
+    // For now, we proceed with delete, ensure your DB schema handles this (e.g., ON DELETE SET NULL for actingUserId)
+    const deleteQuery = 'DELETE FROM "User" WHERE id = $1 RETURNING id, name'; 
     const result = await pool.query(deleteQuery, [params.id]);
     if (result.rowCount === 0) {
       return NextResponse.json({ message: "User not found" }, { status: 404 });
     }
     const deletedUserName = result.rows[0].name;
-    await logAudit('AUDIT', `User account '${deletedUserName}' (ID: ${params.id}) deleted by ${session.user.name} (ID: ${session.user.id}).`, 'API:Users', session.user.id, { targetUserId: params.id, deletedUserName });
+    await logAudit('AUDIT', `User account '${deletedUserName}' (ID: ${params.id}) deleted by Admin '${session.user.name}' (ID: ${session.user.id}).`, 'API:Users', session.user.id, { targetUserId: params.id, deletedUserName });
     return NextResponse.json({ message: "User deleted successfully" }, { status: 200 });
   } catch (error) {
     console.error(`Failed to delete user ${params.id}:`, error);
-    await logAudit('ERROR', `Failed to delete user ${params.id}. Error: ${(error as Error).message}`, 'API:Users', session.user.id, { targetUserId: params.id });
+    await logAudit('ERROR', `Failed to delete user ${params.id} by Admin '${session.user.name}'. Error: ${(error as Error).message}`, 'API:Users', session.user.id, { targetUserId: params.id });
     return NextResponse.json({ message: "Error deleting user", error: (error as Error).message }, { status: 500 });
   }
 }
+
