@@ -115,7 +115,7 @@ export function SidebarNav() {
                       "justify-between group-data-[collapsible=icon]:!size-8 group-data-[collapsible=icon]:!p-2",
                       isSettingsSectionActive && "bg-sidebar-active-background-l dark:bg-sidebar-active-background-d text-sidebar-active-foreground-l dark:text-sidebar-active-foreground-d", 
                       !isSettingsSectionActive && "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
-                      "hover:no-underline h-9" // Ensure consistent height
+                      "hover:no-underline h-9 my-0.5" // No explicit padding, vertical margin added
                     )}
                   >
                     <div className="flex items-center gap-2 group-data-[collapsible=icon]:hidden">
@@ -156,3 +156,5 @@ export function SidebarNav() {
       </SidebarMenu>
   );
 }
+
+    

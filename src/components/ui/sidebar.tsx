@@ -522,9 +522,9 @@ const sidebarMenuButtonVariants = cva(
           "bg-background shadow-[0_0_0_1px_hsl(var(--sidebar-border))] hover:bg-sidebar-accent hover:text-sidebar-accent-foreground hover:shadow-[0_0_0_1px_hsl(var(--sidebar-accent))]",
       },
       size: {
-        default: "h-9 rounded-md", // Removed px-4 py-1
-        sm: "h-8 rounded-md px-3 text-xs", // Kept px-3 for sm as it's a smaller button
-        lg: "h-11 text-sm group-data-[collapsible=icon]:!p-0", // Removed py-1
+        default: "h-9 rounded-md my-0.5", // No explicit padding, vertical margin added
+        sm: "h-8 rounded-md px-3 text-xs my-0.5", // vertical margin added
+        lg: "h-11 text-sm group-data-[collapsible=icon]:!p-0 my-0.5", // vertical margin added
       },
     },
     defaultVariants: {
@@ -660,7 +660,7 @@ const SidebarMenuSkeleton = React.forwardRef<
     <div
       ref={ref}
       data-sidebar="menu-skeleton"
-      className={cn("rounded-md h-9 flex gap-2 items-center", className)} // Removed px-4 py-1
+      className={cn("rounded-md h-9 flex gap-2 items-center my-0.5", className)} // No explicit padding, vertical margin added
       {...props}
     >
       {showIcon && (
@@ -762,3 +762,5 @@ export {
   SidebarTrigger,
   useSidebar,
 }
+
+    
