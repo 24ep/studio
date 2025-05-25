@@ -1,12 +1,13 @@
 
 import { NextResponse, type NextRequest } from 'next/server';
 import { mockCandidates, mockPositions } from '@/lib/data';
-import type { Candidate, Position } from '@/lib/types';
+import type { Candidate, Position, CandidateStatus } from '@/lib/types'; // CandidateStatus imported
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/app/api/auth/[...nextauth]/route';
+import { z } from 'zod';
 
 // In-memory store for this example, replace with database logic
-let candidatesStore: Candidate[] = [...mockCandidates];
+let candidatesStore: Candidate[] = JSON.parse(JSON.stringify(mockCandidates)); // Deep copy
 const positionsStore: Position[] = [...mockPositions]; // Used for validating positionId
 
 /**
@@ -98,6 +99,26 @@ export async function GET(request: NextRequest) {
   }
 }
 
+// Zod schema for creating a new candidate
+const createCandidateSchema = z.object({
+  name: z.string().min(1, { message: "Name is required" }),
+  email: z.string().email({ message: "Invalid email address" }),
+  phone: z.string().optional(),
+  positionId: z.string().min(1, { message: "Position ID is required" }),
+  fitScore: z.number().min(0).max(100).optional(),
+  status: z.custom<CandidateStatus>((val) => {
+    const statuses: CandidateStatus[] = ['Applied', 'Screening', 'Shortlisted', 'Interview Scheduled', 'Interviewing', 'Offer Extended', 'Offer Accepted', 'Hired', 'Rejected', 'On Hold'];
+    return statuses.includes(val as CandidateStatus);
+  }, { message: "Invalid status" }).optional(),
+  parsedData: z.object({
+    education: z.array(z.string()).optional().default([]),
+    skills: z.array(z.string()).optional().default([]),
+    experienceYears: z.number().int().min(0).optional().default(0),
+    summary: z.string().optional().default(''),
+  }),
+});
+
+
 /**
  * @swagger
  * /api/candidates:
@@ -109,48 +130,7 @@ export async function GET(request: NextRequest) {
  *       content:
  *         application/json:
  *           schema:
- *             type: object
- *             properties:
- *               name:
- *                 type: string
- *                 example: "John Doe"
- *               email:
- *                 type: string
- *                 format: email
- *                 example: "john.doe@example.com"
- *               phone:
- *                 type: string
- *                 example: "555-0101"
- *               positionId:
- *                 type: string
- *                 example: "pos1"
- *               parsedData:
- *                 type: object
- *                 properties:
- *                   education:
- *                     type: array
- *                     items:
- *                       type: string
- *                     example: ["BSc Computer Science"]
- *                   skills:
- *                     type: array
- *                     items:
- *                       type: string
- *                     example: ["React", "Node.js"]
- *                   experienceYears:
- *                     type: integer
- *                     example: 3
- *                   summary:
- *                     type: string
- *                     example: "Proactive software developer."
- *                 required:
- *                   - education
- *                   - skills
- *             required:
- *               - name
- *               - email
- *               - positionId
- *               - parsedData
+ *             $ref: '#/components/schemas/CreateCandidateInput' # Hypothetical Zod schema reference
  *     responses:
  *       201:
  *         description: Candidate created successfully.
@@ -173,41 +153,55 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
   }
 
-  // TODO: Replace with actual database insertion (e.g., using Prisma) and proper validation (e.g. Zod)
+  let body;
   try {
-    const body = await request.json();
-
-    // Basic validation
-    if (!body.name || !body.email || !body.positionId || !body.parsedData) {
-      return NextResponse.json({ message: "Missing required fields" }, { status: 400 });
+    body = await request.json();
+  } catch (error) {
+    if (error instanceof SyntaxError) {
+      return NextResponse.json({ message: "Invalid JSON payload", error: error.message }, { status: 400 });
     }
-    
-    const position = positionsStore.find(p => p.id === body.positionId);
+    console.error("Error parsing JSON body for new candidate:", error);
+    return NextResponse.json({ message: "Error parsing request body", error: (error as Error).message }, { status: 500 });
+  }
+  
+  const validationResult = createCandidateSchema.safeParse(body);
+
+  if (!validationResult.success) {
+    return NextResponse.json(
+      { message: "Invalid input", errors: validationResult.error.flatten().fieldErrors },
+      { status: 400 }
+    );
+  }
+
+  const validatedData = validationResult.data;
+
+  try {
+    const position = positionsStore.find(p => p.id === validatedData.positionId);
     if (!position) {
       return NextResponse.json({ message: "Position not found" }, { status: 404 });
     }
 
     const newCandidate: Candidate = {
       id: `cand${Date.now()}`, // Simple ID generation for mock
-      name: body.name,
-      email: body.email,
-      phone: body.phone || undefined,
-      positionId: body.positionId,
-      positionTitle: position.title, // Get title from position
-      fitScore: body.fitScore || Math.floor(Math.random() * 50) + 50, // Random fit score if not provided
-      status: 'Applied',
+      name: validatedData.name,
+      email: validatedData.email,
+      phone: validatedData.phone,
+      positionId: validatedData.positionId,
+      positionTitle: position.title, 
+      fitScore: validatedData.fitScore || Math.floor(Math.random() * 50) + 50,
+      status: validatedData.status || 'Applied',
       applicationDate: new Date().toISOString(),
       lastUpdateDate: new Date().toISOString(),
       parsedData: {
-        education: body.parsedData.education || [],
-        skills: body.parsedData.skills || [],
-        experienceYears: body.parsedData.experienceYears || 0,
-        summary: body.parsedData.summary || '',
+        education: validatedData.parsedData.education || [],
+        skills: validatedData.parsedData.skills || [],
+        experienceYears: validatedData.parsedData.experienceYears || 0,
+        summary: validatedData.parsedData.summary || '',
       },
       transitionHistory: [{
         id: `th-${Date.now()}`,
         date: new Date().toISOString(),
-        stage: 'Applied',
+        stage: validatedData.status || 'Applied',
         notes: 'Application received via API.',
       }],
     };
@@ -218,9 +212,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(newCandidate, { status: 201 });
   } catch (error) {
     console.error("Failed to create candidate:", error);
-    if (error instanceof SyntaxError) {
-        return NextResponse.json({ message: "Invalid JSON payload", error: (error as Error).message }, { status: 400 });
-    }
     return NextResponse.json({ message: "Error creating candidate", error: (error as Error).message }, { status: 500 });
   }
 }
