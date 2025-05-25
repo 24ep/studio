@@ -169,7 +169,7 @@ body {
   /* Dark theme: Active menu item style - Primary Dark Gradient */
   .dark [data-sidebar="menu-button"][data-active="true"] {
     background-image: var(--sidebar-primary-d);
-    color: hsl(var(--sidebar-primary-foreground-d)); 
+    color: hsl(var(--sidebar-primary-foreground-d)) !important; /* Ensure white text for active item */
     box-shadow: 0 2px 10px -3px hsla(var(--primary-gradient-start-d), 0.4);
   }
   /* Dark theme: Hover on active menu item - slightly adjust gradient appearance if desired */
