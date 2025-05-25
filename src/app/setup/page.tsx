@@ -151,7 +151,7 @@ export default function SetupPage() {
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
               <p className="text-sm text-muted-foreground flex-1">
                 Verify if essential database tables (e.g., "User", "Candidate", "Position") have been created.
-                These are automatically created by <code>init-db.sql</code> when the PostgreSQL Docker container starts
+                These should be automatically created by <code>init-db.sql</code> when the PostgreSQL Docker container starts
                 with a fresh data volume. Click "Check Database Schema" to verify.
               </p>
               <Button onClick={handleCheckDbSchema} disabled={dbCheckStatus === 'loading'} variant="outline" className="btn-hover-primary-gradient shrink-0">
@@ -182,10 +182,13 @@ export default function SetupPage() {
                           <p className="mt-1">Missing tables detected: <strong>{missingTables.join(', ')}</strong>.</p>
                       )}
                       <p className="mt-2 text-base font-bold">This strongly indicates the <code>init-db.sql</code> script did not run or complete successfully during PostgreSQL initialization.</p>
-                      <p className="mt-2 font-semibold">To resolve this, you must ensure the PostgreSQL container initializes with a fresh data volume:</p>
+                      <p className="mt-2 font-semibold">Common Cause: PostgreSQL container logs might show an error like "<code>psql:/docker-entrypoint-initdb.d/init-db.sql: error: could not read from input file: Is a directory</code>". This means the <code>init-db.sql</code> file was not correctly mounted as a file into the Docker container.</p>
+                      <p className="mt-2 font-semibold">To resolve this:</p>
                       <ol className="list-decimal list-inside text-sm space-y-1 mt-2 bg-muted p-3 rounded-md">
+                        <li><strong>Verify <code>init-db.sql</code> File:</strong> Ensure <code>init-db.sql</code> is a file (not a directory) located at the root of your project (same level as <code>docker-compose.yml</code>).</li>
+                        <li><strong>Correct Volume Mount:</strong> Ensure your <code>docker-compose.yml</code> correctly mounts this file: <code>./init-db.sql:/docker-entrypoint-initdb.d/init-db.sql</code>. If using Portainer from Git, ensure `init-db.sql` is at the root of your repository.</li>
                         <li><strong>Stop all services:</strong> If running locally, use <code>docker-compose down</code>. In Portainer, stop the stack.</li>
-                        <li><strong>CRITICAL - Remove Docker volumes:</strong> This step is crucial.
+                        <li><strong>CRITICAL - Remove Docker volumes:</strong> This step is crucial for a fresh database initialization.
                           <ul className="list-disc list-inside pl-5 text-xs">
                               <li>Locally: Run <code>docker-compose down -v</code>.</li>
                               <li>In Portainer: Manually delete the <code>postgres_data</code> volume associated with your stack via Portainer's "Volumes" section. Ensure you identify the correct volume name (e.g., <code>yourstackname_postgres_data</code>).</li>
@@ -194,17 +197,17 @@ export default function SetupPage() {
                         <li><strong>Restart services:</strong>
                           <ul className="list-disc list-inside pl-5 text-xs">
                               <li>Locally: Run <code>docker-compose up --build -d</code> (the <code>--build</code> might not be necessary if images are up-to-date, but it doesn't hurt).</li>
-                              <li>In Portainer: Redeploy your stack.</li>
+                              <li>In Portainer: Redeploy your stack, ensuring it uses a fresh PostgreSQL volume.</li>
                           </ul>
                          </li>
-                        <li><strong>Verify PostgreSQL Logs:</strong> After startup, check the logs of your PostgreSQL container.
+                        <li><strong>Verify PostgreSQL Container Logs:</strong> After startup, check the logs of your PostgreSQL container.
                           <ul className="list-disc list-inside pl-5 text-xs">
                               <li>Locally: Use <code>docker logs &lt;your_postgres_container_name&gt;</code>.</li>
                               <li>In Portainer: View the logs for the PostgreSQL container in the Portainer UI.</li>
-                              <li>Look for messages indicating scripts from <code>/docker-entrypoint-initdb.d/</code> are being run. If you see an error like "<code>psql:... Is a directory</code>", it means the <code>init-db.sql</code> file was not mounted correctly. Refer to the main <code>README.md</code> for troubleshooting this specific mounting error.</li>
+                              <li>Look for messages indicating scripts from <code>/docker-entrypoint-initdb.d/</code> are being run. If you still see "Is a directory" or other SQL errors, address the file mounting or script content.</li>
                           </ul>
                         </li>
-                        <li>Once the database is correctly initialized, click the "Check Database Schema" button again.</li>
+                        <li>Once the underlying issue is fixed and PostgreSQL initializes correctly, click the "Check Database Schema" button again on this page.</li>
                       </ol>
                        <p className="mt-2 text-xs text-muted-foreground">Refer to the project's <code>README.md</code> for more detailed troubleshooting if issues persist.</p>
                     </AlertDescription>
