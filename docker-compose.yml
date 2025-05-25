@@ -71,6 +71,7 @@ services:
       # The init-db.sql script in the project root will be executed automatically
       # by the PostgreSQL container on first startup to create the database schema.
       # This only happens if the postgres_data volume is empty or being newly created.
+      # Ensure this volume mount is correctly pointing to your init-db.sql file.
       - ./init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
     restart: unless-stopped
 
@@ -101,4 +102,3 @@ volumes:
   redis_data:
   app_node_modules:
   app_next:
-```
