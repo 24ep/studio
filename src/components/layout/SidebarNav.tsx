@@ -85,9 +85,10 @@ export function SidebarNav() {
               <SidebarMenuButton
                 asChild
                 isActive={pathname === item.href || (item.href !== "/" && pathname.startsWith(item.href))}
-                className="w-full justify-start"
+                className="w-full justify-start" // Removed my-1, px-3 py-2 will be from CVA
                 tooltip={item.label}
                 onClick={() => setAccordionValue(undefined)} 
+                size="default" // Explicitly use default size for padding
               >
                 <a>
                   <item.icon className="h-5 w-5" />
@@ -115,7 +116,7 @@ export function SidebarNav() {
                       "justify-between group-data-[collapsible=icon]:!size-8 group-data-[collapsible=icon]:!p-2",
                       isSettingsSectionActive && "bg-sidebar-active-background-l dark:bg-sidebar-active-background-d text-sidebar-active-foreground-l dark:text-sidebar-active-foreground-d", 
                       !isSettingsSectionActive && "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
-                      "hover:no-underline h-9 my-1" // Changed my-0.5 to my-1
+                      "hover:no-underline px-3 py-2" // Apply same padding as main menu items
                     )}
                   >
                     <div className="flex items-center gap-2 group-data-[collapsible=icon]:hidden">
@@ -139,7 +140,7 @@ export function SidebarNav() {
                         <SidebarMenuButton
                           isActive={pathname.startsWith(item.href)}
                           className="w-full justify-start"
-                          size="sm"
+                          size="sm" // Sub-items can use 'sm' for slightly smaller padding
                           tooltip={item.label}
                         >
                           {item.icon && <item.icon className="h-4 w-4 ml-[1px]" />}
