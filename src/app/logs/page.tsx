@@ -8,10 +8,11 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { format, parseISO } from 'date-fns';
-import { ListOrdered, ServerCrash, ShieldAlert, Info, RefreshCw, ChevronsLeft, ChevronLeft, ChevronRight, ChevronsRight } from "lucide-react";
+import { ListOrdered, ServerCrash, ShieldAlert, Info, RefreshCw, ChevronsLeft, ChevronLeft, ChevronRight, ChevronsRight, AlertTriangle } from "lucide-react";
 import type { LogEntry, LogLevel } from '@/lib/types';
 import { useToast } from "@/hooks/use-toast";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { signIn, useSession } from "next-auth/react";
 
 const getLogLevelBadgeVariant = (level: LogLevel): "default" | "secondary" | "destructive" | "outline" => {
   switch (level) {
@@ -48,7 +49,7 @@ const ITEMS_PER_PAGE = 20;
 export default function LogsPage() {
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [fetchError, setFetchError] = useState<string | null>(null); // Renamed from 'error' to avoid conflict
   const { toast } = useToast();
   const [isClient, setIsClient] = useState(false);
 
@@ -56,11 +57,21 @@ export default function LogsPage() {
   const [totalLogs, setTotalLogs] = useState(0);
   const [levelFilter, setLevelFilter] = useState<LogLevel | "ALL">("ALL");
 
+  const { data: session, status: sessionStatus } = useSession();
+  const [authError, setAuthError] = useState(false);
+
   const totalPages = Math.ceil(totalLogs / ITEMS_PER_PAGE);
 
   const fetchLogs = useCallback(async (page: number, filterLevel: LogLevel | "ALL") => {
+    if (sessionStatus !== 'authenticated') {
+        setIsLoading(false);
+        setAuthError(true);
+        return;
+    }
     setIsLoading(true);
-    setError(null);
+    setFetchError(null);
+    setAuthError(false);
+
     try {
       const offset = (page - 1) * ITEMS_PER_PAGE;
       let url = `/api/logs?limit=${ITEMS_PER_PAGE}&offset=${offset}`;
@@ -69,31 +80,44 @@ export default function LogsPage() {
       }
       const response = await fetch(url);
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || `Failed to fetch logs: ${response.statusText}`);
+        const errorData = await response.json().catch(() => ({ message: `Failed to fetch logs: ${response.statusText || `Status ${response.status}`}`}));
+        if (response.status === 401) {
+            setAuthError(true);
+            setIsLoading(false);
+            return;
+        }
+        throw new Error(errorData.message || `Failed to fetch logs: ${response.statusText || `Status ${response.status}`}`);
       }
       const data: { logs: LogEntry[], total: number } = await response.json();
       setLogs(data.logs);
       setTotalLogs(data.total);
     } catch (err) {
       console.error("Error fetching logs:", err);
-      setError((err as Error).message);
+      setFetchError((err as Error).message);
       setLogs([]);
       setTotalLogs(0);
-      toast({
-        title: "Error Fetching Logs",
-        description: (err as Error).message || "Could not load log data.",
-        variant: "destructive",
-      });
+      if (!(err as Error).message.includes("401")) { // Don't toast for auth errors handled by UI
+        toast({
+            title: "Error Fetching Logs",
+            description: (err as Error).message || "Could not load log data.",
+            variant: "destructive",
+        });
+      }
     } finally {
       setIsLoading(false);
     }
-  }, [toast]);
+  }, [toast, sessionStatus]);
 
   useEffect(() => {
     setIsClient(true);
-    fetchLogs(currentPage, levelFilter);
-  }, [fetchLogs, currentPage, levelFilter]);
+    if (sessionStatus === 'authenticated') {
+      fetchLogs(currentPage, levelFilter);
+    } else if (sessionStatus === 'unauthenticated') {
+      setIsLoading(false);
+      setAuthError(true);
+    }
+    // If sessionStatus is 'loading', we wait.
+  }, [sessionStatus, fetchLogs, currentPage, levelFilter]);
 
 
   const handleRefresh = () => {
@@ -109,7 +133,7 @@ export default function LogsPage() {
     setCurrentPage(1); // Reset to page 1 when filter changes
   };
 
-  if (!isClient && !isLoading) { // Initial server render before client takes over, or if client load fails early.
+  if (!isClient && sessionStatus === 'loading') { // Initial server render before client takes over, or if client load fails early.
     return (
       <div className="space-y-6">
         <Card className="shadow-lg">
@@ -127,6 +151,20 @@ export default function LogsPage() {
       </div>
     );
   }
+
+  if (authError) {
+    return (
+      <div className="flex flex-col items-center justify-center h-[calc(100vh-10rem)] text-center">
+        <AlertTriangle className="w-16 h-16 text-destructive mb-4" />
+        <h2 className="text-2xl font-semibold text-foreground mb-2">Access Denied</h2>
+        <p className="text-muted-foreground mb-6">
+          You need to be signed in to view application logs.
+        </p>
+        <Button onClick={() => signIn('azure-ad')}>Sign In</Button>
+      </div>
+    );
+  }
+
 
   return (
     <div className="space-y-6">
@@ -180,11 +218,11 @@ export default function LogsPage() {
                 </TableBody>
               </Table>
             </div>
-          ) : error ? (
+          ) : fetchError ? (
              <div className="text-center py-10">
               <ServerCrash className="mx-auto h-12 w-12 text-destructive" />
               <p className="mt-4 text-destructive font-semibold">Error loading logs</p>
-              <p className="mt-2 text-muted-foreground">{error}</p>
+              <p className="mt-2 text-muted-foreground">{fetchError}</p>
               <Button onClick={handleRefresh} className="mt-4">Try Again</Button>
             </div>
           ) : logs.length === 0 ? (
@@ -208,7 +246,7 @@ export default function LogsPage() {
                   {logs.map((log) => (
                     <TableRow key={log.id} className="hover:bg-muted/50 transition-colors">
                       <TableCell className="text-xs text-muted-foreground">
-                        {format(parseISO(log.timestamp), "MMM d, yyyy, HH:mm:ss.SSS")}
+                        {log.timestamp ? format(parseISO(log.timestamp), "MMM d, yyyy, HH:mm:ss.SSS") : 'Invalid Date'}
                       </TableCell>
                       <TableCell>
                         <Badge variant={getLogLevelBadgeVariant(log.level)} className="text-xs capitalize items-center">
