@@ -83,13 +83,7 @@ export default async function SignInPage({
                 </div>
               </div>
               <AzureAdSignInButton />
-              <Alert className="border-green-500/50 text-green-700 dark:text-green-400 [&>svg]:text-green-500 mt-4">
-                <CheckCircle2 className="h-4 w-4" />
-                <AlertTitle className="font-semibold">Azure AD Available</AlertTitle>
-                <AlertDescription className="text-xs">
-                  This application is configured for Azure Active Directory single sign-on.
-                </AlertDescription>
-              </Alert>
+              {/* The "Azure AD Available" alert was here and has been removed */}
             </>
           )}
            {!isAzureAdConfigured && !errorMessage && ( // Show this only if Azure is not configured AND there's no other login error
