@@ -84,23 +84,29 @@ This is the recommended way to run the application along with its backend servic
     *   The `MINIO_ENDPOINT` for the app should be `minio` (the service name).
     *   The `REDIS_URL` for the app should be `redis://redis:6379`.
 
-3.  **Build and run the services using Docker Compose:**
-    From the project root directory (where `docker-compose.yml` and `init-db.sql` are located), run:
-    ```bash
-    docker-compose up --build
-    ```
-    *   Use `docker-compose up --build -d` to run in detached mode.
-    *   You can use the provided `start.sh` script as well: `./start.sh` (make it executable: `chmod +x start.sh`).
-
-4.  **Automated Database Schema Setup (PostgreSQL):**
+3.  **Automated Database Schema Setup (PostgreSQL):**
     *   The PostgreSQL container is configured in `docker-compose.yml` to **automatically execute the `init-db.sql` script** (located in the project root) on its first startup when the database is initialized. This creates all necessary tables (`User`, `Candidate`, `Position`, `TransitionRecord`, `LogEntry`).
-    *   This automatic initialization only happens once when the `postgres_data` Docker volume is first created (or if the volume is empty).
-    *   **Troubleshooting - Tables Not Created?** If you find that tables like "Candidate", "Position", or "User" are missing (e.g., you see "relation ... does not exist" errors in your application logs):
-        1.  Stop all services: `docker-compose down`
-        2.  **Completely remove Docker volumes (this will delete existing database data):** `docker-compose down -v`
-        3.  Restart the services: `docker-compose up --build -d` (or `docker-compose up --build`)
-        This ensures a fresh database initialization, forcing the `init-db.sql` script to run.
-        You can also check the logs of the PostgreSQL container for any errors during the execution of `init-db.sql`: `docker logs <your_postgres_container_name>` (find the name with `docker ps`).
+    *   This automatic initialization **only happens once when the `postgres_data` Docker volume is first created** (or if the volume is empty/being newly created).
+
+4.  **IMPORTANT: If Database Tables Are Missing (e.g., "relation ... does not exist" errors):**
+    If your application logs errors indicating that tables like "Candidate", "Position", or "User" do not exist, it means the `init-db.sql` script did not run or did not complete successfully during the last PostgreSQL container startup. This is almost always because the `postgres_data` volume already existed.
+    **To force a fresh database initialization and ensure `init-db.sql` runs:**
+    1.  **Stop all services:** `docker-compose down`
+    2.  **CRITICAL: Remove all Docker volumes (this will delete ALL existing database data and MinIO files):**
+        ```bash
+        docker-compose down -v
+        ```
+    3.  **Restart the services (this will rebuild if necessary):**
+        ```bash
+        docker-compose up --build -d
+        # or just: docker-compose up --build
+        ```
+    4.  **Check PostgreSQL Logs:** After startup, if you still suspect issues, check the logs of the PostgreSQL container for any errors during the execution of `init-db.sql`:
+        ```bash
+        docker logs <your_postgres_container_name> 
+        # (Find <your_postgres_container_name> with `docker ps`)
+        ```
+        Look for messages indicating scripts from `/docker-entrypoint-initdb.d/` are being run, or any SQL errors.
 
 5.  **MinIO Bucket Creation (Automated by Application):**
     *   The MinIO bucket specified by `MINIO_BUCKET_NAME` (default: `canditrack-resumes`) will be **attempted to be created automatically by the application** when it first tries to interact with MinIO (e.g., during a resume upload via the `ensureBucketExists` function in `src/lib/minio.ts`).
@@ -118,7 +124,13 @@ This is the recommended way to run the application along with its backend servic
     *   **MinIO Console:** `http://localhost:9001` (Login with `MINIO_ROOT_USER` and `MINIO_ROOT_PASSWORD` from your `.env.local` or `docker-compose.yml` defaults).
     *   **Redis:** Accessible on `localhost:6379` from your host machine (or `redis:6379` from within the Docker network).
 
-8.  **Stopping the services:**
+8.  **Starting the services using the script:**
+    (Ensure the script is executable: `chmod +x start.sh`)
+    ```bash
+    ./start.sh
+    ```
+
+9.  **Stopping the services:**
     ```bash
     docker-compose down
     ```
@@ -149,4 +161,9 @@ This application is a prototype. For production readiness, consider the followin
 *   **Security Hardening:** Implement rate limiting, advanced security headers, etc. (Consider using an API Gateway like Kong for some of these aspects).
 *   **Password Hashing:** Ensure passwords for the Credentials login are securely hashed (e.g., using bcrypt) in the `User` table and during login checks. The current prototype uses plaintext for simplicity in the `User` table and `CredentialsProvider`. **THIS IS CRITICAL FOR PRODUCTION.**
 
-```
+## Connectivity Checks
+
+*   **PostgreSQL:** The application attempts to connect and execute a test query (`SELECT NOW()`) when the `src/lib/db.ts` module is initialized. Check your application server's console logs for "Successfully connected to PostgreSQL database..." or connection error messages.
+*   **MinIO:** The application attempts to connect and check/create the resume bucket when `src/lib/minio.ts` is initialized. Check application server logs for "Successfully connected to MinIO server..." or "MinIO: Bucket ... already exists/created..." or related error messages.
+
+    
