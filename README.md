@@ -20,6 +20,7 @@ This is a Next.js application prototype for NCC Candidate Management, an Applica
     *   Credentials (Email/Password - Mock data based)
 *   Styling with ShadCN UI components and Tailwind CSS.
 *   Backend API routes for Candidates, Positions, and Logs using PostgreSQL (via `pg` library) and file uploads to MinIO.
+*   Resume uploads can optionally trigger an n8n webhook if `N8N_RESUME_WEBHOOK_URL` is configured.
 
 ## Tech Stack
 
@@ -49,7 +50,7 @@ This is a Next.js application prototype for NCC Candidate Management, an Applica
 1.  **Clone the repository:**
     ```bash
     git clone <repository_url>
-    cd ncc-candidate-management 
+    cd ncc-candidate-management
     ```
 
 2.  **Install dependencies:**
@@ -65,12 +66,13 @@ This is a Next.js application prototype for NCC Candidate Management, an Applica
         cp .env.local.example .env.local
         ```
     *   Open `.env.local` and fill in your actual credentials and configurations for:
-        *   Azure AD (Client ID, Client Secret, Tenant ID)
-        *   `NEXTAUTH_URL` (e.g., `http://localhost:9002` for local dev)
-        *   `NEXTAUTH_SECRET` (Generate a strong secret: `openssl rand -base64 32`)
-        *   `DATABASE_URL` (Should match Docker Compose: `postgresql://devuser:devpassword@postgres:5432/canditrack_db`)
-        *   MinIO credentials and endpoint (Should match Docker Compose for local dev)
-        *   Redis URL (Should match Docker Compose for local dev)
+        *   Azure AD (Client ID, Client Secret, Tenant ID) - if using Azure SSO.
+        *   `NEXTAUTH_URL` (e.g., `http://localhost:9002` for local dev).
+        *   `NEXTAUTH_SECRET` (Generate a strong secret: `openssl rand -base64 32`).
+        *   `DATABASE_URL` (Should match Docker Compose: `postgresql://devuser:devpassword@postgres:5432/canditrack_db`).
+        *   MinIO credentials and endpoint (Should match Docker Compose for local dev).
+        *   Redis URL (Should match Docker Compose for local dev).
+        *   `N8N_RESUME_WEBHOOK_URL` (Optional: Your n8n webhook URL if you want to integrate resume uploads).
 
 ### Running with Docker (Recommended for Full Stack Development)
 
@@ -79,7 +81,7 @@ This is the recommended way to run the application along with its backend servic
 1.  **Ensure Docker and Docker Compose are installed and running.**
 2.  **Set up your `.env.local` file as described in Step 3 of Installation.**
     *   The `DATABASE_URL` should point to the Docker service name: `postgresql://devuser:devpassword@postgres:5432/canditrack_db`
-    *   The `MINIO_ENDPOINT` should be `minio` (the service name).
+    *   The `MINIO_ENDPOINT` should be `minio` (the service name), and `MINIO_PORT` should be `9000`.
     *   The `REDIS_URL` should be `redis://redis:6379`.
 
 3.  **Build and run the services using Docker Compose:**
@@ -112,7 +114,7 @@ This is the recommended way to run the application along with its backend servic
 6.  **Accessing Services:**
     *   **NCC Candidate Management App:** `http://localhost:9002`
     *   **PostgreSQL:** Accessible on `localhost:5432` from your host machine (or `postgres:5432` from within the Docker network).
-    *   **MinIO API:** `http://localhost:9000`
+    *   **MinIO API:** `http://minio:9000` (from within Docker network), `http://localhost:9000` (from host if mapped in `docker-compose.yml`).
     *   **MinIO Console:** `http://localhost:9001` (Login with `MINIO_ROOT_USER` and `MINIO_ROOT_PASSWORD` from your `.env.local` or `docker-compose.yml`).
     *   **Redis:** Accessible on `localhost:6379` from your host machine (or `redis:6379` from within the Docker network).
 
@@ -145,3 +147,4 @@ This application is a prototype. For production readiness, consider the followin
 *   **Real-time Features:** Implement WebSocket connections and Redis pub/sub for real-time updates.
 *   **UX/UI Polish:** Continue refining the user experience and interface.
 *   **Security Hardening:** Implement rate limiting, security headers, etc.
+

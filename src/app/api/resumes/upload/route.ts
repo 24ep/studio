@@ -9,7 +9,53 @@ import type { UserProfile } from '@/lib/types';
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 const ACCEPTED_FILE_TYPES = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
 
+// Ensure the bucket exists when the module is loaded.
+// This is an async operation but we call it here for its side effect.
+// In a real app, this might be part of a startup script or health check.
 ensureBucketExists(MINIO_BUCKET_NAME).catch(console.error);
+
+async function sendToN8N(candidateId: string, fileNameInMinio: string, originalFileName: string, mimeType: string) {
+  const n8nWebhookUrl = process.env.N8N_RESUME_WEBHOOK_URL;
+  if (!n8nWebhookUrl) {
+    console.log('N8N_RESUME_WEBHOOK_URL not configured. Skipping n8n notification.');
+    return;
+  }
+
+  try {
+    const presignedUrl = await minioClient.presignedGetObject(
+      MINIO_BUCKET_NAME,
+      fileNameInMinio,
+      60 * 60 // 1 hour expiry for the presigned URL
+    );
+
+    const payload = {
+      candidateId,
+      minioObjectName: fileNameInMinio,
+      minioBucketName: MINIO_BUCKET_NAME,
+      presignedUrl,
+      originalFileName,
+      mimeType,
+    };
+
+    const response = await fetch(n8nWebhookUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(payload),
+    });
+
+    if (response.ok) {
+      console.log(`Successfully sent resume details to n8n for candidate ${candidateId}.`);
+    } else {
+      const errorBody = await response.text();
+      console.error(`Failed to send resume details to n8n for candidate ${candidateId}. Status: ${response.status}, Body: ${errorBody}`);
+    }
+  } catch (error) {
+    console.error(`Error sending resume details to n8n for candidate ${candidateId}:`, error);
+  }
+}
+
 
 export async function POST(request: NextRequest) {
   const session = await getServerSession(authOptions);
@@ -68,12 +114,20 @@ export async function POST(request: NextRequest) {
     const updateQuery = 'UPDATE "Candidate" SET "resumePath" = $1, "updatedAt" = NOW() WHERE id = $2 RETURNING *;';
     await pool.query(updateQuery, [fileName, candidateId]);
 
+    // Asynchronously send data to n8n - do not await or let it block the response
+    sendToN8N(candidateId, fileName, file.name, file.type).catch(err => {
+        console.error("Error in sendToN8N background task:", err);
+    });
+
     const finalQuery = `
         SELECT 
             c.*, 
             p.title as "positionTitle",
             p.department as "positionDepartment",
-            (SELECT json_agg(th.* ORDER BY th.date DESC) FROM "TransitionRecord" th WHERE th."candidateId" = c.id) as "transitionHistory"
+            COALESCE(
+              (SELECT json_agg(th.* ORDER BY th.date DESC) FROM "TransitionRecord" th WHERE th."candidateId" = c.id), 
+              '[]'::json
+            ) as "transitionHistory"
         FROM "Candidate" c
         LEFT JOIN "Position" p ON c."positionId" = p.id
         WHERE c.id = $1;
@@ -82,11 +136,11 @@ export async function POST(request: NextRequest) {
     const updatedCandidateWithDetails = {
         ...finalResult.rows[0],
         parsedData: finalResult.rows[0].parsedData || { education: [], skills: [], experienceYears: 0, summary: '' },
-        position: {
+        position: finalResult.rows[0].positionId ? {
             id: finalResult.rows[0].positionId,
             title: finalResult.rows[0].positionTitle,
             department: finalResult.rows[0].positionDepartment,
-        },
+        } : null,
     };
 
     return NextResponse.json({ 
@@ -103,3 +157,4 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ message: 'Error processing file upload', error: error.message }, { status: 500 });
   }
 }
+
