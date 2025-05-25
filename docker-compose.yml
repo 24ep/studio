@@ -9,14 +9,13 @@ services:
     ports:
       - "9846:9002" # Next.js dev server port (from package.json's dev script, or 3000 for `next start` if not overridden)
     # For production deployments, you typically want the application code to be self-contained
-    # within the Docker image. The volume mount below is primarily for local development to
-    # reflect code changes without rebuilding the image. If this mount is active in a
-    # production-like environment (e.g., Portainer deploying from an image or a CI/CD pipeline),
-    # and the host path "." does not contain your application code (including package.json),
+    # within the Docker image. The volume mount `.:/app` is primarily for local development to
+    # reflect code changes without rebuilding the image. It's commented out for production-like behavior.
+    # If this mount is active in a production-like environment (e.g., Portainer deploying from an image
+    # or a CI/CD pipeline), and the host path "." does not contain your application code (including package.json),
     # it will overwrite the files copied into the image, leading to "package.json not found" errors.
-    #
     # volumes:
-    #   - .:/app # Commented out for production-like behavior
+    #   - .:/app # Ensure this is commented out or removed for production deployments where the image is self-contained.
     #
     # The named volumes below are generally fine and can be useful for persisting
     # node_modules and the .next build cache across container restarts, potentially
@@ -30,21 +29,21 @@ services:
       AZURE_AD_CLIENT_SECRET: "${AZURE_AD_CLIENT_SECRET:-your_azure_ad_client_secret_value}"
       AZURE_AD_TENANT_ID: "${AZURE_AD_TENANT_ID:-your_azure_ad_directory_tenant_id}"
       NEXTAUTH_URL: "${NEXTAUTH_URL:-http://localhost:9002}"
-      NEXTAUTH_SECRET: "${NEXTAUTH_SECRET:-super-secret-nextauth-key-replace-this}"
+      NEXTAUTH_SECRET: "${NEXTAUTH_SECRET:-super-secret-nextauth-key-replace-this}" # Generate with: openssl rand -base64 32
 
       # --- Genkit Configuration ---
       # GOOGLE_API_KEY: "${GOOGLE_API_KEY:-your_google_api_key}"
 
       # --- Backend Service Connection Configuration ---
       DATABASE_URL: "${DATABASE_URL:-postgresql://devuser:devpassword@postgres:5432/canditrack_db}"
-      MINIO_ENDPOINT: "${MINIO_ENDPOINT:-minio}"
+      MINIO_ENDPOINT: "${MINIO_ENDPOINT:-minio}" # Service name for Docker internal communication
       MINIO_PORT: "${MINIO_PORT:-9000}"
       MINIO_ACCESS_KEY: "${MINIO_ACCESS_KEY:-minioadmin}"
       MINIO_SECRET_KEY: "${MINIO_SECRET_KEY:-minio_secret_password}"
       MINIO_BUCKET_NAME: "${MINIO_BUCKET_NAME:-canditrack-resumes}"
       MINIO_USE_SSL: "${MINIO_USE_SSL:-false}"
-      REDIS_URL: "${REDIS_URL:-redis://redis:6379}"
-      N8N_RESUME_WEBHOOK_URL: "${N8N_RESUME_WEBHOOK_URL:-}"
+      REDIS_URL: "${REDIS_URL:-redis://redis:6379}" # Service name for Docker internal communication
+      N8N_RESUME_WEBHOOK_URL: "${N8N_RESUME_WEBHOOK_URL:-}" # Optional n8n webhook URL
 
       # --- General Application Settings ---
       NODE_ENV: development # Change to "production" for actual production builds
@@ -68,11 +67,11 @@ services:
       POSTGRES_DB: "${POSTGRES_DB:-canditrack_db}"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      # The init-db.sql script in the project root will be executed automatically
-      # by the PostgreSQL container on first startup to create the database schema.
-      # This only happens if the postgres_data volume is empty or being newly created.
-      # Ensure this volume mount is correctly pointing to your init-db.sql file.
-      - ./init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
+      # Mount the entire pg-init-scripts directory.
+      # PostgreSQL will execute all .sql and .sh files found in this directory on first startup
+      # when the postgres_data volume is empty or being newly created.
+      # Ensure your init-db.sql file is inside a 'pg-init-scripts' directory in your project root.
+      - ./pg-init-scripts:/docker-entrypoint-initdb.d
     restart: unless-stopped
 
   minio:
