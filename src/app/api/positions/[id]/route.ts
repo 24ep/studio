@@ -102,6 +102,7 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
   } catch (error: any) {
      console.error(`Failed to delete position ${params.id}:`, error);
      if (error.code === 'P2003') { 
+        // This specific Prisma error code might indicate a foreign key constraint violation
         return NextResponse.json({ message: "Cannot delete this position as it is still referenced by candidates." }, { status: 409 });
      }
     return NextResponse.json({ message: "Error deleting position", error: error.message }, { status: 500 });

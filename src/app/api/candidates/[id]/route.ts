@@ -119,6 +119,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
           notes: `Status updated to ${validatedData.status} via API.`,
         },
       });
+      // Re-fetch candidate to include the new transition record
       const updatedCandidateWithNewTransition = await prisma.candidate.findUnique({
         where: { id: params.id },
         include: { position: true, transitionHistory: { orderBy: { date: 'desc' } } },
@@ -148,6 +149,7 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
       return NextResponse.json({ message: "Candidate not found" }, { status: 404 });
     }
     
+    // Prisma cascades deletes for TransitionRecords based on schema
     await prisma.candidate.delete({
       where: { id: params.id },
     });
