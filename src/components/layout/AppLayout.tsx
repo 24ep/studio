@@ -29,7 +29,6 @@ function getPageTitle(pathname: string): string {
   if (pathname.startsWith("/settings/preferences")) return "Preferences";
   if (pathname.startsWith("/settings/integrations")) return "Integrations";
   if (pathname.startsWith("/setup")) return "Application Setup";
-  // if (pathname.startsWith("/system-status")) return "System Status"; // Removed
   if (pathname.startsWith("/api-docs")) return "API Documentation";
   if (pathname.startsWith("/logs")) return "Application Logs";
   if (pathname.startsWith("/auth/signin")) return "Sign In";
@@ -68,7 +67,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
     <SetupFlowHandler> 
       <SidebarProvider defaultOpen>
         <Sidebar collapsible="icon" variant="sidebar" className="border-r" data-sidebar="sidebar">
-          <SidebarHeader className="p-4 flex items-center justify-between h-16"> {/* Ensure consistent height */}
+          <SidebarHeader className="p-4 flex items-center justify-center h-16"> {/* Changed justify-between to justify-center */}
             <Link href="/" className="flex items-center gap-2 font-semibold text-primary group-data-[collapsible=icon]:hidden">
               {isClient && appLogoUrl ? (
                 <Image src={appLogoUrl} alt="App Logo" width={32} height={32} className="h-8 w-8 object-contain" />
