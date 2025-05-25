@@ -85,7 +85,7 @@ This is the recommended way to run the application along with its backend servic
     *   The `REDIS_URL` for the app should be `redis://redis:6379`.
 
 3.  **Build and run the services using Docker Compose:**
-    From the project root directory, run:
+    From the project root directory (where `docker-compose.yml` and `init-db.sql` are located), run:
     ```bash
     docker-compose up --build
     ```
@@ -93,9 +93,14 @@ This is the recommended way to run the application along with its backend servic
     *   You can use the provided `start.sh` script as well: `./start.sh` (make it executable: `chmod +x start.sh`).
 
 4.  **Automated Database Schema Setup (PostgreSQL):**
-    *   The PostgreSQL container is configured in `docker-compose.yml` to automatically execute the `init-db.sql` script (located in the project root) on its first startup when the database is initialized. This creates all necessary tables (`User`, `Candidate`, `Position`, `TransitionRecord`, `LogEntry`).
-    *   This automatic initialization only happens once when the `postgres_data` Docker volume is first created (or if the volume is empty). If you remove the volume and restart, the script will run again.
-    *   **Troubleshooting:** If tables are not created as expected, check the logs of the PostgreSQL container (e.g., `docker logs <your_postgres_container_name>`) for any errors during the execution of `init-db.sql`.
+    *   The PostgreSQL container is configured in `docker-compose.yml` to **automatically execute the `init-db.sql` script** (located in the project root) on its first startup when the database is initialized. This creates all necessary tables (`User`, `Candidate`, `Position`, `TransitionRecord`, `LogEntry`).
+    *   This automatic initialization only happens once when the `postgres_data` Docker volume is first created (or if the volume is empty).
+    *   **Troubleshooting - Tables Not Created?** If you find that tables like "Candidate", "Position", or "User" are missing (e.g., you see "relation ... does not exist" errors in your application logs):
+        1.  Stop all services: `docker-compose down`
+        2.  **Completely remove Docker volumes (this will delete existing database data):** `docker-compose down -v`
+        3.  Restart the services: `docker-compose up --build -d` (or `docker-compose up --build`)
+        This ensures a fresh database initialization, forcing the `init-db.sql` script to run.
+        You can also check the logs of the PostgreSQL container for any errors during the execution of `init-db.sql`: `docker logs <your_postgres_container_name>` (find the name with `docker ps`).
 
 5.  **MinIO Bucket Creation (Automated by Application):**
     *   The MinIO bucket specified by `MINIO_BUCKET_NAME` (default: `canditrack-resumes`) will be **attempted to be created automatically by the application** when it first tries to interact with MinIO (e.g., during a resume upload via the `ensureBucketExists` function in `src/lib/minio.ts`).
@@ -138,3 +143,4 @@ This application is a prototype. For production readiness, consider the followin
 *   **UX/UI Polish:** Continue refining the user experience and interface.
 *   **Security Hardening:** Implement rate limiting, advanced security headers, etc. (Consider using an API Gateway like Kong for some of these aspects).
 *   **Password Hashing:** Ensure passwords for the Credentials login are securely hashed (e.g., using bcrypt) in the `User` table and during login checks. The current prototype uses plaintext for simplicity in the `User` table and `CredentialsProvider`. **THIS IS CRITICAL FOR PRODUCTION.**
+```

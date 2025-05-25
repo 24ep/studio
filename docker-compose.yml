@@ -68,7 +68,10 @@ services:
       POSTGRES_DB: "${POSTGRES_DB:-canditrack_db}"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./init-db.sql:/docker-entrypoint-initdb.d/init-db.sql # Mount the init script for automatic schema creation
+      # The init-db.sql script in the project root will be executed automatically
+      # by the PostgreSQL container on first startup to create the database schema.
+      # This only happens if the postgres_data volume is empty or being newly created.
+      - ./init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
     restart: unless-stopped
 
   minio:
@@ -98,3 +101,4 @@ volumes:
   redis_data:
   app_node_modules:
   app_next:
+```
