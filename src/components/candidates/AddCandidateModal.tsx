@@ -28,7 +28,6 @@ import {
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { PlusCircle, Trash2, UserPlus } from 'lucide-react';
 import type { CandidateDetails, PersonalInfo, ContactInfo, EducationEntry, ExperienceEntry, SkillEntry, JobSuitableEntry, Position, CandidateStatus } from '@/lib/types';
-import { mockPositions } from '@/lib/data'; // Using mock for available positions for dropdown
 
 const candidateStatusOptions: CandidateStatus[] = [
   'Applied', 'Screening', 'Shortlisted', 'Interview Scheduled', 'Interviewing', 
@@ -113,7 +112,7 @@ export function AddCandidateModal({ isOpen, onOpenChange, onAddCandidate, availa
     resolver: zodResolver(addCandidateFormSchema),
     defaultValues: {
       cv_language: '',
-      personal_info: { firstname: '', lastname: '', email: '' },
+      personal_info: { firstname: '', lastname: '' }, // Removed email here as it's in contact_info
       contact_info: { email: '', phone: '' },
       education: [],
       experience: [],
@@ -148,7 +147,18 @@ export function AddCandidateModal({ isOpen, onOpenChange, onAddCandidate, availa
 
   useEffect(() => {
     if (isOpen) {
-      form.reset(); // Reset form when modal opens
+      form.reset({ // Reset form with default values when modal becomes visible
+        cv_language: '',
+        personal_info: { firstname: '', lastname: '' },
+        contact_info: { email: '', phone: '' },
+        education: [],
+        experience: [],
+        skills: [{ segment_skill: '', skill_string: '' }],
+        job_suitable: [{ suitable_career: '', suitable_job_position: '', suitable_job_level: '', suitable_salary_bath_month: ''}],
+        positionId: null,
+        status: 'Applied',
+        fitScore: 0,
+      });
     }
   }, [isOpen, form]);
 
@@ -239,12 +249,15 @@ export function AddCandidateModal({ isOpen, onOpenChange, onAddCandidate, availa
                             name="positionId"
                             control={form.control}
                             render={({ field }) => (
-                                <Select onValueChange={field.onChange} value={field.value || ""} defaultValue="">
+                                <Select
+                                  onValueChange={(value) => field.onChange(value === "" ? null : value)} // Handle empty string to null
+                                  value={field.value ?? ""} // Ensure value is string for Select
+                                >
                                 <SelectTrigger id="positionId" className="mt-1">
                                     <SelectValue placeholder="Select position" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem value="" disabled>Select a position</SelectItem>
+                                    {/* Removed: <SelectItem value="" disabled>Select a position</SelectItem> */}
                                     {availablePositions.map(pos => (
                                     <SelectItem key={pos.id} value={pos.id}>{pos.title}</SelectItem>
                                     ))}
@@ -311,7 +324,7 @@ export function AddCandidateModal({ isOpen, onOpenChange, onAddCandidate, availa
                     </Button>
                   </div>
                 ))}
-                <Button type="button" variant="outline" onClick={() => appendEducation({})}>
+                <Button type="button" variant="outline" onClick={() => appendEducation({ university: '', major: '', field: '', campus: '', period: '', duration: '', GPA: '' })}>
                   <PlusCircle className="mr-2 h-4 w-4" /> Add Education
                 </Button>
               </fieldset>
@@ -346,7 +359,7 @@ export function AddCandidateModal({ isOpen, onOpenChange, onAddCandidate, availa
                                     <Input 
                                         type="checkbox" 
                                         id={`experience.${index}.is_current_position`}
-                                        checked={controllerField.value}
+                                        checked={!!controllerField.value}
                                         onChange={e => controllerField.onChange(e.target.checked)}
                                         className="h-4 w-4"
                                     />
@@ -361,7 +374,7 @@ export function AddCandidateModal({ isOpen, onOpenChange, onAddCandidate, availa
                     </Button>
                   </div>
                 ))}
-                <Button type="button" variant="outline" onClick={() => appendExperience({})}>
+                <Button type="button" variant="outline" onClick={() => appendExperience({ company: '', position: '', period: '', duration: '', is_current_position: false, description: '' })}>
                   <PlusCircle className="mr-2 h-4 w-4" /> Add Experience
                 </Button>
               </fieldset>
@@ -403,7 +416,7 @@ export function AddCandidateModal({ isOpen, onOpenChange, onAddCandidate, availa
                             )}
                         </div>
                     ))}
-                    <Button type="button" variant="outline" onClick={() => appendJobSuitable({})}>
+                    <Button type="button" variant="outline" onClick={() => appendJobSuitable({ suitable_career: '', suitable_job_position: '', suitable_job_level: '', suitable_salary_bath_month: '' })}>
                         <PlusCircle className="mr-2 h-4 w-4" /> Add Job Suitability Profile
                     </Button>
                 </fieldset>
