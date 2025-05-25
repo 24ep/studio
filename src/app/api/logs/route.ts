@@ -2,9 +2,7 @@
 // src/app/api/logs/route.ts
 import { NextResponse, type NextRequest } from 'next/server';
 import pool from '../../../lib/db';
-import type { LogEntry, LogLevel, UserProfile } from '@/lib/types';
-import { getServerSession } from 'next-auth/next';
-import { authOptions } from '@/app/api/auth/[...nextauth]/route';
+import type { LogEntry, LogLevel } from '@/lib/types';
 import { z } from 'zod';
 
 const logLevelValues: [LogLevel, ...LogLevel[]] = ['INFO', 'WARN', 'ERROR', 'DEBUG', 'AUDIT'];
@@ -19,10 +17,6 @@ const createLogEntrySchema = z.object({
 });
 
 export async function POST(request: NextRequest) {
-  // POSTING logs. For audit logs, the actingUserId will be passed.
-  // For system logs, actingUserId might be null.
-  // This endpoint is kept open for now for flexibility, but could be secured further if needed.
-
   let body;
   try {
     body = await request.json();
@@ -59,22 +53,12 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(result.rows[0], { status: 201 });
   } catch (error) {
     console.error("Failed to create log entry:", error);
+    // Do not try to logAudit here to prevent infinite loops
     return NextResponse.json({ message: "Error creating log entry", error: (error as Error).message }, { status: 500 });
   }
 }
 
 export async function GET(request: NextRequest) {
-  const session = await getServerSession(authOptions);
-  if (!session?.user) {
-    return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
-  }
-  const userRole = session.user.role;
-  if (userRole !== 'Admin') {
-     // Log attempt to access logs by non-admin
-    console.warn(`Unauthorized attempt to access logs by user: ${session.user.email} (ID: ${session.user.id})`);
-    return NextResponse.json({ message: "Forbidden: Only Admins can view logs." }, { status: 403 });
-  }
-
   try {
     const { searchParams } = new URL(request.url);
     const limitParam = searchParams.get('limit');
@@ -98,9 +82,9 @@ export async function GET(request: NextRequest) {
     }
     
     const queryParams: any[] = [limit, offset];
-    let query = `SELECT id, timestamp, level, message, source, "actingUserId", details, "createdAt" FROM "LogEntry"`; // Explicitly select columns
+    let query = `SELECT id, timestamp, level, message, source, "actingUserId", details, "createdAt" FROM "LogEntry"`;
     const conditions = [];
-    let paramIndex = 3; 
+    let paramIndex = 3;
 
     if (levelFilter && logLevelValues.includes(levelFilter as LogLevel)) {
         conditions.push(`level = $${paramIndex++}`);
@@ -120,7 +104,7 @@ export async function GET(request: NextRequest) {
 
     if(conditions.length > 0) {
         countQuery += ' WHERE ' + conditions.join(' AND ');
-        countQueryParams = queryParams.slice(2); // Get only filter params for count
+        countQueryParams = queryParams.slice(2);
     }
     
     const countResult = await pool.query(countQuery, countQueryParams);
@@ -128,6 +112,9 @@ export async function GET(request: NextRequest) {
 
   } catch (error) {
     console.error("Failed to fetch log entries:", error);
+    // Do not logAudit here to prevent potential issues if logging system itself is down
     return NextResponse.json({ message: "Error fetching log entries", error: (error as Error).message }, { status: 500 });
   }
 }
+
+    

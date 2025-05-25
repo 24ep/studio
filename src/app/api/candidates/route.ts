@@ -1,9 +1,7 @@
 
 import { NextResponse, type NextRequest } from 'next/server';
 import pool from '../../../lib/db';
-import type { CandidateStatus, CandidateDetails, OldParsedResumeData, UserProfile, Position } from '@/lib/types'; 
-import { getServerSession } from 'next-auth/next';
-import { authOptions } from '@/app/api/auth/[...nextauth]/route';
+import type { CandidateStatus, CandidateDetails, OldParsedResumeData, Position } from '@/lib/types';
 import { z } from 'zod';
 import { logAudit } from '@/lib/auditLog';
 import { v4 as uuidv4 } from 'uuid';
@@ -53,7 +51,7 @@ const jobSuitableEntrySchema = z.object({
   suitable_career: z.string().optional().default(''),
   suitable_job_position: z.string().optional().default(''),
   suitable_job_level: z.string().optional().default(''),
-  suitable_salary_bath_month: z.string().optional().default(''), 
+  suitable_salary_bath_month: z.string().optional(),
 });
 
 const candidateDetailsSchema = z.object({
@@ -67,30 +65,18 @@ const candidateDetailsSchema = z.object({
 });
 
 const createCandidateSchema = z.object({
-  name: z.string().min(1, { message: "Name is required" }).optional(), // Will be derived if not provided
-  email: z.string().email({ message: "Invalid email address" }).optional(), // Will be derived if not provided
-  phone: z.string().optional().nullable(), // Will be derived if not provided
+  name: z.string().min(1, { message: "Name is required" }).optional(),
+  email: z.string().email({ message: "Invalid email address" }).optional(),
+  phone: z.string().optional().nullable(),
   positionId: z.string().uuid({ message: "Valid Position ID (UUID) is required" }).nullable(),
   fitScore: z.number().min(0).max(100).optional().default(0),
   status: z.enum(candidateStatusValues).optional().default('Applied'),
   applicationDate: z.string().datetime({ message: "Invalid datetime string. Must be UTC ISO8601" }).optional(),
-  // parsedData is now expected to be the detailed CandidateDetails structure
-  parsedData: candidateDetailsSchema.optional(), 
+  parsedData: candidateDetailsSchema.optional(),
   resumePath: z.string().optional().nullable(),
 });
 
-
 export async function GET(request: NextRequest) {
-  const session = await getServerSession(authOptions);
-  if (!session?.user) {
-    return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
-  }
-  const userRole = session.user.role;
-  if (!userRole || !['Admin', 'Recruiter', 'Hiring Manager'].includes(userRole)) {
-    await logAudit('WARN', `Forbidden attempt to list candidates by ${session.user.name} (ID: ${session.user.id}). Required roles: Admin, Recruiter, Hiring Manager.`, 'API:Candidates', session.user.id);
-    return NextResponse.json({ message: "Forbidden: Insufficient permissions" }, { status: 403 });
-  }
-
   try {
     const { searchParams } = new URL(request.url);
     const nameFilter = searchParams.get('name');
@@ -128,7 +114,6 @@ export async function GET(request: NextRequest) {
       queryParams.push(positionIdFilter);
     }
     if (educationFilter) {
-      // Simple text search within the parsedData JSONB, converted to text
       conditions.push(`c."parsedData"::text ILIKE $${paramIndex++}`);
       queryParams.push(`%${educationFilter}%`);
     }
@@ -156,34 +141,24 @@ export async function GET(request: NextRequest) {
     
     const candidates = result.rows.map(row => ({
         ...row,
-        parsedData: row.parsedData || { personal_info: {}, contact_info: {} }, 
+        parsedData: row.parsedData || { personal_info: {}, contact_info: {} },
         position: row.positionId ? { 
             id: row.positionId,
             title: row.positionTitle,
             department: row.positionDepartment,
         } : null,
-        transitionHistory: row.transitionHistory || [], // Ensure it's always an array
+        transitionHistory: row.transitionHistory || [],
     }));
 
     return NextResponse.json(candidates, { status: 200 });
   } catch (error) {
     console.error("Failed to fetch candidates:", error);
-    await logAudit('ERROR', `Failed to fetch candidates. Error: ${(error as Error).message}`, 'API:Candidates', session?.user?.id);
+    await logAudit('ERROR', `Failed to fetch candidates. Error: ${(error as Error).message}`, 'API:Candidates', null);
     return NextResponse.json({ message: "Error fetching candidates", error: (error as Error).message }, { status: 500 });
   }
 }
 
 export async function POST(request: NextRequest) {
-  const session = await getServerSession(authOptions);
-  if (!session?.user) {
-    return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
-  }
-  const userRole = session.user.role;
-  if (!userRole || !['Admin', 'Recruiter'].includes(userRole)) {
-    await logAudit('WARN', `Forbidden attempt to create candidate by ${session.user.name} (ID: ${session.user.id}). Required roles: Admin, Recruiter.`, 'API:Candidates', session.user.id);
-    return NextResponse.json({ message: "Forbidden: Insufficient permissions to create candidates" }, { status: 403 });
-  }
-
   let body;
   try {
     body = await request.json();
@@ -220,7 +195,6 @@ export async function POST(request: NextRequest) {
     );
   }
   
-  // Ensure parsedData has the full structure even if only partial was sent
   const finalParsedData: CandidateDetails = {
     cv_language: rawData.parsedData?.cv_language || '',
     personal_info: {
@@ -241,9 +215,8 @@ export async function POST(request: NextRequest) {
     job_suitable: rawData.parsedData?.job_suitable || [],
   };
 
-
   const client = await pool.connect();
-  const newCandidateId = uuidv4(); // Generate UUID for the candidate
+  const newCandidateId = uuidv4();
 
   try {
     await client.query('BEGIN');
@@ -271,20 +244,19 @@ export async function POST(request: NextRequest) {
       rawData.fitScore,
       rawData.status,
       rawData.applicationDate ? new Date(rawData.applicationDate) : new Date(),
-      finalParsedData, 
+      finalParsedData,
       rawData.resumePath,
     ];
     const candidateResult = await client.query(insertCandidateQuery, candidateValues);
     const newCandidate = candidateResult.rows[0];
 
-    // Create initial transition record
     const insertTransitionQuery = `
       INSERT INTO "TransitionRecord" (id, "candidateId", date, stage, notes, "createdAt", "updatedAt")
       VALUES ($1, $2, NOW(), $3, $4, NOW(), NOW())
       RETURNING *;
     `;
     const transitionValues = [
-      uuidv4(), // Generate UUID for the transition record
+      uuidv4(),
       newCandidate.id,
       rawData.status,
       'Application received.',
@@ -293,7 +265,6 @@ export async function POST(request: NextRequest) {
     
     await client.query('COMMIT');
 
-    // Fetch the newly created candidate with its position details and transition history
     const finalQuery = `
         SELECT 
             c.id, c.name, c.email, c.phone, c."resumePath", c."parsedData",
@@ -320,12 +291,12 @@ export async function POST(request: NextRequest) {
         transitionHistory: finalResult.rows[0].transitionHistory || [],
     };
     
-    await logAudit('AUDIT', `Candidate '${newCandidate.name}' (ID: ${newCandidate.id}) created by ${session.user.name} (ID: ${session.user.id}).`, 'API:Candidates', session.user.id, { targetCandidateId: newCandidate.id, name: newCandidate.name, email: newCandidate.email });
+    await logAudit('AUDIT', `Candidate '${newCandidate.name}' (ID: ${newCandidate.id}) created.`, 'API:Candidates', null, { targetCandidateId: newCandidate.id, name: newCandidate.name, email: newCandidate.email });
     return NextResponse.json(createdCandidateWithDetails, { status: 201 });
   } catch (error: any) {
     await client.query('ROLLBACK');
     console.error("Failed to create candidate:", error);
-    await logAudit('ERROR', `Failed to create candidate '${candidateName}'. Error: ${error.message}`, 'API:Candidates', session.user.id, { name: candidateName, email: candidateEmail });
+    await logAudit('ERROR', `Failed to create candidate '${candidateName}'. Error: ${error.message}`, 'API:Candidates', null, { name: candidateName, email: candidateEmail });
     if (error.code === '23505' && error.constraint === 'Candidate_email_key') {
       return NextResponse.json({ message: "A candidate with this email already exists." }, { status: 409 });
     }
@@ -334,3 +305,5 @@ export async function POST(request: NextRequest) {
     client.release();
   }
 }
+
+    

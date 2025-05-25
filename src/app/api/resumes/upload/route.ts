@@ -1,18 +1,14 @@
 
 import { NextResponse, type NextRequest } from 'next/server';
-import { getServerSession } from 'next-auth/next';
-import { authOptions } from '@/app/api/auth/[...nextauth]/route';
-import { minioClient, MINIO_BUCKET_NAME, ensureBucketExists } from '../../../../lib/minio';
-import pool from '../../../../lib/db';
-import type { UserProfile, Candidate } from '@/lib/types';
+import { minioClient, MINIO_BUCKET_NAME } from '../../../lib/minio';
+import pool from '../../../lib/db';
+import type { Candidate } from '@/lib/types';
 import { logAudit } from '@/lib/auditLog';
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 const ACCEPTED_FILE_TYPES = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
 
-// ensureBucketExists is called when minio.ts is initialized.
-
-async function sendToN8N(candidateId: string, candidateName: string, fileNameInMinio: string, originalFileName: string, mimeType: string, actingUserId?: string): Promise<any> {
+async function sendToN8N(candidateId: string, candidateName: string, fileNameInMinio: string, originalFileName: string, mimeType: string): Promise<any> {
   const n8nWebhookUrl = process.env.N8N_RESUME_WEBHOOK_URL;
   if (!n8nWebhookUrl) {
     console.log('N8N_RESUME_WEBHOOK_URL not configured. Skipping n8n notification.');
@@ -43,36 +39,25 @@ async function sendToN8N(candidateId: string, candidateName: string, fileNameInM
       body: JSON.stringify(payload),
     });
 
+    const n8nResponseBody = await response.json().catch(() => ({ message: `Successfully sent to n8n, but no JSON response or n8n response was not JSON. Status: ${response.status}`}));
+    
     if (response.ok) {
-      const n8nResponseBody = await response.json().catch(() => ({ message: "Successfully sent to n8n, but no JSON response or n8n response was not JSON."}));
       console.log(`Successfully sent resume details to n8n for candidate ${candidateId}. n8n response:`, n8nResponseBody);
-      await logAudit('INFO', `Resume details for candidate '${candidateName}' (ID: ${candidateId}) sent to n8n. File: ${fileNameInMinio}`, 'API:Resumes:N8N', actingUserId, { targetCandidateId: candidateId, minioFile: fileNameInMinio });
+      await logAudit('INFO', `Resume details for candidate '${candidateName}' (ID: ${candidateId}) sent to n8n. File: ${fileNameInMinio}`, 'API:Resumes:N8N', null, { targetCandidateId: candidateId, minioFile: fileNameInMinio });
       return { success: true, data: n8nResponseBody };
     } else {
-      const errorBody = await response.text();
-      console.error(`Failed to send resume details to n8n for candidate ${candidateId}. Status: ${response.status}, Body: ${errorBody}`);
-      await logAudit('WARN', `Failed to send resume details for candidate '${candidateName}' (ID: ${candidateId}) to n8n. Status: ${response.status}. File: ${fileNameInMinio}`, 'API:Resumes:N8N', actingUserId, { targetCandidateId: candidateId, minioFile: fileNameInMinio, n8nError: errorBody });
-      return { success: false, error: `n8n responded with status ${response.status}. Details: ${errorBody}` };
+      console.error(`Failed to send resume details to n8n for candidate ${candidateId}. Status: ${response.status}, Body:`, n8nResponseBody);
+      await logAudit('WARN', `Failed to send resume details for candidate '${candidateName}' (ID: ${candidateId}) to n8n. Status: ${response.status}. File: ${fileNameInMinio}`, 'API:Resumes:N8N', null, { targetCandidateId: candidateId, minioFile: fileNameInMinio, n8nError: n8nResponseBody });
+      return { success: false, error: `n8n responded with status ${response.status}. Details: ${JSON.stringify(n8nResponseBody)}` };
     }
   } catch (error) {
     console.error(`Error sending resume details to n8n for candidate ${candidateId}:`, error);
-    await logAudit('ERROR', `Error sending resume details for candidate '${candidateName}' (ID: ${candidateId}) to n8n. Error: ${(error as Error).message}. File: ${fileNameInMinio}`, 'API:Resumes:N8N', actingUserId, { targetCandidateId: candidateId, minioFile: fileNameInMinio });
+    await logAudit('ERROR', `Error sending resume details for candidate '${candidateName}' (ID: ${candidateId}) to n8n. Error: ${(error as Error).message}. File: ${fileNameInMinio}`, 'API:Resumes:N8N', null, { targetCandidateId: candidateId, minioFile: fileNameInMinio });
     return { success: false, error: (error as Error).message };
   }
 }
 
-
 export async function POST(request: NextRequest) {
-  const session = await getServerSession(authOptions);
-  if (!session?.user) {
-    return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
-  }
-  const userRole = session.user.role;
-  if (!userRole || !['Admin', 'Recruiter'].includes(userRole)) {
-    await logAudit('WARN', `Forbidden attempt to upload resume by ${session.user.name} (ID: ${session.user.id}). Required roles: Admin, Recruiter.`, 'API:Resumes', session.user.id);
-    return NextResponse.json({ message: "Forbidden: Insufficient permissions to upload resumes" }, { status: 403 });
-  }
-
   const candidateId = request.nextUrl.searchParams.get('candidateId');
   if (!candidateId) {
     return NextResponse.json({ message: 'Candidate ID is required as a query parameter' }, { status: 400 });
@@ -88,7 +73,7 @@ export async function POST(request: NextRequest) {
     candidateDBRecord = candidateResult.rows[0];
   } catch (dbError) {
      console.error('Database error fetching candidate:', dbError);
-     await logAudit('ERROR', `Database error fetching candidate (ID: ${candidateId}) for resume upload. Error: ${(dbError as Error).message}`, 'API:Resumes', session.user.id, { targetCandidateId: candidateId });
+     await logAudit('ERROR', `Database error fetching candidate (ID: ${candidateId}) for resume upload. Error: ${(dbError as Error).message}`, 'API:Resumes', null, { targetCandidateId: candidateId });
      return NextResponse.json({ message: 'Error verifying candidate', error: (dbError as Error).message }, { status: 500 });
   }
   
@@ -120,10 +105,9 @@ export async function POST(request: NextRequest) {
     const updateQuery = 'UPDATE "Candidate" SET "resumePath" = $1, "updatedAt" = NOW() WHERE id = $2 RETURNING *;';
     await pool.query(updateQuery, [fileNameInMinio, candidateId]);
 
-    await logAudit('AUDIT', `Resume '${fileNameInMinio}' uploaded for candidate '${candidateDBRecord.name}' (ID: ${candidateId}) by ${session.user.name} (ID: ${session.user.id}).`, 'API:Resumes', session.user.id, { targetCandidateId: candidateId, filePath: fileNameInMinio, originalFileName: file.name });
+    await logAudit('AUDIT', `Resume '${fileNameInMinio}' uploaded for candidate '${candidateDBRecord.name}' (ID: ${candidateId}).`, 'API:Resumes', null, { targetCandidateId: candidateId, filePath: fileNameInMinio, originalFileName: file.name });
 
-    // Synchronously send data to n8n and wait for its response
-    const n8nResult = await sendToN8N(candidateId, candidateDBRecord.name, fileNameInMinio, file.name, file.type, session.user.id);
+    const n8nResult = await sendToN8N(candidateId, candidateDBRecord.name, fileNameInMinio, file.name, file.type);
 
     const finalQuery = `
         SELECT 
@@ -153,15 +137,17 @@ export async function POST(request: NextRequest) {
       message: 'Resume uploaded successfully.', 
       filePath: fileNameInMinio,
       candidate: updatedCandidateWithDetails,
-      n8nResponse: n8nResult // Include n8n's response or error
+      n8nResponse: n8nResult
     }, { status: 200 });
 
   } catch (error: any) {
     console.error('Error uploading resume:', error);
-    await logAudit('ERROR', `Error uploading resume for candidate '${candidateDBRecord?.name || 'Unknown'}' (ID: ${candidateId}). Error: ${error.message}`, 'API:Resumes', session.user.id, { targetCandidateId: candidateId });
+    await logAudit('ERROR', `Error uploading resume for candidate '${candidateDBRecord?.name || 'Unknown'}' (ID: ${candidateId}). Error: ${error.message}`, 'API:Resumes', null, { targetCandidateId: candidateId });
     if (error.code && error.message) { 
         return NextResponse.json({ message: `MinIO Error: ${error.message}`, code: error.code }, { status: 500 });
     }
     return NextResponse.json({ message: 'Error processing file upload', error: error.message }, { status: 500 });
   }
 }
+
+    
