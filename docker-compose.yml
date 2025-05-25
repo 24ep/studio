@@ -43,7 +43,8 @@ services:
       MINIO_BUCKET_NAME: "${MINIO_BUCKET_NAME:-canditrack-resumes}"
       MINIO_USE_SSL: "${MINIO_USE_SSL:-false}"
       REDIS_URL: "${REDIS_URL:-redis://redis:6379}" # Service name for Docker internal communication
-      N8N_RESUME_WEBHOOK_URL: "${N8N_RESUME_WEBHOOK_URL:-}" # Optional n8n webhook URL
+      N8N_RESUME_WEBHOOK_URL: "${N8N_RESUME_WEBHOOK_URL:-}" # Optional n8n webhook URL for candidate resumes
+      N8N_GENERIC_PDF_WEBHOOK_URL: "${N8N_GENERIC_PDF_WEBHOOK_URL:-}" # Optional n8n webhook URL for generic PDF uploads
 
       # --- General Application Settings ---
       NODE_ENV: development # Change to "production" for actual production builds

@@ -11,7 +11,7 @@ This is a Next.js application prototype for NCC Candidate Management, an Applica
 *   User Management (View, Add/Edit/Delete via Modals - interacts with PostgreSQL)
 *   Settings:
     *   Preferences (Theme, App Logo - conceptual)
-    *   Integrations (n8n Webhook, SMTP - conceptual)
+    *   Integrations (n8n Webhook for specific candidate resumes, SMTP - conceptual, Generic PDF to n8n upload)
     *   Setup Guide (Informational, with DB schema check)
     *   System Status (Overview of service configurations)
 *   API Documentation Page
@@ -22,6 +22,7 @@ This is a Next.js application prototype for NCC Candidate Management, an Applica
 *   Styling with ShadCN UI components and Tailwind CSS.
 *   Backend API routes for Candidates, Positions, Users, and Logs using PostgreSQL (via `pg` library) and file uploads to MinIO.
 *   Resume uploads can optionally trigger an n8n webhook if `N8N_RESUME_WEBHOOK_URL` is configured.
+*   Generic PDF uploads can trigger a different n8n webhook if `N8N_GENERIC_PDF_WEBHOOK_URL` is configured.
 
 ## Tech Stack
 
@@ -72,10 +73,11 @@ This is a Next.js application prototype for NCC Candidate Management, an Applica
         *   `NEXTAUTH_URL` (e.g., `http://localhost:9002` for local dev).
         *   `NEXTAUTH_SECRET` (Generate a strong secret: `openssl rand -base64 32`).
         *   PostgreSQL credentials (`POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB`) - if different from defaults.
-        *   `DATABASE_URL` (e.g., `postgresql://devuser:devpassword@localhost:5432/ncc_db` if running app outside Docker but DB in Docker, or `postgresql://devuser:devpassword@postgres:5432/ncc_db` if app also runs in Docker).
+        *   `DATABASE_URL` (e.g., `postgresql://devuser:devpassword@localhost:5432/canditrack_db` if running app outside Docker but DB in Docker, or `postgresql://devuser:devpassword@postgres:5432/canditrack_db` if app also runs in Docker).
         *   MinIO credentials (`MINIO_ROOT_USER`, `MINIO_ROOT_PASSWORD`) and app connection details (`MINIO_ENDPOINT`, `MINIO_ACCESS_KEY`, `MINIO_SECRET_KEY`, `MINIO_BUCKET_NAME`). The `MINIO_ENDPOINT` for the app when running in Docker should be the service name (e.g., `minio`).
         *   Redis URL (`REDIS_URL`).
-        *   `N8N_RESUME_WEBHOOK_URL` (Optional: Your n8n webhook URL if you want to integrate resume uploads).
+        *   `N8N_RESUME_WEBHOOK_URL` (Optional: Your n8n webhook URL for candidate-specific resume processing).
+        *   `N8N_GENERIC_PDF_WEBHOOK_URL` (Optional: Your n8n webhook URL for generic PDF processing).
 
 ### Running with Docker (Recommended for Full Stack Development)
 
@@ -83,7 +85,7 @@ This is the recommended way to run the application along with its backend servic
 
 1.  **Ensure Docker and Docker Compose are installed and running.**
 2.  **Set up your `.env.local` file as described in Step 3 of Installation.**
-    *   The `DATABASE_URL` for the Next.js app (running in Docker) should point to the Docker service name: `postgresql://devuser:devpassword@postgres:5432/ncc_db` (or use the `${DATABASE_URL}` variable which defaults to this if `.env.local` doesn't override it).
+    *   The `DATABASE_URL` for the Next.js app (running in Docker) should point to the Docker service name: `postgresql://devuser:devpassword@postgres:5432/canditrack_db` (or use the `${DATABASE_URL}` variable which defaults to this if `.env.local` doesn't override it).
     *   The `MINIO_ENDPOINT` for the app should be `minio` (the service name).
     *   The `REDIS_URL` for the app should be `redis://redis:6379`.
 
@@ -149,7 +151,7 @@ This is the recommended way to run the application along with its backend servic
     *   **PostgreSQL:** Accessible on `localhost:5432` from your host machine (or `postgres:5432` from within the Docker network, or as exposed by Portainer).
     *   **MinIO API:** `http://localhost:9000` (from host, or as exposed by Portainer on host port 9847).
     *   **MinIO Console:** `http://localhost:9001` (Login with `MINIO_ROOT_USER` and `MINIO_ROOT_PASSWORD` from your `.env.local` or `docker-compose.yml` defaults. Exposed on host port 9848 by default).
-    *   **Redis:** Accessible on `localhost:6379` from your host machine (or `redis:6379` from within the Docker network, or as exposed by Portainer on host port 9849).
+    *   **Redis:** Accessible on `localhost:6379` from your host machine (or `redis://redis:6379` from within the Docker network, or as exposed by Portainer on host port 9849).
 
 8.  **Starting the services using the script (for local development):**
     (Ensure the script is executable: `chmod +x start.sh`)
@@ -192,4 +194,3 @@ This application is a prototype. For production readiness, consider the followin
 
 *   **PostgreSQL:** The application attempts to connect and execute a test query (`SELECT NOW()`) when the `src/lib/db.ts` module is initialized. Check your application server's console logs for "Successfully connected to PostgreSQL database..." or connection error messages.
 *   **MinIO:** The application attempts to connect and check/create the resume bucket when `src/lib/minio.ts` is initialized. Check application server logs for "Successfully connected to MinIO server..." or "MinIO: Bucket ... already exists/created..." or related error messages.
-

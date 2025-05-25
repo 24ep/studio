@@ -1,14 +1,14 @@
 
 "use client";
-import { useState, useEffect } from 'react';
+import { useState, useEffect, type ChangeEvent } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
-import { Save, Settings, Mail, Zap } from 'lucide-react'; // Zap for n8n
+import { Save, Settings, Mail, Zap, UploadCloud, FileText, XCircle, Loader2 } from 'lucide-react'; 
 
-const N8N_WEBHOOK_URL_KEY = 'n8nWebhookUrl';
+const N8N_RESUME_WEBHOOK_URL_KEY = 'n8nResumeWebhookUrl'; // For candidate resumes
 const SMTP_HOST_KEY = 'smtpHost';
 const SMTP_PORT_KEY = 'smtpPort';
 const SMTP_USER_KEY = 'smtpUser';
@@ -17,17 +17,25 @@ export default function IntegrationsSettingsPage() {
   const { toast } = useToast();
   const [isClient, setIsClient] = useState(false);
 
-  const [webhookUrl, setWebhookUrl] = useState('');
+  // n8n for Candidate Resumes
+  const [resumeWebhookUrl, setResumeWebhookUrl] = useState('');
+  
+  // SMTP
   const [smtpHost, setSmtpHost] = useState('');
   const [smtpPort, setSmtpPort] = useState('');
   const [smtpUser, setSmtpUser] = useState('');
   const [smtpPassword, setSmtpPassword] = useState(''); // Only for UI, not saved
 
+  // Generic PDF to n8n
+  const [genericPdfFile, setGenericPdfFile] = useState<File | null>(null);
+  const [isUploadingToN8n, setIsUploadingToN8n] = useState(false);
+
+
   useEffect(() => {
     setIsClient(true);
     if (typeof window !== 'undefined') {
-      const storedWebhookUrl = localStorage.getItem(N8N_WEBHOOK_URL_KEY);
-      if (storedWebhookUrl) setWebhookUrl(storedWebhookUrl);
+      const storedResumeWebhookUrl = localStorage.getItem(N8N_RESUME_WEBHOOK_URL_KEY);
+      if (storedResumeWebhookUrl) setResumeWebhookUrl(storedResumeWebhookUrl);
 
       const storedSmtpHost = localStorage.getItem(SMTP_HOST_KEY);
       if (storedSmtpHost) setSmtpHost(storedSmtpHost);
@@ -42,50 +50,107 @@ export default function IntegrationsSettingsPage() {
 
   const handleSaveIntegrations = () => {
     if (!isClient) return;
-    localStorage.setItem(N8N_WEBHOOK_URL_KEY, webhookUrl);
+    localStorage.setItem(N8N_RESUME_WEBHOOK_URL_KEY, resumeWebhookUrl);
     localStorage.setItem(SMTP_HOST_KEY, smtpHost);
     localStorage.setItem(SMTP_PORT_KEY, smtpPort);
     localStorage.setItem(SMTP_USER_KEY, smtpUser);
     
     toast({
       title: 'Integrations Saved',
-      description: 'Your integration settings have been updated locally.',
+      description: 'Your n8n (resume) and SMTP settings have been updated locally.',
     });
   };
 
+  const handleGenericPdfFileChange = (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      if (file.type === 'application/pdf') {
+        if (file.size > 10 * 1024 * 1024) { // 10MB limit
+            toast({ title: "File Too Large", description: "PDF file size should not exceed 10MB.", variant: "destructive" });
+            setGenericPdfFile(null);
+            event.target.value = ''; 
+            return;
+        }
+        setGenericPdfFile(file);
+      } else {
+        toast({ title: "Invalid File Type", description: "Please select a PDF file.", variant: "destructive" });
+        setGenericPdfFile(null);
+        event.target.value = ''; 
+      }
+    } else {
+      setGenericPdfFile(null);
+    }
+  };
+
+  const removeGenericPdfFile = () => {
+    setGenericPdfFile(null);
+    const fileInput = document.getElementById('generic-pdf-upload') as HTMLInputElement;
+    if (fileInput) fileInput.value = '';
+  };
+
+  const handleUploadGenericPdfToN8n = async () => {
+    if (!genericPdfFile) {
+      toast({ title: "No PDF Selected", description: "Please select a PDF file to upload.", variant: "destructive" });
+      return;
+    }
+    
+    setIsUploadingToN8n(true);
+    const formData = new FormData();
+    formData.append('pdfFile', genericPdfFile);
+
+    try {
+      const response = await fetch('/api/n8n/webhook-proxy', {
+        method: 'POST',
+        body: formData,
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.message || `Failed to send PDF to n8n. Status: ${response.status}`);
+      }
+
+      toast({
+        title: "PDF Sent to n8n",
+        description: result.message || `PDF "${genericPdfFile.name}" sent to n8n workflow.`,
+      });
+      removeGenericPdfFile(); 
+    } catch (error) {
+      console.error("Error sending PDF to n8n:", error);
+      toast({
+        title: "Upload Failed",
+        description: (error as Error).message,
+        variant: "destructive",
+      });
+    } finally {
+      setIsUploadingToN8n(false);
+    }
+  };
+
+
   if (!isClient) {
     return (
-        <div className="space-y-6">
-          <Card className="w-full max-w-xl mx-auto shadow-lg animate-pulse">
-            <CardHeader>
-              <div className="h-8 bg-muted rounded w-1/2 mb-1"></div>
-              <div className="h-4 bg-muted rounded w-3/4"></div>
-            </CardHeader>
-            <CardContent className="space-y-8">
-              <div>
-                <div className="h-6 bg-muted rounded w-1/4 mb-2"></div>
-                <div className="h-10 bg-muted rounded"></div>
-              </div>
-            </CardContent>
-          </Card>
-           <Card className="w-full max-w-xl mx-auto shadow-lg animate-pulse mt-6">
-            <CardHeader>
-              <div className="h-8 bg-muted rounded w-1/2 mb-1"></div>
-              <div className="h-4 bg-muted rounded w-3/4"></div>
-            </CardHeader>
-            <CardContent className="space-y-8">
-              <div>
-                <div className="h-6 bg-muted rounded w-1/3 mb-2"></div>
-                <div className="h-10 bg-muted rounded mb-4"></div>
-                <div className="h-10 bg-muted rounded mb-4"></div>
-                <div className="h-10 bg-muted rounded mb-4"></div>
-                <div className="h-10 bg-muted rounded"></div>
-              </div>
-            </CardContent>
-            <CardFooter>
-              <div className="h-10 bg-muted rounded w-32"></div>
-            </CardFooter>
-          </Card>
+        <div className="space-y-8 max-w-xl mx-auto">
+          {[1,2,3].map(i => (
+             <Card key={i} className="shadow-lg animate-pulse">
+              <CardHeader>
+                <div className="h-8 bg-muted rounded w-1/2 mb-1"></div>
+                <div className="h-4 bg-muted rounded w-3/4"></div>
+              </CardHeader>
+              <CardContent className="space-y-8">
+                <div>
+                  <div className="h-6 bg-muted rounded w-1/4 mb-2"></div>
+                  <div className="h-10 bg-muted rounded"></div>
+                </div>
+                 {i === 2 && <div className="h-10 bg-muted rounded"></div>}
+              </CardContent>
+              { i !== 0 && 
+                <CardFooter>
+                  <div className="h-10 bg-muted rounded w-32"></div>
+                </CardFooter>
+              }
+            </Card>
+          ))}
         </div>
     );
   }
@@ -95,23 +160,23 @@ export default function IntegrationsSettingsPage() {
        <Card className="shadow-lg">
         <CardHeader>
           <CardTitle className="flex items-center">
-            <Zap className="mr-2 h-6 w-6 text-orange-500" /> Workflow Automation (n8n)
+            <Zap className="mr-2 h-6 w-6 text-orange-500" /> Workflow Automation (n8n for Candidate Resumes)
           </CardTitle>
-          <CardDescription>Configure your n8n webhook for automated workflows.</CardDescription>
+          <CardDescription>Configure your n8n webhook for automated candidate resume processing (e.g., parsing).</CardDescription>
         </CardHeader>
         <CardContent>
             <div>
-              <Label htmlFor="n8n-webhook-url">n8n Webhook URL</Label>
+              <Label htmlFor="n8n-resume-webhook-url">n8n Resume Webhook URL (Client Setting)</Label>
               <Input
-                id="n8n-webhook-url"
+                id="n8n-resume-webhook-url"
                 type="url"
                 placeholder="https://your-n8n-instance.com/webhook/..."
-                value={webhookUrl}
-                onChange={(e) => setWebhookUrl(e.target.value)}
+                value={resumeWebhookUrl}
+                onChange={(e) => setResumeWebhookUrl(e.target.value)}
                 className="mt-1"
               />
               <p className="text-sm text-muted-foreground mt-1">
-                Enter the URL for your n8n webhook to process resume uploads or other automations.
+                Enter the URL for your n8n webhook. This setting is saved in browser localStorage. The server uses `N8N_RESUME_WEBHOOK_URL` environment variable for actual processing.
               </p>
             </div>
         </CardContent>
@@ -120,9 +185,56 @@ export default function IntegrationsSettingsPage() {
       <Card className="shadow-lg">
         <CardHeader>
           <CardTitle className="flex items-center">
+            <UploadCloud className="mr-2 h-6 w-6 text-purple-500" /> General PDF to n8n Workflow
+          </CardTitle>
+          <CardDescription>Upload a generic PDF file to trigger a separate n8n workflow. (Requires Admin role)</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div>
+            <Label htmlFor="generic-pdf-upload">Select PDF File (Max 10MB)</Label>
+            <Input
+              id="generic-pdf-upload"
+              type="file"
+              accept="application/pdf"
+              onChange={handleGenericPdfFileChange}
+              className="mt-1"
+            />
+          </div>
+          {genericPdfFile && (
+            <div className="flex items-center justify-between p-2 bg-muted/50 rounded-md text-sm">
+              <div className="flex items-center gap-2 truncate">
+                <FileText className="h-4 w-4 text-primary shrink-0" />
+                <span className="truncate">{genericPdfFile.name}</span> 
+                <span className="text-xs text-muted-foreground whitespace-nowrap">({(genericPdfFile.size / 1024 / 1024).toFixed(2)} MB)</span>
+              </div>
+              <Button type="button" variant="ghost" size="icon" className="h-6 w-6" onClick={removeGenericPdfFile}>
+                <XCircle className="h-4 w-4 text-destructive" />
+                <span className="sr-only">Remove file</span>
+              </Button>
+            </div>
+          )}
+          <p className="text-xs text-muted-foreground">
+            This uploads the PDF via a server proxy to the n8n webhook defined by the `N8N_GENERIC_PDF_WEBHOOK_URL` server environment variable.
+          </p>
+        </CardContent>
+        <CardFooter>
+            <Button 
+              onClick={handleUploadGenericPdfToN8n} 
+              disabled={!genericPdfFile || isUploadingToN8n}
+            >
+              {isUploadingToN8n ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <UploadCloud className="mr-2 h-4 w-4" />}
+              {isUploadingToN8n ? 'Uploading...' : 'Upload PDF to n8n'}
+            </Button>
+        </CardFooter>
+      </Card>
+
+
+      <Card className="shadow-lg">
+        <CardHeader>
+          <CardTitle className="flex items-center">
             <Mail className="mr-2 h-6 w-6 text-blue-500" /> SMTP Configuration
           </CardTitle>
-          <CardDescription>Set up your SMTP server for sending application emails.</CardDescription>
+          <CardDescription>Set up your SMTP server for sending application emails. (Client Settings)</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
             <div>
@@ -169,19 +281,19 @@ export default function IntegrationsSettingsPage() {
                 className="mt-1"
               />
               <p className="text-xs text-muted-foreground mt-1">
-                Note: Password is not saved in this prototype. Use environment variables in production.
+                Note: Password is not saved in localStorage. Use environment variables for actual SMTP credentials on the server.
               </p>
             </div>
              <p className="text-sm text-muted-foreground pt-2">
-                These settings are for sending emails (e.g., notifications). Use environment variables for secure storage in production.
+                These client-side settings are for display/conceptual configuration. Actual email sending would use server-side environment variables.
             </p>
         </CardContent>
-         <CardFooter>
-          <Button onClick={handleSaveIntegrations}>
-            <Save className="mr-2 h-4 w-4" /> Save All Integration Settings
-          </Button>
-        </CardFooter>
       </Card>
+      <div className="flex justify-end pt-4">
+          <Button onClick={handleSaveIntegrations} size="lg">
+            <Save className="mr-2 h-4 w-4" /> Save Client-Side Integration Settings
+          </Button>
+      </div>
     </div>
   );
 }

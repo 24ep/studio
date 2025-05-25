@@ -33,7 +33,8 @@ const candidateStatusOptions: CandidateStatus[] = [
   'Applied', 'Screening', 'Shortlisted', 'Interview Scheduled', 'Interviewing', 
   'Offer Extended', 'Offer Accepted', 'Hired', 'Rejected', 'On Hold'
 ];
-const experienceLevelOptions: ExperienceEntry['postition_level'][] = ['entry level', 'mid level', 'senior level', 'lead', 'manager', 'executive'];
+const experienceLevelOptionsRaw: string[] = ['entry level', 'mid level', 'senior level', 'lead', 'manager', 'executive'];
+const experienceLevelOptions = experienceLevelOptionsRaw as [ExperienceEntry['postition_level'], ...ExperienceEntry['postition_level'][]];
 
 
 // Zod Schemas for form validation (mirroring types and API schemas)
@@ -92,7 +93,6 @@ const addCandidateFormSchema = z.object({
   experience: z.array(experienceEntryFormSchema).optional(),
   skills: z.array(skillEntryFormSchema).optional(),
   job_suitable: z.array(jobSuitableEntryFormSchema).optional(),
-  // Top-level fields required by the API POST schema that are not part of CandidateDetails
   positionId: z.string().uuid("Position is required").nullable(),
   status: z.enum(candidateStatusOptions).default('Applied'),
   fitScore: z.number().min(0).max(100).optional().default(0),
@@ -104,7 +104,7 @@ interface AddCandidateModalProps {
   isOpen: boolean;
   onOpenChange: (isOpen: boolean) => void;
   onAddCandidate: (data: AddCandidateFormValues) => Promise<void>;
-  availablePositions: Position[]; // Pass available positions for the dropdown
+  availablePositions: Position[];
 }
 
 export function AddCandidateModal({ isOpen, onOpenChange, onAddCandidate, availablePositions }: AddCandidateModalProps) {
@@ -112,7 +112,7 @@ export function AddCandidateModal({ isOpen, onOpenChange, onAddCandidate, availa
     resolver: zodResolver(addCandidateFormSchema),
     defaultValues: {
       cv_language: '',
-      personal_info: { firstname: '', lastname: '' }, // Removed email here as it's in contact_info
+      personal_info: { firstname: '', lastname: '' },
       contact_info: { email: '', phone: '' },
       education: [],
       experience: [],
@@ -147,7 +147,7 @@ export function AddCandidateModal({ isOpen, onOpenChange, onAddCandidate, availa
 
   useEffect(() => {
     if (isOpen) {
-      form.reset({ // Reset form with default values when modal becomes visible
+      form.reset({ 
         cv_language: '',
         personal_info: { firstname: '', lastname: '' },
         contact_info: { email: '', phone: '' },
@@ -163,7 +163,6 @@ export function AddCandidateModal({ isOpen, onOpenChange, onAddCandidate, availa
   }, [isOpen, form]);
 
   const onSubmit = async (data: AddCandidateFormValues) => {
-    // Transform skill_string to skill array
     const processedData = {
       ...data,
       skills: data.skills?.map(s => ({
@@ -184,7 +183,7 @@ export function AddCandidateModal({ isOpen, onOpenChange, onAddCandidate, availa
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={form.handleSubmit(onSubmit)}>
-          <ScrollArea className="max-h-[70vh] p-1 pr-3">
+          <ScrollArea className="max-h-[calc(80vh-160px)] p-1 pr-3"> {/* Adjusted max-height for better fit */}
             <div className="space-y-6 p-2">
               {/* CV Language */}
               <div>
@@ -239,7 +238,6 @@ export function AddCandidateModal({ isOpen, onOpenChange, onAddCandidate, availa
                 </div>
               </fieldset>
 
-              {/* Position and Status */}
                <fieldset className="space-y-3 border p-4 rounded-md">
                 <legend className="text-lg font-semibold">Application Details</legend>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -250,14 +248,13 @@ export function AddCandidateModal({ isOpen, onOpenChange, onAddCandidate, availa
                             control={form.control}
                             render={({ field }) => (
                                 <Select
-                                  onValueChange={(value) => field.onChange(value === "" ? null : value)} // Handle empty string to null
-                                  value={field.value ?? ""} // Ensure value is string for Select
+                                  onValueChange={(value) => field.onChange(value === "" ? null : value)} 
+                                  value={field.value ?? ""} 
                                 >
                                 <SelectTrigger id="positionId" className="mt-1">
                                     <SelectValue placeholder="Select position" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    {/* Removed: <SelectItem value="" disabled>Select a position</SelectItem> */}
                                     {availablePositions.map(pos => (
                                     <SelectItem key={pos.id} value={pos.id}>{pos.title}</SelectItem>
                                     ))}
@@ -374,12 +371,11 @@ export function AddCandidateModal({ isOpen, onOpenChange, onAddCandidate, availa
                     </Button>
                   </div>
                 ))}
-                <Button type="button" variant="outline" onClick={() => appendExperience({ company: '', position: '', period: '', duration: '', is_current_position: false, description: '' })}>
+                <Button type="button" variant="outline" onClick={() => appendExperience({ company: '', position: '', period: '', duration: '', is_current_position: false, description: '', postition_level: undefined })}>
                   <PlusCircle className="mr-2 h-4 w-4" /> Add Experience
                 </Button>
               </fieldset>
               
-              {/* Skills */}
                 <fieldset className="space-y-3 border p-4 rounded-md">
                     <legend className="text-lg font-semibold">Skills</legend>
                     {skillFields.map((field, index) => (
@@ -398,7 +394,6 @@ export function AddCandidateModal({ isOpen, onOpenChange, onAddCandidate, availa
                     </Button>
                 </fieldset>
 
-              {/* Job Suitable */}
                 <fieldset className="space-y-3 border p-4 rounded-md">
                     <legend className="text-lg font-semibold">Job Suitability</legend>
                      {jobSuitableFields.map((field, index) => (
@@ -423,7 +418,7 @@ export function AddCandidateModal({ isOpen, onOpenChange, onAddCandidate, availa
 
             </div>
           </ScrollArea>
-          <DialogFooter className="pt-4 pr-2">
+          <DialogFooter className="pt-4 pr-2 sticky bottom-0 bg-background border-t"> {/* Made footer sticky */}
             <DialogClose asChild>
               <Button type="button" variant="outline">
                 Cancel
