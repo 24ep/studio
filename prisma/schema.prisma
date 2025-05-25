@@ -1,0 +1,55 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Candidate {
+  id                String   @id @default(cuid())
+  name              String
+  email             String   @unique
+  phone             String?
+  positionId        String
+  position          Position @relation(fields: [positionId], references: [id], onDelete: Restrict) // Restrict delete if candidates exist
+  fitScore          Int
+  status            String // Corresponds to CandidateStatus type in lib/types.ts
+  applicationDate   DateTime @default(now())
+  lastUpdateDate    DateTime @updatedAt // Will be managed by Prisma
+  parsedData        Json // Storing as JSON, maps to ParsedResumeData type
+  resumePath        String? // Path/key of the resume file in MinIO
+  
+  transitionHistory TransitionRecord[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Position {
+  id          String      @id @default(cuid())
+  title       String
+  department  String
+  description String?
+  isOpen      Boolean
+  candidates  Candidate[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model TransitionRecord {
+  id          String   @id @default(cuid())
+  date        DateTime
+  stage       String // Corresponds to CandidateStatus type in lib/types.ts
+  notes       String?
+  
+  candidateId String
+  candidate   Candidate @relation(fields: [candidateId], references: [id], onDelete: Cascade) // Cascade delete if candidate is deleted
+
+  createdAt DateTime @default(now())
+}
