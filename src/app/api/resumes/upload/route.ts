@@ -10,17 +10,18 @@ import { logAudit } from '@/lib/auditLog';
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 const ACCEPTED_FILE_TYPES = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
 
-ensureBucketExists(MINIO_BUCKET_NAME).catch(console.error);
+// ensureBucketExists is called when minio.ts is initialized.
 
-async function sendToN8N(candidateId: string, candidateName: string, fileNameInMinio: string, originalFileName: string, mimeType: string, actingUserId?: string) {
+async function sendToN8N(candidateId: string, candidateName: string, fileNameInMinio: string, originalFileName: string, mimeType: string, actingUserId?: string): Promise<any> {
   const n8nWebhookUrl = process.env.N8N_RESUME_WEBHOOK_URL;
   if (!n8nWebhookUrl) {
     console.log('N8N_RESUME_WEBHOOK_URL not configured. Skipping n8n notification.');
-    return;
+    return { success: true, message: "N8N notification skipped (not configured)." };
   }
 
+  let presignedUrl = '';
   try {
-    const presignedUrl = await minioClient.presignedGetObject(
+    presignedUrl = await minioClient.presignedGetObject(
       MINIO_BUCKET_NAME,
       fileNameInMinio,
       60 * 60 // 1 hour expiry
@@ -43,16 +44,20 @@ async function sendToN8N(candidateId: string, candidateName: string, fileNameInM
     });
 
     if (response.ok) {
-      console.log(`Successfully sent resume details to n8n for candidate ${candidateId}.`);
+      const n8nResponseBody = await response.json().catch(() => ({ message: "Successfully sent to n8n, but no JSON response or n8n response was not JSON."}));
+      console.log(`Successfully sent resume details to n8n for candidate ${candidateId}. n8n response:`, n8nResponseBody);
       await logAudit('INFO', `Resume details for candidate '${candidateName}' (ID: ${candidateId}) sent to n8n. File: ${fileNameInMinio}`, 'API:Resumes:N8N', actingUserId, { targetCandidateId: candidateId, minioFile: fileNameInMinio });
+      return { success: true, data: n8nResponseBody };
     } else {
       const errorBody = await response.text();
       console.error(`Failed to send resume details to n8n for candidate ${candidateId}. Status: ${response.status}, Body: ${errorBody}`);
       await logAudit('WARN', `Failed to send resume details for candidate '${candidateName}' (ID: ${candidateId}) to n8n. Status: ${response.status}. File: ${fileNameInMinio}`, 'API:Resumes:N8N', actingUserId, { targetCandidateId: candidateId, minioFile: fileNameInMinio, n8nError: errorBody });
+      return { success: false, error: `n8n responded with status ${response.status}. Details: ${errorBody}` };
     }
   } catch (error) {
     console.error(`Error sending resume details to n8n for candidate ${candidateId}:`, error);
     await logAudit('ERROR', `Error sending resume details for candidate '${candidateName}' (ID: ${candidateId}) to n8n. Error: ${(error as Error).message}. File: ${fileNameInMinio}`, 'API:Resumes:N8N', actingUserId, { targetCandidateId: candidateId, minioFile: fileNameInMinio });
+    return { success: false, error: (error as Error).message };
   }
 }
 
@@ -75,7 +80,7 @@ export async function POST(request: NextRequest) {
 
   let candidateDBRecord: Candidate | null = null;
   try {
-    const candidateQuery = 'SELECT id, name FROM "Candidate" WHERE id = $1'; // Fetch name for logging
+    const candidateQuery = 'SELECT id, name FROM "Candidate" WHERE id = $1'; 
     const candidateResult = await pool.query(candidateQuery, [candidateId]);
     if (candidateResult.rows.length === 0) {
       return NextResponse.json({ message: 'Candidate not found' }, { status: 404 });
@@ -117,10 +122,8 @@ export async function POST(request: NextRequest) {
 
     await logAudit('AUDIT', `Resume '${fileNameInMinio}' uploaded for candidate '${candidateDBRecord.name}' (ID: ${candidateId}) by ${session.user.name} (ID: ${session.user.id}).`, 'API:Resumes', session.user.id, { targetCandidateId: candidateId, filePath: fileNameInMinio, originalFileName: file.name });
 
-    // Asynchronously send data to n8n
-    sendToN8N(candidateId, candidateDBRecord.name, fileNameInMinio, file.name, file.type, session.user.id).catch(err => {
-        console.error("Error in sendToN8N background task:", err);
-    });
+    // Synchronously send data to n8n and wait for its response
+    const n8nResult = await sendToN8N(candidateId, candidateDBRecord.name, fileNameInMinio, file.name, file.type, session.user.id);
 
     const finalQuery = `
         SELECT 
@@ -147,9 +150,10 @@ export async function POST(request: NextRequest) {
     };
 
     return NextResponse.json({ 
-      message: 'Resume uploaded successfully', 
+      message: 'Resume uploaded successfully.', 
       filePath: fileNameInMinio,
-      candidate: updatedCandidateWithDetails
+      candidate: updatedCandidateWithDetails,
+      n8nResponse: n8nResult // Include n8n's response or error
     }, { status: 200 });
 
   } catch (error: any) {

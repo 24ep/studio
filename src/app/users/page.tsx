@@ -3,7 +3,7 @@
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button, buttonVariants } from "@/components/ui/button"; 
-import { PlusCircle, UsersRound, ShieldAlert, Edit3, Trash2, ServerCrash, Loader2 } from "lucide-react";
+import { PlusCircle, UsersRound, ShieldAlert, Edit3, Trash2, ServerCrash, Loader2, KeyRound, MoreHorizontal } from "lucide-react";
 import type { UserProfile } from "@/lib/types";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -23,6 +23,13 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuSeparator
+} from "@/components/ui/dropdown-menu";
 import { signIn, useSession } from "next-auth/react";
 
 
@@ -42,6 +49,7 @@ export default function ManageUsersPage() {
 
   const fetchUsers = useCallback(async () => {
     if (sessionStatus !== 'authenticated') {
+        // This will be caught by the useEffect below to redirect
         return;
     }
     setIsLoading(true);
@@ -69,7 +77,7 @@ export default function ManageUsersPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [sessionStatus]);
+  }, [sessionStatus, router]);
 
   useEffect(() => {
     if (sessionStatus === 'unauthenticated') {
@@ -86,17 +94,16 @@ export default function ManageUsersPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data),
       });
+      const result = await response.json();
       if (!response.ok) {
-        const errorData = await response.json();
         if (response.status === 401 || response.status === 403) {
           signIn(undefined, { callbackUrl: window.location.pathname });
           return;
         }
-        throw new Error(errorData.message || 'Failed to add user');
+        throw new Error(result.message || 'Failed to add user');
       }
-      const newUser = await response.json();
-      setUsers(prev => [newUser, ...prev].sort((a,b) => new Date(b.createdAt!).getTime() - new Date(a.createdAt!).getTime()));
-      toast({ title: "Success", description: `User ${newUser.name} added successfully.` });
+      setUsers(prev => [result, ...prev].sort((a,b) => new Date(b.createdAt!).getTime() - new Date(a.createdAt!).getTime()));
+      toast({ title: "Success", description: `User ${result.name} added successfully.` });
       setIsAddUserModalOpen(false);
     } catch (error) {
       console.error("Error adding user:", error);
@@ -111,17 +118,16 @@ export default function ManageUsersPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data),
       });
+      const result = await response.json();
       if (!response.ok) {
-        const errorData = await response.json();
          if (response.status === 401 || response.status === 403) {
           signIn(undefined, { callbackUrl: window.location.pathname });
           return;
         }
-        throw new Error(errorData.message || 'Failed to update user');
+        throw new Error(result.message || 'Failed to update user');
       }
-      const updatedUser = await response.json();
-      setUsers(prev => prev.map(u => (u.id === updatedUser.id ? updatedUser : u)));
-      toast({ title: "Success", description: `User ${updatedUser.name} updated successfully.` });
+      setUsers(prev => prev.map(u => (u.id === result.id ? result : u)));
+      toast({ title: "Success", description: `User ${result.name} updated successfully.` });
       setIsEditUserModalOpen(false);
       setSelectedUserForEdit(null);
     } catch (error) {
@@ -144,7 +150,7 @@ export default function ManageUsersPage() {
     try {
       const response = await fetch(`/api/users/${userToDelete.id}`, { method: 'DELETE' });
       if (!response.ok) {
-        const errorData = await response.json();
+        const errorData = await response.json().catch(() => ({message: "Failed to delete user."}));
         if (response.status === 401 || response.status === 403) {
           signIn(undefined, { callbackUrl: window.location.pathname });
           return;
@@ -159,6 +165,16 @@ export default function ManageUsersPage() {
     } finally {
       setUserToDelete(null); 
     }
+  };
+
+  const handleGenerateApiToken = (user: UserProfile) => {
+    // This is a placeholder. Real token generation would involve a backend call.
+    const mockToken = `mock_token_for_${user.id}_${Date.now()}`;
+    toast({
+      title: "API Token Generated (Mock)",
+      description: `Token for ${user.name}: ${mockToken}. (This is a mock token for UI demonstration only and is not stored or usable).`,
+      duration: 10000, // Show longer for copying
+    });
   };
 
   if (sessionStatus === 'loading' || (sessionStatus === 'unauthenticated' && !router.asPath.startsWith('/auth/signin')) || (isLoading && !fetchError)) {
@@ -195,7 +211,7 @@ export default function ManageUsersPage() {
              <UsersRound className="mr-2 h-5 w-5 text-primary" /> App Users
           </CardTitle>
           <CardDescription>
-            Manage application users and their roles. These operations interact with the PostgreSQL database.
+            Manage application users, their roles, and module permissions. These operations interact with the PostgreSQL database.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -220,6 +236,7 @@ export default function ManageUsersPage() {
                   <TableHead>Name</TableHead>
                   <TableHead>Email</TableHead>
                   <TableHead>Role</TableHead>
+                  <TableHead>API Access</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -241,35 +258,35 @@ export default function ManageUsersPage() {
                         {user.role}
                       </Badge>
                     </TableCell>
+                    <TableCell className="text-xs text-muted-foreground">
+                      {/* Placeholder for API token info or management */}
+                      N/A
+                    </TableCell>
                     <TableCell className="text-right">
-                      <Button variant="ghost" size="icon" className="mr-1 h-8 w-8" onClick={() => openEditModal(user)}>
-                        <Edit3 className="h-4 w-4" />
-                        <span className="sr-only">Edit</span>
-                      </Button>
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                           <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive h-8 w-8" onClick={() => confirmDeleteUser(user)} disabled={session?.user?.id === user.id}>
-                            <Trash2 className="h-4 w-4" />
-                            <span className="sr-only">Delete</span>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon" className="h-8 w-8">
+                            <MoreHorizontal className="h-4 w-4" />
+                            <span className="sr-only">Actions</span>
                           </Button>
-                        </AlertDialogTrigger>
-                        {userToDelete && userToDelete.id === user.id && ( 
-                           <AlertDialogContent>
-                              <AlertDialogHeader>
-                                <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                                <AlertDialogDescription>
-                                  This action cannot be undone. This will permanently delete the user <strong>{userToDelete.name}</strong>.
-                                </AlertDialogDescription>
-                              </AlertDialogHeader>
-                              <AlertDialogFooter>
-                                <AlertDialogCancel onClick={() => setUserToDelete(null)}>Cancel</AlertDialogCancel>
-                                <AlertDialogAction onClick={handleDeleteUser} className={buttonVariants({ variant: "destructive" })}>
-                                  Delete User
-                                </AlertDialogAction>
-                              </AlertDialogFooter>
-                            </AlertDialogContent>
-                        )}
-                      </AlertDialog>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => openEditModal(user)}>
+                            <Edit3 className="mr-2 h-4 w-4" /> Edit User
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleGenerateApiToken(user)}>
+                            <KeyRound className="mr-2 h-4 w-4" /> Generate API Token (Mock)
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem 
+                            onClick={() => confirmDeleteUser(user)} 
+                            disabled={session?.user?.id === user.id}
+                            className="text-destructive hover:!bg-destructive/10 focus:!bg-destructive/10 focus:!text-destructive"
+                          >
+                            <Trash2 className="mr-2 h-4 w-4" /> Delete User
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -300,6 +317,25 @@ export default function ManageUsersPage() {
           onEditUser={handleEditUser}
           user={selectedUserForEdit}
         />
+      )}
+
+      {userToDelete && (
+        <AlertDialog open={!!userToDelete} onOpenChange={(open) => { if(!open) setUserToDelete(null);}}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This action cannot be undone. This will permanently delete the user <strong>{userToDelete.name}</strong>.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel onClick={() => setUserToDelete(null)}>Cancel</AlertDialogCancel>
+              <AlertDialogAction onClick={handleDeleteUser} className={buttonVariants({ variant: "destructive" })}>
+                Delete User
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       )}
     </div>
   );

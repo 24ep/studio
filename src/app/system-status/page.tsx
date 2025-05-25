@@ -22,7 +22,6 @@ interface StatusItem {
   isLoading?: boolean;
 }
 
-const N8N_WEBHOOK_URL_KEY = 'n8nWebhookUrl';
 const AZURE_AD_SSO_CONCEPTUAL_KEY = 'azureAdSsoConceptualEnabled';
 
 export default function SystemStatusPage() {
@@ -37,15 +36,15 @@ export default function SystemStatusPage() {
       id: "postgres_connection",
       name: "PostgreSQL Database Connection",
       status: 'info',
-      message: "Status: Connection success/failure logged by the application server at startup.",
-      details: "The Next.js application attempts to connect to PostgreSQL when the `src/lib/db.ts` module is initialized. Check your application server's console logs for 'Successfully connected...' or connection error messages. Ensure the DATABASE_URL environment variable is correctly set.",
+      message: "Expected: Connected. Status verified by application server logs at startup.",
+      details: "The Next.js application attempts to connect to PostgreSQL when `src/lib/db.ts` is initialized. Check your application server's console logs for 'Successfully connected...' or connection error messages. Ensure DATABASE_URL environment variable is correctly set.",
       icon: Database,
     },
     {
       id: "db_schema",
       name: "Database Schema (Tables)",
-      status: 'info', 
-      message: "Status: Automated initialization by Docker is configured. Verify on Setup Page.",
+      status: 'ok', 
+      message: "Expected: Initialized. Setup automated via Docker Compose (init-db.sql).",
       details: "The 'init-db.sql' script (mounted into /docker-entrypoint-initdb.d/) automatically creates tables when the PostgreSQL Docker container starts with an empty data volume. If tables are missing, use the 'Check Database Schema' button on the Setup Page to verify and get troubleshooting steps. Check PostgreSQL container logs for script execution details.",
       icon: ListChecks,
     },
@@ -53,7 +52,7 @@ export default function SystemStatusPage() {
       id: "minio_connection",
       name: "MinIO File Storage Connection",
       status: 'info',
-      message: "Status: Connection success/failure logged by the application server at startup.",
+      message: "Expected: Connected. Status verified by application server logs at startup.",
       details: "The Next.js application attempts to connect to MinIO when `src/lib/minio.ts` is initialized. Check server logs for 'Successfully connected to MinIO server...' or errors. Ensure MinIO environment variables (MINIO_ENDPOINT, MINIO_ACCESS_KEY, etc.) are correctly set.",
       icon: HardDrive,
     },
@@ -61,7 +60,7 @@ export default function SystemStatusPage() {
       id: "minio_bucket_check",
       name: "MinIO Bucket ('canditrack-resumes')",
       status: 'info', 
-      message: "Status: Application attempts auto-creation. Click to verify current status.",
+      message: "Expected: Created. Application attempts auto-creation. Click to verify.",
       details: "The application (src/lib/minio.ts) tries to create the bucket specified by MINIO_BUCKET_NAME. You can click the button to perform an on-demand check. Requires Admin role.",
       icon: HardDrive,
       actionLabel: "Check Bucket Status",
@@ -71,7 +70,7 @@ export default function SystemStatusPage() {
       id: "redis_connection",
       name: "Redis Cache Connection",
       status: 'info',
-      message: "Status: Application connects when Redis-dependent features are used (currently none active).",
+      message: "Expected: Available. App connects if Redis-dependent features are used (currently none active).",
       details: "No features in this prototype explicitly use Redis. If integrated, connection status would be logged. Ensure REDIS_URL is set for future use.",
       icon: Zap,
     },
@@ -79,42 +78,42 @@ export default function SystemStatusPage() {
       id: "azure_ad_env_vars",
       name: "Azure AD SSO Server Configuration (Environment Variables)",
       status: 'info',
-      message: "Status: Relies on server-side environment variables.",
+      message: "Expected: Configured. Functionality depends on server-side ENV VARS.",
       details: "Functionality depends on AZURE_AD_CLIENT_ID, AZURE_AD_CLIENT_SECRET, and AZURE_AD_TENANT_ID being correctly set on the server. The Azure AD sign-in button on the login page also depends on these.",
       icon: KeyRound,
     },
      {
       id: "azure_ad_sso_conceptual",
       name: "Azure AD SSO (Conceptual Toggle)",
-      status: 'info', 
+      status: 'disabled', // Default to disabled, will be updated from localStorage
       message: "Conceptual UI toggle for Azure AD SSO.",
       details: "This is a UI toggle stored in browser localStorage. The actual SSO functionality is determined by server-side environment variables. This toggle does not affect the server configuration.",
       icon: KeyRound,
-      actionLabel: "Toggle SSO", 
+      actionLabel: "Conceptually Enable SSO", 
       isLoading: false,
     },
     {
       id: "nextauth_secret",
       name: "NextAuth Secret",
       status: 'info',
-      message: "Status: Relies on a critical server-side environment variable.",
+      message: "Expected: Set. Critical server-side environment variable.",
       details: "The NEXTAUTH_SECRET environment variable must be set on the server for NextAuth.js to function securely for session management.",
       icon: KeyRound,
     },
     {
-      id: "n8n_webhook_env_var",
-      name: "n8n Webhook Integration (Server-Side)",
+      id: "n8n_resume_webhook_env_var",
+      name: "n8n Resume Webhook (Server-Side)",
       status: 'info',
-      message: "Status: Relies on server-side N8N_RESUME_WEBHOOK_URL environment variable.",
+      message: "Expected: Configured if n8n resume processing is used. Relies on server-side N8N_RESUME_WEBHOOK_URL.",
       details: "For resume uploads to trigger n8n workflows, the N8N_RESUME_WEBHOOK_URL environment variable must be set on the server. This is used by the /api/resumes/upload endpoint.",
       icon: Zap,
     },
     {
-      id: "n8n_webhook_client_setting",
-      name: "n8n Webhook URL (Client Setting)",
-      status: 'info', 
-      message: "Status: Not configured in local browser settings.",
-      details: "This UI setting is stored in browser localStorage via Settings > Integrations. It's separate from the server-side environment variable.",
+      id: "n8n_generic_pdf_webhook_env_var",
+      name: "n8n Generic PDF Webhook (Server-Side)",
+      status: 'info',
+      message: "Expected: Configured if generic PDF to n8n candidate creation is used. Relies on N8N_GENERIC_PDF_WEBHOOK_URL.",
+      details: "For the 'Create via Resume (n8n)' feature on the Candidates page to create new candidates from PDFs, the N8N_GENERIC_PDF_WEBHOOK_URL environment variable must be set on the server.",
       icon: Zap,
     },
   ];
@@ -171,21 +170,10 @@ export default function SystemStatusPage() {
       return;
     }
     
-    const n8nClientSetting = localStorage.getItem(N8N_WEBHOOK_URL_KEY);
     const conceptualSsoEnabled = localStorage.getItem(AZURE_AD_SSO_CONCEPTUAL_KEY) === 'true';
 
     setStatuses(
       initialStatuses.map(item => {
-        if (item.id === 'n8n_webhook_client_setting') {
-          return {
-            ...item,
-            status: n8nClientSetting ? 'ok' : 'warning',
-            message: n8nClientSetting 
-              ? "Status: Configured in local browser settings." 
-              : "Status: Not configured in local browser settings.",
-            details: `This UI setting is stored in browser localStorage via Settings > Integrations. Current local UI setting: ${n8nClientSetting || 'Not set'}. The server uses the N8N_RESUME_WEBHOOK_URL environment variable.`
-          };
-        }
         if (item.id === 'azure_ad_sso_conceptual') {
           const conceptualStatus = conceptualSsoEnabled ? 'enabled' : 'disabled';
           return {
@@ -198,7 +186,8 @@ export default function SystemStatusPage() {
         return item;
       })
     );
-  }, [isClient, sessionStatus, router]); 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isClient, sessionStatus, router]); // initialStatuses is stable
 
    useEffect(() => {
     setStatuses(prev => prev.map(item => {
@@ -246,13 +235,13 @@ export default function SystemStatusPage() {
   }
 
   const getToggleIcon = (status: StatusItem['status']) => {
-    if (status === 'enabled') return <ToggleRight className="mr-2 h-4 w-4" />;
-    if (status === 'disabled') return <ToggleLeft className="mr-2 h-4 w-4" />;
+    if (status === 'enabled') return <ToggleRight className="mr-2 h-4 w-4 text-green-500" />;
+    if (status === 'disabled') return <ToggleLeft className="mr-2 h-4 w-4 text-gray-500" />;
     return <Settings className="mr-2 h-4 w-4" />;
   }
 
 
-  if (sessionStatus === 'loading' || (sessionStatus === 'unauthenticated' && !router.asPath.startsWith('/auth/signin')) || !isClient) {
+  if (sessionStatus === 'loading' || (sessionStatus === 'unauthenticated' && router.asPath !== '/auth/signin' && !router.asPath.startsWith('/_next/')) || !isClient) {
     return (
       <div className="flex h-screen w-screen items-center justify-center bg-background fixed inset-0 z-50">
         <Loader2 className="h-16 w-16 animate-spin text-primary" />
@@ -281,7 +270,12 @@ export default function SystemStatusPage() {
                   <item.icon className={`mr-2 h-5 w-5 shrink-0 ${getStatusColor(item.status)}`} />
                   {item.name}
                 </h3>
-                <Badge variant={getStatusBadgeVariant(item.status)} className={`${item.status === 'ok' || item.status === 'enabled' ? 'bg-green-500/80 text-primary-foreground' : item.status === 'warning' ? 'bg-yellow-400/80 text-secondary-foreground' : ''} self-start sm:self-center whitespace-nowrap`}>
+                <Badge variant={getStatusBadgeVariant(item.status)} className={cn(
+                  'self-start sm:self-center whitespace-nowrap',
+                  {'bg-green-500/80 text-primary-foreground': item.status === 'ok' || item.status === 'enabled'},
+                  {'bg-yellow-400/80 text-secondary-foreground': item.status === 'warning'},
+                  {'bg-red-500/80 text-destructive-foreground': item.status === 'error' || item.status === 'disabled'}
+                )}>
                   {item.status.toUpperCase()}
                 </Badge>
               </div>
@@ -294,7 +288,16 @@ export default function SystemStatusPage() {
               )}
               {item.action && item.actionLabel && (
                 <div className="mt-3 ml-7 sm:ml-0">
-                  <Button onClick={item.action} disabled={item.isLoading || (item.id === 'minio_bucket_check' && session?.user?.role !== 'Admin')} variant="outline" size="sm" className="btn-hover-primary-gradient">
+                  <Button 
+                    onClick={item.action} 
+                    disabled={item.isLoading || (item.id === 'minio_bucket_check' && session?.user?.role !== 'Admin')} 
+                    variant="outline" 
+                    size="sm" 
+                    className={cn("btn-hover-primary-gradient",
+                      item.id === 'azure_ad_sso_conceptual' && item.status === 'enabled' && 'bg-green-500 hover:bg-green-600 text-white border-green-600',
+                      item.id === 'azure_ad_sso_conceptual' && item.status === 'disabled' && 'bg-gray-400 hover:bg-gray-500 text-white border-gray-500',
+                    )}
+                  >
                     {item.isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : 
                      item.id === 'azure_ad_sso_conceptual' ? getToggleIcon(item.status) :
                      item.id === 'minio_bucket_check' ? <HardDrive className="mr-2 h-4 w-4" /> : null}

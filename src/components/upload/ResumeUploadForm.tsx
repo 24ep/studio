@@ -14,7 +14,7 @@ import { useState, useEffect } from 'react';
 import { useToast } from "@/hooks/use-toast";
 import type { Candidate } from '@/lib/types';
 
-const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB (Increased from 5MB per API)
+const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 const ACCEPTED_FILE_TYPES = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
 
 const resumeUploadSchema = z.object({
@@ -29,9 +29,9 @@ type ResumeUploadFormValues = z.infer<typeof resumeUploadSchema>;
 
 interface ResumeUploadFormProps {
   candidateId: string;
-  onUploadSuccess?: (updatedCandidate: Candidate) => void;
+  onUploadSuccess?: (updatedCandidate: Candidate, n8nResponse?: any) => void; // n8nResponse is now optional
   currentResumePath?: string | null;
-  cardMode?: boolean; // To conditionally render as a Card or just form elements
+  cardMode?: boolean; 
 }
 
 export function ResumeUploadForm({ candidateId, onUploadSuccess, currentResumePath, cardMode = true }: ResumeUploadFormProps) {
@@ -60,7 +60,6 @@ export function ResumeUploadForm({ candidateId, onUploadSuccess, currentResumePa
       const response = await fetch(`/api/resumes/upload?candidateId=${candidateId}`, {
         method: 'POST',
         body: formData,
-        // Headers are automatically set by browser for FormData
       });
 
       const result = await response.json();
@@ -69,12 +68,22 @@ export function ResumeUploadForm({ candidateId, onUploadSuccess, currentResumePa
         throw new Error(result.message || `Failed to upload resume. Status: ${response.status}`);
       }
 
+      let toastDescription = `Resume for candidate ${candidateId} uploaded successfully.`;
+      if (result.n8nResponse) {
+        if (result.n8nResponse.success) {
+          toastDescription += ` n8n processing initiated.`;
+        } else {
+          toastDescription += ` n8n notification failed: ${result.n8nResponse.error || 'Unknown n8n error'}`;
+        }
+      }
+
       toast({
         title: "Resume Uploaded",
-        description: `Resume for candidate ${candidateId} uploaded successfully.`,
+        description: toastDescription,
       });
+
       if (onUploadSuccess && result.candidate) {
-        onUploadSuccess(result.candidate);
+        onUploadSuccess(result.candidate, result.n8nResponse);
       }
       form.reset();
       setSelectedFile(null);
@@ -94,7 +103,6 @@ export function ResumeUploadForm({ candidateId, onUploadSuccess, currentResumePa
     const file = event.target.files?.[0];
     if (file) {
       setSelectedFile(file);
-      // Create a FileList to assign to form value
       const dataTransfer = new DataTransfer();
       dataTransfer.items.add(file);
       form.setValue('resume', dataTransfer.files, { shouldValidate: true });
@@ -108,7 +116,7 @@ export function ResumeUploadForm({ candidateId, onUploadSuccess, currentResumePa
     setSelectedFile(null);
     form.setValue('resume', undefined, { shouldValidate: true });
     const fileInput = document.getElementById(`resume-upload-${candidateId}`) as HTMLInputElement;
-    if (fileInput) fileInput.value = ''; // Clear the file input
+    if (fileInput) fileInput.value = ''; 
   };
 
   const formContent = (
@@ -170,13 +178,13 @@ export function ResumeUploadForm({ candidateId, onUploadSuccess, currentResumePa
         </CardContent>
         {cardMode && (
           <CardFooter>
-            <Button type="submit" className="w-full" disabled={isSubmitting || !selectedFile}>
+            <Button type="submit" className="w-full btn-primary-gradient" disabled={isSubmitting || !selectedFile}>
               {isSubmitting ? "Uploading..." : "Upload Resume"}
             </Button>
           </CardFooter>
         )}
         {!cardMode && (
-             <Button type="submit" className="w-full" disabled={isSubmitting || !selectedFile}>
+             <Button type="submit" className="w-full btn-primary-gradient" disabled={isSubmitting || !selectedFile}>
                 {isSubmitting ? "Uploading..." : "Upload Selected Resume"}
             </Button>
         )}
@@ -192,7 +200,7 @@ export function ResumeUploadForm({ candidateId, onUploadSuccess, currentResumePa
             <UploadCloud className="mr-2 h-6 w-6 text-primary" /> Upload Resume {candidateId && <span className="text-base text-muted-foreground ml-2">for Candidate ID: {candidateId.substring(0,8)}...</span>}
           </CardTitle>
           <CardDescription>
-            Upload a resume in PDF, DOC, or DOCX format.
+            Upload a resume in PDF, DOC, or DOCX format. Results from n8n processing will be shown if configured.
           </CardDescription>
         </CardHeader>
         {formContent}

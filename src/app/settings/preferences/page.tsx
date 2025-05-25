@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useToast } from '@/hooks/use-toast';
-import { Save, Palette, ImageUp, Trash2, Loader2 } from 'lucide-react';
+import { Save, Palette, ImageUp, Trash2, Loader2, XCircle } from 'lucide-react';
 import Image from 'next/image'; 
 import { signIn, useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
@@ -107,7 +107,7 @@ export default function PreferencesSettingsPage() {
     window.dispatchEvent(new Event('logoChanged'));
   };
 
-  if (sessionStatus === 'loading' || (sessionStatus === 'unauthenticated' && !router.asPath.startsWith('/auth/signin')) || !isClient) {
+  if (sessionStatus === 'loading' || (sessionStatus === 'unauthenticated' && router.asPath !== '/auth/signin' && !router.asPath.startsWith('/_next/')) || !isClient) {
     return (
       <div className="flex h-screen w-screen items-center justify-center bg-background fixed inset-0 z-50">
         <Loader2 className="h-16 w-16 animate-spin text-primary" />
@@ -188,7 +188,7 @@ export default function PreferencesSettingsPage() {
           </section>
         </CardContent>
         <CardFooter>
-          <Button onClick={handleSavePreferences}>
+          <Button onClick={handleSavePreferences} className="btn-primary-gradient">
             <Save className="mr-2 h-4 w-4" /> Save Preferences
           </Button>
         </CardFooter>
