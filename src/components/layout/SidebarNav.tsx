@@ -34,7 +34,7 @@ const baseSettingsSubItems = [
   { href: "/settings/preferences", label: "Preferences", icon: Palette },
   { href: "/settings/integrations", label: "Integrations", icon: Zap },
   { href: "/setup", label: "Application Setup", icon: Settings2, id: "setup-link" },
-  { href: "/system-status", label: "System Status", icon: CheckSquare },
+  // { href: "/system-status", label: "System Status", icon: CheckSquare }, // Removed
   { href: "/users", label: "Manage Users", icon: UsersRound },
   { href: "/api-docs", label: "API Docs", icon: Code2 },
   { href: "/logs", label: "Logs", icon: ListOrdered },
@@ -55,10 +55,12 @@ export function SidebarNav() {
   }, []);
 
   const settingsSubItems = React.useMemo(() => {
+    let items = baseSettingsSubItems;
     if (isClient && isSetupDone) {
-      return baseSettingsSubItems.filter(item => item.id !== "setup-link");
+      items = items.filter(item => item.id !== "setup-link");
     }
-    return baseSettingsSubItems;
+    // items = items.filter(item => item.href !== "/system-status"); // Redundant due to removal from baseSettingsSubItems
+    return items;
   }, [isClient, isSetupDone]);
 
   const isSettingsSectionActive = settingsSubItems.some(item => pathname.startsWith(item.href));
@@ -111,11 +113,11 @@ export function SidebarNav() {
                 <TooltipTrigger asChild>
                   <AccordionTrigger
                     className={cn(
-                      "flex w-full items-center gap-2 overflow-hidden rounded-md p-2 text-left text-sm outline-none ring-sidebar-ring transition-all focus-visible:ring-2 active:bg-sidebar-accent active:text-sidebar-accent-foreground disabled:pointer-events-none disabled:opacity-50",
+                      "flex w-full items-center gap-2 overflow-hidden rounded-md px-4 py-3 text-left text-sm outline-none ring-sidebar-ring transition-all focus-visible:ring-2 active:bg-sidebar-accent active:text-sidebar-accent-foreground disabled:pointer-events-none disabled:opacity-50", // Adjusted padding
                       "justify-between group-data-[collapsible=icon]:!size-8 group-data-[collapsible=icon]:!p-2",
                       isSettingsSectionActive && "bg-sidebar-active-background-l dark:bg-sidebar-active-background-d text-sidebar-active-foreground-l dark:text-sidebar-active-foreground-d", 
                       !isSettingsSectionActive && "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
-                      "hover:no-underline py-2"
+                      "hover:no-underline" // Removed py-2 to rely on base padding
                     )}
                   >
                     <div className="flex items-center gap-2 group-data-[collapsible=icon]:hidden">

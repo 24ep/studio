@@ -29,7 +29,7 @@ function getPageTitle(pathname: string): string {
   if (pathname.startsWith("/settings/preferences")) return "Preferences";
   if (pathname.startsWith("/settings/integrations")) return "Integrations";
   if (pathname.startsWith("/setup")) return "Application Setup";
-  if (pathname.startsWith("/system-status")) return "System Status";
+  // if (pathname.startsWith("/system-status")) return "System Status"; // Removed
   if (pathname.startsWith("/api-docs")) return "API Documentation";
   if (pathname.startsWith("/logs")) return "Application Logs";
   if (pathname.startsWith("/auth/signin")) return "Sign In";
