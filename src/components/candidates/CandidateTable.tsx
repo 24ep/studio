@@ -14,8 +14,8 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { MoreHorizontal, FileEdit, Trash2, Eye, Users } from 'lucide-react';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
+import { MoreHorizontal, FileEdit, Trash2, Eye, Users, UploadCloud } from 'lucide-react';
 import type { Candidate, CandidateStatus, TransitionRecord } from '@/lib/types';
 import { ManageTransitionsModal } from './ManageTransitionsModal';
 import { format, parseISO } from 'date-fns';
@@ -25,6 +25,7 @@ interface CandidateTableProps {
   candidates: Candidate[];
   onUpdateCandidate: (candidateId: string, status: CandidateStatus, newTransitionHistory: TransitionRecord[]) => Promise<void>;
   onDeleteCandidate: (candidateId: string) => Promise<void>; 
+  onOpenUploadModal: (candidate: Candidate) => void;
   isLoading?: boolean;
 }
 
@@ -42,21 +43,21 @@ const getStatusBadgeVariant = (status: CandidateStatus): "default" | "secondary"
     case 'Applied':
     case 'Screening':
     case 'Shortlisted':
-    case 'On Hold': // Added On Hold to outline
+    case 'On Hold':
       return 'outline';
     default:
       return 'outline';
   }
 };
 
-export function CandidateTable({ candidates, onUpdateCandidate, onDeleteCandidate, isLoading }: CandidateTableProps) {
+export function CandidateTable({ candidates, onUpdateCandidate, onDeleteCandidate, onOpenUploadModal, isLoading }: CandidateTableProps) {
   const [selectedCandidateForModal, setSelectedCandidateForModal] = useState<Candidate | null>(null);
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isTransitionsModalOpen, setIsTransitionsModalOpen] = useState(false);
   const { toast } = useToast();
 
   const handleManageTransitionsClick = (candidate: Candidate) => {
     setSelectedCandidateForModal(candidate);
-    setIsModalOpen(true);
+    setIsTransitionsModalOpen(true);
   };
 
   const handleViewDetails = (candidate: Candidate) => {
@@ -64,24 +65,20 @@ export function CandidateTable({ candidates, onUpdateCandidate, onDeleteCandidat
   };
   
   const handleDeleteClick = async (candidate: Candidate) => {
-    // Basic confirmation, you might use an AlertDialog for better UX
     if (window.confirm(`Are you sure you want to delete ${candidate.name}?`)) {
       try {
         await onDeleteCandidate(candidate.id);
         toast({ title: "Candidate Deleted", description: `${candidate.name} has been deleted.` });
       } catch (error) {
-        toast({ title: "Error Deleting Candidate", description: (error as Error).message || "Could not delete candidate.", variant: "destructive" });
+        // Parent component (CandidatesPage) should show a toast on error from onDeleteCandidate
       }
     }
   };
 
-  const handleModalUpdateCandidate = async (updatedCandidate: Candidate) => {
-    // The modal now provides the full updated candidate including new transition history.
-    // We just need to pass the relevant parts to onUpdateCandidate prop.
+  const handleTransitionsModalUpdateCandidate = async (updatedCandidate: Candidate) => {
     try {
       await onUpdateCandidate(updatedCandidate.id, updatedCandidate.status, updatedCandidate.transitionHistory);
-      setIsModalOpen(false); // Close modal on successful update from modal
-      // Optimistic update is handled by the parent page's state update after API call.
+      setIsTransitionsModalOpen(false); 
     } catch (error) {
       // Error is toasted by parent
     }
@@ -119,6 +116,7 @@ export function CandidateTable({ candidates, onUpdateCandidate, onDeleteCandidat
               <TableHead className="w-[100px]">Fit Score</TableHead>
               <TableHead>Status</TableHead>
               <TableHead>Last Update</TableHead>
+              <TableHead className="w-[120px]">Resume</TableHead>
               <TableHead className="text-right w-[80px]">Actions</TableHead>
             </TableRow>
           </TableHeader>
@@ -139,8 +137,10 @@ export function CandidateTable({ candidates, onUpdateCandidate, onDeleteCandidat
                 </TableCell>
                 <TableCell>
                   <div className="font-medium text-foreground">{candidate.position?.title || 'N/A'}</div>
-                  <div className="text-xs text-muted-foreground">
-                    {(candidate.parsedData as any)?.education?.[0] || 'Education N/A'}
+                   <div className="text-xs text-muted-foreground">
+                    { (candidate.parsedData as any)?.education?.[0]?.university || 
+                      ((candidate.parsedData as any)?.education?.[0] as string) || // Handle old string array format
+                      'Education N/A'}
                   </div>
                 </TableCell>
                 <TableCell>
@@ -155,7 +155,14 @@ export function CandidateTable({ candidates, onUpdateCandidate, onDeleteCandidat
                   </Badge>
                 </TableCell>
                 <TableCell className="text-sm text-muted-foreground">
-                  {format(parseISO(candidate.updatedAt || candidate.createdAt || candidate.lastUpdateDate), "MMM d, yyyy")}
+                  {format(parseISO(candidate.updatedAt || candidate.createdAt!), "MMM d, yyyy")}
+                </TableCell>
+                <TableCell className="text-xs">
+                  {candidate.resumePath ? 
+                    <span className="text-green-600 truncate block max-w-[100px] hover:underline cursor-pointer" title={candidate.resumePath}>
+                      {candidate.resumePath.split('-').pop() || candidate.resumePath}
+                    </span> 
+                    : <span className="text-muted-foreground">No resume</span>}
                 </TableCell>
                 <TableCell className="text-right">
                   <DropdownMenu>
@@ -172,6 +179,10 @@ export function CandidateTable({ candidates, onUpdateCandidate, onDeleteCandidat
                       <DropdownMenuItem onClick={() => handleManageTransitionsClick(candidate)}>
                         <FileEdit className="mr-2 h-4 w-4" /> Manage Transitions
                       </DropdownMenuItem>
+                       <DropdownMenuItem onClick={() => onOpenUploadModal(candidate)}>
+                        <UploadCloud className="mr-2 h-4 w-4" /> Upload Resume
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
                       <DropdownMenuItem onClick={() => handleDeleteClick(candidate)} className="text-destructive hover:!bg-destructive/10 focus:!bg-destructive/10 focus:!text-destructive">
                         <Trash2 className="mr-2 h-4 w-4" /> Delete
                       </DropdownMenuItem>
@@ -183,12 +194,17 @@ export function CandidateTable({ candidates, onUpdateCandidate, onDeleteCandidat
           </TableBody>
         </Table>
       </div>
-      <ManageTransitionsModal
-        candidate={selectedCandidateForModal}
-        isOpen={isModalOpen}
-        onOpenChange={setIsModalOpen}
-        onUpdateCandidate={handleModalUpdateCandidate} // This will now trigger the API call via props
-      />
+      {selectedCandidateForModal && (
+        <ManageTransitionsModal
+          candidate={selectedCandidateForModal}
+          isOpen={isTransitionsModalOpen}
+          onOpenChange={(isOpen) => {
+            setIsTransitionsModalOpen(isOpen);
+            if (!isOpen) setSelectedCandidateForModal(null);
+          }}
+          onUpdateCandidate={handleTransitionsModalUpdateCandidate}
+        />
+      )}
     </>
   );
 }

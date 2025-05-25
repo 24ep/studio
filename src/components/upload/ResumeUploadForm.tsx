@@ -1,180 +1,204 @@
 
 "use client";
 
-import { useForm, Controller } from 'react-hook-form';
+import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
-import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { UploadCloud, FileText, XCircle } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useToast } from "@/hooks/use-toast";
+import type { Candidate } from '@/lib/types';
 
-const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB (Increased from 5MB per API)
 const ACCEPTED_FILE_TYPES = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
-const N8N_WEBHOOK_URL_KEY = 'n8nWebhookUrl';
-
 
 const resumeUploadSchema = z.object({
-  resumes: z
+  resume: z
     .custom<FileList>()
-    .refine((files) => files && files.length > 0, 'At least one resume file is required.')
-    .refine((files) => Array.from(files).every(file => file.size <= MAX_FILE_SIZE), `Each file size should be less than 5MB.`)
-    .refine((files) => Array.from(files).every(file => ACCEPTED_FILE_TYPES.includes(file.type)), '.pdf, .doc, .docx files are accepted.'),
+    .refine((files) => files && files.length === 1, 'Exactly one resume file is required.')
+    .refine((files) => files?.[0]?.size <= MAX_FILE_SIZE, `File size should be less than ${MAX_FILE_SIZE / (1024*1024)}MB.`)
+    .refine((files) => files?.[0] && ACCEPTED_FILE_TYPES.includes(files[0].type), '.pdf, .doc, .docx files are accepted.'),
 });
 
 type ResumeUploadFormValues = z.infer<typeof resumeUploadSchema>;
 
-export function ResumeUploadForm() {
+interface ResumeUploadFormProps {
+  candidateId: string;
+  onUploadSuccess?: (updatedCandidate: Candidate) => void;
+  currentResumePath?: string | null;
+  cardMode?: boolean; // To conditionally render as a Card or just form elements
+}
+
+export function ResumeUploadForm({ candidateId, onUploadSuccess, currentResumePath, cardMode = true }: ResumeUploadFormProps) {
   const { toast } = useToast();
-  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
-  const [isClient, setIsClient] = useState(false);
-
-
-  useEffect(() => {
-    setIsClient(true); // Component has mounted
-  }, []);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const form = useForm<ResumeUploadFormValues>({
     resolver: zodResolver(resumeUploadSchema),
     defaultValues: {
-      resumes: undefined,
+      resume: undefined,
     },
   });
 
   const onSubmit = async (data: ResumeUploadFormValues) => {
-    let webhookUrl = null;
-    if (isClient) { // Only access localStorage on client
-        webhookUrl = localStorage.getItem(N8N_WEBHOOK_URL_KEY);
+    if (!candidateId || !data.resume?.[0]) {
+      toast({ title: "Error", description: "Candidate ID and resume file are required.", variant: "destructive" });
+      return;
     }
 
-    if (webhookUrl) {
-      console.log(`Simulating resume submission to n8n webhook: ${webhookUrl} for ${data.resumes.length} files.`);
-      // In a real scenario, you would loop and send each file:
-      // for (const file of Array.from(data.resumes)) {
-      //   const formData = new FormData();
-      //   formData.append('resume', file);
-      //   try {
-      //     // const response = await fetch(webhookUrl, { method: 'POST', body: formData });
-      //     // console.log(`File ${file.name} sent, status: ${response.status}`);
-      //   } catch (error) {
-      //     // console.error(`Error sending ${file.name}:`, error);
-      //   }
-      // }
-    } else {
-      console.log('n8n webhook URL not configured in Settings. Skipping webhook submission.');
-    }
+    setIsSubmitting(true);
+    const formData = new FormData();
+    formData.append('resume', data.resume[0]);
 
-    toast({
-      title: "Resumes Submitted (Simulated)",
-      description: `${data.resumes.length} resume(s) processed. ${webhookUrl ? 'Webhook step simulated (check console).' : 'n8n webhook not configured.'}`,
-    });
-    form.reset();
-    setSelectedFiles([]);
+    try {
+      const response = await fetch(`/api/resumes/upload?candidateId=${candidateId}`, {
+        method: 'POST',
+        body: formData,
+        // Headers are automatically set by browser for FormData
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.message || `Failed to upload resume. Status: ${response.status}`);
+      }
+
+      toast({
+        title: "Resume Uploaded",
+        description: `Resume for candidate ${candidateId} uploaded successfully.`,
+      });
+      if (onUploadSuccess && result.candidate) {
+        onUploadSuccess(result.candidate);
+      }
+      form.reset();
+      setSelectedFile(null);
+    } catch (error) {
+      console.error("Error uploading resume:", error);
+      toast({
+        title: "Upload Failed",
+        description: (error as Error).message,
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
   
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const fileList = event.target.files;
-    if (fileList) {
-      const filesArray = Array.from(fileList);
-      setSelectedFiles(filesArray);
-      form.setValue('resumes', fileList, { shouldValidate: true });
+    const file = event.target.files?.[0];
+    if (file) {
+      setSelectedFile(file);
+      // Create a FileList to assign to form value
+      const dataTransfer = new DataTransfer();
+      dataTransfer.items.add(file);
+      form.setValue('resume', dataTransfer.files, { shouldValidate: true });
+    } else {
+      setSelectedFile(null);
+      form.setValue('resume', undefined, { shouldValidate: true });
     }
   };
 
-  const removeFile = (index: number) => {
-    const newFiles = [...selectedFiles];
-    newFiles.splice(index, 1);
-    setSelectedFiles(newFiles);
-    
-    const dataTransfer = new DataTransfer();
-    newFiles.forEach(file => dataTransfer.items.add(file));
-    // Use new FileList() if newFiles is empty to correctly clear the input
-    const newFileList = newFiles.length > 0 ? dataTransfer.files : new FileList(); 
-    form.setValue('resumes', newFileList, { shouldValidate: true });
+  const removeFile = () => {
+    setSelectedFile(null);
+    form.setValue('resume', undefined, { shouldValidate: true });
+    const fileInput = document.getElementById(`resume-upload-${candidateId}`) as HTMLInputElement;
+    if (fileInput) fileInput.value = ''; // Clear the file input
   };
 
-
-  return (
-    <Card className="w-full max-w-2xl mx-auto shadow-lg">
-      <CardHeader>
-        <CardTitle className="text-2xl flex items-center">
-          <UploadCloud className="mr-2 h-6 w-6 text-primary" /> Upload Resumes
-        </CardTitle>
-        <CardDescription>
-          Upload candidate resumes in PDF, DOC, or DOCX format. Files will be parsed to extract key information.
-        </CardDescription>
-      </CardHeader>
-      <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)}>
-          <CardContent className="space-y-6">
-            <FormField
-              control={form.control}
-              name="resumes"
-              render={({ fieldState }) => ( 
-                <FormItem>
-                  <FormLabel htmlFor="resume-upload" className="text-base">Resume Files</FormLabel>
-                  <FormControl>
-                     <div className="mt-2 flex justify-center rounded-lg border border-dashed border-input px-6 py-10 hover:border-primary transition-colors">
-                        <div className="text-center">
-                          <UploadCloud className="mx-auto h-12 w-12 text-muted-foreground" aria-hidden="true" />
-                          <div className="mt-4 flex text-sm leading-6 text-muted-foreground">
-                            <Label
-                              htmlFor="resume-upload"
-                              className="relative cursor-pointer rounded-md bg-background font-semibold text-primary focus-within:outline-none focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2 hover:text-primary/80"
-                            >
-                              <span>Select files</span>
-                              <Input 
-                                id="resume-upload" 
-                                type="file" 
-                                className="sr-only" 
-                                multiple 
-                                accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-                                onChange={handleFileChange}
-                                // value is uncontrolled here; managed by selectedFiles state and removeFile logic
-                              />
-                            </Label>
-                            <p className="pl-1">or drag and drop</p>
-                          </div>
-                          <p className="text-xs leading-5 text-muted-foreground">PDF, DOC, DOCX up to 5MB each</p>
+  const formContent = (
+    <Form {...form}>
+      <form onSubmit={form.handleSubmit(onSubmit)} className={cardMode ? "" : "space-y-6"}>
+        <CardContent className={cardMode ? "space-y-6" : "space-y-6 p-0"}>
+          <FormField
+            control={form.control}
+            name="resume"
+            render={({ fieldState }) => ( 
+              <FormItem>
+                <FormLabel htmlFor={`resume-upload-${candidateId}`} className={cardMode ? "text-base" : ""}>
+                  Resume File {currentResumePath && <span className="text-xs text-muted-foreground">(Current: {currentResumePath.split('-').pop()})</span>}
+                </FormLabel>
+                <FormControl>
+                   <div className="mt-2 flex justify-center rounded-lg border border-dashed border-input px-6 py-10 hover:border-primary transition-colors">
+                      <div className="text-center">
+                        <UploadCloud className="mx-auto h-12 w-12 text-muted-foreground" aria-hidden="true" />
+                        <div className="mt-4 flex text-sm leading-6 text-muted-foreground">
+                          <Label
+                            htmlFor={`resume-upload-${candidateId}`}
+                            className="relative cursor-pointer rounded-md bg-background font-semibold text-primary focus-within:outline-none focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2 hover:text-primary/80"
+                          >
+                            <span>Select file</span>
+                            <Input 
+                              id={`resume-upload-${candidateId}`}
+                              type="file" 
+                              className="sr-only" 
+                              accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                              onChange={handleFileChange}
+                            />
+                          </Label>
+                          <p className="pl-1">or drag and drop</p>
                         </div>
+                        <p className="text-xs leading-5 text-muted-foreground">PDF, DOC, DOCX up to {MAX_FILE_SIZE / (1024*1024)}MB</p>
                       </div>
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            {selectedFiles.length > 0 && (
-              <div>
-                <h4 className="text-sm font-medium text-foreground mb-2">Selected files:</h4>
-                <ul className="space-y-2 max-h-60 overflow-y-auto rounded-md border p-2">
-                  {selectedFiles.map((file, index) => (
-                    <li key={index} className="flex items-center justify-between p-2 bg-muted/50 rounded-md text-sm">
-                      <div className="flex items-center gap-2 truncate">
-                        <FileText className="h-4 w-4 text-primary shrink-0" />
-                        <span className="truncate">{file.name}</span> 
-                        <span className="text-xs text-muted-foreground whitespace-nowrap">({(file.size / 1024 / 1024).toFixed(2)} MB)</span>
-                      </div>
-                      <Button type="button" variant="ghost" size="icon" className="h-6 w-6" onClick={() => removeFile(index)}>
-                        <XCircle className="h-4 w-4 text-destructive" />
-                        <span className="sr-only">Remove file</span>
-                      </Button>
-                    </li>
-                  ))}
-                </ul>
-              </div>
+                    </div>
+                </FormControl>
+                <FormMessage />
+              </FormItem>
             )}
-          </CardContent>
+          />
+          {selectedFile && (
+            <div>
+              <h4 className="text-sm font-medium text-foreground mb-2">Selected file:</h4>
+              <div className="flex items-center justify-between p-2 bg-muted/50 rounded-md text-sm">
+                <div className="flex items-center gap-2 truncate">
+                  <FileText className="h-4 w-4 text-primary shrink-0" />
+                  <span className="truncate">{selectedFile.name}</span> 
+                  <span className="text-xs text-muted-foreground whitespace-nowrap">({(selectedFile.size / 1024 / 1024).toFixed(2)} MB)</span>
+                </div>
+                <Button type="button" variant="ghost" size="icon" className="h-6 w-6" onClick={removeFile}>
+                  <XCircle className="h-4 w-4 text-destructive" />
+                  <span className="sr-only">Remove file</span>
+                </Button>
+              </div>
+            </div>
+          )}
+        </CardContent>
+        {cardMode && (
           <CardFooter>
-            <Button type="submit" className="w-full" disabled={form.formState.isSubmitting || selectedFiles.length === 0}>
-              {form.formState.isSubmitting ? "Uploading..." : "Upload and Process Resumes"}
+            <Button type="submit" className="w-full" disabled={isSubmitting || !selectedFile}>
+              {isSubmitting ? "Uploading..." : "Upload Resume"}
             </Button>
           </CardFooter>
-        </form>
-      </Form>
-    </Card>
+        )}
+        {!cardMode && (
+             <Button type="submit" className="w-full" disabled={isSubmitting || !selectedFile}>
+                {isSubmitting ? "Uploading..." : "Upload Selected Resume"}
+            </Button>
+        )}
+      </form>
+    </Form>
   );
+
+  if (cardMode) {
+    return (
+      <Card className="w-full max-w-2xl mx-auto shadow-lg">
+        <CardHeader>
+          <CardTitle className="text-2xl flex items-center">
+            <UploadCloud className="mr-2 h-6 w-6 text-primary" /> Upload Resume {candidateId && <span className="text-base text-muted-foreground ml-2">for Candidate ID: {candidateId.substring(0,8)}...</span>}
+          </CardTitle>
+          <CardDescription>
+            Upload a resume in PDF, DOC, or DOCX format.
+          </CardDescription>
+        </CardHeader>
+        {formContent}
+      </Card>
+    );
+  }
+
+  return formContent;
 }

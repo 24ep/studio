@@ -1,8 +1,9 @@
 
 "use client"
+import * as React from "react"; // Added this line
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Users, UploadCloud, Briefcase, Settings, UsersRound, Code2, ListOrdered, Palette, Zap } from "lucide-react"; // Added Palette, Zap
+import { LayoutDashboard, Users, UploadCloud, Briefcase, Settings, UsersRound, Code2, ListOrdered, Palette, Zap } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   SidebarMenu,
@@ -20,7 +21,7 @@ import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
-  TooltipProvider, // Ensure TooltipProvider is here if not already at a higher level
+  TooltipProvider,
 } from "@/components/ui/tooltip";
 
 const mainNavItems = [
@@ -43,7 +44,6 @@ export function SidebarNav() {
   const { state: sidebarState, isMobile } = useSidebar();
 
   const isSettingsSectionActive = settingsSubItems.some(item => pathname.startsWith(item.href));
-  // Determine if any main nav item is active to close settings accordion if a main item is clicked
   const isAnyMainNavItemActive = mainNavItems.some(item => pathname === item.href || (item.href !== "/" && pathname.startsWith(item.href)));
 
   const [accordionValue, setAccordionValue] = React.useState<string | undefined>(
@@ -54,16 +54,12 @@ export function SidebarNav() {
     if (isSettingsSectionActive) {
       setAccordionValue("settings-group");
     } else if (isAnyMainNavItemActive) {
-      // If a main nav item (not settings) becomes active, close the settings accordion
       setAccordionValue(undefined);
     }
-    // Only re-run if these specific conditions change, not on every pathname change within settings
   }, [isSettingsSectionActive, isAnyMainNavItemActive]);
 
 
   return (
-    // Ensure TooltipProvider wraps this if not done globally
-    // <TooltipProvider> 
       <SidebarMenu>
         {mainNavItems.map((item) => (
           <SidebarMenuItem key={item.href}>
@@ -73,7 +69,7 @@ export function SidebarNav() {
                 isActive={pathname === item.href || (item.href !== "/" && pathname.startsWith(item.href))}
                 className="w-full justify-start"
                 tooltip={item.label}
-                onClick={() => setAccordionValue(undefined)} // Close accordion when main item clicked
+                onClick={() => setAccordionValue(undefined)}
               >
                 <a>
                   <item.icon className="h-5 w-5" />
@@ -85,10 +81,10 @@ export function SidebarNav() {
         ))}
 
         <SidebarMenuItem className="mt-auto">
-          <Accordion 
-            type="single" 
-            collapsible 
-            className="w-full" 
+          <Accordion
+            type="single"
+            collapsible
+            className="w-full"
             value={accordionValue}
             onValueChange={setAccordionValue}
           >
@@ -139,8 +135,5 @@ export function SidebarNav() {
           </Accordion>
         </SidebarMenuItem>
       </SidebarMenu>
-    // </TooltipProvider>
   );
 }
-
-    
