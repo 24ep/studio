@@ -17,14 +17,14 @@ export default function DashboardPage() {
   const [positions, setPositions] = useState<Position[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [authError, setAuthError] = useState(false);
-  const [fetchError, setFetchError] = useState<string | null>(null); // New state for fetch errors
+  const [fetchError, setFetchError] = useState<string | null>(null);
   const { toast } = useToast();
   const { data: session, status: sessionStatus } = useSession();
 
   const fetchData = useCallback(async () => {
     setIsLoading(true);
     setAuthError(false);
-    setFetchError(null); // Reset fetch error on new attempt
+    setFetchError(null);
 
     try {
       const [candidatesRes, positionsRes] = await Promise.all([
@@ -33,6 +33,7 @@ export default function DashboardPage() {
       ]);
 
       let criticalAuthFailure = false;
+      let accumulatedFetchError = "";
 
       // Process Candidates Response
       if (!candidatesRes.ok) {
@@ -41,9 +42,9 @@ export default function DashboardPage() {
           setAuthError(true);
           criticalAuthFailure = true;
         } else {
-          setFetchError(prev => prev ? `${prev}; Failed to fetch candidates: ${errorText}` : `Failed to fetch candidates: ${errorText}`);
+          accumulatedFetchError += `Failed to fetch candidates: ${errorText}. `;
         }
-        setCandidates([]); // Clear candidates on error
+        setCandidates([]);
       } else {
         const candidatesData: Candidate[] = await candidatesRes.json();
         setCandidates(candidatesData);
@@ -56,9 +57,9 @@ export default function DashboardPage() {
           setAuthError(true);
           criticalAuthFailure = true;
         } else {
-          setFetchError(prev => prev ? `${prev}; Failed to fetch positions: ${errorText}` : `Failed to fetch positions: ${errorText}`);
+          accumulatedFetchError += `Failed to fetch positions: ${errorText}. `;
         }
-        setPositions([]); // Clear positions on error
+        setPositions([]);
       } else {
         const positionsData: Position[] = await positionsRes.json();
         setPositions(positionsData);
@@ -66,18 +67,26 @@ export default function DashboardPage() {
       
       if (criticalAuthFailure) {
          setIsLoading(false);
+         setFetchError(null); // Clear non-auth errors if auth is the primary issue
          return;
       }
 
-    } catch (error) { // Catches network errors, JSON parsing errors, etc.
+      if (accumulatedFetchError) {
+        setFetchError(accumulatedFetchError.trim());
+      }
+
+    } catch (error) { 
+      // This catch block handles network errors or JSON parsing errors from successful responses
+      // that might not be valid JSON, or other unexpected JS errors during fetch.
       console.error("Unexpected error fetching dashboard data:", error);
-      setFetchError((error as Error).message || "An unexpected error occurred while loading dashboard data.");
+      const genericMessage = (error as Error).message || "An unexpected error occurred while loading dashboard data.";
+      setFetchError(prev => prev ? `${prev} ${genericMessage}` : genericMessage);
       setCandidates([]);
       setPositions([]);
     } finally {
       setIsLoading(false);
     }
-  }, [toast, sessionStatus]); // Removed authError from dependencies
+  }, [sessionStatus]); // Removed toast, authError dependencies. sessionStatus drives initial fetch.
 
   useEffect(() => {
     if (sessionStatus === 'authenticated') {
@@ -85,7 +94,9 @@ export default function DashboardPage() {
     } else if (sessionStatus === 'unauthenticated') {
       setIsLoading(false);
       setAuthError(true);
+      setFetchError(null); // Clear fetch error if auth is the issue
     }
+    // If sessionStatus is 'loading', we wait.
   }, [sessionStatus, fetchData]);
 
 
