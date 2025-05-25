@@ -2,6 +2,8 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { mockPositions } from '@/lib/data';
 import type { Position } from '@/lib/types';
+import { getServerSession } from 'next-auth/next';
+import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 
 // In-memory store for this example, replace with database logic
 let positionsStore: Position[] = JSON.parse(JSON.stringify(mockPositions)); // Deep copy
@@ -11,7 +13,7 @@ let positionsStore: Position[] = JSON.parse(JSON.stringify(mockPositions)); // D
  * /api/positions/{id}:
  *   get:
  *     summary: Retrieve a specific position by ID
- *     description: Fetches details for a single job position.
+ *     description: Fetches details for a single job position. Requires authentication.
  *     parameters:
  *       - in: path
  *         name: id
@@ -26,12 +28,19 @@ let positionsStore: Position[] = JSON.parse(JSON.stringify(mockPositions)); // D
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/Position'
+ *       401:
+ *         description: Unauthorized.
  *       404:
  *         description: Position not found.
  *       500:
  *         description: Internal server error.
  */
 export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
+  const session = await getServerSession(authOptions);
+  if (!session) {
+    return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+  }
+
   // TODO: Replace with actual database query
   try {
     const position = positionsStore.find(p => p.id === params.id);
@@ -50,7 +59,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
  * /api/positions/{id}:
  *   put:
  *     summary: Update a job position
- *     description: Updates details for an existing job position.
+ *     description: Updates details for an existing job position. Requires authentication.
  *     parameters:
  *       - in: path
  *         name: id
@@ -82,12 +91,19 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
  *               $ref: '#/components/schemas/Position'
  *       400:
  *         description: Invalid input.
+ *       401:
+ *         description: Unauthorized.
  *       404:
  *         description: Position not found.
  *       500:
  *         description: Internal server error.
  */
 export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {
+  const session = await getServerSession(authOptions);
+  if (!session) {
+    return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+  }
+
   // TODO: Replace with actual database update logic
   try {
     const body = await request.json();
@@ -122,7 +138,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
  * /api/positions/{id}:
  *   delete:
  *     summary: Delete a job position
- *     description: Removes a job position from the system.
+ *     description: Removes a job position from the system. Requires authentication.
  *     parameters:
  *       - in: path
  *         name: id
@@ -140,12 +156,19 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
  *               properties:
  *                 message:
  *                   type: string
+ *       401:
+ *         description: Unauthorized.
  *       404:
  *         description: Position not found.
  *       500:
  *         description: Internal server error.
  */
 export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
+  const session = await getServerSession(authOptions);
+  if (!session) {
+    return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+  }
+
   // TODO: Replace with actual database deletion logic
   try {
     const initialLength = positionsStore.length;

@@ -2,6 +2,8 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { mockCandidates, mockPositions } from '@/lib/data';
 import type { Candidate, Position } from '@/lib/types';
+import { getServerSession } from 'next-auth/next';
+import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 
 // In-memory store for this example, replace with database logic
 let candidatesStore: Candidate[] = [...mockCandidates];
@@ -12,7 +14,7 @@ const positionsStore: Position[] = [...mockPositions]; // Used for validating po
  * /api/candidates:
  *   get:
  *     summary: Retrieve a list of candidates
- *     description: Fetches all candidates. Supports filtering by name, positionId, and fitScore range via query parameters.
+ *     description: Fetches all candidates. Supports filtering by name, positionId, and fitScore range via query parameters. Requires authentication.
  *     parameters:
  *       - in: query
  *         name: name
@@ -47,10 +49,17 @@ const positionsStore: Position[] = [...mockPositions]; // Used for validating po
  *               type: array
  *               items:
  *                 $ref: '#/components/schemas/Candidate'
+ *       401:
+ *         description: Unauthorized.
  *       500:
  *         description: Internal server error.
  */
 export async function GET(request: NextRequest) {
+  const session = await getServerSession(authOptions);
+  if (!session) {
+    return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+  }
+
   // TODO: Replace with actual database query (e.g., using Prisma or similar ORM for PostgreSQL)
   try {
     const { searchParams } = new URL(request.url);
@@ -94,7 +103,7 @@ export async function GET(request: NextRequest) {
  * /api/candidates:
  *   post:
  *     summary: Create a new candidate
- *     description: Adds a new candidate to the system.
+ *     description: Adds a new candidate to the system. Requires authentication.
  *     requestBody:
  *       required: true
  *       content:
@@ -151,12 +160,19 @@ export async function GET(request: NextRequest) {
  *               $ref: '#/components/schemas/Candidate'
  *       400:
  *         description: Invalid input or missing required fields.
+ *       401:
+ *         description: Unauthorized.
  *       404:
  *         description: Position not found.
  *       500:
  *         description: Internal server error.
  */
 export async function POST(request: NextRequest) {
+  const session = await getServerSession(authOptions);
+  if (!session) {
+    return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+  }
+
   // TODO: Replace with actual database insertion (e.g., using Prisma) and proper validation (e.g. Zod)
   try {
     const body = await request.json();

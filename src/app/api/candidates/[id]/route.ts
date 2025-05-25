@@ -2,6 +2,8 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { mockCandidates, mockPositions } from '@/lib/data';
 import type { Candidate, Position, CandidateStatus } from '@/lib/types';
+import { getServerSession } from 'next-auth/next';
+import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 
 // In-memory store for this example, replace with database logic
 // Each API route file manages its own instance of the store for simplicity in this mock setup.
@@ -13,7 +15,7 @@ const positionsStore: Position[] = [...mockPositions];
  * /api/candidates/{id}:
  *   get:
  *     summary: Retrieve a specific candidate by ID
- *     description: Fetches details for a single candidate.
+ *     description: Fetches details for a single candidate. Requires authentication.
  *     parameters:
  *       - in: path
  *         name: id
@@ -28,12 +30,19 @@ const positionsStore: Position[] = [...mockPositions];
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/Candidate'
+ *       401:
+ *         description: Unauthorized.
  *       404:
  *         description: Candidate not found.
  *       500:
  *         description: Internal server error.
  */
 export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
+  const session = await getServerSession(authOptions);
+  if (!session) {
+    return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+  }
+
   // TODO: Replace with actual database query
   try {
     const candidate = candidatesStore.find(c => c.id === params.id);
@@ -52,7 +61,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
  * /api/candidates/{id}:
  *   put:
  *     summary: Update a candidate's information
- *     description: Updates details or status for an existing candidate.
+ *     description: Updates details or status for an existing candidate. Requires authentication.
  *     parameters:
  *       - in: path
  *         name: id
@@ -107,12 +116,19 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
  *               $ref: '#/components/schemas/Candidate'
  *       400:
  *         description: Invalid input.
+ *       401:
+ *         description: Unauthorized.
  *       404:
  *         description: Candidate or Position not found.
  *       500:
  *         description: Internal server error.
  */
 export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {
+  const session = await getServerSession(authOptions);
+  if (!session) {
+    return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+  }
+
   // TODO: Replace with actual database update logic and proper validation
   try {
     const body = await request.json();
@@ -163,7 +179,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
  * /api/candidates/{id}:
  *   delete:
  *     summary: Delete a candidate
- *     description: Removes a candidate from the system.
+ *     description: Removes a candidate from the system. Requires authentication.
  *     parameters:
  *       - in: path
  *         name: id
@@ -181,12 +197,19 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
  *               properties:
  *                 message:
  *                   type: string
+ *       401:
+ *         description: Unauthorized.
  *       404:
  *         description: Candidate not found.
  *       500:
  *         description: Internal server error.
  */
 export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
+  const session = await getServerSession(authOptions);
+  if (!session) {
+    return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+  }
+
   // TODO: Replace with actual database deletion logic
   try {
     const initialLength = candidatesStore.length;

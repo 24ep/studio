@@ -2,6 +2,8 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { mockPositions } from '@/lib/data';
 import type { Position } from '@/lib/types';
+import { getServerSession } from 'next-auth/next';
+import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 
 // In-memory store for this example, replace with database logic
 let positionsStore: Position[] = JSON.parse(JSON.stringify(mockPositions)); // Deep copy for mutation
@@ -11,7 +13,7 @@ let positionsStore: Position[] = JSON.parse(JSON.stringify(mockPositions)); // D
  * /api/positions:
  *   get:
  *     summary: Retrieve a list of job positions
- *     description: Fetches all job positions. Supports filtering by title or department.
+ *     description: Fetches all job positions. Supports filtering by title or department. Requires authentication.
  *     parameters:
  *       - in: query
  *         name: title
@@ -32,10 +34,17 @@ let positionsStore: Position[] = JSON.parse(JSON.stringify(mockPositions)); // D
  *               type: array
  *               items:
  *                 $ref: '#/components/schemas/Position'
+ *       401:
+ *         description: Unauthorized.
  *       500:
  *         description: Internal server error.
  */
 export async function GET(request: NextRequest) {
+  const session = await getServerSession(authOptions);
+  if (!session) {
+    return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+  }
+
   // TODO: Replace with actual database query
   try {
     const { searchParams } = new URL(request.url);
@@ -67,7 +76,7 @@ export async function GET(request: NextRequest) {
  * /api/positions:
  *   post:
  *     summary: Create a new job position
- *     description: Adds a new job position to the system.
+ *     description: Adds a new job position to the system. Requires authentication.
  *     requestBody:
  *       required: true
  *       content:
@@ -100,10 +109,17 @@ export async function GET(request: NextRequest) {
  *               $ref: '#/components/schemas/Position'
  *       400:
  *         description: Invalid input or missing required fields.
+ *       401:
+ *         description: Unauthorized.
  *       500:
  *         description: Internal server error.
  */
 export async function POST(request: NextRequest) {
+  const session = await getServerSession(authOptions);
+  if (!session) {
+    return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+  }
+
   // TODO: Replace with actual database insertion and validation
   try {
     const body = await request.json();
