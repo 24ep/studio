@@ -43,6 +43,7 @@ This is a Next.js application prototype for NCC Candidate Management, an Applica
 *   Node.js (v18 or later recommended)
 *   npm or yarn
 *   Docker Desktop (or Docker Engine + Docker Compose)
+*   Portainer (if deploying/managing via Portainer)
 
 ### Installation
 
@@ -76,7 +77,7 @@ This is a Next.js application prototype for NCC Candidate Management, an Applica
 
 ### Running with Docker (Recommended for Full Stack Development)
 
-This is the recommended way to run the application along with its backend services (PostgreSQL, MinIO, Redis) locally.
+This is the recommended way to run the application along with its backend services (PostgreSQL, MinIO, Redis) locally or via Portainer.
 
 1.  **Ensure Docker and Docker Compose are installed and running.**
 2.  **Set up your `.env.local` file as described in Step 3 of Installation.**
@@ -89,23 +90,28 @@ This is the recommended way to run the application along with its backend servic
     *   This automatic initialization **only happens once when the `postgres_data` Docker volume is first created** (or if the volume is empty/being newly created).
 
 4.  **IMPORTANT: If Database Tables Are Missing (e.g., "relation ... does not exist" errors):**
-    If your application logs errors indicating that tables like "Candidate", "Position", or "User" do not exist, it means the `init-db.sql` script did not run or did not complete successfully during the last PostgreSQL container startup. This is almost always because the `postgres_data` volume already existed.
+    If your application logs errors indicating that tables like "Candidate", "Position", or "User" do not exist, it means the `init-db.sql` script did not run or did not complete successfully during the last PostgreSQL container startup. This is almost always because the `postgres_data` volume already existed with data.
     **To force a fresh database initialization and ensure `init-db.sql` runs:**
-    1.  **Stop all services:** `docker-compose down`
-    2.  **CRITICAL: Remove all Docker volumes (this will delete ALL existing database data and MinIO files):**
-        ```bash
-        docker-compose down -v
-        ```
-    3.  **Restart the services (this will rebuild if necessary):**
-        ```bash
-        docker-compose up --build -d
-        # or just: docker-compose up --build
-        ```
-    4.  **Check PostgreSQL Logs:** After startup, if you still suspect issues, check the logs of the PostgreSQL container for any errors during the execution of `init-db.sql`:
-        ```bash
-        docker logs <your_postgres_container_name> 
-        # (Find <your_postgres_container_name> with `docker ps`)
-        ```
+    *   **For Local Docker Compose:**
+        1.  **Stop all services:** `docker-compose down`
+        2.  **CRITICAL: Remove all Docker volumes (this will delete ALL existing database data and MinIO files):**
+            ```bash
+            docker-compose down -v
+            ```
+        3.  **Restart the services (this will rebuild if necessary):**
+            ```bash
+            docker-compose up --build -d
+            # or just: docker-compose up --build
+            ```
+    *   **When Deploying/Managing with Portainer:**
+        1.  When deploying or updating your stack in Portainer, if you need the `init-db.sql` script to run (e.g., for a fresh setup or if tables are missing), you **must ensure that Portainer does not reuse an existing `postgres_data` volume that already contains a database.**
+        2.  You may need to:
+            *   Manually delete the `postgres_data` volume associated with your stack via Portainer's "Volumes" section before redeploying the stack.
+            *   Or, if Portainer provides an option during stack update/redeployment to "recreate" containers and specify "do not persist volumes" or "use new volumes" for the PostgreSQL service, select that.
+        3.  After ensuring the volume will be fresh, deploy/update your stack in Portainer. The PostgreSQL container will initialize a new database and execute `init-db.sql`.
+    *   **Check PostgreSQL Logs:** After startup, if you still suspect issues, check the logs of the PostgreSQL container for any errors during the execution of `init-db.sql`:
+        *   Local Docker: `docker logs <your_postgres_container_name>` (Find `<your_postgres_container_name>` with `docker ps`)
+        *   Portainer: View the logs for the PostgreSQL container within the Portainer UI.
         Look for messages indicating scripts from `/docker-entrypoint-initdb.d/` are being run, or any SQL errors.
 
 5.  **MinIO Bucket Creation (Automated by Application):**
@@ -113,24 +119,24 @@ This is the recommended way to run the application along with its backend servic
     *   You can also manually create it via the MinIO Console if preferred.
 
 6.  **Verify Service Connectivity (Application Logs):**
-    *   When your Next.js application starts, check its logs (e.g., `docker logs <your_app_container_name> -f`).
+    *   When your Next.js application starts, check its logs (e.g., `docker logs <your_app_container_name> -f` or via Portainer logs).
     *   You should see messages like "Successfully connected to PostgreSQL database..." and "Successfully connected to MinIO server..." or "MinIO: Bucket ... already exists/created...".
     *   If you see connection error messages, verify your `.env.local` settings, Docker networking, and that the backend services are running correctly.
 
 7.  **Accessing Services:**
-    *   **NCC Candidate Management App:** `http://localhost:9002`
-    *   **PostgreSQL:** Accessible on `localhost:5432` from your host machine (or `postgres:5432` from within the Docker network).
-    *   **MinIO API:** `http://localhost:9000` (from host).
-    *   **MinIO Console:** `http://localhost:9001` (Login with `MINIO_ROOT_USER` and `MINIO_ROOT_PASSWORD` from your `.env.local` or `docker-compose.yml` defaults).
-    *   **Redis:** Accessible on `localhost:6379` from your host machine (or `redis:6379` from within the Docker network).
+    *   **NCC Candidate Management App:** `http://localhost:9002` (or your configured host/port in Portainer)
+    *   **PostgreSQL:** Accessible on `localhost:5432` from your host machine (or `postgres:5432` from within the Docker network, or as exposed by Portainer).
+    *   **MinIO API:** `http://localhost:9000` (from host, or as exposed by Portainer on port 9847).
+    *   **MinIO Console:** `http://localhost:9001` (Login with `MINIO_ROOT_USER` and `MINIO_ROOT_PASSWORD` from your `.env.local` or `docker-compose.yml` defaults. Exposed on port 9848 by default).
+    *   **Redis:** Accessible on `localhost:6379` from your host machine (or `redis:6379` from within the Docker network, or as exposed by Portainer on port 9849).
 
-8.  **Starting the services using the script:**
+8.  **Starting the services using the script (for local development):**
     (Ensure the script is executable: `chmod +x start.sh`)
     ```bash
     ./start.sh
     ```
 
-9.  **Stopping the services:**
+9.  **Stopping the services (for local development):**
     ```bash
     docker-compose down
     ```
@@ -154,7 +160,7 @@ This application is a prototype. For production readiness, consider the followin
 *   **Robust Error Handling & Logging:** Implement comprehensive server-side logging beyond the current database logging.
 *   **API Authorization:** RBAC is implemented; review and enhance as needed for all actions.
 *   **Testing:** Add unit, integration, and end-to-end tests.
-*   **Database Migrations:** For ongoing schema changes, use a formal migration tool (e.g., Flyway, Liquibase). The current `init-db.sql` is for initial setup.
+*   **Database Migrations:** For ongoing schema changes, use a formal migration tool (e.g., Prisma Migrate, Flyway, Liquibase). The current `init-db.sql` is for initial setup.
 *   **AI Feature Implementation:** Develop and integrate Genkit flows for resume parsing, candidate matching, etc.
 *   **Real-time Features:** Implement WebSocket connections and Redis pub/sub for real-time updates.
 *   **UX/UI Polish:** Continue refining the user experience and interface.
@@ -165,5 +171,3 @@ This application is a prototype. For production readiness, consider the followin
 
 *   **PostgreSQL:** The application attempts to connect and execute a test query (`SELECT NOW()`) when the `src/lib/db.ts` module is initialized. Check your application server's console logs for "Successfully connected to PostgreSQL database..." or connection error messages.
 *   **MinIO:** The application attempts to connect and check/create the resume bucket when `src/lib/minio.ts` is initialized. Check application server logs for "Successfully connected to MinIO server..." or "MinIO: Bucket ... already exists/created..." or related error messages.
-
-    
