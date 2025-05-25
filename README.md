@@ -8,7 +8,7 @@ This is a Next.js application prototype for NCC Candidate Management, an Applica
 *   Dashboard Overview
 *   Candidate Management (View, Add, Update Status, Delete, Resume Upload via Modal)
 *   Position Management (View, Mock Add/Edit/Delete)
-*   User Management (View, Mock Add/Edit/Delete via Modals)
+*   User Management (View, Add/Edit/Delete via Modals - uses mock data for users)
 *   Settings:
     *   Preferences (Theme, App Logo - conceptual)
     *   Integrations (n8n Webhook, SMTP - conceptual)
@@ -17,7 +17,7 @@ This is a Next.js application prototype for NCC Candidate Management, an Applica
 *   Application Logs Page (Database-backed)
 *   Authentication:
     *   Azure AD SSO
-    *   Credentials (Email/Password - Mock)
+    *   Credentials (Email/Password - Mock data based)
 *   Styling with ShadCN UI components and Tailwind CSS.
 *   Backend API routes for Candidates, Positions, and Logs using PostgreSQL (via `pg` library) and file uploads to MinIO.
 
@@ -42,6 +42,7 @@ This is a Next.js application prototype for NCC Candidate Management, an Applica
 *   Node.js (v18 or later recommended)
 *   npm or yarn
 *   Docker Desktop (or Docker Engine + Docker Compose)
+*   A SQL client (e.g., `psql`, DBeaver, pgAdmin) to connect to PostgreSQL if you need to inspect the database or run queries manually.
 
 ### Installation
 
@@ -67,33 +68,9 @@ This is a Next.js application prototype for NCC Candidate Management, an Applica
         *   Azure AD (Client ID, Client Secret, Tenant ID)
         *   `NEXTAUTH_URL` (e.g., `http://localhost:9002` for local dev)
         *   `NEXTAUTH_SECRET` (Generate a strong secret: `openssl rand -base64 32`)
-        *   `DATABASE_URL` (e.g., `postgresql://devuser:devpassword@localhost:5432/canditrack_db` if running PostgreSQL outside Docker, or `postgresql://devuser:devpassword@postgres:5432/canditrack_db` if using the provided Docker Compose setup)
-        *   MinIO credentials and endpoint (if different from Docker Compose defaults)
-        *   Redis URL (if different from Docker Compose defaults)
-
-4.  **Database Setup (PostgreSQL):**
-    *   Ensure you have a PostgreSQL instance running (either locally or via Docker).
-    *   Connect to your PostgreSQL instance and create the `canditrack_db` database (or the database name specified in your `DATABASE_URL`).
-    *   Create the necessary tables. Example DDL statements are provided in the comments of `src/lib/db.ts`. You should adapt these and run them in your database. This includes tables like `Position`, `Candidate`, `TransitionRecord`, and `LogEntry`.
-
-5.  **MinIO Setup:**
-    *   Ensure your MinIO server is running.
-    *   Create the bucket specified by `MINIO_BUCKET_NAME` in your `.env.local` (default: `canditrack-resumes`). The application attempts to create it if it doesn't exist, but manual creation is also an option.
-
-### Running the Application (Development Mode)
-
-*   **To run the Next.js app standalone (requires external PostgreSQL, MinIO, Redis):**
-    ```bash
-    npm run dev
-    ```
-    The application will be available at `http://localhost:9002`.
-
-*   **To run with Genkit AI flows (if implemented, conceptual for now):**
-    ```bash
-    npm run genkit:dev
-    # or for watching changes
-    npm run genkit:watch
-    ```
+        *   `DATABASE_URL` (Should match Docker Compose: `postgresql://devuser:devpassword@postgres:5432/canditrack_db`)
+        *   MinIO credentials and endpoint (Should match Docker Compose for local dev)
+        *   Redis URL (Should match Docker Compose for local dev)
 
 ### Running with Docker (Recommended for Full Stack Development)
 
@@ -104,6 +81,7 @@ This is the recommended way to run the application along with its backend servic
     *   The `DATABASE_URL` should point to the Docker service name: `postgresql://devuser:devpassword@postgres:5432/canditrack_db`
     *   The `MINIO_ENDPOINT` should be `minio` (the service name).
     *   The `REDIS_URL` should be `redis://redis:6379`.
+
 3.  **Build and run the services using Docker Compose:**
     From the project root directory, run:
     ```bash
@@ -112,18 +90,37 @@ This is the recommended way to run the application along with its backend servic
     *   Use `docker-compose up --build -d` to run in detached mode.
     *   You can use the provided `start.sh` script as well: `./start.sh` (make it executable: `chmod +x start.sh`).
 
-4.  **Accessing Services:**
+4.  **Initialize Database Schema (First Time Setup):**
+    *   The PostgreSQL container will start an empty database named `canditrack_db`. You need to create the tables.
+    *   **After the containers are running (especially `postgres`)**, open a new terminal and execute the `init-db.sql` script.
+    *   First, find your PostgreSQL container name (it usually contains "postgres"):
+        ```bash
+        docker ps
+        ```
+        (Look for a name like `ncc-candidate-management-postgres-1` or similar)
+    *   Then, execute the SQL script using `docker exec`. Replace `your_postgres_container_name` with the actual name:
+        ```bash
+        docker exec -i your_postgres_container_name psql -U devuser -d canditrack_db < init-db.sql
+        ```
+        (The default `devuser` and `canditrack_db` should match your `DATABASE_URL` and `docker-compose.yml` settings. If you've changed `POSTGRES_USER` or `POSTGRES_DB` in `docker-compose.yml`, adjust the `-U` and `-d` flags accordingly.)
+    *   This only needs to be done once unless you remove the `postgres_data` volume.
+
+5.  **MinIO Bucket Creation:**
+    *   The MinIO bucket specified by `MINIO_BUCKET_NAME` (default: `canditrack-resumes`) will be **attempted to be created automatically by the application** when it first tries to interact with MinIO (e.g., during a resume upload).
+    *   You can also manually create it via the MinIO Console if preferred.
+
+6.  **Accessing Services:**
     *   **NCC Candidate Management App:** `http://localhost:9002`
     *   **PostgreSQL:** Accessible on `localhost:5432` from your host machine (or `postgres:5432` from within the Docker network).
     *   **MinIO API:** `http://localhost:9000`
     *   **MinIO Console:** `http://localhost:9001` (Login with `MINIO_ROOT_USER` and `MINIO_ROOT_PASSWORD` from your `.env.local` or `docker-compose.yml`).
     *   **Redis:** Accessible on `localhost:6379` from your host machine (or `redis:6379` from within the Docker network).
 
-5.  **Stopping the services:**
+7.  **Stopping the services:**
     ```bash
     docker-compose down
     ```
-    To also remove volumes (be careful, this deletes data):
+    To also remove volumes (be careful, this deletes data including your database and MinIO files):
     ```bash
     docker-compose down -v
     ```
@@ -140,10 +137,11 @@ This is the recommended way to run the application along with its backend servic
 
 This application is a prototype. For production readiness, consider the following:
 
-*   **Robust Error Handling & Logging:** Implement comprehensive server-side logging.
-*   **API Authorization:** Enhance API security with role-based access control.
+*   **Robust Error Handling & Logging:** Implement comprehensive server-side logging beyond the current database logging.
+*   **API Authorization:** Enhance API security with role-based access control (RBAC is partially implemented, review and complete).
 *   **Testing:** Add unit, integration, and end-to-end tests.
-*   **Database Migrations:** Use a formal migration tool (e.g., Prisma Migrate if you were using Prisma, or others like Flyway/Liquibase for raw SQL) instead of manual DDL for schema changes.
+*   **Database Migrations:** For ongoing schema changes, use a formal migration tool (e.g., Flyway, Liquibase, or if you were using Prisma, `prisma migrate`).
 *   **AI Feature Implementation:** Develop and integrate Genkit flows for resume parsing, candidate matching, etc.
 *   **Real-time Features:** Implement WebSocket connections and Redis pub/sub for real-time updates.
 *   **UX/UI Polish:** Continue refining the user experience and interface.
+*   **Security Hardening:** Implement rate limiting, security headers, etc.
