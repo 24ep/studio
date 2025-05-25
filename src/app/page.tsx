@@ -5,7 +5,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import type { Candidate, Position } from "@/lib/types";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Users, Briefcase, CheckCircle2, UserPlus, FileWarning, UserRoundSearch, AlertTriangle } from "lucide-react";
+import { Users, Briefcase, CheckCircle2, UserPlus, FileWarning, UserRoundSearch, AlertTriangle, ServerCrash } from "lucide-react";
 import { isToday, parseISO } from 'date-fns';
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -17,59 +17,75 @@ export default function DashboardPage() {
   const [positions, setPositions] = useState<Position[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [authError, setAuthError] = useState(false);
+  const [fetchError, setFetchError] = useState<string | null>(null); // New state for fetch errors
   const { toast } = useToast();
   const { data: session, status: sessionStatus } = useSession();
 
   const fetchData = useCallback(async () => {
     setIsLoading(true);
     setAuthError(false);
+    setFetchError(null); // Reset fetch error on new attempt
+
     try {
       const [candidatesRes, positionsRes] = await Promise.all([
         fetch('/api/candidates'),
         fetch('/api/positions'),
       ]);
 
+      let criticalAuthFailure = false;
+
+      // Process Candidates Response
       if (!candidatesRes.ok) {
         const errorText = candidatesRes.statusText || `Status: ${candidatesRes.status}`;
-        if (candidatesRes.status === 401) setAuthError(true);
-        throw new Error(`Failed to fetch candidates: ${errorText}`);
+        if (candidatesRes.status === 401) {
+          setAuthError(true);
+          criticalAuthFailure = true;
+        } else {
+          setFetchError(prev => prev ? `${prev}; Failed to fetch candidates: ${errorText}` : `Failed to fetch candidates: ${errorText}`);
+        }
+        setCandidates([]); // Clear candidates on error
+      } else {
+        const candidatesData: Candidate[] = await candidatesRes.json();
+        setCandidates(candidatesData);
       }
+
+      // Process Positions Response
       if (!positionsRes.ok) {
         const errorText = positionsRes.statusText || `Status: ${positionsRes.status}`;
-        if (positionsRes.status === 401) setAuthError(true); // Also check for positions if candidates fetch was ok
-        throw new Error(`Failed to fetch positions: ${errorText}`);
+        if (positionsRes.status === 401) {
+          setAuthError(true);
+          criticalAuthFailure = true;
+        } else {
+          setFetchError(prev => prev ? `${prev}; Failed to fetch positions: ${errorText}` : `Failed to fetch positions: ${errorText}`);
+        }
+        setPositions([]); // Clear positions on error
+      } else {
+        const positionsData: Position[] = await positionsRes.json();
+        setPositions(positionsData);
       }
-
-      const candidatesData: Candidate[] = await candidatesRes.json();
-      const positionsData: Position[] = await positionsRes.json();
       
-      setCandidates(candidatesData);
-      setPositions(positionsData);
-
-    } catch (error) {
-      console.error("Error fetching dashboard data:", error);
-      // Auth error is handled by state, toast for other errors
-      if (!String((error as Error).message).includes("401")) {
-        toast({
-          title: "Error Fetching Dashboard Data",
-          description: (error as Error).message || "Could not load data.",
-          variant: "destructive",
-        });
+      if (criticalAuthFailure) {
+         setIsLoading(false);
+         return;
       }
+
+    } catch (error) { // Catches network errors, JSON parsing errors, etc.
+      console.error("Unexpected error fetching dashboard data:", error);
+      setFetchError((error as Error).message || "An unexpected error occurred while loading dashboard data.");
+      setCandidates([]);
+      setPositions([]);
     } finally {
       setIsLoading(false);
     }
-  }, [toast]);
+  }, [toast, sessionStatus]); // Removed authError from dependencies
 
   useEffect(() => {
-    // Fetch data only if session is loaded and user is authenticated, or if auth is not required by design (but it is here)
     if (sessionStatus === 'authenticated') {
       fetchData();
     } else if (sessionStatus === 'unauthenticated') {
       setIsLoading(false);
-      setAuthError(true); // If session is unauthenticated, it's an auth error for this page
+      setAuthError(true);
     }
-    // If sessionStatus is 'loading', we wait.
   }, [sessionStatus, fetchData]);
 
 
@@ -107,7 +123,7 @@ export default function DashboardPage() {
     return !hasCandidates;
   });
 
-  if (sessionStatus === 'loading' || (isLoading && !authError) ) {
+  if (isLoading) {
     return (
       <div className="space-y-6 animate-pulse">
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -131,7 +147,20 @@ export default function DashboardPage() {
         <p className="text-muted-foreground mb-6">
           You need to be signed in to view the dashboard data.
         </p>
-        <Button onClick={() => signIn('azure-ad')}>Sign In</Button>
+        <Button onClick={() => signIn()}>Sign In</Button>
+      </div>
+    );
+  }
+
+  if (fetchError) {
+    return (
+      <div className="flex flex-col items-center justify-center h-[calc(100vh-10rem)] text-center">
+        <ServerCrash className="w-16 h-16 text-destructive mb-4" />
+        <h2 className="text-2xl font-semibold text-foreground mb-2">Data Loading Error</h2>
+        <p className="text-muted-foreground mb-6 max-w-md">
+          Could not load dashboard data: {fetchError}
+        </p>
+        <Button onClick={fetchData} className="btn-hover-primary-gradient">Try Again</Button>
       </div>
     );
   }
