@@ -1,30 +1,29 @@
 
 import { NextResponse, type NextRequest } from 'next/server';
-import prisma from '@/lib/prisma';
+import prisma from '../../../lib/prisma'; // Changed from '@/lib/prisma'
 import type { CandidateStatus, ParsedResumeData } from '@/lib/types';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 import { z } from 'zod';
 
-// Zod schema for creating a new candidate (based on types.ts and Prisma model)
+// Zod schema for creating a new candidate
 const candidateStatusValues: [CandidateStatus, ...CandidateStatus[]] = ['Applied', 'Screening', 'Shortlisted', 'Interview Scheduled', 'Interviewing', 'Offer Extended', 'Offer Accepted', 'Hired', 'Rejected', 'On Hold'];
 
 const createCandidateSchema = z.object({
   name: z.string().min(1, { message: "Name is required" }),
   email: z.string().email({ message: "Invalid email address" }),
-  phone: z.string().optional(),
+  phone: z.string().optional().nullable(),
   positionId: z.string().min(1, { message: "Position ID is required" }),
-  fitScore: z.number().min(0).max(100).default(0), // Default fit score to 0 if not provided
+  fitScore: z.number().min(0).max(100).default(0),
   status: z.enum(candidateStatusValues).default('Applied'),
-  applicationDate: z.string().datetime().optional(), // Optional, Prisma defaults to now()
+  applicationDate: z.string().datetime().optional(),
   parsedData: z.object({
     education: z.array(z.string()).optional().default([]),
     skills: z.array(z.string()).optional().default([]),
     experienceYears: z.number().int().min(0).optional().default(0),
     summary: z.string().optional().default(''),
-  }).default({ education: [], skills: [], experienceYears: 0, summary: '' }), // Default for the whole object
-  // transitionHistory is not part of creation schema directly, will be added based on initial status
-  resumePath: z.string().optional(), // Path/key in MinIO
+  }).default({ education: [], skills: [], experienceYears: 0, summary: '' }),
+  resumePath: z.string().optional().nullable(),
 });
 
 
@@ -38,27 +37,38 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const name = searchParams.get('name');
     const positionId = searchParams.get('positionId');
-    const minFitScore = searchParams.get('minFitScore');
-    const maxFitScore = searchParams.get('maxFitScore');
+    const minFitScoreParam = searchParams.get('minFitScore');
+    const maxFitScoreParam = searchParams.get('maxFitScore');
 
     const whereClause: any = {};
     if (name) whereClause.name = { contains: name, mode: 'insensitive' };
     if (positionId) whereClause.positionId = positionId;
-    if (minFitScore) whereClause.fitScore = { ...whereClause.fitScore, gte: parseInt(minFitScore, 10) };
-    if (maxFitScore) whereClause.fitScore = { ...whereClause.fitScore, lte: parseInt(maxFitScore, 10) };
+
+    if (minFitScoreParam) {
+      const minFitScore = parseInt(minFitScoreParam, 10);
+      if (!isNaN(minFitScore)) {
+        whereClause.fitScore = { ...whereClause.fitScore, gte: minFitScore };
+      }
+    }
+    if (maxFitScoreParam) {
+      const maxFitScore = parseInt(maxFitScoreParam, 10);
+      if (!isNaN(maxFitScore)) {
+        whereClause.fitScore = { ...whereClause.fitScore, lte: maxFitScore };
+      }
+    }
     
     const candidates = await prisma.candidate.findMany({
       where: whereClause,
       include: {
-        position: true, // Include related position data
-        transitionHistory: { // Optionally include transition history, ordered by date
+        position: true,
+        transitionHistory: {
           orderBy: {
             date: 'desc',
           },
         },
       },
       orderBy: {
-        createdAt: 'desc',
+        createdAt: 'desc', // Assuming you have createdAt timestamp
       },
     });
     return NextResponse.json(candidates, { status: 200 });
@@ -109,7 +119,8 @@ export async function POST(request: NextRequest) {
         fitScore: validatedData.fitScore,
         status: validatedData.status,
         applicationDate: validatedData.applicationDate ? new Date(validatedData.applicationDate) : new Date(),
-        parsedData: validatedData.parsedData as unknown as ParsedResumeData, // Cast because Prisma expects specific JSON structure
+        // Make sure parsedData structure matches Prisma schema's Json type expectations
+        parsedData: validatedData.parsedData as any, // Cast if necessary, ensure structure is correct
         resumePath: validatedData.resumePath,
         transitionHistory: {
           create: [

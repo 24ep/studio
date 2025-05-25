@@ -2,8 +2,8 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/app/api/auth/[...nextauth]/route';
-import { minioClient, MINIO_BUCKET_NAME, ensureBucketExists } from '@/lib/minio';
-import prisma from '@/lib/prisma';
+import { minioClient, MINIO_BUCKET_NAME, ensureBucketExists } from '../../../lib/minio'; // Changed from @/lib/minio
+import prisma from '../../../lib/prisma'; // Changed from @/lib/prisma
 import { z } from 'zod';
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
