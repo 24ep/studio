@@ -62,17 +62,31 @@ const apiEndpoints: ApiEndpoint[] = [
   {
     method: "POST",
     path: "/api/n8n/create-candidate-with-matches",
-    description: "Webhook endpoint for n8n to create a candidate with job matching details. n8n should send candidate PII and job match data.",
-    requestBody: "JSON: `{ cv_language?: string, personal_info: PersonalInfo, contact_info: ContactInfo, education?: EducationEntry[], ..., job_matches?: N8NJobMatch[] }` (See `N8NWebhookPayload` type in `lib/types.ts`)",
+    description: "Webhook endpoint for n8n to create a candidate with job matching details. n8n sends candidate PII and job match data.",
+    requestBody: "JSON: `{ cv_language?: string, personal_info: PersonalInfo, contact_info: ContactInfo, education?: EducationEntry[], experience?: ExperienceEntry[], skills?: SkillEntry[], job_suitable?: JobSuitableEntry[], job_matches?: N8NJobMatch[] }` (See `N8NWebhookPayload` type in `lib/types.ts`)",
     response: "JSON: `{ message: string, candidate: Candidate }` or error response",
     curlExample: `curl -X POST \\\n` +
                  `  -H 'Content-Type: application/json' \\\n` +
                  `  -d '{ \\ \n` +
                  `    "cv_language": "en", \\ \n` +
-                 `    "personal_info": { "firstname": "Jane", "lastname": "Parsed" }, \\ \n` +
-                 `    "contact_info": { "email": "jane.parsed@example.com" }, \\ \n` +
+                 `    "personal_info": { \\ \n` +
+                 `      "firstname": "Jane", \\ \n` +
+                 `      "lastname": "Parsed" \\ \n` +
+                 `    }, \\ \n` +
+                 `    "contact_info": { \\ \n` +
+                 `      "email": "jane.parsed@example.com" \\ \n` +
+                 `    }, \\ \n` +
+                 `    "education": [], \\ \n` +
+                 `    "experience": [], \\ \n` +
+                 `    "skills": [], \\ \n` +
+                 `    "job_suitable": [], \\ \n` +
                  `    "job_matches": [ \\ \n` +
-                 `      { "job_id": "N8N_JOB_001", "job_title": "Software Engineer", "fit_score": 90, "match_reasons": ["Strong Python"] } \\ \n` +
+                 `      { \\ \n` +
+                 `        "job_id": "N8N_JOB_001", \\ \n` +
+                 `        "job_title": "Software Engineer", \\ \n` +
+                 `        "fit_score": 90, \\ \n` +
+                 `        "match_reasons": ["Strong Python skill"] \\ \n` +
+                 `      } \\ \n` +
                  `    ] \\ \n` +
                  `  }' \\\n` +
                  `  http://localhost:9002/api/n8n/create-candidate-with-matches`,
@@ -247,7 +261,7 @@ const apiEndpoints: ApiEndpoint[] = [
     response: "JSON: `{ message: 'Password changed successfully.' }` or error message.",
     curlExample: `curl -X POST \\\n` +
                  `  -H 'Content-Type: application/json' \\\n` +
-                 `  -H 'Authorization: Bearer <YOUR_AUTH_TOKEN_OR_COOKIE>' \\\n` +
+                 `  -H 'Authorization: Bearer <YOUR_AUTH_TOKEN_OR_COOKIE>' \\\n` + // Kept for this auth-specific endpoint
                  `  -d '{ \\ \n` +
                  `    "currentPassword": "oldPassword123", \\ \n` +
                  `    "newPassword": "newStrongPassword456" \\ \n` +
@@ -260,8 +274,8 @@ const apiEndpoints: ApiEndpoint[] = [
     description: "Get the current user's session information (provided by NextAuth.js).",
     requestBody: "N/A",
     response: "JSON: Session object or null.",
-    curlExample: `curl http://localhost:9002/api/auth/session \\\n` +
-                 `  -H 'Authorization: Bearer <YOUR_AUTH_TOKEN_OR_COOKIE>'`,
+    curlExample: `curl http://localhost:9002/api/auth/session \\\n` + // Kept for this auth-specific endpoint
+                 `  -H 'Cookie: next-auth.session-token=your-session-token-here'`, // Example for cookie-based session
   },
   {
     method: "PUT",
@@ -303,21 +317,22 @@ const apiEndpoints: ApiEndpoint[] = [
   {
     method: "POST",
     path: "/api/n8n/webhook-proxy",
-    description: "Proxies a PDF file upload to the generic n8n webhook (`N8N_GENERIC_PDF_WEBHOOK_URL`). Uploaded as FormData, n8n receives file as base64 data URI in JSON.",
-    requestBody: "JSON (Proxied by API): `{ fileName: string, mimeType: string, fileDataUri: string, ... }`",
+    description: "Client uploads FormData (with 'pdfFile'). API proxies this to a generic n8n webhook (N8N_GENERIC_PDF_WEBHOOK_URL), sending JSON with file as data URI.",
+    requestBody: "Client: FormData (`pdfFile`). n8n receives: JSON `{ fileName: string, mimeType: string, fileDataUri: string, ... }`",
     response: "JSON: `{ message: 'PDF successfully sent to n8n workflow.', n8nResponse?: any }`",
-    curlExample: `# Client uploads FormData with "pdfFile"\n` +
-                 `# API internally converts to JSON with data URI for n8n:\n` +
+    curlExample: `# To test /api/n8n/webhook-proxy (client-side call):\n` +
                  `curl -X POST \\\n` +
-                 `  -H 'Content-Type: application/json' \\\n` +
-                 `  -d '{ \\ \n` +
-                 `    "fileName": "generic_document.pdf", \\ \n` +
-                 `    "mimeType": "application/pdf", \\ \n` +
-                 `    "fileDataUri": "data:application/pdf;base64,..." \\ \n` +
-                 `  }' \\\n` +
-                 `  # THIS CURL IS FOR N8N_GENERIC_PDF_WEBHOOK_URL (not /api/n8n/webhook-proxy directly)\n` +
-                 `  # To test /api/n8n/webhook-proxy, use FormData:\n` +
-                 `# curl -X POST -F 'pdfFile=@generic_document.pdf' http://localhost:9002/api/n8n/webhook-proxy`,
+                 `  -F 'pdfFile=@generic_document.pdf' \\\n` +
+                 `  http://localhost:9002/api/n8n/webhook-proxy\n\n`+
+                 `# Example of what n8n receives from this proxy:\n` +
+                 `# POST <N8N_GENERIC_PDF_WEBHOOK_URL>\n`+
+                 `# Content-Type: application/json\n`+
+                 `# Body:\n` +
+                 `# { \n` +
+                 `#   "fileName": "generic_document.pdf", \n` +
+                 `#   "mimeType": "application/pdf", \n` +
+                 `#   "fileDataUri": "data:application/pdf;base64,..." \n` +
+                 `# }`,
   },
 ];
 
@@ -349,7 +364,7 @@ export default function ApiDocumentationPage() {
     if (!navigator.clipboard) {
       toast({
         title: "Clipboard API Not Available",
-        description: "Copying to clipboard is not supported in this browser or context (e.g., non-HTTPS or sandboxed iframes). Try selecting the text manually.",
+        description: "Copying to clipboard is not supported in this browser or context (e.g., non-HTTPS or sandboxed iframes). Please select the text manually.",
         variant: "destructive",
       });
       return;
@@ -361,7 +376,7 @@ export default function ApiDocumentationPage() {
       console.error("Failed to copy cURL command:", err);
       toast({
         title: "Failed to copy",
-        description: "Could not copy cURL command. This might be due to browser permissions or if the page is not served over HTTPS. Try selecting the text manually.",
+        description: "Could not copy cURL command. This might be due to browser permissions or if the page is not served over HTTPS. Please select the text manually.",
         variant: "destructive",
       });
     }
@@ -422,7 +437,7 @@ export default function ApiDocumentationPage() {
           </div>
 
           <div className="mt-6 text-sm text-muted-foreground space-y-2">
-            <p><strong>Authentication:</strong> Most API endpoints are currently public. Specific endpoints like <code>/api/auth/change-password</code> or <code>/api/auth/session</code> inherently involve an authenticated user context handled by NextAuth.js sessions. For direct API calls (if secured externally, e.g., via Kong), a Bearer token would typically be used.</p>
+            <p><strong>Authentication:</strong> Most API endpoints are currently public. Specific auth-related endpoints like <code>/api/auth/change-password</code> or <code>/api/auth/session</code> inherently involve an authenticated user context handled by NextAuth.js sessions. For direct API calls (e.g., from external systems), you would typically use an API token managed by an API Gateway like Kong.</p>
             <p><strong>Base URL:</strong> All API paths are relative to the application's base URL (e.g., <code>http://localhost:9002</code> or your production domain).</p>
             <p><strong>Error Handling:</strong> Standard HTTP status codes are used (e.g., 200 OK, 201 Created, 400 Bad Request, 401 Unauthorized, 403 Forbidden, 404 Not Found, 500 Internal Server Error). Error responses typically include a JSON body: <code>{`{ "message": "Error description", "errors?": { ... } }`}</code>.</p>
             <p><strong>Content Type:</strong> For POST and PUT requests with a body, set <code>Content-Type: application/json</code>, unless it's a file upload (<code>multipart/form-data</code> for resume uploads).</p>
