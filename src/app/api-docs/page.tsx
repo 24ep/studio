@@ -1,11 +1,26 @@
 
 // src/app/api-docs/page.tsx
+"use client";
+
+import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Code2, Terminal } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from "@/components/ui/dialog";
+import { Code2, Terminal, Copy } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 
-const apiEndpoints = [
+interface ApiEndpoint {
+  method: string;
+  path: string;
+  description: string;
+  requestBody: string;
+  response: string;
+  curlExample: string;
+}
+
+const apiEndpoints: ApiEndpoint[] = [
   {
     method: "POST",
     path: "/api/resumes",
@@ -88,6 +103,24 @@ const getMethodBadgeVariant = (method: string) => {
 };
 
 export default function ApiDocumentationPage() {
+  const [selectedCurlEndpoint, setSelectedCurlEndpoint] = useState<ApiEndpoint | null>(null);
+  const [isCurlDialogOpen, setIsCurlDialogOpen] = useState(false);
+  const { toast } = useToast();
+
+  const openCurlDialog = (endpoint: ApiEndpoint) => {
+    setSelectedCurlEndpoint(endpoint);
+    setIsCurlDialogOpen(true);
+  };
+
+  const copyToClipboard = async (text: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      toast({ title: "Copied!", description: "cURL command copied to clipboard." });
+    } catch (err) {
+      toast({ title: "Failed to copy", description: "Could not copy cURL command.", variant: "destructive" });
+    }
+  };
+
   return (
     <div className="space-y-6">
       <Card className="shadow-lg">
@@ -110,6 +143,7 @@ export default function ApiDocumentationPage() {
                   <TableHead>Description</TableHead>
                   <TableHead className="min-w-[200px]">Request Body (Conceptual)</TableHead>
                   <TableHead className="min-w-[200px]">Response (Conceptual)</TableHead>
+                  <TableHead className="w-[100px] text-center">cURL</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -130,28 +164,15 @@ export default function ApiDocumentationPage() {
                     <TableCell className="text-xs text-muted-foreground font-mono break-words">
                       {endpoint.response}
                     </TableCell>
+                    <TableCell className="text-center">
+                      <Button variant="ghost" size="icon" onClick={() => openCurlDialog(endpoint)} aria-label="Show cURL example">
+                        <Terminal className="h-5 w-5 text-primary" />
+                      </Button>
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
             </Table>
-          </div>
-
-          <div>
-            <h3 className="text-lg font-semibold mb-3 flex items-center">
-              <Terminal className="mr-2 h-5 w-5 text-primary" /> Example cURL Commands
-            </h3>
-            <Card className="bg-muted/50">
-              <CardContent className="p-4 space-y-3">
-              {apiEndpoints.map((endpoint) => (
-                <div key={`curl-${endpoint.path}`} className="text-sm">
-                  <p className="font-semibold text-foreground">{endpoint.method} <code className="text-primary bg-background px-1 rounded">{endpoint.path}</code></p>
-                  <pre className="mt-1 p-2 bg-card rounded-md text-xs text-muted-foreground overflow-x-auto">
-                    <code>{endpoint.curlExample}</code>
-                  </pre>
-                </div>
-              ))}
-              </CardContent>
-            </Card>
           </div>
 
           <div className="mt-6 text-sm text-muted-foreground space-y-2">
@@ -162,8 +183,43 @@ export default function ApiDocumentationPage() {
           </div>
         </CardContent>
       </Card>
+
+      {selectedCurlEndpoint && (
+        <Dialog open={isCurlDialogOpen} onOpenChange={setIsCurlDialogOpen}>
+          <DialogContent className="sm:max-w-2xl">
+            <DialogHeader>
+              <DialogTitle className="flex items-center">
+                <Terminal className="mr-2 h-5 w-5" /> cURL Example
+              </DialogTitle>
+              <DialogDescription>
+                Example cURL command for <strong>{selectedCurlEndpoint.method}</strong> <code>{selectedCurlEndpoint.path}</code>.
+                Remember to replace placeholders with actual values and include authentication headers if required.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="my-4 relative group">
+              <pre className="bg-muted p-4 rounded-md text-sm text-foreground overflow-x-auto">
+                <code>{selectedCurlEndpoint.curlExample}</code>
+              </pre>
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className="absolute top-2 right-2 h-7 w-7 opacity-50 group-hover:opacity-100 transition-opacity"
+                onClick={() => copyToClipboard(selectedCurlEndpoint.curlExample)}
+                aria-label="Copy cURL command"
+              >
+                <Copy className="h-4 w-4" />
+              </Button>
+            </div>
+            <DialogFooter>
+              <DialogClose asChild>
+                <Button type="button" variant="outline">
+                  Close
+                </Button>
+              </DialogClose>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 }
-
-    
