@@ -7,9 +7,11 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { Save, Settings, Mail, Zap, UploadCloud, FileText, XCircle, Loader2 } from 'lucide-react'; 
+import { signIn, useSession } from 'next-auth/react';
+import { useRouter } from 'next/navigation';
 
-const N8N_RESUME_WEBHOOK_URL_KEY = 'n8nResumeWebhookUrl'; // For candidate resumes (from /api/resumes/upload)
-// N8N_GENERIC_PDF_WEBHOOK_URL is a server-side ENV VAR, not managed here.
+
+const N8N_RESUME_WEBHOOK_URL_KEY = 'n8nResumeWebhookUrl'; 
 const SMTP_HOST_KEY = 'smtpHost';
 const SMTP_PORT_KEY = 'smtpPort';
 const SMTP_USER_KEY = 'smtpUser';
@@ -17,33 +19,37 @@ const SMTP_USER_KEY = 'smtpUser';
 export default function IntegrationsSettingsPage() {
   const { toast } = useToast();
   const [isClient, setIsClient] = useState(false);
+  const { data: session, status: sessionStatus } = useSession();
+  const router = useRouter();
 
-  // n8n for Candidate Resumes (from regular resume upload)
   const [resumeWebhookUrl, setResumeWebhookUrl] = useState('');
   
-  // SMTP
   const [smtpHost, setSmtpHost] = useState('');
   const [smtpPort, setSmtpPort] = useState('');
   const [smtpUser, setSmtpUser] = useState('');
-  const [smtpPassword, setSmtpPassword] = useState(''); // Only for UI, not saved
+  const [smtpPassword, setSmtpPassword] = useState(''); 
 
 
   useEffect(() => {
     setIsClient(true);
-    if (typeof window !== 'undefined') {
-      const storedResumeWebhookUrl = localStorage.getItem(N8N_RESUME_WEBHOOK_URL_KEY);
-      if (storedResumeWebhookUrl) setResumeWebhookUrl(storedResumeWebhookUrl);
+    if (sessionStatus === 'unauthenticated') {
+      signIn(undefined, { callbackUrl: window.location.pathname });
+    } else if (sessionStatus === 'authenticated') {
+        if (typeof window !== 'undefined') {
+            const storedResumeWebhookUrl = localStorage.getItem(N8N_RESUME_WEBHOOK_URL_KEY);
+            if (storedResumeWebhookUrl) setResumeWebhookUrl(storedResumeWebhookUrl);
 
-      const storedSmtpHost = localStorage.getItem(SMTP_HOST_KEY);
-      if (storedSmtpHost) setSmtpHost(storedSmtpHost);
+            const storedSmtpHost = localStorage.getItem(SMTP_HOST_KEY);
+            if (storedSmtpHost) setSmtpHost(storedSmtpHost);
 
-      const storedSmtpPort = localStorage.getItem(SMTP_PORT_KEY);
-      if (storedSmtpPort) setSmtpPort(storedSmtpPort);
+            const storedSmtpPort = localStorage.getItem(SMTP_PORT_KEY);
+            if (storedSmtpPort) setSmtpPort(storedSmtpPort);
 
-      const storedSmtpUser = localStorage.getItem(SMTP_USER_KEY);
-      if (storedSmtpUser) setSmtpUser(storedSmtpUser);
+            const storedSmtpUser = localStorage.getItem(SMTP_USER_KEY);
+            if (storedSmtpUser) setSmtpUser(storedSmtpUser);
+        }
     }
-  }, []);
+  }, [sessionStatus, router]);
 
   const handleSaveIntegrations = () => {
     if (!isClient) return;
@@ -59,26 +65,10 @@ export default function IntegrationsSettingsPage() {
   };
 
 
-  if (!isClient) {
+  if (sessionStatus === 'loading' || (sessionStatus === 'unauthenticated' && !router.asPath.startsWith('/auth/signin')) || !isClient) {
     return (
-        <div className="space-y-8 max-w-xl mx-auto">
-          {[1,2].map(i => ( // Reduced to 2 cards as one was removed
-             <Card key={i} className="shadow-lg animate-pulse">
-              <CardHeader>
-                <div className="h-8 bg-muted rounded w-1/2 mb-1"></div>
-                <div className="h-4 bg-muted rounded w-3/4"></div>
-              </CardHeader>
-              <CardContent className="space-y-8">
-                <div>
-                  <div className="h-6 bg-muted rounded w-1/4 mb-2"></div>
-                  <div className="h-10 bg-muted rounded"></div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-           <div className="flex justify-end pt-4">
-                <div className="h-10 bg-muted rounded w-64 animate-pulse"></div>
-            </div>
+        <div className="flex h-screen w-screen items-center justify-center bg-background fixed inset-0 z-50">
+            <Loader2 className="h-16 w-16 animate-spin text-primary" />
         </div>
     );
   }

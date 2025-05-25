@@ -7,40 +7,48 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useToast } from '@/hooks/use-toast';
-import { Save, Palette, ImageUp, Trash2 } from 'lucide-react';
-import Image from 'next/image'; // For better image handling if needed
+import { Save, Palette, ImageUp, Trash2, Loader2 } from 'lucide-react';
+import Image from 'next/image'; 
+import { signIn, useSession } from 'next-auth/react';
+import { useRouter } from 'next/navigation';
 
 const APP_THEME_KEY = 'appThemePreference';
-const APP_LOGO_DATA_URL_KEY = 'appLogoDataUrl'; // New key for data URL
+const APP_LOGO_DATA_URL_KEY = 'appLogoDataUrl'; 
 
 type ThemePreference = "light" | "dark" | "system";
 
 export default function PreferencesSettingsPage() {
   const { toast } = useToast();
   const [isClient, setIsClient] = useState(false);
+  const { data: session, status: sessionStatus } = useSession();
+  const router = useRouter();
 
   // Preferences state
   const [themePreference, setThemePreference] = useState<ThemePreference>('system');
 
   // App Logo state
   const [selectedLogoFile, setSelectedLogoFile] = useState<File | null>(null);
-  const [logoPreviewUrl, setLogoPreviewUrl] = useState<string | null>(null); // This will be the data URL for preview and storage
+  const [logoPreviewUrl, setLogoPreviewUrl] = useState<string | null>(null); 
   const [savedLogoDataUrl, setSavedLogoDataUrl] = useState<string | null>(null);
 
 
   useEffect(() => {
     setIsClient(true);
-    if (typeof window !== 'undefined') {
-      const storedTheme = localStorage.getItem(APP_THEME_KEY) as ThemePreference | null;
-      if (storedTheme) setThemePreference(storedTheme);
+    if (sessionStatus === 'unauthenticated') {
+      signIn(undefined, { callbackUrl: window.location.pathname });
+    } else if (sessionStatus === 'authenticated') {
+        if (typeof window !== 'undefined') {
+            const storedTheme = localStorage.getItem(APP_THEME_KEY) as ThemePreference | null;
+            if (storedTheme) setThemePreference(storedTheme);
 
-      const storedLogoDataUrl = localStorage.getItem(APP_LOGO_DATA_URL_KEY);
-      if (storedLogoDataUrl) {
-        setSavedLogoDataUrl(storedLogoDataUrl);
-        setLogoPreviewUrl(storedLogoDataUrl); // Show saved logo on initial load
-      }
+            const storedLogoDataUrl = localStorage.getItem(APP_LOGO_DATA_URL_KEY);
+            if (storedLogoDataUrl) {
+                setSavedLogoDataUrl(storedLogoDataUrl);
+                setLogoPreviewUrl(storedLogoDataUrl); 
+            }
+        }
     }
-  }, []);
+  }, [sessionStatus, router]);
 
   const handleLogoFileChange = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -55,12 +63,12 @@ export default function PreferencesSettingsPage() {
       } else {
         toast({ title: "Invalid File Type", description: "Please select an image file.", variant: "destructive" });
         setSelectedLogoFile(null);
-        setLogoPreviewUrl(savedLogoDataUrl); // Revert to saved logo if selection is invalid
+        setLogoPreviewUrl(savedLogoDataUrl); 
         event.target.value = ''; 
       }
     } else {
       setSelectedLogoFile(null);
-      setLogoPreviewUrl(savedLogoDataUrl); // Revert to saved logo if selection is cleared
+      setLogoPreviewUrl(savedLogoDataUrl); 
     }
   };
   
@@ -75,10 +83,9 @@ export default function PreferencesSettingsPage() {
         setSavedLogoDataUrl(null);
         setLogoPreviewUrl(null);
         toast({ title: "Logo Cleared", description: "The application logo has been reset." });
-        // Force a re-render or notify AppLayout to update
         window.dispatchEvent(new Event('logoChanged'));
     } else {
-        setLogoPreviewUrl(savedLogoDataUrl); // Revert to displaying the saved logo
+        setLogoPreviewUrl(savedLogoDataUrl); 
     }
   };
 
@@ -86,22 +93,27 @@ export default function PreferencesSettingsPage() {
     if (!isClient) return;
     localStorage.setItem(APP_THEME_KEY, themePreference);
 
-    if (logoPreviewUrl && logoPreviewUrl !== savedLogoDataUrl) { // If there's a new preview URL (from new file or cleared)
-      if (selectedLogoFile) { // New file was selected
+    if (logoPreviewUrl && logoPreviewUrl !== savedLogoDataUrl) { 
+      if (selectedLogoFile) { 
         localStorage.setItem(APP_LOGO_DATA_URL_KEY, logoPreviewUrl);
         setSavedLogoDataUrl(logoPreviewUrl);
       }
     }
-    // If logoPreviewUrl is null and savedLogoDataUrl was not, it means it was cleared by removeSelectedLogo(true)
-    // which already handles localStorage.removeItem.
     
     toast({
       title: 'Preferences Saved',
       description: 'Your preferences have been updated locally.',
     });
-    // Force a re-render or notify AppLayout to update the logo in the header
     window.dispatchEvent(new Event('logoChanged'));
   };
+
+  if (sessionStatus === 'loading' || (sessionStatus === 'unauthenticated' && !router.asPath.startsWith('/auth/signin')) || !isClient) {
+    return (
+      <div className="flex h-screen w-screen items-center justify-center bg-background fixed inset-0 z-50">
+        <Loader2 className="h-16 w-16 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8">

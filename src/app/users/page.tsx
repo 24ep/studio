@@ -2,8 +2,8 @@
 "use client";
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Button, buttonVariants } from "@/components/ui/button"; // Import buttonVariants
-import { PlusCircle, UsersRound, ShieldAlert, Edit3, Trash2, AlertTriangle } from "lucide-react";
+import { Button, buttonVariants } from "@/components/ui/button"; 
+import { PlusCircle, UsersRound, ShieldAlert, Edit3, Trash2, ServerCrash, Loader2 } from "lucide-react";
 import type { UserProfile } from "@/lib/types";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -12,6 +12,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useToast } from "@/hooks/use-toast";
 import { AddUserModal, type AddUserFormValues } from "@/components/users/AddUserModal";
 import { EditUserModal, type EditUserFormValues } from "@/components/users/EditUserModal";
+import { useRouter } from 'next/navigation';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -21,7 +22,6 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { signIn, useSession } from "next-auth/react";
 
@@ -31,7 +31,8 @@ export default function ManageUsersPage() {
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
   const { data: session, status: sessionStatus } = useSession();
-  const [authError, setAuthError] = useState(false);
+  const router = useRouter();
+  const [fetchError, setFetchError] = useState<string | null>(null);
 
   const [isAddUserModalOpen, setIsAddUserModalOpen] = useState(false);
   const [isEditUserModalOpen, setIsEditUserModalOpen] = useState(false);
@@ -41,44 +42,42 @@ export default function ManageUsersPage() {
 
   const fetchUsers = useCallback(async () => {
     if (sessionStatus !== 'authenticated') {
-        setIsLoading(false);
-        setAuthError(true);
         return;
     }
     setIsLoading(true);
-    setAuthError(false);
+    setFetchError(null);
     try {
       const response = await fetch('/api/users');
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({ message: response.statusText || `Status: ${response.status}` }));
-        if (response.status === 401) {
-             setAuthError(true); // Unauthorized or forbidden
-             setIsLoading(false);
+        if (response.status === 401 || response.status === 403) {
+             signIn(undefined, { callbackUrl: window.location.pathname });
              return;
         }
-        throw new Error(errorData.message || 'Failed to fetch users');
+        setFetchError(errorData.message || 'Failed to fetch users');
+        setUsers([]); 
+        return;
       }
       const data: UserProfile[] = await response.json();
       setUsers(data);
     } catch (error) {
       console.error("Error fetching users:", error);
       if (!String((error as Error).message).includes("401") && !String((error as Error).message).includes("403")) {
-        toast({ title: "Error Fetching Users", description: (error as Error).message, variant: "destructive" });
+        setFetchError((error as Error).message);
       }
-      setUsers([]); // Clear users on error
+      setUsers([]); 
     } finally {
       setIsLoading(false);
     }
-  }, [toast, sessionStatus]);
+  }, [sessionStatus]);
 
   useEffect(() => {
-    if (sessionStatus === 'authenticated') {
+    if (sessionStatus === 'unauthenticated') {
+      signIn(undefined, { callbackUrl: window.location.pathname });
+    } else if (sessionStatus === 'authenticated') {
       fetchUsers();
-    } else if (sessionStatus === 'unauthenticated') {
-      setIsLoading(false);
-      setAuthError(true);
     }
-  }, [sessionStatus, fetchUsers]);
+  }, [sessionStatus, fetchUsers, router]);
 
   const handleAddUser = async (data: AddUserFormValues) => {
     try {
@@ -89,6 +88,10 @@ export default function ManageUsersPage() {
       });
       if (!response.ok) {
         const errorData = await response.json();
+        if (response.status === 401 || response.status === 403) {
+          signIn(undefined, { callbackUrl: window.location.pathname });
+          return;
+        }
         throw new Error(errorData.message || 'Failed to add user');
       }
       const newUser = await response.json();
@@ -110,6 +113,10 @@ export default function ManageUsersPage() {
       });
       if (!response.ok) {
         const errorData = await response.json();
+         if (response.status === 401 || response.status === 403) {
+          signIn(undefined, { callbackUrl: window.location.pathname });
+          return;
+        }
         throw new Error(errorData.message || 'Failed to update user');
       }
       const updatedUser = await response.json();
@@ -138,6 +145,10 @@ export default function ManageUsersPage() {
       const response = await fetch(`/api/users/${userToDelete.id}`, { method: 'DELETE' });
       if (!response.ok) {
         const errorData = await response.json();
+        if (response.status === 401 || response.status === 403) {
+          signIn(undefined, { callbackUrl: window.location.pathname });
+          return;
+        }
         throw new Error(errorData.message || 'Failed to delete user');
       }
       setUsers(prev => prev.filter(u => u.id !== userToDelete.id));
@@ -150,47 +161,21 @@ export default function ManageUsersPage() {
     }
   };
 
-  if (sessionStatus === 'loading' || (isLoading && !authError)) {
+  if (sessionStatus === 'loading' || (sessionStatus === 'unauthenticated' && !router.asPath.startsWith('/auth/signin')) || (isLoading && !fetchError)) {
     return (
-        <div className="space-y-6 animate-pulse">
-            <div className="flex flex-col sm:flex-row justify-between items-center gap-2">
-                <div className="h-8 bg-muted rounded w-1/4"></div>
-                <div className="h-10 bg-muted rounded w-40"></div>
-            </div>
-            <Card className="shadow-sm">
-                <CardHeader>
-                    <CardTitle className="h-8 bg-muted rounded w-1/2"></CardTitle>
-                    <CardDescription className="h-4 bg-muted rounded w-3/4 mt-1"></CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <div className="border rounded-lg overflow-hidden">
-                        <div className="h-12 bg-muted border-b"></div>
-                        {[1,2,3].map(i => (
-                            <div key={i} className="flex items-center p-4 border-b h-[70px]">
-                                <div className="h-9 w-9 rounded-full bg-muted mr-3"></div>
-                                <div className="space-y-2 flex-1">
-                                    <div className="h-4 bg-muted rounded w-1/3"></div>
-                                    <div className="h-3 bg-muted rounded w-1/2"></div>
-                                </div>
-                                <div className="h-6 bg-muted rounded w-1/4 ml-auto"></div>
-                            </div>
-                        ))}
-                    </div>
-                </CardContent>
-            </Card>
-        </div>
+      <div className="flex h-screen w-screen items-center justify-center bg-background fixed inset-0 z-50">
+        <Loader2 className="h-16 w-16 animate-spin text-primary" />
+      </div>
     );
   }
 
-  if (authError) {
-    return (
-      <div className="flex flex-col items-center justify-center h-[calc(100vh-10rem)] text-center">
-        <AlertTriangle className="w-16 h-16 text-destructive mb-4" />
-        <h2 className="text-2xl font-semibold text-foreground mb-2">Access Denied</h2>
-        <p className="text-muted-foreground mb-6">
-          You do not have permission to manage users or your session has expired.
-        </p>
-        <Button onClick={() => signIn()}>Sign In</Button>
+  if (fetchError) {
+     return (
+      <div className="flex flex-col items-center justify-center h-[calc(100vh-10rem)] text-center p-4">
+        <ServerCrash className="w-16 h-16 text-destructive mb-4" />
+        <h2 className="text-2xl font-semibold text-foreground mb-2">Error Loading Users</h2>
+        <p className="text-muted-foreground mb-4 max-w-md">{fetchError}</p>
+        <Button onClick={fetchUsers} className="btn-hover-primary-gradient">Try Again</Button>
       </div>
     );
   }
@@ -214,12 +199,12 @@ export default function ManageUsersPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {isLoading && users.length === 0 ? (
+          {isLoading && users.length === 0 && !fetchError ? (
              <div className="text-center py-10">
-              <UsersRound className="mx-auto h-12 w-12 text-muted-foreground animate-spin" />
+              <UsersRound className="mx-auto h-12 w-12 text-muted-foreground animate-pulse" />
               <p className="mt-4 text-muted-foreground">Loading users...</p>
             </div>
-          ) : users.length === 0 ? ( 
+          ) : users.length === 0 && !fetchError ? ( 
             <div className="text-center py-10">
               <UsersRound className="mx-auto h-12 w-12 text-muted-foreground" />
               <p className="mt-4 text-muted-foreground">No users found in the database.</p>
@@ -263,7 +248,7 @@ export default function ManageUsersPage() {
                       </Button>
                       <AlertDialog>
                         <AlertDialogTrigger asChild>
-                           <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive h-8 w-8" onClick={() => confirmDeleteUser(user)}>
+                           <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive h-8 w-8" onClick={() => confirmDeleteUser(user)} disabled={session?.user?.id === user.id}>
                             <Trash2 className="h-4 w-4" />
                             <span className="sr-only">Delete</span>
                           </Button>
@@ -295,7 +280,7 @@ export default function ManageUsersPage() {
            <div className="mt-4 p-3 bg-secondary/30 border border-secondary/50 rounded-md flex items-start text-sm text-secondary-foreground">
             <ShieldAlert className="h-5 w-5 mr-2 mt-0.5 text-primary shrink-0" />
             <div>
-              <span className="font-semibold">Security Note:</span> User creation, deletion, and role modification are restricted to 'Admin' users. Passwords should be securely hashed in a production environment; this prototype stores them in plaintext.
+              <span className="font-semibold">Security Note:</span> User creation, deletion, and role modification are restricted to 'Admin' users. User passwords are securely hashed using bcrypt.
             </div>
           </div>
         </CardContent>

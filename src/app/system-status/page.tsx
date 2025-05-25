@@ -7,7 +7,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { CheckCircle2, AlertTriangle, XCircle, Settings, Database, HardDrive, Zap, KeyRound, Info, ListChecks, ToggleLeft, ToggleRight, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { useSession } from 'next-auth/react';
+import { useSession, signIn } from 'next-auth/react';
+import { useRouter } from 'next/navigation';
 
 interface StatusItem {
   id: string;
@@ -29,6 +30,7 @@ export default function SystemStatusPage() {
   const [statuses, setStatuses] = useState<StatusItem[]>([]);
   const { toast } = useToast();
   const { data: session, status: sessionStatus } = useSession();
+  const router = useRouter();
 
   const initialStatuses: StatusItem[] = [
     {
@@ -43,8 +45,8 @@ export default function SystemStatusPage() {
       id: "db_schema",
       name: "Database Schema (Tables)",
       status: 'info', 
-      message: "Status: Automated initialization by Docker is configured.",
-      details: "The 'init-db.sql' script (mounted into /docker-entrypoint-initdb.d/) automatically creates tables when the PostgreSQL Docker container starts with an empty data volume. If tables are missing (check via Setup Page), ensure the 'postgres_data' Docker volume was correctly cleared and re-initialized (e.g., via `docker-compose down -v` then `docker-compose up --build`). Check PostgreSQL container logs for script execution details.",
+      message: "Status: Automated initialization by Docker is configured. Verify on Setup Page.",
+      details: "The 'init-db.sql' script (mounted into /docker-entrypoint-initdb.d/) automatically creates tables when the PostgreSQL Docker container starts with an empty data volume. If tables are missing, use the 'Check Database Schema' button on the Setup Page to verify and get troubleshooting steps. Check PostgreSQL container logs for script execution details.",
       icon: ListChecks,
     },
     {
@@ -84,11 +86,11 @@ export default function SystemStatusPage() {
      {
       id: "azure_ad_sso_conceptual",
       name: "Azure AD SSO (Conceptual Toggle)",
-      status: 'info', // Will be updated from localStorage
+      status: 'info', 
       message: "Conceptual UI toggle for Azure AD SSO.",
       details: "This is a UI toggle stored in browser localStorage. The actual SSO functionality is determined by server-side environment variables. This toggle does not affect the server configuration.",
       icon: KeyRound,
-      actionLabel: "Toggle SSO", // Will change based on state
+      actionLabel: "Toggle SSO", 
       isLoading: false,
     },
     {
@@ -110,7 +112,7 @@ export default function SystemStatusPage() {
     {
       id: "n8n_webhook_client_setting",
       name: "n8n Webhook URL (Client Setting)",
-      status: 'info', // Will be updated from localStorage
+      status: 'info', 
       message: "Status: Not configured in local browser settings.",
       details: "This UI setting is stored in browser localStorage via Settings > Integrations. It's separate from the server-side environment variable.",
       icon: Zap,
@@ -131,6 +133,11 @@ export default function SystemStatusPage() {
       const response = await fetch('/api/setup/check-minio-bucket');
       const data = await response.json();
       if (!response.ok) {
+        if (response.status === 401 || response.status === 403) {
+            signIn(undefined, { callbackUrl: window.location.pathname });
+            updateStatusItem('minio_bucket_check', { isLoading: false, status: 'error', message: 'Unauthorized to check bucket.' });
+            return;
+        }
         updateStatusItem('minio_bucket_check', { status: 'error', message: data.message || `Error: ${response.status}`, isLoading: false });
         toast({ title: "MinIO Check Failed", description: data.message || "Could not verify bucket status.", variant: "destructive"});
       } else {
@@ -159,6 +166,10 @@ export default function SystemStatusPage() {
 
   useEffect(() => {
     setIsClient(true);
+    if (sessionStatus === 'unauthenticated') {
+      signIn(undefined, { callbackUrl: window.location.pathname });
+      return;
+    }
     
     const n8nClientSetting = localStorage.getItem(N8N_WEBHOOK_URL_KEY);
     const conceptualSsoEnabled = localStorage.getItem(AZURE_AD_SSO_CONCEPTUAL_KEY) === 'true';
@@ -184,16 +195,11 @@ export default function SystemStatusPage() {
             actionLabel: conceptualSsoEnabled ? "Conceptually Disable SSO" : "Conceptually Enable SSO",
           };
         }
-        if (item.id === 'minio_bucket_check') {
-            return { ...item, action: handleCheckMinioBucket };
-        }
         return item;
       })
     );
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isClient]); // handleCheckMinioBucket will be added dynamically if needed or wrapped in useCallback
+  }, [isClient, sessionStatus, router]); 
 
-  // Need to re-assign actions after initialStatuses are set, because of useCallback dependencies
    useEffect(() => {
     setStatuses(prev => prev.map(item => {
         if (item.id === 'minio_bucket_check') {
@@ -246,23 +252,10 @@ export default function SystemStatusPage() {
   }
 
 
-  if (!isClient) {
+  if (sessionStatus === 'loading' || (sessionStatus === 'unauthenticated' && !router.asPath.startsWith('/auth/signin')) || !isClient) {
     return (
-      <div className="space-y-6">
-        <Card className="shadow-lg animate-pulse">
-          <CardHeader>
-            <div className="h-8 bg-muted rounded w-1/2 mb-1"></div>
-            <div className="h-4 bg-muted rounded w-3/4"></div>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {[...Array(5)].map((_, i) => (
-              <div key={i} className="p-3 border rounded-md bg-muted">
-                <div className="h-6 bg-muted-foreground/20 rounded w-1/3 mb-1"></div>
-                <div className="h-4 bg-muted-foreground/20 rounded w-full"></div>
-              </div>
-            ))}
-          </CardContent>
-        </Card>
+      <div className="flex h-screen w-screen items-center justify-center bg-background fixed inset-0 z-50">
+        <Loader2 className="h-16 w-16 animate-spin text-primary" />
       </div>
     );
   }

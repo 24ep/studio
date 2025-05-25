@@ -4,7 +4,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button, buttonVariants } from "@/components/ui/button";
-import { PlusCircle, Briefcase, Edit, Trash2, AlertTriangle, ServerCrash } from "lucide-react";
+import { PlusCircle, Briefcase, Edit, Trash2, ServerCrash, Loader2 } from "lucide-react";
 import type { Position } from "@/lib/types";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -13,6 +13,7 @@ import { signIn, useSession } from "next-auth/react";
 import { AddPositionModal, type AddPositionFormValues } from '@/components/positions/AddPositionModal'; 
 import { EditPositionModal, type EditPositionFormValues } from '@/components/positions/EditPositionModal';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -22,7 +23,6 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 
 
@@ -31,7 +31,7 @@ export default function PositionsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
   const { data: session, status: sessionStatus } = useSession();
-  const [authError, setAuthError] = useState(false);
+  const router = useRouter();
   const [fetchError, setFetchError] = useState<string | null>(null);
   
   const [isAddModalOpen, setIsAddModalOpen] = useState(false); 
@@ -42,25 +42,21 @@ export default function PositionsPage() {
 
   const fetchPositions = useCallback(async () => {
     if (sessionStatus !== 'authenticated') {
-      setIsLoading(false);
-      setAuthError(true);
       return;
     }
     setIsLoading(true);
-    setAuthError(false);
     setFetchError(null);
     try {
       const response = await fetch('/api/positions');
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({ message: response.statusText || `Status: ${response.status}` }));
         if (response.status === 401) {
-            setAuthError(true);
-            setIsLoading(false);
+            signIn(undefined, { callbackUrl: window.location.pathname });
             return;
         }
         const errorMessage = errorData.message || `Failed to fetch positions: ${response.statusText || `Status: ${response.status}`}`;
         setFetchError(errorMessage);
-        setPositions([]); // Clear positions on error
+        setPositions([]); 
         return; 
       }
       const data: Position[] = await response.json();
@@ -68,23 +64,20 @@ export default function PositionsPage() {
     } catch (error) {
       console.error("Error fetching positions:", error);
       const errorMessage = (error as Error).message || "Could not load position data.";
-      if (!fetchError && !errorMessage.includes("401")) {
-        setFetchError(errorMessage);
-      }
-       setPositions([]); 
+      setFetchError(errorMessage);
+      setPositions([]); 
     } finally {
       setIsLoading(false);
     }
-  }, [sessionStatus, fetchError]); // fetchError removed as it was causing re-fetch loops
+  }, [sessionStatus]); 
 
   useEffect(() => {
-    if (sessionStatus === 'authenticated') {
+    if (sessionStatus === 'unauthenticated') {
+      signIn(undefined, { callbackUrl: window.location.pathname });
+    } else if (sessionStatus === 'authenticated') {
       fetchPositions();
-    } else if (sessionStatus === 'unauthenticated') {
-        setIsLoading(false);
-        setAuthError(true);
     }
-  }, [sessionStatus, fetchPositions]);
+  }, [sessionStatus, fetchPositions, router]);
 
 
   const handleAddPositionSubmit = async (formData: AddPositionFormValues) => {
@@ -97,8 +90,7 @@ export default function PositionsPage() {
         if (!response.ok) {
             const errorData = await response.json().catch(() => ({ message: "An unknown error occurred" }));
             if (response.status === 401 || response.status === 403) {
-                setAuthError(true);
-                toast({ title: "Authorization Error", description: errorData.message || "You don't have permission.", variant: "destructive" });
+                signIn(undefined, { callbackUrl: window.location.pathname });
                 return;
             }
             throw new Error(errorData.message || `Failed to add position: ${response.statusText || `Status: ${response.status}`}`);
@@ -137,8 +129,7 @@ export default function PositionsPage() {
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({ message: "An unknown error occurred" }));
          if (response.status === 401 || response.status === 403) {
-            setAuthError(true);
-            toast({ title: "Authorization Error", description: errorData.message || "You don't have permission.", variant: "destructive" });
+            signIn(undefined, { callbackUrl: window.location.pathname });
             return;
         }
         throw new Error(errorData.message || `Failed to update position: ${response.statusText || `Status: ${response.status}`}`);
@@ -173,8 +164,7 @@ export default function PositionsPage() {
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({ message: "An unknown error occurred" }));
         if (response.status === 401 || response.status === 403) {
-          setAuthError(true);
-          toast({ title: "Authorization Error", description: errorData.message || "You don't have permission.", variant: "destructive" });
+          signIn(undefined, { callbackUrl: window.location.pathname });
           return;
         }
         throw new Error(errorData.message || `Failed to delete position: ${response.statusText}`);
@@ -191,48 +181,15 @@ export default function PositionsPage() {
           });
       }
     } finally {
-      setPositionToDelete(null); // Close dialog by resetting
+      setPositionToDelete(null); 
     }
   };
 
 
-  if (sessionStatus === 'loading' || (isLoading && !authError && !fetchError)) {
-    // Skeleton remains the same
+  if (sessionStatus === 'loading' || (sessionStatus === 'unauthenticated' && !router.asPath.startsWith('/auth/signin')) || (isLoading && !fetchError)) {
     return (
-      <div className="space-y-6 animate-pulse">
-        <div className="flex justify-end h-10 mb-4"><div className="bg-muted rounded w-48 h-full"></div></div>
-        <Card className="shadow-sm">
-          <CardHeader>
-            <div className="h-8 bg-muted rounded w-1/2 mb-1"></div>
-            <div className="h-4 bg-muted rounded w-3/4"></div>
-          </CardHeader>
-          <CardContent>
-             <div className="border rounded-lg overflow-hidden">
-               <div className="h-12 bg-muted border-b"></div>
-                {[1,2,3].map(i => (
-                    <div key={i} className="flex items-center p-4 border-b h-[60px]">
-                        <div className="h-4 bg-muted rounded w-1/4 mr-2"></div>
-                        <div className="h-4 bg-muted rounded w-1/4 mr-2"></div>
-                        <div className="h-6 bg-muted rounded w-1/6 mr-auto"></div>
-                        <div className="h-8 bg-muted rounded w-16"></div>
-                    </div>
-                ))}
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
-
-  if (authError) {
-    return (
-      <div className="flex flex-col items-center justify-center h-[calc(100vh-10rem)] text-center">
-        <AlertTriangle className="w-16 h-16 text-destructive mb-4" />
-        <h2 className="text-2xl font-semibold text-foreground mb-2">Access Denied</h2>
-        <p className="text-muted-foreground mb-6">
-          You need to be signed in to view or manage job positions.
-        </p>
-        <Button onClick={() => signIn()}>Sign In</Button>
+      <div className="flex h-screen w-screen items-center justify-center bg-background fixed inset-0 z-50">
+        <Loader2 className="h-16 w-16 animate-spin text-primary" />
       </div>
     );
   }

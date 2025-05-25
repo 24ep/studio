@@ -5,31 +5,31 @@ import { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import type { Candidate, Position } from "@/lib/types";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Users, Briefcase, CheckCircle2, UserPlus, FileWarning, UserRoundSearch, AlertTriangle, ServerCrash } from "lucide-react";
+import { Users, Briefcase, CheckCircle2, UserPlus, FileWarning, UserRoundSearch, ServerCrash, Loader2 } from "lucide-react";
 import { isToday, parseISO } from 'date-fns';
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { signIn, useSession } from "next-auth/react";
-import { CandidatesPerPositionChart } from '@/components/dashboard/CandidatesPerPositionChart'; // Import the new chart
+import { CandidatesPerPositionChart } from '@/components/dashboard/CandidatesPerPositionChart';
+import { useRouter } from 'next/navigation';
 
 export default function DashboardPage() {
   const [candidates, setCandidates] = useState<Candidate[]>([]);
   const [positions, setPositions] = useState<Position[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [authError, setAuthError] = useState(false);
   const [fetchError, setFetchError] = useState<string | null>(null);
   const { data: session, status: sessionStatus } = useSession();
+  const router = useRouter();
 
   const fetchData = useCallback(async () => {
     if (sessionStatus !== 'authenticated') {
+      // This case should ideally be caught by the useEffect redirect,
+      // but as a safeguard if fetchData is called prematurely.
       setIsLoading(false);
-      setAuthError(true);
       return;
     }
     setIsLoading(true);
-    setAuthError(false);
     setFetchError(null);
-    let criticalAuthFailure = false;
     let accumulatedFetchError = "";
 
     try {
@@ -38,41 +38,32 @@ export default function DashboardPage() {
         fetch('/api/positions'),
       ]);
 
-      // Process Candidates Response
       if (!candidatesRes.ok) {
         const errorText = candidatesRes.statusText || `Status: ${candidatesRes.status}`;
         if (candidatesRes.status === 401) {
-          setAuthError(true);
-          criticalAuthFailure = true;
-        } else {
-          accumulatedFetchError += `Failed to fetch candidates: ${errorText}. `;
+          signIn(undefined, { callbackUrl: window.location.pathname });
+          return; // Stop further processing, redirect will occur
         }
+        accumulatedFetchError += `Failed to fetch candidates: ${errorText}. `;
         setCandidates([]);
       } else {
         const candidatesData: Candidate[] = await candidatesRes.json();
         setCandidates(candidatesData);
       }
 
-      // Process Positions Response
       if (!positionsRes.ok) {
         const errorText = positionsRes.statusText || `Status: ${positionsRes.status}`;
         if (positionsRes.status === 401) {
-          setAuthError(true);
-          criticalAuthFailure = true;
-        } else {
-          accumulatedFetchError += `Failed to fetch positions: ${errorText}. `;
+          signIn(undefined, { callbackUrl: window.location.pathname });
+          return; // Stop further processing, redirect will occur
         }
+        accumulatedFetchError += `Failed to fetch positions: ${errorText}. `;
         setPositions([]);
       } else {
         const positionsData: Position[] = await positionsRes.json();
         setPositions(positionsData);
       }
       
-      if (criticalAuthFailure) {
-         setIsLoading(false);
-         return;
-      }
-
       if (accumulatedFetchError) {
         setFetchError(accumulatedFetchError.trim());
       }
@@ -89,14 +80,12 @@ export default function DashboardPage() {
   }, [sessionStatus]); 
 
   useEffect(() => {
-    if (sessionStatus === 'authenticated') {
+    if (sessionStatus === 'unauthenticated') {
+      signIn(undefined, { callbackUrl: window.location.pathname });
+    } else if (sessionStatus === 'authenticated') {
       fetchData();
-    } else if (sessionStatus === 'unauthenticated') {
-      setIsLoading(false);
-      setAuthError(true);
-      setFetchError(null); 
     }
-  }, [sessionStatus, fetchData]);
+  }, [sessionStatus, fetchData, router]);
 
 
   const totalCandidates = candidates.length;
@@ -133,32 +122,10 @@ export default function DashboardPage() {
     return !hasCandidates;
   });
 
-  if (isLoading) {
+  if (sessionStatus === 'loading' || isLoading || sessionStatus === 'unauthenticated') {
     return (
-      <div className="space-y-6 animate-pulse">
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {[...Array(3)].map((_, i) => (
-            <Card key={i}><CardHeader><div className="h-6 w-1/2 bg-muted rounded"></div></CardHeader><CardContent><div className="h-8 w-1/4 bg-muted rounded mt-2"></div></CardContent></Card>
-          ))}
-        </div>
-        <div className="grid gap-6 md:grid-cols-1 lg:grid-cols-2">
-          <Card><CardHeader><div className="h-7 w-3/4 bg-muted rounded"></div><div className="h-4 w-1/2 bg-muted rounded mt-1"></div></CardHeader><CardContent><div className="h-20 bg-muted rounded"></div></CardContent></Card>
-          <Card><CardHeader><div className="h-7 w-3/4 bg-muted rounded"></div><div className="h-4 w-1/2 bg-muted rounded mt-1"></div></CardHeader><CardContent><div className="h-20 bg-muted rounded"></div></CardContent></Card>
-        </div>
-        <Card><CardHeader><div className="h-7 w-full bg-muted rounded"></div></CardHeader><CardContent><div className="h-64 bg-muted rounded"></div></CardContent></Card>
-      </div>
-    );
-  }
-
-  if (authError) {
-    return (
-      <div className="flex flex-col items-center justify-center h-[calc(100vh-10rem)] text-center">
-        <AlertTriangle className="w-16 h-16 text-destructive mb-4" />
-        <h2 className="text-2xl font-semibold text-foreground mb-2">Access Denied</h2>
-        <p className="text-muted-foreground mb-6">
-          You need to be signed in to view the dashboard data.
-        </p>
-        <Button onClick={() => signIn()}>Sign In</Button>
+      <div className="flex h-screen w-screen items-center justify-center bg-background fixed inset-0 z-50">
+        <Loader2 className="h-16 w-16 animate-spin text-primary" />
       </div>
     );
   }

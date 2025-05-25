@@ -6,18 +6,19 @@ import { CandidateFilters, type CandidateFilterValues } from '@/components/candi
 import { CandidateTable } from '@/components/candidates/CandidateTable';
 import type { Candidate, CandidateStatus, TransitionRecord, Position, CandidateDetails, OldParsedResumeData } from '@/lib/types';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, Users, AlertTriangle, ServerCrash, Zap } from 'lucide-react';
+import { PlusCircle, Users, ServerCrash, Zap, Loader2 } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
 import { AddCandidateModal, type AddCandidateFormValues } from '@/components/candidates/AddCandidateModal';
 import { UploadResumeModal } from '@/components/candidates/UploadResumeModal'; 
 import { CreateCandidateViaN8nModal } from '@/components/candidates/CreateCandidateViaN8nModal';
 import { signIn, useSession } from 'next-auth/react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 
 
 export default function CandidatesPage() {
   const [allCandidates, setAllCandidates] = useState<Candidate[]>([]);
-  const [filteredCandidates, setFilteredCandidates] = useState<Candidate[]>([]);
+  // const [filteredCandidates, setFilteredCandidates] = useState<Candidate[]>([]); // API side filtering now
   const [filters, setFilters] = useState<CandidateFilterValues>({ minFitScore: 0, maxFitScore: 100 });
   const [isLoading, setIsLoading] = useState(true);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -27,14 +28,17 @@ export default function CandidatesPage() {
   const [availablePositions, setAvailablePositions] = useState<Position[]>([]);
   const { toast } = useToast();
   const { data: session, status: sessionStatus } = useSession();
-  const [authError, setAuthError] = useState(false);
+  const router = useRouter();
   const [fetchError, setFetchError] = useState<string | null>(null);
 
   const fetchCandidateById = useCallback(async (candidateId: string): Promise<Candidate | null> => {
     try {
       const response = await fetch(`/api/candidates/${candidateId}`);
       if (!response.ok) {
-        // Handle errors appropriately, maybe log or show a specific toast
+        if (response.status === 401) {
+          signIn(undefined, { callbackUrl: window.location.pathname });
+          return null;
+        }
         console.error(`Failed to fetch candidate ${candidateId}: ${response.statusText}`);
         return null;
       }
@@ -50,7 +54,6 @@ export default function CandidatesPage() {
     if (updatedCandidate) {
       setAllCandidates(prev => prev.map(c => c.id === candidateId ? updatedCandidate : c));
     } else {
-      // If fetching fails, maybe just refetch all or show an error
       toast({ title: "Refresh Error", description: `Could not refresh data for candidate ${candidateId}.`, variant: "destructive"});
     }
   }, [fetchCandidateById, toast]);
@@ -66,7 +69,7 @@ export default function CandidatesPage() {
         const errorData = await response.json().catch(() => ({ message: response.statusText || `Status: ${response.status}` }));
         const errorMessage = errorData.message || `Failed to fetch positions: ${response.statusText || `Status: ${response.status}`}`;
         if (response.status === 401) {
-            setAuthError(true);
+            signIn(undefined, { callbackUrl: window.location.pathname });
             return; 
         }
         toast({
@@ -90,19 +93,15 @@ export default function CandidatesPage() {
       }
        setAvailablePositions([]); 
     }
-  }, [toast, sessionStatus]);
+  }, [sessionStatus, toast]);
 
   const fetchCandidates = useCallback(async () => {
     if (sessionStatus !== 'authenticated') {
-      setIsLoading(false);
-      setAuthError(true);
       return;
     }
     setIsLoading(true);
-    setAuthError(false);
     setFetchError(null);
     try {
-      // Construct query parameters for filtering
       const query = new URLSearchParams();
       if (filters.name) query.append('name', filters.name);
       if (filters.positionId) query.append('positionId', filters.positionId);
@@ -115,47 +114,37 @@ export default function CandidatesPage() {
         const errorData = await response.json().catch(() => ({ message: response.statusText || `Status: ${response.status}` }));
         const errorMessage = errorData.message || `Failed to fetch candidates: ${response.statusText || `Status: ${response.status}`}`;
         if (response.status === 401) {
-            setAuthError(true);
-            setIsLoading(false);
+            signIn(undefined, { callbackUrl: window.location.pathname });
             return;
         }
         setFetchError(errorMessage);
         setAllCandidates([]); 
-        setFilteredCandidates([]); // Ensure this is also cleared
         return;
       }
       const data: Candidate[] = await response.json();
       setAllCandidates(data);
-      // No need to call applyFilters here, as the useEffect for [filters, allCandidates] will handle it.
-      // However, since we are fetching based on filters, the result *is* the filtered list.
-      // For simplicity here, we'll just set allCandidates and let the effect run.
-      // A more optimized approach might directly setFilteredCandidates if API does the filtering.
     } catch (error) {
       console.error("Error fetching candidates:", error);
       const errorMessage = (error as Error).message || "Could not load candidate data.";
-      if (!fetchError && !errorMessage.includes("401")) { // Avoid overwriting existing fetchError unless new
-        setFetchError(errorMessage);
-      }
+      setFetchError(errorMessage);
       setAllCandidates([]); 
-      setFilteredCandidates([]);
     } finally {
       setIsLoading(false);
     }
-  }, [sessionStatus, filters, fetchError]); // Added filters to dependency array for API-side filtering
+  }, [sessionStatus, filters]);
 
   useEffect(() => {
-    if (sessionStatus === 'authenticated') {
-      fetchCandidates(); // Will now fetch based on current `filters` state
+    if (sessionStatus === 'unauthenticated') {
+      signIn(undefined, { callbackUrl: window.location.pathname });
+    } else if (sessionStatus === 'authenticated') {
+      fetchCandidates();
       fetchPositions();
-    } else if (sessionStatus === 'unauthenticated') {
-      setIsLoading(false);
-      setAuthError(true);
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps 
-  }, [sessionStatus, filters]); // fetchCandidates and fetchPositions are stable due to useCallback
+  }, [sessionStatus, filters, fetchCandidates, fetchPositions, router]);
+
 
   const handleFilterChange = (newFilters: CandidateFilterValues) => {
-    setFilters(newFilters); // This will trigger the useEffect above to re-fetch candidates with new filters
+    setFilters(newFilters);
   };
 
 
@@ -170,8 +159,7 @@ export default function CandidatesPage() {
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({ message: "An unknown error occurred" }));
         if (response.status === 401 || response.status === 403) {
-            setAuthError(true);
-            toast({ title: "Authorization Error", description: errorData.message || "Your session may have expired or you lack permission.", variant: "destructive" });
+            signIn(undefined, { callbackUrl: window.location.pathname });
             return; 
         }
         throw new Error(errorData.message || `Failed to update candidate: ${response.statusText || `Status: ${response.status}`}`);
@@ -207,8 +195,7 @@ export default function CandidatesPage() {
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({ message: "An unknown error occurred" }));
          if (response.status === 401 || response.status === 403) {
-            setAuthError(true);
-            toast({ title: "Authorization Error", description: errorData.message || "Your session may have expired or you lack permission.", variant: "destructive" });
+            signIn(undefined, { callbackUrl: window.location.pathname });
             return;
         }
         throw new Error(errorData.message || `Failed to delete candidate: ${response.statusText || `Status: ${response.status}`}`);
@@ -261,8 +248,7 @@ export default function CandidatesPage() {
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({ message: "An unknown error occurred" }));
         if (response.status === 401 || response.status === 403) {
-            setAuthError(true);
-            toast({ title: "Authorization Error", description: errorData.message || "Your session may have expired or you lack permission.", variant: "destructive" });
+            signIn(undefined, { callbackUrl: window.location.pathname });
             setIsLoading(false);
             return;
         }
@@ -301,30 +287,20 @@ export default function CandidatesPage() {
   };
   
   const handleN8nProcessingStart = () => {
+    toast({
+      title: "Processing Started",
+      description: "Resume sent to n8n. Candidate list will refresh shortly if successful.",
+    });
     setTimeout(() => {
         fetchCandidates(); 
     }, 15000); 
   };
 
 
-  if (sessionStatus === 'loading' || (isLoading && !authError && !fetchError)) {
+  if (sessionStatus === 'loading' || (sessionStatus === 'unauthenticated' && !router.asPath.startsWith('/auth/signin')) || (isLoading && !fetchError)) {
     return (
-      <div className="space-y-6 animate-pulse">
-        <div className="h-10 bg-muted rounded w-full"></div>
-        <div className="h-64 bg-muted rounded w-full"></div>
-      </div>
-    );
-  }
-
-  if (authError) {
-    return (
-      <div className="flex flex-col items-center justify-center h-[calc(100vh-10rem)] text-center">
-        <AlertTriangle className="w-16 h-16 text-destructive mb-4" />
-        <h2 className="text-2xl font-semibold text-foreground mb-2">Access Denied</h2>
-        <p className="text-muted-foreground mb-6">
-          You need to be signed in to view or manage candidates.
-        </p>
-        <Button onClick={() => signIn()}>Sign In</Button>
+      <div className="flex h-screen w-screen items-center justify-center bg-background fixed inset-0 z-50">
+        <Loader2 className="h-16 w-16 animate-spin text-primary" />
       </div>
     );
   }
@@ -375,7 +351,7 @@ export default function CandidatesPage() {
         </div>
       ) : (
         <CandidateTable 
-          candidates={allCandidates} // Pass allCandidates, filtering is done API side or via useEffect if needed
+          candidates={allCandidates}
           onUpdateCandidate={handleUpdateCandidateAPI} 
           onDeleteCandidate={handleDeleteCandidate} 
           onOpenUploadModal={handleOpenUploadModal} 

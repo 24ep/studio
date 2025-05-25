@@ -1,5 +1,4 @@
 
-// src/app/logs/page.tsx
 "use client";
 
 import { useState, useEffect, useCallback } from 'react';
@@ -8,17 +7,19 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { format, parseISO } from 'date-fns';
-import { ListOrdered, ServerCrash, ShieldAlert, Info, RefreshCw, ChevronsLeft, ChevronLeft, ChevronRight, ChevronsRight, AlertTriangle } from "lucide-react";
+import { ListOrdered, ServerCrash, ShieldAlert, Info, RefreshCw, ChevronsLeft, ChevronLeft, ChevronRight, ChevronsRight, AlertTriangle, Loader2 } from "lucide-react";
 import type { LogEntry, LogLevel } from '@/lib/types';
 import { useToast } from "@/hooks/use-toast";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { signIn, useSession } from "next-auth/react";
+import { useRouter } from 'next/navigation';
 
 const getLogLevelBadgeVariant = (level: LogLevel): "default" | "secondary" | "destructive" | "outline" => {
   switch (level) {
     case 'ERROR':
       return 'destructive';
     case 'WARN':
+    case 'AUDIT': // Adding Audit to secondary for visual distinction
       return 'secondary'; 
     case 'INFO':
       return 'default'; 
@@ -34,6 +35,8 @@ const getLogLevelIcon = (level: LogLevel) => {
     case 'ERROR':
       return <ServerCrash className="h-4 w-4 mr-1.5" />;
     case 'WARN':
+      return <AlertTriangle className="h-4 w-4 mr-1.5" />; // Changed for better visibility
+    case 'AUDIT':
       return <ShieldAlert className="h-4 w-4 mr-1.5" />;
     case 'INFO':
       return <Info className="h-4 w-4 mr-1.5" />;
@@ -58,19 +61,17 @@ export default function LogsPage() {
   const [levelFilter, setLevelFilter] = useState<LogLevel | "ALL">("ALL");
 
   const { data: session, status: sessionStatus } = useSession();
-  const [authError, setAuthError] = useState(false);
+  const router = useRouter();
 
   const totalPages = Math.ceil(totalLogs / ITEMS_PER_PAGE);
 
   const fetchLogs = useCallback(async (page: number, filterLevel: LogLevel | "ALL") => {
     if (sessionStatus !== 'authenticated') {
         setIsLoading(false);
-        setAuthError(true);
         return;
     }
     setIsLoading(true);
     setFetchError(null);
-    setAuthError(false);
 
     try {
       const offset = (page - 1) * ITEMS_PER_PAGE;
@@ -87,18 +88,17 @@ export default function LogsPage() {
           errorJson = await response.json();
           errorMessageFromServer = errorJson.message;
         } catch (e) {
-          // If parsing JSON fails, use a default error message based on status
           errorMessageFromServer = `Failed to fetch logs: ${response.statusText || `Status ${response.status}`}`;
         }
 
-        // If status is 401 OR message indicates unauthorized, treat as auth error
         if (response.status === 401 || (errorMessageFromServer && errorMessageFromServer.toLowerCase().includes("unauthorized"))) {
-            setAuthError(true);
-            setIsLoading(false);
+            signIn(undefined, { callbackUrl: window.location.pathname });
             return;
         }
-        // For other errors, throw to be caught by the generic catch block
-        throw new Error(errorMessageFromServer || `An unknown error occurred. Status: ${response.status}`);
+        setFetchError(errorMessageFromServer || `An unknown error occurred. Status: ${response.status}`);
+        setLogs([]);
+        setTotalLogs(0);
+        return;
       }
       
       const data: { logs: LogEntry[], total: number } = await response.json();
@@ -110,8 +110,7 @@ export default function LogsPage() {
       setFetchError(errorMessage);
       setLogs([]);
       setTotalLogs(0);
-      // Avoid toasting if it's an auth error that's now handled by setAuthError
-      if (!authError && !(errorMessage && errorMessage.toLowerCase().includes("unauthorized"))) {
+      if (!(errorMessage && errorMessage.toLowerCase().includes("unauthorized"))) {
         toast({
             title: "Error Fetching Logs",
             description: errorMessage || "Could not load log data.",
@@ -121,17 +120,16 @@ export default function LogsPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [toast, sessionStatus, authError]); // Added authError to dependencies
+  }, [sessionStatus, toast]); 
 
   useEffect(() => {
     setIsClient(true);
-    if (sessionStatus === 'authenticated') {
+    if (sessionStatus === 'unauthenticated') {
+      signIn(undefined, { callbackUrl: window.location.pathname });
+    } else if (sessionStatus === 'authenticated') {
       fetchLogs(currentPage, levelFilter);
-    } else if (sessionStatus === 'unauthenticated') {
-      setIsLoading(false);
-      setAuthError(true);
     }
-  }, [sessionStatus, fetchLogs, currentPage, levelFilter]);
+  }, [sessionStatus, fetchLogs, currentPage, levelFilter, router]);
 
 
   const handleRefresh = () => {
@@ -147,34 +145,10 @@ export default function LogsPage() {
     setCurrentPage(1); 
   };
 
-  if (!isClient && sessionStatus === 'loading') { 
+  if (sessionStatus === 'loading' || (sessionStatus === 'unauthenticated' && !router.asPath.startsWith('/auth/signin')) || (isLoading && !fetchError && !isClient)) { 
     return (
-      <div className="space-y-6">
-        <Card className="shadow-lg">
-          <CardHeader>
-            <div className="h-8 bg-muted rounded w-1/3 mb-1 animate-pulse"></div>
-            <div className="h-4 bg-muted rounded w-1/2 animate-pulse"></div>
-          </CardHeader>
-          <CardContent>
-             <div className="text-center py-10">
-              <ListOrdered className="mx-auto h-12 w-12 text-muted-foreground animate-pulse" />
-              <p className="mt-4 text-muted-foreground">Loading log entries...</p>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
-
-  if (authError) {
-    return (
-      <div className="flex flex-col items-center justify-center h-[calc(100vh-10rem)] text-center">
-        <AlertTriangle className="w-16 h-16 text-destructive mb-4" />
-        <h2 className="text-2xl font-semibold text-foreground mb-2">Access Denied</h2>
-        <p className="text-muted-foreground mb-6">
-          You need to be signed in and have 'Admin' privileges to view application logs.
-        </p>
-        <Button onClick={() => signIn('azure-ad')}>Sign In</Button>
+      <div className="flex h-screen w-screen items-center justify-center bg-background fixed inset-0 z-50">
+        <Loader2 className="h-16 w-16 animate-spin text-primary" />
       </div>
     );
   }
@@ -203,6 +177,7 @@ export default function LogsPage() {
                     <SelectItem value="INFO">Info</SelectItem>
                     <SelectItem value="WARN">Warn</SelectItem>
                     <SelectItem value="ERROR">Error</SelectItem>
+                    <SelectItem value="AUDIT">Audit</SelectItem>
                 </SelectContent>
             </Select>
             <Button variant="outline" size="icon" onClick={handleRefresh} disabled={isLoading}>
