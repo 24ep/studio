@@ -3,7 +3,7 @@
 import * as React from "react"; 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Users, Briefcase, Settings, UsersRound, Code2, ListOrdered, Palette, Zap } from "lucide-react";
+import { LayoutDashboard, Users, Briefcase, Settings, UsersRound, Code2, ListOrdered, Palette, Zap, Settings2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   SidebarMenu,
@@ -27,12 +27,12 @@ const mainNavItems = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
   { href: "/candidates", label: "Candidates", icon: Users },
   { href: "/positions", label: "Positions", icon: Briefcase },
-  // { href: "/upload", label: "Upload Resume", icon: UploadCloud }, // Removed this line
 ];
 
 const settingsSubItems = [
   { href: "/settings/preferences", label: "Preferences", icon: Palette },
   { href: "/settings/integrations", label: "Integrations", icon: Zap },
+  { href: "/setup", label: "Setup Guide", icon: Settings2 }, // Added Setup page
   { href: "/users", label: "Manage Users", icon: UsersRound },
   { href: "/api-docs", label: "API Docs", icon: Code2 },
   { href: "/logs", label: "Logs", icon: ListOrdered },
@@ -95,7 +95,7 @@ export function SidebarNav() {
                     className={cn(
                       "flex w-full items-center gap-2 overflow-hidden rounded-md p-2 text-left text-sm outline-none ring-sidebar-ring transition-all hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-2 active:bg-sidebar-accent active:text-sidebar-accent-foreground disabled:pointer-events-none disabled:opacity-50",
                       "justify-between group-data-[collapsible=icon]:!size-8 group-data-[collapsible=icon]:!p-2",
-                      isSettingsSectionActive && "bg-sidebar-primary text-sidebar-primary-foreground hover:bg-sidebar-primary/90 font-medium", // Keep primary style if settings active
+                      isSettingsSectionActive && "/* data-[active=true] */ bg-sidebar-accent text-sidebar-accent-foreground", 
                       "hover:no-underline py-2"
                     )}
                   >

@@ -25,10 +25,11 @@ function getPageTitle(pathname: string): string {
   if (pathname.startsWith("/users")) return "Manage Users";
   if (pathname.startsWith("/settings/preferences")) return "Preferences";
   if (pathname.startsWith("/settings/integrations")) return "Integrations";
+  if (pathname.startsWith("/setup")) return "Application Setup"; // Added for setup page
   if (pathname.startsWith("/settings")) return "Settings"; 
   if (pathname.startsWith("/api-docs")) return "API Documentation";
   if (pathname.startsWith("/logs")) return "Application Logs";
-  if (pathname.startsWith("/auth/signin")) return "Sign In"; // New title for sign-in page
+  if (pathname.startsWith("/auth/signin")) return "Sign In";
   return "CandiTrack";
 }
 
