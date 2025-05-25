@@ -66,7 +66,7 @@ export async function POST(request: NextRequest) {
     // Update candidate record with the resume path
     const updatedCandidate = await prisma.candidate.update({
       where: { id: candidateId },
-      data: { resumePath: fileName, lastUpdateDate: new Date() }, // lastUpdateDate is auto-updated by @updatedAt
+      data: { resumePath: fileName, updatedAt: new Date() }, // Ensure updatedAt is manually set if not auto-updated by Prisma middleware
     });
 
     return NextResponse.json({ 
