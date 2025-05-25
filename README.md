@@ -106,14 +106,19 @@ This is the recommended way to run the application along with its backend servic
     *   The MinIO bucket specified by `MINIO_BUCKET_NAME` (default: `canditrack-resumes`) will be **attempted to be created automatically by the application** when it first tries to interact with MinIO (e.g., during a resume upload via the `ensureBucketExists` function in `src/lib/minio.ts`).
     *   You can also manually create it via the MinIO Console if preferred.
 
-6.  **Accessing Services:**
+6.  **Verify Service Connectivity (Application Logs):**
+    *   When your Next.js application starts, check its logs (e.g., `docker logs <your_app_container_name> -f`).
+    *   You should see messages like "Successfully connected to PostgreSQL database..." and "Successfully connected to MinIO server..." or "MinIO: Bucket ... already exists/created...".
+    *   If you see connection error messages, verify your `.env.local` settings, Docker networking, and that the backend services are running correctly.
+
+7.  **Accessing Services:**
     *   **NCC Candidate Management App:** `http://localhost:9002`
     *   **PostgreSQL:** Accessible on `localhost:5432` from your host machine (or `postgres:5432` from within the Docker network).
     *   **MinIO API:** `http://localhost:9000` (from host).
     *   **MinIO Console:** `http://localhost:9001` (Login with `MINIO_ROOT_USER` and `MINIO_ROOT_PASSWORD` from your `.env.local` or `docker-compose.yml` defaults).
     *   **Redis:** Accessible on `localhost:6379` from your host machine (or `redis:6379` from within the Docker network).
 
-7.  **Stopping the services:**
+8.  **Stopping the services:**
     ```bash
     docker-compose down
     ```
@@ -143,4 +148,3 @@ This application is a prototype. For production readiness, consider the followin
 *   **UX/UI Polish:** Continue refining the user experience and interface.
 *   **Security Hardening:** Implement rate limiting, advanced security headers, etc. (Consider using an API Gateway like Kong for some of these aspects).
 *   **Password Hashing:** Ensure passwords for the Credentials login are securely hashed (e.g., using bcrypt) in the `User` table and during login checks. The current prototype uses plaintext for simplicity in the `User` table and `CredentialsProvider`. **THIS IS CRITICAL FOR PRODUCTION.**
-```

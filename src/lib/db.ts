@@ -2,13 +2,10 @@
 // src/lib/db.ts
 import { Pool } from 'pg';
 
-// Ensure you have DATABASE_URL in your .env.local or environment variables
-// e.g., DATABASE_URL="postgresql://devuser:devpassword@postgres:5432/canditrack_db"
-
 if (!process.env.DATABASE_URL) {
   if (process.env.NODE_ENV === 'production') {
-    console.error('DATABASE_URL environment variable not set for production!');
-    // Potentially throw an error in production to prevent startup without DB
+    console.error('FATAL: DATABASE_URL environment variable not set for production!');
+    // In a real production scenario, you might want to throw an error to prevent startup
     // throw new Error('DATABASE_URL environment variable not set for production!');
   } else {
     console.warn('DATABASE_URL environment variable not set. Using default or expecting it to be set for development.');
@@ -17,26 +14,36 @@ if (!process.env.DATABASE_URL) {
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  // You can add SSL configuration here if needed for production
+  // SSL configuration can be added here if needed for production
   // ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : undefined,
 });
 
-pool.on('connect', () => {
-  console.log('Connected to PostgreSQL database');
-});
+// Function to check database connectivity
+async function checkDbConnection() {
+  let client;
+  try {
+    client = await pool.connect();
+    await client.query('SELECT NOW()'); // Simple query to check connection
+    console.log('Successfully connected to PostgreSQL database and executed test query.');
+  } catch (err) {
+    console.error('Failed to connect to PostgreSQL database or execute test query:', err);
+    // Depending on your application's needs, you might want to exit the process
+    // if the database connection is critical for startup.
+    // process.exit(1);
+  } finally {
+    if (client) {
+      client.release();
+    }
+  }
+}
 
-pool.on('error', (err) => {
-  console.error('Unexpected error on idle client', err);
+// Perform the connection check when this module is loaded.
+// This will run when the application starts and imports this module.
+checkDbConnection();
+
+pool.on('error', (err, client) => {
+  console.error('Unexpected error on idle PostgreSQL client', err);
   // process.exit(-1); // Optional: exit if a critical error occurs
 });
 
 export default pool;
-
-/*
-The SQL DDL statements for creating tables (Candidate, Position, TransitionRecord, LogEntry)
-have been moved to the init-db.sql file in the project root.
-
-Please run this script against your PostgreSQL database after starting
-the services with Docker Compose to set up the necessary tables.
-See README.md for instructions.
-*/
