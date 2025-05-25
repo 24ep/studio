@@ -76,7 +76,8 @@ export async function POST(request: NextRequest) {
     });
 
     return NextResponse.json(newPosition, { status: 201 });
-  } catch (error) {
+  } catch (error)
+ {
     console.error("Failed to create position:", error);
     return NextResponse.json({ message: "Error creating position", error: (error as Error).message }, { status: 500 });
   }
