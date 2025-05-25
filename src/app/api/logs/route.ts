@@ -7,23 +7,21 @@ import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 import { z } from 'zod';
 
-const logLevelValues: [LogLevel, ...LogLevel[]] = ['INFO', 'WARN', 'ERROR', 'DEBUG'];
+const logLevelValues: [LogLevel, ...LogLevel[]] = ['INFO', 'WARN', 'ERROR', 'DEBUG', 'AUDIT'];
 
 const createLogEntrySchema = z.object({
   level: z.enum(logLevelValues),
   message: z.string().min(1, { message: "Log message cannot be empty" }),
   source: z.string().optional(),
   timestamp: z.string().datetime({ message: "Invalid datetime string. Must be UTC ISO8601" }).optional(),
+  actingUserId: z.string().uuid().nullable().optional(),
+  details: z.record(z.any()).nullable().optional(),
 });
 
 export async function POST(request: NextRequest) {
-  // POSTING logs might be allowed from various sources, including unauthenticated ones (e.g. client-side errors)
-  // Or you might want to restrict this. For now, it remains open as per previous logic.
-  // If securing this, add session checks and role checks as needed.
-  // const session = await getServerSession(authOptions);
-  // if (!session) {
-  //    return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
-  // }
+  // POSTING logs. For audit logs, the actingUserId will be passed.
+  // For system logs, actingUserId might be null.
+  // This endpoint is kept open for now for flexibility, but could be secured further if needed.
 
   let body;
   try {
@@ -41,12 +39,12 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const { level, message, source, timestamp } = validationResult.data;
+  const { level, message, source, timestamp, actingUserId, details } = validationResult.data;
 
   try {
     const insertQuery = `
-      INSERT INTO "LogEntry" (timestamp, level, message, source, "createdAt")
-      VALUES ($1, $2, $3, $4, NOW())
+      INSERT INTO "LogEntry" (timestamp, level, message, source, "actingUserId", details, "createdAt")
+      VALUES ($1, $2, $3, $4, $5, $6, NOW())
       RETURNING *;
     `;
     const values = [
@@ -54,6 +52,8 @@ export async function POST(request: NextRequest) {
       level,
       message,
       source,
+      actingUserId || null,
+      details || null,
     ];
     const result = await pool.query(insertQuery, values);
     return NextResponse.json(result.rows[0], { status: 201 });
@@ -70,6 +70,8 @@ export async function GET(request: NextRequest) {
   }
   const userRole = session.user.role;
   if (userRole !== 'Admin') {
+     // Log attempt to access logs by non-admin
+    console.warn(`Unauthorized attempt to access logs by user: ${session.user.email} (ID: ${session.user.id})`);
     return NextResponse.json({ message: "Forbidden: Only Admins can view logs." }, { status: 403 });
   }
 
@@ -96,7 +98,7 @@ export async function GET(request: NextRequest) {
     }
     
     const queryParams: any[] = [limit, offset];
-    let query = `SELECT * FROM "LogEntry"`;
+    let query = `SELECT id, timestamp, level, message, source, "actingUserId", details, "createdAt" FROM "LogEntry"`; // Explicitly select columns
     const conditions = [];
     let paramIndex = 3; 
 
@@ -114,15 +116,15 @@ export async function GET(request: NextRequest) {
     const result = await pool.query(query, queryParams);
     
     let countQuery = `SELECT COUNT(*) FROM "LogEntry"`;
+    let countQueryParams: any[] = [];
+
     if(conditions.length > 0) {
-        const countQueryParams = queryParams.slice(2);
         countQuery += ' WHERE ' + conditions.join(' AND ');
-        const countResult = await pool.query(countQuery, countQueryParams);
-        return NextResponse.json({ logs: result.rows, total: parseInt(countResult.rows[0].count, 10) }, { status: 200 });
-    } else {
-        const countResult = await pool.query(countQuery);
-        return NextResponse.json({ logs: result.rows, total: parseInt(countResult.rows[0].count, 10) }, { status: 200 });
+        countQueryParams = queryParams.slice(2); // Get only filter params for count
     }
+    
+    const countResult = await pool.query(countQuery, countQueryParams);
+    return NextResponse.json({ logs: result.rows, total: parseInt(countResult.rows[0].count, 10) }, { status: 200 });
 
   } catch (error) {
     console.error("Failed to fetch log entries:", error);

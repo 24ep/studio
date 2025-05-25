@@ -1,10 +1,11 @@
 
 import { NextResponse, type NextRequest } from 'next/server';
 import pool from '../../../lib/db';
-import type { CandidateStatus, CandidateDetails, OldParsedResumeData, UserProfile } from '@/lib/types'; // Updated type import
+import type { CandidateStatus, CandidateDetails, OldParsedResumeData, UserProfile } from '@/lib/types'; 
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 import { z } from 'zod';
+import { logAudit } from '@/lib/auditLog';
 
 const candidateStatusValues: [CandidateStatus, ...CandidateStatus[]] = ['Applied', 'Screening', 'Shortlisted', 'Interview Scheduled', 'Interviewing', 'Offer Extended', 'Offer Accepted', 'Hired', 'Rejected', 'On Hold'];
 
@@ -84,6 +85,7 @@ export async function GET(request: NextRequest) {
   }
   const userRole = session.user.role;
   if (!userRole || !['Admin', 'Recruiter', 'Hiring Manager'].includes(userRole)) {
+    await logAudit('WARN', `Forbidden attempt to list candidates by ${session.user.name} (ID: ${session.user.id}). Required roles: Admin, Recruiter, Hiring Manager.`, 'API:Candidates', session.user.id);
     return NextResponse.json({ message: "Forbidden: Insufficient permissions" }, { status: 403 });
   }
 
@@ -153,6 +155,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(candidates, { status: 200 });
   } catch (error) {
     console.error("Failed to fetch candidates:", error);
+    await logAudit('ERROR', `Failed to fetch candidates. Error: ${(error as Error).message}`, 'API:Candidates', session?.user?.id);
     return NextResponse.json({ message: "Error fetching candidates", error: (error as Error).message }, { status: 500 });
   }
 }
@@ -164,6 +167,7 @@ export async function POST(request: NextRequest) {
   }
   const userRole = session.user.role;
   if (!userRole || !['Admin', 'Recruiter'].includes(userRole)) {
+    await logAudit('WARN', `Forbidden attempt to create candidate by ${session.user.name} (ID: ${session.user.id}). Required roles: Admin, Recruiter.`, 'API:Candidates', session.user.id);
     return NextResponse.json({ message: "Forbidden: Insufficient permissions to create candidates" }, { status: 403 });
   }
 
@@ -270,10 +274,12 @@ export async function POST(request: NextRequest) {
         } : null,
     };
     
+    await logAudit('AUDIT', `Candidate '${newCandidate.name}' (ID: ${newCandidate.id}) created by ${session.user.name} (ID: ${session.user.id}).`, 'API:Candidates', session.user.id, { targetCandidateId: newCandidate.id, name: newCandidate.name, email: newCandidate.email });
     return NextResponse.json(createdCandidateWithDetails, { status: 201 });
   } catch (error: any) {
     await client.query('ROLLBACK');
     console.error("Failed to create candidate:", error);
+    await logAudit('ERROR', `Failed to create candidate '${candidateName}'. Error: ${error.message}`, 'API:Candidates', session.user.id, { name: candidateName, email: candidateEmail });
     if (error.code === '23505' && error.constraint === 'Candidate_email_key') {
       return NextResponse.json({ message: "A candidate with this email already exists." }, { status: 409 });
     }

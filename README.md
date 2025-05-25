@@ -15,7 +15,7 @@ This is a Next.js application prototype for NCC Candidate Management, an Applica
     *   Setup Guide (Informational, with DB schema check)
     *   System Status (Overview of service configurations)
 *   API Documentation Page
-*   Application Logs Page (Database-backed)
+*   Application Logs Page (Database-backed, with audit trail for key actions)
 *   Authentication:
     *   Azure AD SSO
     *   Credentials (Email/Password - backed by PostgreSQL, **passwords are hashed using bcrypt**)
@@ -23,6 +23,7 @@ This is a Next.js application prototype for NCC Candidate Management, an Applica
 *   Backend API routes for Candidates, Positions, Users, and Logs using PostgreSQL (via `pg` library) and file uploads to MinIO.
 *   Resume uploads can optionally trigger an n8n webhook if `N8N_RESUME_WEBHOOK_URL` is configured.
 *   Generic PDF uploads can trigger a different n8n webhook if `N8N_GENERIC_PDF_WEBHOOK_URL` is configured.
+*   **Audit Logging:** Key actions (CRUD operations, logins, logouts) are logged to the database for traceability.
 
 ## Tech Stack
 
@@ -91,7 +92,7 @@ This is the recommended way to run the application along with its backend servic
 
 3.  **Automated Database Schema Setup (PostgreSQL):**
     *   The PostgreSQL container is configured in `docker-compose.yml` to **automatically execute all `.sql` and `.sh` scripts located in the `./pg-init-scripts` directory** (relative to your project root) on its first startup when the database is initialized.
-    *   **You must create a directory named `pg-init-scripts` in your project root and place your `init-db.sql` file (containing all `CREATE TABLE` statements) inside this directory.**
+    *   **You must have a directory named `pg-init-scripts` in your project root, and your `init-db.sql` file (containing all `CREATE TABLE` statements) must be inside this directory.**
     *   This automatic initialization **only happens once when the `postgres_data` Docker volume is first created** (or if the volume is empty/being newly created).
 
 4.  **IMPORTANT: If Database Tables Are Missing (e.g., "relation ... does not exist" errors):**

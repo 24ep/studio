@@ -7,19 +7,17 @@ import type { DefaultUser } from 'next-auth';
 declare module 'next-auth' {
   interface Session {
     user: {
-      id: string; // Add id here
-      role?: UserProfile['role']; // Add role here
-    } & DefaultUser; // Keep existing fields like name, email, image
+      id: string; 
+      role?: UserProfile['role']; 
+    } & DefaultUser; 
   }
 
-  // Optional: If you're augmenting the User object returned by the authorize function
-  // or the profile function of an OAuth provider.
   interface User extends DefaultUser {
     role?: UserProfile['role'];
+    id: string; // Ensure User object passed to JWT/Session has id
   }
 }
 
-// JWT token can also be augmented if needed
 declare module 'next-auth/jwt' {
   interface JWT {
     id?: string;
@@ -50,7 +48,6 @@ export interface TransitionRecord {
   updatedAt?: string;
 }
 
-// New detailed types for candidate information
 export interface PersonalInfo {
   title_honorific?: string;
   firstname: string;
@@ -68,8 +65,8 @@ export interface ContactInfo {
 export interface EducationEntry {
   major?: string;
   field?: string;
-  period?: string; // e.g., "2018-2022" or "Aug 2018 - May 2022"
-  duration?: string; // e.g., "4y" or "3y5m"
+  period?: string; 
+  duration?: string; 
   GPA?: string;
   university?: string;
   campus?: string;
@@ -79,7 +76,7 @@ export interface ExperienceEntry {
   company?: string;
   position?: string;
   description?: string;
-  period?: string; // e.g., "2022-Present" or "Jan 2022 - Dec 2023"
+  period?: string; 
   duration?: string;
   is_current_position?: boolean;
   postition_level?: 'entry level' | 'mid level' | 'senior level' | 'lead' | 'manager' | 'executive';
@@ -87,14 +84,14 @@ export interface ExperienceEntry {
 
 export interface SkillEntry {
   segment_skill?: string;
-  skill?: string[]; // Representing the list like ["excel", "photoshop"]
+  skill?: string[]; 
 }
 
 export interface JobSuitableEntry {
   suitable_career?: string;
   suitable_job_position?: string;
   suitable_job_level?: string;
-  suitable_salary_bath_month?: string; // Assuming this is a string, can be number if defined
+  suitable_salary_bath_month?: string; 
 }
 
 export interface CandidateDetails {
@@ -107,7 +104,6 @@ export interface CandidateDetails {
   job_suitable?: JobSuitableEntry[];
 }
 
-// Original ParsedResumeData - might be deprecated or co-exist if some systems produce simpler output
 export interface OldParsedResumeData {
   name?: string;
   email?: string;
@@ -132,16 +128,16 @@ export interface Position {
 
 export interface Candidate {
   id: string;
-  name: string; // Will be derived from personal_info.firstname + personal_info.lastname
-  email: string; // Will be derived from contact_info.email
-  phone?: string; // Will be derived from contact_info.phone
+  name: string; 
+  email: string; 
+  phone?: string; 
   resumePath?: string;
-  parsedData: CandidateDetails | OldParsedResumeData | null; // Updated to include new detailed structure
+  parsedData: CandidateDetails | OldParsedResumeData | null; 
   positionId: string | null;
   position?: Position;
-  fitScore: number; // 0-100
+  fitScore: number; 
   status: CandidateStatus;
-  applicationDate: string; // ISO date string
+  applicationDate: string; 
   createdAt?: string;
   updatedAt?: string;
   transitionHistory: TransitionRecord[];
@@ -155,17 +151,19 @@ export interface UserProfile {
   avatarUrl?: string;
   dataAiHint?: string;
   role: 'Admin' | 'Recruiter' | 'Hiring Manager';
-  // password?: string; // Password should NOT be part of this type if it's for client-side/API responses
+  password?: string; // Only used during creation/auth process, not stored in session
 }
 
-// LogEntry type
-export type LogLevel = 'INFO' | 'WARN' | 'ERROR' | 'DEBUG';
+export type LogLevel = 'INFO' | 'WARN' | 'ERROR' | 'DEBUG' | 'AUDIT';
 
 export interface LogEntry {
   id: string;
-  timestamp: string; // ISO string
+  timestamp: string; 
   level: LogLevel;
   message: string;
-  source?: string; // e.g., 'API', 'Frontend', 'System'
+  source?: string; 
+  actingUserId?: string | null; // User ID of the person performing the action
+  details?: Record<string, any> | null; // Additional structured data for the log
   createdAt?: string;
 }
+

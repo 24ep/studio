@@ -5,6 +5,7 @@ import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 import { z } from 'zod';
 import type { UserProfile } from '@/lib/types';
+import { logAudit } from '@/lib/auditLog';
 
 export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
   const session = await getServerSession(authOptions);
@@ -13,6 +14,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
   }
   const userRole = session.user.role;
    if (!userRole || !['Admin', 'Recruiter', 'Hiring Manager'].includes(userRole)) {
+    await logAudit('WARN', `Forbidden attempt to view position (ID: ${params.id}) by ${session.user.name} (ID: ${session.user.id}). Required roles: Admin, Recruiter, Hiring Manager.`, 'API:Positions', session.user.id, { targetPositionId: params.id });
     return NextResponse.json({ message: "Forbidden: Insufficient permissions" }, { status: 403 });
   }
 
@@ -25,6 +27,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
     return NextResponse.json(result.rows[0], { status: 200 });
   } catch (error) {
     console.error(`Failed to fetch position ${params.id}:`, error);
+    await logAudit('ERROR', `Failed to fetch position ${params.id}. Error: ${(error as Error).message}`, 'API:Positions', session.user.id, { targetPositionId: params.id });
     return NextResponse.json({ message: "Error fetching position", error: (error as Error).message }, { status: 500 });
   }
 }
@@ -43,6 +46,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
   }
   const userRole = session.user.role;
   if (!userRole || !['Admin', 'Recruiter'].includes(userRole)) {
+     await logAudit('WARN', `Forbidden attempt to update position (ID: ${params.id}) by ${session.user.name} (ID: ${session.user.id}). Required roles: Admin, Recruiter.`, 'API:Positions', session.user.id, { targetPositionId: params.id });
     return NextResponse.json({ message: "Forbidden: Insufficient permissions to update positions" }, { status: 403 });
   }
 
@@ -92,10 +96,13 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
 
     const updateQuery = `UPDATE "Position" SET ${updateFields.join(', ')} WHERE id = $${paramIndex} RETURNING *;`;
     const updatedResult = await pool.query(updateQuery, updateValues);
-    
-    return NextResponse.json(updatedResult.rows[0], { status: 200 });
+    const updatedPosition = updatedResult.rows[0];
+
+    await logAudit('AUDIT', `Position '${updatedPosition.title}' (ID: ${updatedPosition.id}) updated by ${session.user.name} (ID: ${session.user.id}).`, 'API:Positions', session.user.id, { targetPositionId: updatedPosition.id, changes: Object.keys(validatedData) });
+    return NextResponse.json(updatedPosition, { status: 200 });
   } catch (error) {
     console.error(`Failed to update position ${params.id}:`, error);
+    await logAudit('ERROR', `Failed to update position ${params.id}. Error: ${(error as Error).message}`, 'API:Positions', session.user.id, { targetPositionId: params.id });
     return NextResponse.json({ message: "Error updating position", error: (error as Error).message }, { status: 500 });
   }
 }
@@ -107,27 +114,32 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
   }
   const userRole = session.user.role;
   if (userRole !== 'Admin') {
+    await logAudit('WARN', `Forbidden attempt to delete position (ID: ${params.id}) by ${session.user.name} (ID: ${session.user.id}). Required role: Admin.`, 'API:Positions', session.user.id, { targetPositionId: params.id });
     return NextResponse.json({ message: "Forbidden: Only Admins can delete positions" }, { status: 403 });
   }
 
   try {
-    const positionQuery = 'SELECT p.id, COUNT(c.id) as "candidateCount" FROM "Position" p LEFT JOIN "Candidate" c ON p.id = c."positionId" WHERE p.id = $1 GROUP BY p.id;';
+    const positionQuery = 'SELECT p.id, p.title, COUNT(c.id) as "candidateCount" FROM "Position" p LEFT JOIN "Candidate" c ON p.id = c."positionId" WHERE p.id = $1 GROUP BY p.id, p.title;';
     const positionResult = await pool.query(positionQuery, [params.id]);
 
     if (positionResult.rows.length === 0) {
       return NextResponse.json({ message: "Position not found" }, { status: 404 });
     }
+    const positionTitle = positionResult.rows[0].title;
 
     if (parseInt(positionResult.rows[0].candidateCount, 10) > 0) {
+        await logAudit('WARN', `Attempt to delete position '${positionTitle}' (ID: ${params.id}) with associated candidates by ${session.user.name} (ID: ${session.user.id}). Action denied.`, 'API:Positions', session.user.id, { targetPositionId: params.id });
         return NextResponse.json({ message: "Cannot delete position with associated candidates. Please reassign or delete candidates first." }, { status: 409 });
     }
     
     const deleteQuery = 'DELETE FROM "Position" WHERE id = $1';
     await pool.query(deleteQuery, [params.id]);
     
+    await logAudit('AUDIT', `Position '${positionTitle}' (ID: ${params.id}) deleted by ${session.user.name} (ID: ${session.user.id}).`, 'API:Positions', session.user.id, { targetPositionId: params.id, deletedPositionTitle: positionTitle });
     return NextResponse.json({ message: "Position deleted successfully" }, { status: 200 });
   } catch (error: any) {
      console.error(`Failed to delete position ${params.id}:`, error);
+     await logAudit('ERROR', `Failed to delete position ${params.id}. Error: ${(error as Error).message}`, 'API:Positions', session.user.id, { targetPositionId: params.id });
      if (error.code === '23503') { 
         return NextResponse.json({ message: "Cannot delete this position as it is still referenced by other entities (e.g., candidates)." }, { status: 409 });
      }

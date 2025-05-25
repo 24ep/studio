@@ -3,9 +3,10 @@
 import NextAuth, { type NextAuthOptions, type User as NextAuthUser } from 'next-auth';
 import AzureADProvider from 'next-auth/providers/azure-ad';
 import CredentialsProvider from 'next-auth/providers/credentials';
-import pool from '../../../../lib/db'; // Import the db pool
+import pool from '../../../../lib/db'; 
 import type { UserProfile } from '@/lib/types';
 import bcrypt from 'bcrypt';
+import { logAudit } from '@/lib/auditLog';
 
 export const authOptions: NextAuthOptions = {
   providers: [
@@ -20,7 +21,7 @@ export const authOptions: NextAuthOptions = {
           name: profile.name,
           email: profile.email,
           image: profile.picture,
-          // role: mapAzureGroupsToRoles(profile.groups) // Example: custom function to map roles. Ensure roles are part of the JWT/session.
+          // role: mapAzureGroupsToRoles(profile.groups) // TODO: Implement if using Azure AD group-based roles
         };
       }
     }),
@@ -42,6 +43,7 @@ export const authOptions: NextAuthOptions = {
           
           if (result.rows.length === 0) {
             console.log(`No user found with email: ${credentials.email}`);
+            await logAudit('WARN', `Failed login attempt: User not found for email '${credentials.email}'.`, 'Auth:Credentials', null, { email: credentials.email, ip: req.headers?.['x-forwarded-for'] || req.headers?.['remote_addr'] });
             throw new Error("Invalid email or password.");
           }
           
@@ -54,18 +56,25 @@ export const authOptions: NextAuthOptions = {
               id: userFromDb.id,
               name: userFromDb.name,
               email: userFromDb.email,
-              image: userFromDb.image, // from "avatarUrl"
+              image: userFromDb.image, 
               role: userFromDb.role as UserProfile['role'],
             } as NextAuthUser & { role?: UserProfile['role'] }; 
           } else {
             console.log(`Invalid password attempt for email: ${credentials.email}`);
+            await logAudit('WARN', `Failed login attempt: Invalid password for user '${userFromDb.email}' (ID: ${userFromDb.id}).`, 'Auth:Credentials', userFromDb.id, { email: userFromDb.email, ip: req.headers?.['x-forwarded-for'] || req.headers?.['remote_addr'] });
             throw new Error("Invalid email or password.");
           }
         } catch (error) {
             if (!(error instanceof Error && (error.message === "Invalid email or password." || error.message === "Please enter both email and password."))) {
               console.error("Error during credentials authorization:", error);
             }
-            throw error; 
+            // Do not throw generic error again if it's already one of the specific ones
+            if (error instanceof Error && (error.message === "Invalid email or password." || error.message === "Please enter both email and password.")) {
+                throw error;
+            }
+            // For other errors, log and throw a generic message or the original error
+            await logAudit('ERROR', `Error during credentials authorization for email '${credentials?.email}'. Error: ${(error as Error).message}`, 'Auth:Credentials', null, { email: credentials?.email });
+            throw new Error("An error occurred during login. Please try again.");
         } finally {
           client.release();
         }
@@ -74,6 +83,21 @@ export const authOptions: NextAuthOptions = {
   ],
   session: {
     strategy: "jwt",
+  },
+  events: {
+    async signIn({ user, account, profile, isNewUser }) {
+      await logAudit('AUDIT', `User '${user.name || user.email}' (ID: ${user.id}) signed in.`, 'Auth', user.id, { provider: account?.provider, isNewUser: isNewUser });
+    },
+    async signOut({ token, session }) {
+      // Token might be more reliable here if session is already cleared
+      const userId = token?.id || (session?.user as any)?.id;
+      const userName = token?.name || token?.email || session?.user?.name || session?.user?.email || 'Unknown User';
+      if (userId) {
+        await logAudit('AUDIT', `User '${userName}' (ID: ${userId}) signed out.`, 'Auth', userId);
+      } else {
+        await logAudit('AUDIT', `User signed out (ID not available in token/session).`, 'Auth');
+      }
+    }
   },
   callbacks: {
     async jwt({ token, user, account, profile }) {
@@ -86,11 +110,6 @@ export const authOptions: NextAuthOptions = {
           token.role = (user as any).role as UserProfile['role'];
         }
       }
-      // For Azure AD, if role wasn't mapped in profile(), you might map it here
-      // or ensure profile mapping includes the role from group claims.
-      // if (account?.provider === "azure-ad" && profile) {
-      //   // example: token.role = mapAzureGroupsToRoles(profile.groups)
-      // }
       return token;
     },
     async session({ session, token }) {
@@ -116,4 +135,3 @@ export const authOptions: NextAuthOptions = {
 const handler = NextAuth(authOptions);
 
 export { handler as GET, handler as POST };
-    

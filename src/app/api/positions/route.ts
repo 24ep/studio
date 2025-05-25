@@ -5,6 +5,7 @@ import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 import { z } from 'zod';
 import type { UserProfile } from '@/lib/types';
+import { logAudit } from '@/lib/auditLog';
 
 export async function GET(request: NextRequest) {
   const session = await getServerSession(authOptions);
@@ -13,6 +14,7 @@ export async function GET(request: NextRequest) {
   }
   const userRole = session.user.role;
   if (!userRole || !['Admin', 'Recruiter', 'Hiring Manager'].includes(userRole)) {
+    await logAudit('WARN', `Forbidden attempt to list positions by ${session.user.name} (ID: ${session.user.id}). Required roles: Admin, Recruiter, Hiring Manager.`, 'API:Positions', session.user.id);
     return NextResponse.json({ message: "Forbidden: Insufficient permissions" }, { status: 403 });
   }
 
@@ -44,6 +46,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(result.rows, { status: 200 });
   } catch (error) {
     console.error("Failed to fetch positions:", error);
+    await logAudit('ERROR', `Failed to fetch positions. Error: ${(error as Error).message}`, 'API:Positions', session?.user?.id);
     return NextResponse.json({ message: "Error fetching positions", error: (error as Error).message }, { status: 500 });
   }
 }
@@ -62,6 +65,7 @@ export async function POST(request: NextRequest) {
   }
   const userRole = session.user.role;
   if (!userRole || !['Admin', 'Recruiter'].includes(userRole)) {
+    await logAudit('WARN', `Forbidden attempt to create position by ${session.user.name} (ID: ${session.user.id}). Required roles: Admin, Recruiter.`, 'API:Positions', session.user.id);
     return NextResponse.json({ message: "Forbidden: Insufficient permissions to create positions" }, { status: 403 });
   }
 
@@ -96,9 +100,13 @@ export async function POST(request: NextRequest) {
       validatedData.isOpen,
     ];
     const result = await pool.query(insertQuery, values);
-    return NextResponse.json(result.rows[0], { status: 201 });
+    const newPosition = result.rows[0];
+
+    await logAudit('AUDIT', `Position '${newPosition.title}' (ID: ${newPosition.id}) created by ${session.user.name} (ID: ${session.user.id}).`, 'API:Positions', session.user.id, { targetPositionId: newPosition.id, title: newPosition.title });
+    return NextResponse.json(newPosition, { status: 201 });
   } catch (error) {
     console.error("Failed to create position:", error);
+    await logAudit('ERROR', `Failed to create position '${validatedData.title}'. Error: ${(error as Error).message}`, 'API:Positions', session.user.id, { title: validatedData.title });
     return NextResponse.json({ message: "Error creating position", error: (error as Error).message }, { status: 500 });
   }
 }
