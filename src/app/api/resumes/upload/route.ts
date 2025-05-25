@@ -4,7 +4,7 @@ import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 import { minioClient, MINIO_BUCKET_NAME, ensureBucketExists } from '../../../../lib/minio';
 import pool from '../../../../lib/db';
-import { z } from 'zod';
+import type { UserProfile } from '@/lib/types';
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 const ACCEPTED_FILE_TYPES = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
@@ -13,16 +13,20 @@ ensureBucketExists(MINIO_BUCKET_NAME).catch(console.error);
 
 export async function POST(request: NextRequest) {
   const session = await getServerSession(authOptions);
-  if (!session) {
+  if (!session?.user) {
     return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
   }
+  const userRole = session.user.role;
+  if (!userRole || !['Admin', 'Recruiter'].includes(userRole)) {
+    return NextResponse.json({ message: "Forbidden: Insufficient permissions to upload resumes" }, { status: 403 });
+  }
+
 
   const candidateId = request.nextUrl.searchParams.get('candidateId');
   if (!candidateId) {
     return NextResponse.json({ message: 'Candidate ID is required as a query parameter' }, { status: 400 });
   }
 
-  // Verify candidate exists
   let candidateDBRecord;
   try {
     const candidateQuery = 'SELECT id FROM "Candidate" WHERE id = $1';
@@ -61,11 +65,9 @@ export async function POST(request: NextRequest) {
       'Content-Type': file.type,
     });
 
-    // Update candidate record in database with the resume path
     const updateQuery = 'UPDATE "Candidate" SET "resumePath" = $1, "updatedAt" = NOW() WHERE id = $2 RETURNING *;';
-    const updatedCandidateResult = await pool.query(updateQuery, [fileName, candidateId]);
+    await pool.query(updateQuery, [fileName, candidateId]);
 
-    // Fetch full candidate details for response (similar to GET /candidates/[id])
     const finalQuery = `
         SELECT 
             c.*, 
@@ -86,7 +88,6 @@ export async function POST(request: NextRequest) {
             department: finalResult.rows[0].positionDepartment,
         },
     };
-
 
     return NextResponse.json({ 
       message: 'Resume uploaded successfully', 

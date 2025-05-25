@@ -2,7 +2,7 @@
 // src/app/api/logs/route.ts
 import { NextResponse, type NextRequest } from 'next/server';
 import pool from '../../../lib/db';
-import type { LogEntry, LogLevel } from '@/lib/types';
+import type { LogEntry, LogLevel, UserProfile } from '@/lib/types';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 import { z } from 'zod';
@@ -17,15 +17,13 @@ const createLogEntrySchema = z.object({
 });
 
 export async function POST(request: NextRequest) {
-  const session = await getServerSession(authOptions);
-  if (!session) {
-    // For logging, we might allow unauthenticated POSTs from internal systems or less critical client-side events.
-    // However, for sensitive logs or to prevent abuse, authentication might be desired.
-    // For now, let's assume logging can be done by authenticated users or trusted system components.
-    // If logs can come from unauthenticated sources, consider rate limiting or other abuse prevention.
-    // For this example, we'll proceed if there's a session, but you might adjust this.
-    // console.warn("Attempt to POST log without session. This might be acceptable for some log sources.");
-  }
+  // POSTING logs might be allowed from various sources, including unauthenticated ones (e.g. client-side errors)
+  // Or you might want to restrict this. For now, it remains open as per previous logic.
+  // If securing this, add session checks and role checks as needed.
+  // const session = await getServerSession(authOptions);
+  // if (!session) {
+  //    return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+  // }
 
   let body;
   try {
@@ -52,7 +50,7 @@ export async function POST(request: NextRequest) {
       RETURNING *;
     `;
     const values = [
-      timestamp ? new Date(timestamp) : new Date(), // Use provided timestamp or current time
+      timestamp ? new Date(timestamp) : new Date(), 
       level,
       message,
       source,
@@ -67,8 +65,12 @@ export async function POST(request: NextRequest) {
 
 export async function GET(request: NextRequest) {
   const session = await getServerSession(authOptions);
-  if (!session) {
+  if (!session?.user) {
     return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+  }
+  const userRole = session.user.role;
+  if (userRole !== 'Admin') {
+    return NextResponse.json({ message: "Forbidden: Only Admins can view logs." }, { status: 403 });
   }
 
   try {
@@ -77,15 +79,15 @@ export async function GET(request: NextRequest) {
     const offsetParam = searchParams.get('offset');
     const levelFilter = searchParams.get('level');
 
-    let limit = 50; // Default limit
+    let limit = 50; 
     if (limitParam) {
       const parsedLimit = parseInt(limitParam, 10);
-      if (!isNaN(parsedLimit) && parsedLimit > 0 && parsedLimit <= 200) { // Max limit 200
+      if (!isNaN(parsedLimit) && parsedLimit > 0 && parsedLimit <= 200) { 
         limit = parsedLimit;
       }
     }
 
-    let offset = 0; // Default offset
+    let offset = 0; 
     if (offsetParam) {
       const parsedOffset = parseInt(offsetParam, 10);
       if (!isNaN(parsedOffset) && parsedOffset >= 0) {
@@ -96,7 +98,7 @@ export async function GET(request: NextRequest) {
     const queryParams: any[] = [limit, offset];
     let query = `SELECT * FROM "LogEntry"`;
     const conditions = [];
-    let paramIndex = 3; // Start after limit and offset
+    let paramIndex = 3; 
 
     if (levelFilter && logLevelValues.includes(levelFilter as LogLevel)) {
         conditions.push(`level = $${paramIndex++}`);
@@ -111,10 +113,8 @@ export async function GET(request: NextRequest) {
     
     const result = await pool.query(query, queryParams);
     
-    // Also get total count for pagination purposes
     let countQuery = `SELECT COUNT(*) FROM "LogEntry"`;
     if(conditions.length > 0) {
-        // Rebuild count query params, excluding limit and offset
         const countQueryParams = queryParams.slice(2);
         countQuery += ' WHERE ' + conditions.join(' AND ');
         const countResult = await pool.query(countQuery, countQueryParams);
@@ -123,7 +123,6 @@ export async function GET(request: NextRequest) {
         const countResult = await pool.query(countQuery);
         return NextResponse.json({ logs: result.rows, total: parseInt(countResult.rows[0].count, 10) }, { status: 200 });
     }
-
 
   } catch (error) {
     console.error("Failed to fetch log entries:", error);

@@ -1,15 +1,19 @@
 
 import { NextResponse, type NextRequest } from 'next/server';
 import pool from '../../../../lib/db';
-import type { CandidateStatus, ParsedResumeData, Candidate } from '@/lib/types';
+import type { CandidateStatus, ParsedResumeData, Candidate, UserProfile } from '@/lib/types';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 import { z } from 'zod';
 
 export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
   const session = await getServerSession(authOptions);
-  if (!session) {
+  if (!session?.user) {
     return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+  }
+  const userRole = session.user.role;
+  if (!userRole || !['Admin', 'Recruiter', 'Hiring Manager'].includes(userRole)) {
+    return NextResponse.json({ message: "Forbidden: Insufficient permissions" }, { status: 403 });
   }
 
   try {
@@ -69,14 +73,19 @@ const updateCandidateSchema = z.object({
 
 export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {
   const session = await getServerSession(authOptions);
-  if (!session) {
+  if (!session?.user) {
     return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+  }
+  const userRole = session.user.role;
+  if (!userRole || !['Admin', 'Recruiter'].includes(userRole)) {
+    return NextResponse.json({ message: "Forbidden: Insufficient permissions to update candidates" }, { status: 403 });
   }
 
   let body;
   try {
     body = await request.json();
   } catch (error) {
+    console.error("Error parsing request body for candidate update:", error);
     return NextResponse.json({ message: "Error parsing request body", error: (error as Error).message }, { status: 400 });
   }
 
@@ -111,7 +120,6 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
       }
     }
     
-    // Construct dynamic update query
     const updateFields: string[] = [];
     const updateValues: any[] = [];
     let paramIndex = 1;
@@ -119,11 +127,9 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
     Object.entries(validatedData).forEach(([key, value]) => {
       if (value !== undefined) {
         if (key === 'parsedData') {
-          // Deep merge parsedData
           const mergedParsedData = { 
             ...(existingCandidate.parsedData as object || {}),
             ...(value as object),
-            // Ensure arrays are overwritten, not merged if that's the intent
             education: value.education || (existingCandidate.parsedData as ParsedResumeData)?.education || [],
             skills: value.skills || (existingCandidate.parsedData as ParsedResumeData)?.skills || [],
           };
@@ -137,12 +143,12 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
     });
 
     if (updateFields.length === 0) {
-      await client.query('ROLLBACK'); // Or just return existing candidate if no fields to update
+      await client.query('ROLLBACK'); 
       return NextResponse.json(existingCandidate, { status: 200 });
     }
 
     updateFields.push(`"updatedAt" = NOW()`);
-    updateValues.push(params.id); // For WHERE clause
+    updateValues.push(params.id); 
 
     const updateQuery = `UPDATE "Candidate" SET ${updateFields.join(', ')} WHERE id = $${paramIndex} RETURNING *;`;
     const updatedResult = await client.query(updateQuery, updateValues);
@@ -158,7 +164,6 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
     
     await client.query('COMMIT');
 
-    // Re-fetch the candidate to include updated relations (position, transitionHistory)
     const finalQuery = `
         SELECT 
             c.*, 
@@ -195,8 +200,12 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
 
 export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
   const session = await getServerSession(authOptions);
-  if (!session) {
+  if (!session?.user) {
     return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+  }
+  const userRole = session.user.role;
+  if (!userRole || !['Admin', 'Recruiter'].includes(userRole)) {
+    return NextResponse.json({ message: "Forbidden: Insufficient permissions to delete candidates" }, { status: 403 });
   }
 
   const client = await pool.connect();
@@ -210,7 +219,6 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
       return NextResponse.json({ message: "Candidate not found" }, { status: 404 });
     }
     
-    // Manually delete related TransitionRecords first due to foreign key constraint
     const deleteTransitionsQuery = 'DELETE FROM "TransitionRecord" WHERE "candidateId" = $1';
     await client.query(deleteTransitionsQuery, [params.id]);
     

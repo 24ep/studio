@@ -8,24 +8,24 @@ declare module 'next-auth' {
   interface Session {
     user: {
       id: string; // Add id here
-      // role?: UserProfile['role']; // Example: if you add role to session
+      role?: UserProfile['role']; // Add role here
     } & DefaultUser; // Keep existing fields like name, email, image
   }
 
   // Optional: If you're augmenting the User object returned by the authorize function
   // or the profile function of an OAuth provider.
-  // interface User extends DefaultUser {
-  //   role?: UserProfile['role'];
-  // }
+  interface User extends DefaultUser {
+    role?: UserProfile['role'];
+  }
 }
 
 // JWT token can also be augmented if needed
-// declare module 'next-auth/jwt' {
-//   interface JWT {
-//     id?: string;
-//     role?: UserProfile['role'];
-//   }
-// }
+declare module 'next-auth/jwt' {
+  interface JWT {
+    id?: string;
+    role?: UserProfile['role'];
+  }
+}
 
 
 export type CandidateStatus =
@@ -169,4 +169,3 @@ export interface LogEntry {
   source?: string; // e.g., 'API', 'Frontend', 'System'
   createdAt?: string;
 }
-

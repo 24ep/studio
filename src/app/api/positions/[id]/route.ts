@@ -4,11 +4,16 @@ import pool from '../../../../lib/db';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 import { z } from 'zod';
+import type { UserProfile } from '@/lib/types';
 
 export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
   const session = await getServerSession(authOptions);
-  if (!session) {
+  if (!session?.user) {
     return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+  }
+  const userRole = session.user.role;
+   if (!userRole || !['Admin', 'Recruiter', 'Hiring Manager'].includes(userRole)) {
+    return NextResponse.json({ message: "Forbidden: Insufficient permissions" }, { status: 403 });
   }
 
   try {
@@ -33,14 +38,19 @@ const updatePositionSchema = z.object({
 
 export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {
   const session = await getServerSession(authOptions);
-  if (!session) {
+  if (!session?.user) {
     return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+  }
+  const userRole = session.user.role;
+  if (!userRole || !['Admin', 'Recruiter'].includes(userRole)) {
+    return NextResponse.json({ message: "Forbidden: Insufficient permissions to update positions" }, { status: 403 });
   }
 
   let body;
   try {
     body = await request.json();
   } catch (error) {
+    console.error("Error parsing request body for position update:", error);
     return NextResponse.json({ message: "Error parsing request body", error: (error as Error).message }, { status: 400 });
   }
 
@@ -78,7 +88,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
     }
 
     updateFields.push(`"updatedAt" = NOW()`);
-    updateValues.push(params.id); // For WHERE clause
+    updateValues.push(params.id); 
 
     const updateQuery = `UPDATE "Position" SET ${updateFields.join(', ')} WHERE id = $${paramIndex} RETURNING *;`;
     const updatedResult = await pool.query(updateQuery, updateValues);
@@ -92,8 +102,12 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
 
 export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
   const session = await getServerSession(authOptions);
-  if (!session) {
+  if (!session?.user) {
     return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+  }
+  const userRole = session.user.role;
+  if (userRole !== 'Admin') {
+    return NextResponse.json({ message: "Forbidden: Only Admins can delete positions" }, { status: 403 });
   }
 
   try {
@@ -114,7 +128,6 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
     return NextResponse.json({ message: "Position deleted successfully" }, { status: 200 });
   } catch (error: any) {
      console.error(`Failed to delete position ${params.id}:`, error);
-     // PostgreSQL foreign key violation error code is '23503'
      if (error.code === '23503') { 
         return NextResponse.json({ message: "Cannot delete this position as it is still referenced by other entities (e.g., candidates)." }, { status: 409 });
      }

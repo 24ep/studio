@@ -1,14 +1,13 @@
 
 import { NextResponse, type NextRequest } from 'next/server';
 import pool from '../../../lib/db';
-import type { CandidateStatus, CandidateDetails, OldParsedResumeData } from '@/lib/types'; // Updated type import
+import type { CandidateStatus, CandidateDetails, OldParsedResumeData, UserProfile } from '@/lib/types'; // Updated type import
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 import { z } from 'zod';
 
 const candidateStatusValues: [CandidateStatus, ...CandidateStatus[]] = ['Applied', 'Screening', 'Shortlisted', 'Interview Scheduled', 'Interviewing', 'Offer Extended', 'Offer Accepted', 'Hired', 'Rejected', 'On Hold'];
 
-// Zod schemas for nested structures (aligning with lib/types.ts)
 const personalInfoSchema = z.object({
   title_honorific: z.string().optional(),
   firstname: z.string().min(1, "First name is required"),
@@ -65,27 +64,27 @@ const candidateDetailsSchema = z.object({
   job_suitable: z.array(jobSuitableEntrySchema).optional().default([]),
 });
 
-// Main schema for creating a candidate
 const createCandidateSchema = z.object({
-  // Top-level fields are now primarily for API convenience; source of truth is parsedData.
-  // If name, email, phone are not provided top-level, they MUST be in parsedData.
-  name: z.string().min(1, { message: "Name is required" }).optional(), // Will be derived if not provided
-  email: z.string().email({ message: "Invalid email address" }).optional(), // Will be derived
-  phone: z.string().optional().nullable(), // Will be derived
+  name: z.string().min(1, { message: "Name is required" }).optional(),
+  email: z.string().email({ message: "Invalid email address" }).optional(),
+  phone: z.string().optional().nullable(),
   positionId: z.string().uuid({ message: "Valid Position ID (UUID) is required" }).nullable(),
   fitScore: z.number().min(0).max(100).optional().default(0),
   status: z.enum(candidateStatusValues).optional().default('Applied'),
   applicationDate: z.string().datetime({ message: "Invalid datetime string. Must be UTC ISO8601" }).optional(),
-  // parsedData now expects the detailed CandidateDetails structure
-  parsedData: candidateDetailsSchema.optional(), // Make it optional, but if provided, it must match CandidateDetails
+  parsedData: candidateDetailsSchema.optional(),
   resumePath: z.string().optional().nullable(),
 });
 
 
 export async function GET(request: NextRequest) {
   const session = await getServerSession(authOptions);
-  if (!session) {
+  if (!session?.user) {
     return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+  }
+  const userRole = session.user.role;
+  if (!userRole || !['Admin', 'Recruiter', 'Hiring Manager'].includes(userRole)) {
+    return NextResponse.json({ message: "Forbidden: Insufficient permissions" }, { status: 403 });
   }
 
   try {
@@ -143,7 +142,6 @@ export async function GET(request: NextRequest) {
     
     const candidates = result.rows.map(row => ({
         ...row,
-        // Ensure parsedData is an object, even if null from DB, for type consistency
         parsedData: row.parsedData || { personal_info: {}, contact_info: {} }, 
         position: row.positionId ? { 
             id: row.positionId,
@@ -161,8 +159,12 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   const session = await getServerSession(authOptions);
-  if (!session) {
+  if (!session?.user) {
     return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+  }
+  const userRole = session.user.role;
+  if (!userRole || !['Admin', 'Recruiter'].includes(userRole)) {
+    return NextResponse.json({ message: "Forbidden: Insufficient permissions to create candidates" }, { status: 403 });
   }
 
   let body;
@@ -184,7 +186,6 @@ export async function POST(request: NextRequest) {
 
   const rawData = validationResult.data;
   
-  // Derive name, email, phone from parsedData if not provided at top level
   const candidateName = rawData.name || (rawData.parsedData ? `${rawData.parsedData.personal_info.firstname} ${rawData.parsedData.personal_info.lastname}`.trim() : 'Unknown Candidate');
   const candidateEmail = rawData.email || (rawData.parsedData ? rawData.parsedData.contact_info.email : '');
   const candidatePhone = rawData.phone || (rawData.parsedData ? rawData.parsedData.contact_info.phone : null);
@@ -201,7 +202,6 @@ export async function POST(request: NextRequest) {
     contact_info: { email: candidateEmail, phone: candidatePhone || undefined },
   };
 
-
   const client = await pool.connect();
 
   try {
@@ -216,7 +216,6 @@ export async function POST(request: NextRequest) {
         }
     }
 
-
     const insertCandidateQuery = `
       INSERT INTO "Candidate" (name, email, phone, "positionId", "fitScore", status, "applicationDate", "parsedData", "resumePath", "createdAt", "updatedAt")
       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW(), NOW())
@@ -230,7 +229,7 @@ export async function POST(request: NextRequest) {
       rawData.fitScore,
       rawData.status,
       rawData.applicationDate ? new Date(rawData.applicationDate) : new Date(),
-      finalParsedData, // Store the structured CandidateDetails
+      finalParsedData, 
       rawData.resumePath,
     ];
     const candidateResult = await client.query(insertCandidateQuery, candidateValues);

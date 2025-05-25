@@ -17,9 +17,14 @@ const createUserSchema = z.object({
 
 export async function GET(request: NextRequest) {
   const session = await getServerSession(authOptions);
-  if (!session) {
+  if (!session?.user) {
     return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
   }
+  const userRole = session.user.role;
+  if (userRole !== 'Admin') {
+    return NextResponse.json({ message: "Forbidden: Only Admins can view all users." }, { status: 403 });
+  }
+
   // In a real app, you'd fetch from a database. Here, we use mock data.
   // Also, consider pagination for real user lists.
   return NextResponse.json(mockAppUsers, { status: 200 });
@@ -27,18 +32,19 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   const session = await getServerSession(authOptions);
-  if (!session) {
+  if (!session?.user) {
     return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
   }
-  // Add role check here: only Admins should create users
-  // if (session.user.role !== 'Admin') { // Assuming role is part of session.user
-  //   return NextResponse.json({ message: "Forbidden" }, { status: 403 });
-  // }
+  const userRole = session.user.role;
+  if (userRole !== 'Admin') {
+    return NextResponse.json({ message: "Forbidden: Only Admins can create users." }, { status: 403 });
+  }
 
   let body;
   try {
     body = await request.json();
   } catch (error) {
+    console.error("Error parsing request body for new user:", error);
     return NextResponse.json({ message: "Error parsing request body", error: (error as Error).message }, { status: 400 });
   }
 
@@ -52,15 +58,11 @@ export async function POST(request: NextRequest) {
 
   const { name, email, role } = validationResult.data;
 
-  // Check if user with this email already exists (mock implementation)
   if (mockAppUsers.some(user => user.email === email)) {
     return NextResponse.json({ message: "User with this email already exists." }, { status: 409 });
   }
 
-  // In a real app, you'd save to a database.
   const newUser = addUserToMockData({ name, email, role });
 
   return NextResponse.json(newUser, { status: 201 });
 }
-
-    

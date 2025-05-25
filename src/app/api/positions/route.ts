@@ -4,11 +4,16 @@ import pool from '../../../lib/db';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 import { z } from 'zod';
+import type { UserProfile } from '@/lib/types';
 
 export async function GET(request: NextRequest) {
   const session = await getServerSession(authOptions);
-  if (!session) {
+  if (!session?.user) {
     return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+  }
+  const userRole = session.user.role;
+  if (!userRole || !['Admin', 'Recruiter', 'Hiring Manager'].includes(userRole)) {
+    return NextResponse.json({ message: "Forbidden: Insufficient permissions" }, { status: 403 });
   }
 
   try {
@@ -52,14 +57,19 @@ const createPositionSchema = z.object({
 
 export async function POST(request: NextRequest) {
   const session = await getServerSession(authOptions);
-  if (!session) {
+  if (!session?.user) {
     return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+  }
+  const userRole = session.user.role;
+  if (!userRole || !['Admin', 'Recruiter'].includes(userRole)) {
+    return NextResponse.json({ message: "Forbidden: Insufficient permissions to create positions" }, { status: 403 });
   }
 
   let body;
   try {
     body = await request.json();
   } catch (error) {
+    console.error("Error parsing request body for new position:", error);
     return NextResponse.json({ message: "Error parsing request body", error: (error as Error).message }, { status: 400 });
   }
 

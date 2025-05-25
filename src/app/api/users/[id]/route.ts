@@ -17,32 +17,42 @@ const updateUserSchema = z.object({
 
 export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
   const session = await getServerSession(authOptions);
-  if (!session) {
+  if (!session?.user) {
     return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+  }
+  const userRole = session.user.role;
+  if (userRole !== 'Admin') {
+     // Allow users to fetch their own profile, or admins to fetch any
+     if (session.user.id !== params.id) {
+        return NextResponse.json({ message: "Forbidden: Insufficient permissions." }, { status: 403 });
+     }
   }
 
   const user = mockAppUsers.find(u => u.id === params.id);
   if (!user) {
     return NextResponse.json({ message: "User not found" }, { status: 404 });
   }
-  return NextResponse.json(user, { status: 200 });
+  // Return a simplified user object, excluding sensitive info if necessary
+  const { ...userProfile } = user; // Spread to omit potential sensitive fields if any were added
+  return NextResponse.json(userProfile, { status: 200 });
 }
 
 
 export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {
   const session = await getServerSession(authOptions);
-  if (!session) {
+  if (!session?.user) {
     return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
   }
-  // Add role check here: only Admins should update users
-  // if (session.user.role !== 'Admin') { 
-  //   return NextResponse.json({ message: "Forbidden" }, { status: 403 });
-  // }
+  const userRole = session.user.role;
+  if (userRole !== 'Admin') {
+    return NextResponse.json({ message: "Forbidden: Only Admins can update users." }, { status: 403 });
+  }
 
   let body;
   try {
     body = await request.json();
   } catch (error) {
+    console.error("Error parsing request body for user update:", error);
     return NextResponse.json({ message: "Error parsing request body", error: (error as Error).message }, { status: 400 });
   }
 
@@ -56,44 +66,46 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
 
   const updates = validationResult.data;
 
-  // In a real app, you'd update in a database.
-  const updatedUser = updateUserInMockData(params.id, updates);
-
-  if (!updatedUser) {
+  const userToUpdate = mockAppUsers.find(u => u.id === params.id);
+  if (!userToUpdate) {
     return NextResponse.json({ message: "User not found" }, { status: 404 });
   }
-  
-  // Check for email conflict if email is being changed
-  if (updates.email && mockAppUsers.some(user => user.email === updates.email && user.id !== params.id)) {
-    // Note: This is a simplified conflict check. Ideally, this check happens before attempting the update.
-    // For mock data, we might just warn or allow it, as rolling back mock data changes is trivial.
-    // A real DB would handle this with a unique constraint.
-    // return NextResponse.json({ message: "Another user with this email already exists." }, { status: 409 });
+
+  if (updates.email && updates.email !== userToUpdate.email && mockAppUsers.some(user => user.email === updates.email && user.id !== params.id)) {
+    return NextResponse.json({ message: "Another user with this email already exists." }, { status: 409 });
   }
+  
+  const updatedUser = updateUserInMockData(params.id, updates);
 
 
+  if (!updatedUser) { // Should not happen if userToUpdate was found, but as a safeguard
+    return NextResponse.json({ message: "User not found or update failed" }, { status: 404 });
+  }
+  
   return NextResponse.json(updatedUser, { status: 200 });
 }
 
 export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
   const session = await getServerSession(authOptions);
-  if (!session) {
+  if (!session?.user) {
     return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
   }
-  // Add role check here: only Admins should delete users
-  // if (session.user.role !== 'Admin') { 
-  //   return NextResponse.json({ message: "Forbidden" }, { status: 403 });
-  // }
+  const userRole = session.user.role;
+   if (userRole !== 'Admin') {
+    return NextResponse.json({ message: "Forbidden: Only Admins can delete users." }, { status: 403 });
+  }
   
   const userIndex = mockAppUsers.findIndex(u => u.id === params.id);
   if (userIndex === -1) {
     return NextResponse.json({ message: "User not found" }, { status: 404 });
   }
 
-  // In a real app, you'd delete from a database.
+  // Prevent deleting oneself if that's a desired rule
+  if (session.user.id === params.id) {
+     return NextResponse.json({ message: "Cannot delete your own account." }, { status: 403 });
+  }
+
   mockAppUsers.splice(userIndex, 1);
 
   return NextResponse.json({ message: "User deleted successfully" }, { status: 200 });
 }
-
-    
