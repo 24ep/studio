@@ -3,7 +3,7 @@
 import * as React from "react"; 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Users, Briefcase, Settings, UsersRound, Code2, ListOrdered, Palette, Zap, Settings2, CheckSquare } from "lucide-react"; 
+import { LayoutDashboard, Users, Briefcase, Settings, UsersRound, Code2, ListOrdered, Palette, Zap, Settings2, CheckSquare, FileText } from "lucide-react"; 
 import { cn } from "@/lib/utils";
 import {
   SidebarMenu,
@@ -115,7 +115,7 @@ export function SidebarNav() {
                       "justify-between group-data-[collapsible=icon]:!size-8 group-data-[collapsible=icon]:!p-2",
                       isSettingsSectionActive && "bg-sidebar-active-background-l dark:bg-sidebar-active-background-d text-sidebar-active-foreground-l dark:text-sidebar-active-foreground-d", 
                       !isSettingsSectionActive && "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
-                      "hover:no-underline h-9 my-0.5" // No explicit padding, vertical margin added
+                      "hover:no-underline h-9 my-1" // Changed my-0.5 to my-1
                     )}
                   >
                     <div className="flex items-center gap-2 group-data-[collapsible=icon]:hidden">
