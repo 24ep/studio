@@ -1,9 +1,8 @@
-
 "use client"
 import * as React from "react"; 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Users, Briefcase, Settings, UsersRound, Code2, ListOrdered, Palette, Zap, Settings2, CheckSquare } from "lucide-react"; // Added CheckSquare
+import { LayoutDashboard, Users, Briefcase, Settings, UsersRound, Code2, ListOrdered, Palette, Zap, Settings2, CheckSquare } from "lucide-react"; 
 import { cn } from "@/lib/utils";
 import {
   SidebarMenu,
@@ -23,20 +22,8 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 
-// Custom Docker icon as SVG component
-const DockerIcon = (props: React.SVGProps<SVGSVGElement>) => (
-  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
-    <path d="M5.71 1.71A12.28 12.28 0 0 0 .73 12.5h0a12.28 12.28 0 0 0 4.94 10.79H18.3a12.28 12.28 0 0 0 4.94-10.79h0A12.28 12.28 0 0 0 18.33 1.71Z"/>
-    <path d="M10 17H5"/>
-    <path d="M13.29 17H19"/>
-    <path d="M19 13.71V17"/>
-    <path d="M5 13.71V17"/>
-    <path d="M10.63 8.25A2.59 2.59 0 0 0 8.39 7a2.43 2.43 0 0 0-2.39 2.5c0 .9.34 1.58.8 2"/>
-    <path d="M16.34 8.25a2.59 2.59 0 0 0-2.24-1.25 2.43 2.43 0 0 0-2.39 2.5c0 .9.34 1.58.8 2"/>
-    <path d="M12 17v-2.09"/>
-    <path d="M12 12.5v-2.09"/>
-  </svg>
-);
+// Custom Docker icon as SVG component - This is no longer needed here
+// const DockerIcon = (props: React.SVGProps<SVGSVGElement>) => ( ... );
 
 
 const mainNavItems = [
@@ -50,7 +37,7 @@ const settingsSubItems = [
   { href: "/settings/integrations", label: "Integrations", icon: Zap },
   { href: "/setup", label: "Setup Guide", icon: Settings2 },
   { href: "/system-status", label: "System Status", icon: CheckSquare },
-  { href: "/docker-deployment", label: "Docker & Deployment", icon: DockerIcon },
+  // { href: "/docker-deployment", label: "Docker & Deployment", icon: DockerIcon }, // Removed
   { href: "/users", label: "Manage Users", icon: UsersRound },
   { href: "/api-docs", label: "API Docs", icon: Code2 },
   { href: "/logs", label: "Logs", icon: ListOrdered },
