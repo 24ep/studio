@@ -1,3 +1,4 @@
+
 // src/app/api/n8n/create-candidate-with-matches/route.ts
 import { NextResponse, type NextRequest } from 'next/server';
 import pool from '../../../../lib/db';
@@ -37,7 +38,17 @@ const experienceEntrySchema = z.object({
   description: z.string().optional().default(''),
   period: z.string().optional().default(''),
   duration: z.string().optional().default(''),
-  is_current_position: z.boolean().optional().default(false),
+  is_current_position: z.preprocess(
+    (val) => {
+      if (val === "") return false; // Treat empty string as false
+      if (val === null || val === undefined) return false; // Default for not provided
+      // Attempt to convert string "true" or "false" to boolean
+      if (typeof val === 'string' && val.toLowerCase() === 'true') return true;
+      if (typeof val === 'string' && val.toLowerCase() === 'false') return false;
+      return val; // Pass other values (like actual booleans) through
+    },
+    z.boolean().optional().default(false)
+  ),
   postition_level: z.enum(['entry level', 'mid level', 'senior level', 'lead', 'manager', 'executive']).optional(),
 }).passthrough();
 
@@ -67,7 +78,7 @@ const candidateDetailsSchemaForN8N = z.object({
 
 
 const n8nJobMatchSchema = z.object({
-  job_id: z.string(),
+  job_id: z.string().optional(), // Made optional as per example
   job_title: z.string(),
   fit_score: z.number(),
   match_reasons: z.array(z.string()),
@@ -109,9 +120,28 @@ export async function POST(request: NextRequest) {
   const email = contact_info.email;
   const phone = contact_info.phone || null;
 
+  // Validate that name is not empty after construction
+  if (!name) {
+    return NextResponse.json(
+      { message: "Invalid input: Candidate name (derived from firstname and lastname) cannot be empty.", errors: { personal_info: { firstname: ["First name is required"], lastname: ["Last name is required"] }}},
+      { status: 400 }
+    );
+  }
+
+
   let positionId: string | null = null;
   let fitScore: number = 0;
-  let finalParsedData: CandidateDetails = { ...otherDetails, personal_info, contact_info }; // This will be stored in the DB
+  // Ensure finalParsedData captures all attributes from the root of the n8n payload
+  let finalParsedData: CandidateDetails = {
+    cv_language: payload.cv_language,
+    personal_info: payload.personal_info,
+    contact_info: payload.contact_info,
+    education: payload.education,
+    experience: payload.experience,
+    skills: payload.skills,
+    job_suitable: payload.job_suitable,
+    // associatedMatchDetails will be added below if a match is found
+  };
 
   const client = await pool.connect();
   const newCandidateId = uuidv4();
@@ -143,9 +173,9 @@ export async function POST(request: NextRequest) {
           reasons: topMatch.match_reasons,
           n8nJobId: topMatch.job_id,
         };
-        await logAudit('INFO', `N8N Webhook: Matched candidate '${name}' to position '${topMatch.job_title}' (ID: ${positionId}) with fit score ${fitScore}.`, 'API:N8N:CreateCandidate');
+        await logAudit('INFO', `N8N Webhook: Matched candidate '${name}' to position '${topMatch.job_title}' (ID: ${positionId}) with fit score ${fitScore}.`, 'API:N8N:CreateCandidate', null, { candidateName: name, positionTitle: topMatch.job_title, positionId, fitScore});
       } else {
-        await logAudit('INFO', `N8N Webhook: No open position found matching title '${topMatch.job_title}' for candidate '${name}'. Candidate will be created without position assignment.`, 'API:N8N:CreateCandidate');
+        await logAudit('INFO', `N8N Webhook: No open position found matching title '${topMatch.job_title}' for candidate '${name}'. Candidate will be created without position assignment.`, 'API:N8N:CreateCandidate', null, { candidateName: name, searchedPositionTitle: topMatch.job_title });
       }
     }
 
@@ -181,7 +211,37 @@ export async function POST(request: NextRequest) {
 
     await client.query('COMMIT');
     await logAudit('AUDIT', `N8N Webhook: Candidate '${newCandidate.name}' (ID: ${newCandidate.id}) created successfully.`, 'API:N8N:CreateCandidate', null, { candidateId: newCandidate.id, name: newCandidate.name });
-    return NextResponse.json({ message: "Candidate created successfully from n8n webhook", candidate: newCandidate }, { status: 201 });
+    
+    // Fetch the fully detailed candidate to return
+    const finalCandidateQuery = `
+      SELECT 
+        c.*, 
+        p.title as "positionTitle",
+        p.department as "positionDepartment",
+        COALESCE(
+          (SELECT json_agg(th.* ORDER BY th.date DESC) FROM "TransitionRecord" th WHERE th."candidateId" = c.id), 
+          '[]'::json
+        ) as "transitionHistory"
+      FROM "Candidate" c
+      LEFT JOIN "Position" p ON c."positionId" = p.id
+      WHERE c.id = $1;
+    `;
+    const finalResult = await client.query(finalCandidateQuery, [newCandidate.id]);
+    if (finalResult.rows.length === 0) {
+        // Should not happen if insert succeeded
+        return NextResponse.json({ message: "Candidate created but failed to retrieve details" }, { status: 500 });
+    }
+    const createdCandidateWithDetails = {
+        ...finalResult.rows[0],
+        parsedData: finalResult.rows[0].parsedData || { personal_info: {}, contact_info: {} }, // Ensure parsedData exists
+        position: finalResult.rows[0].positionId ? { 
+            id: finalResult.rows[0].positionId,
+            title: finalResult.rows[0].positionTitle,
+            department: finalResult.rows[0].positionDepartment,
+        } : null,
+    };
+
+    return NextResponse.json({ message: "Candidate created successfully from n8n webhook", candidate: createdCandidateWithDetails }, { status: 201 });
 
   } catch (error: any) {
     await client.query('ROLLBACK');
@@ -192,3 +252,5 @@ export async function POST(request: NextRequest) {
     client.release();
   }
 }
+
+    
