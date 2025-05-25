@@ -9,8 +9,8 @@ import { Users, Briefcase, CheckCircle2, UserPlus, FileWarning, UserRoundSearch,
 import { isToday, parseISO } from 'date-fns';
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-// Removed useToast as it's not used
 import { signIn, useSession } from "next-auth/react";
+import { CandidatesPerPositionChart } from '@/components/dashboard/CandidatesPerPositionChart'; // Import the new chart
 
 export default function DashboardPage() {
   const [candidates, setCandidates] = useState<Candidate[]>([]);
@@ -21,6 +21,11 @@ export default function DashboardPage() {
   const { data: session, status: sessionStatus } = useSession();
 
   const fetchData = useCallback(async () => {
+    if (sessionStatus !== 'authenticated') {
+      setIsLoading(false);
+      setAuthError(true);
+      return;
+    }
     setIsLoading(true);
     setAuthError(false);
     setFetchError(null);
@@ -65,7 +70,6 @@ export default function DashboardPage() {
       
       if (criticalAuthFailure) {
          setIsLoading(false);
-         // No need to setFetchError(null) here if authError takes precedence
          return;
       }
 
@@ -76,18 +80,13 @@ export default function DashboardPage() {
     } catch (error) { 
       console.error("Unexpected error fetching dashboard data:", error);
       const genericMessage = (error as Error).message || "An unexpected error occurred while loading dashboard data.";
-      // If accumulatedFetchError was already set from an HTTP error, it will be shown.
-      // This catch block primarily handles network errors or JSON parsing errors.
-      // If there was an HTTP error already, we might want to prioritize that.
-      // For simplicity, if this catch block is reached, we set its error.
       setFetchError(genericMessage);
       setCandidates([]);
       setPositions([]);
     } finally {
       setIsLoading(false);
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sessionStatus]); // State setters (setIsLoading, setAuthError, setFetchError) are stable
+  }, [sessionStatus]); 
 
   useEffect(() => {
     if (sessionStatus === 'authenticated') {
@@ -146,6 +145,7 @@ export default function DashboardPage() {
           <Card><CardHeader><div className="h-7 w-3/4 bg-muted rounded"></div><div className="h-4 w-1/2 bg-muted rounded mt-1"></div></CardHeader><CardContent><div className="h-20 bg-muted rounded"></div></CardContent></Card>
           <Card><CardHeader><div className="h-7 w-3/4 bg-muted rounded"></div><div className="h-4 w-1/2 bg-muted rounded mt-1"></div></CardHeader><CardContent><div className="h-20 bg-muted rounded"></div></CardContent></Card>
         </div>
+        <Card><CardHeader><div className="h-7 w-full bg-muted rounded"></div></CardHeader><CardContent><div className="h-64 bg-muted rounded"></div></CardContent></Card>
       </div>
     );
   }
@@ -269,8 +269,9 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
       </div>
+      
+      <CandidatesPerPositionChart candidates={candidates} positions={positions.filter(p => p.isOpen)} />
+
     </div>
   );
 }
-
-    
