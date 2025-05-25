@@ -17,7 +17,7 @@ This is a Next.js application prototype for NCC Candidate Management, an Applica
 *   Application Logs Page (Database-backed)
 *   Authentication:
     *   Azure AD SSO
-    *   Credentials (Email/Password - backed by PostgreSQL)
+    *   Credentials (Email/Password - backed by PostgreSQL, **passwords are hashed using bcrypt**)
 *   Styling with ShadCN UI components and Tailwind CSS.
 *   Backend API routes for Candidates, Positions, Users, and Logs using PostgreSQL (via `pg` library) and file uploads to MinIO.
 *   Resume uploads can optionally trigger an n8n webhook if `N8N_RESUME_WEBHOOK_URL` is configured.
@@ -35,6 +35,7 @@ This is a Next.js application prototype for NCC Candidate Management, an Applica
 *   Redis (conceptual, for future real-time features)
 *   Genkit (conceptual, for future AI features)
 *   Docker & Docker Compose
+*   `bcrypt` for password hashing.
 
 ## Getting Started
 
@@ -100,6 +101,7 @@ This is the recommended way to run the application along with its backend servic
             ```bash
             docker-compose down -v
             ```
+            This command removes named volumes defined in `docker-compose.yml` and anonymous volumes attached to containers.
         3.  **Restart the services (this will rebuild if necessary):**
             ```bash
             docker-compose up --build -d
@@ -184,9 +186,10 @@ This application is a prototype. For production readiness, consider the followin
 *   **Real-time Features:** Implement WebSocket connections and Redis pub/sub for real-time updates.
 *   **UX/UI Polish:** Continue refining the user experience and interface.
 *   **Security Hardening:** Implement rate limiting, advanced security headers, etc. (Consider using an API Gateway like Kong for some of these aspects).
-*   **Password Hashing:** Ensure passwords for the Credentials login are securely hashed (e.g., using bcrypt) in the `User` table and during login checks. The current prototype uses plaintext for simplicity in the `User` table and `CredentialsProvider`. **THIS IS CRITICAL FOR PRODUCTION.**
+*   **Password Hashing:** User passwords for the Credentials login are now hashed using `bcrypt`. Ensure strong password policies are encouraged.
 
 ## Connectivity Checks
 
 *   **PostgreSQL:** The application attempts to connect and execute a test query (`SELECT NOW()`) when the `src/lib/db.ts` module is initialized. Check your application server's console logs for "Successfully connected to PostgreSQL database..." or connection error messages.
 *   **MinIO:** The application attempts to connect and check/create the resume bucket when `src/lib/minio.ts` is initialized. Check application server logs for "Successfully connected to MinIO server..." or "MinIO: Bucket ... already exists/created..." or related error messages.
+

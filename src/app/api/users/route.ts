@@ -7,13 +7,14 @@ import { z } from 'zod';
 import pool from '../../../lib/db';
 import type { UserProfile } from '@/lib/types';
 import { v4 as uuidv4 } from 'uuid';
+import bcrypt from 'bcrypt';
 
 const userRoleEnum = z.enum(['Admin', 'Recruiter', 'Hiring Manager']);
 
 const createUserSchema = z.object({
   name: z.string().min(1, "Name is required"),
   email: z.string().email("Invalid email address"),
-  password: z.string().min(6, "Password must be at least 6 characters long"), // Added password
+  password: z.string().min(6, "Password must be at least 6 characters long"),
   role: userRoleEnum,
 });
 
@@ -64,12 +65,15 @@ export async function POST(request: NextRequest) {
 
   const { name, email, password, role } = validationResult.data;
 
-  // IMPORTANT: In production, you MUST hash the password here before storing it.
-  // Example using bcrypt (install bcrypt: npm install bcrypt @types/bcrypt):
-  // const bcrypt = require('bcrypt');
-  // const saltRounds = 10;
-  // const hashedPassword = await bcrypt.hash(password, saltRounds);
-  const plainPasswordForNow = password; // Replace with hashedPassword
+  const saltRounds = 10; // Standard salt rounds for bcrypt
+  let hashedPassword;
+  try {
+    hashedPassword = await bcrypt.hash(password, saltRounds);
+  } catch (hashError) {
+    console.error("Error hashing password:", hashError);
+    return NextResponse.json({ message: "Error processing user creation (hashing failed)." }, { status: 500 });
+  }
+  
 
   try {
     const checkEmailQuery = 'SELECT id FROM "User" WHERE email = $1';
@@ -86,13 +90,12 @@ export async function POST(request: NextRequest) {
       VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), NOW())
       RETURNING id, name, email, role, "avatarUrl", "dataAiHint", "createdAt", "updatedAt";
     `;
-    // Use plainPasswordForNow - MUST BE REPLACED WITH HASHED PASSWORD IN PRODUCTION
-    const result = await pool.query(insertQuery, [uuidv4(), name, email, plainPasswordForNow, role, defaultAvatarUrl, defaultDataAiHint]);
+    const result = await pool.query(insertQuery, [uuidv4(), name, email, hashedPassword, role, defaultAvatarUrl, defaultDataAiHint]);
     
     return NextResponse.json(result.rows[0], { status: 201 });
   } catch (error: any) {
     console.error("Failed to create user:", error);
-    if (error.code === '23505' && error.constraint === 'User_email_key') { // Double check constraint name
+    if (error.code === '23505' && error.constraint === 'User_email_key') { 
       return NextResponse.json({ message: "User with this email already exists." }, { status: 409 });
     }
     return NextResponse.json({ message: "Error creating user", error: error.message }, { status: 500 });

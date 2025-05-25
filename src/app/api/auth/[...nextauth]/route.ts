@@ -5,6 +5,7 @@ import AzureADProvider from 'next-auth/providers/azure-ad';
 import CredentialsProvider from 'next-auth/providers/credentials';
 import pool from '../../../../lib/db'; // Import the db pool
 import type { UserProfile } from '@/lib/types';
+import bcrypt from 'bcrypt';
 
 export const authOptions: NextAuthOptions = {
   providers: [
@@ -19,7 +20,7 @@ export const authOptions: NextAuthOptions = {
           name: profile.name,
           email: profile.email,
           image: profile.picture,
-          // role: mapAzureGroupsToRoles(profile.groups) // Example: custom function to map roles
+          // role: mapAzureGroupsToRoles(profile.groups) // Example: custom function to map roles. Ensure roles are part of the JWT/session.
         };
       }
     }),
@@ -46,11 +47,7 @@ export const authOptions: NextAuthOptions = {
           
           const userFromDb = result.rows[0];
 
-          // --- THIS IS PLAINTEXT PASSWORD CHECKING - NOT FOR PRODUCTION ---
-          // In a real app, use bcrypt.compare(credentials.password, userFromDb.password)
-          // where userFromDb.password is the hashed password.
-          const isPasswordValid = credentials.password === userFromDb.password; 
-          // --- END INSECURE PASSWORD CHECK ---
+          const isPasswordValid = await bcrypt.compare(credentials.password, userFromDb.password);
 
           if (isPasswordValid) {
             return {
@@ -65,11 +62,10 @@ export const authOptions: NextAuthOptions = {
             throw new Error("Invalid email or password.");
           }
         } catch (error) {
-            // Log the actual error for debugging if it's not one of our thrown errors
             if (!(error instanceof Error && (error.message === "Invalid email or password." || error.message === "Please enter both email and password."))) {
               console.error("Error during credentials authorization:", error);
             }
-            throw error; // Re-throw the error to be handled by NextAuth
+            throw error; 
         } finally {
           client.release();
         }
@@ -85,12 +81,13 @@ export const authOptions: NextAuthOptions = {
         token.id = user.id;
         token.email = user.email;
         token.name = user.name;
-        token.picture = user.image; // NextAuth `User` type has `image`
-        if ((user as any).role) { // Cast to any if role isn't on default User type
+        token.picture = user.image;
+        if ((user as any).role) {
           token.role = (user as any).role as UserProfile['role'];
         }
       }
       // For Azure AD, if role wasn't mapped in profile(), you might map it here
+      // or ensure profile mapping includes the role from group claims.
       // if (account?.provider === "azure-ad" && profile) {
       //   // example: token.role = mapAzureGroupsToRoles(profile.groups)
       // }
