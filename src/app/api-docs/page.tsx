@@ -62,23 +62,21 @@ const apiEndpoints: ApiEndpoint[] = [
   {
     method: "POST",
     path: "/api/n8n/create-candidate-with-matches",
-    description: "Webhook endpoint for n8n to create candidates with job matching details. Expects an array of candidate entries.",
-    requestBody: "JSON: `N8NCandidateWebhookEntry[]` where each entry is ` { candidate_info: CandidateDetails, jobs: N8NJobMatch[] } ` (See `N8NCandidateWebhookEntry` type in `lib/types.ts`)",
-    response: "JSON: `{ message: string, results: Array<{status: string, candidate?: Candidate, email?: string, message?: string}> }`",
+    description: "Webhook endpoint for n8n to create a candidate with job matching details. Expects a single candidate entry object.",
+    requestBody: "JSON: `{ candidate_info: CandidateDetails, jobs: N8NJobMatch[] }` (See `N8NCandidateWebhookEntry` type in `lib/types.ts`)",
+    response: "JSON: `{ status: 'success' | 'skipped' | 'error', candidate?: Candidate, email?: string, message?: string, candidateId?: string }`",
     curlExample: `curl -X POST \\\n` +
                  `  -H 'Content-Type: application/json' \\\n` +
-                 `  -d '[ \\\n` +
-                 `    { \\\n` +
-                 `      "candidate_info": { \\\n` +
-                 `        "personal_info": { "firstname": "Jane", "lastname": "Parsed" }, \\\n` +
-                 `        "contact_info": { "email": "jane.parsed@example.com" }, \\\n` +
-                 `        "education": [], "experience": [], "skills": [], "job_suitable": [] \\\n` +
-                 `      }, \\\n` +
-                 `      "jobs": [ \\\n` +
-                 `        { "job_id": "N8N_JOB_001", "job_title": "Software Engineer", "fit_score": 90, "match_reasons": ["Strong Python skill"] } \\\n` +
-                 `      ] \\\n` +
-                 `    } \\\n` +
-                 `  ]' \\\n` +
+                 `  -d '{ \\\n` +
+                 `    "candidate_info": { \\\n` +
+                 `      "personal_info": { "firstname": "Jane", "lastname": "Parsed" }, \\\n` +
+                 `      "contact_info": { "email": "jane.parsed@example.com" }, \\\n` +
+                 `      "education": [], "experience": [], "skills": [], "job_suitable": [] \\\n` +
+                 `    }, \\\n` +
+                 `    "jobs": [ \\\n` +
+                 `      { "job_id": "N8N_JOB_001", "job_title": "Software Engineer", "fit_score": 90, "match_reasons": ["Strong Python skill"] } \\\n` +
+                 `    ] \\\n` +
+                 `  }' \\\n` +
                  `  http://localhost:9002/api/n8n/create-candidate-with-matches`,
   },
   {
@@ -251,7 +249,7 @@ const apiEndpoints: ApiEndpoint[] = [
     response: "JSON: `{ message: 'Password changed successfully.' }` or error message.",
     curlExample: `curl -X POST \\\n` +
                  `  -H 'Content-Type: application/json' \\\n` +
-                 `  -H 'Authorization: Bearer <YOUR_AUTH_TOKEN_OR_COOKIE>' \\\n` +
+                 `  -H 'Authorization: Bearer <YOUR_AUTH_TOKEN_OR_COOKIE>' \\\n` + // Kept for this specific auth endpoint
                  `  -d '{ \\\n` +
                  `    "currentPassword": "oldPassword123", \\\n` +
                  `    "newPassword": "newStrongPassword456" \\\n` +
@@ -265,7 +263,7 @@ const apiEndpoints: ApiEndpoint[] = [
     requestBody: "N/A",
     response: "JSON: Session object or null.",
     curlExample: `curl http://localhost:9002/api/auth/session \\\n` +
-                 `  -H 'Cookie: next-auth.session-token=your-session-token-here'`,
+                 `  -H 'Cookie: next-auth.session-token=your-session-token-here'`, // Session typically cookie-based
   },
   {
     method: "PUT",
@@ -318,10 +316,10 @@ const apiEndpoints: ApiEndpoint[] = [
                  `# POST <N8N_GENERIC_PDF_WEBHOOK_URL>\n`+
                  `# Content-Type: application/json\n`+
                  `# Body:\n` +
-                 `# { \n` +
-                 `#   "fileName": "generic_document.pdf", \n` +
-                 `#   "mimeType": "application/pdf", \n` +
-                 `#   "fileDataUri": "data:application/pdf;base64,..." \n` +
+                 `# { \\\n` +
+                 `#   "fileName": "generic_document.pdf", \\\n` +
+                 `#   "mimeType": "application/pdf", \\\n` +
+                 `#   "fileDataUri": "data:application/pdf;base64,..." \\\n` +
                  `# }`,
   },
 ];
