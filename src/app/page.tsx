@@ -9,7 +9,7 @@ import { Users, Briefcase, CheckCircle2, UserPlus, FileWarning, UserRoundSearch,
 import { isToday, parseISO } from 'date-fns';
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { useToast } from "@/hooks/use-toast";
+// Removed useToast as it's not used
 import { signIn, useSession } from "next-auth/react";
 
 export default function DashboardPage() {
@@ -18,22 +18,20 @@ export default function DashboardPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [authError, setAuthError] = useState(false);
   const [fetchError, setFetchError] = useState<string | null>(null);
-  const { toast } = useToast();
   const { data: session, status: sessionStatus } = useSession();
 
   const fetchData = useCallback(async () => {
     setIsLoading(true);
     setAuthError(false);
     setFetchError(null);
+    let criticalAuthFailure = false;
+    let accumulatedFetchError = "";
 
     try {
       const [candidatesRes, positionsRes] = await Promise.all([
         fetch('/api/candidates'),
         fetch('/api/positions'),
       ]);
-
-      let criticalAuthFailure = false;
-      let accumulatedFetchError = "";
 
       // Process Candidates Response
       if (!candidatesRes.ok) {
@@ -42,10 +40,9 @@ export default function DashboardPage() {
           setAuthError(true);
           criticalAuthFailure = true;
         } else {
-          // Corrected: Accumulate error instead of throwing
           accumulatedFetchError += `Failed to fetch candidates: ${errorText}. `;
         }
-        setCandidates([]); // Clear data on error
+        setCandidates([]);
       } else {
         const candidatesData: Candidate[] = await candidatesRes.json();
         setCandidates(candidatesData);
@@ -58,10 +55,9 @@ export default function DashboardPage() {
           setAuthError(true);
           criticalAuthFailure = true;
         } else {
-          // Corrected: Accumulate error instead of throwing
           accumulatedFetchError += `Failed to fetch positions: ${errorText}. `;
         }
-        setPositions([]); // Clear data on error
+        setPositions([]);
       } else {
         const positionsData: Position[] = await positionsRes.json();
         setPositions(positionsData);
@@ -69,7 +65,7 @@ export default function DashboardPage() {
       
       if (criticalAuthFailure) {
          setIsLoading(false);
-         setFetchError(null); // Clear non-auth errors if auth is the primary issue
+         // No need to setFetchError(null) here if authError takes precedence
          return;
       }
 
@@ -80,19 +76,18 @@ export default function DashboardPage() {
     } catch (error) { 
       console.error("Unexpected error fetching dashboard data:", error);
       const genericMessage = (error as Error).message || "An unexpected error occurred while loading dashboard data.";
-      // Ensure accumulatedFetchError from try block is preserved if error is from JSON parsing etc.
-      setFetchError(prev => {
-        let newError = prev || "";
-        if (fetchError) newError += `${fetchError} `; // Append error from inside try if it was set
-        newError += genericMessage;
-        return newError.trim();
-      });
+      // If accumulatedFetchError was already set from an HTTP error, it will be shown.
+      // This catch block primarily handles network errors or JSON parsing errors.
+      // If there was an HTTP error already, we might want to prioritize that.
+      // For simplicity, if this catch block is reached, we set its error.
+      setFetchError(genericMessage);
       setCandidates([]);
       setPositions([]);
     } finally {
       setIsLoading(false);
     }
-  }, [sessionStatus]); // Removed toast from dependencies as it's not used in fetchData
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sessionStatus]); // State setters (setIsLoading, setAuthError, setFetchError) are stable
 
   useEffect(() => {
     if (sessionStatus === 'authenticated') {
@@ -110,7 +105,7 @@ export default function DashboardPage() {
   
   const hiredCandidatesThisMonth = candidates.filter(c => {
     try {
-      if (!c.applicationDate) return false;
+      if (!c.applicationDate || typeof c.applicationDate !== 'string') return false;
       const appDate = parseISO(c.applicationDate); 
       return c.status === 'Hired' && appDate.getFullYear() === new Date().getFullYear() && appDate.getMonth() === new Date().getMonth();
     } catch { return false; }
@@ -118,7 +113,7 @@ export default function DashboardPage() {
 
   const newCandidatesTodayList = candidates.filter(c => {
     try {
-      if (!c.applicationDate) return false;
+      if (!c.applicationDate || typeof c.applicationDate !== 'string') return false;
       const appDate = parseISO(c.applicationDate);
       return isToday(appDate);
     } catch (error) {
@@ -277,3 +272,5 @@ export default function DashboardPage() {
     </div>
   );
 }
+
+    
