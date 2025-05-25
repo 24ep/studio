@@ -1,6 +1,6 @@
 
 import { NextResponse, type NextRequest } from 'next/server';
-import prisma from '../../../../lib/prisma'; // Changed to relative path
+import prisma from '../../../../lib/prisma'; // Using relative path
 import type { CandidateStatus, ParsedResumeData } from '@/lib/types';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/app/api/auth/[...nextauth]/route';
