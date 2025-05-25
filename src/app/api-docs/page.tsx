@@ -1,3 +1,4 @@
+
 // src/app/api-docs/page.tsx
 "use client";
 
@@ -46,7 +47,16 @@ const apiEndpoints: ApiEndpoint[] = [
     response: "JSON: `Candidate` (Newly created candidate object)",
     curlExample: `curl -X POST \\\n` +
                  `  -H 'Content-Type: application/json' \\\n` +
-                 `  -d '{"name":"John Doe", "email":"john@example.com", "status":"Applied", "parsedData": { "personal_info": {"firstname":"John", "lastname":"Doe"}, "contact_info": {"email":"john@example.com"}}, "positionId": null}' \\\n` +
+                 `  -d '{ \\ \n` +
+                 `    "name": "John Doe", \\ \n` +
+                 `    "email": "john@example.com", \\ \n` +
+                 `    "status": "Applied", \\ \n` +
+                 `    "parsedData": { \\ \n` +
+                 `      "personal_info": {"firstname": "John", "lastname": "Doe"}, \\ \n` +
+                 `      "contact_info": {"email": "john@example.com"} \\ \n` +
+                 `    }, \\ \n` +
+                 `    "positionId": null \\ \n` +
+                 `  }' \\\n` +
                  `  http://localhost:9002/api/candidates`,
   },
   {
@@ -57,11 +67,13 @@ const apiEndpoints: ApiEndpoint[] = [
     response: "JSON: `{ message: string, candidate: Candidate }` or error response",
     curlExample: `curl -X POST \\\n` +
                  `  -H 'Content-Type: application/json' \\\n` +
-                 `  -d '{\\n` +
-                 `    "cv_language": "en",\\n` +
-                 `    "personal_info": { "firstname": "Jane", "lastname": "Parsed" },\\n` +
-                 `    "contact_info": { "email": "jane.parsed@example.com" },\\n` +
-                 `    "job_matches": [ { "job_id": "N8N_JOB_001", "job_title": "Software Engineer", "fit_score": 90, "match_reasons": ["Strong Python"] } ]\\n` +
+                 `  -d '{ \\ \n` +
+                 `    "cv_language": "en", \\ \n` +
+                 `    "personal_info": { "firstname": "Jane", "lastname": "Parsed" }, \\ \n` +
+                 `    "contact_info": { "email": "jane.parsed@example.com" }, \\ \n` +
+                 `    "job_matches": [ \\ \n` +
+                 `      { "job_id": "N8N_JOB_001", "job_title": "Software Engineer", "fit_score": 90, "match_reasons": ["Strong Python"] } \\ \n` +
+                 `    ] \\ \n` +
                  `  }' \\\n` +
                  `  http://localhost:9002/api/n8n/create-candidate-with-matches`,
   },
@@ -81,7 +93,9 @@ const apiEndpoints: ApiEndpoint[] = [
     response: "JSON: `Candidate` (Updated candidate object with transition history)",
     curlExample: `curl -X PUT \\\n` +
                  `  -H 'Content-Type: application/json' \\\n` +
-                 `  -d '{"status":"Interviewing"}' \\\n` +
+                 `  -d '{ \\ \n` +
+                 `    "status": "Interviewing" \\ \n` +
+                 `  }' \\\n` +
                  `  http://localhost:9002/api/candidates/your-candidate-id`,
   },
   {
@@ -118,7 +132,12 @@ const apiEndpoints: ApiEndpoint[] = [
     response: "JSON: `Position` (Newly created position object)",
     curlExample: `curl -X POST \\\n` +
                  `  -H 'Content-Type: application/json' \\\n` +
-                 `  -d '{"title":"New Role", "department":"Engineering", "isOpen":true, "position_level":"Senior"}' \\\n` +
+                 `  -d '{ \\ \n` +
+                 `    "title": "New Role", \\ \n` +
+                 `    "department": "Engineering", \\ \n` +
+                 `    "isOpen": true, \\ \n` +
+                 `    "position_level": "Senior" \\ \n` +
+                 `  }' \\\n` +
                  `  http://localhost:9002/api/positions`,
   },
   {
@@ -137,7 +156,10 @@ const apiEndpoints: ApiEndpoint[] = [
     response: "JSON: `Position` (Updated position object)",
     curlExample: `curl -X PUT \\\n` +
                  `  -H 'Content-Type: application/json' \\\n` +
-                 `  -d '{"isOpen":false, "position_level":"Lead"}' \\\n` +
+                 `  -d '{ \\ \n` +
+                 `    "isOpen": false, \\ \n` +
+                 `    "position_level": "Lead" \\ \n` +
+                 `  }' \\\n` +
                  `  http://localhost:9002/api/positions/your-position-id`,
   },
   {
@@ -164,7 +186,12 @@ const apiEndpoints: ApiEndpoint[] = [
     response: "JSON: `UserProfile` (Newly created user profile object, password not returned)",
     curlExample: `curl -X POST \\\n` +
                  `  -H 'Content-Type: application/json' \\\n` +
-                 `  -d '{"name":"Test User", "email":"test@example.com", "password":"strongpassword123", "role":"Recruiter"}' \\\n` +
+                 `  -d '{ \\ \n` +
+                 `    "name": "Test User", \\ \n` +
+                 `    "email": "test@example.com", \\ \n` +
+                 `    "password": "strongpassword123", \\ \n` +
+                 `    "role": "Recruiter" \\ \n` +
+                 `  }' \\\n` +
                  `  http://localhost:9002/api/users`,
   },
   {
@@ -175,7 +202,9 @@ const apiEndpoints: ApiEndpoint[] = [
     response: "JSON: `UserProfile` (Updated user profile object, password not returned)",
     curlExample: `curl -X PUT \\\n` +
                  `  -H 'Content-Type: application/json' \\\n` +
-                 `  -d '{"role":"Admin"}' \\\n` +
+                 `  -d '{ \\ \n` +
+                 `    "role": "Admin" \\ \n` +
+                 `  }' \\\n` +
                  `  http://localhost:9002/api/users/user-id-to-update`,
   },
   {
@@ -194,7 +223,12 @@ const apiEndpoints: ApiEndpoint[] = [
     response: "JSON: `LogEntry` (Newly created log entry object)",
     curlExample: `curl -X POST \\\n` +
                  `  -H 'Content-Type: application/json' \\\n` +
-                 `  -d '{"level":"AUDIT", "message":"User logged in", "source":"AuthAPI", "actingUserId":"user-id-123"}' \\\n` +
+                 `  -d '{ \\ \n` +
+                 `    "level": "AUDIT", \\ \n` +
+                 `    "message": "User logged in", \\ \n` +
+                 `    "source": "AuthAPI", \\ \n` +
+                 `    "actingUserId": "user-id-123" \\ \n` +
+                 `  }' \\\n` +
                  `  http://localhost:9002/api/logs`,
   },
   {
@@ -213,8 +247,11 @@ const apiEndpoints: ApiEndpoint[] = [
     response: "JSON: `{ message: 'Password changed successfully.' }` or error message.",
     curlExample: `curl -X POST \\\n` +
                  `  -H 'Content-Type: application/json' \\\n` +
-                 `  -H 'Authorization: Bearer <YOUR_AUTH_TOKEN_OR_COOKIE>' \\\n` + // Kept as it's auth-related
-                 `  -d '{"currentPassword":"oldPassword123", "newPassword":"newStrongPassword456"}' \\\n` +
+                 `  -H 'Authorization: Bearer <YOUR_AUTH_TOKEN_OR_COOKIE>' \\\n` +
+                 `  -d '{ \\ \n` +
+                 `    "currentPassword": "oldPassword123", \\ \n` +
+                 `    "newPassword": "newStrongPassword456" \\ \n` +
+                 `  }' \\\n` +
                  `  http://localhost:9002/api/auth/change-password`,
   },
   {
@@ -224,7 +261,7 @@ const apiEndpoints: ApiEndpoint[] = [
     requestBody: "N/A",
     response: "JSON: Session object or null.",
     curlExample: `curl http://localhost:9002/api/auth/session \\\n` +
-                 `  -H 'Authorization: Bearer <YOUR_AUTH_TOKEN_OR_COOKIE>'`, // Kept as it's auth-related
+                 `  -H 'Authorization: Bearer <YOUR_AUTH_TOKEN_OR_COOKIE>'`,
   },
   {
     method: "PUT",
@@ -234,7 +271,9 @@ const apiEndpoints: ApiEndpoint[] = [
     response: "JSON: `TransitionRecord` (Updated transition record)",
     curlExample: `curl -X PUT \\\n` +
                  `  -H 'Content-Type: application/json' \\\n` +
-                 `  -d '{"notes":"Updated notes for this stage."}' \\\n` +
+                 `  -d '{ \\ \n` +
+                 `    "notes": "Updated notes for this stage." \\ \n` +
+                 `  }' \\\n` +
                  `  http://localhost:9002/api/transitions/transition-record-id`,
   },
   {
@@ -265,18 +304,27 @@ const apiEndpoints: ApiEndpoint[] = [
     method: "POST",
     path: "/api/n8n/webhook-proxy",
     description: "Proxies a PDF file upload to the generic n8n webhook (`N8N_GENERIC_PDF_WEBHOOK_URL`). Uploaded as FormData, n8n receives file as base64 data URI in JSON.",
-    requestBody: "FormData: `pdfFile`: File (PDF)",
+    requestBody: "JSON (Proxied by API): `{ fileName: string, mimeType: string, fileDataUri: string, ... }`",
     response: "JSON: `{ message: 'PDF successfully sent to n8n workflow.', n8nResponse?: any }`",
-    curlExample: `curl -X POST \\\n` +
-                 `  -F 'pdfFile=@generic_document.pdf' \\\n` +
-                 `  http://localhost:9002/api/n8n/webhook-proxy`,
+    curlExample: `# Client uploads FormData with "pdfFile"\n` +
+                 `# API internally converts to JSON with data URI for n8n:\n` +
+                 `curl -X POST \\\n` +
+                 `  -H 'Content-Type: application/json' \\\n` +
+                 `  -d '{ \\ \n` +
+                 `    "fileName": "generic_document.pdf", \\ \n` +
+                 `    "mimeType": "application/pdf", \\ \n` +
+                 `    "fileDataUri": "data:application/pdf;base64,..." \\ \n` +
+                 `  }' \\\n` +
+                 `  # THIS CURL IS FOR N8N_GENERIC_PDF_WEBHOOK_URL (not /api/n8n/webhook-proxy directly)\n` +
+                 `  # To test /api/n8n/webhook-proxy, use FormData:\n` +
+                 `# curl -X POST -F 'pdfFile=@generic_document.pdf' http://localhost:9002/api/n8n/webhook-proxy`,
   },
 ];
 
 const getMethodBadgeVariant = (method: string) => {
   switch (method.toUpperCase()) {
     case "GET":
-    case "POST": // Changed to outline for consistency
+    case "POST":
       return "outline";
     case "PUT":
       return "secondary";
@@ -301,7 +349,7 @@ export default function ApiDocumentationPage() {
     if (!navigator.clipboard) {
       toast({
         title: "Clipboard API Not Available",
-        description: "Copying to clipboard is not supported in this browser or context (e.g., non-HTTPS or sandboxed iframes).",
+        description: "Copying to clipboard is not supported in this browser or context (e.g., non-HTTPS or sandboxed iframes). Try selecting the text manually.",
         variant: "destructive",
       });
       return;
@@ -313,7 +361,7 @@ export default function ApiDocumentationPage() {
       console.error("Failed to copy cURL command:", err);
       toast({
         title: "Failed to copy",
-        description: "Could not copy cURL command. This might be due to browser permissions or if the page is not served over HTTPS.",
+        description: "Could not copy cURL command. This might be due to browser permissions or if the page is not served over HTTPS. Try selecting the text manually.",
         variant: "destructive",
       });
     }
@@ -327,7 +375,7 @@ export default function ApiDocumentationPage() {
             <Code2 className="mr-2 h-6 w-6 text-primary" /> API Documentation
           </CardTitle>
           <CardDescription>
-            Overview of available API endpoints for NCC Candidate Management.
+            Overview of available API endpoints for Candidate Matching.
             The base URL is <code>http://localhost:9002</code> for these examples.
           </CardDescription>
         </CardHeader>
@@ -374,7 +422,7 @@ export default function ApiDocumentationPage() {
           </div>
 
           <div className="mt-6 text-sm text-muted-foreground space-y-2">
-            <p><strong>Authentication:</strong> Most API endpoints are currently public. Specific endpoints like <code>/api/auth/change-password</code> or <code>/api/auth/session</code> inherently involve an authenticated user context handled by NextAuth.js sessions or would require a Bearer token if accessed via an API Gateway like Kong.</p>
+            <p><strong>Authentication:</strong> Most API endpoints are currently public. Specific endpoints like <code>/api/auth/change-password</code> or <code>/api/auth/session</code> inherently involve an authenticated user context handled by NextAuth.js sessions. For direct API calls (if secured externally, e.g., via Kong), a Bearer token would typically be used.</p>
             <p><strong>Base URL:</strong> All API paths are relative to the application's base URL (e.g., <code>http://localhost:9002</code> or your production domain).</p>
             <p><strong>Error Handling:</strong> Standard HTTP status codes are used (e.g., 200 OK, 201 Created, 400 Bad Request, 401 Unauthorized, 403 Forbidden, 404 Not Found, 500 Internal Server Error). Error responses typically include a JSON body: <code>{`{ "message": "Error description", "errors?": { ... } }`}</code>.</p>
             <p><strong>Content Type:</strong> For POST and PUT requests with a body, set <code>Content-Type: application/json</code>, unless it's a file upload (<code>multipart/form-data</code> for resume uploads).</p>
@@ -421,3 +469,5 @@ export default function ApiDocumentationPage() {
     </div>
   );
 }
+
+    
