@@ -3,7 +3,7 @@
 import * as React from "react"; 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Users, Briefcase, Settings, UsersRound, Code2, ListOrdered, Palette, Zap, Settings2 } from "lucide-react";
+import { LayoutDashboard, Users, Briefcase, Settings, UsersRound, Code2, ListOrdered, Palette, Zap, Settings2, CheckSquare } from "lucide-react"; // Added CheckSquare
 import { cn } from "@/lib/utils";
 import {
   SidebarMenu,
@@ -49,6 +49,7 @@ const settingsSubItems = [
   { href: "/settings/preferences", label: "Preferences", icon: Palette },
   { href: "/settings/integrations", label: "Integrations", icon: Zap },
   { href: "/setup", label: "Setup Guide", icon: Settings2 },
+  { href: "/system-status", label: "System Status", icon: CheckSquare },
   { href: "/docker-deployment", label: "Docker & Deployment", icon: DockerIcon },
   { href: "/users", label: "Manage Users", icon: UsersRound },
   { href: "/api-docs", label: "API Docs", icon: Code2 },
@@ -153,5 +154,4 @@ export function SidebarNav() {
       </SidebarMenu>
   );
 }
-
     
