@@ -148,3 +148,4 @@ This application is a prototype. For production readiness, consider the followin
 *   **UX/UI Polish:** Continue refining the user experience and interface.
 *   **Security Hardening:** Implement rate limiting, advanced security headers, etc. (Consider using an API Gateway like Kong for some of these aspects).
 *   **Password Hashing:** Ensure passwords for the Credentials login are securely hashed (e.g., using bcrypt) in the `User` table and during login checks. The current prototype uses plaintext for simplicity in the `User` table and `CredentialsProvider`. **THIS IS CRITICAL FOR PRODUCTION.**
+
