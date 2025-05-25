@@ -2,7 +2,7 @@
 "use client"
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Users, UploadCloud, Briefcase, Settings, UsersRound } from "lucide-react";
+import { LayoutDashboard, Users, UploadCloud, Briefcase, Settings, UsersRound, Code2 } from "lucide-react"; // Added Code2
 import { cn } from "@/lib/utils";
 import {
   SidebarMenu,
@@ -17,6 +17,7 @@ const navItems = [
   { href: "/upload", label: "Upload Resume", icon: UploadCloud },
   { href: "/users", label: "Manage Users", icon: UsersRound },
   { href: "/settings", label: "Settings", icon: Settings },
+  { href: "/api-docs", label: "API Docs", icon: Code2 }, // New API Docs item
 ];
 
 export function SidebarNav() {
