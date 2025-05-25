@@ -21,7 +21,7 @@ function getPageTitle(pathname: string): string {
   if (pathname === "/") return "Dashboard";
   if (pathname.startsWith("/candidates")) return "Candidates";
   if (pathname.startsWith("/positions")) return "Positions";
-  if (pathname.startsWith("/upload")) return "Upload Resume";
+  // if (pathname.startsWith("/upload")) return "Upload Resume"; // Removed this line
   if (pathname.startsWith("/users")) return "Manage Users";
   if (pathname.startsWith("/settings/preferences")) return "Preferences";
   if (pathname.startsWith("/settings/integrations")) return "Integrations";
@@ -68,5 +68,4 @@ export function AppLayout({ children }: { children: ReactNode }) {
     </SidebarProvider>
   );
 }
-
     

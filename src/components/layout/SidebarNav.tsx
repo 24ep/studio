@@ -1,9 +1,9 @@
 
 "use client"
-import * as React from "react"; // Added this line
+import * as React from "react"; 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Users, UploadCloud, Briefcase, Settings, UsersRound, Code2, ListOrdered, Palette, Zap } from "lucide-react";
+import { LayoutDashboard, Users, Briefcase, Settings, UsersRound, Code2, ListOrdered, Palette, Zap } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   SidebarMenu,
@@ -21,14 +21,13 @@ import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
-  TooltipProvider,
 } from "@/components/ui/tooltip";
 
 const mainNavItems = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
   { href: "/candidates", label: "Candidates", icon: Users },
   { href: "/positions", label: "Positions", icon: Briefcase },
-  { href: "/upload", label: "Upload Resume", icon: UploadCloud },
+  // { href: "/upload", label: "Upload Resume", icon: UploadCloud }, // Removed this line
 ];
 
 const settingsSubItems = [
@@ -56,7 +55,8 @@ export function SidebarNav() {
     } else if (isAnyMainNavItemActive) {
       setAccordionValue(undefined);
     }
-  }, [isSettingsSectionActive, isAnyMainNavItemActive]);
+    // If neither settings nor main items are active, accordion remains as it was (user might have closed it)
+  }, [pathname, isSettingsSectionActive, isAnyMainNavItemActive]);
 
 
   return (
@@ -69,7 +69,7 @@ export function SidebarNav() {
                 isActive={pathname === item.href || (item.href !== "/" && pathname.startsWith(item.href))}
                 className="w-full justify-start"
                 tooltip={item.label}
-                onClick={() => setAccordionValue(undefined)}
+                onClick={() => setAccordionValue(undefined)} // Close settings accordion if a main item is clicked
               >
                 <a>
                   <item.icon className="h-5 w-5" />
@@ -95,7 +95,7 @@ export function SidebarNav() {
                     className={cn(
                       "flex w-full items-center gap-2 overflow-hidden rounded-md p-2 text-left text-sm outline-none ring-sidebar-ring transition-all hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-2 active:bg-sidebar-accent active:text-sidebar-accent-foreground disabled:pointer-events-none disabled:opacity-50",
                       "justify-between group-data-[collapsible=icon]:!size-8 group-data-[collapsible=icon]:!p-2",
-                      isSettingsSectionActive && !isAnyMainNavItemActive && "bg-sidebar-primary text-sidebar-primary-foreground hover:bg-sidebar-primary/90 font-medium",
+                      isSettingsSectionActive && "bg-sidebar-primary text-sidebar-primary-foreground hover:bg-sidebar-primary/90 font-medium", // Keep primary style if settings active
                       "hover:no-underline py-2"
                     )}
                   >
