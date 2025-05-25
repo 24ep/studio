@@ -3,7 +3,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { PlusCircle, Briefcase, Edit, Trash2, AlertTriangle, ServerCrash } from "lucide-react";
 import type { Position } from "@/lib/types";
 import { Badge } from "@/components/ui/badge";
@@ -11,7 +11,20 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { useToast } from "@/hooks/use-toast";
 import { signIn, useSession } from "next-auth/react";
 import { AddPositionModal, type AddPositionFormValues } from '@/components/positions/AddPositionModal'; 
+import { EditPositionModal, type EditPositionFormValues } from '@/components/positions/EditPositionModal';
 import Link from 'next/link';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+
 
 export default function PositionsPage() {
   const [positions, setPositions] = useState<Position[]>([]);
@@ -20,7 +33,12 @@ export default function PositionsPage() {
   const { data: session, status: sessionStatus } = useSession();
   const [authError, setAuthError] = useState(false);
   const [fetchError, setFetchError] = useState<string | null>(null);
+  
   const [isAddModalOpen, setIsAddModalOpen] = useState(false); 
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [selectedPositionForEdit, setSelectedPositionForEdit] = useState<Position | null>(null);
+  const [positionToDelete, setPositionToDelete] = useState<Position | null>(null);
+
 
   const fetchPositions = useCallback(async () => {
     if (sessionStatus !== 'authenticated') {
@@ -40,22 +58,24 @@ export default function PositionsPage() {
             setIsLoading(false);
             return;
         }
-        setFetchError(errorData.message || `Failed to fetch positions: ${response.statusText || `Status: ${response.status}`}`);
-        // throw new Error(errorData.message || `Failed to fetch positions: ${response.statusText || `Status: ${response.status}`}`);
-        return; // Return here to prevent setting positions to empty array on error
+        const errorMessage = errorData.message || `Failed to fetch positions: ${response.statusText || `Status: ${response.status}`}`;
+        setFetchError(errorMessage);
+        setPositions([]); // Clear positions on error
+        return; 
       }
       const data: Position[] = await response.json();
       setPositions(data);
     } catch (error) {
       console.error("Error fetching positions:", error);
-      if (!fetchError && !(error as Error).message.includes("401")) {
-        setFetchError((error as Error).message || "Could not load position data.");
+      const errorMessage = (error as Error).message || "Could not load position data.";
+      if (!fetchError && !errorMessage.includes("401")) {
+        setFetchError(errorMessage);
       }
-       setPositions([]); // Clear positions on error
+       setPositions([]); 
     } finally {
       setIsLoading(false);
     }
-  }, [sessionStatus, fetchError]); // Removed toast from dependencies
+  }, [sessionStatus, fetchError]); // fetchError removed as it was causing re-fetch loops
 
   useEffect(() => {
     if (sessionStatus === 'authenticated') {
@@ -76,6 +96,11 @@ export default function PositionsPage() {
         });
         if (!response.ok) {
             const errorData = await response.json().catch(() => ({ message: "An unknown error occurred" }));
+            if (response.status === 401 || response.status === 403) {
+                setAuthError(true);
+                toast({ title: "Authorization Error", description: errorData.message || "You don't have permission.", variant: "destructive" });
+                return;
+            }
             throw new Error(errorData.message || `Failed to add position: ${response.statusText || `Status: ${response.status}`}`);
         }
         const newPosition: Position = await response.json();
@@ -87,51 +112,92 @@ export default function PositionsPage() {
         });
     } catch (error) {
         console.error("Error adding position:", error);
-        toast({
-            title: "Error Adding Position",
-            description: (error as Error).message || "Could not add position.",
-            variant: "destructive",
-        });
+        if (!String((error as Error).message).includes("401") && !String((error as Error).message).includes("403")){
+            toast({
+                title: "Error Adding Position",
+                description: (error as Error).message || "Could not add position.",
+                variant: "destructive",
+            });
+        }
     }
   };
 
-  const handleEditPosition = (position: Position) => {
-    console.log("Edit position action triggered for:", position.title);
-    toast({ title: "Edit Position", description: `Editing for ${position.title} is not yet implemented.`, variant: "default" });
+  const handleOpenEditModal = (position: Position) => {
+    setSelectedPositionForEdit(position);
+    setIsEditModalOpen(true);
   };
 
-  const handleDeletePosition = async (position: Position) => {
-    if (window.confirm(`Are you sure you want to delete the position "${position.title}"? This action cannot be undone.`)) {
-      try {
-        const response = await fetch(`/api/positions/${position.id}`, {
-          method: 'DELETE',
-        });
-        if (!response.ok) {
-          const errorData = await response.json().catch(() => ({ message: "An unknown error occurred" }));
-          if (response.status === 401) {
+  const handleEditPositionSubmit = async (positionId: string, data: EditPositionFormValues) => {
+    try {
+      const response = await fetch(`/api/positions/${positionId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      });
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ message: "An unknown error occurred" }));
+         if (response.status === 401 || response.status === 403) {
             setAuthError(true);
-            toast({ title: "Authentication Error", description: "Your session may have expired. Please sign in again.", variant: "destructive" });
+            toast({ title: "Authorization Error", description: errorData.message || "You don't have permission.", variant: "destructive" });
             return;
-          }
-          throw new Error(errorData.message || `Failed to delete position: ${response.statusText}`);
         }
-        setPositions(prevPositions => prevPositions.filter(p => p.id !== position.id));
-        toast({ title: "Position Deleted", description: `Position "${position.title}" has been deleted.` });
-      } catch (error) {
-        console.error("Error deleting position:", error);
-         if (!(error as Error).message.includes("401")) {
+        throw new Error(errorData.message || `Failed to update position: ${response.statusText || `Status: ${response.status}`}`);
+      }
+      const updatedPosition: Position = await response.json();
+      setPositions(prevPositions => prevPositions.map(p => p.id === updatedPosition.id ? updatedPosition : p));
+      setIsEditModalOpen(false);
+      setSelectedPositionForEdit(null);
+      toast({ title: "Position Updated", description: `Position "${updatedPosition.title}" has been updated.` });
+    } catch (error) {
+      console.error("Error updating position:", error);
+       if (!String((error as Error).message).includes("401") && !String((error as Error).message).includes("403")){
             toast({
-                title: "Error Deleting Position",
+                title: "Error Updating Position",
                 description: (error as Error).message,
                 variant: "destructive",
             });
         }
+    }
+  };
+
+  const confirmDeletePosition = (position: Position) => {
+    setPositionToDelete(position);
+  };
+
+  const handleDeletePosition = async () => {
+    if (!positionToDelete) return;
+    try {
+      const response = await fetch(`/api/positions/${positionToDelete.id}`, {
+        method: 'DELETE',
+      });
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ message: "An unknown error occurred" }));
+        if (response.status === 401 || response.status === 403) {
+          setAuthError(true);
+          toast({ title: "Authorization Error", description: errorData.message || "You don't have permission.", variant: "destructive" });
+          return;
+        }
+        throw new Error(errorData.message || `Failed to delete position: ${response.statusText}`);
       }
+      setPositions(prevPositions => prevPositions.filter(p => p.id !== positionToDelete!.id));
+      toast({ title: "Position Deleted", description: `Position "${positionToDelete.title}" has been deleted.` });
+    } catch (error) {
+      console.error("Error deleting position:", error);
+      if (!String((error as Error).message).includes("401") && !String((error as Error).message).includes("403")){
+          toast({
+              title: "Error Deleting Position",
+              description: (error as Error).message,
+              variant: "destructive",
+          });
+      }
+    } finally {
+      setPositionToDelete(null); // Close dialog by resetting
     }
   };
 
 
   if (sessionStatus === 'loading' || (isLoading && !authError && !fetchError)) {
+    // Skeleton remains the same
     return (
       <div className="space-y-6 animate-pulse">
         <div className="flex justify-end h-10 mb-4"><div className="bg-muted rounded w-48 h-full"></div></div>
@@ -166,7 +232,7 @@ export default function PositionsPage() {
         <p className="text-muted-foreground mb-6">
           You need to be signed in to view or manage job positions.
         </p>
-        <Button onClick={() => signIn('azure-ad')}>Sign In</Button>
+        <Button onClick={() => signIn()}>Sign In</Button>
       </div>
     );
   }
@@ -181,7 +247,7 @@ export default function PositionsPage() {
         {isMissingTableError && (
             <div className="mb-6 p-4 border border-destructive bg-destructive/10 rounded-md text-sm">
                 <p className="font-semibold">It looks like the necessary database tables (e.g., "Position") are missing.</p>
-                <p className="mt-1">This usually means the database initialization script (`init-db.sql`) did not run correctly when the PostgreSQL Docker container started.</p>
+                <p className="mt-1">This usually means the database initialization script (`pg-init-scripts/init-db.sql`) did not run correctly when the PostgreSQL Docker container started.</p>
                 <p className="mt-2">Please refer to the troubleshooting steps in the `README.md` or go to the <Link href="/setup" className="text-primary hover:underline font-medium">Application Setup</Link> page to verify the schema and find guidance.</p>
             </div>
         )}
@@ -228,6 +294,7 @@ export default function PositionsPage() {
                 <TableRow>
                   <TableHead>Title</TableHead>
                   <TableHead>Department</TableHead>
+                  <TableHead>Level</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead className="hidden md:table-cell">Description</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
@@ -238,6 +305,7 @@ export default function PositionsPage() {
                   <TableRow key={pos.id} className="hover:bg-muted/50 transition-colors">
                     <TableCell className="font-medium">{pos.title}</TableCell>
                     <TableCell>{pos.department}</TableCell>
+                    <TableCell>{pos.position_level || 'N/A'}</TableCell>
                     <TableCell>
                       <Badge variant={pos.isOpen ? "default" : "outline"} className={pos.isOpen ? "bg-green-500 hover:bg-green-600 text-primary-foreground" : ""}>
                         {pos.isOpen ? "Open" : "Closed"}
@@ -247,14 +315,35 @@ export default function PositionsPage() {
                       {pos.description || "No description"}
                     </TableCell>
                     <TableCell className="text-right">
-                      <Button variant="ghost" size="icon" className="mr-1 h-8 w-8" onClick={() => handleEditPosition(pos)}>
+                      <Button variant="ghost" size="icon" className="mr-1 h-8 w-8" onClick={() => handleOpenEditModal(pos)}>
                         <Edit className="h-4 w-4" />
                         <span className="sr-only">Edit</span>
                       </Button>
-                       <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive h-8 w-8" onClick={() => handleDeletePosition(pos)}>
-                        <Trash2 className="h-4 w-4" />
-                        <span className="sr-only">Delete</span>
-                      </Button>
+                       <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                           <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive h-8 w-8" onClick={() => confirmDeletePosition(pos)}>
+                            <Trash2 className="h-4 w-4" />
+                            <span className="sr-only">Delete</span>
+                          </Button>
+                        </AlertDialogTrigger>
+                        {positionToDelete && positionToDelete.id === pos.id && ( 
+                           <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  This action cannot be undone. This will permanently delete the position <strong>{positionToDelete.title}</strong>. 
+                                  If there are candidates associated with this position, deletion might be blocked.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel onClick={() => setPositionToDelete(null)}>Cancel</AlertDialogCancel>
+                                <AlertDialogAction onClick={handleDeletePosition} className={buttonVariants({ variant: "destructive" })}>
+                                  Delete Position
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                        )}
+                      </AlertDialog>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -269,6 +358,17 @@ export default function PositionsPage() {
         onOpenChange={setIsAddModalOpen}
         onAddPosition={handleAddPositionSubmit}
       />
+      {selectedPositionForEdit && (
+        <EditPositionModal
+            isOpen={isEditModalOpen}
+            onOpenChange={(isOpen) => {
+                setIsEditModalOpen(isOpen);
+                if (!isOpen) setSelectedPositionForEdit(null);
+            }}
+            onEditPosition={handleEditPositionSubmit}
+            position={selectedPositionForEdit}
+        />
+      )}
     </div>
   );
 }

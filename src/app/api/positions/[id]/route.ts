@@ -4,7 +4,7 @@ import pool from '../../../../lib/db';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 import { z } from 'zod';
-import type { UserProfile } from '@/lib/types';
+import type { UserProfile, Position } from '@/lib/types';
 import { logAudit } from '@/lib/auditLog';
 
 export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
@@ -35,8 +35,9 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
 const updatePositionSchema = z.object({
   title: z.string().min(1).optional(),
   department: z.string().min(1).optional(),
-  description: z.string().optional(),
+  description: z.string().optional().nullable(),
   isOpen: z.boolean().optional(),
+  position_level: z.string().optional().nullable(),
 });
 
 export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {
@@ -80,7 +81,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
     let paramIndex = 1;
 
     Object.entries(validatedData).forEach(([key, value]) => {
-      if (value !== undefined) {
+      if (value !== undefined) { // Allow nulls to be set, but not undefined (meaning field wasn't sent)
         updateFields.push(`"${key}" = $${paramIndex++}`);
         updateValues.push(value);
       }
@@ -129,7 +130,7 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
 
     if (parseInt(positionResult.rows[0].candidateCount, 10) > 0) {
         await logAudit('WARN', `Attempt to delete position '${positionTitle}' (ID: ${params.id}) with associated candidates by ${session.user.name} (ID: ${session.user.id}). Action denied.`, 'API:Positions', session.user.id, { targetPositionId: params.id });
-        return NextResponse.json({ message: "Cannot delete position with associated candidates. Please reassign or delete candidates first." }, { status: 409 });
+        return NextResponse.json({ message: "Cannot delete position with associated candidates. Please reassign or delete candidates first." }, { status: 409 }); // 409 Conflict
     }
     
     const deleteQuery = 'DELETE FROM "Position" WHERE id = $1';
@@ -140,9 +141,10 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
   } catch (error: any) {
      console.error(`Failed to delete position ${params.id}:`, error);
      await logAudit('ERROR', `Failed to delete position ${params.id}. Error: ${(error as Error).message}`, 'API:Positions', session.user.id, { targetPositionId: params.id });
-     if (error.code === '23503') { 
-        return NextResponse.json({ message: "Cannot delete this position as it is still referenced by other entities (e.g., candidates)." }, { status: 409 });
+     if (error.code === '23503') { // Foreign key violation
+        return NextResponse.json({ message: "Cannot delete this position as it is still referenced by other entities (e.g., candidates)." }, { status: 409 }); // 409 Conflict
      }
     return NextResponse.json({ message: "Error deleting position", error: error.message }, { status: 500 });
   }
 }
+

@@ -54,8 +54,9 @@ export async function GET(request: NextRequest) {
 const createPositionSchema = z.object({
   title: z.string().min(1, { message: "Title is required" }),
   department: z.string().min(1, { message: "Department is required" }),
-  description: z.string().optional(),
+  description: z.string().optional().nullable(),
   isOpen: z.boolean({ required_error: "isOpen status is required" }),
+  position_level: z.string().optional().nullable(),
 });
 
 export async function POST(request: NextRequest) {
@@ -89,20 +90,21 @@ export async function POST(request: NextRequest) {
 
   try {
     const insertQuery = `
-      INSERT INTO "Position" (title, department, description, "isOpen", "createdAt", "updatedAt")
-      VALUES ($1, $2, $3, $4, NOW(), NOW())
+      INSERT INTO "Position" (title, department, description, "isOpen", position_level, "createdAt", "updatedAt")
+      VALUES ($1, $2, $3, $4, $5, NOW(), NOW())
       RETURNING *;
     `;
     const values = [
       validatedData.title,
       validatedData.department,
-      validatedData.description || '',
+      validatedData.description || null,
       validatedData.isOpen,
+      validatedData.position_level || null,
     ];
     const result = await pool.query(insertQuery, values);
     const newPosition = result.rows[0];
 
-    await logAudit('AUDIT', `Position '${newPosition.title}' (ID: ${newPosition.id}) created by ${session.user.name} (ID: ${session.user.id}).`, 'API:Positions', session.user.id, { targetPositionId: newPosition.id, title: newPosition.title });
+    await logAudit('AUDIT', `Position '${newPosition.title}' (ID: ${newPosition.id}) created by ${session.user.name} (ID: ${session.user.id}).`, 'API:Positions', session.user.id, { targetPositionId: newPosition.id, title: newPosition.title, department: newPosition.department, position_level: newPosition.position_level });
     return NextResponse.json(newPosition, { status: 201 });
   } catch (error) {
     console.error("Failed to create position:", error);

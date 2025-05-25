@@ -93,7 +93,7 @@ const addCandidateFormSchema = z.object({
   experience: z.array(experienceEntryFormSchema).optional(),
   skills: z.array(skillEntryFormSchema).optional(),
   job_suitable: z.array(jobSuitableEntryFormSchema).optional(),
-  positionId: z.string().uuid("Position is required").nullable(),
+  positionId: z.string().uuid("Position is required").nullable(), // Allow null for 'No specific position'
   status: z.enum(candidateStatusOptions).default('Applied'),
   fitScore: z.number().min(0).max(100).optional().default(0),
 });
@@ -165,17 +165,14 @@ export function AddCandidateModal({ isOpen, onOpenChange, onAddCandidate, availa
   const onSubmit = async (data: AddCandidateFormValues) => {
     const processedData = {
       ...data,
-      skills: data.skills?.map(s => ({
-        ...s,
-        skill: s.skill_string?.split(',').map(sk => sk.trim()).filter(sk => sk) || []
-      })),
+      // Skills are already handled correctly by API if skill_string is not defined as array in Zod
     };
     await onAddCandidate(processedData);
   };
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-3xl">
+      <DialogContent className="sm:max-w-3xl"> {/* Allow modal to be wider */}
         <DialogHeader>
           <DialogTitle className="flex items-center"><UserPlus className="mr-2 h-6 w-6 text-primary" /> Add New Candidate</DialogTitle>
           <DialogDescription>
@@ -183,7 +180,8 @@ export function AddCandidateModal({ isOpen, onOpenChange, onAddCandidate, availa
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={form.handleSubmit(onSubmit)}>
-          <ScrollArea className="max-h-[calc(80vh-160px)] p-1 pr-3"> {/* Adjusted max-height for better fit */}
+          {/* Adjusted max-height for ScrollArea and ensured DialogContent can grow */}
+          <ScrollArea className="max-h-[calc(100vh-220px)] p-1 pr-3"> 
             <div className="space-y-6 p-2">
               {/* CV Language */}
               <div>
@@ -248,13 +246,14 @@ export function AddCandidateModal({ isOpen, onOpenChange, onAddCandidate, availa
                             control={form.control}
                             render={({ field }) => (
                                 <Select
-                                  onValueChange={(value) => field.onChange(value === "" ? null : value)} 
-                                  value={field.value ?? ""} 
+                                  onValueChange={(value) => field.onChange(value === "___NONE___" ? null : value)} 
+                                  value={field.value ?? "___NONE___"} 
                                 >
                                 <SelectTrigger id="positionId" className="mt-1">
-                                    <SelectValue placeholder="Select position" />
+                                    <SelectValue placeholder="Select position or None" />
                                 </SelectTrigger>
                                 <SelectContent>
+                                    <SelectItem value="___NONE___">No specific position / General Application</SelectItem>
                                     {availablePositions.map(pos => (
                                     <SelectItem key={pos.id} value={pos.id}>{pos.title}</SelectItem>
                                     ))}
@@ -418,7 +417,7 @@ export function AddCandidateModal({ isOpen, onOpenChange, onAddCandidate, availa
 
             </div>
           </ScrollArea>
-          <DialogFooter className="pt-4 pr-2 sticky bottom-0 bg-background border-t"> {/* Made footer sticky */}
+          <DialogFooter className="pt-4 pr-2 sticky bottom-0 bg-card border-t z-10"> {/* Made footer sticky */}
             <DialogClose asChild>
               <Button type="button" variant="outline">
                 Cancel

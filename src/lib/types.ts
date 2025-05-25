@@ -40,7 +40,7 @@ export type CandidateStatus =
 
 export interface TransitionRecord {
   id: string;
-  candidateId?: string;
+  candidateId?: string; // This might not be needed if fetched as part of candidate
   date: string; // ISO date string
   stage: CandidateStatus;
   notes?: string;
@@ -104,12 +104,13 @@ export interface CandidateDetails {
   job_suitable?: JobSuitableEntry[];
 }
 
+// Kept for potential backward compatibility if some candidates have old data structure
 export interface OldParsedResumeData {
   name?: string;
   email?: string;
   phone?: string;
-  education: string[];
-  skills: string[];
+  education?: string[]; // Note: this was string array in old type
+  skills?: string[];    // Note: this was string array in old type
   experienceYears?: number;
   summary?: string;
 }
@@ -121,25 +122,27 @@ export interface Position {
   department: string;
   description?: string;
   isOpen: boolean;
+  position_level?: string; // New attribute
   createdAt?: string;
   updatedAt?: string;
-  candidates?: Candidate[];
+  candidates?: Candidate[]; // Relation for ORM/Prisma like fetching
 }
 
 export interface Candidate {
   id: string;
   name: string; 
   email: string; 
-  phone?: string; 
-  resumePath?: string;
+  phone?: string | null; 
+  resumePath?: string | null;
+  // parsedData can be the new detailed structure, old simple structure, or null
   parsedData: CandidateDetails | OldParsedResumeData | null; 
   positionId: string | null;
-  position?: Position;
+  position?: Position | null; // Relation for ORM/Prisma like fetching
   fitScore: number; 
   status: CandidateStatus;
-  applicationDate: string; 
-  createdAt?: string;
-  updatedAt?: string;
+  applicationDate: string; // ISO date string
+  createdAt?: string; // ISO date string
+  updatedAt?: string; // ISO date string
   transitionHistory: TransitionRecord[];
 }
 
@@ -152,18 +155,20 @@ export interface UserProfile {
   dataAiHint?: string;
   role: 'Admin' | 'Recruiter' | 'Hiring Manager';
   password?: string; // Only used during creation/auth process, not stored in session
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export type LogLevel = 'INFO' | 'WARN' | 'ERROR' | 'DEBUG' | 'AUDIT';
 
 export interface LogEntry {
   id: string;
-  timestamp: string; 
+  timestamp: string; // ISO date string
   level: LogLevel;
   message: string;
   source?: string; 
   actingUserId?: string | null; // User ID of the person performing the action
   details?: Record<string, any> | null; // Additional structured data for the log
-  createdAt?: string;
+  createdAt?: string; // ISO date string
 }
 

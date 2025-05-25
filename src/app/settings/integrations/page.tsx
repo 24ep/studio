@@ -8,7 +8,8 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter }
 import { useToast } from '@/hooks/use-toast';
 import { Save, Settings, Mail, Zap, UploadCloud, FileText, XCircle, Loader2 } from 'lucide-react'; 
 
-const N8N_RESUME_WEBHOOK_URL_KEY = 'n8nResumeWebhookUrl'; // For candidate resumes
+const N8N_RESUME_WEBHOOK_URL_KEY = 'n8nResumeWebhookUrl'; // For candidate resumes (from /api/resumes/upload)
+// N8N_GENERIC_PDF_WEBHOOK_URL is a server-side ENV VAR, not managed here.
 const SMTP_HOST_KEY = 'smtpHost';
 const SMTP_PORT_KEY = 'smtpPort';
 const SMTP_USER_KEY = 'smtpUser';
@@ -17,7 +18,7 @@ export default function IntegrationsSettingsPage() {
   const { toast } = useToast();
   const [isClient, setIsClient] = useState(false);
 
-  // n8n for Candidate Resumes
+  // n8n for Candidate Resumes (from regular resume upload)
   const [resumeWebhookUrl, setResumeWebhookUrl] = useState('');
   
   // SMTP
@@ -25,10 +26,6 @@ export default function IntegrationsSettingsPage() {
   const [smtpPort, setSmtpPort] = useState('');
   const [smtpUser, setSmtpUser] = useState('');
   const [smtpPassword, setSmtpPassword] = useState(''); // Only for UI, not saved
-
-  // Generic PDF to n8n
-  const [genericPdfFile, setGenericPdfFile] = useState<File | null>(null);
-  const [isUploadingToN8n, setIsUploadingToN8n] = useState(false);
 
 
   useEffect(() => {
@@ -56,82 +53,16 @@ export default function IntegrationsSettingsPage() {
     localStorage.setItem(SMTP_USER_KEY, smtpUser);
     
     toast({
-      title: 'Integrations Saved',
-      description: 'Your n8n (resume) and SMTP settings have been updated locally.',
+      title: 'Client-Side Settings Saved',
+      description: 'Your n8n (resume specific) and SMTP display settings have been updated locally in your browser.',
     });
-  };
-
-  const handleGenericPdfFileChange = (event: ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      if (file.type === 'application/pdf') {
-        if (file.size > 10 * 1024 * 1024) { // 10MB limit
-            toast({ title: "File Too Large", description: "PDF file size should not exceed 10MB.", variant: "destructive" });
-            setGenericPdfFile(null);
-            event.target.value = ''; 
-            return;
-        }
-        setGenericPdfFile(file);
-      } else {
-        toast({ title: "Invalid File Type", description: "Please select a PDF file.", variant: "destructive" });
-        setGenericPdfFile(null);
-        event.target.value = ''; 
-      }
-    } else {
-      setGenericPdfFile(null);
-    }
-  };
-
-  const removeGenericPdfFile = () => {
-    setGenericPdfFile(null);
-    const fileInput = document.getElementById('generic-pdf-upload') as HTMLInputElement;
-    if (fileInput) fileInput.value = '';
-  };
-
-  const handleUploadGenericPdfToN8n = async () => {
-    if (!genericPdfFile) {
-      toast({ title: "No PDF Selected", description: "Please select a PDF file to upload.", variant: "destructive" });
-      return;
-    }
-    
-    setIsUploadingToN8n(true);
-    const formData = new FormData();
-    formData.append('pdfFile', genericPdfFile);
-
-    try {
-      const response = await fetch('/api/n8n/webhook-proxy', {
-        method: 'POST',
-        body: formData,
-      });
-
-      const result = await response.json();
-
-      if (!response.ok) {
-        throw new Error(result.message || `Failed to send PDF to n8n. Status: ${response.status}`);
-      }
-
-      toast({
-        title: "PDF Sent to n8n",
-        description: result.message || `PDF "${genericPdfFile.name}" sent to n8n workflow.`,
-      });
-      removeGenericPdfFile(); 
-    } catch (error) {
-      console.error("Error sending PDF to n8n:", error);
-      toast({
-        title: "Upload Failed",
-        description: (error as Error).message,
-        variant: "destructive",
-      });
-    } finally {
-      setIsUploadingToN8n(false);
-    }
   };
 
 
   if (!isClient) {
     return (
         <div className="space-y-8 max-w-xl mx-auto">
-          {[1,2,3].map(i => (
+          {[1,2].map(i => ( // Reduced to 2 cards as one was removed
              <Card key={i} className="shadow-lg animate-pulse">
               <CardHeader>
                 <div className="h-8 bg-muted rounded w-1/2 mb-1"></div>
@@ -142,15 +73,12 @@ export default function IntegrationsSettingsPage() {
                   <div className="h-6 bg-muted rounded w-1/4 mb-2"></div>
                   <div className="h-10 bg-muted rounded"></div>
                 </div>
-                 {i === 2 && <div className="h-10 bg-muted rounded"></div>}
               </CardContent>
-              { i !== 0 && 
-                <CardFooter>
-                  <div className="h-10 bg-muted rounded w-32"></div>
-                </CardFooter>
-              }
             </Card>
           ))}
+           <div className="flex justify-end pt-4">
+                <div className="h-10 bg-muted rounded w-64 animate-pulse"></div>
+            </div>
         </div>
     );
   }
@@ -162,7 +90,7 @@ export default function IntegrationsSettingsPage() {
           <CardTitle className="flex items-center">
             <Zap className="mr-2 h-6 w-6 text-orange-500" /> Workflow Automation (n8n for Candidate Resumes)
           </CardTitle>
-          <CardDescription>Configure your n8n webhook for automated candidate resume processing (e.g., parsing).</CardDescription>
+          <CardDescription>Configure your n8n webhook for automated processing of resumes uploaded to **existing candidates**.</CardDescription>
         </CardHeader>
         <CardContent>
             <div>
@@ -176,7 +104,9 @@ export default function IntegrationsSettingsPage() {
                 className="mt-1"
               />
               <p className="text-sm text-muted-foreground mt-1">
-                Enter the URL for your n8n webhook. This setting is saved in browser localStorage. The server uses `N8N_RESUME_WEBHOOK_URL` environment variable for actual processing.
+                Enter the URL for your n8n webhook. This setting is saved in browser localStorage. 
+                The server uses the `N8N_RESUME_WEBHOOK_URL` environment variable for processing resumes uploaded to specific candidates.
+                For creating candidates from PDF via n8n (on Candidates page), the `N8N_GENERIC_PDF_WEBHOOK_URL` environment variable is used by the server.
               </p>
             </div>
         </CardContent>
@@ -185,56 +115,9 @@ export default function IntegrationsSettingsPage() {
       <Card className="shadow-lg">
         <CardHeader>
           <CardTitle className="flex items-center">
-            <UploadCloud className="mr-2 h-6 w-6 text-purple-500" /> General PDF to n8n Workflow
-          </CardTitle>
-          <CardDescription>Upload a generic PDF file to trigger a separate n8n workflow. (Requires Admin role)</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div>
-            <Label htmlFor="generic-pdf-upload">Select PDF File (Max 10MB)</Label>
-            <Input
-              id="generic-pdf-upload"
-              type="file"
-              accept="application/pdf"
-              onChange={handleGenericPdfFileChange}
-              className="mt-1"
-            />
-          </div>
-          {genericPdfFile && (
-            <div className="flex items-center justify-between p-2 bg-muted/50 rounded-md text-sm">
-              <div className="flex items-center gap-2 truncate">
-                <FileText className="h-4 w-4 text-primary shrink-0" />
-                <span className="truncate">{genericPdfFile.name}</span> 
-                <span className="text-xs text-muted-foreground whitespace-nowrap">({(genericPdfFile.size / 1024 / 1024).toFixed(2)} MB)</span>
-              </div>
-              <Button type="button" variant="ghost" size="icon" className="h-6 w-6" onClick={removeGenericPdfFile}>
-                <XCircle className="h-4 w-4 text-destructive" />
-                <span className="sr-only">Remove file</span>
-              </Button>
-            </div>
-          )}
-          <p className="text-xs text-muted-foreground">
-            This uploads the PDF via a server proxy to the n8n webhook defined by the `N8N_GENERIC_PDF_WEBHOOK_URL` server environment variable.
-          </p>
-        </CardContent>
-        <CardFooter>
-            <Button 
-              onClick={handleUploadGenericPdfToN8n} 
-              disabled={!genericPdfFile || isUploadingToN8n}
-            >
-              {isUploadingToN8n ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <UploadCloud className="mr-2 h-4 w-4" />}
-              {isUploadingToN8n ? 'Uploading...' : 'Upload PDF to n8n'}
-            </Button>
-        </CardFooter>
-      </Card>
-
-
-      <Card className="shadow-lg">
-        <CardHeader>
-          <CardTitle className="flex items-center">
             <Mail className="mr-2 h-6 w-6 text-blue-500" /> SMTP Configuration
           </CardTitle>
-          <CardDescription>Set up your SMTP server for sending application emails. (Client Settings)</CardDescription>
+          <CardDescription>Set up your SMTP server for sending application emails. (Client Settings for display/concept)</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
             <div>
@@ -291,7 +174,7 @@ export default function IntegrationsSettingsPage() {
       </Card>
       <div className="flex justify-end pt-4">
           <Button onClick={handleSaveIntegrations} size="lg">
-            <Save className="mr-2 h-4 w-4" /> Save Client-Side Integration Settings
+            <Save className="mr-2 h-4 w-4" /> Save Client-Side Settings
           </Button>
       </div>
     </div>

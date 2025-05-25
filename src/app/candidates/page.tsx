@@ -6,10 +6,11 @@ import { CandidateFilters, type CandidateFilterValues } from '@/components/candi
 import { CandidateTable } from '@/components/candidates/CandidateTable';
 import type { Candidate, CandidateStatus, TransitionRecord, Position, CandidateDetails, OldParsedResumeData } from '@/lib/types';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, Users, AlertTriangle, ServerCrash } from 'lucide-react';
+import { PlusCircle, Users, AlertTriangle, ServerCrash, Zap } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
 import { AddCandidateModal, type AddCandidateFormValues } from '@/components/candidates/AddCandidateModal';
 import { UploadResumeModal } from '@/components/candidates/UploadResumeModal'; 
+import { CreateCandidateViaN8nModal } from '@/components/candidates/CreateCandidateViaN8nModal';
 import { signIn, useSession } from 'next-auth/react';
 import Link from 'next/link';
 
@@ -21,6 +22,7 @@ export default function CandidatesPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false); 
+  const [isCreateViaN8nModalOpen, setIsCreateViaN8nModalOpen] = useState(false);
   const [selectedCandidateForUpload, setSelectedCandidateForUpload] = useState<Candidate | null>(null); 
   const [availablePositions, setAvailablePositions] = useState<Position[]>([]);
   const { toast } = useToast();
@@ -37,19 +39,29 @@ export default function CandidatesPage() {
       const response = await fetch('/api/positions');
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({ message: response.statusText || `Status: ${response.status}` }));
+        const errorMessage = errorData.message || `Failed to fetch positions: ${response.statusText || `Status: ${response.status}`}`;
         if (response.status === 401) {
             setAuthError(true);
+            // toast for 401 is handled globally by authError state
             return; 
         }
-        throw new Error(errorData.message || `Failed to fetch positions: ${response.statusText || `Status: ${response.status}`}`);
+        // For other errors when fetching positions, we might not want to block the page
+        // but show a toast. The candidate table can still function.
+        toast({
+            title: "Error Fetching Positions",
+            description: errorMessage,
+            variant: "destructive",
+        });
+        setAvailablePositions([]); // Set to empty if fetch fails for positions
+        return;
       }
       const data: Position[] = await response.json();
       setAvailablePositions(data.filter(p => p.isOpen)); 
     } catch (error) {
       console.error("Error fetching positions for modal:", error);
-      if (!(error as Error).message.includes("401")) { 
+      if (!String((error as Error).message).includes("401")) { 
         toast({
-            title: "Error Fetching Positions for Modal",
+            title: "Error Fetching Positions",
             description: (error as Error).message || "Could not load position data.",
             variant: "destructive",
         });
@@ -71,29 +83,32 @@ export default function CandidatesPage() {
       const response = await fetch('/api/candidates');
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({ message: response.statusText || `Status: ${response.status}` }));
+        const errorMessage = errorData.message || `Failed to fetch candidates: ${response.statusText || `Status: ${response.status}`}`;
         if (response.status === 401) {
             setAuthError(true);
             setIsLoading(false);
             return;
         }
-        setFetchError(errorData.message || `Failed to fetch candidates: ${response.statusText || `Status: ${response.status}`}`);
-        // throw new Error(errorData.message || `Failed to fetch candidates: ${response.statusText || `Status: ${response.status}`}`);
-        return; // Return here to prevent setting candidates to empty array on error
+        setFetchError(errorMessage);
+        setAllCandidates([]); 
+        setFilteredCandidates([]);
+        return;
       }
       const data: Candidate[] = await response.json();
       setAllCandidates(data);
       setFilteredCandidates(data); 
     } catch (error) {
       console.error("Error fetching candidates:", error);
-      if (!fetchError && !(error as Error).message.includes("401")) {
-        setFetchError((error as Error).message || "Could not load candidate data.");
+      const errorMessage = (error as Error).message || "Could not load candidate data.";
+      if (!fetchError && !errorMessage.includes("401")) {
+        setFetchError(errorMessage);
       }
       setAllCandidates([]); 
       setFilteredCandidates([]);
     } finally {
       setIsLoading(false);
     }
-  }, [sessionStatus, fetchError]); // Removed toast from dependencies
+  }, [sessionStatus, fetchError]);
 
   useEffect(() => {
     if (sessionStatus === 'authenticated') {
@@ -122,8 +137,8 @@ export default function CandidatesPage() {
             foundInEducation = pd.education.some(edu => 
                 Object.values(edu).some(val => String(val).toLowerCase().includes(educationQuery))
             );
-        } else if (pd && 'skills' in pd && Array.isArray((pd as OldParsedResumeData).education)) { 
-            foundInEducation = (pd as OldParsedResumeData).education.some(eduStr => eduStr.toLowerCase().includes(educationQuery));
+        } else if (pd && typeof pd === 'object' && pd !== null && 'education' in pd && Array.isArray((pd as OldParsedResumeData).education)) { 
+             foundInEducation = (pd as OldParsedResumeData).education.some(eduStr => eduStr.toLowerCase().includes(educationQuery));
         }
         if (!foundInEducation) return false;
       }
@@ -146,6 +161,7 @@ export default function CandidatesPage() {
   };
 
   const handleUpdateCandidateAPI = async (candidateId: string, status: CandidateStatus) => {
+    // No need to pass transitionHistory, API handles its creation.
     try {
       const response = await fetch(`/api/candidates/${candidateId}`, {
         method: 'PUT',
@@ -155,9 +171,9 @@ export default function CandidatesPage() {
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({ message: "An unknown error occurred" }));
-        if (response.status === 401) {
+        if (response.status === 401 || response.status === 403) {
             setAuthError(true);
-            toast({ title: "Authentication Error", description: "Your session may have expired. Please sign in again.", variant: "destructive" });
+            toast({ title: "Authorization Error", description: errorData.message || "Your session may have expired or you lack permission.", variant: "destructive" });
             return; 
         }
         throw new Error(errorData.message || `Failed to update candidate: ${response.statusText || `Status: ${response.status}`}`);
@@ -174,7 +190,7 @@ export default function CandidatesPage() {
       });
     } catch (error) {
       console.error("Error updating candidate:", error);
-      if (!(error as Error).message.includes("401")) {
+      if (!String((error as Error).message).includes("401") && !String((error as Error).message).includes("403")){
         toast({
             title: "Error Updating Candidate",
             description: (error as Error).message || "Could not update candidate.",
@@ -192,9 +208,9 @@ export default function CandidatesPage() {
       });
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({ message: "An unknown error occurred" }));
-         if (response.status === 401) {
+         if (response.status === 401 || response.status === 403) {
             setAuthError(true);
-            toast({ title: "Authentication Error", description: "Your session may have expired. Please sign in again.", variant: "destructive" });
+            toast({ title: "Authorization Error", description: errorData.message || "Your session may have expired or you lack permission.", variant: "destructive" });
             return;
         }
         throw new Error(errorData.message || `Failed to delete candidate: ${response.statusText || `Status: ${response.status}`}`);
@@ -203,7 +219,7 @@ export default function CandidatesPage() {
       toast({ title: "Candidate Deleted", description: `Candidate successfully deleted.` });
     } catch (error) {
       console.error("Error deleting candidate:", error);
-      if (!(error as Error).message.includes("401")) {
+      if (!String((error as Error).message).includes("401") && !String((error as Error).message).includes("403")){
         toast({
             title: "Error Deleting Candidate",
             description: (error as Error).message || "Could not delete candidate.",
@@ -224,7 +240,7 @@ export default function CandidatesPage() {
         positionId: formData.positionId,
         fitScore: formData.fitScore || 0,
         status: formData.status,
-        parsedData: {
+        parsedData: { // Ensure this structure matches CandidateDetails
           cv_language: formData.cv_language,
           personal_info: formData.personal_info,
           contact_info: formData.contact_info,
@@ -246,9 +262,9 @@ export default function CandidatesPage() {
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({ message: "An unknown error occurred" }));
-        if (response.status === 401) {
+        if (response.status === 401 || response.status === 403) {
             setAuthError(true);
-            toast({ title: "Authentication Error", description: "Your session may have expired. Please sign in again.", variant: "destructive" });
+            toast({ title: "Authorization Error", description: errorData.message || "Your session may have expired or you lack permission.", variant: "destructive" });
             setIsLoading(false);
             return;
         }
@@ -263,7 +279,7 @@ export default function CandidatesPage() {
       });
     } catch (error) {
       console.error("Error adding candidate:", error);
-      if (!(error as Error).message.includes("401")) {
+      if (!String((error as Error).message).includes("401") && !String((error as Error).message).includes("403")){
         toast({
             title: "Error Adding Candidate",
             description: (error as Error).message || "Could not add candidate.",
@@ -284,7 +300,18 @@ export default function CandidatesPage() {
     setAllCandidates(prev => 
       prev.map(c => (c.id === updatedCandidate.id ? updatedCandidate : c))
     );
+    // Toast for upload success is handled in UploadResumeModal/Form
   };
+  
+  const handleN8nProcessingStart = () => {
+    // Optionally show a persistent toast or UI element indicating background processing
+    // For now, a simple toast is handled by the modal itself.
+    // You might want to trigger a refresh of candidates after some delay here.
+    setTimeout(() => {
+        fetchCandidates(); // Refresh candidate list after a delay
+    }, 15000); // e.g., 15 seconds delay, adjust as needed for your n8n workflow speed
+  };
+
 
   if (sessionStatus === 'loading' || (isLoading && !authError && !fetchError)) {
     return (
@@ -303,7 +330,7 @@ export default function CandidatesPage() {
         <p className="text-muted-foreground mb-6">
           You need to be signed in to view or manage candidates.
         </p>
-        <Button onClick={() => signIn('azure-ad')}>Sign In</Button>
+        <Button onClick={() => signIn()}>Sign In</Button>
       </div>
     );
   }
@@ -318,7 +345,7 @@ export default function CandidatesPage() {
         {isMissingTableError && (
             <div className="mb-6 p-4 border border-destructive bg-destructive/10 rounded-md text-sm">
                 <p className="font-semibold">It looks like the necessary database tables (e.g., "Candidate", "Position") are missing.</p>
-                <p className="mt-1">This usually means the database initialization script (`init-db.sql`) did not run correctly when the PostgreSQL Docker container started.</p>
+                <p className="mt-1">This usually means the database initialization script (`pg-init-scripts/init-db.sql`) did not run correctly when the PostgreSQL Docker container started.</p>
                 <p className="mt-2">Please refer to the troubleshooting steps in the `README.md` or go to the <Link href="/setup" className="text-primary hover:underline font-medium">Application Setup</Link> page to verify the schema and find guidance.</p>
             </div>
         )}
@@ -334,9 +361,12 @@ export default function CandidatesPage() {
         <h1 className="text-2xl font-semibold text-foreground hidden md:block">
           Candidate Management
         </h1>
-        <div className="w-full md:w-auto flex justify-end">
+        <div className="w-full md:w-auto flex flex-col sm:flex-row gap-2">
+          <Button onClick={() => setIsCreateViaN8nModalOpen(true)} variant="outline" className="w-full sm:w-auto btn-hover-primary-gradient">
+            <Zap className="mr-2 h-4 w-4" /> Create via Resume (n8n)
+          </Button>
           <Button onClick={() => setIsAddModalOpen(true)} className="w-full sm:w-auto">
-            <PlusCircle className="mr-2 h-4 w-4" /> Add Candidate
+            <PlusCircle className="mr-2 h-4 w-4" /> Add Candidate Manually
           </Button>
         </div>
       </div>
@@ -372,6 +402,11 @@ export default function CandidatesPage() {
         onOpenChange={setIsUploadModalOpen}
         candidate={selectedCandidateForUpload}
         onUploadSuccess={handleUploadSuccess}
+      />
+      <CreateCandidateViaN8nModal
+        isOpen={isCreateViaN8nModalOpen}
+        onOpenChange={setIsCreateViaN8nModalOpen}
+        onProcessingStart={handleN8nProcessingStart}
       />
     </div>
   );

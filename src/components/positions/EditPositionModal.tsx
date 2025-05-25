@@ -19,10 +19,10 @@ import {
   DialogFooter,
   DialogClose,
 } from '@/components/ui/dialog';
-import { Briefcase } from 'lucide-react';
-// Removed unused Position type import
+import { Edit3 } from 'lucide-react';
+import type { Position } from '@/lib/types';
 
-const addPositionFormSchema = z.object({
+const editPositionFormSchema = z.object({
   title: z.string().min(1, "Title is required"),
   department: z.string().min(1, "Department is required"),
   description: z.string().optional().nullable(),
@@ -30,17 +30,18 @@ const addPositionFormSchema = z.object({
   position_level: z.string().optional().nullable(),
 });
 
-export type AddPositionFormValues = z.infer<typeof addPositionFormSchema>;
+export type EditPositionFormValues = z.infer<typeof editPositionFormSchema>;
 
-interface AddPositionModalProps {
+interface EditPositionModalProps {
   isOpen: boolean;
   onOpenChange: (isOpen: boolean) => void;
-  onAddPosition: (data: AddPositionFormValues) => Promise<void>;
+  onEditPosition: (positionId: string, data: EditPositionFormValues) => Promise<void>;
+  position: Position | null;
 }
 
-export function AddPositionModal({ isOpen, onOpenChange, onAddPosition }: AddPositionModalProps) {
-  const form = useForm<AddPositionFormValues>({
-    resolver: zodResolver(addPositionFormSchema),
+export function EditPositionModal({ isOpen, onOpenChange, onEditPosition, position }: EditPositionModalProps) {
+  const form = useForm<EditPositionFormValues>({
+    resolver: zodResolver(editPositionFormSchema),
     defaultValues: {
       title: '',
       department: '',
@@ -51,20 +52,25 @@ export function AddPositionModal({ isOpen, onOpenChange, onAddPosition }: AddPos
   });
 
   useEffect(() => {
-    if (isOpen) {
+    if (position && isOpen) {
       form.reset({
-        title: '',
-        department: '',
-        description: '',
-        isOpen: true,
-        position_level: '',
+        title: position.title,
+        department: position.department,
+        description: position.description || '',
+        isOpen: position.isOpen,
+        position_level: position.position_level || '',
       });
+    } else if (!isOpen) {
+        form.reset({ title: '', department: '', description: '', isOpen: true, position_level: '' });
     }
-  }, [isOpen, form]);
+  }, [position, isOpen, form]);
 
-  const onSubmit = async (data: AddPositionFormValues) => {
-    await onAddPosition(data);
+  const onSubmit = async (data: EditPositionFormValues) => {
+    if (!position) return;
+    await onEditPosition(position.id, data);
   };
+  
+  if (!position && isOpen) return null;
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => {
@@ -76,31 +82,31 @@ export function AddPositionModal({ isOpen, onOpenChange, onAddPosition }: AddPos
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle className="flex items-center">
-            <Briefcase className="mr-2 h-5 w-5 text-primary" /> Add New Position
+            <Edit3 className="mr-2 h-5 w-5 text-primary" /> Edit Position: {position?.title}
           </DialogTitle>
           <DialogDescription>
-            Enter the details for the new job position.
+            Update the details for this job position.
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-2">
           <div>
-            <Label htmlFor="title-add">Position Title *</Label>
-            <Input id="title-add" {...form.register('title')} className="mt-1" />
+            <Label htmlFor="title-edit">Position Title *</Label>
+            <Input id="title-edit" {...form.register('title')} className="mt-1" />
             {form.formState.errors.title && <p className="text-sm text-destructive mt-1">{form.formState.errors.title.message}</p>}
           </div>
           <div>
-            <Label htmlFor="department-add">Department *</Label>
-            <Input id="department-add" {...form.register('department')} className="mt-1" />
+            <Label htmlFor="department-edit">Department *</Label>
+            <Input id="department-edit" {...form.register('department')} className="mt-1" />
             {form.formState.errors.department && <p className="text-sm text-destructive mt-1">{form.formState.errors.department.message}</p>}
           </div>
            <div>
-            <Label htmlFor="position_level-add">Position Level</Label>
-            <Input id="position_level-add" {...form.register('position_level')} className="mt-1" placeholder="e.g., Senior, Mid-Level, L3"/>
+            <Label htmlFor="position_level-edit">Position Level</Label>
+            <Input id="position_level-edit" {...form.register('position_level')} className="mt-1" placeholder="e.g., Senior, Mid-Level, L3"/>
             {form.formState.errors.position_level && <p className="text-sm text-destructive mt-1">{form.formState.errors.position_level.message}</p>}
           </div>
           <div>
-            <Label htmlFor="description-add">Description</Label>
-            <Textarea id="description-add" {...form.register('description')} className="mt-1" />
+            <Label htmlFor="description-edit">Description</Label>
+            <Textarea id="description-edit" {...form.register('description')} className="mt-1" />
           </div>
           <div className="flex items-center space-x-2">
             <Controller
@@ -108,13 +114,13 @@ export function AddPositionModal({ isOpen, onOpenChange, onAddPosition }: AddPos
                 control={form.control}
                 render={({ field }) => (
                     <Switch
-                        id="isOpen-add"
+                        id="isOpen-edit"
                         checked={field.value}
                         onCheckedChange={field.onChange}
                     />
                 )}
             />
-            <Label htmlFor="isOpen-add">Position is Open</Label>
+            <Label htmlFor="isOpen-edit">Position is Open</Label>
           </div>
           
           <DialogFooter className="pt-4">
@@ -124,7 +130,7 @@ export function AddPositionModal({ isOpen, onOpenChange, onAddPosition }: AddPos
               </Button>
             </DialogClose>
             <Button type="submit" disabled={form.formState.isSubmitting}>
-              {form.formState.isSubmitting ? 'Adding Position...' : 'Add Position'}
+              {form.formState.isSubmitting ? 'Saving Changes...' : 'Save Changes'}
             </Button>
           </DialogFooter>
         </form>
