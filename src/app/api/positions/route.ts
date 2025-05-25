@@ -1,6 +1,6 @@
 
 import { NextResponse, type NextRequest } from 'next/server';
-import prisma from '../../../lib/prisma'; // Changed from '@/lib/prisma'
+import prisma from '../../../lib/prisma'; // Changed to relative path
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 import { z } from 'zod';
@@ -46,7 +46,6 @@ export async function POST(request: NextRequest) {
   if (!session) {
     return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
   }
-  // TODO: Add role-based authorization if needed (e.g., only admins/recruiters can create positions)
 
   let body;
   try {

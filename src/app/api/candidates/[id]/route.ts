@@ -1,6 +1,6 @@
 
 import { NextResponse, type NextRequest } from 'next/server';
-import prisma from '../../../../lib/prisma'; // Changed from '@/lib/prisma'
+import prisma from '../../../../lib/prisma'; // Changed to relative path
 import type { CandidateStatus, ParsedResumeData } from '@/lib/types';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/app/api/auth/[...nextauth]/route';
@@ -50,7 +50,6 @@ const updateCandidateSchema = z.object({
     summary: z.string().optional(),
   }).deepPartial().optional(),
   resumePath: z.string().optional(),
-  // transitionHistory updates are handled by creating new TransitionRecord entries if status changes
 });
 
 
@@ -93,17 +92,14 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
     
     const updatePayload: any = { ...validatedData };
     
-    // Handle parsedData merge
     if (validatedData.parsedData) {
         updatePayload.parsedData = {
-            ...existingCandidate.parsedData as object, // cast existing JSON to object
+            ...existingCandidate.parsedData as object, 
             ...validatedData.parsedData,
-             // Ensure arrays are not undefined if only partially updated
             education: validatedData.parsedData.education || (existingCandidate.parsedData as ParsedResumeData).education,
             skills: validatedData.parsedData.skills || (existingCandidate.parsedData as ParsedResumeData).skills,
         };
     }
-
 
     const candidate = await prisma.candidate.update({
       where: { id: params.id },
@@ -114,7 +110,6 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
       },
     });
 
-    // If status changed, add a new transition history record
     if (validatedData.status && validatedData.status !== existingCandidate.status) {
       await prisma.transitionRecord.create({
         data: {
@@ -124,14 +119,12 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
           notes: `Status updated to ${validatedData.status} via API.`,
         },
       });
-      // Re-fetch candidate to include the new transition record in the response
       const updatedCandidateWithNewTransition = await prisma.candidate.findUnique({
         where: { id: params.id },
         include: { position: true, transitionHistory: { orderBy: { date: 'desc' } } },
       });
       return NextResponse.json(updatedCandidateWithNewTransition, { status: 200 });
     }
-
 
     return NextResponse.json(candidate, { status: 200 });
   } catch (error: any) {
@@ -155,16 +148,10 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
       return NextResponse.json({ message: "Candidate not found" }, { status: 404 });
     }
     
-    // Prisma will cascade delete TransitionRecords due to schema definition
     await prisma.candidate.delete({
       where: { id: params.id },
     });
     
-    // If resumePath exists, you might want to delete the file from MinIO here
-    // This requires MinIO client setup and an async call
-    // Example: if (candidate.resumePath) { await minioClient.removeObject(MINIO_BUCKET_NAME, candidate.resumePath); }
-
-
     return NextResponse.json({ message: "Candidate deleted successfully" }, { status: 200 });
   } catch (error) {
     console.error(`Failed to delete candidate ${params.id}:`, error);

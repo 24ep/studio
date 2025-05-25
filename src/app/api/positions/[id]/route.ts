@@ -1,6 +1,6 @@
 
 import { NextResponse, type NextRequest } from 'next/server';
-import prisma from '../../../../lib/prisma'; // Changed from '@/lib/prisma'
+import prisma from '../../../../lib/prisma'; // Changed to relative path
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 import { z } from 'zod';
@@ -37,7 +37,6 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
   if (!session) {
     return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
   }
-  // TODO: Add role-based authorization if needed
 
   let body;
   try {
@@ -80,23 +79,19 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
   if (!session) {
     return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
   }
-  // TODO: Add role-based authorization if needed
 
   try {
     const positionExists = await prisma.position.findUnique({ 
       where: { id: params.id },
-      include: { _count: { select: { candidates: true } } } // Check if candidates are associated
+      include: { _count: { select: { candidates: true } } }
     });
 
     if (!positionExists) {
       return NextResponse.json({ message: "Position not found" }, { status: 404 });
     }
 
-    // Prevent deletion if candidates are associated, unless cascade delete is intended and carefully considered.
-    // The Prisma schema uses onDelete: Restrict for Candidate.positionId, so DB will prevent this.
-    // This check provides a friendlier error message.
     if (positionExists._count.candidates > 0) {
-        return NextResponse.json({ message: "Cannot delete position with associated candidates. Please reassign or delete candidates first." }, { status: 409 }); // Conflict
+        return NextResponse.json({ message: "Cannot delete position with associated candidates. Please reassign or delete candidates first." }, { status: 409 });
     }
     
     await prisma.position.delete({
@@ -106,7 +101,7 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
     return NextResponse.json({ message: "Position deleted successfully" }, { status: 200 });
   } catch (error: any) {
      console.error(`Failed to delete position ${params.id}:`, error);
-     if (error.code === 'P2003') { // Foreign key constraint failed (e.g. candidates still linked)
+     if (error.code === 'P2003') { 
         return NextResponse.json({ message: "Cannot delete this position as it is still referenced by candidates." }, { status: 409 });
      }
     return NextResponse.json({ message: "Error deleting position", error: error.message }, { status: 500 });

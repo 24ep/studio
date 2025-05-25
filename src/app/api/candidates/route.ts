@@ -1,6 +1,6 @@
 
 import { NextResponse, type NextRequest } from 'next/server';
-import prisma from '../../../lib/prisma'; // Changed from '@/lib/prisma'
+import prisma from '../../../lib/prisma'; // Changed to relative path
 import type { CandidateStatus, ParsedResumeData } from '@/lib/types';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/app/api/auth/[...nextauth]/route';
@@ -14,15 +14,15 @@ const createCandidateSchema = z.object({
   email: z.string().email({ message: "Invalid email address" }),
   phone: z.string().optional().nullable(),
   positionId: z.string().min(1, { message: "Position ID is required" }),
-  fitScore: z.number().min(0).max(100).default(0),
-  status: z.enum(candidateStatusValues).default('Applied'),
-  applicationDate: z.string().datetime().optional(),
+  fitScore: z.number().min(0).max(100).optional().default(0),
+  status: z.enum(candidateStatusValues).optional().default('Applied'),
+  applicationDate: z.string().datetime({ message: "Invalid datetime string. Must be UTC ISO8601" }).optional(),
   parsedData: z.object({
     education: z.array(z.string()).optional().default([]),
     skills: z.array(z.string()).optional().default([]),
     experienceYears: z.number().int().min(0).optional().default(0),
     summary: z.string().optional().default(''),
-  }).default({ education: [], skills: [], experienceYears: 0, summary: '' }),
+  }).optional().default({ education: [], skills: [], experienceYears: 0, summary: '' }),
   resumePath: z.string().optional().nullable(),
 });
 
@@ -60,7 +60,7 @@ export async function GET(request: NextRequest) {
     const candidates = await prisma.candidate.findMany({
       where: whereClause,
       include: {
-        position: true,
+        position: true, // Include related position
         transitionHistory: {
           orderBy: {
             date: 'desc',
@@ -68,7 +68,7 @@ export async function GET(request: NextRequest) {
         },
       },
       orderBy: {
-        createdAt: 'desc', // Assuming you have createdAt timestamp
+        createdAt: 'desc',
       },
     });
     return NextResponse.json(candidates, { status: 200 });
@@ -119,8 +119,7 @@ export async function POST(request: NextRequest) {
         fitScore: validatedData.fitScore,
         status: validatedData.status,
         applicationDate: validatedData.applicationDate ? new Date(validatedData.applicationDate) : new Date(),
-        // Make sure parsedData structure matches Prisma schema's Json type expectations
-        parsedData: validatedData.parsedData as any, // Cast if necessary, ensure structure is correct
+        parsedData: validatedData.parsedData as any, // Prisma expects JsonValue
         resumePath: validatedData.resumePath,
         transitionHistory: {
           create: [
@@ -142,7 +141,7 @@ export async function POST(request: NextRequest) {
   } catch (error: any) {
     console.error("Failed to create candidate:", error);
     if (error.code === 'P2002' && error.meta?.target?.includes('email')) {
-      return NextResponse.json({ message: "A candidate with this email already exists." }, { status: 409 }); // Conflict
+      return NextResponse.json({ message: "A candidate with this email already exists." }, { status: 409 });
     }
     return NextResponse.json({ message: "Error creating candidate", error: error.message }, { status: 500 });
   }

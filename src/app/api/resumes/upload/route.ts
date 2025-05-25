@@ -2,16 +2,13 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/app/api/auth/[...nextauth]/route';
-import { minioClient, MINIO_BUCKET_NAME, ensureBucketExists } from '../../../lib/minio'; // Changed from @/lib/minio
-import prisma from '../../../lib/prisma'; // Changed from @/lib/prisma
+import { minioClient, MINIO_BUCKET_NAME, ensureBucketExists } from '../../../lib/minio'; // Changed to relative path
+import prisma from '../../../lib/prisma'; // Changed to relative path
 import { z } from 'zod';
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 const ACCEPTED_FILE_TYPES = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
 
-// Ensure bucket exists on server start or before first upload.
-// Calling it here means it runs when this module is loaded.
-// In a larger app, this might be part of an initialization script.
 ensureBucketExists(MINIO_BUCKET_NAME).catch(console.error);
 
 export async function POST(request: NextRequest) {
@@ -53,9 +50,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ message: 'Invalid file type. Only PDF, DOC, and DOCX are allowed.' }, { status: 400 });
     }
 
-    const fileName = `${candidateId}-${Date.now()}-${file.name.replace(/\s+/g, '_')}`; // Create a unique file name
+    const fileName = `${candidateId}-${Date.now()}-${file.name.replace(/\s+/g, '_')}`; 
     
-    // Convert File to Buffer for MinIO SDK
     const bytes = await file.arrayBuffer();
     const buffer = Buffer.from(bytes);
 
@@ -63,10 +59,9 @@ export async function POST(request: NextRequest) {
       'Content-Type': file.type,
     });
 
-    // Update candidate record with the resume path
     const updatedCandidate = await prisma.candidate.update({
       where: { id: candidateId },
-      data: { resumePath: fileName, updatedAt: new Date() }, // Ensure updatedAt is manually set if not auto-updated by Prisma middleware
+      data: { resumePath: fileName, updatedAt: new Date() }, 
     });
 
     return NextResponse.json({ 
@@ -77,7 +72,7 @@ export async function POST(request: NextRequest) {
 
   } catch (error: any) {
     console.error('Error uploading resume:', error);
-    if (error.code && error.message) { // MinIO errors often have a 'code' property
+    if (error.code && error.message) { 
         return NextResponse.json({ message: `MinIO Error: ${error.message}`, code: error.code }, { status: 500 });
     }
     return NextResponse.json({ message: 'Error processing file upload', error: error.message }, { status: 500 });
