@@ -1,29 +1,86 @@
 
 import { NextResponse, type NextRequest } from 'next/server';
 import pool from '../../../lib/db';
-import type { CandidateStatus, ParsedResumeData, Candidate } from '@/lib/types';
+import type { CandidateStatus, CandidateDetails, OldParsedResumeData } from '@/lib/types'; // Updated type import
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 import { z } from 'zod';
 
 const candidateStatusValues: [CandidateStatus, ...CandidateStatus[]] = ['Applied', 'Screening', 'Shortlisted', 'Interview Scheduled', 'Interviewing', 'Offer Extended', 'Offer Accepted', 'Hired', 'Rejected', 'On Hold'];
 
+// Zod schemas for nested structures (aligning with lib/types.ts)
+const personalInfoSchema = z.object({
+  title_honorific: z.string().optional(),
+  firstname: z.string().min(1, "First name is required"),
+  lastname: z.string().min(1, "Last name is required"),
+  nickname: z.string().optional(),
+  location: z.string().optional(),
+  introduction_aboutme: z.string().optional(),
+});
+
+const contactInfoSchema = z.object({
+  email: z.string().email("Invalid email address"),
+  phone: z.string().optional(),
+});
+
+const educationEntrySchema = z.object({
+  major: z.string().optional(),
+  field: z.string().optional(),
+  period: z.string().optional(),
+  duration: z.string().optional(),
+  GPA: z.string().optional(),
+  university: z.string().optional(),
+  campus: z.string().optional(),
+});
+
+const experienceEntrySchema = z.object({
+  company: z.string().optional(),
+  position: z.string().optional(),
+  description: z.string().optional(),
+  period: z.string().optional(),
+  duration: z.string().optional(),
+  is_current_position: z.boolean().optional(),
+  postition_level: z.enum(['entry level', 'mid level', 'senior level', 'lead', 'manager', 'executive']).optional(),
+});
+
+const skillEntrySchema = z.object({
+  segment_skill: z.string().optional(),
+  skill: z.array(z.string()).optional(),
+});
+
+const jobSuitableEntrySchema = z.object({
+  suitable_career: z.string().optional(),
+  suitable_job_position: z.string().optional(),
+  suitable_job_level: z.string().optional(),
+  suitable_salary_bath_month: z.string().optional(),
+});
+
+const candidateDetailsSchema = z.object({
+  cv_language: z.string().optional().default(''),
+  personal_info: personalInfoSchema,
+  contact_info: contactInfoSchema,
+  education: z.array(educationEntrySchema).optional().default([]),
+  experience: z.array(experienceEntrySchema).optional().default([]),
+  skills: z.array(skillEntrySchema).optional().default([]),
+  job_suitable: z.array(jobSuitableEntrySchema).optional().default([]),
+});
+
+// Main schema for creating a candidate
 const createCandidateSchema = z.object({
-  name: z.string().min(1, { message: "Name is required" }),
-  email: z.string().email({ message: "Invalid email address" }),
-  phone: z.string().optional().nullable(),
-  positionId: z.string().uuid({ message: "Valid Position ID (UUID) is required" }),
+  // Top-level fields are now primarily for API convenience; source of truth is parsedData.
+  // If name, email, phone are not provided top-level, they MUST be in parsedData.
+  name: z.string().min(1, { message: "Name is required" }).optional(), // Will be derived if not provided
+  email: z.string().email({ message: "Invalid email address" }).optional(), // Will be derived
+  phone: z.string().optional().nullable(), // Will be derived
+  positionId: z.string().uuid({ message: "Valid Position ID (UUID) is required" }).nullable(),
   fitScore: z.number().min(0).max(100).optional().default(0),
   status: z.enum(candidateStatusValues).optional().default('Applied'),
   applicationDate: z.string().datetime({ message: "Invalid datetime string. Must be UTC ISO8601" }).optional(),
-  parsedData: z.object({
-    education: z.array(z.string()).optional().default([]),
-    skills: z.array(z.string()).optional().default([]),
-    experienceYears: z.number().int().min(0).optional().default(0),
-    summary: z.string().optional().default(''),
-  }).optional().default({ education: [], skills: [], experienceYears: 0, summary: '' }),
+  // parsedData now expects the detailed CandidateDetails structure
+  parsedData: candidateDetailsSchema.optional(), // Make it optional, but if provided, it must match CandidateDetails
   resumePath: z.string().optional().nullable(),
 });
+
 
 export async function GET(request: NextRequest) {
   const session = await getServerSession(authOptions);
@@ -86,14 +143,13 @@ export async function GET(request: NextRequest) {
     
     const candidates = result.rows.map(row => ({
         ...row,
-        parsedData: row.parsedData || { education: [], skills: [], experienceYears: 0, summary: '' }, // Ensure parsedData is not null
-        position: { // Reconstruct position object for consistency with Prisma's include
+        // Ensure parsedData is an object, even if null from DB, for type consistency
+        parsedData: row.parsedData || { personal_info: {}, contact_info: {} }, 
+        position: row.positionId ? { 
             id: row.positionId,
             title: row.positionTitle,
             department: row.positionDepartment,
-            // Add other position fields if needed and fetched
-        },
-        // transitionHistory is already fetched as JSON array string and parsed by pg
+        } : null,
     }));
 
     return NextResponse.json(candidates, { status: 200 });
@@ -113,29 +169,53 @@ export async function POST(request: NextRequest) {
   try {
     body = await request.json();
   } catch (error) {
+    console.error("Error parsing request body for new candidate:", error);
     return NextResponse.json({ message: "Error parsing request body", error: (error as Error).message }, { status: 400 });
   }
   
   const validationResult = createCandidateSchema.safeParse(body);
   if (!validationResult.success) {
+    console.error("Validation failed for new candidate:", validationResult.error.flatten().fieldErrors);
     return NextResponse.json(
       { message: "Invalid input", errors: validationResult.error.flatten().fieldErrors },
       { status: 400 }
     );
   }
 
-  const validatedData = validationResult.data;
+  const rawData = validationResult.data;
+  
+  // Derive name, email, phone from parsedData if not provided at top level
+  const candidateName = rawData.name || (rawData.parsedData ? `${rawData.parsedData.personal_info.firstname} ${rawData.parsedData.personal_info.lastname}`.trim() : 'Unknown Candidate');
+  const candidateEmail = rawData.email || (rawData.parsedData ? rawData.parsedData.contact_info.email : '');
+  const candidatePhone = rawData.phone || (rawData.parsedData ? rawData.parsedData.contact_info.phone : null);
+
+  if (!candidateEmail) {
+     return NextResponse.json(
+      { message: "Invalid input", errors: { email: ["Email is required either at top level or in parsedData.contact_info"]}},
+      { status: 400 }
+    );
+  }
+  
+  const finalParsedData = rawData.parsedData || {
+    personal_info: { firstname: candidateName.split(' ')[0] || '', lastname: candidateName.split(' ').slice(1).join(' ') || '' },
+    contact_info: { email: candidateEmail, phone: candidatePhone || undefined },
+  };
+
+
   const client = await pool.connect();
 
   try {
     await client.query('BEGIN');
 
-    const positionCheckQuery = 'SELECT id FROM "Position" WHERE id = $1';
-    const positionResult = await client.query(positionCheckQuery, [validatedData.positionId]);
-    if (positionResult.rows.length === 0) {
-      await client.query('ROLLBACK');
-      return NextResponse.json({ message: "Position not found" }, { status: 404 });
+    if (rawData.positionId) {
+        const positionCheckQuery = 'SELECT id FROM "Position" WHERE id = $1';
+        const positionResult = await client.query(positionCheckQuery, [rawData.positionId]);
+        if (positionResult.rows.length === 0) {
+          await client.query('ROLLBACK');
+          return NextResponse.json({ message: "Position not found" }, { status: 404 });
+        }
     }
+
 
     const insertCandidateQuery = `
       INSERT INTO "Candidate" (name, email, phone, "positionId", "fitScore", status, "applicationDate", "parsedData", "resumePath", "createdAt", "updatedAt")
@@ -143,15 +223,15 @@ export async function POST(request: NextRequest) {
       RETURNING *;
     `;
     const candidateValues = [
-      validatedData.name,
-      validatedData.email,
-      validatedData.phone,
-      validatedData.positionId,
-      validatedData.fitScore,
-      validatedData.status,
-      validatedData.applicationDate ? new Date(validatedData.applicationDate) : new Date(),
-      validatedData.parsedData,
-      validatedData.resumePath,
+      candidateName,
+      candidateEmail,
+      candidatePhone,
+      rawData.positionId,
+      rawData.fitScore,
+      rawData.status,
+      rawData.applicationDate ? new Date(rawData.applicationDate) : new Date(),
+      finalParsedData, // Store the structured CandidateDetails
+      rawData.resumePath,
     ];
     const candidateResult = await client.query(insertCandidateQuery, candidateValues);
     const newCandidate = candidateResult.rows[0];
@@ -163,14 +243,13 @@ export async function POST(request: NextRequest) {
     `;
     const transitionValues = [
       newCandidate.id,
-      validatedData.status,
+      rawData.status,
       'Application received.',
     ];
-    const transitionResult = await client.query(insertTransitionQuery, transitionValues);
+    await client.query(insertTransitionQuery, transitionValues);
     
     await client.query('COMMIT');
 
-    // Fetch the newly created candidate with its position and transition history for the response
     const finalQuery = `
         SELECT 
             c.*, 
@@ -184,19 +263,19 @@ export async function POST(request: NextRequest) {
     const finalResult = await pool.query(finalQuery, [newCandidate.id]);
     const createdCandidateWithDetails = {
         ...finalResult.rows[0],
-        parsedData: finalResult.rows[0].parsedData || { education: [], skills: [], experienceYears: 0, summary: '' },
-        position: {
+        parsedData: finalResult.rows[0].parsedData || { personal_info: {}, contact_info: {} },
+        position: finalResult.rows[0].positionId ? {
             id: finalResult.rows[0].positionId,
             title: finalResult.rows[0].positionTitle,
             department: finalResult.rows[0].positionDepartment,
-        },
+        } : null,
     };
     
     return NextResponse.json(createdCandidateWithDetails, { status: 201 });
   } catch (error: any) {
     await client.query('ROLLBACK');
     console.error("Failed to create candidate:", error);
-    if (error.code === '23505' && error.constraint === 'Candidate_email_key') { // Example for unique constraint
+    if (error.code === '23505' && error.constraint === 'Candidate_email_key') {
       return NextResponse.json({ message: "A candidate with this email already exists." }, { status: 409 });
     }
     return NextResponse.json({ message: "Error creating candidate", error: error.message }, { status: 500 });

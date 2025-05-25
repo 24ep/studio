@@ -13,15 +13,73 @@ export type CandidateStatus =
 
 export interface TransitionRecord {
   id: string;
-  candidateId?: string; 
+  candidateId?: string;
   date: string; // ISO date string
   stage: CandidateStatus;
   notes?: string;
-  createdAt?: string; 
-  updatedAt?: string; 
+  createdAt?: string;
+  updatedAt?: string;
 }
 
-export interface ParsedResumeData {
+// New detailed types for candidate information
+export interface PersonalInfo {
+  title_honorific?: string;
+  firstname: string;
+  lastname: string;
+  nickname?: string;
+  location?: string;
+  introduction_aboutme?: string;
+}
+
+export interface ContactInfo {
+  email: string;
+  phone?: string;
+}
+
+export interface EducationEntry {
+  major?: string;
+  field?: string;
+  period?: string; // e.g., "2018-2022" or "Aug 2018 - May 2022"
+  duration?: string; // e.g., "4y" or "3y5m"
+  GPA?: string;
+  university?: string;
+  campus?: string;
+}
+
+export interface ExperienceEntry {
+  company?: string;
+  position?: string;
+  description?: string;
+  period?: string; // e.g., "2022-Present" or "Jan 2022 - Dec 2023"
+  duration?: string;
+  is_current_position?: boolean;
+  postition_level?: 'entry level' | 'mid level' | 'senior level' | 'lead' | 'manager' | 'executive';
+}
+
+export interface SkillEntry {
+  segment_skill?: string;
+  skill?: string[]; // Representing the list like ["excel", "photoshop"]
+}
+
+export interface JobSuitableEntry {
+  suitable_career?: string;
+  suitable_job_position?: string;
+  suitable_job_level?: string;
+  suitable_salary_bath_month?: string; // Assuming this is a string, can be number if defined
+}
+
+export interface CandidateDetails {
+  cv_language?: string;
+  personal_info: PersonalInfo;
+  contact_info: ContactInfo;
+  education?: EducationEntry[];
+  experience?: ExperienceEntry[];
+  skills?: SkillEntry[];
+  job_suitable?: JobSuitableEntry[];
+}
+
+// Original ParsedResumeData - might be deprecated or co-exist if some systems produce simpler output
+export interface OldParsedResumeData {
   name?: string;
   email?: string;
   phone?: string;
@@ -31,46 +89,47 @@ export interface ParsedResumeData {
   summary?: string;
 }
 
+
 export interface Position {
   id: string;
   title: string;
   department: string;
   description?: string;
   isOpen: boolean;
-  createdAt?: string; 
-  updatedAt?: string; 
-  candidates?: Candidate[]; 
+  createdAt?: string;
+  updatedAt?: string;
+  candidates?: Candidate[];
 }
 
 export interface Candidate {
   id: string;
-  name: string;
-  email: string;
-  phone?: string;
-  resumePath?: string; 
-  parsedData: ParsedResumeData | null; // Can be null if not parsed
-  positionId: string | null; // Can be null if not assigned to a position
-  position?: Position; 
+  name: string; // Will be derived from personal_info.firstname + personal_info.lastname
+  email: string; // Will be derived from contact_info.email
+  phone?: string; // Will be derived from contact_info.phone
+  resumePath?: string;
+  parsedData: CandidateDetails | OldParsedResumeData | null; // Updated to include new detailed structure
+  positionId: string | null;
+  position?: Position;
   fitScore: number; // 0-100
   status: CandidateStatus;
   applicationDate: string; // ISO date string
-  lastUpdateDate?: string; // // Kept for compatibility, but updatedAt is primary for DB
-  createdAt?: string; 
-  updatedAt?: string; 
+  // lastUpdateDate?: string; // // Kept for compatibility, but updatedAt is primary for DB - Prisma manages updatedAt
+  createdAt?: string;
+  updatedAt?: string;
   transitionHistory: TransitionRecord[];
 }
 
 
-export interface UserProfile { 
+export interface UserProfile {
   id: string;
   name: string;
   email: string;
   avatarUrl?: string;
-  dataAiHint?: string; 
+  dataAiHint?: string;
   role: 'Admin' | 'Recruiter' | 'Hiring Manager';
 }
 
-// New LogEntry type
+// LogEntry type
 export type LogLevel = 'INFO' | 'WARN' | 'ERROR' | 'DEBUG';
 
 export interface LogEntry {
