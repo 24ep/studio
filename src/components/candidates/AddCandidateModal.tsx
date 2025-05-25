@@ -30,11 +30,19 @@ import { PlusCircle, Trash2, UserPlus } from 'lucide-react';
 import type { CandidateDetails, PersonalInfo, ContactInfo, EducationEntry, ExperienceEntry, SkillEntry, JobSuitableEntry, Position, CandidateStatus } from '@/lib/types';
 
 const candidateStatusOptions: CandidateStatus[] = [
-  'Applied', 'Screening', 'Shortlisted', 'Interview Scheduled', 'Interviewing', 
+  'Applied', 'Screening', 'Shortlisted', 'Interview Scheduled', 'Interviewing',
   'Offer Extended', 'Offer Accepted', 'Hired', 'Rejected', 'On Hold'
 ];
 const experienceLevelOptionsRaw: string[] = ['entry level', 'mid level', 'senior level', 'lead', 'manager', 'executive'];
-const experienceLevelOptions = experienceLevelOptionsRaw as [ExperienceEntry['postition_level'], ...ExperienceEntry['postition_level'][]];
+// Ensure the enum values match exactly what Zod expects for ExperienceEntry['position_level']
+const experienceLevelEnumValues = experienceLevelOptionsRaw as [
+    "entry level",
+    "mid level",
+    "senior level",
+    "lead",
+    "manager",
+    "executive"
+];
 
 
 // Zod Schemas for form validation (mirroring types and API schemas)
@@ -69,7 +77,7 @@ const experienceEntryFormSchema = z.object({
   period: z.string().optional(),
   duration: z.string().optional(),
   is_current_position: z.boolean().optional().default(false),
-  postition_level: z.enum(experienceLevelOptions).optional(),
+  postition_level: z.enum(experienceLevelEnumValues).optional(),
 });
 
 const skillEntryFormSchema = z.object({
@@ -93,8 +101,8 @@ const addCandidateFormSchema = z.object({
   experience: z.array(experienceEntryFormSchema).optional(),
   skills: z.array(skillEntryFormSchema).optional(),
   job_suitable: z.array(jobSuitableEntryFormSchema).optional(),
-  positionId: z.string().uuid("Position is required").nullable(), // Allow null for 'No specific position'
-  status: z.enum(candidateStatusOptions).default('Applied'),
+  positionId: z.string().uuid("Position is required").nullable(),
+  status: z.enum(candidateStatusOptions as [CandidateStatus, ...CandidateStatus[]]).default('Applied'),
   fitScore: z.number().min(0).max(100).optional().default(0),
 });
 
@@ -133,7 +141,7 @@ export function AddCandidateModal({ isOpen, onOpenChange, onAddCandidate, availa
     control: form.control,
     name: "experience",
   });
-  
+
   const { fields: skillFields, append: appendSkill, remove: removeSkill } = useFieldArray({
     control: form.control,
     name: "skills",
@@ -147,7 +155,7 @@ export function AddCandidateModal({ isOpen, onOpenChange, onAddCandidate, availa
 
   useEffect(() => {
     if (isOpen) {
-      form.reset({ 
+      form.reset({
         cv_language: '',
         personal_info: { firstname: '', lastname: '' },
         contact_info: { email: '', phone: '' },
@@ -165,24 +173,22 @@ export function AddCandidateModal({ isOpen, onOpenChange, onAddCandidate, availa
   const onSubmit = async (data: AddCandidateFormValues) => {
     const processedData = {
       ...data,
-      // Skills are already handled correctly by API if skill_string is not defined as array in Zod
     };
     await onAddCandidate(processedData);
   };
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-3xl"> {/* Allow modal to be wider */}
-        <DialogHeader>
+      <DialogContent className="sm:max-w-3xl max-h-[90vh] flex flex-col p-0">
+        <DialogHeader className="p-6 pb-0">
           <DialogTitle className="flex items-center"><UserPlus className="mr-2 h-6 w-6 text-primary" /> Add New Candidate</DialogTitle>
           <DialogDescription>
             Enter the details for the new candidate. Fields marked with * are required.
           </DialogDescription>
         </DialogHeader>
-        <form onSubmit={form.handleSubmit(onSubmit)}>
-          {/* Adjusted max-height for ScrollArea and ensured DialogContent can grow */}
-          <ScrollArea className="max-h-[calc(100vh-220px)] p-1 pr-3"> 
-            <div className="space-y-6 p-2">
+        <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col flex-grow overflow-hidden">
+          <ScrollArea className="flex-grow overflow-y-auto p-6 pt-4">
+            <div className="space-y-6">
               {/* CV Language */}
               <div>
                 <Label htmlFor="cv_language">CV Language</Label>
@@ -246,8 +252,8 @@ export function AddCandidateModal({ isOpen, onOpenChange, onAddCandidate, availa
                             control={form.control}
                             render={({ field }) => (
                                 <Select
-                                  onValueChange={(value) => field.onChange(value === "___NONE___" ? null : value)} 
-                                  value={field.value ?? "___NONE___"} 
+                                  onValueChange={(value) => field.onChange(value === "___NONE___" ? null : value)}
+                                  value={field.value ?? "___NONE___"}
                                 >
                                 <SelectTrigger id="positionId" className="mt-1">
                                     <SelectValue placeholder="Select position or None" />
@@ -289,12 +295,12 @@ export function AddCandidateModal({ isOpen, onOpenChange, onAddCandidate, availa
                         name="fitScore"
                         control={form.control}
                         render={({ field }) => (
-                            <Input 
-                                id="fitScore" 
-                                type="number" 
-                                {...field} 
+                            <Input
+                                id="fitScore"
+                                type="number"
+                                {...field}
                                 onChange={e => field.onChange(parseInt(e.target.value, 10) || 0)}
-                                className="mt-1" 
+                                className="mt-1"
                             />
                         )}
                     />
@@ -342,7 +348,7 @@ export function AddCandidateModal({ isOpen, onOpenChange, onAddCandidate, availa
                                 <Select onValueChange={controllerField.onChange} value={controllerField.value} defaultValue="">
                                 <SelectTrigger><SelectValue placeholder="Position Level" /></SelectTrigger>
                                 <SelectContent>
-                                    {experienceLevelOptions.map(level => <SelectItem key={level} value={level}>{level}</SelectItem>)}
+                                    {experienceLevelEnumValues.map(level => <SelectItem key={level} value={level}>{level}</SelectItem>)}
                                 </SelectContent>
                                 </Select>
                             )}
@@ -352,8 +358,8 @@ export function AddCandidateModal({ isOpen, onOpenChange, onAddCandidate, availa
                                 name={`experience.${index}.is_current_position`}
                                 control={form.control}
                                 render={({ field: controllerField }) => (
-                                    <Input 
-                                        type="checkbox" 
+                                    <Input
+                                        type="checkbox"
                                         id={`experience.${index}.is_current_position`}
                                         checked={!!controllerField.value}
                                         onChange={e => controllerField.onChange(e.target.checked)}
@@ -374,7 +380,7 @@ export function AddCandidateModal({ isOpen, onOpenChange, onAddCandidate, availa
                   <PlusCircle className="mr-2 h-4 w-4" /> Add Experience
                 </Button>
               </fieldset>
-              
+
                 <fieldset className="space-y-3 border p-4 rounded-md">
                     <legend className="text-lg font-semibold">Skills</legend>
                     {skillFields.map((field, index) => (
@@ -417,7 +423,7 @@ export function AddCandidateModal({ isOpen, onOpenChange, onAddCandidate, availa
 
             </div>
           </ScrollArea>
-          <DialogFooter className="pt-4 pr-2 sticky bottom-0 bg-card border-t z-10"> {/* Made footer sticky */}
+          <DialogFooter className="p-6 pt-4 sticky bottom-0 bg-card border-t z-10">
             <DialogClose asChild>
               <Button type="button" variant="outline">
                 Cancel
@@ -432,3 +438,6 @@ export function AddCandidateModal({ isOpen, onOpenChange, onAddCandidate, availa
     </Dialog>
   );
 }
+
+
+    
