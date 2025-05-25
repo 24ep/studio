@@ -4,6 +4,7 @@ import { mockPositions } from '@/lib/data';
 import type { Position } from '@/lib/types';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/app/api/auth/[...nextauth]/route';
+import { z } from 'zod';
 
 // In-memory store for this example, replace with database logic
 let positionsStore: Position[] = JSON.parse(JSON.stringify(mockPositions)); // Deep copy for mutation
@@ -71,6 +72,14 @@ export async function GET(request: NextRequest) {
   }
 }
 
+// Zod schema for creating a new position
+const createPositionSchema = z.object({
+  title: z.string().min(1, { message: "Title is required" }),
+  department: z.string().min(1, { message: "Department is required" }),
+  description: z.string().optional(),
+  isOpen: z.boolean({ required_error: "isOpen status is required" }),
+});
+
 /**
  * @swagger
  * /api/positions:
@@ -120,20 +129,34 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
   }
 
-  // TODO: Replace with actual database insertion and validation
+  let body;
   try {
-    const body = await request.json();
-
-    if (!body.title || !body.department || typeof body.isOpen !== 'boolean') {
-      return NextResponse.json({ message: "Missing required fields (title, department, isOpen)" }, { status: 400 });
+    body = await request.json();
+  } catch (error) {
+    if (error instanceof SyntaxError) {
+      return NextResponse.json({ message: "Invalid JSON payload", error: error.message }, { status: 400 });
     }
+    console.error("Error parsing JSON body for new position:", error);
+    return NextResponse.json({ message: "Error parsing request body", error: (error as Error).message }, { status: 500 });
+  }
 
+  const validationResult = createPositionSchema.safeParse(body);
+  if (!validationResult.success) {
+    return NextResponse.json(
+      { message: "Invalid input", errors: validationResult.error.flatten().fieldErrors },
+      { status: 400 }
+    );
+  }
+  
+  const validatedData = validationResult.data;
+
+  try {
     const newPosition: Position = {
       id: `pos${Date.now()}`, // Simple ID generation
-      title: body.title,
-      department: body.department,
-      description: body.description || '',
-      isOpen: body.isOpen,
+      title: validatedData.title,
+      department: validatedData.department,
+      description: validatedData.description || '',
+      isOpen: validatedData.isOpen,
     };
 
     positionsStore.push(newPosition);
@@ -142,9 +165,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(newPosition, { status: 201 });
   } catch (error) {
     console.error("Failed to create position:", error);
-     if (error instanceof SyntaxError) {
-        return NextResponse.json({ message: "Invalid JSON payload", error: (error as Error).message }, { status: 400 });
-    }
     return NextResponse.json({ message: "Error creating position", error: (error as Error).message }, { status: 500 });
   }
 }

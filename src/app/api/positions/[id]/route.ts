@@ -4,6 +4,7 @@ import { mockPositions } from '@/lib/data';
 import type { Position } from '@/lib/types';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/app/api/auth/[...nextauth]/route';
+import { z } from 'zod';
 
 // In-memory store for this example, replace with database logic
 let positionsStore: Position[] = JSON.parse(JSON.stringify(mockPositions)); // Deep copy
@@ -53,6 +54,14 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
     return NextResponse.json({ message: "Error fetching position", error: (error as Error).message }, { status: 500 });
   }
 }
+
+// Zod schema for updating a position (all fields optional)
+const updatePositionSchema = z.object({
+  title: z.string().min(1, { message: "Title cannot be empty" }).optional(),
+  department: z.string().min(1, { message: "Department cannot be empty" }).optional(),
+  description: z.string().optional(),
+  isOpen: z.boolean().optional(),
+});
 
 /**
  * @swagger
@@ -104,9 +113,28 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
     return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
   }
 
-  // TODO: Replace with actual database update logic
+  let body;
   try {
-    const body = await request.json();
+    body = await request.json();
+  } catch (error) {
+    if (error instanceof SyntaxError) {
+      return NextResponse.json({ message: "Invalid JSON payload", error: error.message }, { status: 400 });
+    }
+    console.error(`Error parsing JSON body for updating position ${params.id}:`, error);
+    return NextResponse.json({ message: "Error parsing request body", error: (error as Error).message }, { status: 500 });
+  }
+
+  const validationResult = updatePositionSchema.safeParse(body);
+  if (!validationResult.success) {
+    return NextResponse.json(
+      { message: "Invalid input", errors: validationResult.error.flatten().fieldErrors },
+      { status: 400 }
+    );
+  }
+  
+  const validatedData = validationResult.data;
+  
+  try {
     const positionIndex = positionsStore.findIndex(p => p.id === params.id);
 
     if (positionIndex === -1) {
@@ -115,10 +143,10 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
 
     let updatedPosition = { ...positionsStore[positionIndex] };
 
-    if (body.title) updatedPosition.title = body.title;
-    if (body.department) updatedPosition.department = body.department;
-    if (body.description !== undefined) updatedPosition.description = body.description;
-    if (typeof body.isOpen === 'boolean') updatedPosition.isOpen = body.isOpen;
+    if (validatedData.title) updatedPosition.title = validatedData.title;
+    if (validatedData.department) updatedPosition.department = validatedData.department;
+    if (validatedData.description !== undefined) updatedPosition.description = validatedData.description;
+    if (typeof validatedData.isOpen === 'boolean') updatedPosition.isOpen = validatedData.isOpen;
     
     positionsStore[positionIndex] = updatedPosition;
     // TODO: Persist to PostgreSQL database here
@@ -126,9 +154,6 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
     return NextResponse.json(updatedPosition, { status: 200 });
   } catch (error) {
     console.error(`Failed to update position ${params.id}:`, error);
-     if (error instanceof SyntaxError) {
-        return NextResponse.json({ message: "Invalid JSON payload", error: (error as Error).message }, { status: 400 });
-    }
     return NextResponse.json({ message: "Error updating position", error: (error as Error).message }, { status: 500 });
   }
 }

@@ -4,6 +4,7 @@ import { mockCandidates, mockPositions } from '@/lib/data';
 import type { Candidate, Position, CandidateStatus } from '@/lib/types';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/app/api/auth/[...nextauth]/route';
+import { z } from 'zod';
 
 // In-memory store for this example, replace with database logic
 // Each API route file manages its own instance of the store for simplicity in this mock setup.
@@ -55,6 +56,25 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
     return NextResponse.json({ message: "Error fetching candidate", error: (error as Error).message }, { status: 500 });
   }
 }
+
+// Zod schema for updating a candidate (all fields optional)
+const candidateStatusValues: [CandidateStatus, ...CandidateStatus[]] = ['Applied', 'Screening', 'Shortlisted', 'Interview Scheduled', 'Interviewing', 'Offer Extended', 'Offer Accepted', 'Hired', 'Rejected', 'On Hold'];
+
+const updateCandidateSchema = z.object({
+  name: z.string().min(1, { message: "Name cannot be empty" }).optional(),
+  email: z.string().email({ message: "Invalid email address" }).optional(),
+  phone: z.string().optional(),
+  positionId: z.string().min(1, { message: "Position ID cannot be empty" }).optional(),
+  fitScore: z.number().min(0).max(100).optional(),
+  status: z.enum(candidateStatusValues, { message: "Invalid status" }).optional(),
+  parsedData: z.object({
+    education: z.array(z.string()).optional(),
+    skills: z.array(z.string()).optional(),
+    experienceYears: z.number().int().min(0).optional(),
+    summary: z.string().optional(),
+  }).deepPartial().optional(), // deepPartial allows partial updates to nested objects
+});
+
 
 /**
  * @swagger
@@ -129,9 +149,28 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
     return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
   }
 
-  // TODO: Replace with actual database update logic and proper validation
+  let body;
   try {
-    const body = await request.json();
+    body = await request.json();
+  } catch (error) {
+    if (error instanceof SyntaxError) {
+      return NextResponse.json({ message: "Invalid JSON payload", error: error.message }, { status: 400 });
+    }
+    console.error(`Error parsing JSON body for updating candidate ${params.id}:`, error);
+    return NextResponse.json({ message: "Error parsing request body", error: (error as Error).message }, { status: 500 });
+  }
+
+  const validationResult = updateCandidateSchema.safeParse(body);
+  if (!validationResult.success) {
+    return NextResponse.json(
+      { message: "Invalid input", errors: validationResult.error.flatten().fieldErrors },
+      { status: 400 }
+    );
+  }
+
+  const validatedData = validationResult.data;
+
+  try {
     const candidateIndex = candidatesStore.findIndex(c => c.id === params.id);
 
     if (candidateIndex === -1) {
@@ -140,23 +179,29 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
 
     let updatedCandidate = { ...candidatesStore[candidateIndex] };
 
-    if (body.name) updatedCandidate.name = body.name;
-    if (body.email) updatedCandidate.email = body.email;
-    if (body.phone) updatedCandidate.phone = body.phone;
-    if (body.fitScore !== undefined) updatedCandidate.fitScore = body.fitScore;
-    if (body.status) updatedCandidate.status = body.status as CandidateStatus; // Add type assertion
+    if (validatedData.name) updatedCandidate.name = validatedData.name;
+    if (validatedData.email) updatedCandidate.email = validatedData.email;
+    if (validatedData.phone) updatedCandidate.phone = validatedData.phone;
+    if (validatedData.fitScore !== undefined) updatedCandidate.fitScore = validatedData.fitScore;
+    if (validatedData.status) updatedCandidate.status = validatedData.status;
 
-    if (body.positionId) {
-      const position = positionsStore.find(p => p.id === body.positionId);
+    if (validatedData.positionId) {
+      const position = positionsStore.find(p => p.id === validatedData.positionId);
       if (!position) {
         return NextResponse.json({ message: "Position not found for new positionId" }, { status: 404 });
       }
-      updatedCandidate.positionId = body.positionId;
+      updatedCandidate.positionId = validatedData.positionId;
       updatedCandidate.positionTitle = position.title;
     }
     
-    if (body.parsedData) {
-      updatedCandidate.parsedData = { ...updatedCandidate.parsedData, ...body.parsedData };
+    if (validatedData.parsedData) {
+      updatedCandidate.parsedData = { 
+        ...updatedCandidate.parsedData, 
+        ...validatedData.parsedData,
+        // Ensure arrays are not undefined if only partially updated
+        education: validatedData.parsedData.education || updatedCandidate.parsedData.education,
+        skills: validatedData.parsedData.skills || updatedCandidate.parsedData.skills,
+      };
     }
     
     updatedCandidate.lastUpdateDate = new Date().toISOString();
@@ -167,9 +212,6 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
     return NextResponse.json(updatedCandidate, { status: 200 });
   } catch (error) {
     console.error(`Failed to update candidate ${params.id}:`, error);
-    if (error instanceof SyntaxError) {
-        return NextResponse.json({ message: "Invalid JSON payload", error: (error as Error).message }, { status: 400 });
-    }
     return NextResponse.json({ message: "Error updating candidate", error: (error as Error).message }, { status: 500 });
   }
 }
