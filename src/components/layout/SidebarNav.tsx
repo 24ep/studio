@@ -23,6 +23,22 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 
+// Custom Docker icon as SVG component
+const DockerIcon = (props: React.SVGProps<SVGSVGElement>) => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+    <path d="M5.71 1.71A12.28 12.28 0 0 0 .73 12.5h0a12.28 12.28 0 0 0 4.94 10.79H18.3a12.28 12.28 0 0 0 4.94-10.79h0A12.28 12.28 0 0 0 18.33 1.71Z"/>
+    <path d="M10 17H5"/>
+    <path d="M13.29 17H19"/>
+    <path d="M19 13.71V17"/>
+    <path d="M5 13.71V17"/>
+    <path d="M10.63 8.25A2.59 2.59 0 0 0 8.39 7a2.43 2.43 0 0 0-2.39 2.5c0 .9.34 1.58.8 2"/>
+    <path d="M16.34 8.25a2.59 2.59 0 0 0-2.24-1.25 2.43 2.43 0 0 0-2.39 2.5c0 .9.34 1.58.8 2"/>
+    <path d="M12 17v-2.09"/>
+    <path d="M12 12.5v-2.09"/>
+  </svg>
+);
+
+
 const mainNavItems = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
   { href: "/candidates", label: "Candidates", icon: Users },
@@ -32,7 +48,8 @@ const mainNavItems = [
 const settingsSubItems = [
   { href: "/settings/preferences", label: "Preferences", icon: Palette },
   { href: "/settings/integrations", label: "Integrations", icon: Zap },
-  { href: "/setup", label: "Setup Guide", icon: Settings2 }, // Added Setup page
+  { href: "/setup", label: "Setup Guide", icon: Settings2 },
+  { href: "/docker-deployment", label: "Docker & Deployment", icon: DockerIcon },
   { href: "/users", label: "Manage Users", icon: UsersRound },
   { href: "/api-docs", label: "API Docs", icon: Code2 },
   { href: "/logs", label: "Logs", icon: ListOrdered },
@@ -55,7 +72,6 @@ export function SidebarNav() {
     } else if (isAnyMainNavItemActive) {
       setAccordionValue(undefined);
     }
-    // If neither settings nor main items are active, accordion remains as it was (user might have closed it)
   }, [pathname, isSettingsSectionActive, isAnyMainNavItemActive]);
 
 
@@ -69,7 +85,7 @@ export function SidebarNav() {
                 isActive={pathname === item.href || (item.href !== "/" && pathname.startsWith(item.href))}
                 className="w-full justify-start"
                 tooltip={item.label}
-                onClick={() => setAccordionValue(undefined)} // Close settings accordion if a main item is clicked
+                onClick={() => setAccordionValue(undefined)} 
               >
                 <a>
                   <item.icon className="h-5 w-5" />
@@ -95,7 +111,7 @@ export function SidebarNav() {
                     className={cn(
                       "flex w-full items-center gap-2 overflow-hidden rounded-md p-2 text-left text-sm outline-none ring-sidebar-ring transition-all hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-2 active:bg-sidebar-accent active:text-sidebar-accent-foreground disabled:pointer-events-none disabled:opacity-50",
                       "justify-between group-data-[collapsible=icon]:!size-8 group-data-[collapsible=icon]:!p-2",
-                      isSettingsSectionActive && "/* data-[active=true] */ bg-sidebar-accent text-sidebar-accent-foreground", 
+                      isSettingsSectionActive && "bg-sidebar-accent text-sidebar-accent-foreground", 
                       "hover:no-underline py-2"
                     )}
                   >
@@ -137,3 +153,5 @@ export function SidebarNav() {
       </SidebarMenu>
   );
 }
+
+    

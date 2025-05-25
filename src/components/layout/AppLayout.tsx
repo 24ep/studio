@@ -25,7 +25,8 @@ function getPageTitle(pathname: string): string {
   if (pathname.startsWith("/users")) return "Manage Users";
   if (pathname.startsWith("/settings/preferences")) return "Preferences";
   if (pathname.startsWith("/settings/integrations")) return "Integrations";
-  if (pathname.startsWith("/setup")) return "Application Setup"; // Added for setup page
+  if (pathname.startsWith("/setup")) return "Application Setup";
+  if (pathname.startsWith("/docker-deployment")) return "Docker & Deployment";
   if (pathname.startsWith("/settings")) return "Settings"; 
   if (pathname.startsWith("/api-docs")) return "API Documentation";
   if (pathname.startsWith("/logs")) return "Application Logs";
@@ -39,7 +40,6 @@ export function AppLayout({ children }: { children: ReactNode }) {
   const pageTitle = getPageTitle(pathname);
   const { data: session, status } = useSession();
 
-  // If on the sign-in page, render children directly without the main app layout
   if (pathname === "/auth/signin") {
     return <>{children}</>;
   }
@@ -76,4 +76,6 @@ export function AppLayout({ children }: { children: ReactNode }) {
     </SidebarProvider>
   );
 }
+    
+
     
