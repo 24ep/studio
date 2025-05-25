@@ -92,7 +92,7 @@ export function Header({ pageTitle }: { pageTitle: string }) {
             </DropdownMenuContent>
           </DropdownMenu>
         ) : (
-          <Button variant="outline" onClick={() => signIn('azure-ad')}> {/* Default to azure-ad if it's the only provider */}
+          <Button variant="outline" onClick={() => signIn()}> {/* Changed to signIn() without provider */}
             <LogIn className="mr-2 h-4 w-4" />
             Sign In
           </Button>
