@@ -522,9 +522,9 @@ const sidebarMenuButtonVariants = cva(
           "bg-background shadow-[0_0_0_1px_hsl(var(--sidebar-border))] hover:bg-sidebar-accent hover:text-sidebar-accent-foreground hover:shadow-[0_0_0_1px_hsl(var(--sidebar-accent))]",
       },
       size: {
-        default: "h-10 text-sm", 
-        sm: "h-9 rounded-md px-3 text-xs",    
-        lg: "h-12 text-sm group-data-[collapsible=icon]:!p-0",
+        default: "h-9 text-sm",
+        sm: "h-8 rounded-md px-3 text-xs",    
+        lg: "h-11 text-sm group-data-[collapsible=icon]:!p-0", 
       },
     },
     defaultVariants: {
@@ -632,7 +632,7 @@ const SidebarMenuBadge = React.forwardRef<
     ref={ref}
     data-sidebar="menu-badge"
     className={cn(
-      "absolute right-1 flex h-5 min-w-5 items-center justify-center rounded-md px-1 text-xs font-medium tabular-nums text-sidebar-foreground select-none pointer-events-none",
+      "absolute right-1 flex h-5 min-w-5 items-center justify-center rounded-md px-0.5 text-xs font-medium tabular-nums text-sidebar-foreground select-none pointer-events-none", // Changed px-1 to px-0.5
       "peer-hover/menu-button:text-sidebar-accent-foreground peer-data-[active=true]/menu-button:text-sidebar-accent-foreground",
       "peer-data-[size=sm]/menu-button:top-1",
       "peer-data-[size=default]/menu-button:top-1.5", 
@@ -660,7 +660,7 @@ const SidebarMenuSkeleton = React.forwardRef<
     <div
       ref={ref}
       data-sidebar="menu-skeleton"
-      className={cn("rounded-md h-10 flex gap-2 px-3 py-2 items-center", className)} 
+      className={cn("rounded-md h-9 flex gap-2 px-3 py-2 items-center", className)} // Matched padding px-3 py-2
       {...props}
     >
       {showIcon && (
