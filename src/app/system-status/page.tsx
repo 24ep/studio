@@ -4,7 +4,7 @@
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { CheckCircle2, AlertTriangle, XCircle, Settings, Database, HardDrive, Zap, KeyRound, Info } from "lucide-react";
+import { CheckCircle2, AlertTriangle, XCircle, Settings, Database, HardDrive, Zap, KeyRound, Info, ListChecks } from "lucide-react";
 
 interface StatusItem {
   name: string;
@@ -30,50 +30,50 @@ export default function SystemStatusPage() {
         {
           name: "PostgreSQL Database Connection",
           status: 'info',
-          message: "Status: Verified via application startup logs.",
-          details: "The application attempts to connect to PostgreSQL at startup and logs success or failure. Check server logs for 'Successfully connected...' or connection error messages. Ensure DATABASE_URL environment variable is correctly set in your .env.local or server environment.",
+          message: "Status: Connection success/failure logged by the application server at startup.",
+          details: "The Next.js application attempts to connect to PostgreSQL when the `src/lib/db.ts` module is initialized. Check your application server's console logs for 'Successfully connected...' or connection error messages. Ensure the DATABASE_URL environment variable is correctly set.",
           icon: Database,
         },
         {
           name: "Database Schema (Tables)",
-          status: 'ok', // Updated as this is automated
-          message: "Status: Automated initialization by Docker.",
-          details: "The 'init-db.sql' script automatically creates tables (User, Position, Candidate, TransitionRecord, LogEntry) when the PostgreSQL container starts with an empty data volume. If tables are missing, ensure the 'postgres_data' Docker volume was correctly cleared and re-initialized (e.g., via `docker-compose down -v`).",
-          icon: Database,
+          status: 'info', 
+          message: "Status: Automated initialization by Docker is configured.",
+          details: "The 'init-db.sql' script is set up to automatically create tables (User, Position, Candidate, etc.) when the PostgreSQL Docker container starts with an empty data volume. If tables are reported missing in application logs (e.g., 'relation ... does not exist'), ensure the 'postgres_data' Docker volume was correctly cleared and re-initialized (e.g., via `docker-compose down -v` then `docker-compose up --build`). Check PostgreSQL container logs for `init-db.sql` execution details.",
+          icon: ListChecks,
         },
         {
           name: "MinIO File Storage Connection",
           status: 'info',
-          message: "Status: Verified via application startup logs.",
-          details: "The application attempts to connect to the MinIO server at startup and logs success or failure. Check server logs for 'Successfully connected to MinIO server...' or connection error messages. Ensure MinIO environment variables (MINIO_ENDPOINT, MINIO_ACCESS_KEY, etc.) are correctly set.",
+          message: "Status: Connection success/failure logged by the application server at startup.",
+          details: "The Next.js application attempts to connect to the MinIO server when the `src/lib/minio.ts` module is initialized. Check your application server's console logs for 'Successfully connected to MinIO server...' or connection error messages. Ensure MinIO environment variables (MINIO_ENDPOINT, MINIO_ACCESS_KEY, etc.) are correctly set.",
           icon: HardDrive,
         },
         {
           name: "MinIO Bucket ('canditrack-resumes')",
-          status: 'ok', // Updated to reflect application's attempt
-          message: "Status: Application attempts auto-creation if not exists.",
-          details: "The application's MinIO client (src/lib/minio.ts) will try to create the bucket defined by MINIO_BUCKET_NAME upon first interaction. Errors during this process (e.g., permission issues) would be logged by the application server.",
+          status: 'info', 
+          message: "Status: Application attempts auto-creation if bucket doesn't exist.",
+          details: "The application's MinIO client (src/lib/minio.ts) will try to create the bucket defined by MINIO_BUCKET_NAME upon first interaction. Success or errors during this process (e.g., permission issues) would be logged by the application server. Check server logs.",
           icon: HardDrive,
         },
         {
           name: "Redis Cache Connection",
           status: 'info',
-          message: "Status: Application connects when Redis-dependent features are used.",
-          details: "Currently, no specific features in this prototype explicitly use Redis. If integrated, connection status would be logged. Ensure REDIS_URL environment variable is correctly set for future use.",
+          message: "Status: Application connects when Redis-dependent features are used (currently none active).",
+          details: "Currently, no specific features in this prototype explicitly use Redis. If integrated, connection status would be logged by the application. Ensure the REDIS_URL environment variable is correctly set for future use.",
           icon: Zap,
         },
         {
           name: "Azure AD SSO Server Configuration",
           status: 'info',
-          message: "Status: Configuration dependent on server-side environment variables.",
-          details: "Azure AD Single Sign-On relies on AZURE_AD_CLIENT_ID, AZURE_AD_CLIENT_SECRET, and AZURE_AD_TENANT_ID being correctly set in the server's environment variables. If these are not configured, SSO will not function. The Azure AD sign-in button's visibility on the login page is a partial client-side indicator.",
+          message: "Status: Relies on server-side environment variables.",
+          details: "Azure AD Single Sign-On functionality depends on AZURE_AD_CLIENT_ID, AZURE_AD_CLIENT_SECRET, and AZURE_AD_TENANT_ID being correctly set in the server's environment variables. If these are not configured, SSO will not function. The Azure AD sign-in button's visibility on the login page is a partial client-side indicator of configuration.",
           icon: KeyRound,
         },
         {
           name: "NextAuth Secret",
           status: 'info',
-          message: "Status: Critical server-side environment variable.",
-          details: "The NEXTAUTH_SECRET environment variable must be set on the server for NextAuth to function securely and reliably. This is crucial for session management.",
+          message: "Status: Relies on a critical server-side environment variable.",
+          details: "The NEXTAUTH_SECRET environment variable must be set on the server for NextAuth.js to function securely and reliably for session management. This is crucial for authentication.",
           icon: KeyRound,
         },
         {
@@ -82,7 +82,7 @@ export default function SystemStatusPage() {
           message: localStorage.getItem(N8N_WEBHOOK_URL_KEY) 
             ? "Status: Configured in local browser settings." 
             : "Status: Not configured in local browser settings.",
-          details: `This is set on the Settings > Integrations page and stored in browser localStorage. For backend usage (like in /api/resumes/upload), the N8N_RESUME_WEBHOOK_URL environment variable must be set on the server. Current local setting: ${localStorage.getItem(N8N_WEBHOOK_URL_KEY) || 'Not set'}.`,
+          details: `This UI setting is stored in browser localStorage via Settings > Integrations. For backend resume processing, the N8N_RESUME_WEBHOOK_URL environment variable must be set on the server. Current local UI setting: ${localStorage.getItem(N8N_WEBHOOK_URL_KEY) || 'Not set'}.`,
           icon: localStorage.getItem(N8N_WEBHOOK_URL_KEY) ? CheckCircle2 : AlertTriangle,
         },
       ];
@@ -140,7 +140,7 @@ export default function SystemStatusPage() {
             System Status & Configuration
           </CardTitle>
           <CardDescription>
-            Overview of key application dependencies and their expected setup status.
+            Overview of key application dependencies and their expected setup or verification methods.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -152,7 +152,7 @@ export default function SystemStatusPage() {
                   <item.icon className={`mr-2 h-5 w-5 shrink-0 ${getStatusColor(item.status)}`} />
                   {item.name}
                 </h3>
-                <Badge variant={getStatusBadgeVariant(item.status)} className={item.status === 'ok' ? 'bg-green-500/80 text-primary-foreground' : ''}>
+                <Badge variant={getStatusBadgeVariant(item.status)} className={item.status === 'ok' ? 'bg-green-500/80 text-primary-foreground' : item.status === 'warning' ? 'bg-yellow-400/80 text-secondary-foreground' : ''}>
                   {item.status.toUpperCase()}
                 </Badge>
               </div>
