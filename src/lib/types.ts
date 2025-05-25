@@ -13,10 +13,12 @@ export type CandidateStatus =
 
 export interface TransitionRecord {
   id: string;
-  candidateId?: string; // Added if you want to query transitions separately, Prisma relation handles it
+  candidateId?: string; 
   date: string; // ISO date string
   stage: CandidateStatus;
   notes?: string;
+  createdAt?: string; 
+  updatedAt?: string; 
 }
 
 export interface ParsedResumeData {
@@ -35,9 +37,9 @@ export interface Position {
   department: string;
   description?: string;
   isOpen: boolean;
-  createdAt?: string; // Prisma adds these
-  updatedAt?: string; // Prisma adds these
-  candidates?: Candidate[]; // Relation: A position can have many candidates
+  createdAt?: string; 
+  updatedAt?: string; 
+  candidates?: Candidate[]; 
 }
 
 export interface Candidate {
@@ -45,25 +47,37 @@ export interface Candidate {
   name: string;
   email: string;
   phone?: string;
-  resumePath?: string; // Path to the resume in MinIO
-  parsedData: ParsedResumeData; // Stored as JSON in DB
-  positionId: string;
-  position?: Position; // Relation: A candidate belongs to a position
+  resumePath?: string; 
+  parsedData: ParsedResumeData | null; // Can be null if not parsed
+  positionId: string | null; // Can be null if not assigned to a position
+  position?: Position; 
   fitScore: number; // 0-100
   status: CandidateStatus;
   applicationDate: string; // ISO date string
-  lastUpdateDate: string; // ISO date string
-  createdAt?: string; // Prisma adds these
-  updatedAt?: string; // Prisma adds these
+  lastUpdateDate?: string; // // Kept for compatibility, but updatedAt is primary for DB
+  createdAt?: string; 
+  updatedAt?: string; 
   transitionHistory: TransitionRecord[];
 }
 
 
-export interface UserProfile { // Represents an application user (recruiter, admin)
+export interface UserProfile { 
   id: string;
   name: string;
   email: string;
   avatarUrl?: string;
-  dataAiHint?: string; // For placeholder images if avatarUrl is missing
+  dataAiHint?: string; 
   role: 'Admin' | 'Recruiter' | 'Hiring Manager';
+}
+
+// New LogEntry type
+export type LogLevel = 'INFO' | 'WARN' | 'ERROR' | 'DEBUG';
+
+export interface LogEntry {
+  id: string;
+  timestamp: string; // ISO string
+  level: LogLevel;
+  message: string;
+  source?: string; // e.g., 'API', 'Frontend', 'System'
+  createdAt?: string;
 }

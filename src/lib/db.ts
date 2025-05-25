@@ -31,3 +31,23 @@ pool.on('error', (err) => {
 });
 
 export default pool;
+
+/*
+Reference SQL for creating the "LogEntry" table (you'll need to run this in your PostgreSQL DB):
+
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp"; -- Ensure UUID functions are available
+
+CREATE TABLE "LogEntry" (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    timestamp TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    level VARCHAR(10) NOT NULL, -- e.g., INFO, WARN, ERROR, DEBUG
+    message TEXT NOT NULL,
+    source VARCHAR(255), -- Optional: e.g., API, Frontend, System
+    "createdAt" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP -- For consistency with other tables
+);
+
+CREATE INDEX idx_logentry_timestamp ON "LogEntry"(timestamp DESC);
+CREATE INDEX idx_logentry_level ON "LogEntry"(level);
+CREATE INDEX idx_logentry_source ON "LogEntry"(source);
+
+*/
