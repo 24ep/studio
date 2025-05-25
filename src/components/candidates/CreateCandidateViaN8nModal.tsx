@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, type ChangeEvent } from 'react';
+import { useState, type ChangeEvent, useEffect } from 'react'; // Added useEffect
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -68,7 +68,7 @@ export function CreateCandidateViaN8nModal({ isOpen, onOpenChange, onProcessingS
     formData.append('pdfFile', selectedFile);
 
     try {
-      const response = await fetch('/api/candidates/upload-for-n8n', { // New API endpoint
+      const response = await fetch('/api/candidates/upload-for-n8n', {
         method: 'POST',
         body: formData,
       });
@@ -76,6 +76,7 @@ export function CreateCandidateViaN8nModal({ isOpen, onOpenChange, onProcessingS
       const result = await response.json();
 
       if (!response.ok) {
+        // This will throw the error that gets caught by the catch block below
         throw new Error(result.message || `Failed to send PDF to n8n for candidate creation. Status: ${response.status}`);
       }
 
@@ -85,12 +86,16 @@ export function CreateCandidateViaN8nModal({ isOpen, onOpenChange, onProcessingS
       });
       onProcessingStart(); // Notify parent page
       onOpenChange(false); // Close modal
-      removeFile(); 
+      // No need to call removeFile() here as the modal closing will trigger it via useEffect or onOpenChange handler
     } catch (error) {
       console.error("Error sending PDF to n8n for candidate creation:", error);
+      let description = (error as Error).message;
+      if (description === "n8n integration for candidate creation is not configured on the server.") {
+        description += " Please ensure the N8N_GENERIC_PDF_WEBHOOK_URL environment variable is set on the server.";
+      }
       toast({
         title: "Upload Failed",
-        description: (error as Error).message,
+        description: description,
         variant: "destructive",
       });
     } finally {
@@ -98,18 +103,18 @@ export function CreateCandidateViaN8nModal({ isOpen, onOpenChange, onProcessingS
     }
   };
   
-  // Reset file when modal is closed or opened
-  useState(() => {
+  // Reset file when modal is closed
+  useEffect(() => {
     if (!isOpen) {
         removeFile();
     }
-  });
+  }, [isOpen]);
 
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => {
         onOpenChange(open);
-        if (!open) removeFile(); // Clear file on close
+        // No need for removeFile() here if useEffect handles it
     }}>
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
