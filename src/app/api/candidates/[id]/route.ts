@@ -1,7 +1,7 @@
 
 import { NextResponse, type NextRequest } from 'next/server';
-import prisma from '../../../../lib/prisma'; // Using relative path
-import type { CandidateStatus, ParsedResumeData } from '@/lib/types';
+import pool from '../../../../lib/db';
+import type { CandidateStatus, ParsedResumeData, Candidate } from '@/lib/types';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 import { z } from 'zod';
@@ -13,20 +13,34 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
   }
 
   try {
-    const candidate = await prisma.candidate.findUnique({
-      where: { id: params.id },
-      include: {
-        position: true,
-        transitionHistory: {
-          orderBy: {
-            date: 'desc',
-          },
-        },
-      },
-    });
-    if (!candidate) {
+    const query = `
+      SELECT 
+        c.*, 
+        p.title as "positionTitle",
+        p.department as "positionDepartment",
+        COALESCE(
+          (SELECT json_agg(th.* ORDER BY th.date DESC) FROM "TransitionRecord" th WHERE th."candidateId" = c.id), 
+          '[]'::json
+        ) as "transitionHistory"
+      FROM "Candidate" c
+      LEFT JOIN "Position" p ON c."positionId" = p.id
+      WHERE c.id = $1;
+    `;
+    const result = await pool.query(query, [params.id]);
+
+    if (result.rows.length === 0) {
       return NextResponse.json({ message: "Candidate not found" }, { status: 404 });
     }
+    
+    const candidate = {
+        ...result.rows[0],
+        parsedData: result.rows[0].parsedData || { education: [], skills: [], experienceYears: 0, summary: '' },
+        position: {
+            id: result.rows[0].positionId,
+            title: result.rows[0].positionTitle,
+            department: result.rows[0].positionDepartment,
+        },
+    };
     return NextResponse.json(candidate, { status: 200 });
   } catch (error) {
     console.error(`Failed to fetch candidate ${params.id}:`, error);
@@ -37,10 +51,10 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
 const candidateStatusValues: [CandidateStatus, ...CandidateStatus[]] = ['Applied', 'Screening', 'Shortlisted', 'Interview Scheduled', 'Interviewing', 'Offer Extended', 'Offer Accepted', 'Hired', 'Rejected', 'On Hold'];
 
 const updateCandidateSchema = z.object({
-  name: z.string().min(1, { message: "Name cannot be empty" }).optional(),
-  email: z.string().email({ message: "Invalid email address" }).optional(),
+  name: z.string().min(1).optional(),
+  email: z.string().email().optional(),
   phone: z.string().optional(),
-  positionId: z.string().min(1, { message: "Position ID cannot be empty" }).optional(),
+  positionId: z.string().uuid().optional(),
   fitScore: z.number().min(0).max(100).optional(),
   status: z.enum(candidateStatusValues).optional(),
   parsedData: z.object({
@@ -63,7 +77,6 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
   try {
     body = await request.json();
   } catch (error) {
-    console.error(`Error parsing JSON body for updating candidate ${params.id}:`, error);
     return NextResponse.json({ message: "Error parsing request body", error: (error as Error).message }, { status: 400 });
   }
 
@@ -76,64 +89,107 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
   }
 
   const validatedData = validationResult.data;
+  const client = await pool.connect();
 
   try {
-    const existingCandidate = await prisma.candidate.findUnique({ where: { id: params.id } });
-    if (!existingCandidate) {
+    await client.query('BEGIN');
+
+    const existingCandidateQuery = 'SELECT * FROM "Candidate" WHERE id = $1';
+    const existingCandidateResult = await client.query(existingCandidateQuery, [params.id]);
+    if (existingCandidateResult.rows.length === 0) {
+      await client.query('ROLLBACK');
       return NextResponse.json({ message: "Candidate not found" }, { status: 404 });
     }
+    const existingCandidate = existingCandidateResult.rows[0];
 
     if (validatedData.positionId) {
-      const positionExists = await prisma.position.findUnique({ where: { id: validatedData.positionId } });
-      if (!positionExists) {
+      const positionExistsQuery = 'SELECT id FROM "Position" WHERE id = $1';
+      const positionResult = await client.query(positionExistsQuery, [validatedData.positionId]);
+      if (positionResult.rows.length === 0) {
+        await client.query('ROLLBACK');
         return NextResponse.json({ message: "Position not found for new positionId" }, { status: 404 });
       }
     }
     
-    const updatePayload: any = { ...validatedData };
-    
-    if (validatedData.parsedData) {
-        updatePayload.parsedData = {
-            ...existingCandidate.parsedData as object, 
-            ...validatedData.parsedData,
-            education: validatedData.parsedData.education || (existingCandidate.parsedData as ParsedResumeData).education,
-            skills: validatedData.parsedData.skills || (existingCandidate.parsedData as ParsedResumeData).skills,
-        };
-    }
+    // Construct dynamic update query
+    const updateFields: string[] = [];
+    const updateValues: any[] = [];
+    let paramIndex = 1;
 
-    const candidate = await prisma.candidate.update({
-      where: { id: params.id },
-      data: updatePayload,
-      include: {
-        position: true,
-        transitionHistory: { orderBy: { date: 'desc' } },
-      },
+    Object.entries(validatedData).forEach(([key, value]) => {
+      if (value !== undefined) {
+        if (key === 'parsedData') {
+          // Deep merge parsedData
+          const mergedParsedData = { 
+            ...(existingCandidate.parsedData as object || {}),
+            ...(value as object),
+            // Ensure arrays are overwritten, not merged if that's the intent
+            education: value.education || (existingCandidate.parsedData as ParsedResumeData)?.education || [],
+            skills: value.skills || (existingCandidate.parsedData as ParsedResumeData)?.skills || [],
+          };
+          updateFields.push(`"${key}" = $${paramIndex++}`);
+          updateValues.push(mergedParsedData);
+        } else {
+          updateFields.push(`"${key}" = $${paramIndex++}`);
+          updateValues.push(value);
+        }
+      }
     });
 
-    if (validatedData.status && validatedData.status !== existingCandidate.status) {
-      await prisma.transitionRecord.create({
-        data: {
-          candidateId: params.id,
-          date: new Date(),
-          stage: validatedData.status,
-          notes: `Status updated to ${validatedData.status} via API.`,
-        },
-      });
-      // Re-fetch candidate to include the new transition record
-      const updatedCandidateWithNewTransition = await prisma.candidate.findUnique({
-        where: { id: params.id },
-        include: { position: true, transitionHistory: { orderBy: { date: 'desc' } } },
-      });
-      return NextResponse.json(updatedCandidateWithNewTransition, { status: 200 });
+    if (updateFields.length === 0) {
+      await client.query('ROLLBACK'); // Or just return existing candidate if no fields to update
+      return NextResponse.json(existingCandidate, { status: 200 });
     }
 
-    return NextResponse.json(candidate, { status: 200 });
+    updateFields.push(`"updatedAt" = NOW()`);
+    updateValues.push(params.id); // For WHERE clause
+
+    const updateQuery = `UPDATE "Candidate" SET ${updateFields.join(', ')} WHERE id = $${paramIndex} RETURNING *;`;
+    const updatedResult = await client.query(updateQuery, updateValues);
+    let updatedCandidate = updatedResult.rows[0];
+
+    if (validatedData.status && validatedData.status !== existingCandidate.status) {
+      const insertTransitionQuery = `
+        INSERT INTO "TransitionRecord" ("candidateId", date, stage, notes, "createdAt", "updatedAt")
+        VALUES ($1, NOW(), $2, $3, NOW(), NOW());
+      `;
+      await client.query(insertTransitionQuery, [params.id, validatedData.status, `Status updated to ${validatedData.status} via API.`]);
+    }
+    
+    await client.query('COMMIT');
+
+    // Re-fetch the candidate to include updated relations (position, transitionHistory)
+    const finalQuery = `
+        SELECT 
+            c.*, 
+            p.title as "positionTitle",
+            p.department as "positionDepartment",
+            (SELECT json_agg(th.* ORDER BY th.date DESC) FROM "TransitionRecord" th WHERE th."candidateId" = c.id) as "transitionHistory"
+        FROM "Candidate" c
+        LEFT JOIN "Position" p ON c."positionId" = p.id
+        WHERE c.id = $1;
+    `;
+    const finalResult = await pool.query(finalQuery, [params.id]);
+    updatedCandidate = {
+        ...finalResult.rows[0],
+        parsedData: finalResult.rows[0].parsedData || { education: [], skills: [], experienceYears: 0, summary: '' },
+        position: {
+            id: finalResult.rows[0].positionId,
+            title: finalResult.rows[0].positionTitle,
+            department: finalResult.rows[0].positionDepartment,
+        },
+    };
+
+    return NextResponse.json(updatedCandidate, { status: 200 });
   } catch (error: any) {
+    await client.query('ROLLBACK');
     console.error(`Failed to update candidate ${params.id}:`, error);
-     if (error.code === 'P2002' && error.meta?.target?.includes('email')) {
+    if (error.code === '23505' && error.constraint === 'Candidate_email_key') {
       return NextResponse.json({ message: "A candidate with this email already exists." }, { status: 409 });
     }
     return NextResponse.json({ message: "Error updating candidate", error: error.message }, { status: 500 });
+  } finally {
+    client.release();
   }
 }
 
@@ -143,20 +199,32 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
     return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
   }
 
+  const client = await pool.connect();
   try {
-    const candidate = await prisma.candidate.findUnique({ where: { id: params.id } });
-    if (!candidate) {
+    await client.query('BEGIN');
+
+    const candidateExistsQuery = 'SELECT id FROM "Candidate" WHERE id = $1';
+    const candidateResult = await client.query(candidateExistsQuery, [params.id]);
+    if (candidateResult.rows.length === 0) {
+      await client.query('ROLLBACK');
       return NextResponse.json({ message: "Candidate not found" }, { status: 404 });
     }
     
-    // Prisma cascades deletes for TransitionRecords based on schema
-    await prisma.candidate.delete({
-      where: { id: params.id },
-    });
+    // Manually delete related TransitionRecords first due to foreign key constraint
+    const deleteTransitionsQuery = 'DELETE FROM "TransitionRecord" WHERE "candidateId" = $1';
+    await client.query(deleteTransitionsQuery, [params.id]);
+    
+    const deleteCandidateQuery = 'DELETE FROM "Candidate" WHERE id = $1';
+    await client.query(deleteCandidateQuery, [params.id]);
+    
+    await client.query('COMMIT');
     
     return NextResponse.json({ message: "Candidate deleted successfully" }, { status: 200 });
   } catch (error) {
+    await client.query('ROLLBACK');
     console.error(`Failed to delete candidate ${params.id}:`, error);
     return NextResponse.json({ message: "Error deleting candidate", error: (error as Error).message }, { status: 500 });
+  } finally {
+    client.release();
   }
 }

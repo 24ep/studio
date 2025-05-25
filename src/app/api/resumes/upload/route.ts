@@ -2,15 +2,13 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/app/api/auth/[...nextauth]/route';
-import { minioClient, MINIO_BUCKET_NAME, ensureBucketExists } from '../../../../lib/minio'; // Using relative path
-import prisma from '../../../../lib/prisma'; // Using relative path
+import { minioClient, MINIO_BUCKET_NAME, ensureBucketExists } from '../../../../lib/minio';
+import pool from '../../../../lib/db';
 import { z } from 'zod';
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 const ACCEPTED_FILE_TYPES = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
 
-// Ensure bucket exists on server start (or first API call in serverless)
-// This is a side effect, ideally managed during deployment or a startup script
 ensureBucketExists(MINIO_BUCKET_NAME).catch(console.error);
 
 export async function POST(request: NextRequest) {
@@ -19,25 +17,25 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
   }
 
-  // Candidate ID should be passed as a query parameter
   const candidateId = request.nextUrl.searchParams.get('candidateId');
   if (!candidateId) {
     return NextResponse.json({ message: 'Candidate ID is required as a query parameter' }, { status: 400 });
   }
 
   // Verify candidate exists
-  let candidate;
+  let candidateDBRecord;
   try {
-    candidate = await prisma.candidate.findUnique({ where: { id: candidateId } });
-    if (!candidate) {
+    const candidateQuery = 'SELECT id FROM "Candidate" WHERE id = $1';
+    const candidateResult = await pool.query(candidateQuery, [candidateId]);
+    if (candidateResult.rows.length === 0) {
       return NextResponse.json({ message: 'Candidate not found' }, { status: 404 });
     }
+    candidateDBRecord = candidateResult.rows[0];
   } catch (dbError) {
      console.error('Database error fetching candidate:', dbError);
      return NextResponse.json({ message: 'Error verifying candidate', error: (dbError as Error).message }, { status: 500 });
   }
   
-
   try {
     const formData = await request.formData();
     const file = formData.get('resume') as File | null;
@@ -46,7 +44,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ message: 'No resume file provided in the "resume" field' }, { status: 400 });
     }
 
-    // Validate file size and type
     if (file.size > MAX_FILE_SIZE) {
       return NextResponse.json({ message: `File size exceeds the limit of ${MAX_FILE_SIZE / (1024*1024)}MB` }, { status: 400 });
     }
@@ -55,35 +52,51 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ message: 'Invalid file type. Only PDF, DOC, and DOCX are allowed.' }, { status: 400 });
     }
 
-    // Create a unique file name to prevent overwrites and include candidate context
-    const fileName = `${candidateId}-${Date.now()}-${file.name.replace(/\s+/g, '_')}`; // Sanitize filename
+    const fileName = `${candidateId}-${Date.now()}-${file.name.replace(/\s+/g, '_')}`;
     
-    // Convert File to Buffer for MinIO
     const bytes = await file.arrayBuffer();
     const buffer = Buffer.from(bytes);
 
-    // Upload to MinIO
     await minioClient.putObject(MINIO_BUCKET_NAME, fileName, buffer, file.size, {
       'Content-Type': file.type,
-      // You could add other metadata here, e.g., 'X-Amz-Meta-Candidate-Id': candidateId
     });
 
     // Update candidate record in database with the resume path
-    const updatedCandidate = await prisma.candidate.update({
-      where: { id: candidateId },
-      data: { resumePath: fileName, updatedAt: new Date() }, // Using 'fileName' as the path/key
-    });
+    const updateQuery = 'UPDATE "Candidate" SET "resumePath" = $1, "updatedAt" = NOW() WHERE id = $2 RETURNING *;';
+    const updatedCandidateResult = await pool.query(updateQuery, [fileName, candidateId]);
+
+    // Fetch full candidate details for response (similar to GET /candidates/[id])
+    const finalQuery = `
+        SELECT 
+            c.*, 
+            p.title as "positionTitle",
+            p.department as "positionDepartment",
+            (SELECT json_agg(th.* ORDER BY th.date DESC) FROM "TransitionRecord" th WHERE th."candidateId" = c.id) as "transitionHistory"
+        FROM "Candidate" c
+        LEFT JOIN "Position" p ON c."positionId" = p.id
+        WHERE c.id = $1;
+    `;
+    const finalResult = await pool.query(finalQuery, [candidateId]);
+    const updatedCandidateWithDetails = {
+        ...finalResult.rows[0],
+        parsedData: finalResult.rows[0].parsedData || { education: [], skills: [], experienceYears: 0, summary: '' },
+        position: {
+            id: finalResult.rows[0].positionId,
+            title: finalResult.rows[0].positionTitle,
+            department: finalResult.rows[0].positionDepartment,
+        },
+    };
+
 
     return NextResponse.json({ 
       message: 'Resume uploaded successfully', 
       filePath: fileName,
-      candidate: updatedCandidate // Return updated candidate data
+      candidate: updatedCandidateWithDetails
     }, { status: 200 });
 
   } catch (error: any) {
     console.error('Error uploading resume:', error);
-    // Check if it's a MinIO specific error or a general one
-    if (error.code && error.message) { // MinIO errors often have a 'code' property
+    if (error.code && error.message) { 
         return NextResponse.json({ message: `MinIO Error: ${error.message}`, code: error.code }, { status: 500 });
     }
     return NextResponse.json({ message: 'Error processing file upload', error: error.message }, { status: 500 });
