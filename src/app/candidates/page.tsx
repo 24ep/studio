@@ -6,10 +6,11 @@ import { CandidateFilters, type CandidateFilterValues } from '@/components/candi
 import { CandidateTable } from '@/components/candidates/CandidateTable';
 import type { Candidate, CandidateStatus, TransitionRecord, Position, CandidateDetails, OldParsedResumeData } from '@/lib/types';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, Users } from 'lucide-react';
+import { PlusCircle, Users, AlertTriangle } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
 import { AddCandidateModal, type AddCandidateFormValues } from '@/components/candidates/AddCandidateModal';
 import { UploadResumeModal } from '@/components/candidates/UploadResumeModal'; 
+import { signIn, useSession } from 'next-auth/react';
 
 export default function CandidatesPage() {
   const [allCandidates, setAllCandidates] = useState<Candidate[]>([]);
@@ -21,32 +22,56 @@ export default function CandidatesPage() {
   const [selectedCandidateForUpload, setSelectedCandidateForUpload] = useState<Candidate | null>(null); 
   const [availablePositions, setAvailablePositions] = useState<Position[]>([]);
   const { toast } = useToast();
+  const { data: session, status: sessionStatus } = useSession();
+  const [authError, setAuthError] = useState(false);
 
   const fetchPositions = useCallback(async () => {
+    if (sessionStatus !== 'authenticated') {
+      // Don't fetch if not authenticated, rely on main fetch logic to handle authError
+      return;
+    }
     try {
       const response = await fetch('/api/positions');
       if (!response.ok) {
         const errorText = response.statusText || `Status: ${response.status}`;
+        if (response.status === 401) {
+            setAuthError(true);
+            // No need to throw here, authError state will handle UI
+            return; 
+        }
         throw new Error(`Failed to fetch positions: ${errorText}`);
       }
       const data: Position[] = await response.json();
       setAvailablePositions(data.filter(p => p.isOpen)); 
     } catch (error) {
       console.error("Error fetching positions:", error);
-      toast({
-        title: "Error Fetching Positions",
-        description: (error as Error).message || "Could not load position data.",
-        variant: "destructive",
-      });
+      if (!(error as Error).message.includes("401")) { // Don't toast for auth errors handled by UI
+        toast({
+            title: "Error Fetching Positions",
+            description: (error as Error).message || "Could not load position data.",
+            variant: "destructive",
+        });
+      }
     }
-  }, [toast]);
+  }, [toast, sessionStatus]);
 
   const fetchCandidates = useCallback(async () => {
+    if (sessionStatus !== 'authenticated') {
+      setIsLoading(false);
+      setAuthError(true);
+      return;
+    }
     setIsLoading(true);
+    setAuthError(false);
     try {
       const response = await fetch('/api/candidates');
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({ message: response.statusText || `Status: ${response.status}` }));
+        if (response.status === 401) {
+            setAuthError(true);
+            setIsLoading(false);
+            return;
+        }
         throw new Error(errorData.message || `Failed to fetch candidates: ${response.statusText || `Status: ${response.status}`}`);
       }
       const data: Candidate[] = await response.json();
@@ -54,22 +79,31 @@ export default function CandidatesPage() {
       setFilteredCandidates(data); 
     } catch (error) {
       console.error("Error fetching candidates:", error);
-      toast({
-        title: "Error Fetching Candidates",
-        description: (error as Error).message || "Could not load candidate data.",
-        variant: "destructive",
-      });
+       if (!(error as Error).message.includes("401")) {
+        toast({
+            title: "Error Fetching Candidates",
+            description: (error as Error).message || "Could not load candidate data.",
+            variant: "destructive",
+        });
+      }
       setAllCandidates([]); 
       setFilteredCandidates([]);
     } finally {
       setIsLoading(false);
     }
-  }, [toast]);
+  }, [toast, sessionStatus]);
 
   useEffect(() => {
-    fetchCandidates();
-    fetchPositions();
-  }, [fetchCandidates, fetchPositions]);
+    if (sessionStatus === 'authenticated') {
+      fetchCandidates();
+      fetchPositions();
+    } else if (sessionStatus === 'unauthenticated') {
+      setIsLoading(false);
+      setAuthError(true);
+    }
+    // If sessionStatus is 'loading', we wait.
+  }, [sessionStatus, fetchCandidates, fetchPositions]);
+
 
   const applyFilters = useCallback((currentCandidates: Candidate[], currentFilters: CandidateFilterValues) => {
     return currentCandidates.filter(candidate => {
@@ -120,6 +154,11 @@ export default function CandidatesPage() {
 
       if (!response.ok) {
         const errorData = await response.json();
+        if (response.status === 401) {
+            setAuthError(true);
+            toast({ title: "Authentication Error", description: "Your session may have expired. Please sign in again.", variant: "destructive" });
+            return; // Do not throw, let authError handle UI
+        }
         throw new Error(errorData.message || `Failed to update candidate: ${response.statusText || `Status: ${response.status}`}`);
       }
       const updatedCandidateFromServer: Candidate = await response.json();
@@ -127,7 +166,6 @@ export default function CandidatesPage() {
       setAllCandidates(prev => 
         prev.map(c => (c.id === updatedCandidateFromServer.id ? updatedCandidateFromServer : c))
       );
-      // Also update filteredCandidates if the updated candidate is in the current filter
       setFilteredCandidates(prev => 
         prev.map(c => (c.id === updatedCandidateFromServer.id ? updatedCandidateFromServer : c))
       );
@@ -138,11 +176,13 @@ export default function CandidatesPage() {
       });
     } catch (error) {
       console.error("Error updating candidate:", error);
-      toast({
-        title: "Error Updating Candidate",
-        description: (error as Error).message || "Could not update candidate.",
-        variant: "destructive",
-      });
+      if (!(error as Error).message.includes("401")) {
+        toast({
+            title: "Error Updating Candidate",
+            description: (error as Error).message || "Could not update candidate.",
+            variant: "destructive",
+        });
+      }
       throw error; 
     }
   };
@@ -154,6 +194,11 @@ export default function CandidatesPage() {
       });
       if (!response.ok) {
         const errorData = await response.json();
+         if (response.status === 401) {
+            setAuthError(true);
+            toast({ title: "Authentication Error", description: "Your session may have expired. Please sign in again.", variant: "destructive" });
+            return;
+        }
         throw new Error(errorData.message || `Failed to delete candidate: ${response.statusText || `Status: ${response.status}`}`);
       }
       setAllCandidates(prev => prev.filter(c => c.id !== candidateId));
@@ -161,11 +206,13 @@ export default function CandidatesPage() {
       toast({ title: "Candidate Deleted", description: `Candidate successfully deleted.` });
     } catch (error) {
       console.error("Error deleting candidate:", error);
-      toast({
-        title: "Error Deleting Candidate",
-        description: (error as Error).message || "Could not delete candidate.",
-        variant: "destructive",
-      });
+      if (!(error as Error).message.includes("401")) {
+        toast({
+            title: "Error Deleting Candidate",
+            description: (error as Error).message || "Could not delete candidate.",
+            variant: "destructive",
+        });
+      }
       throw error; 
     }
   };
@@ -188,7 +235,6 @@ export default function CandidatesPage() {
           experience: formData.experience,
           skills: formData.skills?.map(s => ({
             segment_skill: s.segment_skill,
-            // Ensure skill is an array, even if skill_string is undefined/empty
             skill: s.skill_string?.split(',').map(sk => sk.trim()).filter(sk => sk) || [] 
           })),
           job_suitable: formData.job_suitable,
@@ -203,6 +249,12 @@ export default function CandidatesPage() {
 
       if (!response.ok) {
         const errorData = await response.json();
+        if (response.status === 401) {
+            setAuthError(true);
+            toast({ title: "Authentication Error", description: "Your session may have expired. Please sign in again.", variant: "destructive" });
+            setIsLoading(false);
+            return;
+        }
         throw new Error(errorData.message || `Failed to add candidate: ${response.statusText || `Status: ${response.status}`}`);
       }
       const newCandidate: Candidate = await response.json();
@@ -214,11 +266,13 @@ export default function CandidatesPage() {
       });
     } catch (error) {
       console.error("Error adding candidate:", error);
-      toast({
-        title: "Error Adding Candidate",
-        description: (error as Error).message || "Could not add candidate.",
-        variant: "destructive",
-      });
+      if (!(error as Error).message.includes("401")) {
+        toast({
+            title: "Error Adding Candidate",
+            description: (error as Error).message || "Could not add candidate.",
+            variant: "destructive",
+        });
+      }
     } finally {
         setIsLoading(false);
     }
@@ -238,6 +292,29 @@ export default function CandidatesPage() {
     );
   };
 
+  if (sessionStatus === 'loading' || (isLoading && !authError)) {
+    return (
+      <div className="space-y-6 animate-pulse">
+        <div className="h-10 bg-muted rounded w-full"></div> {/* Filter placeholder */}
+        <div className="h-64 bg-muted rounded w-full"></div> {/* Table placeholder */}
+      </div>
+    );
+  }
+
+  if (authError) {
+    return (
+      <div className="flex flex-col items-center justify-center h-[calc(100vh-10rem)] text-center">
+        <AlertTriangle className="w-16 h-16 text-destructive mb-4" />
+        <h2 className="text-2xl font-semibold text-foreground mb-2">Access Denied</h2>
+        <p className="text-muted-foreground mb-6">
+          You need to be signed in to view or manage candidates.
+        </p>
+        <Button onClick={() => signIn('azure-ad')}>Sign In</Button>
+      </div>
+    );
+  }
+
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-center gap-2">
@@ -253,7 +330,7 @@ export default function CandidatesPage() {
 
       <CandidateFilters initialFilters={filters} onFilterChange={handleFilterChange} availablePositions={availablePositions} />
       
-      {isLoading && allCandidates.length === 0 ? (
+      {isLoading && allCandidates.length === 0 ? ( // This specific loader is for when initial fetch is happening and there are no candidates yet
          <div className="flex flex-col items-center justify-center h-64 border rounded-lg bg-card shadow">
             <Users className="w-16 h-16 text-muted-foreground animate-pulse mb-4" />
             <h3 className="text-xl font-semibold text-foreground">Loading Candidates...</h3>
@@ -265,7 +342,7 @@ export default function CandidatesPage() {
           onUpdateCandidate={handleUpdateCandidateAPI} 
           onDeleteCandidate={handleDeleteCandidate} 
           onOpenUploadModal={handleOpenUploadModal} 
-          isLoading={isLoading && allCandidates.length > 0} // Show loading overlay on table if refreshing
+          isLoading={isLoading && allCandidates.length > 0} 
         />
       )}
 
