@@ -16,18 +16,19 @@ import Link from "next/link";
 import { Separator } from "@/components/ui/separator";
 import { Package2 } from "lucide-react";
 import { usePathname } from "next/navigation";
+import { useSession } from "next-auth/react";
 
 function getPageTitle(pathname: string): string {
   if (pathname === "/") return "Dashboard";
   if (pathname.startsWith("/candidates")) return "Candidates";
   if (pathname.startsWith("/positions")) return "Positions";
-  // if (pathname.startsWith("/upload")) return "Upload Resume"; // Removed this line
   if (pathname.startsWith("/users")) return "Manage Users";
   if (pathname.startsWith("/settings/preferences")) return "Preferences";
   if (pathname.startsWith("/settings/integrations")) return "Integrations";
-  if (pathname.startsWith("/settings")) return "Settings"; // Fallback for base settings
+  if (pathname.startsWith("/settings")) return "Settings"; 
   if (pathname.startsWith("/api-docs")) return "API Documentation";
   if (pathname.startsWith("/logs")) return "Application Logs";
+  if (pathname.startsWith("/auth/signin")) return "Sign In"; // New title for sign-in page
   return "CandiTrack";
 }
 
@@ -35,6 +36,12 @@ function getPageTitle(pathname: string): string {
 export function AppLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const pageTitle = getPageTitle(pathname);
+  const { data: session, status } = useSession();
+
+  // If on the sign-in page, render children directly without the main app layout
+  if (pathname === "/auth/signin") {
+    return <>{children}</>;
+  }
 
   return (
     <SidebarProvider defaultOpen>

@@ -61,10 +61,13 @@ export const authOptions: NextAuthOptions = {
   //     return session;
   //   },
   // },
-  // Pages option can be used to define custom sign-in, sign-out, error pages
-  // pages: {
-  //   signIn: '/auth/signin', // Example custom sign-in page relative to app root
-  // },
+  pages: {
+    signIn: '/auth/signin', // Custom sign-in page
+    // signOut: '/auth/signout', // Optional: Custom sign-out page
+    // error: '/auth/error', // Optional: Custom error page (e.g., for auth errors)
+    // verifyRequest: '/auth/verify-request', // Optional: For email provider
+    // newUser: '/auth/new-user' // Optional: New user (e.g., after sign up)
+  },
   secret: process.env.NEXTAUTH_SECRET,
   // debug: process.env.NODE_ENV === 'development', // Enable debug logs in development
 };
