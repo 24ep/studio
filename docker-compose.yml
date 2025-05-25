@@ -19,34 +19,39 @@ services:
       # --- NextAuth & Azure AD Configuration ---
       # IMPORTANT: Fill these with your Azure AD App Registration details
       # These can also be in a .env.local file which Docker Compose will pick up by default.
-      AZURE_AD_CLIENT_ID: "your_azure_ad_application_client_id"
-      AZURE_AD_CLIENT_SECRET: "your_azure_ad_client_secret_value"
-      AZURE_AD_TENANT_ID: "your_azure_ad_directory_tenant_id"
-      NEXTAUTH_URL: "http://localhost:9002" # Should match the exposed port
-      NEXTAUTH_SECRET: "super-secret-nextauth-key-replace-this" # Generate a strong secret: openssl rand -base64 32
+      AZURE_AD_CLIENT_ID: "${AZURE_AD_CLIENT_ID:-your_azure_ad_application_client_id}"
+      AZURE_AD_CLIENT_SECRET: "${AZURE_AD_CLIENT_SECRET:-your_azure_ad_client_secret_value}"
+      AZURE_AD_TENANT_ID: "${AZURE_AD_TENANT_ID:-your_azure_ad_directory_tenant_id}"
+      NEXTAUTH_URL: "${NEXTAUTH_URL:-http://localhost:9002}" # Should match the exposed port
+      NEXTAUTH_SECRET: "${NEXTAUTH_SECRET:-super-secret-nextauth-key-replace-this}" # Generate a strong secret: openssl rand -base64 32
 
       # --- Genkit Configuration ---
       # For Genkit, if Google AI needs API key via env var (uncomment and set if needed)
-      # GOOGLE_API_KEY: "your_google_api_key"
+      # GOOGLE_API_KEY: "${GOOGLE_API_KEY:-your_google_api_key}"
 
       # --- Backend Service Connection Configuration ---
       # PostgreSQL connection URL for the Next.js app
       # Format: postgresql://USER:PASSWORD@HOST:PORT/DATABASE
-      DATABASE_URL: "postgresql://devuser:devpassword@postgres:5432/canditrack_db"
+      DATABASE_URL: "${DATABASE_URL:-postgresql://devuser:devpassword@postgres:5432/canditrack_db}"
 
       # MinIO connection details for the Next.js app
-      MINIO_ENDPOINT: "http://minio:9000"
-      MINIO_ACCESS_KEY: "minioadmin" # Corresponds to MINIO_ROOT_USER in minio service
-      MINIO_SECRET_KEY: "minio_secret_password" # Corresponds to MINIO_ROOT_PASSWORD in minio service
-      MINIO_BUCKET_NAME: "canditrack-resumes" # Example bucket name, ensure this bucket is created in MinIO
-      MINIO_USE_SSL: "false" # Set to "true" if MinIO is configured with SSL
+      MINIO_ENDPOINT: "${MINIO_ENDPOINT:-minio}" # Changed from http://minio:9000 to just minio (service name)
+      MINIO_PORT: "${MINIO_PORT:-9000}"
+      MINIO_ACCESS_KEY: "${MINIO_ACCESS_KEY:-minioadmin}" # Corresponds to MINIO_ROOT_USER in minio service
+      MINIO_SECRET_KEY: "${MINIO_SECRET_KEY:-minio_secret_password}" # Corresponds to MINIO_ROOT_PASSWORD in minio service
+      MINIO_BUCKET_NAME: "${MINIO_BUCKET_NAME:-canditrack-resumes}" # Example bucket name, ensure this bucket is created in MinIO
+      MINIO_USE_SSL: "${MINIO_USE_SSL:-false}" # Set to "true" if MinIO is configured with SSL
 
       # Redis connection URL for the Next.js app
       # Format: redis://HOST:PORT
-      REDIS_URL: "redis://redis:6379"
+      REDIS_URL: "${REDIS_URL:-redis://redis:6379}"
       # Alternatively, you could use separate host/port variables:
       # REDIS_HOST: "redis"
       # REDIS_PORT: "6379"
+
+      # N8N Webhook URL (optional)
+      N8N_RESUME_WEBHOOK_URL: "${N8N_RESUME_WEBHOOK_URL:-}"
+
 
       # --- General Application Settings ---
       NODE_ENV: development
@@ -61,11 +66,12 @@ services:
     ports:
       - "5432:5432"
     environment:
-      POSTGRES_USER: devuser
-      POSTGRES_PASSWORD: devpassword
-      POSTGRES_DB: canditrack_db
+      POSTGRES_USER: "${POSTGRES_USER:-devuser}"
+      POSTGRES_PASSWORD: "${POSTGRES_PASSWORD:-devpassword}"
+      POSTGRES_DB: "${POSTGRES_DB:-canditrack_db}"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      - ./init-db.sql:/docker-entrypoint-initdb.d/init-db.sql # Mount the init script
     restart: unless-stopped
 
   minio:
@@ -74,8 +80,8 @@ services:
       - "9000:9000" # MinIO API port
       - "9001:9001" # MinIO Console port
     environment:
-      MINIO_ROOT_USER: minioadmin # Access key for MinIO
-      MINIO_ROOT_PASSWORD: minio_secret_password # Secret key for MinIO
+      MINIO_ROOT_USER: "${MINIO_ROOT_USER:-minioadmin}" # Access key for MinIO
+      MINIO_ROOT_PASSWORD: "${MINIO_ROOT_PASSWORD:-minio_secret_password}" # Secret key for MinIO
     command: server /data --console-address ":9001"
     volumes:
       - minio_data:/data
