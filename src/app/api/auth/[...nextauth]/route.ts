@@ -1,10 +1,9 @@
-
 // src/app/api/auth/[...nextauth]/route.ts
 import NextAuth, { type NextAuthOptions, type User as NextAuthUser } from 'next-auth';
 import AzureADProvider from 'next-auth/providers/azure-ad';
 import CredentialsProvider from 'next-auth/providers/credentials';
 import pool from '../../../../lib/db'; 
-import type { UserProfile } from '@/lib/types';
+import type { UserProfile, PlatformModuleId } from '@/lib/types';
 import bcrypt from 'bcrypt';
 import { logAudit } from '@/lib/auditLog';
 
@@ -22,6 +21,7 @@ export const authOptions: NextAuthOptions = {
           email: profile.email,
           image: profile.picture,
           // role: mapAzureGroupsToRoles(profile.groups) // TODO: Implement if using Azure AD group-based roles
+          // modulePermissions: mapAzureGroupsToModulePermissions(profile.groups) // TODO
         };
       }
     }),
@@ -38,7 +38,7 @@ export const authOptions: NextAuthOptions = {
 
         const client = await pool.connect();
         try {
-          const userQuery = 'SELECT id, name, email, password, role, "avatarUrl" as "image" FROM "User" WHERE email = $1';
+          const userQuery = 'SELECT id, name, email, password, role, "avatarUrl" as "image", "modulePermissions" FROM "User" WHERE email = $1';
           const result = await client.query(userQuery, [credentials.email]);
           
           if (result.rows.length === 0) {
@@ -58,7 +58,8 @@ export const authOptions: NextAuthOptions = {
               email: userFromDb.email,
               image: userFromDb.image, 
               role: userFromDb.role as UserProfile['role'],
-            } as NextAuthUser & { role?: UserProfile['role'] }; 
+              modulePermissions: (userFromDb.modulePermissions || []) as PlatformModuleId[],
+            } as NextAuthUser & { role?: UserProfile['role'], modulePermissions?: PlatformModuleId[] }; 
           } else {
             console.log(`Invalid password attempt for email: ${credentials.email}`);
             await logAudit('WARN', `Failed login attempt: Invalid password for user '${userFromDb.email}' (ID: ${userFromDb.id}).`, 'Auth:Credentials', userFromDb.id, { email: userFromDb.email, ip: req.headers?.['x-forwarded-for'] || req.headers?.['remote_addr'] });
@@ -109,6 +110,9 @@ export const authOptions: NextAuthOptions = {
         if ((user as any).role) {
           token.role = (user as any).role as UserProfile['role'];
         }
+        if ((user as any).modulePermissions) {
+          token.modulePermissions = (user as any).modulePermissions as PlatformModuleId[];
+        }
       }
       return token;
     },
@@ -120,6 +124,9 @@ export const authOptions: NextAuthOptions = {
         session.user.image = token.picture as string | undefined;
         if (token.role) {
           session.user.role = token.role as UserProfile['role'];
+        }
+        if (token.modulePermissions) {
+          session.user.modulePermissions = token.modulePermissions as PlatformModuleId[];
         }
       }
       return session;

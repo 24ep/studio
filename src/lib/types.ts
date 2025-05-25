@@ -1,20 +1,35 @@
-
 // This declares the shape of the user object returned by the session callback
 // and available in useSession() or getServerSession()
 // It needs to be augmented if you add custom properties to the session token
 import type { DefaultUser } from 'next-auth';
+
+// Define platform module IDs
+export const PLATFORM_MODULES = [
+  { id: 'CANDIDATES_VIEW', label: 'View Candidates' },
+  { id: 'CANDIDATES_MANAGE', label: 'Manage Candidates (Add, Edit, Delete)' },
+  { id: 'POSITIONS_VIEW', label: 'View Positions' },
+  { id: 'POSITIONS_MANAGE', label: 'Manage Positions (Add, Edit, Delete)' },
+  { id: 'USERS_MANAGE', label: 'Manage Users & Permissions' },
+  { id: 'SETTINGS_ACCESS', label: 'Access System Settings' },
+  { id: 'LOGS_VIEW', label: 'View Application Logs' },
+] as const;
+
+export type PlatformModuleId = typeof PLATFORM_MODULES[number]['id'];
+
 
 declare module 'next-auth' {
   interface Session {
     user: {
       id: string; 
       role?: UserProfile['role']; 
+      modulePermissions?: PlatformModuleId[];
     } & DefaultUser; 
   }
 
   interface User extends DefaultUser {
     role?: UserProfile['role'];
     id: string; // Ensure User object passed to JWT/Session has id
+    modulePermissions?: PlatformModuleId[];
   }
 }
 
@@ -22,6 +37,7 @@ declare module 'next-auth/jwt' {
   interface JWT {
     id?: string;
     role?: UserProfile['role'];
+    modulePermissions?: PlatformModuleId[];
   }
 }
 
@@ -120,9 +136,9 @@ export interface Position {
   id: string;
   title: string;
   department: string;
-  description?: string;
+  description?: string | null; // Allow null for description
   isOpen: boolean;
-  position_level?: string; // New attribute
+  position_level?: string | null; // Allow null
   createdAt?: string;
   updatedAt?: string;
   candidates?: Candidate[]; // Relation for ORM/Prisma like fetching
@@ -155,6 +171,7 @@ export interface UserProfile {
   dataAiHint?: string;
   role: 'Admin' | 'Recruiter' | 'Hiring Manager';
   password?: string; // Only used during creation/auth process, not stored in session
+  modulePermissions?: PlatformModuleId[]; // Array of allowed module IDs
   createdAt?: string;
   updatedAt?: string;
 }
@@ -171,4 +188,3 @@ export interface LogEntry {
   details?: Record<string, any> | null; // Additional structured data for the log
   createdAt?: string; // ISO date string
 }
-

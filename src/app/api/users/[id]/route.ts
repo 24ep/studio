@@ -1,21 +1,23 @@
-
 // src/app/api/users/[id]/route.ts
 import { NextResponse, type NextRequest } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 import { z } from 'zod';
 import pool from '../../../../lib/db';
-import type { UserProfile } from '@/lib/types';
+import type { UserProfile, PlatformModuleId } from '@/lib/types';
+import { PLATFORM_MODULES } from '@/lib/types';
 import { logAudit } from '@/lib/auditLog';
 import bcrypt from 'bcrypt';
 
+const platformModuleIds = PLATFORM_MODULES.map(m => m.id) as [PlatformModuleId, ...PlatformModuleId[]];
 const userRoleEnum = z.enum(['Admin', 'Recruiter', 'Hiring Manager']);
 
 const updateUserSchema = z.object({
   name: z.string().min(1, "Name is required").optional(),
   email: z.string().email("Invalid email address").optional(),
   role: userRoleEnum.optional(),
-  newPassword: z.string().min(6, "Password must be at least 6 characters").optional(),
+  newPassword: z.string().min(6, "Password must be at least 6 characters").optional().or(z.literal('')),
+  modulePermissions: z.array(z.enum(platformModuleIds)).optional(),
 });
 
 export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
@@ -30,12 +32,16 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
   }
 
   try {
-    const query = 'SELECT id, name, email, role, "avatarUrl", "dataAiHint", "createdAt", "updatedAt" FROM "User" WHERE id = $1';
+    const query = 'SELECT id, name, email, role, "avatarUrl", "dataAiHint", "modulePermissions", "createdAt", "updatedAt" FROM "User" WHERE id = $1';
     const result = await pool.query(query, [params.id]);
     if (result.rows.length === 0) {
       return NextResponse.json({ message: "User not found" }, { status: 404 });
     }
-    return NextResponse.json(result.rows[0], { status: 200 });
+    const user = {
+        ...result.rows[0],
+        modulePermissions: result.rows[0].modulePermissions || [] // Ensure it's an array
+    };
+    return NextResponse.json(user, { status: 200 });
   } catch (error) {
     console.error(`Failed to fetch user ${params.id}:`, error);
     await logAudit('ERROR', `Failed to fetch user ${params.id}. Error: ${(error as Error).message}`, 'API:Users', session.user.id, { targetUserId: params.id });
@@ -72,12 +78,6 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
 
   const updates = validationResult.data;
 
-  if (Object.keys(updates).length === 0) {
-    const currentUser = await pool.query('SELECT id, name, email, role, "avatarUrl", "dataAiHint", "createdAt", "updatedAt" FROM "User" WHERE id = $1', [params.id]);
-    if(currentUser.rows.length > 0) return NextResponse.json(currentUser.rows[0], { status: 200 });
-    return NextResponse.json({ message: "User not found or no updates provided" }, { status: 400 });
-  }
-
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
@@ -105,18 +105,21 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
     const auditChanges: string[] = [];
 
     for (const [key, value] of Object.entries(updates)) {
-      if (value !== undefined) {
+      if (value !== undefined) { // Check for undefined, allow nulls or empty strings if schema permits
         auditChanges.push(key);
         if (key === 'newPassword') {
           if (value && typeof value === 'string' && value.length > 0) {
             const hashedPassword = await bcrypt.hash(value, 10);
-            updateFields.push(`"password" = $${paramIndex++}`); // Store as "password" in DB
+            updateFields.push(`"password" = $${paramIndex++}`);
             updateValues.push(hashedPassword);
             auditChanges.push('password (hashed)'); // Indicate password was changed
           }
           // Don't add newPassword field itself to auditChanges if it was just for password
           const newPasswordIndex = auditChanges.indexOf('newPassword');
           if (newPasswordIndex > -1) auditChanges.splice(newPasswordIndex, 1);
+        } else if (key === 'modulePermissions') {
+            updateFields.push(`"${key}" = $${paramIndex++}`);
+            updateValues.push(value || []); // Ensure it's an array, default to empty if null/undefined
         } else {
           updateFields.push(`"${key}" = $${paramIndex++}`);
           updateValues.push(value);
@@ -124,18 +127,22 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
       }
     }
 
-
     if (updateFields.length === 0) {
       await client.query('ROLLBACK');
-      return NextResponse.json(existingUser, { status: 200 }); 
+      const currentUser = await pool.query('SELECT id, name, email, role, "avatarUrl", "dataAiHint", "modulePermissions", "createdAt", "updatedAt" FROM "User" WHERE id = $1', [params.id]);
+      if(currentUser.rows.length > 0) return NextResponse.json({ ...currentUser.rows[0], modulePermissions: currentUser.rows[0].modulePermissions || [] }, { status: 200 });
+      return NextResponse.json({ message: "User not found or no updates provided" }, { status: 400 });
     }
 
     updateFields.push(`"updatedAt" = NOW()`);
     updateValues.push(params.id); 
 
-    const updateQuery = `UPDATE "User" SET ${updateFields.join(', ')} WHERE id = $${paramIndex} RETURNING id, name, email, role, "avatarUrl", "dataAiHint", "createdAt", "updatedAt";`;
+    const updateQuery = `UPDATE "User" SET ${updateFields.join(', ')} WHERE id = $${paramIndex} RETURNING id, name, email, role, "avatarUrl", "dataAiHint", "modulePermissions", "createdAt", "updatedAt";`;
     const updatedResult = await client.query(updateQuery, updateValues);
-    const updatedUser = updatedResult.rows[0];
+    const updatedUser = {
+        ...updatedResult.rows[0],
+        modulePermissions: updatedResult.rows[0].modulePermissions || []
+    };
     await client.query('COMMIT');
 
     await logAudit('AUDIT', `User account '${updatedUser.name}' (ID: ${updatedUser.id}) updated by Admin '${session.user.name}' (ID: ${session.user.id}).`, 'API:Users', session.user.id, { targetUserId: updatedUser.id, changes: auditChanges });
@@ -171,8 +178,6 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
   }
 
   try {
-    // Check if user is associated with any logs as actingUserId before deleting, to avoid foreign key issues if logs are critical
-    // For now, we proceed with delete, ensure your DB schema handles this (e.g., ON DELETE SET NULL for actingUserId)
     const deleteQuery = 'DELETE FROM "User" WHERE id = $1 RETURNING id, name'; 
     const result = await pool.query(deleteQuery, [params.id]);
     if (result.rowCount === 0) {
@@ -187,4 +192,3 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
     return NextResponse.json({ message: "Error deleting user", error: (error as Error).message }, { status: 500 });
   }
 }
-

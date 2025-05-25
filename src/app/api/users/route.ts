@@ -1,14 +1,16 @@
-
 // src/app/api/users/route.ts
 import { NextResponse, type NextRequest } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 import { z } from 'zod';
 import pool from '../../../lib/db';
-import type { UserProfile } from '@/lib/types';
+import type { UserProfile, PlatformModuleId } from '@/lib/types';
+import { PLATFORM_MODULES } from '@/lib/types'; // Import defined modules
 import { v4 as uuidv4 } from 'uuid';
 import bcrypt from 'bcrypt';
 import { logAudit } from '@/lib/auditLog';
+
+const platformModuleIds = PLATFORM_MODULES.map(m => m.id) as [PlatformModuleId, ...PlatformModuleId[]];
 
 const userRoleEnum = z.enum(['Admin', 'Recruiter', 'Hiring Manager']);
 
@@ -17,6 +19,7 @@ const createUserSchema = z.object({
   email: z.string().email("Invalid email address"),
   password: z.string().min(6, "Password must be at least 6 characters long"),
   role: userRoleEnum,
+  modulePermissions: z.array(z.enum(platformModuleIds)).optional().default([]),
 });
 
 export async function GET(request: NextRequest) {
@@ -31,9 +34,11 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const result = await pool.query('SELECT id, name, email, role, "avatarUrl", "dataAiHint", "createdAt", "updatedAt" FROM "User" ORDER BY "createdAt" DESC');
-    // await logAudit('AUDIT', `User list retrieved by ${session.user.name} (ID: ${session.user.id}).`, 'API:Users', session.user.id); // Can be too verbose
-    return NextResponse.json(result.rows, { status: 200 });
+    const result = await pool.query('SELECT id, name, email, role, "avatarUrl", "dataAiHint", "modulePermissions", "createdAt", "updatedAt" FROM "User" ORDER BY "createdAt" DESC');
+    return NextResponse.json(result.rows.map(user => ({
+      ...user,
+      modulePermissions: user.modulePermissions || [] // Ensure it's an array
+    })), { status: 200 });
   } catch (error) {
     console.error("Failed to fetch users:", error);
     await logAudit('ERROR', `Failed to fetch users. Error: ${(error as Error).message}`, 'API:Users', session.user.id);
@@ -68,7 +73,7 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const { name, email, password, role } = validationResult.data;
+  const { name, email, password, role, modulePermissions } = validationResult.data;
 
   const saltRounds = 10;
   let hashedPassword;
@@ -95,15 +100,18 @@ export async function POST(request: NextRequest) {
     const newUserId = uuidv4();
 
     const insertQuery = `
-      INSERT INTO "User" (id, name, email, password, role, "avatarUrl", "dataAiHint", "createdAt", "updatedAt")
-      VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), NOW())
-      RETURNING id, name, email, role, "avatarUrl", "dataAiHint", "createdAt", "updatedAt";
+      INSERT INTO "User" (id, name, email, password, role, "avatarUrl", "dataAiHint", "modulePermissions", "createdAt", "updatedAt")
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW(), NOW())
+      RETURNING id, name, email, role, "avatarUrl", "dataAiHint", "modulePermissions", "createdAt", "updatedAt";
     `;
-    const result = await client.query(insertQuery, [newUserId, name, email, hashedPassword, role, defaultAvatarUrl, defaultDataAiHint]);
-    const newUser = result.rows[0];
+    const result = await client.query(insertQuery, [newUserId, name, email, hashedPassword, role, defaultAvatarUrl, defaultDataAiHint, modulePermissions || []]);
+    const newUser = {
+        ...result.rows[0],
+        modulePermissions: result.rows[0].modulePermissions || []
+    };
     await client.query('COMMIT');
     
-    await logAudit('AUDIT', `User account '${newUser.name}' (ID: ${newUser.id}) created by ${session.user.name} (ID: ${session.user.id}).`, 'API:Users', session.user.id, { targetUserId: newUser.id, role: newUser.role });
+    await logAudit('AUDIT', `User account '${newUser.name}' (ID: ${newUser.id}) created by ${session.user.name} (ID: ${session.user.id}).`, 'API:Users', session.user.id, { targetUserId: newUser.id, role: newUser.role, permissions: newUser.modulePermissions });
     return NextResponse.json(newUser, { status: 201 });
 
   } catch (error: any) {
