@@ -3,9 +3,13 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import pool from '../../../../lib/db';
 import { z } from 'zod';
-import type { N8NWebhookPayload, CandidateDetails, Position, CandidateStatus, N8NJobMatch, PersonalInfo, ContactInfo, EducationEntry, ExperienceEntry, SkillEntry, JobSuitableEntry } from '@/lib/types';
+import type { N8NCandidateWebhookEntry, CandidateDetails, Position, CandidateStatus, N8NJobMatch, PersonalInfo, ContactInfo, EducationEntry, ExperienceEntry, SkillEntry, JobSuitableEntry, PositionLevel } from '@/lib/types';
 import { logAudit } from '@/lib/auditLog';
 import { v4 as uuidv4 } from 'uuid';
+
+const positionLevelEnumValues: [PositionLevel, ...PositionLevel[]] = [
+    'entry level', 'mid level', 'senior level', 'lead', 'manager', 'executive', 'officer', 'leader'
+];
 
 // Zod schemas for validation, mirroring types.ts
 const personalInfoSchema = z.object({
@@ -40,16 +44,15 @@ const experienceEntrySchema = z.object({
   duration: z.string().optional().default(''),
   is_current_position: z.preprocess(
     (val) => {
-      if (val === "") return false; // Treat empty string as false
-      if (val === null || val === undefined) return false; // Default for not provided
-      // Attempt to convert string "true" or "false" to boolean
+      if (val === "") return false; 
+      if (val === null || val === undefined) return false; 
       if (typeof val === 'string' && val.toLowerCase() === 'true') return true;
       if (typeof val === 'string' && val.toLowerCase() === 'false') return false;
-      return val; // Pass other values (like actual booleans) through
+      return val; 
     },
     z.boolean().optional().default(false)
   ),
-  postition_level: z.enum(['entry level', 'mid level', 'senior level', 'lead', 'manager', 'executive']).optional(),
+  postition_level: z.enum(positionLevelEnumValues).optional(),
 }).passthrough();
 
 const skillEntrySchema = z.object({
@@ -72,23 +75,22 @@ const candidateDetailsSchemaForN8N = z.object({
   experience: z.array(experienceEntrySchema).optional().default([]),
   skills: z.array(skillEntrySchema).optional().default([]),
   job_suitable: z.array(jobSuitableEntrySchema).optional().default([]),
-  // associatedMatchDetails is NOT expected from n8n directly in this part of the payload
-  // it's constructed by this API if a match is found
 }).passthrough();
 
 
 const n8nJobMatchSchema = z.object({
-  job_id: z.string().optional(), // Made optional as per example
+  job_id: z.string().optional(),
   job_title: z.string(),
   fit_score: z.number(),
   match_reasons: z.array(z.string()),
 });
 
-// Updated n8nWebhookPayloadSchema to directly reflect the new JSON structure
-const n8nWebhookPayloadSchema = candidateDetailsSchemaForN8N.extend({
-  job_matches: z.array(n8nJobMatchSchema).optional(),
+const n8nCandidateWebhookEntrySchema = z.object({
+  candidate_info: candidateDetailsSchemaForN8N,
+  jobs: z.array(n8nJobMatchSchema).optional().default([]),
 });
 
+const n8nWebhookPayloadSchema = z.array(n8nCandidateWebhookEntrySchema);
 
 const candidateStatusValues: [CandidateStatus, ...CandidateStatus[]] = ['Applied', 'Screening', 'Shortlisted', 'Interview Scheduled', 'Interviewing', 'Offer Extended', 'Offer Accepted', 'Hired', 'Rejected', 'On Hold'];
 
@@ -113,144 +115,142 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const payload = validationResult.data;
-  const { personal_info, contact_info, job_matches, ...otherDetails } = payload;
-
-  const name = `${personal_info.firstname} ${personal_info.lastname}`.trim();
-  const email = contact_info.email;
-  const phone = contact_info.phone || null;
-
-  // Validate that name is not empty after construction
-  if (!name) {
-    return NextResponse.json(
-      { message: "Invalid input: Candidate name (derived from firstname and lastname) cannot be empty.", errors: { personal_info: { firstname: ["First name is required"], lastname: ["Last name is required"] }}},
-      { status: 400 }
-    );
-  }
-
-
-  let positionId: string | null = null;
-  let fitScore: number = 0;
-  // Ensure finalParsedData captures all attributes from the root of the n8n payload
-  let finalParsedData: CandidateDetails = {
-    cv_language: payload.cv_language,
-    personal_info: payload.personal_info,
-    contact_info: payload.contact_info,
-    education: payload.education,
-    experience: payload.experience,
-    skills: payload.skills,
-    job_suitable: payload.job_suitable,
-    // associatedMatchDetails will be added below if a match is found
-  };
-
+  const payloadArray = validationResult.data;
+  const results = [];
   const client = await pool.connect();
-  const newCandidateId = uuidv4();
 
   try {
-    await client.query('BEGIN');
+    for (const entry of payloadArray) {
+      const { candidate_info, jobs: job_matches } = entry;
+      const { personal_info, contact_info } = candidate_info;
 
-    const existingCandidateQuery = 'SELECT id FROM "Candidate" WHERE email = $1';
-    const existingCandidateResult = await client.query(existingCandidateQuery, [email]);
-    if (existingCandidateResult.rows.length > 0) {
-      await client.query('ROLLBACK');
-      const existingId = existingCandidateResult.rows[0].id;
-      await logAudit('WARN', `N8N Webhook: Candidate with email '${email}' already exists (ID: ${existingId}). Creation skipped.`, 'API:N8N:CreateCandidate', null, { email });
-      return NextResponse.json({ message: `Candidate with email ${email} already exists.`, candidateId: existingId }, { status: 409 });
-    }
+      const name = `${personal_info.firstname} ${personal_info.lastname}`.trim();
+      const email = contact_info.email;
+      const phone = contact_info.phone || null;
 
-    if (job_matches && job_matches.length > 0) {
-      const topMatch = job_matches[0]; 
-
-      const positionQuery = 'SELECT id FROM "Position" WHERE title ILIKE $1 AND "isOpen" = TRUE LIMIT 1'; // Using ILIKE for case-insensitive match
-      const positionResult = await client.query(positionQuery, [topMatch.job_title]);
-
-      if (positionResult.rows.length > 0) {
-        positionId = positionResult.rows[0].id;
-        fitScore = topMatch.fit_score;
-        finalParsedData.associatedMatchDetails = {
-          jobTitle: topMatch.job_title,
-          fitScore: topMatch.fit_score,
-          reasons: topMatch.match_reasons,
-          n8nJobId: topMatch.job_id,
-        };
-        await logAudit('INFO', `N8N Webhook: Matched candidate '${name}' to position '${topMatch.job_title}' (ID: ${positionId}) with fit score ${fitScore}.`, 'API:N8N:CreateCandidate', null, { candidateName: name, positionTitle: topMatch.job_title, positionId, fitScore});
-      } else {
-        await logAudit('INFO', `N8N Webhook: No open position found matching title '${topMatch.job_title}' for candidate '${name}'. Candidate will be created without position assignment.`, 'API:N8N:CreateCandidate', null, { candidateName: name, searchedPositionTitle: topMatch.job_title });
+      if (!name) {
+        results.push({ status: 'error', email, message: "Candidate name (derived from firstname and lastname) cannot be empty."});
+        continue;
       }
+      if (!email) {
+        results.push({ status: 'error', name, message: "Candidate email cannot be empty."});
+        continue;
+      }
+
+      let positionId: string | null = null;
+      let fitScore: number = 0;
+      let finalParsedData: CandidateDetails = {
+        ...candidate_info, // This now includes cv_language, personal_info, contact_info, education etc.
+      };
+
+      await client.query('BEGIN');
+
+      const existingCandidateQuery = 'SELECT id FROM "Candidate" WHERE email = $1';
+      const existingCandidateResult = await client.query(existingCandidateQuery, [email]);
+      if (existingCandidateResult.rows.length > 0) {
+        await client.query('ROLLBACK');
+        const existingId = existingCandidateResult.rows[0].id;
+        await logAudit('WARN', `N8N Webhook: Candidate with email '${email}' already exists (ID: ${existingId}). Creation skipped.`, 'API:N8N:CreateCandidate', null, { email });
+        results.push({ status: 'skipped', email, message: `Candidate with email ${email} already exists.`, candidateId: existingId });
+        continue;
+      }
+
+      if (job_matches && job_matches.length > 0) {
+        const topMatch = job_matches[0]; 
+
+        const positionQuery = 'SELECT id FROM "Position" WHERE title ILIKE $1 AND "isOpen" = TRUE LIMIT 1';
+        const positionResult = await client.query(positionQuery, [topMatch.job_title]);
+
+        if (positionResult.rows.length > 0) {
+          positionId = positionResult.rows[0].id;
+          fitScore = topMatch.fit_score;
+          finalParsedData.associatedMatchDetails = {
+            jobTitle: topMatch.job_title,
+            fitScore: topMatch.fit_score,
+            reasons: topMatch.match_reasons,
+            n8nJobId: topMatch.job_id,
+          };
+          await logAudit('INFO', `N8N Webhook: Matched candidate '${name}' to position '${topMatch.job_title}' (ID: ${positionId}) with fit score ${fitScore}.`, 'API:N8N:CreateCandidate', null, { candidateName: name, positionTitle: topMatch.job_title, positionId, fitScore});
+        } else {
+          await logAudit('INFO', `N8N Webhook: No open position found matching title '${topMatch.job_title}' for candidate '${name}'. Candidate will be created without position assignment.`, 'API:N8N:CreateCandidate', null, { candidateName: name, searchedPositionTitle: topMatch.job_title });
+        }
+      }
+      
+      const newCandidateId = uuidv4();
+      const insertCandidateQuery = `
+        INSERT INTO "Candidate" (id, name, email, phone, "positionId", "fitScore", status, "applicationDate", "parsedData", "createdAt", "updatedAt")
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW(), NOW())
+        RETURNING *;
+      `;
+      const candidateValues = [
+        newCandidateId,
+        name,
+        email,
+        phone,
+        positionId,
+        fitScore,
+        'Applied' as CandidateStatus, 
+        new Date().toISOString(),
+        finalParsedData, 
+      ];
+      const candidateResult = await client.query(insertCandidateQuery, candidateValues);
+      const newCandidate = candidateResult.rows[0];
+
+      const insertTransitionQuery = `
+        INSERT INTO "TransitionRecord" (id, "candidateId", date, stage, notes, "createdAt", "updatedAt")
+        VALUES ($1, $2, NOW(), $3, $4, NOW(), NOW());
+      `;
+      await client.query(insertTransitionQuery, [
+        uuidv4(),
+        newCandidate.id,
+        'Applied' as CandidateStatus,
+        'Candidate created via n8n webhook from resume processing.',
+      ]);
+
+      await client.query('COMMIT');
+      await logAudit('AUDIT', `N8N Webhook: Candidate '${newCandidate.name}' (ID: ${newCandidate.id}) created successfully.`, 'API:N8N:CreateCandidate', null, { candidateId: newCandidate.id, name: newCandidate.name });
+      
+      const finalCandidateQuery = `
+        SELECT 
+          c.*, 
+          p.title as "positionTitle",
+          p.department as "positionDepartment",
+          COALESCE(
+            (SELECT json_agg(th.* ORDER BY th.date DESC) FROM "TransitionRecord" th WHERE th."candidateId" = c.id), 
+            '[]'::json
+          ) as "transitionHistory"
+        FROM "Candidate" c
+        LEFT JOIN "Position" p ON c."positionId" = p.id
+        WHERE c.id = $1;
+      `;
+      const finalResult = await client.query(finalCandidateQuery, [newCandidate.id]);
+      const createdCandidateWithDetails = finalResult.rows.length > 0 ? {
+          ...finalResult.rows[0],
+          parsedData: finalResult.rows[0].parsedData || { personal_info: {}, contact_info: {} },
+          position: finalResult.rows[0].positionId ? { 
+              id: finalResult.rows[0].positionId,
+              title: finalResult.rows[0].positionTitle,
+              department: finalResult.rows[0].positionDepartment,
+          } : null,
+      } : null;
+      
+      results.push({ status: 'success', candidate: createdCandidateWithDetails, message: `Candidate ${name} created.` });
+
+    } catch (error: any) {
+      await client.query('ROLLBACK'); // Rollback for the current candidate if an error occurs
+      console.error("N8N Webhook: Error creating candidate:", error);
+      const currentEntry = payloadArray.find(entry => entry.candidate_info.contact_info.email === error.email) || { candidate_info: { contact_info: { email: 'unknown' }, personal_info: { firstname: 'unknown', lastname: '' } } };
+      const candidateNameForLog = `${currentEntry.candidate_info.personal_info.firstname} ${currentEntry.candidate_info.personal_info.lastname}`.trim();
+      const candidateEmailForLog = currentEntry.candidate_info.contact_info.email;
+      
+      await logAudit('ERROR', `N8N Webhook: Error processing candidate entry for '${candidateNameForLog}'. Error: ${error.message}`, 'API:N8N:CreateCandidate', null, { name: candidateNameForLog, email: candidateEmailForLog, error: error.message });
+      results.push({ status: 'error', email: candidateEmailForLog, message: error.message });
     }
+  }
 
-    const insertCandidateQuery = `
-      INSERT INTO "Candidate" (id, name, email, phone, "positionId", "fitScore", status, "applicationDate", "parsedData", "createdAt", "updatedAt")
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW(), NOW())
-      RETURNING *;
-    `;
-    const candidateValues = [
-      newCandidateId,
-      name,
-      email,
-      phone,
-      positionId,
-      fitScore,
-      'Applied' as CandidateStatus, 
-      new Date().toISOString(),
-      finalParsedData, 
-    ];
-    const candidateResult = await client.query(insertCandidateQuery, candidateValues);
-    const newCandidate = candidateResult.rows[0];
+  return NextResponse.json({ message: "Batch candidate creation process completed.", results }, { status: 200 });
 
-    const insertTransitionQuery = `
-      INSERT INTO "TransitionRecord" (id, "candidateId", date, stage, notes, "createdAt", "updatedAt")
-      VALUES ($1, $2, NOW(), $3, $4, NOW(), NOW());
-    `;
-    await client.query(insertTransitionQuery, [
-      uuidv4(),
-      newCandidate.id,
-      'Applied' as CandidateStatus,
-      'Candidate created via n8n webhook from resume processing.',
-    ]);
-
-    await client.query('COMMIT');
-    await logAudit('AUDIT', `N8N Webhook: Candidate '${newCandidate.name}' (ID: ${newCandidate.id}) created successfully.`, 'API:N8N:CreateCandidate', null, { candidateId: newCandidate.id, name: newCandidate.name });
-    
-    // Fetch the fully detailed candidate to return
-    const finalCandidateQuery = `
-      SELECT 
-        c.*, 
-        p.title as "positionTitle",
-        p.department as "positionDepartment",
-        COALESCE(
-          (SELECT json_agg(th.* ORDER BY th.date DESC) FROM "TransitionRecord" th WHERE th."candidateId" = c.id), 
-          '[]'::json
-        ) as "transitionHistory"
-      FROM "Candidate" c
-      LEFT JOIN "Position" p ON c."positionId" = p.id
-      WHERE c.id = $1;
-    `;
-    const finalResult = await client.query(finalCandidateQuery, [newCandidate.id]);
-    if (finalResult.rows.length === 0) {
-        // Should not happen if insert succeeded
-        return NextResponse.json({ message: "Candidate created but failed to retrieve details" }, { status: 500 });
-    }
-    const createdCandidateWithDetails = {
-        ...finalResult.rows[0],
-        parsedData: finalResult.rows[0].parsedData || { personal_info: {}, contact_info: {} }, // Ensure parsedData exists
-        position: finalResult.rows[0].positionId ? { 
-            id: finalResult.rows[0].positionId,
-            title: finalResult.rows[0].positionTitle,
-            department: finalResult.rows[0].positionDepartment,
-        } : null,
-    };
-
-    return NextResponse.json({ message: "Candidate created successfully from n8n webhook", candidate: createdCandidateWithDetails }, { status: 201 });
-
-  } catch (error: any) {
-    await client.query('ROLLBACK');
-    console.error("N8N Webhook: Error creating candidate:", error);
-    await logAudit('ERROR', `N8N Webhook: Error creating candidate '${name}'. Error: ${error.message}`, 'API:N8N:CreateCandidate', null, { name, email, error: error.message });
-    return NextResponse.json({ message: "Error creating candidate from n8n webhook", error: error.message }, { status: 500 });
   } finally {
     client.release();
   }
 }
-
-    

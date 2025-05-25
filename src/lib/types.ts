@@ -1,3 +1,4 @@
+
 // This declares the shape of the user object returned by the session callback
 // and available in useSession() or getServerSession()
 // It needs to be augmented if you add custom properties to the session token
@@ -88,6 +89,16 @@ export interface EducationEntry {
   campus?: string;
 }
 
+export type PositionLevel = 
+  | 'entry level' 
+  | 'mid level' 
+  | 'senior level' 
+  | 'lead' 
+  | 'manager' 
+  | 'executive'
+  | 'officer' // Added from new payload
+  | 'leader'; // Added from new payload
+
 export interface ExperienceEntry {
   company?: string;
   position?: string;
@@ -95,7 +106,7 @@ export interface ExperienceEntry {
   period?: string;
   duration?: string;
   is_current_position?: boolean;
-  postition_level?: 'entry level' | 'mid level' | 'senior level' | 'lead' | 'manager' | 'executive';
+  postition_level?: PositionLevel;
 }
 
 export interface SkillEntry {
@@ -134,16 +145,14 @@ export interface CandidateDetails {
   };
 }
 
-export interface N8NWebhookPayload {
-  cv_language?: string;
-  personal_info: PersonalInfo;
-  contact_info: ContactInfo;
-  education?: EducationEntry[];
-  experience?: ExperienceEntry[];
-  skills?: SkillEntry[];
-  job_suitable?: JobSuitableEntry[];
-  job_matches?: N8NJobMatch[]; // Changed from top_matches and now root level of the payload
+// This is the structure for a single candidate entry coming from n8n
+export interface N8NCandidateWebhookEntry {
+  candidate_info: CandidateDetails;
+  jobs: N8NJobMatch[];
 }
+
+// The overall payload from n8n is an array of these entries
+export type N8NWebhookPayload = N8NCandidateWebhookEntry[];
 
 
 // Kept for potential backward compatibility if some candidates have old data structure
@@ -164,7 +173,7 @@ export interface Position {
   department: string;
   description?: string | null; 
   isOpen: boolean;
-  position_level?: string | null;
+  position_level?: string | null; // Matches PositionLevel options
   createdAt?: string;
   updatedAt?: string;
   candidates?: Candidate[]; 
@@ -195,7 +204,7 @@ export interface UserProfile {
   avatarUrl?: string;
   dataAiHint?: string;
   role: 'Admin' | 'Recruiter' | 'Hiring Manager';
-  password?: string; 
+  password?: string; // This should be the hashed password in the DB
   modulePermissions?: PlatformModuleId[]; 
   createdAt?: string;
   updatedAt?: string;
