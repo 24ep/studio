@@ -3,7 +3,7 @@
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button, buttonVariants } from "@/components/ui/button"; 
-import { PlusCircle, UsersRound, ShieldAlert, Edit3, Trash2, ServerCrash, Loader2, MoreHorizontal } from "lucide-react"; // Removed KeyRound
+import { PlusCircle, UsersRound, ShieldAlert, Edit3, Trash2, ServerCrash, Loader2, MoreHorizontal, KeyRound } from "lucide-react"; // Added KeyRound
 import type { UserProfile } from "@/lib/types";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -12,7 +12,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useToast } from "@/hooks/use-toast";
 import { AddUserModal, type AddUserFormValues } from "@/components/users/AddUserModal";
 import { EditUserModal, type EditUserFormValues } from "@/components/users/EditUserModal";
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation'; // Added usePathname
 import {
   AlertDialog,
   AlertDialogAction,
@@ -22,6 +22,7 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
+  AlertDialogTrigger, // Ensure this is imported
 } from "@/components/ui/alert-dialog";
 import {
   DropdownMenu,
@@ -39,6 +40,7 @@ export default function ManageUsersPage() {
   const { toast } = useToast();
   const { data: session, status: sessionStatus } = useSession();
   const router = useRouter();
+  const pathname = usePathname(); // Get current pathname
   const [fetchError, setFetchError] = useState<string | null>(null);
 
   const [isAddUserModalOpen, setIsAddUserModalOpen] = useState(false);
@@ -49,7 +51,7 @@ export default function ManageUsersPage() {
 
   const fetchUsers = useCallback(async () => {
     if (sessionStatus !== 'authenticated') {
-        signIn(undefined, { callbackUrl: window.location.pathname });
+        // This will be handled by the useEffect below
         return;
     }
     setIsLoading(true);
@@ -59,7 +61,7 @@ export default function ManageUsersPage() {
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({ message: response.statusText || `Status: ${response.status}` }));
         if (response.status === 401 || response.status === 403) {
-             signIn(undefined, { callbackUrl: window.location.pathname });
+             // This will be handled by the useEffect below
              return;
         }
         setFetchError(errorData.message || 'Failed to fetch users');
@@ -71,22 +73,22 @@ export default function ManageUsersPage() {
     } catch (error) {
       console.error("Error fetching users:", error);
       const errorMessage = (error as Error).message || "An unexpected error occurred.";
-      if (!errorMessage.toLowerCase().includes("unauthorized") && !errorMessage.toLowerCase().includes("forbidden")) {
+      if (!(errorMessage.toLowerCase().includes("unauthorized") || errorMessage.toLowerCase().includes("forbidden"))) {
         setFetchError(errorMessage);
       }
       setUsers([]); 
     } finally {
       setIsLoading(false);
     }
-  }, [sessionStatus, router]); // Removed signIn from dependencies as it's stable
+  }, [sessionStatus]); 
 
   useEffect(() => {
     if (sessionStatus === 'unauthenticated') {
-      signIn(undefined, { callbackUrl: window.location.pathname });
+      signIn(undefined, { callbackUrl: pathname }); // Use pathname
     } else if (sessionStatus === 'authenticated') {
       fetchUsers();
     }
-  }, [sessionStatus, fetchUsers, router]); // Removed signIn
+  }, [sessionStatus, fetchUsers, pathname, signIn]); // Added signIn to dependencies
 
   const handleAddUser = async (data: AddUserFormValues) => {
     try {
@@ -98,7 +100,7 @@ export default function ManageUsersPage() {
       const result = await response.json();
       if (!response.ok) {
         if (response.status === 401 || response.status === 403) {
-          signIn(undefined, { callbackUrl: window.location.pathname });
+          signIn(undefined, { callbackUrl: pathname });
           return;
         }
         throw new Error(result.message || 'Failed to add user');
@@ -122,7 +124,7 @@ export default function ManageUsersPage() {
       const result = await response.json();
       if (!response.ok) {
          if (response.status === 401 || response.status === 403) {
-          signIn(undefined, { callbackUrl: window.location.pathname });
+          signIn(undefined, { callbackUrl: pathname });
           return;
         }
         throw new Error(result.message || 'Failed to update user');
@@ -153,7 +155,7 @@ export default function ManageUsersPage() {
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({message: "Failed to delete user."}));
         if (response.status === 401 || response.status === 403) {
-          signIn(undefined, { callbackUrl: window.location.pathname });
+          signIn(undefined, { callbackUrl: pathname });
           return;
         }
         throw new Error(errorData.message || 'Failed to delete user');
@@ -168,7 +170,27 @@ export default function ManageUsersPage() {
     }
   };
 
-  if (sessionStatus === 'loading' || (sessionStatus === 'unauthenticated' && !router.asPath.startsWith('/auth/signin')) || (isLoading && !fetchError)) {
+  const handleGenerateApiToken = (user: UserProfile) => {
+    // This is a placeholder. Actual API token generation is complex.
+    const mockToken = `mock_token_${user.id}_${Date.now().toString(36)}`;
+    navigator.clipboard.writeText(mockToken)
+      .then(() => {
+        toast({
+          title: "Mock API Token Generated",
+          description: `Token for ${user.name} copied to clipboard: ${mockToken}`,
+        });
+      })
+      .catch(err => {
+        toast({
+          title: "Mock API Token Generated (Copy Failed)",
+          description: `Token: ${mockToken}. Failed to copy to clipboard: ${err}`,
+          variant: "destructive"
+        });
+      });
+  };
+
+
+  if (sessionStatus === 'loading' || (sessionStatus === 'unauthenticated' && !pathname.startsWith('/auth/signin')) || (isLoading && !fetchError)) {
     return (
       <div className="flex h-screen w-screen items-center justify-center bg-background fixed inset-0 z-50">
         <Loader2 className="h-16 w-16 animate-spin text-primary" />
@@ -304,6 +326,10 @@ export default function ManageUsersPage() {
 
       {userToDelete && (
         <AlertDialog open={!!userToDelete} onOpenChange={(open) => { if(!open) setUserToDelete(null);}}>
+          <AlertDialogTrigger asChild>
+             {/* Trigger is handled by DropdownMenuItem, this is just for modal control */}
+            <button style={{display: 'none'}}></button>
+          </AlertDialogTrigger>
           <AlertDialogContent>
             <AlertDialogHeader>
               <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
