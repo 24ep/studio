@@ -5,20 +5,24 @@ import { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import type { Candidate, Position } from "@/lib/types";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Users, Briefcase, CheckCircle2, UserPlus, FileWarning, UserRoundSearch } from "lucide-react";
+import { Users, Briefcase, CheckCircle2, UserPlus, FileWarning, UserRoundSearch, AlertTriangle } from "lucide-react";
 import { isToday, parseISO } from 'date-fns';
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
+import { signIn, useSession } from "next-auth/react";
 
 export default function DashboardPage() {
   const [candidates, setCandidates] = useState<Candidate[]>([]);
   const [positions, setPositions] = useState<Position[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [authError, setAuthError] = useState(false);
   const { toast } = useToast();
+  const { data: session, status: sessionStatus } = useSession();
 
   const fetchData = useCallback(async () => {
     setIsLoading(true);
+    setAuthError(false);
     try {
       const [candidatesRes, positionsRes] = await Promise.all([
         fetch('/api/candidates'),
@@ -27,10 +31,12 @@ export default function DashboardPage() {
 
       if (!candidatesRes.ok) {
         const errorText = candidatesRes.statusText || `Status: ${candidatesRes.status}`;
+        if (candidatesRes.status === 401) setAuthError(true);
         throw new Error(`Failed to fetch candidates: ${errorText}`);
       }
       if (!positionsRes.ok) {
         const errorText = positionsRes.statusText || `Status: ${positionsRes.status}`;
+        if (positionsRes.status === 401) setAuthError(true); // Also check for positions if candidates fetch was ok
         throw new Error(`Failed to fetch positions: ${errorText}`);
       }
 
@@ -42,19 +48,29 @@ export default function DashboardPage() {
 
     } catch (error) {
       console.error("Error fetching dashboard data:", error);
-      toast({
-        title: "Error Fetching Dashboard Data",
-        description: (error as Error).message || "Could not load data.",
-        variant: "destructive",
-      });
+      // Auth error is handled by state, toast for other errors
+      if (!String((error as Error).message).includes("401")) {
+        toast({
+          title: "Error Fetching Dashboard Data",
+          description: (error as Error).message || "Could not load data.",
+          variant: "destructive",
+        });
+      }
     } finally {
       setIsLoading(false);
     }
   }, [toast]);
 
   useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+    // Fetch data only if session is loaded and user is authenticated, or if auth is not required by design (but it is here)
+    if (sessionStatus === 'authenticated') {
+      fetchData();
+    } else if (sessionStatus === 'unauthenticated') {
+      setIsLoading(false);
+      setAuthError(true); // If session is unauthenticated, it's an auth error for this page
+    }
+    // If sessionStatus is 'loading', we wait.
+  }, [sessionStatus, fetchData]);
 
 
   const totalCandidates = candidates.length;
@@ -62,7 +78,6 @@ export default function DashboardPage() {
   
   const hiredCandidatesThisMonth = candidates.filter(c => {
     try {
-      // Ensure applicationDate exists and is a valid date string
       if (!c.applicationDate) return false;
       const appDate = parseISO(c.applicationDate); 
       return c.status === 'Hired' && appDate.getFullYear() === new Date().getFullYear() && appDate.getMonth() === new Date().getMonth();
@@ -71,12 +86,10 @@ export default function DashboardPage() {
 
   const newCandidatesTodayList = candidates.filter(c => {
     try {
-      // Ensure applicationDate exists and is a valid date string
       if (!c.applicationDate) return false;
       const appDate = parseISO(c.applicationDate);
       return isToday(appDate);
     } catch (error) {
-      // console.error("Error parsing applicationDate for candidate:", c.id, error);
       return false;
     }
   });
@@ -94,7 +107,7 @@ export default function DashboardPage() {
     return !hasCandidates;
   });
 
-  if (isLoading) {
+  if (sessionStatus === 'loading' || (isLoading && !authError) ) {
     return (
       <div className="space-y-6 animate-pulse">
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -106,6 +119,19 @@ export default function DashboardPage() {
           <Card><CardHeader><div className="h-7 w-3/4 bg-muted rounded"></div><div className="h-4 w-1/2 bg-muted rounded mt-1"></div></CardHeader><CardContent><div className="h-20 bg-muted rounded"></div></CardContent></Card>
           <Card><CardHeader><div className="h-7 w-3/4 bg-muted rounded"></div><div className="h-4 w-1/2 bg-muted rounded mt-1"></div></CardHeader><CardContent><div className="h-20 bg-muted rounded"></div></CardContent></Card>
         </div>
+      </div>
+    );
+  }
+
+  if (authError) {
+    return (
+      <div className="flex flex-col items-center justify-center h-[calc(100vh-10rem)] text-center">
+        <AlertTriangle className="w-16 h-16 text-destructive mb-4" />
+        <h2 className="text-2xl font-semibold text-foreground mb-2">Access Denied</h2>
+        <p className="text-muted-foreground mb-6">
+          You need to be signed in to view the dashboard data.
+        </p>
+        <Button onClick={() => signIn('azure-ad')}>Sign In</Button>
       </div>
     );
   }
