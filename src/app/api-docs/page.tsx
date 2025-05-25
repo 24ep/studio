@@ -23,11 +23,11 @@ interface ApiEndpoint {
 const apiEndpoints: ApiEndpoint[] = [
   {
     method: "POST",
-    path: "/api/resumes",
-    description: "Upload one or more candidate resumes for parsing and processing.",
-    requestBody: "FormData: `resumes`: File[] (one or more resume files)",
-    response: "JSON: `{ status: 'success', message: 'Files uploaded', count: 2 }`",
-    curlExample: "curl -X POST -F 'resumes=@resume1.pdf' -F 'resumes=@resume2.docx' http://localhost:9002/api/resumes",
+    path: "/api/resumes/upload",
+    description: "Upload a candidate resume. Requires candidateId as query param.",
+    requestBody: "FormData: `resume`: File (PDF, DOC, DOCX)",
+    response: "JSON: `{ message: 'Resume uploaded successfully', filePath: '...', candidate: Candidate }`",
+    curlExample: "curl -X POST -F 'resume=@resume.pdf' 'http://localhost:9002/api/resumes/upload?candidateId=your-candidate-id'",
   },
   {
     method: "GET",
@@ -35,7 +35,15 @@ const apiEndpoints: ApiEndpoint[] = [
     description: "Retrieve a list of candidates. Supports filtering by name, position, fit score, etc.",
     requestBody: "N/A (Query params: `name`, `positionId`, `minFitScore`, `maxFitScore`)",
     response: "JSON: `Candidate[]` (Array of candidate objects)",
-    curlExample: "curl http://localhost:9002/api/candidates?positionId=pos1",
+    curlExample: "curl http://localhost:9002/api/candidates?positionId=your-position-id",
+  },
+  {
+    method: "POST",
+    path: "/api/candidates",
+    description: "Create a new candidate.",
+    requestBody: "JSON: See AddCandidateFormValues type; requires `name`, `email`, `positionId` (nullable), `parsedData` (CandidateDetails)",
+    response: "JSON: `Candidate` (Newly created candidate object)",
+    curlExample: "curl -X POST -H 'Content-Type: application/json' -d '{\"name\":\"John Doe\", \"email\":\"john@example.com\", \"positionId\": null, \"parsedData\": { ... }}' http://localhost:9002/api/candidates",
   },
   {
     method: "GET",
@@ -43,23 +51,23 @@ const apiEndpoints: ApiEndpoint[] = [
     description: "Retrieve details for a specific candidate.",
     requestBody: "N/A (Path parameter: `id`)",
     response: "JSON: `Candidate` (Single candidate object)",
-    curlExample: "curl http://localhost:9002/api/candidates/cand1",
+    curlExample: "curl http://localhost:9002/api/candidates/your-candidate-id",
   },
   {
     method: "PUT",
     path: "/api/candidates/{id}",
     description: "Update a candidate's information or status.",
-    requestBody: "JSON: `{ name?: string, status?: CandidateStatus, ... }`",
+    requestBody: "JSON: `{ name?: string, status?: CandidateStatus, parsedData?: CandidateDetails, ... }`",
     response: "JSON: `Candidate` (Updated candidate object)",
-    curlExample: "curl -X PUT -H 'Content-Type: application/json' -d '{\"status\":\"Interviewing\"}' http://localhost:9002/api/candidates/cand1",
+    curlExample: "curl -X PUT -H 'Content-Type: application/json' -d '{\"status\":\"Interviewing\"}' http://localhost:9002/api/candidates/your-candidate-id",
   },
   {
     method: "DELETE",
     path: "/api/candidates/{id}",
     description: "Delete a candidate.",
     requestBody: "N/A (Path parameter: `id`)",
-    response: "JSON: `{ status: 'success', message: 'Candidate deleted' }`",
-    curlExample: "curl -X DELETE http://localhost:9002/api/candidates/cand1",
+    response: "JSON: `{ message: 'Candidate deleted successfully' }`",
+    curlExample: "curl -X DELETE http://localhost:9002/api/candidates/your-candidate-id",
   },
   {
     method: "GET",
@@ -75,7 +83,63 @@ const apiEndpoints: ApiEndpoint[] = [
     description: "Create a new job position.",
     requestBody: "JSON: `{ title: string, department: string, description?: string, isOpen: boolean }`",
     response: "JSON: `Position` (Newly created position object)",
-    curlExample: "curl -X POST -H 'Content-Type: application/json' -d '{\"title\":\"New Role\", ...}' http://localhost:9002/api/positions",
+    curlExample: "curl -X POST -H 'Content-Type: application/json' -d '{\"title\":\"New Role\", \"department\":\"Engineering\", \"isOpen\":true}' http://localhost:9002/api/positions",
+  },
+  {
+    method: "GET",
+    path: "/api/positions/{id}",
+    description: "Retrieve details for a specific position.",
+    requestBody: "N/A (Path parameter: `id`)",
+    response: "JSON: `Position` (Single position object)",
+    curlExample: "curl http://localhost:9002/api/positions/your-position-id",
+  },
+  {
+    method: "PUT",
+    path: "/api/positions/{id}",
+    description: "Update a position's information.",
+    requestBody: "JSON: `{ title?: string, department?: string, isOpen?: boolean, ... }`",
+    response: "JSON: `Position` (Updated position object)",
+    curlExample: "curl -X PUT -H 'Content-Type: application/json' -d '{\"isOpen\":false}' http://localhost:9002/api/positions/your-position-id",
+  },
+  {
+    method: "DELETE",
+    path: "/api/positions/{id}",
+    description: "Delete a position.",
+    requestBody: "N/A (Path parameter: `id`)",
+    response: "JSON: `{ message: 'Position deleted successfully' }` (or 409 if candidates are associated)",
+    curlExample: "curl -X DELETE http://localhost:9002/api/positions/your-position-id",
+  },
+  {
+    method: "GET",
+    path: "/api/users",
+    description: "Retrieve a list of application users (mock data).",
+    requestBody: "N/A",
+    response: "JSON: `UserProfile[]` (Array of user profile objects)",
+    curlExample: "curl http://localhost:9002/api/users",
+  },
+  {
+    method: "POST",
+    path: "/api/users",
+    description: "Create a new application user (mock data).",
+    requestBody: "JSON: `{ name: string, email: string, role: UserRole }`",
+    response: "JSON: `UserProfile` (Newly created user profile object)",
+    curlExample: "curl -X POST -H 'Content-Type: application/json' -d '{\"name\":\"Test User\", \"email\":\"test@example.com\", \"role\":\"Recruiter\"}' http://localhost:9002/api/users",
+  },
+   {
+    method: "POST",
+    path: "/api/logs",
+    description: "Create a new log entry in the database.",
+    requestBody: "JSON: `{ level: LogLevel, message: string, source?: string, timestamp?: ISOString }`",
+    response: "JSON: `LogEntry` (Newly created log entry object)",
+    curlExample: "curl -X POST -H 'Content-Type: application/json' -d '{\"level\":\"INFO\", \"message\":\"User logged in\", \"source\":\"AuthAPI\"}' http://localhost:9002/api/logs",
+  },
+  {
+    method: "GET",
+    path: "/api/logs",
+    description: "Retrieve a list of log entries. Supports pagination and level filtering.",
+    requestBody: "N/A (Query params: `limit`, `offset`, `level`)",
+    response: "JSON: `{ logs: LogEntry[], total: number }`",
+    curlExample: "curl http://localhost:9002/api/logs?level=ERROR&limit=10",
   },
   {
     method: "GET",
@@ -92,7 +156,7 @@ const getMethodBadgeVariant = (method: string) => {
     case "GET":
       return "outline"; 
     case "POST":
-      return "default"; 
+      return "outline"; // Changed from "default" to "outline"
     case "PUT":
       return "secondary"; 
     case "DELETE":
@@ -130,7 +194,7 @@ export default function ApiDocumentationPage() {
           </CardTitle>
           <CardDescription>
             Overview of available API endpoints for CandiTrack.
-            This documentation is conceptual for this prototype. Replace localhost:9002 with your actual domain.
+            Replace localhost:9002 with your actual domain. All protected routes require authentication.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
@@ -176,10 +240,10 @@ export default function ApiDocumentationPage() {
           </div>
 
           <div className="mt-6 text-sm text-muted-foreground space-y-2">
-            <p><strong>Authentication:</strong> Most endpoints will require authentication. This application uses NextAuth.js with Azure AD. API requests should include the appropriate authentication token (e.g., Bearer token in the Authorization header or session cookie).</p>
+            <p><strong>Authentication:</strong> Most endpoints require authentication via Azure AD (NextAuth.js). API requests should include the session cookie. Unauthenticated requests to protected routes will receive a 401 Unauthorized response.</p>
             <p><strong>Base URL:</strong> All API paths are relative to the application's base URL (e.g., <code>http://localhost:9002</code> or your production domain).</p>
-            <p><strong>Error Handling:</strong> Standard HTTP status codes will be used to indicate success or failure. Error responses will typically include a JSON body with an error message (e.g., <code>{`{ "error": "Resource not found" }`}</code> for a 404).</p>
-            <p><strong>Content Type:</strong> For POST and PUT requests with a body, ensure the <code>Content-Type</code> header is set appropriately (e.g., <code>application/json</code> for JSON data, or multipart/form-data for file uploads).</p>
+            <p><strong>Error Handling:</strong> Standard HTTP status codes are used (e.g., 200 OK, 201 Created, 400 Bad Request, 401 Unauthorized, 404 Not Found, 500 Internal Server Error). Error responses typically include a JSON body: <code>{`{ "message": "Error description", "errors?": { ... } }`}</code>.</p>
+            <p><strong>Content Type:</strong> For POST and PUT requests with a body, set <code>Content-Type: application/json</code>, unless it's a file upload (<code>multipart/form-data</code> for resume uploads).</p>
           </div>
         </CardContent>
       </Card>
@@ -193,7 +257,7 @@ export default function ApiDocumentationPage() {
               </DialogTitle>
               <DialogDescription>
                 Example cURL command for <strong>{selectedCurlEndpoint.method}</strong> <code>{selectedCurlEndpoint.path}</code>.
-                Remember to replace placeholders with actual values and include authentication headers if required.
+                Remember to replace placeholders with actual values and ensure your session cookie is included for authenticated requests.
               </DialogDescription>
             </DialogHeader>
             <div className="my-4 relative group">
