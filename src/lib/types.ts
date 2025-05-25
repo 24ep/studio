@@ -13,6 +13,7 @@ export type CandidateStatus =
 
 export interface TransitionRecord {
   id: string;
+  candidateId?: string; // Added if you want to query transitions separately, Prisma relation handles it
   date: string; // ISO date string
   stage: CandidateStatus;
   notes?: string;
@@ -28,29 +29,35 @@ export interface ParsedResumeData {
   summary?: string;
 }
 
-export interface Candidate {
-  id: string;
-  name: string;
-  email: string;
-  phone?: string;
-  resumeUrl?: string; // URL to the stored resume
-  parsedData: ParsedResumeData;
-  positionId: string;
-  positionTitle: string;
-  fitScore: number; // 0-100
-  status: CandidateStatus;
-  applicationDate: string; // ISO date string
-  lastUpdateDate: string; // ISO date string
-  transitionHistory: TransitionRecord[];
-}
-
 export interface Position {
   id: string;
   title: string;
   department: string;
   description?: string;
   isOpen: boolean;
+  createdAt?: string; // Prisma adds these
+  updatedAt?: string; // Prisma adds these
+  candidates?: Candidate[]; // Relation: A position can have many candidates
 }
+
+export interface Candidate {
+  id: string;
+  name: string;
+  email: string;
+  phone?: string;
+  resumePath?: string; // Path to the resume in MinIO
+  parsedData: ParsedResumeData; // Stored as JSON in DB
+  positionId: string;
+  position?: Position; // Relation: A candidate belongs to a position
+  fitScore: number; // 0-100
+  status: CandidateStatus;
+  applicationDate: string; // ISO date string
+  lastUpdateDate: string; // ISO date string
+  createdAt?: string; // Prisma adds these
+  updatedAt?: string; // Prisma adds these
+  transitionHistory: TransitionRecord[];
+}
+
 
 export interface UserProfile { // Represents an application user (recruiter, admin)
   id: string;

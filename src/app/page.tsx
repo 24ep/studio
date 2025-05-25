@@ -1,22 +1,64 @@
 
+"use client";
+
+import { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { mockCandidates, mockPositions } from "@/lib/data";
+import type { Candidate, Position } from "@/lib/types";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Users, Briefcase, CheckCircle2, UserPlus, FileWarning, UserRoundSearch } from "lucide-react";
 import { isToday, parseISO } from 'date-fns';
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { useToast } from "@/hooks/use-toast";
 
 export default function DashboardPage() {
-  const candidates = mockCandidates;
-  const positions = mockPositions;
+  const [candidates, setCandidates] = useState<Candidate[]>([]);
+  const [positions, setPositions] = useState<Position[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const { toast } = useToast();
+
+  const fetchData = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const [candidatesRes, positionsRes] = await Promise.all([
+        fetch('/api/candidates'),
+        fetch('/api/positions'),
+      ]);
+
+      if (!candidatesRes.ok) throw new Error(`Failed to fetch candidates: ${candidatesRes.statusText}`);
+      if (!positionsRes.ok) throw new Error(`Failed to fetch positions: ${positionsRes.statusText}`);
+
+      const candidatesData: Candidate[] = await candidatesRes.json();
+      const positionsData: Position[] = await positionsRes.json();
+      
+      setCandidates(candidatesData);
+      setPositions(positionsData);
+
+    } catch (error) {
+      console.error("Error fetching dashboard data:", error);
+      toast({
+        title: "Error Fetching Dashboard Data",
+        description: (error as Error).message || "Could not load data.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  }, [toast]);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
 
   const totalCandidates = candidates.length;
   const totalOpenPositions = positions.filter(p => p.isOpen).length;
   
   const hiredCandidatesThisMonth = candidates.filter(c => {
-    const appDate = parseISO(c.applicationDate);
-    return c.status === 'Hired' && appDate.getFullYear() === new Date().getFullYear() && appDate.getMonth() === new Date().getMonth();
+    try {
+      const appDate = parseISO(c.applicationDate); // applicationDate should exist
+      return c.status === 'Hired' && appDate.getFullYear() === new Date().getFullYear() && appDate.getMonth() === new Date().getMonth();
+    } catch { return false; }
   }).length;
 
   const newCandidatesTodayList = candidates.filter(c => {
@@ -24,7 +66,7 @@ export default function DashboardPage() {
       const appDate = parseISO(c.applicationDate);
       return isToday(appDate);
     } catch (error) {
-      console.error("Error parsing applicationDate for candidate:", c.id, error);
+      // console.error("Error parsing applicationDate for candidate:", c.id, error);
       return false;
     }
   });
@@ -42,9 +84,25 @@ export default function DashboardPage() {
     return !hasCandidates;
   });
 
+  if (isLoading) {
+    return (
+      <div className="space-y-6 animate-pulse">
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {[...Array(3)].map((_, i) => (
+            <Card key={i}><CardHeader><div className="h-6 w-1/2 bg-muted rounded"></div></CardHeader><CardContent><div className="h-8 w-1/4 bg-muted rounded mt-2"></div></CardContent></Card>
+          ))}
+        </div>
+        <div className="grid gap-6 md:grid-cols-1 lg:grid-cols-2">
+          <Card><CardHeader><div className="h-7 w-3/4 bg-muted rounded"></div><div className="h-4 w-1/2 bg-muted rounded mt-1"></div></CardHeader><CardContent><div className="h-20 bg-muted rounded"></div></CardContent></Card>
+          <Card><CardHeader><div className="h-7 w-3/4 bg-muted rounded"></div><div className="h-4 w-1/2 bg-muted rounded mt-1"></div></CardHeader><CardContent><div className="h-20 bg-muted rounded"></div></CardContent></Card>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3"> {/* Updated to lg:grid-cols-3 */}
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         {stats.map((stat) => (
           <Card key={stat.title} className="shadow-sm hover:shadow-md transition-shadow duration-200">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -60,7 +118,7 @@ export default function DashboardPage() {
         ))}
       </div>
 
-      <div className="grid gap-6 md:grid-cols-1 lg:grid-cols-2"> {/* Main content area for list cards */}
+      <div className="grid gap-6 md:grid-cols-1 lg:grid-cols-2">
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center text-lg">
@@ -80,7 +138,7 @@ export default function DashboardPage() {
                     </Avatar>
                     <div>
                       <p className="text-sm font-medium text-foreground">{candidate.name}</p>
-                      <p className="text-xs text-muted-foreground">{candidate.positionTitle}</p>
+                      <p className="text-xs text-muted-foreground">{candidate.position?.title || 'N/A'}</p>
                     </div>
                   </li>
                 ))}
