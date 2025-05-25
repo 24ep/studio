@@ -3,7 +3,7 @@
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { PlusCircle, UsersRound } from "lucide-react";
+import { PlusCircle, UsersRound, ShieldAlert } from "lucide-react";
 import { mockAppUsers } from "@/lib/data";
 import type { UserProfile } from "@/lib/types";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -60,7 +60,7 @@ export default function ManageUsersPage() {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-center gap-2">
         <div></div> {/* Placeholder for title, handled by Header */}
-        <Button className="w-full sm:w-auto" disabled> {/* Add user functionality can be future enhancement */}
+        <Button className="w-full sm:w-auto" disabled> 
           <PlusCircle className="mr-2 h-4 w-4" /> Add New User
         </Button>
       </div>
@@ -70,10 +70,13 @@ export default function ManageUsersPage() {
           <CardTitle className="flex items-center">
              <UsersRound className="mr-2 h-5 w-5 text-primary" /> App Users
           </CardTitle>
-          <CardDescription>Manage application users and their roles.</CardDescription>
+          <CardDescription>
+            Manage application users and their roles. Modifying users and their permissions
+            is typically restricted to administrators.
+          </CardDescription>
         </CardHeader>
         <CardContent>
-          {users.length === 0 && isClient ? ( // Show only if client-side and truly no users
+          {users.length === 0 && isClient ? ( 
             <div className="text-center py-10">
               <UsersRound className="mx-auto h-12 w-12 text-muted-foreground" />
               <p className="mt-4 text-muted-foreground">No users found.</p>
@@ -108,7 +111,7 @@ export default function ManageUsersPage() {
                       </Badge>
                     </TableCell>
                     <TableCell className="text-right">
-                      <Button variant="ghost" size="sm" disabled>Edit</Button> {/* Edit functionality can be future enhancement */}
+                      <Button variant="ghost" size="sm" disabled>Edit</Button> 
                     </TableCell>
                   </TableRow>
                 ))}
@@ -116,8 +119,16 @@ export default function ManageUsersPage() {
             </Table>
             </div>
           )}
+           <div className="mt-4 p-3 bg-secondary/30 border border-secondary/50 rounded-md flex items-start text-sm text-secondary-foreground">
+            <ShieldAlert className="h-5 w-5 mr-2 mt-0.5 text-primary" />
+            <div>
+              <span className="font-semibold">Permissions Note:</span> User creation, deletion, and role modification functionalities are disabled in this prototype. In a production system, these actions would require administrative privileges and a backend implementation for user and role management.
+            </div>
+          </div>
         </CardContent>
       </Card>
     </div>
   );
 }
+
+    
