@@ -23,6 +23,7 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
+  AlertDialogTrigger, // Added AlertDialogTrigger here
 } from "@/components/ui/alert-dialog";
 
 
@@ -41,20 +42,14 @@ export default function PositionsPage() {
 
 
   const fetchPositions = useCallback(async () => {
-    if (sessionStatus !== 'authenticated') {
-      return;
-    }
     setIsLoading(true);
     setFetchError(null);
     try {
       const response = await fetch('/api/positions');
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({ message: response.statusText || `Status: ${response.status}` }));
-        if (response.status === 401) {
-            signIn(undefined, { callbackUrl: window.location.pathname });
-            return;
-        }
         const errorMessage = errorData.message || `Failed to fetch positions: ${response.statusText || `Status: ${response.status}`}`;
+        // Removed session check here as APIs are public
         setFetchError(errorMessage);
         setPositions([]); 
         return; 
@@ -69,15 +64,11 @@ export default function PositionsPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [sessionStatus]); 
+  }, []); 
 
   useEffect(() => {
-    if (sessionStatus === 'unauthenticated') {
-      signIn(undefined, { callbackUrl: window.location.pathname });
-    } else if (sessionStatus === 'authenticated') {
-      fetchPositions();
-    }
-  }, [sessionStatus, fetchPositions, router]);
+    fetchPositions();
+  }, [fetchPositions]);
 
 
   const handleAddPositionSubmit = async (formData: AddPositionFormValues) => {
@@ -89,10 +80,6 @@ export default function PositionsPage() {
         });
         if (!response.ok) {
             const errorData = await response.json().catch(() => ({ message: "An unknown error occurred" }));
-            if (response.status === 401 || response.status === 403) {
-                signIn(undefined, { callbackUrl: window.location.pathname });
-                return;
-            }
             throw new Error(errorData.message || `Failed to add position: ${response.statusText || `Status: ${response.status}`}`);
         }
         const newPosition: Position = await response.json();
@@ -104,13 +91,11 @@ export default function PositionsPage() {
         });
     } catch (error) {
         console.error("Error adding position:", error);
-        if (!String((error as Error).message).includes("401") && !String((error as Error).message).includes("403")){
-            toast({
-                title: "Error Adding Position",
-                description: (error as Error).message || "Could not add position.",
-                variant: "destructive",
-            });
-        }
+        toast({
+            title: "Error Adding Position",
+            description: (error as Error).message || "Could not add position.",
+            variant: "destructive",
+        });
     }
   };
 
@@ -128,10 +113,6 @@ export default function PositionsPage() {
       });
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({ message: "An unknown error occurred" }));
-         if (response.status === 401 || response.status === 403) {
-            signIn(undefined, { callbackUrl: window.location.pathname });
-            return;
-        }
         throw new Error(errorData.message || `Failed to update position: ${response.statusText || `Status: ${response.status}`}`);
       }
       const updatedPosition: Position = await response.json();
@@ -141,13 +122,11 @@ export default function PositionsPage() {
       toast({ title: "Position Updated", description: `Position "${updatedPosition.title}" has been updated.` });
     } catch (error) {
       console.error("Error updating position:", error);
-       if (!String((error as Error).message).includes("401") && !String((error as Error).message).includes("403")){
-            toast({
-                title: "Error Updating Position",
-                description: (error as Error).message,
-                variant: "destructive",
-            });
-        }
+      toast({
+          title: "Error Updating Position",
+          description: (error as Error).message,
+          variant: "destructive",
+      });
     }
   };
 
@@ -163,30 +142,24 @@ export default function PositionsPage() {
       });
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({ message: "An unknown error occurred" }));
-        if (response.status === 401 || response.status === 403) {
-          signIn(undefined, { callbackUrl: window.location.pathname });
-          return;
-        }
         throw new Error(errorData.message || `Failed to delete position: ${response.statusText}`);
       }
       setPositions(prevPositions => prevPositions.filter(p => p.id !== positionToDelete!.id));
       toast({ title: "Position Deleted", description: `Position "${positionToDelete.title}" has been deleted.` });
     } catch (error) {
       console.error("Error deleting position:", error);
-      if (!String((error as Error).message).includes("401") && !String((error as Error).message).includes("403")){
-          toast({
-              title: "Error Deleting Position",
-              description: (error as Error).message,
-              variant: "destructive",
-          });
-      }
+      toast({
+          title: "Error Deleting Position",
+          description: (error as Error).message,
+          variant: "destructive",
+      });
     } finally {
       setPositionToDelete(null); 
     }
   };
 
 
-  if (sessionStatus === 'loading' || (sessionStatus === 'unauthenticated' && !router.asPath.startsWith('/auth/signin')) || (isLoading && !fetchError)) {
+  if (isLoading && !fetchError) {
     return (
       <div className="flex h-screen w-screen items-center justify-center bg-background fixed inset-0 z-50">
         <Loader2 className="h-16 w-16 animate-spin text-primary" />
