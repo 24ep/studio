@@ -112,7 +112,7 @@ body {
     
     /* Active item in dark theme uses dark primary gradient vars */
     --sidebar-primary-d: linear-gradient(to right, hsl(var(--primary-gradient-start-d)), hsl(var(--primary-gradient-end-d)));
-    --sidebar-primary-foreground-d: hsl(var(--primary-foreground)); /* Foreground for active item, now light */
+    --sidebar-primary-foreground-d: hsl(0 0% 100%); /* Explicitly white for selected menu text in dark mode */
     
     --sidebar-accent-d: 220 15% 20%; /* Hover for non-active */
     --sidebar-accent-foreground-d: 210 30% 90%; /* Text for hover non-active */
@@ -169,7 +169,7 @@ body {
   /* Dark theme: Active menu item style - Primary Dark Gradient */
   .dark [data-sidebar="menu-button"][data-active="true"] {
     background-image: var(--sidebar-primary-d);
-    color: hsl(var(--sidebar-primary-foreground-d)); /* Will now use the light --primary-foreground */
+    color: hsl(var(--sidebar-primary-foreground-d)); 
     box-shadow: 0 2px 10px -3px hsla(var(--primary-gradient-start-d), 0.4);
   }
   /* Dark theme: Hover on active menu item - slightly adjust gradient appearance if desired */
