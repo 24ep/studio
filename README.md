@@ -12,7 +12,7 @@ This is a Next.js application prototype for NCC Candidate Management, an Applica
 *   Settings:
     *   Preferences (Theme, App Logo - conceptual)
     *   Integrations (n8n Webhook, SMTP - conceptual)
-    *   Setup Guide (Informational)
+    *   Setup Guide (Informational, with DB schema check)
 *   API Documentation Page
 *   Application Logs Page (Database-backed)
 *   Authentication:
@@ -113,6 +113,14 @@ This is the recommended way to run the application along with its backend servic
         *   Local Docker: `docker logs <your_postgres_container_name>` (Find `<your_postgres_container_name>` with `docker ps`)
         *   Portainer: View the logs for the PostgreSQL container within the Portainer UI.
         Look for messages indicating scripts from `/docker-entrypoint-initdb.d/` are being run, or any SQL errors.
+    *   **Specific Error: `psql:/docker-entrypoint-initdb.d/init-db.sql: error: could not read from input file: Is a directory`**
+        If you see this error in the PostgreSQL container logs, it means that when `docker-compose` mounted the `init-db.sql` file, it was incorrectly interpreted as a directory inside the container. This can happen if:
+        *   The `./init-db.sql` path on your host machine (where `docker-compose` is run) was somehow a directory at the time of mounting. Ensure it is a file.
+        *   There's a very subtle issue with how Docker is handling the file mount in your specific environment.
+        **Solution:**
+        1.  Triple-check that `init-db.sql` in your project root is a file.
+        2.  Execute the `docker-compose down -v` and `docker-compose up --build -d` commands as described above. This often resolves issues related to Docker's cached state of volumes or mounts.
+        3.  If the issue persists, ensure there are no permission problems with `init-db.sql` on your host system that might prevent Docker from correctly mounting it as a file.
 
 5.  **MinIO Bucket Creation (Automated by Application):**
     *   The MinIO bucket specified by `MINIO_BUCKET_NAME` (default: `canditrack-resumes`) will be **attempted to be created automatically by the application** when it first tries to interact with MinIO (e.g., during a resume upload via the `ensureBucketExists` function in `src/lib/minio.ts`).
