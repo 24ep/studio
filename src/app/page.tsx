@@ -25,8 +25,14 @@ export default function DashboardPage() {
         fetch('/api/positions'),
       ]);
 
-      if (!candidatesRes.ok) throw new Error(`Failed to fetch candidates: ${candidatesRes.statusText}`);
-      if (!positionsRes.ok) throw new Error(`Failed to fetch positions: ${positionsRes.statusText}`);
+      if (!candidatesRes.ok) {
+        const errorText = candidatesRes.statusText || `Status: ${candidatesRes.status}`;
+        throw new Error(`Failed to fetch candidates: ${errorText}`);
+      }
+      if (!positionsRes.ok) {
+        const errorText = positionsRes.statusText || `Status: ${positionsRes.status}`;
+        throw new Error(`Failed to fetch positions: ${errorText}`);
+      }
 
       const candidatesData: Candidate[] = await candidatesRes.json();
       const positionsData: Position[] = await positionsRes.json();
@@ -56,13 +62,17 @@ export default function DashboardPage() {
   
   const hiredCandidatesThisMonth = candidates.filter(c => {
     try {
-      const appDate = parseISO(c.applicationDate); // applicationDate should exist
+      // Ensure applicationDate exists and is a valid date string
+      if (!c.applicationDate) return false;
+      const appDate = parseISO(c.applicationDate); 
       return c.status === 'Hired' && appDate.getFullYear() === new Date().getFullYear() && appDate.getMonth() === new Date().getMonth();
     } catch { return false; }
   }).length;
 
   const newCandidatesTodayList = candidates.filter(c => {
     try {
+      // Ensure applicationDate exists and is a valid date string
+      if (!c.applicationDate) return false;
       const appDate = parseISO(c.applicationDate);
       return isToday(appDate);
     } catch (error) {
