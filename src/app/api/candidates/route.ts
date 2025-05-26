@@ -1,10 +1,13 @@
 
 import { NextResponse, type NextRequest } from 'next/server';
 import pool from '../../../lib/db';
-import type { CandidateStatus, CandidateDetails, OldParsedResumeData, Position } from '@/lib/types';
+import type { CandidateStatus, CandidateDetails, OldParsedResumeData, Position, UserProfile } from '@/lib/types';
 import { z } from 'zod';
 import { logAudit } from '@/lib/auditLog';
 import { v4 as uuidv4 } from 'uuid';
+import { getServerSession } from 'next-auth/next';
+import { authOptions } from '@/app/api/auth/[...nextauth]/route';
+
 
 const candidateStatusValues: [CandidateStatus, ...CandidateStatus[]] = ['Applied', 'Screening', 'Shortlisted', 'Interview Scheduled', 'Interviewing', 'Offer Extended', 'Offer Accepted', 'Hired', 'Rejected', 'On Hold'];
 
@@ -15,6 +18,7 @@ const personalInfoSchema = z.object({
   nickname: z.string().optional().default(''),
   location: z.string().optional().default(''),
   introduction_aboutme: z.string().optional().default(''),
+  avatar_url: z.string().url().optional().nullable(),
 });
 
 const contactInfoSchema = z.object({
@@ -39,7 +43,7 @@ const experienceEntrySchema = z.object({
   period: z.string().optional().default(''),
   duration: z.string().optional().default(''),
   is_current_position: z.boolean().optional().default(false),
-  postition_level: z.enum(['entry level', 'mid level', 'senior level', 'lead', 'manager', 'executive']).optional(),
+  postition_level: z.string().optional(),
 });
 
 const skillEntrySchema = z.object({
@@ -54,6 +58,13 @@ const jobSuitableEntrySchema = z.object({
   suitable_salary_bath_month: z.string().optional(),
 });
 
+const n8nJobMatchSchemaForCandidate = z.object({
+  job_id: z.string().optional(),
+  job_title: z.string().min(1, "Job title is required"),
+  fit_score: z.number().min(0).max(100, "Fit score must be between 0 and 100"),
+  match_reasons: z.array(z.string()).optional().default([]),
+});
+
 const candidateDetailsSchema = z.object({
   cv_language: z.string().optional().default(''),
   personal_info: personalInfoSchema,
@@ -62,21 +73,37 @@ const candidateDetailsSchema = z.object({
   experience: z.array(experienceEntrySchema).optional().default([]),
   skills: z.array(skillEntrySchema).optional().default([]),
   job_suitable: z.array(jobSuitableEntrySchema).optional().default([]),
+  associatedMatchDetails: z.object({
+    jobTitle: z.string(),
+    fitScore: z.number(),
+    reasons: z.array(z.string()),
+    n8nJobId: z.string().optional(),
+  }).optional(),
+  job_matches: z.array(n8nJobMatchSchemaForCandidate).optional().default([]),
 });
 
 const createCandidateSchema = z.object({
-  name: z.string().min(1, { message: "Name is required" }).optional(),
-  email: z.string().email({ message: "Invalid email address" }).optional(),
+  name: z.string().min(1, { message: "Name is required" }).optional(), // Will be derived if not provided
+  email: z.string().email({ message: "Invalid email address" }).optional(), // Will be derived if not provided
   phone: z.string().optional().nullable(),
-  positionId: z.string().uuid({ message: "Valid Position ID (UUID) is required" }).nullable(),
+  positionId: z.string().uuid({ message: "Valid Position ID (UUID) is required" }).nullable().optional(), // Changed to optional
   fitScore: z.number().min(0).max(100).optional().default(0),
   status: z.enum(candidateStatusValues).optional().default('Applied'),
   applicationDate: z.string().datetime({ message: "Invalid datetime string. Must be UTC ISO8601" }).optional(),
-  parsedData: candidateDetailsSchema.optional(),
+  parsedData: candidateDetailsSchema.optional(), // This will hold the rich structure
   resumePath: z.string().optional().nullable(),
 });
 
 export async function GET(request: NextRequest) {
+  const session = await getServerSession(authOptions);
+  // if (!session?.user?.id) { // Public for now
+  //   return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+  // }
+  // const allowedRoles: UserProfile['role'][] = ['Admin', 'Recruiter', 'Hiring Manager'];
+  // if (!session.user.role || !allowedRoles.includes(session.user.role)) {
+  //    return NextResponse.json({ message: "Forbidden: Insufficient permissions" }, { status: 403 });
+  // }
+
   try {
     const { searchParams } = new URL(request.url);
     const nameFilter = searchParams.get('name');
@@ -86,16 +113,25 @@ export async function GET(request: NextRequest) {
     const maxFitScoreParam = searchParams.get('maxFitScore');
 
     let query = `
-      SELECT 
+      SELECT
         c.id, c.name, c.email, c.phone, c."resumePath", c."parsedData",
         c."positionId", c."fitScore", c.status, c."applicationDate",
         c."createdAt", c."updatedAt",
-        p.title as "positionTitle", 
+        p.title as "positionTitle",
         p.department as "positionDepartment",
+        p.position_level as "positionLevel",
         COALESCE(
-          (SELECT json_agg(tr.* ORDER BY tr.date DESC) 
-           FROM "TransitionRecord" tr 
-           WHERE tr."candidateId" = c.id), 
+          (SELECT json_agg(
+            json_build_object(
+              'id', th.id, 'candidateId', th."candidateId", 'date', th.date, 'stage', th.stage, 'notes', th.notes,
+              'actingUserId', th."actingUserId", 'actingUserName', u.name,
+              'createdAt', th."createdAt", 'updatedAt', th."updatedAt"
+            ) ORDER BY th.date DESC
+           )
+           FROM "TransitionRecord" th
+           LEFT JOIN "User" u ON th."actingUserId" = u.id
+           WHERE th."candidateId" = c.id
+          ),
           '[]'::json
         ) as "transitionHistory"
       FROM "Candidate" c
@@ -114,6 +150,7 @@ export async function GET(request: NextRequest) {
       queryParams.push(positionIdFilter);
     }
     if (educationFilter) {
+      // Broad search within the stringified parsedData JSONB
       conditions.push(`c."parsedData"::text ILIKE $${paramIndex++}`);
       queryParams.push(`%${educationFilter}%`);
     }
@@ -138,14 +175,15 @@ export async function GET(request: NextRequest) {
     query += ' ORDER BY c."createdAt" DESC';
 
     const result = await pool.query(query, queryParams);
-    
+
     const candidates = result.rows.map(row => ({
         ...row,
         parsedData: row.parsedData || { personal_info: {}, contact_info: {} },
-        position: row.positionId ? { 
+        position: row.positionId ? {
             id: row.positionId,
             title: row.positionTitle,
             department: row.positionDepartment,
+            position_level: row.positionLevel,
         } : null,
         transitionHistory: row.transitionHistory || [],
     }));
@@ -153,12 +191,19 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(candidates, { status: 200 });
   } catch (error) {
     console.error("Failed to fetch candidates:", error);
-    await logAudit('ERROR', `Failed to fetch candidates. Error: ${(error as Error).message}`, 'API:Candidates', null);
+    await logAudit('ERROR', `Failed to fetch candidates. Error: ${(error as Error).message}`, 'API:Candidates', null); // Assuming public access for now
     return NextResponse.json({ message: "Error fetching candidates", error: (error as Error).message }, { status: 500 });
   }
 }
 
 export async function POST(request: NextRequest) {
+  const session = await getServerSession(authOptions);
+  // const allowedRoles: UserProfile['role'][] = ['Admin', 'Recruiter'];
+  // if (!session?.user?.id || !session.user.role || !allowedRoles.includes(session.user.role)) {
+  //   await logAudit('WARN', `Forbidden attempt to create candidate by user ${session?.user?.email || 'Unknown/Public'} (ID: ${session?.user?.id || 'N/A'}). Required roles: Admin, Recruiter.`, 'API:Candidates', session?.user?.id);
+  //   return NextResponse.json({ message: "Forbidden: Insufficient permissions" }, { status: 403 });
+  // }
+
   let body;
   try {
     body = await request.json();
@@ -166,7 +211,7 @@ export async function POST(request: NextRequest) {
     console.error("Error parsing request body for new candidate:", error);
     return NextResponse.json({ message: "Error parsing request body", error: (error as Error).message }, { status: 400 });
   }
-  
+
   const validationResult = createCandidateSchema.safeParse(body);
   if (!validationResult.success) {
     console.error("Validation failed for new candidate:", validationResult.error.flatten().fieldErrors);
@@ -177,8 +222,9 @@ export async function POST(request: NextRequest) {
   }
 
   const rawData = validationResult.data;
-  
-  const candidateName = rawData.name || (rawData.parsedData ? `${rawData.parsedData.personal_info.firstname} ${rawData.parsedData.personal_info.lastname}`.trim() : 'Unknown Candidate');
+
+  // Derive name and email from parsedData if not provided at top level
+  const candidateName = rawData.name || (rawData.parsedData ? `${rawData.parsedData.personal_info.firstname} ${rawData.parsedData.personal_info.lastname}`.trim() : '');
   const candidateEmail = rawData.email || (rawData.parsedData ? rawData.parsedData.contact_info.email : '');
   const candidatePhone = rawData.phone || (rawData.parsedData?.contact_info?.phone ? rawData.parsedData.contact_info.phone : null);
 
@@ -194,26 +240,30 @@ export async function POST(request: NextRequest) {
       { status: 400 }
     );
   }
-  
-  const finalParsedData: CandidateDetails = {
-    cv_language: rawData.parsedData?.cv_language || '',
+
+  const finalParsedData: CandidateDetails = rawData.parsedData ? {
+    cv_language: rawData.parsedData.cv_language || '',
     personal_info: {
-        title_honorific: rawData.parsedData?.personal_info?.title_honorific || '',
-        firstname: rawData.parsedData?.personal_info?.firstname || candidateName.split(' ')[0] || '',
-        lastname: rawData.parsedData?.personal_info?.lastname || candidateName.split(' ').slice(1).join(' ') || '',
-        nickname: rawData.parsedData?.personal_info?.nickname || '',
-        location: rawData.parsedData?.personal_info?.location || '',
-        introduction_aboutme: rawData.parsedData?.personal_info?.introduction_aboutme || '',
+        ...(rawData.parsedData.personal_info), // Spread existing personal_info
+        firstname: rawData.parsedData.personal_info.firstname || candidateName.split(' ')[0] || '',
+        lastname: rawData.parsedData.personal_info.lastname || candidateName.split(' ').slice(1).join(' ') || '',
     },
     contact_info: {
+        ...(rawData.parsedData.contact_info), // Spread existing contact_info
         email: candidateEmail,
         phone: candidatePhone || '',
     },
-    education: rawData.parsedData?.education || [],
-    experience: rawData.parsedData?.experience || [],
-    skills: rawData.parsedData?.skills || [],
-    job_suitable: rawData.parsedData?.job_suitable || [],
+    education: rawData.parsedData.education || [],
+    experience: rawData.parsedData.experience || [],
+    skills: rawData.parsedData.skills || [],
+    job_suitable: rawData.parsedData.job_suitable || [],
+    associatedMatchDetails: rawData.parsedData.associatedMatchDetails,
+    job_matches: rawData.parsedData.job_matches || [],
+  } : { // Minimal parsedData if not provided
+    personal_info: { firstname: candidateName.split(' ')[0] || '', lastname: candidateName.split(' ').slice(1).join(' ') || '' },
+    contact_info: { email: candidateEmail, phone: candidatePhone || '' },
   };
+
 
   const client = await pool.connect();
   const newCandidateId = uuidv4();
@@ -240,7 +290,7 @@ export async function POST(request: NextRequest) {
       candidateName,
       candidateEmail,
       candidatePhone,
-      rawData.positionId,
+      rawData.positionId || null,
       rawData.fitScore,
       rawData.status,
       rawData.applicationDate ? new Date(rawData.applicationDate) : new Date(),
@@ -251,8 +301,8 @@ export async function POST(request: NextRequest) {
     const newCandidate = candidateResult.rows[0];
 
     const insertTransitionQuery = `
-      INSERT INTO "TransitionRecord" (id, "candidateId", date, stage, notes, "createdAt", "updatedAt")
-      VALUES ($1, $2, NOW(), $3, $4, NOW(), NOW())
+      INSERT INTO "TransitionRecord" (id, "candidateId", date, stage, notes, "actingUserId", "createdAt", "updatedAt")
+      VALUES ($1, $2, NOW(), $3, $4, $5, NOW(), NOW())
       RETURNING *;
     `;
     const transitionValues = [
@@ -260,21 +310,27 @@ export async function POST(request: NextRequest) {
       newCandidate.id,
       rawData.status,
       'Application received.',
+      session?.user?.id || null, // If public, no acting user
     ];
     await client.query(insertTransitionQuery, transitionValues);
-    
+
     await client.query('COMMIT');
 
     const finalQuery = `
-        SELECT 
+        SELECT
             c.id, c.name, c.email, c.phone, c."resumePath", c."parsedData",
             c."positionId", c."fitScore", c.status, c."applicationDate",
             c."createdAt", c."updatedAt",
-            p.title as "positionTitle", 
+            p.title as "positionTitle",
             p.department as "positionDepartment",
-            (SELECT json_agg(tr.* ORDER BY tr.date DESC) 
-             FROM "TransitionRecord" tr 
-             WHERE tr."candidateId" = c.id) as "transitionHistory"
+            p.position_level as "positionLevel",
+            (SELECT json_agg(
+              json_build_object(
+                'id', th.id, 'candidateId', th."candidateId", 'date', th.date, 'stage', th.stage, 'notes', th.notes,
+                'actingUserId', th."actingUserId", 'actingUserName', u.name,
+                'createdAt', th."createdAt", 'updatedAt', th."updatedAt"
+              ) ORDER BY th.date DESC
+             ) FROM "TransitionRecord" th LEFT JOIN "User" u ON th."actingUserId" = u.id WHERE th."candidateId" = c.id) as "transitionHistory"
         FROM "Candidate" c
         LEFT JOIN "Position" p ON c."positionId" = p.id
         WHERE c.id = $1;
@@ -287,16 +343,17 @@ export async function POST(request: NextRequest) {
             id: finalResult.rows[0].positionId,
             title: finalResult.rows[0].positionTitle,
             department: finalResult.rows[0].positionDepartment,
+            position_level: finalResult.rows[0].positionLevel,
         } : null,
         transitionHistory: finalResult.rows[0].transitionHistory || [],
     };
-    
-    await logAudit('AUDIT', `Candidate '${newCandidate.name}' (ID: ${newCandidate.id}) created.`, 'API:Candidates', null, { targetCandidateId: newCandidate.id, name: newCandidate.name, email: newCandidate.email });
+
+    await logAudit('AUDIT', `Candidate '${newCandidate.name}' (ID: ${newCandidate.id}) created.`, 'API:Candidates', session?.user?.id, { targetCandidateId: newCandidate.id, name: newCandidate.name, email: newCandidate.email });
     return NextResponse.json(createdCandidateWithDetails, { status: 201 });
   } catch (error: any) {
     await client.query('ROLLBACK');
     console.error("Failed to create candidate:", error);
-    await logAudit('ERROR', `Failed to create candidate '${candidateName}'. Error: ${error.message}`, 'API:Candidates', null, { name: candidateName, email: candidateEmail });
+    await logAudit('ERROR', `Failed to create candidate '${candidateName}'. Error: ${error.message}`, 'API:Candidates', session?.user?.id, { name: candidateName, email: candidateEmail });
     if (error.code === '23505' && error.constraint === 'Candidate_email_key') {
       return NextResponse.json({ message: "A candidate with this email already exists." }, { status: 409 });
     }
@@ -305,5 +362,3 @@ export async function POST(request: NextRequest) {
     client.release();
   }
 }
-
-    

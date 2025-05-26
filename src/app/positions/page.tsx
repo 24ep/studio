@@ -4,16 +4,16 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button, buttonVariants } from "@/components/ui/button";
-import { PlusCircle, Briefcase, Edit, Trash2, ServerCrash, Loader2 } from "lucide-react";
+import { PlusCircle, Briefcase, Edit, Trash2, ServerCrash, Loader2, FileDown, FileUp } from "lucide-react";
 import type { Position } from "@/lib/types";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
 import { signIn, useSession } from "next-auth/react";
-import { AddPositionModal, type AddPositionFormValues } from '@/components/positions/AddPositionModal'; 
+import { AddPositionModal, type AddPositionFormValues } from '@/components/positions/AddPositionModal';
 import { EditPositionModal, type EditPositionFormValues } from '@/components/positions/EditPositionModal';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -23,7 +23,7 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger, // Added AlertDialogTrigger here
+  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 
 
@@ -33,15 +33,20 @@ export default function PositionsPage() {
   const { toast } = useToast();
   const { data: session, status: sessionStatus } = useSession();
   const router = useRouter();
+  const pathname = usePathname();
   const [fetchError, setFetchError] = useState<string | null>(null);
-  
-  const [isAddModalOpen, setIsAddModalOpen] = useState(false); 
+
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [selectedPositionForEdit, setSelectedPositionForEdit] = useState<Position | null>(null);
   const [positionToDelete, setPositionToDelete] = useState<Position | null>(null);
 
 
   const fetchPositions = useCallback(async () => {
+    if (sessionStatus !== 'authenticated') {
+      setIsLoading(false); // Stop loading if not authenticated
+      return;
+    }
     setIsLoading(true);
     setFetchError(null);
     try {
@@ -49,26 +54,35 @@ export default function PositionsPage() {
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({ message: response.statusText || `Status: ${response.status}` }));
         const errorMessage = errorData.message || `Failed to fetch positions: ${response.statusText || `Status: ${response.status}`}`;
-        // Removed session check here as APIs are public
+        if (response.status === 401) {
+          signIn(undefined, { callbackUrl: pathname });
+          return;
+        }
         setFetchError(errorMessage);
-        setPositions([]); 
-        return; 
+        setPositions([]);
+        return;
       }
       const data: Position[] = await response.json();
       setPositions(data);
     } catch (error) {
       console.error("Error fetching positions:", error);
       const errorMessage = (error as Error).message || "Could not load position data.";
-      setFetchError(errorMessage);
-      setPositions([]); 
+      if (!errorMessage.toLowerCase().includes("unauthorized")) {
+        setFetchError(errorMessage);
+      }
+      setPositions([]);
     } finally {
       setIsLoading(false);
     }
-  }, []); 
+  }, [sessionStatus, pathname, signIn]);
 
   useEffect(() => {
-    fetchPositions();
-  }, [fetchPositions]);
+    if (sessionStatus === 'unauthenticated') {
+      signIn(undefined, { callbackUrl: pathname });
+    } else if (sessionStatus === 'authenticated') {
+      fetchPositions();
+    }
+  }, [sessionStatus, fetchPositions, pathname, signIn]);
 
 
   const handleAddPositionSubmit = async (formData: AddPositionFormValues) => {
@@ -80,6 +94,10 @@ export default function PositionsPage() {
         });
         if (!response.ok) {
             const errorData = await response.json().catch(() => ({ message: "An unknown error occurred" }));
+            if (response.status === 401 || response.status === 403) {
+                signIn(undefined, { callbackUrl: pathname });
+                return;
+            }
             throw new Error(errorData.message || `Failed to add position: ${response.statusText || `Status: ${response.status}`}`);
         }
         const newPosition: Position = await response.json();
@@ -91,11 +109,13 @@ export default function PositionsPage() {
         });
     } catch (error) {
         console.error("Error adding position:", error);
-        toast({
-            title: "Error Adding Position",
-            description: (error as Error).message || "Could not add position.",
-            variant: "destructive",
-        });
+        if (!String((error as Error).message).toLowerCase().includes("unauthorized")) {
+          toast({
+              title: "Error Adding Position",
+              description: (error as Error).message || "Could not add position.",
+              variant: "destructive",
+          });
+        }
     }
   };
 
@@ -113,6 +133,10 @@ export default function PositionsPage() {
       });
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({ message: "An unknown error occurred" }));
+        if (response.status === 401 || response.status === 403) {
+            signIn(undefined, { callbackUrl: pathname });
+            return;
+        }
         throw new Error(errorData.message || `Failed to update position: ${response.statusText || `Status: ${response.status}`}`);
       }
       const updatedPosition: Position = await response.json();
@@ -122,11 +146,13 @@ export default function PositionsPage() {
       toast({ title: "Position Updated", description: `Position "${updatedPosition.title}" has been updated.` });
     } catch (error) {
       console.error("Error updating position:", error);
-      toast({
-          title: "Error Updating Position",
-          description: (error as Error).message,
-          variant: "destructive",
-      });
+      if (!String((error as Error).message).toLowerCase().includes("unauthorized")) {
+        toast({
+            title: "Error Updating Position",
+            description: (error as Error).message,
+            variant: "destructive",
+        });
+      }
     }
   };
 
@@ -142,24 +168,40 @@ export default function PositionsPage() {
       });
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({ message: "An unknown error occurred" }));
+        if (response.status === 401 || response.status === 403) {
+            signIn(undefined, { callbackUrl: pathname });
+            return;
+        }
         throw new Error(errorData.message || `Failed to delete position: ${response.statusText}`);
       }
       setPositions(prevPositions => prevPositions.filter(p => p.id !== positionToDelete!.id));
       toast({ title: "Position Deleted", description: `Position "${positionToDelete.title}" has been deleted.` });
     } catch (error) {
       console.error("Error deleting position:", error);
-      toast({
-          title: "Error Deleting Position",
-          description: (error as Error).message,
-          variant: "destructive",
-      });
+      if (!String((error as Error).message).toLowerCase().includes("unauthorized")) {
+        toast({
+            title: "Error Deleting Position",
+            description: (error as Error).message,
+            variant: "destructive",
+        });
+      }
     } finally {
-      setPositionToDelete(null); 
+      setPositionToDelete(null);
     }
   };
 
+  const handleDownloadTemplate = () => {
+    // Placeholder for download template functionality
+    toast({ title: "Not Implemented", description: "Download template functionality is not yet implemented." });
+  };
 
-  if (isLoading && !fetchError) {
+  const handleImportExcel = () => {
+    // Placeholder for import Excel functionality
+    toast({ title: "Not Implemented", description: "Import from Excel functionality is not yet implemented." });
+  };
+
+
+  if (sessionStatus === 'loading' || (isLoading && !fetchError && !pathname.startsWith('/auth/signin'))) {
     return (
       <div className="flex h-screen w-screen items-center justify-center bg-background fixed inset-0 z-50">
         <Loader2 className="h-16 w-16 animate-spin text-primary" />
@@ -190,8 +232,15 @@ export default function PositionsPage() {
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-center gap-2">
-        <div></div>
-        <Button onClick={() => setIsAddModalOpen(true)} className="w-full sm:w-auto">
+        <div className="flex gap-2">
+          <Button onClick={handleImportExcel} variant="outline" className="w-full sm:w-auto">
+            <FileUp className="mr-2 h-4 w-4" /> Import Positions (Excel)
+          </Button>
+          <Button onClick={handleDownloadTemplate} variant="outline" className="w-full sm:w-auto">
+            <FileDown className="mr-2 h-4 w-4" /> Download Template
+          </Button>
+        </div>
+        <Button onClick={() => setIsAddModalOpen(true)} className="w-full sm:w-auto btn-primary-gradient">
           <PlusCircle className="mr-2 h-4 w-4" /> Add New Position
         </Button>
       </div>
@@ -204,16 +253,16 @@ export default function PositionsPage() {
           <CardDescription>Manage job positions and their statuses.</CardDescription>
         </CardHeader>
         <CardContent>
-          {isLoading && positions.length === 0 && !fetchError ? ( 
+          {isLoading && positions.length === 0 && !fetchError ? (
             <div className="text-center py-10">
               <Briefcase className="mx-auto h-12 w-12 text-muted-foreground animate-pulse" />
               <p className="mt-4 text-muted-foreground">Loading positions...</p>
             </div>
-          ) : !isLoading && positions.length === 0 && !fetchError ? ( 
+          ) : !isLoading && positions.length === 0 && !fetchError ? (
             <div className="text-center py-10">
               <Briefcase className="mx-auto h-12 w-12 text-muted-foreground" />
               <p className="mt-4 text-muted-foreground">No positions created yet.</p>
-              <Button onClick={() => setIsAddModalOpen(true)} className="mt-4">
+              <Button onClick={() => setIsAddModalOpen(true)} className="mt-4 btn-primary-gradient">
                 <PlusCircle className="mr-2 h-4 w-4" /> Add New Position
               </Button>
             </div>
@@ -233,7 +282,11 @@ export default function PositionsPage() {
               <TableBody>
                 {positions.map((pos) => (
                   <TableRow key={pos.id} className="hover:bg-muted/50 transition-colors">
-                    <TableCell className="font-medium">{pos.title}</TableCell>
+                    <TableCell className="font-medium">
+                      <Link href={`/positions/${pos.id}`} className="hover:underline text-primary">
+                        {pos.title}
+                      </Link>
+                    </TableCell>
                     <TableCell>{pos.department}</TableCell>
                     <TableCell>{pos.position_level || 'N/A'}</TableCell>
                     <TableCell>
@@ -256,12 +309,12 @@ export default function PositionsPage() {
                             <span className="sr-only">Delete</span>
                           </Button>
                         </AlertDialogTrigger>
-                        {positionToDelete && positionToDelete.id === pos.id && ( 
+                        {positionToDelete && positionToDelete.id === pos.id && (
                            <AlertDialogContent>
                               <AlertDialogHeader>
                                 <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
                                 <AlertDialogDescription>
-                                  This action cannot be undone. This will permanently delete the position <strong>{positionToDelete.title}</strong>. 
+                                  This action cannot be undone. This will permanently delete the position <strong>{positionToDelete.title}</strong>.
                                   If there are candidates associated with this position, deletion might be blocked.
                                 </AlertDialogDescription>
                               </AlertDialogHeader>

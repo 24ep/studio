@@ -28,8 +28,8 @@ declare module 'next-auth' {
   }
 
   interface User extends DefaultUser {
-    role?: UserProfile['role'];
     id: string; // Ensure User object passed to JWT/Session has id
+    role?: UserProfile['role'];
     modulePermissions?: PlatformModuleId[];
   }
 }
@@ -57,8 +57,8 @@ export type CandidateStatus =
 
 export interface TransitionRecord {
   id: string;
-  candidateId?: string; 
-  date: string; 
+  candidateId?: string;
+  date: string;
   stage: CandidateStatus;
   notes?: string;
   actingUserId?: string | null;
@@ -74,7 +74,7 @@ export interface PersonalInfo {
   nickname?: string;
   location?: string;
   introduction_aboutme?: string;
-  avatar_url?: string; 
+  avatar_url?: string;
 }
 
 export interface ContactInfo {
@@ -92,12 +92,12 @@ export interface EducationEntry {
   campus?: string;
 }
 
-export type PositionLevel = 
-  | 'entry level' 
-  | 'mid level' 
-  | 'senior level' 
-  | 'lead' 
-  | 'manager' 
+export type PositionLevel =
+  | 'entry level'
+  | 'mid level'
+  | 'senior level'
+  | 'lead'
+  | 'manager'
   | 'executive'
   | 'officer'
   | 'leader';
@@ -108,8 +108,8 @@ export interface ExperienceEntry {
   description?: string;
   period?: string;
   duration?: string;
-  is_current_position?: boolean | string; 
-  postition_level?: string | undefined; // Changed from PositionLevel | string to string | undefined for n8n flexibility
+  is_current_position?: boolean | string;
+  postition_level?: string | undefined;
 }
 
 export interface SkillEntry {
@@ -125,10 +125,10 @@ export interface JobSuitableEntry {
 }
 
 export interface N8NJobMatch {
-  job_id?: string; 
+  job_id?: string;
   job_title: string;
   fit_score: number;
-  match_reasons?: string[]; // Made optional
+  match_reasons?: string[];
 }
 
 export interface CandidateDetails {
@@ -139,16 +139,17 @@ export interface CandidateDetails {
   experience?: ExperienceEntry[];
   skills?: SkillEntry[];
   job_suitable?: JobSuitableEntry[];
-  associatedMatchDetails?: { 
+  associatedMatchDetails?: {
     jobTitle: string;
     fitScore: number;
     reasons: string[];
-    n8nJobId?: string; 
+    n8nJobId?: string;
   };
+  job_matches?: N8NJobMatch[]; // Added to store all matches from n8n
 }
 
 // For the n8n webhook that creates candidates
-export interface N8NCandidateInfoForWebhook {
+export interface N8NCandidateInfoForWebhook { // This is what n8n sends as 'candidate_info'
   cv_language?: string;
   personal_info: PersonalInfo;
   contact_info: ContactInfo;
@@ -159,10 +160,10 @@ export interface N8NCandidateInfoForWebhook {
 }
 export interface N8NCandidateWebhookEntry {
   candidate_info: N8NCandidateInfoForWebhook;
-  jobs: N8NJobMatch[]; // This was `top_matches` in previous, renamed to `jobs` for consistency
+  jobs: N8NJobMatch[];
 }
-// The overall payload from n8n can be a single object or an array of these entries
-export type N8NWebhookPayload = N8NCandidateWebhookEntry; // Changed from array to single entry
+// The overall payload from n8n
+export type N8NWebhookPayload = N8NCandidateWebhookEntry;
 
 
 // Kept for potential backward compatibility if some candidates have old data structure
@@ -170,8 +171,8 @@ export interface OldParsedResumeData {
   name?: string;
   email?: string;
   phone?: string;
-  education?: string[]; 
-  skills?: string[];    
+  education?: string[];
+  skills?: string[];
   experienceYears?: number;
   summary?: string;
 }
@@ -181,12 +182,12 @@ export interface Position {
   id: string;
   title: string;
   department: string;
-  description?: string | null; 
+  description?: string | null;
   isOpen: boolean;
-  position_level?: string | null; 
+  position_level?: string | null;
   createdAt?: string;
   updatedAt?: string;
-  candidates?: Candidate[]; 
+  candidates?: Candidate[];
 }
 
 export interface Candidate {
@@ -197,12 +198,12 @@ export interface Candidate {
   resumePath?: string | null;
   parsedData: CandidateDetails | OldParsedResumeData | null;
   positionId: string | null;
-  position?: Position | null; 
+  position?: Position | null;
   fitScore: number;
   status: CandidateStatus;
-  applicationDate: string; 
-  createdAt?: string; 
-  updatedAt?: string; 
+  applicationDate: string;
+  createdAt?: string;
+  updatedAt?: string;
   transitionHistory: TransitionRecord[];
 }
 
@@ -214,8 +215,8 @@ export interface UserProfile {
   avatarUrl?: string;
   dataAiHint?: string;
   role: 'Admin' | 'Recruiter' | 'Hiring Manager';
-  password?: string; 
-  modulePermissions?: PlatformModuleId[]; 
+  password?: string;
+  modulePermissions?: PlatformModuleId[];
   createdAt?: string;
   updatedAt?: string;
 }
@@ -224,11 +225,12 @@ export type LogLevel = 'INFO' | 'WARN' | 'ERROR' | 'DEBUG' | 'AUDIT';
 
 export interface LogEntry {
   id: string;
-  timestamp: string; 
+  timestamp: string;
   level: LogLevel;
   message: string;
   source?: string;
-  actingUserId?: string | null; 
-  details?: Record<string, any> | null; 
-  createdAt?: string; 
+  actingUserId?: string | null;
+  actingUserName?: string | null; // Added for potential display
+  details?: Record<string, any> | null;
+  createdAt?: string;
 }
