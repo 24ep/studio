@@ -88,7 +88,7 @@ export function CandidateTable({ candidates, onUpdateCandidate, onDeleteCandidat
           <TableHeader>
             <TableRow>
               <TableHead className="w-[250px]">Candidate</TableHead>
-              <TableHead>1st Fitting Position</TableHead>
+              <TableHead>Applied Job</TableHead>
               <TableHead className="w-[100px]">Fit Score</TableHead>
               <TableHead>Status</TableHead>
               <TableHead>Last Update</TableHead>
