@@ -17,7 +17,7 @@ import { format, parseISO } from 'date-fns';
 import { ArrowLeft, Briefcase, CalendarDays, DollarSign, Edit, GraduationCap, HardDrive, Info, LinkIcon, ListChecks, Loader2, Mail, MapPin, MessageSquare, Percent, Phone, ServerCrash, ShieldAlert, Star, Tag, UploadCloud, User, UserCircle, UserCog, Users, Zap, ExternalLink } from 'lucide-react';
 import { UploadResumeModal } from '@/components/candidates/UploadResumeModal';
 import { ManageTransitionsModal } from '@/components/candidates/ManageTransitionsModal';
-import { EditPositionModal, type EditPositionFormValues } from '@/components/positions/EditPositionModal'; // Import EditPositionModal
+import { EditPositionModal, type EditPositionFormValues } from '@/components/positions/EditPositionModal';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
@@ -51,14 +51,14 @@ export default function CandidateDetailPage() {
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
   const [isTransitionsModalOpen, setIsTransitionsModalOpen] = useState(false);
 
-  // For EditPositionModal
   const [allDbPositions, setAllDbPositions] = useState<Position[]>([]);
   const [isEditPositionModalOpen, setIsEditPositionModalOpen] = useState(false);
   const [selectedPositionForEdit, setSelectedPositionForEdit] = useState<Position | null>(null);
 
 
   const fetchCandidateDetails = useCallback(async () => {
-    if (!candidateId || sessionStatus !== 'authenticated') return;
+    if (!candidateId) return;
+    // Removed sessionStatus check here as API is now public
     setIsLoading(true);
     setFetchError(null);
     setAuthError(false);
@@ -68,12 +68,12 @@ export default function CandidateDetailPage() {
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
         const errorMessage = errorData.message || `Failed to fetch candidate: ${response.statusText || `Status ${response.status}`}`;
-        if (response.status === 401) {
-          setAuthError(true);
-          signIn(undefined, { callbackUrl: `/candidates/${candidateId}` });
-        } else {
+        // if (response.status === 401) { // API is public, so 401 might mean something else or not occur
+        //   setAuthError(true);
+        //   signIn(undefined, { callbackUrl: `/candidates/${candidateId}` });
+        // } else {
           setFetchError(errorMessage);
-        }
+        // }
         setCandidate(null);
         return;
       }
@@ -86,10 +86,14 @@ export default function CandidateDetailPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [candidateId, sessionStatus, signIn]);
+  }, [candidateId, toast]); // Removed signIn
 
   const fetchRecruiters = useCallback(async () => {
-    if (sessionStatus !== 'authenticated' || (session?.user?.role !== 'Admin' && session?.user?.role !== 'Recruiter')) return;
+    // Removed sessionStatus check as API is now public, but assigning still makes sense for logged-in users.
+    // However, listing recruiters might need to be re-thought if the page is fully public.
+    // For now, let's assume this feature is for authenticated users or this API is restricted.
+    // If API is public, this might fetch all users with role 'Recruiter'.
+    if (sessionStatus !== 'authenticated') return; // Or handle based on public API design
     try {
       const response = await fetch('/api/users?role=Recruiter');
       if (!response.ok) throw new Error('Failed to fetch recruiters');
@@ -99,10 +103,10 @@ export default function CandidateDetailPage() {
       console.error("Error fetching recruiters:", error);
       toast({ title: "Error", description: "Could not load recruiters for assignment.", variant: "destructive" });
     }
-  }, [sessionStatus, session, toast]);
+  }, [sessionStatus, toast]); // Keeping sessionStatus for now, this might need adjustment
 
   const fetchAllPositions = useCallback(async () => {
-    if (sessionStatus !== 'authenticated') return;
+    // API is public
     try {
       const response = await fetch('/api/positions');
       if (!response.ok) throw new Error('Failed to fetch positions for n8n matching');
@@ -110,25 +114,20 @@ export default function CandidateDetailPage() {
       setAllDbPositions(data);
     } catch (error) {
       console.error("Error fetching all positions:", error);
-      // Silently fail or show a subtle non-blocking error
     }
-  }, [sessionStatus]);
+  }, []);
 
 
   useEffect(() => {
-    if (sessionStatus === 'loading') return;
-    if (sessionStatus === 'unauthenticated') {
-      signIn(undefined, { callbackUrl: `/candidates/${candidateId}` });
-      return;
-    }
+    // Page is public, so fetch immediately
     if (candidateId) {
       fetchCandidateDetails();
-      fetchAllPositions(); // Fetch all positions for n8n match clicking
-      if (session?.user?.role === 'Admin' || session?.user?.role === 'Recruiter') {
-        fetchRecruiters();
+      fetchAllPositions();
+      if (sessionStatus === 'authenticated' && (session?.user?.role === 'Admin' || session?.user?.role === 'Recruiter')) {
+         fetchRecruiters();
       }
     }
-  }, [candidateId, sessionStatus, fetchCandidateDetails, fetchRecruiters, fetchAllPositions, signIn, session]);
+  }, [candidateId, sessionStatus, session, fetchCandidateDetails, fetchRecruiters, fetchAllPositions]);
 
   const handleUploadSuccess = (updatedCandidate: Candidate) => {
     setCandidate(updatedCandidate);
@@ -195,9 +194,9 @@ export default function CandidateDetailPage() {
   const handlePositionEdited = async () => {
     toast({ title: "Position Updated", description: "Position details have been saved." });
     setIsEditPositionModalOpen(false);
-    await fetchAllPositions(); // Re-fetch positions if needed for consistency
+    await fetchAllPositions();
     if (candidateId) {
-        await fetchCandidateDetails(); // Re-fetch candidate if their associated position might have changed
+        await fetchCandidateDetails(); 
     }
   };
 
@@ -210,12 +209,12 @@ export default function CandidateDetailPage() {
     );
   }
 
-  if (authError) {
+  if (authError) { // This path might be less relevant if page is fully public
     return (
       <div className="flex flex-col items-center justify-center h-[calc(100vh-8rem)] text-center p-6">
         <ShieldAlert className="w-16 h-16 text-destructive mb-4" />
         <h2 className="text-2xl font-semibold text-foreground mb-2">Access Denied</h2>
-        <p className="text-muted-foreground mb-6">You need to be signed in to view candidate details.</p>
+        <p className="text-muted-foreground mb-6">You might need to be signed in with appropriate permissions to view all details or perform actions.</p>
         <Button onClick={() => signIn(undefined, { callbackUrl: `/candidates/${candidateId}` })}>Sign In</Button>
       </div>
     );
@@ -246,20 +245,33 @@ export default function CandidateDetailPage() {
   }
 
   const parsed = candidate.parsedData as CandidateDetails | null;
+  // Determine if actions like upload/edit transitions should be available
+  // This depends on whether your APIs for these actions are public or require auth
+  // For now, assuming they might require auth (e.g., Recruiter or Admin role)
   const canManageCandidate = session?.user?.role === 'Admin' || session?.user?.role === 'Recruiter';
 
 
-  const renderField = (label: string, value?: string | number | null, icon?: React.ElementType) => {
+  const renderField = (label: string, value?: string | number | null, icon?: React.ElementType, isLink?: boolean, linkHref?: string, linkTarget?: string) => {
     if (value === undefined || value === null || value === '' || (typeof value === 'number' && isNaN(value))) return null;
     const IconComponent = icon;
+    const content = isLink ? (
+      <a href={linkHref} target={linkTarget} rel={linkTarget === "_blank" ? "noopener noreferrer" : undefined} className="text-primary hover:underline cursor-pointer break-all">
+        {String(value)}
+      </a>
+    ) : (
+      <span className="text-foreground break-words">{String(value)}</span>
+    );
     return (
       <div className="flex items-start text-sm">
         {IconComponent && <IconComponent className="h-4 w-4 mr-2 mt-0.5 text-muted-foreground shrink-0" />}
         <span className="font-medium text-muted-foreground mr-1">{label}:</span>
-        <span className="text-foreground break-words">{String(value)}</span>
+        {content}
       </div>
     );
   };
+  
+  const MINIO_PUBLIC_BASE_URL = `http://localhost:9847`; // Default exposed port for MinIO API
+  const MINIO_BUCKET = "canditrack-resumes"; // Default bucket name
 
   return (
     <div className="space-y-6">
@@ -268,7 +280,6 @@ export default function CandidateDetailPage() {
       </Button>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Main Content Column */}
         <div className="lg:col-span-2 space-y-6">
           <Card className="shadow-lg">
             <CardHeader className="flex flex-row items-start justify-between gap-4">
@@ -295,14 +306,13 @@ export default function CandidateDetailPage() {
                 {renderField("Applied for", candidate.position?.title, Briefcase)}
                 {renderField("Application Date", candidate.applicationDate ? format(parseISO(candidate.applicationDate), "PPP") : 'N/A', CalendarDays)}
                 {renderField("CV Language", parsed?.cv_language, Tag)}
-                {candidate.resumePath && (
-                    <div className="flex items-start text-sm">
-                        <HardDrive className="h-4 w-4 mr-2 mt-0.5 text-muted-foreground shrink-0" />
-                        <span className="font-medium text-muted-foreground mr-1">Resume:</span>
-                        <span className="text-primary hover:underline cursor-pointer break-all" title={candidate.resumePath}>
-                            {candidate.resumePath.split('-').pop()?.split('.').slice(0,-1).join('.') || candidate.resumePath.split('-').pop()}
-                        </span>
-                    </div>
+                {candidate.resumePath && renderField(
+                  "Resume", 
+                  candidate.resumePath.split('-').pop()?.split('.').slice(0,-1).join('.') || candidate.resumePath.split('-').pop(), 
+                  HardDrive,
+                  true,
+                  `${MINIO_PUBLIC_BASE_URL}/${MINIO_BUCKET}/${candidate.resumePath}`,
+                  "_blank"
                 )}
             </CardContent>
             {canManageCandidate && (
@@ -313,7 +323,7 @@ export default function CandidateDetailPage() {
             )}
           </Card>
 
-          {canManageCandidate && (
+          {canManageCandidate && ( // Only show recruiter assignment if user can manage candidates
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center"><UserCog className="mr-2 h-5 w-5 text-primary"/>Assign Recruiter</CardTitle>
@@ -427,7 +437,6 @@ export default function CandidateDetailPage() {
                 <CardTitle className="flex items-center"><Briefcase className="mr-2 h-5 w-5 text-primary"/>Experience</CardTitle>
               </CardHeader>
               <CardContent>
-                { /* console.log("Experience Data for Rendering:", candidate.parsedData?.experience) */ }
                 <ScrollArea className="h-[300px]"> 
                   <ul className="space-y-4">
                     {parsed.experience.map((exp, index) => (
@@ -544,7 +553,6 @@ export default function CandidateDetailPage() {
           </Card>
         </div>
 
-        {/* Right Column for Job Matches */}
         <div className="lg:col-span-1 space-y-6">
           {parsed?.job_matches && parsed.job_matches.length > 0 && (
             <Card>
@@ -598,8 +606,8 @@ export default function CandidateDetailPage() {
               candidate={candidate}
               isOpen={isTransitionsModalOpen}
               onOpenChange={setIsTransitionsModalOpen}
-              onUpdateCandidate={handleUpdateCandidateStatus}
-              onRefreshCandidateData={fetchCandidateDetails}
+              onUpdateCandidate={handleUpdateCandidateStatus} // This only updates status
+              onRefreshCandidateData={fetchCandidateDetails} // For refreshing after note edit/delete
           />
         </>
       )}
@@ -614,3 +622,5 @@ export default function CandidateDetailPage() {
     </div>
   );
 }
+
+    
