@@ -8,12 +8,12 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter }
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useToast } from '@/hooks/use-toast';
 import { Save, Palette, ImageUp, Trash2, Loader2, XCircle } from 'lucide-react';
-import Image from 'next/image'; 
+import Image from 'next/image';
 import { signIn, useSession } from 'next-auth/react';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation'; // Import usePathname
 
 const APP_THEME_KEY = 'appThemePreference';
-const APP_LOGO_DATA_URL_KEY = 'appLogoDataUrl'; 
+const APP_LOGO_DATA_URL_KEY = 'appLogoDataUrl';
 
 type ThemePreference = "light" | "dark" | "system";
 
@@ -22,20 +22,21 @@ export default function PreferencesSettingsPage() {
   const [isClient, setIsClient] = useState(false);
   const { data: session, status: sessionStatus } = useSession();
   const router = useRouter();
+  const pathname = usePathname(); // Get current pathname
 
   // Preferences state
   const [themePreference, setThemePreference] = useState<ThemePreference>('system');
 
   // App Logo state
   const [selectedLogoFile, setSelectedLogoFile] = useState<File | null>(null);
-  const [logoPreviewUrl, setLogoPreviewUrl] = useState<string | null>(null); 
+  const [logoPreviewUrl, setLogoPreviewUrl] = useState<string | null>(null);
   const [savedLogoDataUrl, setSavedLogoDataUrl] = useState<string | null>(null);
 
 
   useEffect(() => {
     setIsClient(true);
     if (sessionStatus === 'unauthenticated') {
-      signIn(undefined, { callbackUrl: window.location.pathname });
+      signIn(undefined, { callbackUrl: pathname }); // Use pathname
     } else if (sessionStatus === 'authenticated') {
         if (typeof window !== 'undefined') {
             const storedTheme = localStorage.getItem(APP_THEME_KEY) as ThemePreference | null;
@@ -44,11 +45,11 @@ export default function PreferencesSettingsPage() {
             const storedLogoDataUrl = localStorage.getItem(APP_LOGO_DATA_URL_KEY);
             if (storedLogoDataUrl) {
                 setSavedLogoDataUrl(storedLogoDataUrl);
-                setLogoPreviewUrl(storedLogoDataUrl); 
+                setLogoPreviewUrl(storedLogoDataUrl);
             }
         }
     }
-  }, [sessionStatus, router]);
+  }, [sessionStatus, router, pathname, signIn]); // Added pathname and signIn to dependencies
 
   const handleLogoFileChange = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -63,15 +64,15 @@ export default function PreferencesSettingsPage() {
       } else {
         toast({ title: "Invalid File Type", description: "Please select an image file.", variant: "destructive" });
         setSelectedLogoFile(null);
-        setLogoPreviewUrl(savedLogoDataUrl); 
-        event.target.value = ''; 
+        setLogoPreviewUrl(savedLogoDataUrl);
+        event.target.value = '';
       }
     } else {
       setSelectedLogoFile(null);
-      setLogoPreviewUrl(savedLogoDataUrl); 
+      setLogoPreviewUrl(savedLogoDataUrl);
     }
   };
-  
+
   const removeSelectedLogo = (clearSaved: boolean = false) => {
     setSelectedLogoFile(null);
     const fileInput = document.getElementById('app-logo-upload') as HTMLInputElement;
@@ -85,7 +86,7 @@ export default function PreferencesSettingsPage() {
         toast({ title: "Logo Cleared", description: "The application logo has been reset." });
         window.dispatchEvent(new Event('logoChanged'));
     } else {
-        setLogoPreviewUrl(savedLogoDataUrl); 
+        setLogoPreviewUrl(savedLogoDataUrl);
     }
   };
 
@@ -93,13 +94,13 @@ export default function PreferencesSettingsPage() {
     if (!isClient) return;
     localStorage.setItem(APP_THEME_KEY, themePreference);
 
-    if (logoPreviewUrl && logoPreviewUrl !== savedLogoDataUrl) { 
-      if (selectedLogoFile) { 
+    if (logoPreviewUrl && logoPreviewUrl !== savedLogoDataUrl) {
+      if (selectedLogoFile) {
         localStorage.setItem(APP_LOGO_DATA_URL_KEY, logoPreviewUrl);
         setSavedLogoDataUrl(logoPreviewUrl);
       }
     }
-    
+
     toast({
       title: 'Preferences Saved',
       description: 'Your preferences have been updated locally.',
@@ -107,7 +108,7 @@ export default function PreferencesSettingsPage() {
     window.dispatchEvent(new Event('logoChanged'));
   };
 
-  if (sessionStatus === 'loading' || (sessionStatus === 'unauthenticated' && router.asPath !== '/auth/signin' && !router.asPath.startsWith('/_next/')) || !isClient) {
+  if (sessionStatus === 'loading' || (sessionStatus === 'unauthenticated' && pathname !== '/auth/signin' && !pathname.startsWith('/_next/')) || !isClient) {
     return (
       <div className="flex h-screen w-screen items-center justify-center bg-background fixed inset-0 z-50">
         <Loader2 className="h-16 w-16 animate-spin text-primary" />
