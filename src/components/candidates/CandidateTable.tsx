@@ -19,7 +19,7 @@ import { MoreHorizontal, FileEdit, Trash2, Eye, Users, UploadCloud } from 'lucid
 import type { Candidate, CandidateStatus } from '@/lib/types';
 import { ManageTransitionsModal } from './ManageTransitionsModal';
 import { format, parseISO } from 'date-fns';
-import Link from 'next/link'; // Import Link
+import Link from 'next/link';
 
 interface CandidateTableProps {
   candidates: Candidate[];
@@ -115,9 +115,6 @@ export function CandidateTable({ candidates, onUpdateCandidate, onDeleteCandidat
                 </TableCell>
                 <TableCell>
                   <div className="font-medium text-foreground">{candidate.position?.title || 'N/A'}</div>
-                   <div className="text-xs text-muted-foreground">
-                    { (candidate.parsedData as any)?.education?.[0]?.university || 'Education N/A'}
-                  </div>
                 </TableCell>
                 <TableCell>
                   <div className="flex items-center gap-2">
