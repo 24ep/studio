@@ -74,7 +74,7 @@ export interface PersonalInfo {
   nickname?: string;
   location?: string;
   introduction_aboutme?: string;
-  avatar_url?: string; // Added for potential future use from parsed data
+  avatar_url?: string; 
 }
 
 export interface ContactInfo {
@@ -108,8 +108,8 @@ export interface ExperienceEntry {
   description?: string;
   period?: string;
   duration?: string;
-  is_current_position?: boolean | string; // Allow string due to n8n payload
-  postition_level?: PositionLevel | string; // Allow string due to n8n payload
+  is_current_position?: boolean | string; 
+  postition_level?: string | undefined; // Changed from PositionLevel | string to string | undefined for n8n flexibility
 }
 
 export interface SkillEntry {
@@ -125,10 +125,10 @@ export interface JobSuitableEntry {
 }
 
 export interface N8NJobMatch {
-  job_id?: string; // Made optional as per your last n8n example
+  job_id?: string; 
   job_title: string;
   fit_score: number;
-  match_reasons: string[];
+  match_reasons?: string[]; // Made optional
 }
 
 export interface CandidateDetails {
@@ -158,11 +158,11 @@ export interface N8NCandidateInfoForWebhook {
   job_suitable?: JobSuitableEntry[];
 }
 export interface N8NCandidateWebhookEntry {
-  candidate_info: N8NCandidateInfoForWebhook; // This used to be CandidateDetails
-  jobs: N8NJobMatch[];
+  candidate_info: N8NCandidateInfoForWebhook;
+  jobs: N8NJobMatch[]; // This was `top_matches` in previous, renamed to `jobs` for consistency
 }
-// The overall payload from n8n is now a single object not an array
-export type N8NWebhookPayload = N8NCandidateWebhookEntry;
+// The overall payload from n8n can be a single object or an array of these entries
+export type N8NWebhookPayload = N8NCandidateWebhookEntry; // Changed from array to single entry
 
 
 // Kept for potential backward compatibility if some candidates have old data structure

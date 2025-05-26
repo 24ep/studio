@@ -3,10 +3,12 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import pool from '../../../../lib/db';
 import { z } from 'zod';
-import type { CandidateDetails, Position, CandidateStatus, N8NJobMatch, PersonalInfo, ContactInfo, EducationEntry, ExperienceEntry, SkillEntry, JobSuitableEntry, PositionLevel } from '@/lib/types';
+import type { CandidateDetails, Position, CandidateStatus, N8NJobMatch, PersonalInfo, ContactInfo, EducationEntry, ExperienceEntry, SkillEntry, JobSuitableEntry, PositionLevel } from '@/lib/types'; // Ensure PositionLevel is imported if still used conceptually
 import { logAudit } from '@/lib/auditLog';
 import { v4 as uuidv4 } from 'uuid';
 
+// Keep the enum for reference or potential future use in other contexts,
+// but it won't be directly used for 'postition_level' in this specific n8n schema.
 const positionLevelEnumValues: [PositionLevel, ...PositionLevel[]] = [
     'entry level', 'mid level', 'senior level', 'lead', 'manager', 'executive', 'officer', 'leader'
 ];
@@ -43,20 +45,26 @@ const experienceEntrySchema = z.object({
   duration: z.string().optional().default(''),
   is_current_position: z.preprocess(
     (val) => {
-      if (val === "") return false;
-      if (val === null || val === undefined) return false;
       if (typeof val === 'string') {
         const lowerVal = val.toLowerCase();
         if (lowerVal === 'true') return true;
-        if (lowerVal === 'false') return false;
+        if (lowerVal === 'false' || lowerVal === 'none' || lowerVal === '') return false;
       }
+      if (val === null || val === undefined) return false;
       return val; 
     },
     z.boolean().optional().default(false)
   ),
   postition_level: z.preprocess(
-    (val) => (typeof val === 'string' ? val.toLowerCase() : val),
-    z.enum(positionLevelEnumValues).optional()
+    (val) => {
+      if (typeof val === 'string') {
+        const lowerVal = val.toLowerCase();
+        if (lowerVal === 'none' || lowerVal === '') return undefined; // Treat "None" or empty string as optional
+        return lowerVal; // Convert to lowercase
+      }
+      return val;
+    },
+    z.string().optional() // Changed from z.enum to z.string().optional()
   ),
 }).passthrough();
 
@@ -89,14 +97,12 @@ const n8nJobMatchSchema = z.object({
   match_reasons: z.array(z.string()).optional().default([]),
 }).passthrough();
 
-// Schema for a single candidate entry from n8n
 const n8nCandidateWebhookEntrySchema = z.object({
   candidate_info: candidateDetailsSchemaForN8N,
-  jobs: z.array(n8nJobMatchSchema).optional().default([]),
+  jobs: z.array(n8nJobMatchSchema).optional().default([]), // Changed from job_matches
 });
 
-// The overall payload from n8n is now a single object, not an array
-const n8nWebhookPayloadSchema = n8nCandidateWebhookEntrySchema;
+const n8nWebhookPayloadSchema = n8nCandidateWebhookEntrySchema; // Now expects a single object
 
 
 export async function POST(request: NextRequest) {
@@ -125,7 +131,7 @@ export async function POST(request: NextRequest) {
   try {
     client = await pool.connect(); 
 
-    const { candidate_info, jobs: job_matches } = payload; 
+    const { candidate_info, jobs: job_matches } = payload; // 'jobs' from payload becomes 'job_matches' internally
     const { personal_info, contact_info } = candidate_info;
 
     const name = `${personal_info.firstname} ${personal_info.lastname}`.trim();
@@ -144,6 +150,8 @@ export async function POST(request: NextRequest) {
     let positionId: string | null = null;
     let fitScore: number = 0;
     
+    // Construct the full parsedData object to be stored in the database
+    // This includes all fields from candidate_info
     const fullParsedDataFromN8N: CandidateDetails = {
       cv_language: candidate_info.cv_language || '',
       personal_info: candidate_info.personal_info,
@@ -152,6 +160,7 @@ export async function POST(request: NextRequest) {
       experience: candidate_info.experience || [],
       skills: candidate_info.skills || [],
       job_suitable: candidate_info.job_suitable || [],
+      // associatedMatchDetails will be added below if a match is found
     };
 
     try { 
@@ -175,7 +184,7 @@ export async function POST(request: NextRequest) {
         if (positionResult.rows.length > 0) {
           positionId = positionResult.rows[0].id;
           fitScore = topMatch.fit_score;
-          fullParsedDataFromN8N.associatedMatchDetails = {
+          fullParsedDataFromN8N.associatedMatchDetails = { // Add match details to parsedData
             jobTitle: topMatch.job_title,
             fitScore: topMatch.fit_score,
             reasons: topMatch.match_reasons || [],
@@ -202,7 +211,7 @@ export async function POST(request: NextRequest) {
         fitScore,
         'Applied' as CandidateStatus,
         new Date().toISOString(),
-        fullParsedDataFromN8N, 
+        fullParsedDataFromN8N, // Store the complete parsed data
       ];
       const candidateResult = await client.query(insertCandidateQuery, candidateValues);
       const newCandidate = candidateResult.rows[0];
@@ -236,7 +245,7 @@ export async function POST(request: NextRequest) {
       const finalResult = await client.query(finalCandidateQuery, [newCandidate.id]);
       const createdCandidateWithDetails = finalResult.rows.length > 0 ? {
           ...finalResult.rows[0],
-          parsedData: finalResult.rows[0].parsedData || { personal_info: {}, contact_info: {} }, 
+          parsedData: finalResult.rows[0].parsedData || { personal_info: {}, contact_info: {} }, // Ensure parsedData defaults
           position: finalResult.rows[0].positionId ? {
               id: finalResult.rows[0].positionId,
               title: finalResult.rows[0].positionTitle,
@@ -258,6 +267,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ status: 'error', email: candidateEmailForLog, message: error.message }, { status: 500 });
     }
   } catch (batchProcessingError: any) { 
+    // This outer catch is for errors before client connection or if the payload wasn't an array (though now it's a single object)
     console.error("N8N Webhook: Error processing webhook request:", batchProcessingError);
     await logAudit('ERROR', `N8N Webhook: Error processing webhook request. Error: ${batchProcessingError.message}`, 'API:N8N:CreateCandidate', null, { error: batchProcessingError.message });
     return NextResponse.json({ message: "Error processing webhook request.", error: batchProcessingError.message }, { status: 500 });
