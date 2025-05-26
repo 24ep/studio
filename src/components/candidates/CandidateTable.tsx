@@ -68,9 +68,9 @@ export function CandidateTable({ candidates, onUpdateCandidate, onDeleteCandidat
     onDeleteCandidate(candidate.id);
   };
 
-  const handleTransitionsModalUpdateCandidate = async (candidateId: string, status: CandidateStatus, newTransitionHistory?: TransitionRecord[]) => {
+  const handleTransitionsModalUpdateCandidate = async (candidateId: string, status: CandidateStatus) => {
     try {
-      await onUpdateCandidate(candidateId, status, newTransitionHistory);
+      await onUpdateCandidate(candidateId, status); // Removed newTransitionHistory as it's handled by backend
       setIsTransitionsModalOpen(false);
       // Parent (CandidatesPage) will handle UI update and toast
     } catch (error) {
@@ -106,7 +106,7 @@ export function CandidateTable({ candidates, onUpdateCandidate, onDeleteCandidat
           <TableHeader>
             <TableRow>
               <TableHead className="w-[250px]">Candidate</TableHead>
-              <TableHead>Position</TableHead>
+              <TableHead>Applied Position</TableHead>
               <TableHead className="w-[100px]">Fit Score</TableHead>
               <TableHead>Status</TableHead>
               <TableHead>Last Update</TableHead>
@@ -120,7 +120,7 @@ export function CandidateTable({ candidates, onUpdateCandidate, onDeleteCandidat
                 <TableCell>
                   <div className="flex items-center gap-3">
                     <Avatar className="h-10 w-10">
-                      <AvatarImage src={candidate.parsedData?.personal_info?.avatar_url || `https://placehold.co/40x40.png?text=${candidate.name.charAt(0)}`} alt={candidate.name} data-ai-hint="person avatar" />
+                      <AvatarImage src={(candidate.parsedData as any)?.personal_info?.avatar_url || `https://placehold.co/40x40.png?text=${candidate.name.charAt(0)}`} alt={candidate.name} data-ai-hint="person avatar" />
                       <AvatarFallback>{candidate.name.charAt(0).toUpperCase()}</AvatarFallback>
                     </Avatar>
                     <div>
@@ -132,13 +132,13 @@ export function CandidateTable({ candidates, onUpdateCandidate, onDeleteCandidat
                 <TableCell>
                   <div className="font-medium text-foreground">{candidate.position?.title || 'N/A'}</div>
                    <div className="text-xs text-muted-foreground">
-                    { candidate.parsedData?.education?.[0]?.university || 'Education N/A'}
+                    { (candidate.parsedData as any)?.education?.[0]?.university || 'Education N/A'}
                   </div>
                 </TableCell>
                 <TableCell>
                   <div className="flex items-center gap-2">
-                    <Progress value={candidate.fitScore} className="h-2 w-[60px]" />
-                    <span className="text-sm font-medium text-foreground">{candidate.fitScore}%</span>
+                    <Progress value={candidate.fitScore || 0} className="h-2 w-[60px]" />
+                    <span className="text-sm font-medium text-foreground">{candidate.fitScore || 0}%</span>
                   </div>
                 </TableCell>
                 <TableCell>
