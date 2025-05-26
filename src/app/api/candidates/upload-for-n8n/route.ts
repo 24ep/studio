@@ -12,18 +12,8 @@ const ACCEPTED_FILE_TYPES = ['application/pdf'];
 
 export async function POST(request: NextRequest) {
   const session = await getServerSession(authOptions);
-  // This endpoint is now public as per user request.
-  // if (!session?.user) {
-  //   return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
-  // }
-  // const userRole = session.user.role;
-  // if (!userRole || !['Admin', 'Recruiter'].includes(userRole)) {
-  //   await logAudit('WARN', `Forbidden attempt to use n8n candidate creation upload by ${session?.user?.name || 'Unknown user'} (ID: ${session?.user?.id || 'N/A'}). Required roles: Admin, Recruiter.`, 'API:Candidates:N8NCreate', session?.user?.id);
-  //   return NextResponse.json({ message: "Forbidden: Insufficient permissions" }, { status: 403 });
-  // }
   const actingUserId = session?.user?.id || null;
   const actingUserName = session?.user?.name || session?.user?.email || 'System (n8n Upload)';
-
 
   const n8nWebhookUrl = process.env.N8N_GENERIC_PDF_WEBHOOK_URL;
   if (!n8nWebhookUrl) {
@@ -36,6 +26,9 @@ export async function POST(request: NextRequest) {
     const formData = await request.formData();
     const file = formData.get('pdfFile') as File | null;
     const targetPositionId = formData.get('positionId') as string | null;
+    const targetPositionDescription = formData.get('targetPositionDescription') as string | null;
+    const targetPositionLevel = formData.get('targetPositionLevel') as string | null;
+
 
     if (!file) {
       return NextResponse.json({ message: 'No PDF file provided in "pdfFile" field' }, { status: 400 });
@@ -58,13 +51,12 @@ export async function POST(request: NextRequest) {
             }
         } catch (dbError) {
             console.error(`Error fetching position title for ID ${targetPositionId}:`, dbError);
-            // Continue without title if DB error, n8n can still process the resume
         }
     }
 
     // We will forward the file as FormData to n8n
     const n8nFormData = new FormData();
-    n8nFormData.append('file', file, file.name);
+    n8nFormData.append('file', file, file.name); // Send the file itself
     n8nFormData.append('originalFileName', file.name);
     n8nFormData.append('mimeType', file.type);
     n8nFormData.append('sourceApplication', 'NCC Candidate Management');
@@ -78,11 +70,19 @@ export async function POST(request: NextRequest) {
     if (targetPositionTitle) {
         n8nFormData.append('targetPositionTitle', targetPositionTitle);
     }
+    if (targetPositionDescription) {
+        n8nFormData.append('targetPositionDescription', targetPositionDescription);
+    }
+    if (targetPositionLevel) {
+        n8nFormData.append('targetPositionLevel', targetPositionLevel);
+    }
 
 
     const n8nResponse = await fetch(n8nWebhookUrl, {
       method: 'POST',
       body: n8nFormData, 
+      // Do not set Content-Type header when sending FormData;
+      // the browser (or fetch) will set it correctly with the boundary.
     });
 
     if (n8nResponse.ok) {

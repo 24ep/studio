@@ -39,7 +39,7 @@ export function CreateCandidateViaN8nModal({ isOpen, onOpenChange, onProcessingS
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [availablePositions, setAvailablePositions] = useState<Position[]>([]);
-  const [selectedPositionId, setSelectedPositionId] = useState<string>(""); // Internal state for form
+  const [selectedPositionId, setSelectedPositionId] = useState<string>("");
 
   useEffect(() => {
     if (isOpen) {
@@ -61,7 +61,6 @@ export function CreateCandidateViaN8nModal({ isOpen, onOpenChange, onProcessingS
       // Reset state when modal closes
       setSelectedFile(null);
       setSelectedPositionId("");
-      // setAvailablePositions([]); // Keep positions if modal reopens quickly, or clear if fresh list always needed
       const fileInput = document.getElementById('n8n-candidate-pdf-upload') as HTMLInputElement;
       if (fileInput) fileInput.value = '';
     }
@@ -103,8 +102,18 @@ export function CreateCandidateViaN8nModal({ isOpen, onOpenChange, onProcessingS
     setIsUploading(true);
     const formData = new FormData();
     formData.append('pdfFile', selectedFile);
-    if (selectedPositionId) { // Only append if a position is actually selected (not the "None" placeholder)
+
+    if (selectedPositionId && selectedPositionId !== NONE_POSITION_VALUE) {
       formData.append('positionId', selectedPositionId);
+      const selectedPosition = availablePositions.find(p => p.id === selectedPositionId);
+      if (selectedPosition) {
+        if (selectedPosition.description) {
+          formData.append('targetPositionDescription', selectedPosition.description);
+        }
+        if (selectedPosition.position_level) {
+          formData.append('targetPositionLevel', selectedPosition.position_level);
+        }
+      }
     }
 
     try {
