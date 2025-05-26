@@ -5,7 +5,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import type { Candidate, CandidateDetails, TransitionRecord, EducationEntry, ExperienceEntry, SkillEntry, JobSuitableEntry, PersonalInfo, N8NJobMatch, UserProfile, Position, PositionLevel } from '@/lib/types';
 import { useToast } from "@/hooks/use-toast";
-import { useSession } from 'next-auth/react';
+import { useSession, signIn } from 'next-auth/react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -28,6 +28,12 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Checkbox } from '@/components/ui/checkbox';
 
+// Environment variables for client-side MinIO URL construction
+// Ensure these are set in your .env.local file, prefixed with NEXT_PUBLIC_
+// For direct linking to work, your MinIO bucket (MINIO_BUCKET) must have a public read policy.
+const MINIO_PUBLIC_BASE_URL = process.env.NEXT_PUBLIC_MINIO_URL || `http://localhost:9847`;
+const MINIO_BUCKET = process.env.NEXT_PUBLIC_MINIO_BUCKET_NAME || "canditrack-resumes";
+
 const PLACEHOLDER_VALUE_NONE = "___NOT_SPECIFIED___";
 const positionLevelOptions: PositionLevel[] = ['entry level', 'mid level', 'senior level', 'lead', 'manager', 'executive', 'officer', 'leader'];
 
@@ -41,62 +47,64 @@ const getStatusBadgeVariant = (status: Candidate['status']): "default" | "second
   }
 };
 
+// Zod schemas for editing candidate details
 const personalInfoEditSchema = z.object({
-  title_honorific: z.string().optional(),
+  title_honorific: z.string().optional().nullable(),
   firstname: z.string().min(1, "First name is required").optional(),
   lastname: z.string().min(1, "Last name is required").optional(),
-  nickname: z.string().optional(),
-  location: z.string().optional(),
-  introduction_aboutme: z.string().optional(),
+  nickname: z.string().optional().nullable(),
+  location: z.string().optional().nullable(),
+  introduction_aboutme: z.string().optional().nullable(),
   avatar_url: z.string().url().optional().nullable(),
 }).deepPartial();
 
 const contactInfoEditSchema = z.object({
   email: z.string().email("Invalid email address").optional(),
-  phone: z.string().optional(),
+  phone: z.string().optional().nullable(),
 }).deepPartial();
 
 const educationEntryEditSchema = z.object({
-    major: z.string().optional(),
-    field: z.string().optional(),
-    period: z.string().optional(),
-    duration: z.string().optional(),
-    GPA: z.string().optional(),
-    university: z.string().optional(),
-    campus: z.string().optional(),
+    major: z.string().optional().nullable(),
+    field: z.string().optional().nullable(),
+    period: z.string().optional().nullable(),
+    duration: z.string().optional().nullable(),
+    GPA: z.string().optional().nullable(),
+    university: z.string().optional().nullable(),
+    campus: z.string().optional().nullable(),
 }).deepPartial();
 
 const experienceEntryEditSchema = z.object({
-    company: z.string().optional(),
-    position: z.string().optional(),
-    description: z.string().optional(),
-    period: z.string().optional(),
-    duration: z.string().optional(),
+    company: z.string().optional().nullable(),
+    position: z.string().optional().nullable(),
+    description: z.string().optional().nullable(),
+    period: z.string().optional().nullable(),
+    duration: z.string().optional().nullable(),
     is_current_position: z.boolean().optional(),
     postition_level: z.string().optional().nullable(),
 }).deepPartial();
 
 const skillEntryEditSchema = z.object({
-    segment_skill: z.string().optional(),
-    skill_string: z.string().optional(), 
-    skill: z.array(z.string()).optional(), 
+    segment_skill: z.string().optional().nullable(),
+    skill_string: z.string().optional().nullable(), // For comma-separated skills input
+    skill: z.array(z.string()).optional(), // This will be derived from skill_string
 }).deepPartial();
 
 const jobSuitableEntryEditSchema = z.object({
-    suitable_career: z.string().optional(),
-    suitable_job_position: z.string().optional(),
-    suitable_job_level: z.string().optional(),
-    suitable_salary_bath_month: z.string().optional(),
+    suitable_career: z.string().optional().nullable(),
+    suitable_job_position: z.string().optional().nullable(),
+    suitable_job_level: z.string().optional().nullable(),
+    suitable_salary_bath_month: z.string().optional().nullable(),
 }).deepPartial();
 
 const candidateDetailsEditSchema = z.object({
-  cv_language: z.string().optional(),
+  cv_language: z.string().optional().nullable(),
   personal_info: personalInfoEditSchema.optional(),
   contact_info: contactInfoEditSchema.optional(),
   education: z.array(educationEntryEditSchema).optional(),
   experience: z.array(experienceEntryEditSchema).optional(),
   skills: z.array(skillEntryEditSchema).optional(),
   job_suitable: z.array(jobSuitableEntryEditSchema).optional(),
+  // job_matches and associatedMatchDetails are typically read-only derived from n8n, not directly edited here
 }).deepPartial();
 
 const editCandidateDetailSchema = z.object({
@@ -104,7 +112,7 @@ const editCandidateDetailSchema = z.object({
   email: z.string().email("Invalid email address").optional(),
   phone: z.string().optional().nullable(),
   positionId: z.string().uuid().nullable().optional(),
-  recruiterId: z.string().uuid().nullable().optional(), 
+  recruiterId: z.string().uuid().nullable().optional(),
   fitScore: z.number().min(0).max(100).optional(),
   status: z.enum(['Applied', 'Screening', 'Shortlisted', 'Interview Scheduled', 'Interviewing', 'Offer Extended', 'Offer Accepted', 'Hired', 'Rejected', 'On Hold'] as [string, ...string[]]).optional(),
   parsedData: candidateDetailsEditSchema.optional(),
@@ -119,7 +127,7 @@ interface RoleSuggestionSummaryProps {
 }
 
 const RoleSuggestionSummary: React.FC<RoleSuggestionSummaryProps> = ({ candidate, allDbPositions }) => {
-  if (!candidate || !candidate.parsedData?.job_matches || candidate.parsedData.job_matches.length === 0) {
+  if (!candidate || !candidate.parsedData || !(candidate.parsedData as CandidateDetails).job_matches || (candidate.parsedData as CandidateDetails).job_matches!.length === 0) {
     return (
       <Card>
         <CardHeader>
@@ -141,12 +149,12 @@ const RoleSuggestionSummary: React.FC<RoleSuggestionSummaryProps> = ({ candidate
 
   const openPositionsMap = new Map(allDbPositions.filter(p => p.isOpen).map(p => [p.title.toLowerCase(), p]));
 
-  for (const n8nMatch of candidate.parsedData.job_matches) {
+  for (const n8nMatch of (candidate.parsedData as CandidateDetails).job_matches!) {
     const n8nMatchTitleLower = n8nMatch.job_title.toLowerCase();
     const dbPositionMatch = openPositionsMap.get(n8nMatchTitleLower);
 
     if (dbPositionMatch && dbPositionMatch.id !== currentAppliedPositionId) {
-      if (n8nMatch.fit_score > bestAlternativeScore && (n8nMatch.fit_score - currentFitScore >= 10)) { // Example: 10 points higher threshold
+      if (n8nMatch.fit_score > bestAlternativeScore && (n8nMatch.fit_score - currentFitScore >= 10)) {
         bestAlternativeScore = n8nMatch.fit_score;
         bestAlternativeMatch = n8nMatch;
         bestAlternativePositionInDb = dbPositionMatch;
@@ -232,6 +240,12 @@ export default function CandidateDetailPage() {
 
   const fetchCandidateDetails = useCallback(async () => {
     if (!candidateId) return;
+    if (sessionStatus !== 'authenticated' && sessionStatus !== 'loading') { 
+        signIn(undefined, { callbackUrl: `/candidates/${candidateId}` });
+        return;
+    }
+    if(sessionStatus === 'loading') return;
+
     setIsLoading(true);
     setFetchError(null);
     
@@ -239,6 +253,10 @@ export default function CandidateDetailPage() {
       const response = await fetch(`/api/candidates/${candidateId}`);
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
+        if (response.status === 401) {
+            signIn(undefined, { callbackUrl: `/candidates/${candidateId}` });
+            return;
+        }
         const errorMessage = errorData.message || `Failed to fetch candidate: ${response.statusText || `Status ${response.status}`}`;
         setFetchError(errorMessage);
         setCandidate(null);
@@ -246,7 +264,6 @@ export default function CandidateDetailPage() {
       }
       const data: Candidate = await response.json();
       setCandidate(data);
-      console.log('Fetched candidate data:', data); // For debugging experience data
       reset({
         name: data.name,
         email: data.email,
@@ -270,9 +287,10 @@ export default function CandidateDetailPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [candidateId, reset]);
+  }, [candidateId, reset, sessionStatus, signIn]);
 
   const fetchRecruiters = useCallback(async () => {
+    if (sessionStatus !== 'authenticated') return;
     try {
       const response = await fetch('/api/users?role=Recruiter');
       if (!response.ok) throw new Error('Failed to fetch recruiters');
@@ -282,27 +300,32 @@ export default function CandidateDetailPage() {
       console.error("Error fetching recruiters:", error);
       toast({ title: "Error", description: "Could not load recruiters for assignment.", variant: "destructive" });
     }
-  }, [toast]);
+  }, [sessionStatus, toast]);
 
   const fetchAllPositions = useCallback(async () => {
+    if (sessionStatus !== 'authenticated') return;
     try {
-      const response = await fetch('/api/positions?isOpen=true'); // Fetch only open positions
+      const response = await fetch('/api/positions?isOpen=true'); 
       if (!response.ok) throw new Error('Failed to fetch positions');
       const data: Position[] = await response.json();
       setAllDbPositions(data);
     } catch (error) {
       console.error("Error fetching all positions:", error);
     }
-  }, []);
+  }, [sessionStatus]);
 
 
   useEffect(() => {
-    if (candidateId) {
-        fetchCandidateDetails();
-        fetchAllPositions(); 
-        fetchRecruiters(); 
+    if (sessionStatus === 'authenticated') {
+        if (candidateId) {
+            fetchCandidateDetails();
+            fetchAllPositions(); 
+            fetchRecruiters(); 
+        }
+    } else if (sessionStatus === 'unauthenticated') {
+         signIn(undefined, { callbackUrl: `/candidates/${candidateId}` });
     }
-  }, [candidateId, fetchCandidateDetails, fetchRecruiters, fetchAllPositions]);
+  }, [candidateId, fetchCandidateDetails, fetchRecruiters, fetchAllPositions, sessionStatus, signIn]);
 
   const handleUploadSuccess = (updatedCandidate: Candidate) => {
     setCandidate(updatedCandidate);
@@ -464,7 +487,6 @@ export default function CandidateDetailPage() {
     setIsEditing(false);
   };
 
-
   if (sessionStatus === 'loading' || (isLoading && !fetchError)) {
     return (
       <div className="flex h-[calc(100vh-8rem)] items-center justify-center">
@@ -498,9 +520,10 @@ export default function CandidateDetailPage() {
   }
 
   const parsed = candidate.parsedData as CandidateDetails | null;
+  const personalInfo = parsed?.personal_info as PersonalInfo | undefined;
 
   const renderField = (label: string, value?: string | number | null, icon?: React.ElementType, isLink?: boolean, linkHref?: string, linkTarget?: string) => {
-    if (value === undefined || value === null || value === '' || (typeof value === 'number' && isNaN(value))) return null;
+    if (value === undefined || value === null || String(value).trim() === '' || (typeof value === 'number' && isNaN(value))) return null;
     const IconComponent = icon;
     const content = isLink ? (
       <a href={linkHref} target={linkTarget} rel={linkTarget === "_blank" ? "noopener noreferrer" : undefined} className="text-primary hover:underline cursor-pointer break-all">
@@ -518,8 +541,16 @@ export default function CandidateDetailPage() {
     );
   };
   
-  const MINIO_PUBLIC_BASE_URL = process.env.NEXT_PUBLIC_MINIO_URL || `http://localhost:9847`; 
-  const MINIO_BUCKET = process.env.NEXT_PUBLIC_MINIO_BUCKET_NAME || "canditrack-resumes";
+  // Function to try and extract a user-friendly filename
+  const getDisplayFilename = (filePath: string | null | undefined): string => {
+    if (!filePath) return "View Resume";
+    // Assuming format: candId-timestamp-original_filename.ext
+    const parts = filePath.split('-');
+    if (parts.length > 2) {
+      return parts.slice(2).join('-').replace(/_/g, ' '); // Join back parts of original filename and replace underscores
+    }
+    return parts.pop() || "View Resume"; // Fallback to last part or default
+  };
 
   return (
     <FormProvider {...form}>
@@ -551,7 +582,7 @@ export default function CandidateDetailPage() {
             <CardHeader className="flex flex-row items-start justify-between gap-4">
               <div className="flex items-center gap-4">
                 <Avatar className="h-20 w-20 border-2 border-primary">
-                  <AvatarImage src={(parsed?.personal_info as PersonalInfo)?.avatar_url || `https://placehold.co/80x80.png?text=${candidate.name.charAt(0)}`} alt={candidate.name} data-ai-hint="person avatar" />
+                  <AvatarImage src={personalInfo?.avatar_url || `https://placehold.co/80x80.png?text=${candidate.name.charAt(0)}`} alt={candidate.name} data-ai-hint="person avatar" />
                   <AvatarFallback className="text-3xl">{candidate.name.charAt(0).toUpperCase()}</AvatarFallback>
                 </Avatar>
                 <div>
@@ -595,7 +626,7 @@ export default function CandidateDetailPage() {
                                 </Select>
                             )}
                         />
-                        <Label htmlFor="fitScore" className="mt-1">Fit Score (Applied)</Label>
+                        <Label htmlFor="fitScore" className="mt-1">Fit Score (Applied Position)</Label>
                         <Input id="fitScore" type="number" {...register('fitScore', { valueAsNumber: true })} className="w-32 text-right" />
 
                     </>
@@ -603,7 +634,7 @@ export default function CandidateDetailPage() {
                     <>
                         <Badge variant={getStatusBadgeVariant(candidate.status)} className="text-base px-3 py-1 capitalize">{candidate.status}</Badge>
                         <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                        <Percent className="h-4 w-4" /> Fit Score (Applied): <span className="font-semibold text-foreground">{(candidate.fitScore || 0)}%</span>
+                        <Percent className="h-4 w-4" /> Fit Score (Applied Position): <span className="font-semibold text-foreground">{(candidate.fitScore || 0)}%</span>
                         </div>
                         <Progress value={candidate.fitScore || 0} className="w-32 h-2" />
                     </>
@@ -637,9 +668,10 @@ export default function CandidateDetailPage() {
                         {renderField("CV Language", parsed?.cv_language, Tag)}
                     </>
                 )}
+                {/* Resume link - ensure your MinIO bucket has public read access or use pre-signed URLs for production */}
                 {candidate.resumePath && !isEditing && renderField(
-                  "Resume", 
-                  candidate.resumePath.split('-').pop()?.split('.').slice(0,-1).join('.') || candidate.resumePath.split('-').pop(), 
+                  "Resume",
+                  getDisplayFilename(candidate.resumePath),
                   HardDrive,
                   true,
                   `${MINIO_PUBLIC_BASE_URL}/${MINIO_BUCKET}/${candidate.resumePath}`,
@@ -665,7 +697,6 @@ export default function CandidateDetailPage() {
             )}
           </Card>
 
-          {/* Role Suggestion Summary Card - New */}
           {!isEditing && (
              <RoleSuggestionSummary candidate={candidate} allDbPositions={allDbPositions} />
           )}
@@ -733,10 +764,12 @@ export default function CandidateDetailPage() {
                         <>
                             <Label htmlFor="parsedData.personal_info.title_honorific">Title</Label>
                             <Input id="parsedData.personal_info.title_honorific" {...register('parsedData.personal_info.title_honorific')} />
-                            <Label htmlFor="parsedData.personal_info.firstname">First Name</Label>
+                            <Label htmlFor="parsedData.personal_info.firstname">First Name *</Label>
                             <Input id="parsedData.personal_info.firstname" {...register('parsedData.personal_info.firstname')} />
-                            <Label htmlFor="parsedData.personal_info.lastname">Last Name</Label>
+                            {errors.parsedData?.personal_info?.firstname && <p className="text-sm text-destructive">{errors.parsedData.personal_info.firstname.message}</p>}
+                            <Label htmlFor="parsedData.personal_info.lastname">Last Name *</Label>
                             <Input id="parsedData.personal_info.lastname" {...register('parsedData.personal_info.lastname')} />
+                            {errors.parsedData?.personal_info?.lastname && <p className="text-sm text-destructive">{errors.parsedData.personal_info.lastname.message}</p>}
                             <Label htmlFor="parsedData.personal_info.nickname">Nickname</Label>
                             <Input id="parsedData.personal_info.nickname" {...register('parsedData.personal_info.nickname')} />
                             <Label htmlFor="parsedData.personal_info.location">Location</Label>
@@ -746,15 +779,15 @@ export default function CandidateDetailPage() {
                         </>
                     ) : (
                         <>
-                            {renderField("Title", (parsed?.personal_info as PersonalInfo)?.title_honorific)}
-                            {renderField("First Name", (parsed?.personal_info as PersonalInfo)?.firstname)}
-                            {renderField("Last Name", (parsed?.personal_info as PersonalInfo)?.lastname)}
-                            {renderField("Nickname", (parsed?.personal_info as PersonalInfo)?.nickname)}
-                            {renderField("Location", (parsed?.personal_info as PersonalInfo)?.location, MapPin)}
-                            {(parsed?.personal_info as PersonalInfo)?.introduction_aboutme && (
+                            {renderField("Title", personalInfo?.title_honorific)}
+                            {renderField("First Name", personalInfo?.firstname)}
+                            {renderField("Last Name", personalInfo?.lastname)}
+                            {renderField("Nickname", personalInfo?.nickname)}
+                            {renderField("Location", personalInfo?.location, MapPin)}
+                            {(personalInfo)?.introduction_aboutme && (
                                 <div>
                                 <h4 className="text-sm font-medium text-muted-foreground mb-1 flex items-center"><Info className="h-4 w-4 mr-2"/>About Me:</h4>
-                                <p className="text-sm text-foreground whitespace-pre-wrap bg-muted/50 p-3 rounded-md">{(parsed.personal_info as PersonalInfo).introduction_aboutme}</p>
+                                <p className="text-sm text-foreground whitespace-pre-wrap bg-muted/50 p-3 rounded-md">{personalInfo.introduction_aboutme}</p>
                                 </div>
                             )}
                         </>
@@ -1006,7 +1039,7 @@ export default function CandidateDetailPage() {
 
         {/* Right Column - n8n Job Matches */}
         <div className="lg:col-span-1 space-y-6">
-          {parsed?.job_matches && parsed.job_matches.length > 0 && !isEditing && (
+          {(parsed?.job_matches && parsed.job_matches.length > 0 && !isEditing) && (
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center"><ListChecks className="mr-2 h-5 w-5 text-blue-600" />All n8n Job Matches</CardTitle>
@@ -1042,7 +1075,7 @@ export default function CandidateDetailPage() {
               </CardContent>
             </Card>
           )}
-           {!isEditing && (!parsed?.job_matches || parsed.job_matches.length === 0) && (
+           {(!isEditing && (!parsed?.job_matches || parsed.job_matches.length === 0)) && (
              <Card>
                 <CardHeader><CardTitle className="flex items-center"><ListChecks className="mr-2 h-5 w-5 text-blue-600" />All n8n Job Matches</CardTitle></CardHeader>
                 <CardContent><p className="text-sm text-muted-foreground text-center py-4">No n8n job match data available.</p></CardContent>
@@ -1081,6 +1114,5 @@ export default function CandidateDetailPage() {
     </FormProvider>
   );
 }
-
 
     
