@@ -9,12 +9,12 @@ import type { Position } from "@/lib/types";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
-import { signIn, useSession } from "next-auth/react";
+// import { signIn, useSession } from "next-auth/react"; // Removed as APIs are public
 import { AddPositionModal, type AddPositionFormValues } from '@/components/positions/AddPositionModal';
 import { EditPositionModal, type EditPositionFormValues } from '@/components/positions/EditPositionModal';
 import { PositionFilters, type PositionFilterValues } from '@/components/positions/PositionFilters';
 import Link from 'next/link';
-import { useRouter, usePathname } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation'; // Removed usePathname as it's not used
 import {
   AlertDialog,
   AlertDialogAction,
@@ -31,11 +31,9 @@ import {
 export default function PositionsPage() {
   const [positions, setPositions] = useState<Position[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [filters, setFilters] = useState<PositionFilterValues>({});
+  const [filters, setFilters] = useState<PositionFilterValues>({ isOpen: "all" });
   const { toast } = useToast();
-  // const { data: session, status: sessionStatus } = useSession(); // Not needed for public API based page
   const router = useRouter();
-  const pathname = usePathname();
   const [fetchError, setFetchError] = useState<string | null>(null);
 
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -45,25 +43,20 @@ export default function PositionsPage() {
 
 
   const fetchPositions = useCallback(async () => {
-    // if (sessionStatus !== 'authenticated') {
-    //   // signIn(undefined, { callbackUrl: pathname });
-    //   return;
-    // }
     setIsLoading(true);
     setFetchError(null);
     try {
       const query = new URLSearchParams();
       if (filters.title) query.append('title', filters.title);
       if (filters.department) query.append('department', filters.department);
+      if (filters.isOpen && filters.isOpen !== "all") query.append('isOpen', filters.isOpen);
+      if (filters.positionLevel) query.append('position_level', filters.positionLevel);
+
 
       const response = await fetch(`/api/positions?${query.toString()}`);
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({ message: response.statusText || `Status: ${response.status}` }));
         const errorMessage = errorData.message || `Failed to fetch positions: ${response.statusText || `Status: ${response.status}`}`;
-        // if (response.status === 401) {
-        //     signIn(undefined, { callbackUrl: pathname });
-        //     return;
-        // }
         setFetchError(errorMessage);
         setPositions([]);
         return;
@@ -73,27 +66,20 @@ export default function PositionsPage() {
     } catch (error) {
       console.error("Error fetching positions:", error);
       const errorMessage = (error as Error).message || "Could not load position data.";
-      // if (!errorMessage.toLowerCase().includes("unauthorized")) {
       if (errorMessage.toLowerCase().includes("relation") && errorMessage.toLowerCase().includes("does not exist")) {
         setFetchError(`Database table "Position" missing. Please ensure the database schema is initialized. Check README or /setup for troubleshooting. Error: ${errorMessage}`);
       } else {
         setFetchError(errorMessage);
       }
-      // }
       setPositions([]);
     } finally {
       setIsLoading(false);
     }
-  }, [filters, pathname]); // Removed sessionStatus, signIn
+  }, [filters]); 
 
   useEffect(() => {
-    // if (sessionStatus === 'unauthenticated') {
-    //   signIn(undefined, { callbackUrl: pathname });
-    // } else if (sessionStatus === 'authenticated') {
-    //   fetchPositions();
-    // }
-    fetchPositions(); // Fetch positions regardless of auth status as page is public
-  }, [filters, fetchPositions, pathname]); // Removed sessionStatus, signIn
+    fetchPositions();
+  }, [filters, fetchPositions]); 
 
 
   const handleFilterChange = (newFilters: PositionFilterValues) => {
@@ -109,10 +95,6 @@ export default function PositionsPage() {
         });
         if (!response.ok) {
             const errorData = await response.json().catch(() => ({ message: "An unknown error occurred" }));
-            // if (response.status === 401 || response.status === 403) {
-            //     signIn(undefined, { callbackUrl: pathname });
-            //     return;
-            // }
             throw new Error(errorData.message || `Failed to add position: ${response.statusText || `Status: ${response.status}`}`);
         }
         const newPosition: Position = await response.json();
@@ -124,13 +106,11 @@ export default function PositionsPage() {
         });
     } catch (error) {
         console.error("Error adding position:", error);
-        // if (!String((error as Error).message).toLowerCase().includes("unauthorized")) {
           toast({
               title: "Error Adding Position",
               description: (error as Error).message || "Could not add position.",
               variant: "destructive",
           });
-        // }
     }
   };
 
@@ -148,10 +128,6 @@ export default function PositionsPage() {
       });
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({ message: "An unknown error occurred" }));
-        // if (response.status === 401 || response.status === 403) {
-        //     signIn(undefined, { callbackUrl: pathname });
-        //     return;
-        // }
         throw new Error(errorData.message || `Failed to update position: ${response.statusText || `Status: ${response.status}`}`);
       }
       const updatedPosition: Position = await response.json();
@@ -161,13 +137,11 @@ export default function PositionsPage() {
       toast({ title: "Position Updated", description: `Position "${updatedPosition.title}" has been updated.` });
     } catch (error) {
       console.error("Error updating position:", error);
-      // if (!String((error as Error).message).toLowerCase().includes("unauthorized")) {
         toast({
             title: "Error Updating Position",
             description: (error as Error).message,
             variant: "destructive",
         });
-      // }
     }
   };
 
@@ -183,23 +157,17 @@ export default function PositionsPage() {
       });
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({ message: "An unknown error occurred" }));
-        // if (response.status === 401 || response.status === 403) {
-        //     signIn(undefined, { callbackUrl: pathname });
-        //     return;
-        // }
         throw new Error(errorData.message || `Failed to delete position: ${response.statusText}`);
       }
       setPositions(prevPositions => prevPositions.filter(p => p.id !== positionToDelete!.id));
       toast({ title: "Position Deleted", description: `Position "${positionToDelete.title}" has been deleted.` });
     } catch (error) {
       console.error("Error deleting position:", error);
-      // if (!String((error as Error).message).toLowerCase().includes("unauthorized")) {
         toast({
             title: "Error Deleting Position",
             description: (error as Error).message,
             variant: "destructive",
         });
-      // }
     } finally {
       setPositionToDelete(null);
     }
@@ -214,7 +182,7 @@ export default function PositionsPage() {
   };
 
 
-  if (isLoading && !fetchError) { // No need for pathname check for public page
+  if (isLoading && !fetchError) { 
     return (
       <div className="flex h-screen w-screen items-center justify-center bg-background fixed inset-0 z-50">
         <Loader2 className="h-16 w-16 animate-spin text-primary" />
@@ -233,7 +201,7 @@ export default function PositionsPage() {
             <div className="mb-6 p-4 border border-destructive bg-destructive/10 rounded-md text-sm">
                 <p className="font-semibold">It looks like the "Position" database table is missing.</p>
                 <p className="mt-1">This usually means the database initialization script (`pg-init-scripts/init-db.sql`) did not run correctly when the PostgreSQL Docker container started.</p>
-                <p className="mt-2">Please refer to the troubleshooting steps in the `README.md` or check the PostgreSQL container logs for details.</p>
+                <p className="mt-2">Please refer to the troubleshooting steps in the `README.md` for guidance on how to resolve this, typically involving a clean Docker volume reset.</p>
             </div>
         )}
         <Button onClick={fetchPositions} className="btn-hover-primary-gradient">Try Again</Button>
@@ -277,7 +245,7 @@ export default function PositionsPage() {
           ) : !isLoading && positions.length === 0 && !fetchError ? (
             <div className="text-center py-10">
               <Briefcase className="mx-auto h-12 w-12 text-muted-foreground" />
-              <p className="mt-4 text-muted-foreground">No positions created yet.</p>
+              <p className="mt-4 text-muted-foreground">No positions found. Try adjusting filters or add a new position.</p>
               <Button onClick={() => setIsAddModalOpen(true)} className="mt-4 btn-primary-gradient">
                 <PlusCircle className="mr-2 h-4 w-4" /> Add New Position
               </Button>

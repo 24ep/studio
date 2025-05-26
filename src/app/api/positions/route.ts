@@ -17,6 +17,9 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const titleFilter = searchParams.get('title');
     const departmentFilter = searchParams.get('department');
+    const isOpenFilter = searchParams.get('isOpen'); // "true", "false", or null
+    const positionLevelFilter = searchParams.get('position_level');
+
 
     let query = 'SELECT * FROM "Position"';
     const conditions = [];
@@ -31,6 +34,16 @@ export async function GET(request: NextRequest) {
       conditions.push(`department ILIKE $${paramIndex++}`);
       queryParams.push(`%${departmentFilter}%`);
     }
+    if (isOpenFilter === "true") {
+      conditions.push(`"isOpen" = TRUE`);
+    } else if (isOpenFilter === "false") {
+      conditions.push(`"isOpen" = FALSE`);
+    }
+    if (positionLevelFilter) {
+      conditions.push(`position_level ILIKE $${paramIndex++}`);
+      queryParams.push(`%${positionLevelFilter}%`);
+    }
+
 
     if (conditions.length > 0) {
       query += ' WHERE ' + conditions.join(' AND ');

@@ -3,7 +3,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import type { Candidate, CandidateDetails, TransitionRecord, EducationEntry, ExperienceEntry, SkillEntry, JobSuitableEntry, PersonalInfo, N8NJobMatch, UserProfile } from '@/lib/types';
+import type { Candidate, CandidateDetails, TransitionRecord, EducationEntry, ExperienceEntry, SkillEntry, JobSuitableEntry, PersonalInfo, N8NJobMatch, UserProfile, Position } from '@/lib/types';
 import { useToast } from "@/hooks/use-toast";
 import { signIn, useSession } from 'next-auth/react';
 import { Button } from '@/components/ui/button';
@@ -356,7 +356,7 @@ export default function CandidateDetailPage() {
                 <CardTitle  className="flex items-center"><GraduationCap className="mr-2 h-5 w-5 text-primary"/>Education</CardTitle>
                 </CardHeader>
                 <CardContent>
-                    <ScrollArea className="h-60">
+                    <ScrollArea className="h-[300px]"> {/* Fixed height for scroll area */}
                     <ul className="space-y-4">
                         {parsed.education.map((edu, index) => (
                         <li key={`edu-${index}`} className="p-3 border rounded-md bg-muted/30">
@@ -387,7 +387,7 @@ export default function CandidateDetailPage() {
                 <CardTitle className="flex items-center"><Briefcase className="mr-2 h-5 w-5 text-primary"/>Experience</CardTitle>
               </CardHeader>
               <CardContent>
-                <ScrollArea className="max-h-[300px] h-auto"> {/* Adjusted max-h for experience */}
+                <ScrollArea className="h-[300px]"> {/* Fixed height for scroll area */}
                   <ul className="space-y-4">
                     {/* console.log("Rendering experiences:", parsed.experience) */} {/* Removed for production */}
                     {parsed.experience.map((exp, index) => (
@@ -422,7 +422,7 @@ export default function CandidateDetailPage() {
             <Card>
               <CardHeader><CardTitle className="flex items-center"><Star className="mr-2 h-5 w-5 text-primary"/>Skills</CardTitle></CardHeader>
               <CardContent>
-                <ScrollArea className="h-60">
+                <ScrollArea className="h-[300px]"> {/* Fixed height for scroll area */}
                 <ul className="space-y-4">
                     {parsed.skills.map((skillEntry, index) => (
                     <li key={`skill-${index}`} className="p-3 border rounded-md bg-muted/30">
@@ -453,7 +453,7 @@ export default function CandidateDetailPage() {
             <Card>
               <CardHeader><CardTitle className="flex items-center"><UserCog className="mr-2 h-5 w-5 text-primary"/>Job Suitability</CardTitle></CardHeader>
               <CardContent>
-                <ScrollArea className="h-60">
+                <ScrollArea className="h-[300px]"> {/* Fixed height for scroll area */}
                 <ul className="space-y-4">
                     {parsed.job_suitable.map((job, index) => (
                     <li key={`jobsuit-${index}`} className="p-3 border rounded-md bg-muted/30">
@@ -479,7 +479,7 @@ export default function CandidateDetailPage() {
             <CardHeader><CardTitle className="flex items-center"><MessageSquare className="mr-2 h-5 w-5 text-primary"/>Transition History</CardTitle></CardHeader>
             <CardContent>
               {candidate.transitionHistory && candidate.transitionHistory.length > 0 ? (
-                <ScrollArea className="h-60">
+                <ScrollArea className="h-[300px]"> {/* Fixed height for scroll area */}
                 <ul className="space-y-0">
                   {candidate.transitionHistory.sort((a,b) => parseISO(b.date).getTime() - parseISO(a.date).getTime()).map((record, index) => (
                     <li key={record.id} className="p-3 hover:bg-muted/50 transition-colors">
@@ -510,10 +510,10 @@ export default function CandidateDetailPage() {
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center"><ListChecks className="mr-2 h-5 w-5 text-blue-600" />All n8n Job Matches</CardTitle>
-                <CardDescription>Full list of job matches from n8n processing.</CardDescription>
+                <CardDescription>Full list of job matches from n8n processing for this candidate.</CardDescription>
               </CardHeader>
               <CardContent>
-                <ScrollArea className="max-h-[calc(100vh-180px)]"> 
+                <ScrollArea className="h-[calc(100vh-200px)]"> {/* Adjusted height to fill available space */}
                   <ul className="space-y-3">
                     {parsed.job_matches.map((match, index) => (
                       <li key={`match-${index}-${match.job_id || index}`} className="p-3 border rounded-md bg-muted/30">
