@@ -15,17 +15,19 @@ import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
-import { MoreHorizontal, FileEdit, Trash2, Eye, Users, UploadCloud } from 'lucide-react';
-import type { Candidate, CandidateStatus } from '@/lib/types';
+import { MoreHorizontal, FileEdit, Trash2, Eye, Users, UploadCloud, Briefcase } from 'lucide-react';
+import type { Candidate, CandidateStatus, Position } from '@/lib/types';
 import { ManageTransitionsModal } from './ManageTransitionsModal';
 import { format, parseISO } from 'date-fns';
 import Link from 'next/link';
 
 interface CandidateTableProps {
   candidates: Candidate[];
+  availablePositions: Position[]; // New prop
   onUpdateCandidate: (candidateId: string, status: CandidateStatus) => Promise<void>;
   onDeleteCandidate: (candidateId: string) => Promise<void>;
   onOpenUploadModal: (candidate: Candidate) => void;
+  onEditPosition: (position: Position) => void; // New prop
   isLoading?: boolean;
   onRefreshCandidateData: (candidateId: string) => Promise<void>;
 }
@@ -51,13 +53,30 @@ const getStatusBadgeVariant = (status: CandidateStatus): "default" | "secondary"
   }
 };
 
-export function CandidateTable({ candidates, onUpdateCandidate, onDeleteCandidate, onOpenUploadModal, isLoading, onRefreshCandidateData }: CandidateTableProps) {
+export function CandidateTable({
+  candidates,
+  availablePositions,
+  onUpdateCandidate,
+  onDeleteCandidate,
+  onOpenUploadModal,
+  onEditPosition,
+  isLoading,
+  onRefreshCandidateData
+}: CandidateTableProps) {
   const [selectedCandidateForModal, setSelectedCandidateForModal] = useState<Candidate | null>(null);
   const [isTransitionsModalOpen, setIsTransitionsModalOpen] = useState(false);
 
   const handleManageTransitionsClick = (candidate: Candidate) => {
     setSelectedCandidateForModal(candidate);
     setIsTransitionsModalOpen(true);
+  };
+
+  const handleEditPositionClick = (positionId: string | null | undefined) => {
+    if (!positionId) return;
+    const positionToEdit = availablePositions.find(p => p.id === positionId);
+    if (positionToEdit) {
+      onEditPosition(positionToEdit);
+    }
   };
 
   if (isLoading) {
@@ -114,7 +133,17 @@ export function CandidateTable({ candidates, onUpdateCandidate, onDeleteCandidat
                   </div>
                 </TableCell>
                 <TableCell>
-                  <div className="font-medium text-foreground">{candidate.position?.title || 'N/A'}</div>
+                  {candidate.position?.title ? (
+                    <span
+                      className="font-medium text-primary hover:underline cursor-pointer"
+                      onClick={() => handleEditPositionClick(candidate.positionId)}
+                      title={`Edit ${candidate.position.title}`}
+                    >
+                      {candidate.position.title}
+                    </span>
+                  ) : (
+                    <span className="text-muted-foreground">N/A</span>
+                  )}
                 </TableCell>
                 <TableCell>
                   <div className="flex items-center gap-2">
@@ -157,6 +186,11 @@ export function CandidateTable({ candidates, onUpdateCandidate, onDeleteCandidat
                        <DropdownMenuItem onClick={() => onOpenUploadModal(candidate)}>
                         <UploadCloud className="mr-2 h-4 w-4" /> Upload Resume
                       </DropdownMenuItem>
+                      {candidate.positionId && (
+                        <DropdownMenuItem onClick={() => handleEditPositionClick(candidate.positionId)}>
+                          <Briefcase className="mr-2 h-4 w-4" /> Edit Applied Job
+                        </DropdownMenuItem>
+                      )}
                       <DropdownMenuSeparator />
                       <DropdownMenuItem onClick={() => onDeleteCandidate(candidate.id)} className="text-destructive hover:!bg-destructive/10 focus:!bg-destructive/10 focus:!text-destructive">
                         <Trash2 className="mr-2 h-4 w-4" /> Delete

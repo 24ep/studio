@@ -13,6 +13,7 @@ import { AddCandidateModal, type AddCandidateFormValues } from '@/components/can
 import { UploadResumeModal } from '@/components/candidates/UploadResumeModal';
 import { CreateCandidateViaN8nModal } from '@/components/candidates/CreateCandidateViaN8nModal';
 import { ImportCandidatesModal } from '@/components/candidates/ImportCandidatesModal';
+import { EditPositionModal, type EditPositionFormValues } from '@/components/positions/EditPositionModal'; // Import EditPositionModal
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
 
@@ -31,6 +32,9 @@ export default function CandidatesPage() {
   const router = useRouter();
   const pathname = usePathname();
   const [fetchError, setFetchError] = useState<string | null>(null);
+
+  const [isEditPositionModalOpen, setIsEditPositionModalOpen] = useState(false);
+  const [selectedPositionForEdit, setSelectedPositionForEdit] = useState<Position | null>(null);
 
 
   const fetchCandidateById = useCallback(async (candidateId: string): Promise<Candidate | null> => {
@@ -56,7 +60,7 @@ export default function CandidatesPage() {
       toast({ title: "Refresh Error", description: `Could not refresh data for candidate ${candidateId}.`, variant: "destructive"});
        fetchCandidates(); 
     }
-  }, [fetchCandidateById, toast]); // Added fetchCandidates to dependency array for refresh
+  }, [fetchCandidateById, toast]); 
 
 
   const fetchPositions = useCallback(async () => {
@@ -70,7 +74,7 @@ export default function CandidatesPage() {
         return;
       }
       const data: Position[] = await response.json();
-      setAvailablePositions(data); // Fetch all, open or closed, for filtering context
+      setAvailablePositions(data); 
     } catch (error) {
       console.error("Error fetching positions for modal:", error);
       setAvailablePositions([]);
@@ -92,7 +96,12 @@ export default function CandidatesPage() {
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({ message: response.statusText || `Status: ${response.status}` }));
         const errorMessage = errorData.message || `Failed to fetch candidates: ${response.statusText || `Status: ${response.status}`}`;
-        setFetchError(errorMessage);
+        
+        if (errorMessage.toLowerCase().includes("relation") && errorMessage.toLowerCase().includes("does not exist")) {
+           setFetchError(`Database table 'Candidate' or a related table might be missing. Please refer to README.md or /setup for troubleshooting. Error: ${errorMessage}`);
+        } else {
+            setFetchError(errorMessage);
+        }
         setAllCandidates([]);
         return;
       }
@@ -243,6 +252,7 @@ export default function CandidatesPage() {
     setAllCandidates(prev =>
       prev.map(c => (c.id === updatedCandidate.id ? updatedCandidate : c))
     );
+    toast({ title: "Resume Uploaded", description: `Resume for ${updatedCandidate.name} successfully updated.`});
   };
 
   const handleN8nProcessingStart = () => {
@@ -283,6 +293,18 @@ export default function CandidatesPage() {
     } else {
         toast({ title: "Excel Template", description: "Excel template download not yet implemented.", variant: "default"});
     }
+  };
+
+  const handleOpenEditPositionModal = (position: Position) => {
+    setSelectedPositionForEdit(position);
+    setIsEditPositionModalOpen(true);
+  };
+
+  const handlePositionEdited = async () => {
+    toast({ title: "Position Updated", description: "Position details have been saved." });
+    setIsEditPositionModalOpen(false);
+    await fetchPositions(); // Refresh available positions for filters
+    await fetchCandidates(); // Refresh candidates as their position details might have changed
   };
 
 
@@ -364,9 +386,11 @@ export default function CandidatesPage() {
       ) : (
         <CandidateTable
           candidates={allCandidates}
+          availablePositions={availablePositions}
           onUpdateCandidate={handleUpdateCandidateAPI}
           onDeleteCandidate={handleDeleteCandidate}
           onOpenUploadModal={handleOpenUploadModal}
+          onEditPosition={handleOpenEditPositionModal}
           isLoading={isLoading && allCandidates.length > 0 && !fetchError}
           onRefreshCandidateData={refreshCandidateInList}
         />
@@ -395,6 +419,17 @@ export default function CandidatesPage() {
         onOpenChange={setIsImportModalOpen}
         onImportSuccess={fetchCandidates}
       />
+      {selectedPositionForEdit && (
+        <EditPositionModal
+          isOpen={isEditPositionModalOpen}
+          onOpenChange={(isOpen) => {
+            setIsEditPositionModalOpen(isOpen);
+            if (!isOpen) setSelectedPositionForEdit(null);
+          }}
+          position={selectedPositionForEdit}
+          onEditPosition={handlePositionEdited}
+        />
+      )}
     </div>
   );
 }
