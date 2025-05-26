@@ -3,7 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Users, Briefcase, Settings, UsersRound, Code2, ListOrdered, Palette, Zap, Settings2, CheckSquare, FileText, ListTodo } from "lucide-react";
+import { LayoutDashboard, Users, Briefcase, Settings, UsersRound, Code2, ListOrdered, Palette, Zap, ListTodo } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   SidebarMenu,
@@ -31,6 +31,8 @@ const mainNavItems = [
   { href: "/positions", label: "Positions", icon: Briefcase },
 ];
 
+const myTasksNavItem = { href: "/my-tasks", label: "My Tasks", icon: ListTodo };
+
 const baseSettingsSubItems = [
   { href: "/settings/preferences", label: "Preferences", icon: Palette },
   { href: "/settings/integrations", label: "Integrations", icon: Zap },
@@ -47,7 +49,6 @@ export function SidebarNav() {
 
   const settingsSubItems = React.useMemo(() => {
     let items = baseSettingsSubItems;
-    // Filter out "Manage Users" if user is not Admin
     if (userRole !== 'Admin') {
       items = items.filter(item => item.href !== "/users");
     }
@@ -55,9 +56,8 @@ export function SidebarNav() {
   }, [userRole]);
 
   const isSettingsSectionActive = settingsSubItems.some(item => pathname.startsWith(item.href));
-  const isMyTasksActive = pathname === "/my-tasks";
+  const isMyTasksActive = pathname === myTasksNavItem.href || pathname.startsWith(myTasksNavItem.href + "/");
   const isAnyMainNavItemActive = mainNavItems.some(item => pathname === item.href || (item.href !== "/" && pathname.startsWith(item.href)));
-
 
   const [accordionValue, setAccordionValue] = React.useState<string | undefined>(
     isSettingsSectionActive ? "settings-group" : undefined
@@ -67,7 +67,7 @@ export function SidebarNav() {
     if (isSettingsSectionActive) {
       setAccordionValue("settings-group");
     } else if (isAnyMainNavItemActive || isMyTasksActive) {
-      setAccordionValue(undefined);
+      setAccordionValue(undefined); // Close accordion if a main nav item or My Tasks is active
     }
   }, [pathname, isSettingsSectionActive, isAnyMainNavItemActive, isMyTasksActive]);
 
@@ -84,6 +84,7 @@ export function SidebarNav() {
                 tooltip={item.label}
                 onClick={() => setAccordionValue(undefined)}
                 size="default"
+                data-active={pathname === item.href || (item.href !== "/" && pathname.startsWith(item.href))}
               >
                 <a>
                   <item.icon className="h-5 w-5" />
@@ -95,25 +96,25 @@ export function SidebarNav() {
         ))}
 
         {(userRole === 'Recruiter' || userRole === 'Admin') && (
-          <SidebarMenuItem>
-            <Link href="/my-tasks" passHref legacyBehavior>
+          <SidebarMenuItem key={myTasksNavItem.href}>
+            <Link href={myTasksNavItem.href} passHref legacyBehavior>
               <SidebarMenuButton
                 asChild
                 isActive={isMyTasksActive}
                 className="w-full justify-start"
-                tooltip="My Tasks"
+                tooltip={myTasksNavItem.label}
                 onClick={() => setAccordionValue(undefined)}
                 size="default"
+                data-active={isMyTasksActive}
               >
-                <a target="_blank" rel="noopener noreferrer">
-                  <ListTodo className="h-5 w-5" />
-                  <span className="truncate">My Tasks</span>
+                <a>
+                  <myTasksNavItem.icon className="h-5 w-5" />
+                  <span className="truncate">{myTasksNavItem.label}</span>
                 </a>
               </SidebarMenuButton>
             </Link>
           </SidebarMenuItem>
         )}
-
 
         <SidebarMenuItem className="mt-auto">
           <Accordion
@@ -134,6 +135,7 @@ export function SidebarNav() {
                       !isSettingsSectionActive && "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
                       "hover:no-underline"
                     )}
+                    data-active={isSettingsSectionActive}
                   >
                     <div className="flex items-center gap-2 group-data-[collapsible=icon]:hidden">
                       <Settings className="h-5 w-5" />
@@ -158,9 +160,12 @@ export function SidebarNav() {
                           className="w-full justify-start"
                           size="sm"
                           tooltip={item.label}
+                          data-active={pathname.startsWith(item.href)}
                         >
-                          {item.icon && <item.icon className="h-4 w-4 ml-[1px]" />}
-                          <span className="truncate">{item.label}</span>
+                          <a>
+                            {item.icon && <item.icon className="h-4 w-4 ml-[1px]" />}
+                            <span className="truncate">{item.label}</span>
+                          </a>
                         </SidebarMenuButton>
                       </Link>
                     </SidebarMenuItem>
