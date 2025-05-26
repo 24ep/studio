@@ -20,7 +20,7 @@ import { FileUp, Loader2, Briefcase } from 'lucide-react';
 interface ImportPositionsModalProps {
   isOpen: boolean;
   onOpenChange: (isOpen: boolean) => void;
-  onImportSuccess: () => void; // Callback to refresh position list
+  onImportSuccess: () => void; 
 }
 
 export function ImportPositionsModal({ isOpen, onOpenChange, onImportSuccess }: ImportPositionsModalProps) {
@@ -111,9 +111,9 @@ export function ImportPositionsModal({ isOpen, onOpenChange, onImportSuccess }: 
             <Briefcase className="mr-2 h-5 w-5 text-primary" /> Import Positions (JSON)
           </DialogTitle>
           <DialogDescription>
-            Upload a JSON file containing an array of position objects to import. 
+            Upload a JSON file containing an array of position objects. 
             Required fields: title, department, isOpen. Optional: description, position_level.
-            (Future: Excel support)
+            (Excel support is planned for a future update).
           </DialogDescription>
         </DialogHeader>
         <div className="py-4 space-y-2">

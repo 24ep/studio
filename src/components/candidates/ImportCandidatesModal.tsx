@@ -16,12 +16,12 @@ import {
 } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 import { FileUp, Loader2, Users } from 'lucide-react';
-import type { Candidate } from '@/lib/types'; // For response type hint
+import type { Candidate } from '@/lib/types'; 
 
 interface ImportCandidatesModalProps {
   isOpen: boolean;
   onOpenChange: (isOpen: boolean) => void;
-  onImportSuccess: () => void; // Callback to refresh candidate list
+  onImportSuccess: () => void; 
 }
 
 export function ImportCandidatesModal({ isOpen, onOpenChange, onImportSuccess }: ImportCandidatesModalProps) {
@@ -110,8 +110,9 @@ export function ImportCandidatesModal({ isOpen, onOpenChange, onImportSuccess }:
             <Users className="mr-2 h-5 w-5 text-primary" /> Import Candidates (JSON)
           </DialogTitle>
           <DialogDescription>
-            Upload a JSON file containing an array of candidate objects to import. 
-            See documentation for expected JSON structure. (Future: Excel support)
+            Upload a JSON file containing an array of candidate objects. 
+            Refer to the downloaded JSON template for the expected structure. 
+            (Excel support is planned for a future update).
           </DialogDescription>
         </DialogHeader>
         <div className="py-4 space-y-2">

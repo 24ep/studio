@@ -13,9 +13,10 @@ import { AddCandidateModal, type AddCandidateFormValues } from '@/components/can
 import { UploadResumeModal } from '@/components/candidates/UploadResumeModal';
 import { CreateCandidateViaN8nModal } from '@/components/candidates/CreateCandidateViaN8nModal';
 import { ImportCandidatesModal } from '@/components/candidates/ImportCandidatesModal';
-import { EditPositionModal, type EditPositionFormValues } from '@/components/positions/EditPositionModal'; // Import EditPositionModal
+import { EditPositionModal, type EditPositionFormValues } from '@/components/positions/EditPositionModal'; 
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
+import { useSession, signIn } from 'next-auth/react';
 
 
 export default function CandidatesPage() {
@@ -32,9 +33,11 @@ export default function CandidatesPage() {
   const router = useRouter();
   const pathname = usePathname();
   const [fetchError, setFetchError] = useState<string | null>(null);
+  const [authError, setAuthError] = useState(false);
 
   const [isEditPositionModalOpen, setIsEditPositionModalOpen] = useState(false);
   const [selectedPositionForEdit, setSelectedPositionForEdit] = useState<Position | null>(null);
+  const { data: session, status: sessionStatus } = useSession();
 
 
   const fetchCandidateById = useCallback(async (candidateId: string): Promise<Candidate | null> => {
@@ -64,12 +67,18 @@ export default function CandidatesPage() {
 
 
   const fetchPositions = useCallback(async () => {
+    if (sessionStatus !== 'authenticated') return;
     try {
       const response = await fetch('/api/positions');
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ message: response.statusText || `Status: ${response.status}` }));
-        const errorMessage = errorData.message || `Failed to fetch positions: ${response.statusText || `Status: ${response.status}`}`;
-        console.error("Error fetching positions for filter: ", errorMessage);
+        const errorData = await response.json().catch(() => ({}));
+        const errorText = errorData.message || `Status: ${response.status}`;
+         if (response.status === 401) {
+            setAuthError(true);
+            signIn(undefined, { callbackUrl: pathname });
+            return;
+        }
+        console.error("Error fetching positions for filter: ", errorText);
         setAvailablePositions([]);
         return;
       }
@@ -79,11 +88,16 @@ export default function CandidatesPage() {
       console.error("Error fetching positions for modal:", error);
       setAvailablePositions([]);
     }
-  }, []);
+  }, [sessionStatus, pathname, signIn]);
 
   const fetchCandidates = useCallback(async () => {
+    if (sessionStatus !== 'authenticated') {
+        setIsLoading(false); // Prevent indefinite loading if not authenticated
+        return;
+    }
     setIsLoading(true);
     setFetchError(null);
+    setAuthError(false);
     try {
       const query = new URLSearchParams();
       if (filters.name) query.append('name', filters.name);
@@ -96,12 +110,12 @@ export default function CandidatesPage() {
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({ message: response.statusText || `Status: ${response.status}` }));
         const errorMessage = errorData.message || `Failed to fetch candidates: ${response.statusText || `Status: ${response.status}`}`;
-        
-        if (errorMessage.toLowerCase().includes("relation") && errorMessage.toLowerCase().includes("does not exist")) {
-           setFetchError(`Database table 'Candidate' or a related table might be missing. Please refer to README.md or /setup for troubleshooting. Error: ${errorMessage}`);
-        } else {
-            setFetchError(errorMessage);
+        if (response.status === 401) {
+            setAuthError(true);
+            signIn(undefined, { callbackUrl: pathname });
+            return;
         }
+        setFetchError(errorMessage);
         setAllCandidates([]);
         return;
       }
@@ -110,21 +124,23 @@ export default function CandidatesPage() {
     } catch (error) {
       console.error("Error fetching candidates:", error);
       const errorMessage = (error as Error).message || "Could not load candidate data.";
-      if (errorMessage.toLowerCase().includes("relation") && errorMessage.toLowerCase().includes("does not exist")) {
-         setFetchError(`Database table 'Candidate' or a related table might be missing. Please check the database schema setup. Refer to README.md for troubleshooting. Error: ${errorMessage}`);
-      } else {
-         setFetchError(errorMessage);
+       if (!(errorMessage.toLowerCase().includes("unauthorized") || errorMessage.toLowerCase().includes("forbidden"))) {
+        setFetchError(errorMessage);
       }
       setAllCandidates([]);
     } finally {
       setIsLoading(false);
     }
-  }, [filters]);
+  }, [filters, sessionStatus, pathname, signIn]);
 
   useEffect(() => {
-    fetchCandidates();
-    fetchPositions();
-  }, [filters, fetchCandidates, fetchPositions]);
+    if (sessionStatus === 'unauthenticated') {
+      signIn(undefined, { callbackUrl: pathname });
+    } else if (sessionStatus === 'authenticated') {
+      fetchCandidates();
+      fetchPositions();
+    }
+  }, [filters, sessionStatus, fetchCandidates, fetchPositions, pathname, signIn]);
 
 
   const handleFilterChange = (newFilters: CandidateFilterValues) => {
@@ -290,7 +306,7 @@ export default function CandidatesPage() {
       link.download = "candidate_import_template.json";
       link.click();
       toast({ title: "Template Downloaded", description: "Candidate JSON import template has been downloaded." });
-    } else {
+    } else { // 'excel'
         toast({ title: "Excel Template", description: "Excel template download not yet implemented.", variant: "default"});
     }
   };
@@ -303,16 +319,26 @@ export default function CandidatesPage() {
   const handlePositionEdited = async () => {
     toast({ title: "Position Updated", description: "Position details have been saved." });
     setIsEditPositionModalOpen(false);
-    await fetchPositions(); // Refresh available positions for filters
-    await fetchCandidates(); // Refresh candidates as their position details might have changed
+    await fetchPositions(); 
+    await fetchCandidates(); 
   };
 
-
-  if (isLoading && allCandidates.length === 0 && !fetchError ) {
+  if (sessionStatus === 'loading' || (sessionStatus === 'unauthenticated' && !pathname.startsWith('/auth/signin')) || (isLoading && !fetchError && allCandidates.length === 0)) {
     return (
       <div className="flex h-screen w-screen items-center justify-center bg-background fixed inset-0 z-50">
         <Loader2 className="h-16 w-16 animate-spin text-primary" />
       </div>
+    );
+  }
+
+  if (authError) {
+    return (
+        <div className="flex flex-col items-center justify-center h-[calc(100vh-10rem)] text-center p-4">
+            <ServerCrash className="w-16 h-16 text-destructive mb-4" />
+            <h2 className="text-2xl font-semibold text-foreground mb-2">Access Denied</h2>
+            <p className="text-muted-foreground mb-4 max-w-md">You need to be signed in to view this page.</p>
+            <Button onClick={() => signIn(undefined, { callbackUrl: pathname })} className="btn-hover-primary-gradient">Sign In</Button>
+        </div>
     );
   }
   
@@ -358,9 +384,6 @@ export default function CandidatesPage() {
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => setIsImportModalOpen(true)}>
                 <FileUp className="mr-2 h-4 w-4" /> Import Candidates (JSON)
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleDownloadTemplate('excel')}>
-                <FileDown className="mr-2 h-4 w-4" /> Download Template (Excel)
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => handleDownloadTemplate('json')}>
                 <FileDown className="mr-2 h-4 w-4" /> Download Template (JSON)
