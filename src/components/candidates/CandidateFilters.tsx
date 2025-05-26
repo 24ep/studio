@@ -5,16 +5,18 @@ import { useState, useEffect } from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Command, CommandInput, CommandEmpty, CommandGroup, CommandItem, CommandList } from '@/components/ui/command';
+// Command components removed as they are not found
+// import { Command, CommandInput, CommandEmpty, CommandGroup, CommandItem, CommandList } from '@/components/ui/command';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'; // Added Select
 import { Slider } from '@/components/ui/slider';
 import { Label } from '@/components/ui/label';
-import { Search, FilterX, ListFilter, Check, ChevronsUpDown } from 'lucide-react';
+import { Search, FilterX, ListFilter } from 'lucide-react'; // Removed Check, ChevronsUpDown
 import type { Position } from '@/lib/types';
 import { cn } from "@/lib/utils";
 
 export interface CandidateFilterValues {
   name?: string;
-  positionId?: string;
+  positionId?: string; // Will hold the ID of the selected position
   education?: string;
   minFitScore?: number;
   maxFitScore?: number;
@@ -23,7 +25,7 @@ export interface CandidateFilterValues {
 interface CandidateFiltersProps {
   initialFilters?: CandidateFilterValues;
   onFilterChange: (filters: CandidateFilterValues) => void;
-  availablePositions: Position[]; // Expects positions to be passed as a prop
+  availablePositions: Position[];
   isLoading?: boolean;
 }
 
@@ -37,16 +39,14 @@ export function CandidateFilters({ initialFilters = {}, onFilterChange, availabl
     initialFilters.minFitScore || 0,
     initialFilters.maxFitScore || 100,
   ]);
-  const [positionComboboxOpen, setPositionComboboxOpen] = useState(false);
+  // const [positionComboboxOpen, setPositionComboboxOpen] = useState(false); // Removed for Select
 
   useEffect(() => {
-    // Ensure filter state reflects initialFilters, especially for positionId
     setPositionId(initialFilters.positionId || ALL_POSITIONS_SELECT_VALUE);
     setName(initialFilters.name || '');
     setEducation(initialFilters.education || '');
     setFitScoreRange([initialFilters.minFitScore || 0, initialFilters.maxFitScore || 100]);
   }, [initialFilters]);
-
 
   const handleApplyFilters = () => {
     onFilterChange({
@@ -70,12 +70,12 @@ export function CandidateFilters({ initialFilters = {}, onFilterChange, availabl
     });
   };
 
-  const selectedPositionTitle = positionId === ALL_POSITIONS_SELECT_VALUE
-    ? "All Positions"
-    : availablePositions.find(pos => pos.id === positionId)?.title || "Select position...";
-
   return (
     <div className="mb-6 p-4 border rounded-lg bg-card shadow">
+      {/* Comment explaining the change for future reference
+          Searchable Combobox for Position filter was removed due to missing 'Command' component.
+          To re-enable, run 'npx shadcn-ui@latest add command popover' and then update this component.
+      */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
         <div>
           <Label htmlFor="name-search">Name</Label>
@@ -89,65 +89,24 @@ export function CandidateFilters({ initialFilters = {}, onFilterChange, availabl
           />
         </div>
         <div>
-          <Label htmlFor="position-combobox">Position</Label>
-          <Popover open={positionComboboxOpen} onOpenChange={setPositionComboboxOpen}>
-            <PopoverTrigger asChild>
-              <Button
-                variant="outline"
-                role="combobox"
-                aria-expanded={positionComboboxOpen}
-                className="w-full justify-between mt-1"
-                id="position-combobox"
-                disabled={isLoading}
-              >
-                <span className="truncate">{selectedPositionTitle}</span>
-                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
-              <Command>
-                <CommandInput placeholder="Search position..." />
-                <CommandList>
-                  <CommandEmpty>No position found.</CommandEmpty>
-                  <CommandGroup>
-                    <CommandItem
-                      value={ALL_POSITIONS_SELECT_VALUE}
-                      onSelect={() => {
-                        setPositionId(ALL_POSITIONS_SELECT_VALUE);
-                        setPositionComboboxOpen(false);
-                      }}
-                    >
-                      <Check
-                        className={cn(
-                          "mr-2 h-4 w-4",
-                          positionId === ALL_POSITIONS_SELECT_VALUE ? "opacity-100" : "opacity-0"
-                        )}
-                      />
-                      All Positions
-                    </CommandItem>
-                    {availablePositions.map((pos) => (
-                      <CommandItem
-                        key={pos.id}
-                        value={pos.id}
-                        onSelect={(currentValue) => {
-                          setPositionId(currentValue === positionId ? ALL_POSITIONS_SELECT_VALUE : currentValue);
-                          setPositionComboboxOpen(false);
-                        }}
-                      >
-                        <Check
-                          className={cn(
-                            "mr-2 h-4 w-4",
-                            positionId === pos.id ? "opacity-100" : "opacity-0"
-                          )}
-                        />
-                        {pos.title}
-                      </CommandItem>
-                    ))}
-                  </CommandGroup>
-                </CommandList>
-              </Command>
-            </PopoverContent>
-          </Popover>
+          <Label htmlFor="position-select">Position</Label>
+          <Select
+            value={positionId}
+            onValueChange={(value) => setPositionId(value)}
+            disabled={isLoading}
+          >
+            <SelectTrigger id="position-select" className="w-full mt-1">
+              <SelectValue placeholder="Select position" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={ALL_POSITIONS_SELECT_VALUE}>All Positions</SelectItem>
+              {availablePositions.map((pos) => (
+                <SelectItem key={pos.id} value={pos.id}>
+                  {pos.title}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
         <div>
           <Label htmlFor="education-search">Education</Label>
