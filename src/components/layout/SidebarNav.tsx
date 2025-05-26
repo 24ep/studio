@@ -3,7 +3,7 @@
 import * as React from "react"; 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Users, Briefcase, Settings, UsersRound, Code2, ListOrdered, Palette, Zap, Settings2, CheckSquare, FileText } from "lucide-react"; 
+import { LayoutDashboard, Users, Briefcase, Settings, UsersRound, Code2, ListOrdered, Palette, Zap, Settings2, CheckSquare, FileText, ListTodo } from "lucide-react"; 
 import { cn } from "@/lib/utils";
 import {
   SidebarMenu,
@@ -22,6 +22,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { useSession } from "next-auth/react";
 
 
 const mainNavItems = [
@@ -30,6 +31,7 @@ const mainNavItems = [
   { href: "/positions", label: "Positions", icon: Briefcase },
 ];
 
+// Base settings items - "Application Setup" will be filtered out if setup is complete
 const baseSettingsSubItems = [
   { href: "/settings/preferences", label: "Preferences", icon: Palette },
   { href: "/settings/integrations", label: "Integrations", icon: Zap },
@@ -44,6 +46,8 @@ export function SidebarNav() {
   const { state: sidebarState, isMobile } = useSidebar();
   const [isClient, setIsClient] = React.useState(false);
   const [isSetupDone, setIsSetupDone] = React.useState(false);
+  const { data: session } = useSession();
+  const userRole = session?.user?.role;
 
   React.useEffect(() => {
     setIsClient(true);
@@ -62,7 +66,10 @@ export function SidebarNav() {
   }, [isClient, isSetupDone]);
 
   const isSettingsSectionActive = settingsSubItems.some(item => pathname.startsWith(item.href));
+  
+  const isMyTasksActive = pathname === "/my-tasks";
   const isAnyMainNavItemActive = mainNavItems.some(item => pathname === item.href || (item.href !== "/" && pathname.startsWith(item.href)));
+
 
   const [accordionValue, setAccordionValue] = React.useState<string | undefined>(
     isSettingsSectionActive ? "settings-group" : undefined
@@ -71,10 +78,10 @@ export function SidebarNav() {
   React.useEffect(() => {
     if (isSettingsSectionActive) {
       setAccordionValue("settings-group");
-    } else if (isAnyMainNavItemActive) {
-      setAccordionValue(undefined); // Close accordion if a main nav item is active
+    } else if (isAnyMainNavItemActive || isMyTasksActive) { // Close accordion if a main nav or My Tasks item is active
+      setAccordionValue(undefined); 
     }
-  }, [pathname, isSettingsSectionActive, isAnyMainNavItemActive]);
+  }, [pathname, isSettingsSectionActive, isAnyMainNavItemActive, isMyTasksActive]);
 
 
   return (
@@ -85,10 +92,10 @@ export function SidebarNav() {
               <SidebarMenuButton
                 asChild
                 isActive={pathname === item.href || (item.href !== "/" && pathname.startsWith(item.href))}
-                className="w-full justify-start" // Removed my-1, px-3 py-2 will be from CVA
+                className="w-full justify-start"
                 tooltip={item.label}
                 onClick={() => setAccordionValue(undefined)} 
-                size="default" // Explicitly use default size for padding
+                size="default"
               >
                 <a>
                   <item.icon className="h-5 w-5" />
@@ -98,6 +105,27 @@ export function SidebarNav() {
             </Link>
           </SidebarMenuItem>
         ))}
+
+        {(userRole === 'Recruiter' || userRole === 'Admin') && (
+          <SidebarMenuItem>
+            <Link href="/my-tasks" passHref legacyBehavior>
+              <SidebarMenuButton
+                asChild
+                isActive={isMyTasksActive}
+                className="w-full justify-start"
+                tooltip="My Tasks"
+                onClick={() => setAccordionValue(undefined)}
+                size="default"
+              >
+                <a>
+                  <ListTodo className="h-5 w-5" />
+                  <span className="truncate">My Tasks</span>
+                </a>
+              </SidebarMenuButton>
+            </Link>
+          </SidebarMenuItem>
+        )}
+
 
         <SidebarMenuItem className="mt-auto">
           <Accordion
@@ -116,7 +144,7 @@ export function SidebarNav() {
                       "justify-between group-data-[collapsible=icon]:!size-8 group-data-[collapsible=icon]:!p-2",
                       isSettingsSectionActive && "bg-sidebar-active-background-l dark:bg-sidebar-active-background-d text-sidebar-active-foreground-l dark:text-sidebar-active-foreground-d", 
                       !isSettingsSectionActive && "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
-                      "hover:no-underline px-3 py-2" // Apply same padding as main menu items
+                      "hover:no-underline px-3 py-2"
                     )}
                   >
                     <div className="flex items-center gap-2 group-data-[collapsible=icon]:hidden">
@@ -140,7 +168,7 @@ export function SidebarNav() {
                         <SidebarMenuButton
                           isActive={pathname.startsWith(item.href)}
                           className="w-full justify-start"
-                          size="sm" // Sub-items can use 'sm' for slightly smaller padding
+                          size="sm" 
                           tooltip={item.label}
                         >
                           {item.icon && <item.icon className="h-4 w-4 ml-[1px]" />}
@@ -157,5 +185,3 @@ export function SidebarNav() {
       </SidebarMenu>
   );
 }
-
-    

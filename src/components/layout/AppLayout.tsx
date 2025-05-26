@@ -23,14 +23,20 @@ const APP_LOGO_DATA_URL_KEY = 'appLogoDataUrl';
 
 function getPageTitle(pathname: string): string {
   if (pathname === "/") return "Dashboard";
-  if (pathname.startsWith("/candidates")) {
-    if (pathname.split('/').length === 3 && pathname.split('/')[2] !== '') {
-        return "Candidate Details"; // Or fetch candidate name for more specific title
+  if (pathname.startsWith("/candidates/(?!create-via-n8n)")) { // Exclude create-via-n8n
+    if (pathname.split('/').length === 3 && pathname.split('/')[2] !== '' && !pathname.includes('create-via-n8n')) {
+        return "Candidate Details";
     }
     return "Candidates";
   }
-  if (pathname.startsWith("/positions")) return "Job Positions";
+  if (pathname.startsWith("/positions")) {
+     if (pathname.split('/').length === 3 && pathname.split('/')[2] !== '') {
+        return "Position Details";
+    }
+    return "Job Positions";
+  }
   if (pathname.startsWith("/users")) return "Manage Users";
+  if (pathname.startsWith("/my-tasks")) return "My Tasks"; // New page title
   if (pathname.startsWith("/settings/preferences")) return "Preferences";
   if (pathname.startsWith("/settings/integrations")) return "Integrations";
   if (pathname.startsWith("/setup")) return "Application Setup";
@@ -54,9 +60,8 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     setIsClient(true);
-    updateLogo(); // Initial load
+    updateLogo(); 
 
-    // Listen for custom event to update logo
     window.addEventListener('logoChanged', updateLogo);
     return () => {
       window.removeEventListener('logoChanged', updateLogo);

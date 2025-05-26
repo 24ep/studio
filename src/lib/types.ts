@@ -1,4 +1,3 @@
-
 // This declares the shape of the user object returned by the session callback
 // and available in useSession() or getServerSession()
 // It needs to be augmented if you add custom properties to the session token
@@ -24,11 +23,11 @@ declare module 'next-auth' {
       id: string;
       role?: UserProfile['role'];
       modulePermissions?: PlatformModuleId[];
-    } & DefaultUser;
+    } & DefaultUser; // DefaultUser includes name, email, image
   }
 
-  interface User extends DefaultUser {
-    id: string; // Ensure User object passed to JWT/Session has id
+  interface User extends DefaultUser { // NextAuth User object
+    id: string; 
     role?: UserProfile['role'];
     modulePermissions?: PlatformModuleId[];
   }
@@ -108,8 +107,8 @@ export interface ExperienceEntry {
   description?: string;
   period?: string;
   duration?: string;
-  is_current_position?: boolean | string;
-  postition_level?: string | undefined;
+  is_current_position?: boolean | string; // Allow string for n8n, preprocess in Zod
+  postition_level?: string | undefined; // Allow flexible string from n8n
 }
 
 export interface SkillEntry {
@@ -139,32 +138,21 @@ export interface CandidateDetails {
   experience?: ExperienceEntry[];
   skills?: SkillEntry[];
   job_suitable?: JobSuitableEntry[];
-  associatedMatchDetails?: {
+  associatedMatchDetails?: { // Details of the primary n8n match
     jobTitle: string;
     fitScore: number;
     reasons: string[];
     n8nJobId?: string;
   };
-  job_matches?: N8NJobMatch[]; // Added to store all matches from n8n
+  job_matches?: N8NJobMatch[]; // All job matches from n8n
 }
 
-// For the n8n webhook that creates candidates
-export interface N8NCandidateInfoForWebhook { // This is what n8n sends as 'candidate_info'
-  cv_language?: string;
-  personal_info: PersonalInfo;
-  contact_info: ContactInfo;
-  education?: EducationEntry[];
-  experience?: ExperienceEntry[];
-  skills?: SkillEntry[];
-  job_suitable?: JobSuitableEntry[];
-}
 export interface N8NCandidateWebhookEntry {
-  candidate_info: N8NCandidateInfoForWebhook;
-  jobs: N8NJobMatch[];
+  candidate_info: CandidateDetails; // n8n sends all candidate details here
+  jobs: N8NJobMatch[]; // n8n sends job matches here
 }
-// The overall payload from n8n
-export type N8NWebhookPayload = N8NCandidateWebhookEntry;
 
+export type N8NWebhookPayload = N8NCandidateWebhookEntry; // Updated to reflect single entry
 
 // Kept for potential backward compatibility if some candidates have old data structure
 export interface OldParsedResumeData {
@@ -187,7 +175,7 @@ export interface Position {
   position_level?: string | null;
   createdAt?: string;
   updatedAt?: string;
-  candidates?: Candidate[];
+  candidates?: Candidate[]; // Relation for dashboard chart
 }
 
 export interface Candidate {
@@ -198,10 +186,12 @@ export interface Candidate {
   resumePath?: string | null;
   parsedData: CandidateDetails | OldParsedResumeData | null;
   positionId: string | null;
-  position?: Position | null;
+  position?: Position | null; // For display, if joined
   fitScore: number;
   status: CandidateStatus;
   applicationDate: string;
+  recruiterId?: string | null; // New: Assigned recruiter ID
+  recruiter?: Pick<UserProfile, 'id' | 'name' | 'email'> | null; // New: Assigned recruiter info
   createdAt?: string;
   updatedAt?: string;
   transitionHistory: TransitionRecord[];
@@ -215,7 +205,7 @@ export interface UserProfile {
   avatarUrl?: string;
   dataAiHint?: string;
   role: 'Admin' | 'Recruiter' | 'Hiring Manager';
-  password?: string;
+  password?: string; // Only used for creation/validation, not sent to client
   modulePermissions?: PlatformModuleId[];
   createdAt?: string;
   updatedAt?: string;

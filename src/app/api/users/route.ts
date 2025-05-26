@@ -8,6 +8,9 @@ import { PLATFORM_MODULES } from '@/lib/types';
 import { v4 as uuidv4 } from 'uuid';
 import bcrypt from 'bcrypt';
 import { logAudit } from '@/lib/auditLog';
+import { getServerSession } from 'next-auth/next';
+import { authOptions } from '@/app/api/auth/[...nextauth]/route';
+
 
 const platformModuleIds = PLATFORM_MODULES.map(m => m.id) as [PlatformModuleId, ...PlatformModuleId[]];
 
@@ -22,20 +25,54 @@ const createUserSchema = z.object({
 });
 
 export async function GET(request: NextRequest) {
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.id) {
+    return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+  }
+  
+  const userRole = session.user.role;
+  const { searchParams } = new URL(request.url);
+  const filterRole = searchParams.get('role');
+
+  let query = 'SELECT id, name, email, role, "avatarUrl", "dataAiHint", "modulePermissions", "createdAt", "updatedAt" FROM "User"';
+  const queryParams = [];
+
+  if (userRole === 'Admin') {
+    if (filterRole) {
+      query += ' WHERE role = $1';
+      queryParams.push(filterRole);
+    }
+  } else if (userRole === 'Recruiter') {
+    // Recruiters can only fetch other Recruiters (for assignment dropdowns)
+    query += ' WHERE role = $1';
+    queryParams.push('Recruiter');
+  } else {
+    // Hiring Managers or other roles cannot list users by default
+    return NextResponse.json({ message: "Forbidden: Insufficient permissions" }, { status: 403 });
+  }
+  
+  query += ' ORDER BY "createdAt" DESC';
+
   try {
-    const result = await pool.query('SELECT id, name, email, role, "avatarUrl", "dataAiHint", "modulePermissions", "createdAt", "updatedAt" FROM "User" ORDER BY "createdAt" DESC');
+    const result = await pool.query(query, queryParams);
     return NextResponse.json(result.rows.map(user => ({
       ...user,
-      modulePermissions: user.modulePermissions || []
+      modulePermissions: user.modulePermissions || [] // Ensure it's always an array
     })), { status: 200 });
   } catch (error) {
     console.error("Failed to fetch users:", error);
-    await logAudit('ERROR', `Failed to fetch users. Error: ${(error as Error).message}`, 'API:Users', null);
+    await logAudit('ERROR', `Failed to fetch users by ${session.user.name}. Error: ${(error as Error).message}`, 'API:Users:Get', session.user.id);
     return NextResponse.json({ message: "Error fetching users", error: (error as Error).message }, { status: 500 });
   }
 }
 
 export async function POST(request: NextRequest) {
+  const session = await getServerSession(authOptions);
+  if (session?.user?.role !== 'Admin') {
+    await logAudit('WARN', `Forbidden attempt to create user by ${session?.user?.email || 'Unknown'} (ID: ${session?.user?.id || 'N/A'}). Required role: Admin.`, 'API:Users:Create', session?.user?.id);
+    return NextResponse.json({ message: "Forbidden: You must be an Admin to create users." }, { status: 403 });
+  }
+  
   let body;
   try {
     body = await request.json();
@@ -60,7 +97,7 @@ export async function POST(request: NextRequest) {
     hashedPassword = await bcrypt.hash(password, saltRounds);
   } catch (hashError) {
     console.error("Error hashing password:", hashError);
-    await logAudit('ERROR', `Error hashing password for new user ${email}. Error: ${(hashError as Error).message}`, 'API:Users', null);
+    await logAudit('ERROR', `Error hashing password for new user ${email} by ${session.user.name}. Error: ${(hashError as Error).message}`, 'API:Users:Create', session.user.id);
     return NextResponse.json({ message: "Error processing user creation (hashing failed)." }, { status: 500 });
   }
   
@@ -90,13 +127,13 @@ export async function POST(request: NextRequest) {
     };
     await client.query('COMMIT');
     
-    await logAudit('AUDIT', `User account '${newUser.name}' (ID: ${newUser.id}) created.`, 'API:Users', null, { targetUserId: newUser.id, role: newUser.role, permissions: newUser.modulePermissions });
+    await logAudit('AUDIT', `User account '${newUser.name}' (ID: ${newUser.id}) created by ${session.user.name}.`, 'API:Users:Create', session.user.id, { targetUserId: newUser.id, role: newUser.role, permissions: newUser.modulePermissions });
     return NextResponse.json(newUser, { status: 201 });
 
   } catch (error: any) {
     await client.query('ROLLBACK');
     console.error("Failed to create user:", error);
-    await logAudit('ERROR', `Failed to create user ${email}. Error: ${error.message}`, 'API:Users', null);
+    await logAudit('ERROR', `Failed to create user ${email} by ${session.user.name}. Error: ${error.message}`, 'API:Users:Create', session.user.id);
     if (error.code === '23505' && error.constraint === 'User_email_key') {
       return NextResponse.json({ message: "User with this email already exists." }, { status: 409 });
     }
@@ -105,5 +142,3 @@ export async function POST(request: NextRequest) {
     client.release();
   }
 }
-
-    

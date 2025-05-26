@@ -4,7 +4,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import type { Candidate, CandidateDetails, TransitionRecord, EducationEntry, ExperienceEntry, SkillEntry, JobSuitableEntry, PersonalInfo, N8NJobMatch } from '@/lib/types';
+import type { Candidate, CandidateDetails, TransitionRecord, EducationEntry, ExperienceEntry, SkillEntry, JobSuitableEntry, PersonalInfo, N8NJobMatch, UserProfile } from '@/lib/types';
 import { useToast } from "@/hooks/use-toast";
 import { signIn, useSession } from 'next-auth/react';
 import { Button } from '@/components/ui/button';
@@ -15,10 +15,12 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { Progress } from '@/components/ui/progress';
 import { format, parseISO } from 'date-fns';
-import { ArrowLeft, Briefcase, CalendarDays, DollarSign, Edit, GraduationCap, HardDrive, Info, LinkIcon, ListChecks, Loader2, Mail, MapPin, MessageSquare, Percent, Phone, ServerCrash, ShieldAlert, Star, Tag, UploadCloud, User, UserCircle, UserCog, Zap } from 'lucide-react';
+import { ArrowLeft, Briefcase, CalendarDays, DollarSign, Edit, GraduationCap, HardDrive, Info, LinkIcon, ListChecks, Loader2, Mail, MapPin, MessageSquare, Percent, Phone, ServerCrash, ShieldAlert, Star, Tag, UploadCloud, User, UserCircle, UserCog, Users, Zap } from 'lucide-react';
 import { UploadResumeModal } from '@/components/candidates/UploadResumeModal';
 import { ManageTransitionsModal } from '@/components/candidates/ManageTransitionsModal';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Label } from '@/components/ui/label';
 
 
 const getStatusBadgeVariant = (status: Candidate['status']): "default" | "secondary" | "destructive" | "outline" => {
@@ -39,6 +41,9 @@ export default function CandidateDetailPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [fetchError, setFetchError] = useState<string | null>(null);
   const [authError, setAuthError] = useState(false);
+  const [recruiters, setRecruiters] = useState<Pick<UserProfile, 'id' | 'name'>[]>([]);
+  const [isAssigningRecruiter, setIsAssigningRecruiter] = useState(false);
+
 
   const { data: session, status: sessionStatus } = useSession();
   const { toast } = useToast();
@@ -69,9 +74,6 @@ export default function CandidateDetailPage() {
       const data: Candidate = await response.json();
       setCandidate(data);
       console.log("Fetched candidate data:", data);
-      if (data.parsedData && (data.parsedData as CandidateDetails).experience) {
-        console.log("Candidate experience data:", (data.parsedData as CandidateDetails).experience);
-      }
     } catch (error) {
       console.error("Error fetching candidate details:", error);
       setFetchError((error as Error).message || "Could not load candidate data.");
@@ -79,7 +81,21 @@ export default function CandidateDetailPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [candidateId, sessionStatus, toast]);
+  }, [candidateId, sessionStatus, signIn]);
+
+  const fetchRecruiters = useCallback(async () => {
+    if (sessionStatus !== 'authenticated' || (session?.user?.role !== 'Admin' && session?.user?.role !== 'Recruiter')) return;
+    try {
+      const response = await fetch('/api/users?role=Recruiter');
+      if (!response.ok) throw new Error('Failed to fetch recruiters');
+      const data: UserProfile[] = await response.json();
+      setRecruiters(data.map(r => ({ id: r.id, name: r.name })));
+    } catch (error) {
+      console.error("Error fetching recruiters:", error);
+      toast({ title: "Error", description: "Could not load recruiters for assignment.", variant: "destructive" });
+    }
+  }, [sessionStatus, session, toast]);
+
 
   useEffect(() => {
     if (sessionStatus === 'loading') return;
@@ -89,8 +105,11 @@ export default function CandidateDetailPage() {
     }
     if (candidateId) {
       fetchCandidateDetails();
+      if (session?.user?.role === 'Admin' || session?.user?.role === 'Recruiter') {
+        fetchRecruiters();
+      }
     }
-  }, [candidateId, sessionStatus, fetchCandidateDetails, signIn]);
+  }, [candidateId, sessionStatus, fetchCandidateDetails, fetchRecruiters, signIn, session]);
 
   const handleUploadSuccess = (updatedCandidate: Candidate) => {
     setCandidate(updatedCandidate);
@@ -110,7 +129,7 @@ export default function CandidateDetailPage() {
             throw new Error(errorData.message || `Failed to update candidate status: ${response.statusText}`);
         }
         const updatedCandidateFromServer: Candidate = await response.json();
-        setCandidate(updatedCandidateFromServer); // Update candidate with new history
+        setCandidate(updatedCandidateFromServer);
         toast({ title: "Status Updated", description: `Candidate status updated to ${newStatus}.` });
     } catch (error) {
         toast({
@@ -118,6 +137,29 @@ export default function CandidateDetailPage() {
             description: (error as Error).message || "Could not update candidate status.",
             variant: "destructive",
         });
+    }
+  };
+
+  const handleAssignRecruiter = async (newRecruiterId: string | null) => {
+    if (!candidate || isAssigningRecruiter) return;
+    setIsAssigningRecruiter(true);
+    try {
+      const response = await fetch(`/api/candidates/${candidate.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ recruiterId: newRecruiterId }),
+      });
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ message: "An unknown error occurred" }));
+        throw new Error(errorData.message || `Failed to assign recruiter: ${response.statusText}`);
+      }
+      const updatedCandidate: Candidate = await response.json();
+      setCandidate(updatedCandidate);
+      toast({ title: "Recruiter Assigned", description: `Candidate assigned to ${updatedCandidate.recruiter?.name || 'Unassigned'}.` });
+    } catch (error) {
+      toast({ title: "Error Assigning Recruiter", description: (error as Error).message, variant: "destructive" });
+    } finally {
+      setIsAssigningRecruiter(false);
     }
   };
 
@@ -166,6 +208,8 @@ export default function CandidateDetailPage() {
   }
 
   const parsed = candidate.parsedData as CandidateDetails | null;
+  const canManageCandidate = session?.user?.role === 'Admin' || session?.user?.role === 'Recruiter';
+
 
   const renderField = (label: string, value?: string | number | null, icon?: React.ElementType) => {
     if (value === undefined || value === null || value === '' || (typeof value === 'number' && isNaN(value))) return null;
@@ -186,6 +230,7 @@ export default function CandidateDetailPage() {
       </Button>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Main Content Column */}
         <div className="lg:col-span-2 space-y-6">
           <Card className="shadow-lg">
             <CardHeader className="flex flex-row items-start justify-between gap-4">
@@ -222,11 +267,47 @@ export default function CandidateDetailPage() {
                     </div>
                 )}
             </CardContent>
-            <CardFooter className="gap-2">
-                <Button variant="outline" onClick={() => setIsUploadModalOpen(true)}><UploadCloud className="mr-2 h-4 w-4" /> Upload New Resume</Button>
-                <Button variant="outline" onClick={() => setIsTransitionsModalOpen(true)}><Edit className="mr-2 h-4 w-4" /> Manage Transitions</Button>
-            </CardFooter>
+            {canManageCandidate && (
+              <CardFooter className="gap-2">
+                  <Button variant="outline" onClick={() => setIsUploadModalOpen(true)}><UploadCloud className="mr-2 h-4 w-4" /> Upload New Resume</Button>
+                  <Button variant="outline" onClick={() => setIsTransitionsModalOpen(true)}><Edit className="mr-2 h-4 w-4" /> Manage Transitions</Button>
+              </CardFooter>
+            )}
           </Card>
+
+          {canManageCandidate && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center"><UserCog className="mr-2 h-5 w-5 text-primary"/>Assign Recruiter</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {candidate.recruiter ? (
+                  <p className="text-sm mb-2">Currently assigned to: <span className="font-semibold">{candidate.recruiter.name}</span></p>
+                ) : (
+                  <p className="text-sm text-muted-foreground mb-2">Not assigned to any recruiter.</p>
+                )}
+                <div className="flex items-center gap-2">
+                  <Select
+                    value={candidate.recruiterId || "unassigned"}
+                    onValueChange={(value) => handleAssignRecruiter(value === "unassigned" ? null : value)}
+                    disabled={isAssigningRecruiter || recruiters.length === 0}
+                  >
+                    <SelectTrigger className="w-full md:w-[280px]">
+                      <SelectValue placeholder="Select Recruiter" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="unassigned">Unassign</SelectItem>
+                      {recruiters.map(r => (
+                        <SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {isAssigningRecruiter && <Loader2 className="h-5 w-5 animate-spin" />}
+                </div>
+                {recruiters.length === 0 && <p className="text-xs text-muted-foreground mt-1">No recruiters available for assignment.</p>}
+              </CardContent>
+            </Card>
+          )}
 
           {parsed?.associatedMatchDetails && (
             <Card>
@@ -310,6 +391,7 @@ export default function CandidateDetailPage() {
               <CardContent>
                 <ScrollArea className="max-h-[500px]">
                   <ul className="space-y-4">
+                    {console.log("Rendering experiences:", parsed.experience)}
                     {parsed.experience.map((exp, index) => (
                       <li key={`exp-${index}`} className="p-3 border rounded-md bg-muted/30">
                         {renderField("Company", exp.company)}
@@ -324,7 +406,7 @@ export default function CandidateDetailPage() {
                                 <p className="text-sm text-foreground whitespace-pre-wrap bg-background p-2 rounded">{exp.description}</p>
                             </div>
                         )}
-                        {index < parsed.experience!.length - 1 && <Separator className="my-3" />}
+                        {index < parsed.experience.length - 1 && <Separator className="my-3" />}
                       </li>
                     ))}
                   </ul>
@@ -422,8 +504,9 @@ export default function CandidateDetailPage() {
               ) : <p className="text-sm text-muted-foreground">No transition history available.</p>}
             </CardContent>
           </Card>
-        </div> {/* End of lg:col-span-2 */}
+        </div>
 
+        {/* Right Column for Job Matches */}
         <div className="lg:col-span-1 space-y-6">
           {parsed?.job_matches && parsed.job_matches.length > 0 && (
             <Card>
@@ -432,7 +515,7 @@ export default function CandidateDetailPage() {
                 <CardDescription>Full list of job matches from n8n processing.</CardDescription>
               </CardHeader>
               <CardContent>
-                <ScrollArea className="max-h-[calc(100vh-200px)]"> {/* Adjust max-h as needed */}
+                <ScrollArea className="max-h-[calc(100vh-120px)]"> {/* Adjust max-h as needed */}
                   <ul className="space-y-3">
                     {parsed.job_matches.map((match, index) => (
                       <li key={`match-${index}`} className="p-3 border rounded-md bg-muted/30">
@@ -456,11 +539,11 @@ export default function CandidateDetailPage() {
               </CardContent>
             </Card>
           )}
-        </div> {/* End of lg:col-span-1 */}
-      </div> {/* End of grid */}
+        </div>
+      </div>
 
 
-      {candidate && (
+      {candidate && canManageCandidate && (
         <>
         <UploadResumeModal
             isOpen={isUploadModalOpen}
@@ -472,8 +555,8 @@ export default function CandidateDetailPage() {
             candidate={candidate}
             isOpen={isTransitionsModalOpen}
             onOpenChange={setIsTransitionsModalOpen}
-            onUpdateCandidate={handleUpdateCandidateStatus}
-            onRefreshCandidateData={fetchCandidateDetails}
+            onUpdateCandidate={handleUpdateCandidateStatus} // This updates candidate status
+            onRefreshCandidateData={fetchCandidateDetails} // This refreshes full candidate details (incl. history)
         />
         </>
       )}
