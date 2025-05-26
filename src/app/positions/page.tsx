@@ -3,7 +3,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Button, buttonVariants } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button"; 
 import { PlusCircle, Briefcase, Edit, Trash2, ServerCrash, Loader2, FileDown, FileUp } from "lucide-react";
 import type { Position } from "@/lib/types";
 import { Badge } from "@/components/ui/badge";
@@ -12,6 +12,7 @@ import { useToast } from "@/hooks/use-toast";
 import { signIn, useSession } from "next-auth/react";
 import { AddPositionModal, type AddPositionFormValues } from '@/components/positions/AddPositionModal';
 import { EditPositionModal, type EditPositionFormValues } from '@/components/positions/EditPositionModal';
+import { PositionFilters, type PositionFilterValues } from '@/components/positions/PositionFilters';
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
 import {
@@ -30,8 +31,9 @@ import {
 export default function PositionsPage() {
   const [positions, setPositions] = useState<Position[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [filters, setFilters] = useState<PositionFilterValues>({});
   const { toast } = useToast();
-  const { data: session, status: sessionStatus } = useSession();
+  // const { data: session, status: sessionStatus } = useSession(); // Not needed for public API based page
   const router = useRouter();
   const pathname = usePathname();
   const [fetchError, setFetchError] = useState<string | null>(null);
@@ -43,21 +45,25 @@ export default function PositionsPage() {
 
 
   const fetchPositions = useCallback(async () => {
-    if (sessionStatus !== 'authenticated') {
-      setIsLoading(false); // Stop loading if not authenticated
-      return;
-    }
+    // if (sessionStatus !== 'authenticated') {
+    //   // signIn(undefined, { callbackUrl: pathname });
+    //   return;
+    // }
     setIsLoading(true);
     setFetchError(null);
     try {
-      const response = await fetch('/api/positions');
+      const query = new URLSearchParams();
+      if (filters.title) query.append('title', filters.title);
+      if (filters.department) query.append('department', filters.department);
+
+      const response = await fetch(`/api/positions?${query.toString()}`);
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({ message: response.statusText || `Status: ${response.status}` }));
         const errorMessage = errorData.message || `Failed to fetch positions: ${response.statusText || `Status: ${response.status}`}`;
-        if (response.status === 401) {
-          signIn(undefined, { callbackUrl: pathname });
-          return;
-        }
+        // if (response.status === 401) {
+        //     signIn(undefined, { callbackUrl: pathname });
+        //     return;
+        // }
         setFetchError(errorMessage);
         setPositions([]);
         return;
@@ -67,23 +73,32 @@ export default function PositionsPage() {
     } catch (error) {
       console.error("Error fetching positions:", error);
       const errorMessage = (error as Error).message || "Could not load position data.";
-      if (!errorMessage.toLowerCase().includes("unauthorized")) {
+      // if (!errorMessage.toLowerCase().includes("unauthorized")) {
+      if (errorMessage.toLowerCase().includes("relation") && errorMessage.toLowerCase().includes("does not exist")) {
+        setFetchError(`Database table "Position" missing. Please ensure the database schema is initialized. Check README or /setup for troubleshooting. Error: ${errorMessage}`);
+      } else {
         setFetchError(errorMessage);
       }
+      // }
       setPositions([]);
     } finally {
       setIsLoading(false);
     }
-  }, [sessionStatus, pathname, signIn]);
+  }, [filters, pathname]); // Removed sessionStatus, signIn
 
   useEffect(() => {
-    if (sessionStatus === 'unauthenticated') {
-      signIn(undefined, { callbackUrl: pathname });
-    } else if (sessionStatus === 'authenticated') {
-      fetchPositions();
-    }
-  }, [sessionStatus, fetchPositions, pathname, signIn]);
+    // if (sessionStatus === 'unauthenticated') {
+    //   signIn(undefined, { callbackUrl: pathname });
+    // } else if (sessionStatus === 'authenticated') {
+    //   fetchPositions();
+    // }
+    fetchPositions(); // Fetch positions regardless of auth status as page is public
+  }, [filters, fetchPositions, pathname]); // Removed sessionStatus, signIn
 
+
+  const handleFilterChange = (newFilters: PositionFilterValues) => {
+    setFilters(newFilters);
+  };
 
   const handleAddPositionSubmit = async (formData: AddPositionFormValues) => {
     try {
@@ -94,10 +109,10 @@ export default function PositionsPage() {
         });
         if (!response.ok) {
             const errorData = await response.json().catch(() => ({ message: "An unknown error occurred" }));
-            if (response.status === 401 || response.status === 403) {
-                signIn(undefined, { callbackUrl: pathname });
-                return;
-            }
+            // if (response.status === 401 || response.status === 403) {
+            //     signIn(undefined, { callbackUrl: pathname });
+            //     return;
+            // }
             throw new Error(errorData.message || `Failed to add position: ${response.statusText || `Status: ${response.status}`}`);
         }
         const newPosition: Position = await response.json();
@@ -109,13 +124,13 @@ export default function PositionsPage() {
         });
     } catch (error) {
         console.error("Error adding position:", error);
-        if (!String((error as Error).message).toLowerCase().includes("unauthorized")) {
+        // if (!String((error as Error).message).toLowerCase().includes("unauthorized")) {
           toast({
               title: "Error Adding Position",
               description: (error as Error).message || "Could not add position.",
               variant: "destructive",
           });
-        }
+        // }
     }
   };
 
@@ -133,10 +148,10 @@ export default function PositionsPage() {
       });
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({ message: "An unknown error occurred" }));
-        if (response.status === 401 || response.status === 403) {
-            signIn(undefined, { callbackUrl: pathname });
-            return;
-        }
+        // if (response.status === 401 || response.status === 403) {
+        //     signIn(undefined, { callbackUrl: pathname });
+        //     return;
+        // }
         throw new Error(errorData.message || `Failed to update position: ${response.statusText || `Status: ${response.status}`}`);
       }
       const updatedPosition: Position = await response.json();
@@ -146,13 +161,13 @@ export default function PositionsPage() {
       toast({ title: "Position Updated", description: `Position "${updatedPosition.title}" has been updated.` });
     } catch (error) {
       console.error("Error updating position:", error);
-      if (!String((error as Error).message).toLowerCase().includes("unauthorized")) {
+      // if (!String((error as Error).message).toLowerCase().includes("unauthorized")) {
         toast({
             title: "Error Updating Position",
             description: (error as Error).message,
             variant: "destructive",
         });
-      }
+      // }
     }
   };
 
@@ -168,40 +183,38 @@ export default function PositionsPage() {
       });
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({ message: "An unknown error occurred" }));
-        if (response.status === 401 || response.status === 403) {
-            signIn(undefined, { callbackUrl: pathname });
-            return;
-        }
+        // if (response.status === 401 || response.status === 403) {
+        //     signIn(undefined, { callbackUrl: pathname });
+        //     return;
+        // }
         throw new Error(errorData.message || `Failed to delete position: ${response.statusText}`);
       }
       setPositions(prevPositions => prevPositions.filter(p => p.id !== positionToDelete!.id));
       toast({ title: "Position Deleted", description: `Position "${positionToDelete.title}" has been deleted.` });
     } catch (error) {
       console.error("Error deleting position:", error);
-      if (!String((error as Error).message).toLowerCase().includes("unauthorized")) {
+      // if (!String((error as Error).message).toLowerCase().includes("unauthorized")) {
         toast({
             title: "Error Deleting Position",
             description: (error as Error).message,
             variant: "destructive",
         });
-      }
+      // }
     } finally {
       setPositionToDelete(null);
     }
   };
 
   const handleDownloadTemplate = () => {
-    // Placeholder for download template functionality
     toast({ title: "Not Implemented", description: "Download template functionality is not yet implemented." });
   };
 
   const handleImportExcel = () => {
-    // Placeholder for import Excel functionality
     toast({ title: "Not Implemented", description: "Import from Excel functionality is not yet implemented." });
   };
 
 
-  if (sessionStatus === 'loading' || (isLoading && !fetchError && !pathname.startsWith('/auth/signin'))) {
+  if (isLoading && !fetchError) { // No need for pathname check for public page
     return (
       <div className="flex h-screen w-screen items-center justify-center bg-background fixed inset-0 z-50">
         <Loader2 className="h-16 w-16 animate-spin text-primary" />
@@ -218,9 +231,9 @@ export default function PositionsPage() {
         <p className="text-muted-foreground mb-4 max-w-md">{fetchError}</p>
         {isMissingTableError && (
             <div className="mb-6 p-4 border border-destructive bg-destructive/10 rounded-md text-sm">
-                <p className="font-semibold">It looks like the necessary database tables (e.g., "Position") are missing.</p>
+                <p className="font-semibold">It looks like the "Position" database table is missing.</p>
                 <p className="mt-1">This usually means the database initialization script (`pg-init-scripts/init-db.sql`) did not run correctly when the PostgreSQL Docker container started.</p>
-                <p className="mt-2">Please refer to the troubleshooting steps in the `README.md` or go to the <Link href="/setup" className="text-primary hover:underline font-medium">Application Setup</Link> page to verify the schema and find guidance.</p>
+                <p className="mt-2">Please refer to the troubleshooting steps in the `README.md` or check the PostgreSQL container logs for details.</p>
             </div>
         )}
         <Button onClick={fetchPositions} className="btn-hover-primary-gradient">Try Again</Button>
@@ -232,18 +245,21 @@ export default function PositionsPage() {
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-center gap-2">
-        <div className="flex gap-2">
-          <Button onClick={handleImportExcel} variant="outline" className="w-full sm:w-auto">
-            <FileUp className="mr-2 h-4 w-4" /> Import Positions (Excel)
-          </Button>
-          <Button onClick={handleDownloadTemplate} variant="outline" className="w-full sm:w-auto">
-            <FileDown className="mr-2 h-4 w-4" /> Download Template
-          </Button>
-        </div>
+         <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+            <Button onClick={handleImportExcel} variant="outline" className="w-full sm:w-auto">
+                <FileUp className="mr-2 h-4 w-4" /> Import Positions (Excel)
+            </Button>
+            <Button onClick={handleDownloadTemplate} variant="outline" className="w-full sm:w-auto">
+                <FileDown className="mr-2 h-4 w-4" /> Download Template
+            </Button>
+         </div>
         <Button onClick={() => setIsAddModalOpen(true)} className="w-full sm:w-auto btn-primary-gradient">
           <PlusCircle className="mr-2 h-4 w-4" /> Add New Position
         </Button>
       </div>
+
+      <PositionFilters initialFilters={filters} onFilterChange={handleFilterChange} isLoading={isLoading} />
+
 
       <Card className="shadow-sm">
         <CardHeader>
@@ -315,7 +331,7 @@ export default function PositionsPage() {
                                 <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
                                 <AlertDialogDescription>
                                   This action cannot be undone. This will permanently delete the position <strong>{positionToDelete.title}</strong>.
-                                  If there are candidates associated with this position, deletion might be blocked.
+                                  If there are candidates associated with this position, deletion might be blocked by the database.
                                 </AlertDialogDescription>
                               </AlertDialogHeader>
                               <AlertDialogFooter>

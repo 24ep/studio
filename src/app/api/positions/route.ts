@@ -3,25 +3,33 @@ import { NextResponse, type NextRequest } from 'next/server';
 import pool from '../../../lib/db';
 import { z } from 'zod';
 import { logAudit } from '@/lib/auditLog';
+// import { getServerSession } from 'next-auth/next'; // No longer needed for public API
+// import { authOptions } from '@/app/api/auth/[...nextauth]/route'; // No longer needed for public API
+import { v4 as uuidv4 } from 'uuid';
 
 export async function GET(request: NextRequest) {
+  // const session = await getServerSession(authOptions);
+  // if (!session?.user) {
+  //   return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+  // }
+
   try {
     const { searchParams } = new URL(request.url);
-    const title = searchParams.get('title');
-    const department = searchParams.get('department');
+    const titleFilter = searchParams.get('title');
+    const departmentFilter = searchParams.get('department');
 
     let query = 'SELECT * FROM "Position"';
     const conditions = [];
     const queryParams = [];
     let paramIndex = 1;
 
-    if (title) {
+    if (titleFilter) {
       conditions.push(`title ILIKE $${paramIndex++}`);
-      queryParams.push(`%${title}%`);
+      queryParams.push(`%${titleFilter}%`);
     }
-    if (department) {
+    if (departmentFilter) {
       conditions.push(`department ILIKE $${paramIndex++}`);
-      queryParams.push(`%${department}%`);
+      queryParams.push(`%${departmentFilter}%`);
     }
 
     if (conditions.length > 0) {
@@ -33,7 +41,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(result.rows, { status: 200 });
   } catch (error) {
     console.error("Failed to fetch positions:", error);
-    await logAudit('ERROR', `Failed to fetch positions. Error: ${(error as Error).message}`, 'API:Positions', null);
+    await logAudit('ERROR', `Failed to fetch positions. Error: ${(error as Error).message}`, 'API:Positions:GetAll', null);
     return NextResponse.json({ message: "Error fetching positions", error: (error as Error).message }, { status: 500 });
   }
 }
@@ -47,6 +55,17 @@ const createPositionSchema = z.object({
 });
 
 export async function POST(request: NextRequest) {
+  // const session = await getServerSession(authOptions);
+  // const userRole = session?.user?.role;
+
+  // if (!session?.user || (userRole !== 'Admin' && userRole !== 'Recruiter')) {
+  //   await logAudit('WARN', `Forbidden attempt to create position by user ${session?.user?.email || 'Unknown'} (ID: ${session?.user?.id || 'N/A'}). Required roles: Admin, Recruiter.`, 'API:Positions:Create', session?.user?.id);
+  //   return NextResponse.json({ message: "Forbidden: Insufficient permissions" }, { status: 403 });
+  // }
+  const actingUserId = null; // Public API
+  const actingUserName = 'System (Public API)';
+
+
   let body;
   try {
     body = await request.json();
@@ -66,12 +85,14 @@ export async function POST(request: NextRequest) {
   const validatedData = validationResult.data;
 
   try {
+    const newPositionId = uuidv4();
     const insertQuery = `
-      INSERT INTO "Position" (title, department, description, "isOpen", position_level, "createdAt", "updatedAt")
-      VALUES ($1, $2, $3, $4, $5, NOW(), NOW())
+      INSERT INTO "Position" (id, title, department, description, "isOpen", position_level, "createdAt", "updatedAt")
+      VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW())
       RETURNING *;
     `;
     const values = [
+      newPositionId,
       validatedData.title,
       validatedData.department,
       validatedData.description || null,
@@ -81,13 +102,11 @@ export async function POST(request: NextRequest) {
     const result = await pool.query(insertQuery, values);
     const newPosition = result.rows[0];
 
-    await logAudit('AUDIT', `Position '${newPosition.title}' (ID: ${newPosition.id}) created.`, 'API:Positions', null, { targetPositionId: newPosition.id, title: newPosition.title, department: newPosition.department, position_level: newPosition.position_level });
+    await logAudit('AUDIT', `Position '${newPosition.title}' (ID: ${newPosition.id}) created by ${actingUserName}.`, 'API:Positions:Create', actingUserId, { targetPositionId: newPosition.id, title: newPosition.title, department: newPosition.department, position_level: newPosition.position_level });
     return NextResponse.json(newPosition, { status: 201 });
   } catch (error) {
     console.error("Failed to create position:", error);
-    await logAudit('ERROR', `Failed to create position '${validatedData.title}'. Error: ${(error as Error).message}`, 'API:Positions', null, { title: validatedData.title });
+    await logAudit('ERROR', `Failed to create position '${validatedData.title}' by ${actingUserName}. Error: ${(error as Error).message}`, 'API:Positions:Create', actingUserId, { title: validatedData.title });
     return NextResponse.json({ message: "Error creating position", error: (error as Error).message }, { status: 500 });
   }
 }
-
-    

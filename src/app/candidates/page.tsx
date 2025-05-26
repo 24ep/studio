@@ -4,9 +4,10 @@
 import { useState, useEffect, useCallback } from 'react';
 import { CandidateFilters, type CandidateFilterValues } from '@/components/candidates/CandidateFilters';
 import { CandidateTable } from '@/components/candidates/CandidateTable';
-import type { Candidate, CandidateStatus, TransitionRecord, Position, CandidateDetails, OldParsedResumeData } from '@/lib/types';
+import type { Candidate, CandidateStatus, Position } from '@/lib/types';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, Users, ServerCrash, Zap, Loader2, FileDown, FileUp } from 'lucide-react';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { PlusCircle, Users, ServerCrash, Zap, Loader2, FileDown, FileUp, ChevronDown } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
 import { AddCandidateModal, type AddCandidateFormValues } from '@/components/candidates/AddCandidateModal';
 import { UploadResumeModal } from '@/components/candidates/UploadResumeModal';
@@ -72,11 +73,7 @@ export default function CandidatesPage() {
             signIn(undefined, { callbackUrl: pathname });
             return;
         }
-        toast({
-            title: "Error Fetching Positions",
-            description: errorMessage,
-            variant: "destructive",
-        });
+        setFetchError(errorMessage); // Set fetch error for positions as well
         setAvailablePositions([]);
         return;
       }
@@ -84,12 +81,9 @@ export default function CandidatesPage() {
       setAvailablePositions(data.filter(p => p.isOpen));
     } catch (error) {
       console.error("Error fetching positions for modal:", error);
-      if (!String((error as Error).message).includes("401")) {
-        toast({
-            title: "Error Fetching Positions",
-            description: (error as Error).message || "Could not load position data.",
-            variant: "destructive",
-        });
+      const errorMessage = (error as Error).message || "Could not load position data.";
+      if (!String(errorMessage).includes("401")) {
+        setFetchError(errorMessage);
       }
        setAvailablePositions([]);
     }
@@ -127,7 +121,11 @@ export default function CandidatesPage() {
       console.error("Error fetching candidates:", error);
       const errorMessage = (error as Error).message || "Could not load candidate data.";
       if (!errorMessage.toLowerCase().includes("unauthorized")) {
-        setFetchError(errorMessage);
+         if (errorMessage.toLowerCase().includes("relation") && errorMessage.toLowerCase().includes("does not exist")) {
+           setFetchError(`Database table missing. Please ensure the database schema is initialized. Check README or /setup for troubleshooting. Error: ${errorMessage}`);
+         } else {
+           setFetchError(errorMessage);
+         }
       }
       setAllCandidates([]);
     } finally {
@@ -150,7 +148,7 @@ export default function CandidatesPage() {
   };
 
 
-  const handleUpdateCandidateAPI = async (candidateId: string, status: CandidateStatus) => { // Removed newTransitionHistory
+  const handleUpdateCandidateAPI = async (candidateId: string, status: CandidateStatus) => { 
     try {
       const response = await fetch(`/api/candidates/${candidateId}`, {
         method: 'PUT',
@@ -324,9 +322,9 @@ export default function CandidatesPage() {
         <p className="text-muted-foreground mb-4 max-w-md">{fetchError}</p>
         {isMissingTableError && (
             <div className="mb-6 p-4 border border-destructive bg-destructive/10 rounded-md text-sm">
-                <p className="font-semibold">It looks like the necessary database tables (e.g., "Candidate", "Position") are missing.</p>
+                <p className="font-semibold">It looks like one or more necessary database tables (e.g., "Candidate", "Position") are missing.</p>
                 <p className="mt-1">This usually means the database initialization script (`pg-init-scripts/init-db.sql`) did not run correctly when the PostgreSQL Docker container started.</p>
-                <p className="mt-2">Please refer to the troubleshooting steps in the `README.md` or go to the <Link href="/setup" className="text-primary hover:underline font-medium">Application Setup</Link> page to verify the schema and find guidance.</p>
+                <p className="mt-2">Please refer to the troubleshooting steps in the `README.md` or check the PostgreSQL container logs for details.</p>
             </div>
         )}
         <Button onClick={fetchCandidates} className="btn-hover-primary-gradient">Try Again</Button>
@@ -341,19 +339,28 @@ export default function CandidatesPage() {
         <h1 className="text-2xl font-semibold text-foreground hidden md:block">
           Candidate Management
         </h1>
-        <div className="w-full flex flex-col sm:flex-row gap-2">
-           <Button onClick={handleImportExcel} variant="outline" className="w-full sm:w-auto">
-            <FileUp className="mr-2 h-4 w-4" /> Import Candidates (Excel)
-          </Button>
-          <Button onClick={handleDownloadTemplate} variant="outline" className="w-full sm:w-auto">
-            <FileDown className="mr-2 h-4 w-4" /> Download Template
-          </Button>
-          <Button onClick={() => setIsCreateViaN8nModalOpen(true)} variant="outline" className="w-full sm:w-auto btn-hover-primary-gradient">
+        <div className="w-full flex flex-col sm:flex-row gap-2 items-center sm:justify-end">
+          <Button onClick={() => setIsCreateViaN8nModalOpen(true)} className="w-full sm:w-auto btn-primary-gradient">
             <Zap className="mr-2 h-4 w-4" /> Create via Resume (n8n)
           </Button>
-          <Button onClick={() => setIsAddModalOpen(true)} className="w-full sm:w-auto btn-primary-gradient">
-            <PlusCircle className="mr-2 h-4 w-4" /> Add Candidate Manually
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" className="w-full sm:w-auto">
+                More Actions <ChevronDown className="ml-2 h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => setIsAddModalOpen(true)}>
+                <PlusCircle className="mr-2 h-4 w-4" /> Add Candidate Manually
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={handleImportExcel}>
+                <FileUp className="mr-2 h-4 w-4" /> Import Candidates (Excel)
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={handleDownloadTemplate}>
+                <FileDown className="mr-2 h-4 w-4" /> Download Template
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
 
