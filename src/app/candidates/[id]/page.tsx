@@ -5,7 +5,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import type { Candidate, CandidateDetails, TransitionRecord, EducationEntry, ExperienceEntry, SkillEntry, JobSuitableEntry, PersonalInfo, N8NJobMatch, UserProfile, Position, PositionLevel } from '@/lib/types';
 import { useToast } from "@/hooks/use-toast";
-import { signIn, useSession } from 'next-auth/react';
+import { useSession } from 'next-auth/react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -14,7 +14,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { Progress } from '@/components/ui/progress';
 import { format, parseISO } from 'date-fns';
-import { ArrowLeft, Briefcase, CalendarDays, DollarSign, Edit, GraduationCap, HardDrive, Info, LinkIcon, ListChecks, Loader2, Mail, MapPin, MessageSquare, Percent, Phone, ServerCrash, ShieldAlert, Star, Tag, UploadCloud, User, UserCircle, UserCog, Users, Zap, ExternalLink, Edit3, Save, X, PlusCircle, Trash2 } from 'lucide-react';
+import { ArrowLeft, Briefcase, CalendarDays, DollarSign, Edit, GraduationCap, HardDrive, Info, LinkIcon, ListChecks, Loader2, Mail, MapPin, MessageSquare, Percent, Phone, ServerCrash, ShieldAlert, Star, Tag, UploadCloud, User, UserCircle, UserCog, Users, Zap, ExternalLink, Edit3, Save, X, PlusCircle, Trash2, Lightbulb } from 'lucide-react';
 import { UploadResumeModal } from '@/components/candidates/UploadResumeModal';
 import { ManageTransitionsModal } from '@/components/candidates/ManageTransitionsModal';
 import { EditPositionModal } from '@/components/positions/EditPositionModal';
@@ -113,6 +113,86 @@ const editCandidateDetailSchema = z.object({
 type EditCandidateFormValues = z.infer<typeof editCandidateDetailSchema>;
 
 
+interface RoleSuggestionSummaryProps {
+  candidate: Candidate | null;
+  allDbPositions: Position[];
+}
+
+const RoleSuggestionSummary: React.FC<RoleSuggestionSummaryProps> = ({ candidate, allDbPositions }) => {
+  if (!candidate || !candidate.parsedData?.job_matches || candidate.parsedData.job_matches.length === 0) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center text-lg"><Lightbulb className="mr-2 h-5 w-5 text-yellow-500" />Role Suggestion</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-sm text-muted-foreground">No n8n job match data to provide suggestions.</p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  const currentAppliedPositionId = candidate.positionId;
+  const currentAppliedPosition = allDbPositions.find(p => p.id === currentAppliedPositionId);
+  const currentFitScore = candidate.fitScore || 0;
+  let bestAlternativeMatch: N8NJobMatch | null = null;
+  let bestAlternativeScore = currentFitScore;
+  let bestAlternativePositionInDb: Position | null = null;
+
+  const openPositionsMap = new Map(allDbPositions.filter(p => p.isOpen).map(p => [p.title.toLowerCase(), p]));
+
+  for (const n8nMatch of candidate.parsedData.job_matches) {
+    const n8nMatchTitleLower = n8nMatch.job_title.toLowerCase();
+    const dbPositionMatch = openPositionsMap.get(n8nMatchTitleLower);
+
+    if (dbPositionMatch && dbPositionMatch.id !== currentAppliedPositionId) {
+      if (n8nMatch.fit_score > bestAlternativeScore && (n8nMatch.fit_score - currentFitScore >= 10)) { // Example: 10 points higher threshold
+        bestAlternativeScore = n8nMatch.fit_score;
+        bestAlternativeMatch = n8nMatch;
+        bestAlternativePositionInDb = dbPositionMatch;
+      }
+    }
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center text-lg"><Lightbulb className="mr-2 h-5 w-5 text-yellow-500" />Role Suggestion</CardTitle>
+      </CardHeader>
+      <CardContent>
+        {bestAlternativeMatch && bestAlternativePositionInDb ? (
+          <div className="p-3 border border-dashed border-primary/50 rounded-md bg-primary/5">
+            <p className="text-sm text-foreground">
+              Consider {candidate.name} for the role of <strong>{bestAlternativeMatch.job_title}</strong> (Open Position).
+            </p>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              n8n Fit Score for this role: <span className="font-semibold text-foreground">{bestAlternativeMatch.fit_score}%</span>.
+            </p>
+            {currentAppliedPosition ? (
+              <p className="text-xs text-muted-foreground">
+                Currently applied for: "{currentAppliedPosition.title}" (Fit Score: {currentFitScore}%)
+              </p>
+            ) : (
+               <p className="text-xs text-muted-foreground">Currently not formally applied to a specific position in our system (General Fit Score: {currentFitScore}%).</p>
+            )}
+            {bestAlternativeMatch.match_reasons && bestAlternativeMatch.match_reasons.length > 0 && (
+              <div className="mt-1.5">
+                <p className="text-xs font-medium text-muted-foreground">Top n8n Match Reasons for Suggested Role:</p>
+                <ul className="list-disc list-inside pl-3 text-xs text-foreground">
+                  {bestAlternativeMatch.match_reasons.slice(0, 2).map((reason, i) => <li key={`reason-sugg-${i}`}>{reason}</li>)}
+                </ul>
+              </div>
+            )}
+          </div>
+        ) : (
+          <p className="text-sm text-muted-foreground">Candidate appears well-suited for their current applied role, or no significantly stronger alternative open roles were identified from n8n matches.</p>
+        )}
+      </CardContent>
+    </Card>
+  );
+};
+
+
 export default function CandidateDetailPage() {
   const params = useParams();
   const router = useRouter();
@@ -142,7 +222,7 @@ export default function CandidateDetailPage() {
     defaultValues: {},
   });
 
-  const { control, register, handleSubmit, reset, setValue, watch, formState: { errors } } = form;
+  const { control, register, handleSubmit, reset, setValue, watch, formState: { errors, isSubmitting } } = form;
 
   const { fields: educationFields, append: appendEducation, remove: removeEducation } = useFieldArray({ control, name: "parsedData.education" });
   const { fields: experienceFields, append: appendExperience, remove: removeExperience } = useFieldArray({ control, name: "parsedData.experience" });
@@ -166,6 +246,7 @@ export default function CandidateDetailPage() {
       }
       const data: Candidate = await response.json();
       setCandidate(data);
+      console.log('Fetched candidate data:', data); // For debugging experience data
       reset({
         name: data.name,
         email: data.email,
@@ -192,7 +273,6 @@ export default function CandidateDetailPage() {
   }, [candidateId, reset]);
 
   const fetchRecruiters = useCallback(async () => {
-    // API is public, no session check needed here for fetching
     try {
       const response = await fetch('/api/users?role=Recruiter');
       if (!response.ok) throw new Error('Failed to fetch recruiters');
@@ -217,11 +297,10 @@ export default function CandidateDetailPage() {
 
 
   useEffect(() => {
-    // API is public, fetch directly
     if (candidateId) {
         fetchCandidateDetails();
-        fetchAllPositions();
-        fetchRecruiters(); // Fetch recruiters regardless of current user's role for assignment
+        fetchAllPositions(); 
+        fetchRecruiters(); 
     }
   }, [candidateId, fetchCandidateDetails, fetchRecruiters, fetchAllPositions]);
 
@@ -419,7 +498,6 @@ export default function CandidateDetailPage() {
   }
 
   const parsed = candidate.parsedData as CandidateDetails | null;
-  const canManageCandidate = true; // Public API
 
   const renderField = (label: string, value?: string | number | null, icon?: React.ElementType, isLink?: boolean, linkHref?: string, linkTarget?: string) => {
     if (value === undefined || value === null || value === '' || (typeof value === 'number' && isNaN(value))) return null;
@@ -450,15 +528,16 @@ export default function CandidateDetailPage() {
         <Button variant="outline" onClick={() => router.push('/candidates')}>
           <ArrowLeft className="mr-2 h-4 w-4" /> Back to All Candidates
         </Button>
-        {canManageCandidate && !isEditing && (
+        {!isEditing && (
             <Button onClick={() => setIsEditing(true)}><Edit3 className="mr-2 h-4 w-4"/> Edit Details</Button>
         )}
         {isEditing && (
             <div className="flex gap-2">
-                <Button onClick={handleSubmit(handleSaveDetails)} variant="default" className="btn-primary-gradient">
-                    <Save className="mr-2 h-4 w-4"/> Save Changes
+                <Button onClick={handleSubmit(handleSaveDetails)} variant="default" disabled={isSubmitting} className="btn-primary-gradient">
+                    {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Save className="mr-2 h-4 w-4"/>} 
+                    {isSubmitting ? 'Saving...' : 'Save Changes'}
                 </Button>
-                <Button variant="outline" onClick={handleCancelEdit}>
+                <Button variant="outline" onClick={handleCancelEdit} disabled={isSubmitting}>
                     <X className="mr-2 h-4 w-4"/> Cancel
                 </Button>
             </div>
@@ -467,6 +546,7 @@ export default function CandidateDetailPage() {
     <form onSubmit={handleSubmit(handleSaveDetails)}>
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-6">
+          {/* Candidate Info Card */}
           <Card className="shadow-lg">
             <CardHeader className="flex flex-row items-start justify-between gap-4">
               <div className="flex items-center gap-4">
@@ -515,7 +595,7 @@ export default function CandidateDetailPage() {
                                 </Select>
                             )}
                         />
-                        <Label htmlFor="fitScore" className="mt-1">Fit Score</Label>
+                        <Label htmlFor="fitScore" className="mt-1">Fit Score (Applied)</Label>
                         <Input id="fitScore" type="number" {...register('fitScore', { valueAsNumber: true })} className="w-32 text-right" />
 
                     </>
@@ -523,7 +603,7 @@ export default function CandidateDetailPage() {
                     <>
                         <Badge variant={getStatusBadgeVariant(candidate.status)} className="text-base px-3 py-1 capitalize">{candidate.status}</Badge>
                         <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                        <Percent className="h-4 w-4" /> Fit Score: <span className="font-semibold text-foreground">{(candidate.fitScore || 0)}%</span>
+                        <Percent className="h-4 w-4" /> Fit Score (Applied): <span className="font-semibold text-foreground">{(candidate.fitScore || 0)}%</span>
                         </div>
                         <Progress value={candidate.fitScore || 0} className="w-32 h-2" />
                     </>
@@ -552,7 +632,7 @@ export default function CandidateDetailPage() {
                     </>
                 ) : (
                     <>
-                        {renderField("Applied for", candidate.position?.title, Briefcase)}
+                        {renderField("Applied for", candidate.position?.title || 'N/A - General Application', Briefcase)}
                         {renderField("Application Date", candidate.applicationDate ? format(parseISO(candidate.applicationDate), "PPP") : 'N/A', CalendarDays)}
                         {renderField("CV Language", parsed?.cv_language, Tag)}
                     </>
@@ -565,8 +645,19 @@ export default function CandidateDetailPage() {
                   `${MINIO_PUBLIC_BASE_URL}/${MINIO_BUCKET}/${candidate.resumePath}`,
                   "_blank"
                 )}
+                 {(parsed?.associatedMatchDetails && !isEditing) && (
+                  <Card className="mt-4 bg-muted/50 p-3">
+                    <CardHeader className="p-0 pb-1">
+                      <CardTitle className="text-sm font-semibold flex items-center"><Zap className="mr-2 h-4 w-4 text-orange-500" /> Initial n8n Match Suggestion</CardTitle>
+                    </CardHeader>
+                    <CardContent className="p-0 text-xs space-y-0.5">
+                      {renderField("Matched Job", parsed.associatedMatchDetails.jobTitle)}
+                      {renderField("n8n Fit Score", `${parsed.associatedMatchDetails.fitScore}%`)}
+                    </CardContent>
+                  </Card>
+                )}
             </CardContent>
-            {canManageCandidate && !isEditing && (
+            {!isEditing && (
               <CardFooter className="gap-2">
                   <Button variant="outline" onClick={() => setIsUploadModalOpen(true)}><UploadCloud className="mr-2 h-4 w-4" /> Upload New Resume</Button>
                   <Button variant="outline" onClick={() => setIsTransitionsModalOpen(true)}><Edit className="mr-2 h-4 w-4" /> Manage Transitions</Button>
@@ -574,8 +665,14 @@ export default function CandidateDetailPage() {
             )}
           </Card>
 
-          {canManageCandidate && ( // Show recruiter assignment whether editing or not
-            <Card>
+          {/* Role Suggestion Summary Card - New */}
+          {!isEditing && (
+             <RoleSuggestionSummary candidate={candidate} allDbPositions={allDbPositions} />
+          )}
+
+
+          {/* Recruiter Assignment Card */}
+          <Card>
               <CardHeader>
                 <CardTitle className="flex items-center"><UserCog className="mr-2 h-5 w-5 text-primary"/>Assign Recruiter</CardTitle>
               </CardHeader>
@@ -627,30 +724,8 @@ export default function CandidateDetailPage() {
                  )}
               </CardContent>
             </Card>
-          )}
-
-          {parsed?.associatedMatchDetails && !isEditing && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center"><Zap className="mr-2 h-5 w-5 text-orange-500" /> Primary n8n Match Details</CardTitle>
-                <CardDescription>Details from automated matching process for the primary associated position.</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                {renderField("Matched Job Title", parsed.associatedMatchDetails.jobTitle)}
-                {renderField("Fit Score (n8n)", `${parsed.associatedMatchDetails.fitScore}%`)}
-                {parsed.associatedMatchDetails.n8nJobId && renderField("n8n Job ID", parsed.associatedMatchDetails.n8nJobId)}
-                {parsed.associatedMatchDetails.reasons && parsed.associatedMatchDetails.reasons.length > 0 && (
-                  <div>
-                    <h4 className="text-sm font-medium text-muted-foreground">Match Reasons:</h4>
-                    <ul className="list-disc list-inside pl-4 text-sm text-foreground">
-                      {parsed.associatedMatchDetails.reasons.map((reason, i) => <li key={i}>{reason}</li>)}
-                    </ul>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          )}
-
+          
+          {/* Personal Info Card */}
             <Card>
                 <CardHeader><CardTitle className="flex items-center"><UserCircle className="mr-2 h-5 w-5 text-primary"/>Personal Information</CardTitle></CardHeader>
                 <CardContent className="space-y-3">
@@ -686,7 +761,8 @@ export default function CandidateDetailPage() {
                     )}
                 </CardContent>
             </Card>
-
+          
+          {/* Education Card */}
             <Card>
                 <CardHeader><CardTitle className="flex items-center"><GraduationCap className="mr-2 h-5 w-5 text-primary"/>Education</CardTitle></CardHeader>
                 <CardContent>
@@ -732,7 +808,8 @@ export default function CandidateDetailPage() {
                     </ScrollArea>
                 </CardContent>
             </Card>
-
+          
+          {/* Experience Card */}
           <Card>
               <CardHeader><CardTitle className="flex items-center"><Briefcase className="mr-2 h-5 w-5 text-primary"/>Experience</CardTitle></CardHeader>
               <CardContent>
@@ -788,7 +865,6 @@ export default function CandidateDetailPage() {
                     ) : (
                         (parsed?.experience && parsed.experience.length > 0) ? (
                             <ul className="space-y-4">
-                                {console.log('Experience data for display:', parsed.experience)}
                                 {parsed.experience.map((exp, index) => (
                                 <li key={`exp-${index}-${exp.company || index}`} className="p-3 border rounded-md bg-muted/30">
                                     {renderField("Company", exp.company)}
@@ -813,6 +889,7 @@ export default function CandidateDetailPage() {
               </CardContent>
           </Card>
           
+          {/* Skills Card */}
             <Card>
               <CardHeader><CardTitle className="flex items-center"><Star className="mr-2 h-5 w-5 text-primary"/>Skills</CardTitle></CardHeader>
               <CardContent>
@@ -855,7 +932,8 @@ export default function CandidateDetailPage() {
                 </ScrollArea>
               </CardContent>
             </Card>
-
+          
+          {/* Job Suitability Card */}
             <Card>
               <CardHeader><CardTitle className="flex items-center"><UserCog className="mr-2 h-5 w-5 text-primary"/>Job Suitability</CardTitle></CardHeader>
               <CardContent>
@@ -896,7 +974,7 @@ export default function CandidateDetailPage() {
               </CardContent>
             </Card>
 
-
+          {/* Transition History Card */}
           <Card>
             <CardHeader><CardTitle className="flex items-center"><MessageSquare className="mr-2 h-5 w-5 text-primary"/>Transition History</CardTitle></CardHeader>
             <CardContent>
@@ -926,6 +1004,7 @@ export default function CandidateDetailPage() {
           </Card>
         </div>
 
+        {/* Right Column - n8n Job Matches */}
         <div className="lg:col-span-1 space-y-6">
           {parsed?.job_matches && parsed.job_matches.length > 0 && !isEditing && (
             <Card>
@@ -1002,3 +1081,6 @@ export default function CandidateDetailPage() {
     </FormProvider>
   );
 }
+
+
+    
