@@ -9,12 +9,12 @@ import type { Position } from "@/lib/types";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
-// import { signIn, useSession } from "next-auth/react"; // Removed as APIs are public
 import { AddPositionModal, type AddPositionFormValues } from '@/components/positions/AddPositionModal';
 import { EditPositionModal, type EditPositionFormValues } from '@/components/positions/EditPositionModal';
 import { PositionFilters, type PositionFilterValues } from '@/components/positions/PositionFilters';
+import { ImportPositionsModal } from '@/components/positions/ImportPositionsModal';
 import Link from 'next/link';
-import { useRouter, usePathname } from 'next/navigation'; // Removed usePathname as it's not used
+import { useRouter } from 'next/navigation';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -35,9 +35,11 @@ export default function PositionsPage() {
   const { toast } = useToast();
   const router = useRouter();
   const [fetchError, setFetchError] = useState<string | null>(null);
+  const [authError, setAuthError] = useState(false);
 
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [selectedPositionForEdit, setSelectedPositionForEdit] = useState<Position | null>(null);
   const [positionToDelete, setPositionToDelete] = useState<Position | null>(null);
 
@@ -45,11 +47,12 @@ export default function PositionsPage() {
   const fetchPositions = useCallback(async () => {
     setIsLoading(true);
     setFetchError(null);
+    setAuthError(false);
     try {
       const query = new URLSearchParams();
       if (filters.title) query.append('title', filters.title);
       if (filters.department) query.append('department', filters.department);
-      if (filters.isOpen && filters.isOpen !== "all") query.append('isOpen', filters.isOpen);
+      if (filters.isOpen && filters.isOpen !== "all") query.append('isOpen', String(filters.isOpen === "true")); // Convert to boolean string for API
       if (filters.positionLevel) query.append('position_level', filters.positionLevel);
 
 
@@ -57,6 +60,10 @@ export default function PositionsPage() {
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({ message: response.statusText || `Status: ${response.status}` }));
         const errorMessage = errorData.message || `Failed to fetch positions: ${response.statusText || `Status: ${response.status}`}`;
+        if (response.status === 401 || response.status === 403) { // Public API - this shouldn't be primary path
+            setAuthError(true);
+            return;
+        }
         setFetchError(errorMessage);
         setPositions([]);
         return;
@@ -66,10 +73,12 @@ export default function PositionsPage() {
     } catch (error) {
       console.error("Error fetching positions:", error);
       const errorMessage = (error as Error).message || "Could not load position data.";
-      if (errorMessage.toLowerCase().includes("relation") && errorMessage.toLowerCase().includes("does not exist")) {
-        setFetchError(`Database table "Position" missing. Please ensure the database schema is initialized. Check README or /setup for troubleshooting. Error: ${errorMessage}`);
-      } else {
-        setFetchError(errorMessage);
+      if (!(errorMessage.toLowerCase().includes("unauthorized") || errorMessage.toLowerCase().includes("forbidden"))) {
+        if (errorMessage.toLowerCase().includes("relation") && errorMessage.toLowerCase().includes("does not exist")) {
+            setFetchError(`Database table 'Position' might be missing. Please check the database schema setup. Refer to README.md or /setup for troubleshooting. Error: ${errorMessage}`);
+        } else {
+           setFetchError(errorMessage);
+        }
       }
       setPositions([]);
     } finally {
@@ -78,6 +87,7 @@ export default function PositionsPage() {
   }, [filters]); 
 
   useEffect(() => {
+    // API is public, fetch directly
     fetchPositions();
   }, [filters, fetchPositions]); 
 
@@ -174,15 +184,36 @@ export default function PositionsPage() {
   };
 
   const handleDownloadTemplate = () => {
-    toast({ title: "Not Implemented", description: "Download template functionality is not yet implemented." });
+    const positionTemplate = [{
+      "title": "Sample Position Title",
+      "department": "Sample Department",
+      "description": "Optional description here.",
+      "isOpen": true,
+      "position_level": "e.g., Senior, Mid-Level"
+    }];
+    const jsonString = `data:text/json;charset=utf-8,${encodeURIComponent(JSON.stringify(positionTemplate, null, 2))}`;
+    const link = document.createElement("a");
+    link.href = jsonString;
+    link.download = "position_import_template.json";
+    link.click();
+    toast({ title: "Template Downloaded", description: "Position JSON import template has been downloaded." });
   };
 
-  const handleImportExcel = () => {
-    toast({ title: "Not Implemented", description: "Import from Excel functionality is not yet implemented." });
-  };
+
+  if (authError) {
+    return (
+        <div className="flex flex-col items-center justify-center h-[calc(100vh-10rem)] text-center p-4">
+            <ServerCrash className="w-16 h-16 text-destructive mb-4" />
+            <h2 className="text-2xl font-semibold text-foreground mb-2">Access Denied</h2>
+            <p className="text-muted-foreground mb-4 max-w-md">You need to be signed in to view this page or the API requires authentication.</p>
+            {/* Assuming signIn function is available or redirect handled globally */}
+            <Button onClick={() => router.push('/auth/signin')} className="btn-hover-primary-gradient">Sign In</Button> 
+        </div>
+    );
+  }
 
 
-  if (isLoading && !fetchError) { 
+  if (isLoading && positions.length === 0 && !fetchError) { 
     return (
       <div className="flex h-screen w-screen items-center justify-center bg-background fixed inset-0 z-50">
         <Loader2 className="h-16 w-16 animate-spin text-primary" />
@@ -190,7 +221,7 @@ export default function PositionsPage() {
     );
   }
 
-  if (fetchError) {
+  if (fetchError && !authError) {
     const isMissingTableError = fetchError.toLowerCase().includes("relation") && fetchError.toLowerCase().includes("does not exist");
     return (
       <div className="flex flex-col items-center justify-center h-[calc(100vh-10rem)] text-center p-4">
@@ -214,11 +245,11 @@ export default function PositionsPage() {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-center gap-2">
          <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
-            <Button onClick={handleImportExcel} variant="outline" className="w-full sm:w-auto">
-                <FileUp className="mr-2 h-4 w-4" /> Import Positions (Excel)
+            <Button onClick={() => setIsImportModalOpen(true)} variant="outline" className="w-full sm:w-auto">
+                <FileUp className="mr-2 h-4 w-4" /> Import Positions (JSON)
             </Button>
             <Button onClick={handleDownloadTemplate} variant="outline" className="w-full sm:w-auto">
-                <FileDown className="mr-2 h-4 w-4" /> Download Template
+                <FileDown className="mr-2 h-4 w-4" /> Download Template (JSON)
             </Button>
          </div>
         <Button onClick={() => setIsAddModalOpen(true)} className="w-full sm:w-auto btn-primary-gradient">
@@ -242,7 +273,7 @@ export default function PositionsPage() {
               <Briefcase className="mx-auto h-12 w-12 text-muted-foreground animate-pulse" />
               <p className="mt-4 text-muted-foreground">Loading positions...</p>
             </div>
-          ) : !isLoading && positions.length === 0 && !fetchError ? (
+          ) : !isLoading && positions.length === 0 && !fetchError ? ( 
             <div className="text-center py-10">
               <Briefcase className="mx-auto h-12 w-12 text-muted-foreground" />
               <p className="mt-4 text-muted-foreground">No positions found. Try adjusting filters or add a new position.</p>
@@ -267,8 +298,8 @@ export default function PositionsPage() {
                 {positions.map((pos) => (
                   <TableRow key={pos.id} className="hover:bg-muted/50 transition-colors">
                     <TableCell className="font-medium">
-                      <Link href={`/positions/${pos.id}`} className="hover:underline text-primary">
-                        {pos.title}
+                      <Link href={`/positions/${pos.id}`} passHref>
+                        <span className="hover:underline text-primary cursor-pointer">{pos.title}</span>
                       </Link>
                     </TableCell>
                     <TableCell>{pos.department}</TableCell>
@@ -336,6 +367,12 @@ export default function PositionsPage() {
             position={selectedPositionForEdit}
         />
       )}
+      <ImportPositionsModal
+        isOpen={isImportModalOpen}
+        onOpenChange={setIsImportModalOpen}
+        onImportSuccess={fetchPositions} // Refresh list on successful import
+      />
     </div>
   );
 }
+

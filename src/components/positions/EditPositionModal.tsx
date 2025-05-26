@@ -74,13 +74,14 @@ export function EditPositionModal({ isOpen, onOpenChange, onEditPosition, positi
         try {
           const response = await fetch(`/api/candidates?positionId=${position.id}`);
           if (!response.ok) {
-            throw new Error('Failed to fetch associated candidates');
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.message || 'Failed to fetch associated candidates');
           }
           const data: Candidate[] = await response.json();
           setAssociatedCandidates(data.sort((a, b) => (b.fitScore || 0) - (a.fitScore || 0)));
         } catch (error) {
           console.error("Error fetching associated candidates:", error);
-          toast({ title: "Error", description: "Could not load candidates for this position.", variant: "destructive" });
+          toast({ title: "Error", description: (error as Error).message || "Could not load candidates for this position.", variant: "destructive" });
           setAssociatedCandidates([]);
         } finally {
           setIsLoadingCandidates(false);
@@ -109,7 +110,7 @@ export function EditPositionModal({ isOpen, onOpenChange, onEditPosition, positi
         setAssociatedCandidates([]);
       }
     }}>
-      <DialogContent className="sm:max-w-3xl max-h-[90vh] flex flex-col"> {/* Increased width */}
+      <DialogContent className="sm:max-w-3xl max-h-[90vh] flex flex-col">
         <DialogHeader>
           <DialogTitle className="flex items-center">
             <Edit3 className="mr-2 h-5 w-5 text-primary" /> Edit Position: {position?.title}
@@ -120,7 +121,7 @@ export function EditPositionModal({ isOpen, onOpenChange, onEditPosition, positi
         </DialogHeader>
         
         <div className="grid md:grid-cols-2 gap-6 flex-grow overflow-hidden py-4">
-          <ScrollArea className="md:pr-3">
+          <ScrollArea className="md:pr-3 h-full"> {/* Added h-full */}
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
               <div>
                 <Label htmlFor="title-edit">Position Title *</Label>
@@ -159,11 +160,11 @@ export function EditPositionModal({ isOpen, onOpenChange, onEditPosition, positi
             </form>
           </ScrollArea>
 
-          <div className="border-l md:pl-3 flex flex-col">
+          <div className="border-l md:pl-3 flex flex-col h-full"> {/* Added h-full */}
             <h4 className="text-md font-semibold mb-2 flex items-center">
               <Users className="mr-2 h-5 w-5 text-muted-foreground" /> Associated Candidates ({associatedCandidates.length})
             </h4>
-            <ScrollArea className="flex-grow h-[300px] border rounded-md p-2 bg-muted/10">
+            <ScrollArea className="flex-grow border rounded-md p-2 bg-muted/10">
               {isLoadingCandidates ? (
                 <div className="flex justify-center items-center h-full">
                   <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -175,7 +176,7 @@ export function EditPositionModal({ isOpen, onOpenChange, onEditPosition, positi
                       <Link href={`/candidates/${candidate.id}`} passHref>
                         <span className="font-medium text-foreground hover:underline cursor-pointer">{candidate.name}</span>
                       </Link>
-                      <p className="text-xs text-muted-foreground">{candidate.email} - Fit: {candidate.fitScore || 0}%</p>
+                      <p className="text-xs text-muted-foreground">{candidate.email} - Fit: {(candidate.fitScore || 0)}%</p>
                     </li>
                   ))}
                 </ul>
@@ -186,7 +187,7 @@ export function EditPositionModal({ isOpen, onOpenChange, onEditPosition, positi
           </div>
         </div>
         
-        <DialogFooter className="pt-4 border-t mt-auto"> {/* Use mt-auto to push footer down */}
+        <DialogFooter className="pt-4 border-t mt-auto">
           <DialogClose asChild>
             <Button type="button" variant="outline">
               Cancel
