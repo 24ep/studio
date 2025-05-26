@@ -13,14 +13,13 @@ import { AddCandidateModal, type AddCandidateFormValues } from '@/components/can
 import { UploadResumeModal } from '@/components/candidates/UploadResumeModal';
 import { CreateCandidateViaN8nModal } from '@/components/candidates/CreateCandidateViaN8nModal';
 import { ImportCandidatesModal } from '@/components/candidates/ImportCandidatesModal';
-import { signIn, useSession } from 'next-auth/react';
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
 
 
 export default function CandidatesPage() {
   const [allCandidates, setAllCandidates] = useState<Candidate[]>([]);
-  const [filters, setFilters] = useState<CandidateFilterValues>({ minFitScore: 0, maxFitScore: 100 });
+  const [filters, setFilters] = useState<CandidateFilterValues>({ minFitScore: 0, maxFitScore: 100, positionId: "__ALL_POSITIONS__" });
   const [isLoading, setIsLoading] = useState(true);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
@@ -29,22 +28,16 @@ export default function CandidatesPage() {
   const [selectedCandidateForUpload, setSelectedCandidateForUpload] = useState<Candidate | null>(null);
   const [availablePositions, setAvailablePositions] = useState<Position[]>([]);
   const { toast } = useToast();
-  const { data: session, status: sessionStatus } = useSession();
   const router = useRouter();
   const pathname = usePathname();
   const [fetchError, setFetchError] = useState<string | null>(null);
-  const [authError, setAuthError] = useState(false);
+
 
   const fetchCandidateById = useCallback(async (candidateId: string): Promise<Candidate | null> => {
     try {
       const response = await fetch(`/api/candidates/${candidateId}`);
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        if (response.status === 401 || response.status === 403) {
-            setAuthError(true);
-            signIn(undefined, { callbackUrl: `/candidates/${candidateId}` });
-            return null;
-        }
         console.error(`Failed to fetch candidate ${candidateId}: ${errorData.message || response.statusText}`);
         return null;
       }
@@ -60,34 +53,26 @@ export default function CandidatesPage() {
     if (updatedCandidate) {
       setAllCandidates(prev => prev.map(c => c.id === candidateId ? updatedCandidate : c));
     } else {
-      toast({ title: "Refresh Error", description: `Could not refresh data for candidate ${candidateId}. The candidate might have been deleted or there was a network issue.`, variant: "destructive"});
-       // Optionally, refetch all candidates if a single refresh fails and might indicate broader issues
-       // fetchCandidates(); 
+      toast({ title: "Refresh Error", description: `Could not refresh data for candidate ${candidateId}.`, variant: "destructive"});
+       fetchCandidates(); 
     }
-  }, [fetchCandidateById, toast]);
+  }, [fetchCandidateById, toast]); // Added fetchCandidates to dependency array for refresh
 
 
   const fetchPositions = useCallback(async () => {
-    // API is public
     try {
       const response = await fetch('/api/positions');
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({ message: response.statusText || `Status: ${response.status}` }));
         const errorMessage = errorData.message || `Failed to fetch positions: ${response.statusText || `Status: ${response.status}`}`;
-        if (response.status === 401) { // Should not happen for public API
-            setAuthError(true);
-            return;
-        }
-        // Do not set fetchError here to avoid masking candidate fetch errors
         console.error("Error fetching positions for filter: ", errorMessage);
         setAvailablePositions([]);
         return;
       }
       const data: Position[] = await response.json();
-      setAvailablePositions(data.filter(p => p.isOpen));
+      setAvailablePositions(data); // Fetch all, open or closed, for filtering context
     } catch (error) {
       console.error("Error fetching positions for modal:", error);
-      // Do not set fetchError here to avoid masking candidate fetch errors
       setAvailablePositions([]);
     }
   }, []);
@@ -95,11 +80,10 @@ export default function CandidatesPage() {
   const fetchCandidates = useCallback(async () => {
     setIsLoading(true);
     setFetchError(null);
-    setAuthError(false);
     try {
       const query = new URLSearchParams();
       if (filters.name) query.append('name', filters.name);
-      if (filters.positionId) query.append('positionId', filters.positionId);
+      if (filters.positionId && filters.positionId !== "__ALL_POSITIONS__") query.append('positionId', filters.positionId);
       if (filters.education) query.append('education', filters.education);
       if (filters.minFitScore !== undefined) query.append('minFitScore', String(filters.minFitScore));
       if (filters.maxFitScore !== undefined) query.append('maxFitScore', String(filters.maxFitScore));
@@ -108,10 +92,6 @@ export default function CandidatesPage() {
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({ message: response.statusText || `Status: ${response.status}` }));
         const errorMessage = errorData.message || `Failed to fetch candidates: ${response.statusText || `Status: ${response.status}`}`;
-         if (response.status === 401 || response.status === 403) { // API is public, this shouldn't be the primary error path for it
-            setAuthError(true); // but keep for robustness
-            return;
-        }
         setFetchError(errorMessage);
         setAllCandidates([]);
         return;
@@ -121,12 +101,10 @@ export default function CandidatesPage() {
     } catch (error) {
       console.error("Error fetching candidates:", error);
       const errorMessage = (error as Error).message || "Could not load candidate data.";
-      if (!(errorMessage.toLowerCase().includes("unauthorized") || errorMessage.toLowerCase().includes("forbidden"))) {
-         if (errorMessage.toLowerCase().includes("relation") && errorMessage.toLowerCase().includes("does not exist")) {
-           setFetchError(`Database table 'Candidate' or a related table might be missing. Please check the database schema setup. Refer to README.md or /setup for troubleshooting. Error: ${errorMessage}`);
-         } else {
-           setFetchError(errorMessage);
-         }
+      if (errorMessage.toLowerCase().includes("relation") && errorMessage.toLowerCase().includes("does not exist")) {
+         setFetchError(`Database table 'Candidate' or a related table might be missing. Please check the database schema setup. Refer to README.md for troubleshooting. Error: ${errorMessage}`);
+      } else {
+         setFetchError(errorMessage);
       }
       setAllCandidates([]);
     } finally {
@@ -135,14 +113,13 @@ export default function CandidatesPage() {
   }, [filters]);
 
   useEffect(() => {
-    // API is public, so fetch directly
     fetchCandidates();
     fetchPositions();
   }, [filters, fetchCandidates, fetchPositions]);
 
 
   const handleFilterChange = (newFilters: CandidateFilterValues) => {
-    setFilters(newFilters);
+    setFilters(prevFilters => ({ ...prevFilters, ...newFilters}));
   };
 
 
@@ -175,7 +152,7 @@ export default function CandidatesPage() {
           description: (error as Error).message || "Could not update candidate.",
           variant: "destructive",
       });
-      throw error; // Re-throw to be caught by modal if needed
+      throw error;
     }
   };
 
@@ -197,7 +174,7 @@ export default function CandidatesPage() {
           description: (error as Error).message || "Could not delete candidate.",
           variant: "destructive",
       });
-      throw error; // Re-throw to be caught by modal if needed
+      throw error;
     }
   };
 
@@ -205,7 +182,6 @@ export default function CandidatesPage() {
     setIsLoading(true);
     try {
       const apiPayload = {
-        // Name, email, phone will be derived by API if not top-level
         name: `${formData.personal_info.firstname} ${formData.personal_info.lastname}`.trim(),
         email: formData.contact_info.email,
         phone: formData.contact_info.phone || null,
@@ -217,7 +193,10 @@ export default function CandidatesPage() {
           personal_info: formData.personal_info,
           contact_info: formData.contact_info,
           education: formData.education,
-          experience: formData.experience,
+          experience: formData.experience?.map(exp => ({
+            ...exp,
+            postition_level: exp.postition_level === "___NOT_SPECIFIED___" ? undefined : exp.postition_level
+          })),
           skills: formData.skills?.map(s => ({
             segment_skill: s.segment_skill,
             skill: s.skill_string?.split(',').map(sk => sk.trim()).filter(sk => sk) || []
@@ -264,7 +243,6 @@ export default function CandidatesPage() {
     setAllCandidates(prev =>
       prev.map(c => (c.id === updatedCandidate.id ? updatedCandidate : c))
     );
-    // Toast is handled by UploadResumeModal or its form
   };
 
   const handleN8nProcessingStart = () => {
@@ -273,48 +251,40 @@ export default function CandidatesPage() {
       description: "Resume sent to n8n. Candidate list will refresh shortly if successful.",
     });
     setTimeout(() => {
-        fetchCandidates(); // Refresh the list after a delay
-    }, 15000); // 15 seconds delay, adjust as needed
+        fetchCandidates(); 
+    }, 15000); 
   };
 
-  const handleDownloadTemplate = () => {
-    // For JSON, create a dummy JSON structure and trigger download
-    const candidateTemplate = [{
-      "name": "John Doe (Optional, or derive from personal_info)",
-      "email": "john.doe@example.com (Optional, or derive from contact_info)",
-      "phone": "123-456-7890 (Optional)",
-      "positionId": "valid-position-uuid-if-known (Optional)",
-      "fitScore": 0,
-      "status": "Applied",
-      "parsedData": {
-        "cv_language": "English",
-        "personal_info": {"firstname": "John", "lastname": "Doe", "location": "City, Country"},
-        "contact_info": {"email": "john.doe@example.com", "phone": "123-456-7890"},
-        "education": [{"university": "State University", "major": "Computer Science", "period": "2018-2022"}],
-        "experience": [{"company": "Tech Corp", "position": "Intern", "period": "Jun 2021 - Aug 2021", "description": "Worked on..."}],
-        "skills": [{"segment_skill": "Programming", "skill": ["JavaScript", "Python"]}],
-        "job_suitable": [{"suitable_career": "Software Development", "suitable_job_position": "Junior Developer"}]
-      }
-    }];
-    const jsonString = `data:text/json;charset=utf-8,${encodeURIComponent(JSON.stringify(candidateTemplate, null, 2))}`;
-    const link = document.createElement("a");
-    link.href = jsonString;
-    link.download = "candidate_import_template.json";
-    link.click();
-    toast({ title: "Template Downloaded", description: "Candidate JSON import template has been downloaded." });
+  const handleDownloadTemplate = (type: 'json' | 'excel') => {
+    if (type === 'json') {
+      const candidateTemplate = [{
+        "name": "John Doe (Optional, or derive from personal_info)",
+        "email": "john.doe@example.com (Optional, or derive from contact_info)",
+        "phone": "123-456-7890 (Optional)",
+        "positionId": "valid-position-uuid-if-known (Optional)",
+        "fitScore": 0,
+        "status": "Applied",
+        "parsedData": {
+          "cv_language": "English",
+          "personal_info": {"firstname": "John", "lastname": "Doe", "location": "City, Country"},
+          "contact_info": {"email": "john.doe@example.com", "phone": "123-456-7890"},
+          "education": [{"university": "State University", "major": "Computer Science", "period": "2018-2022"}],
+          "experience": [{"company": "Tech Corp", "position": "Intern", "period": "Jun 2021 - Aug 2021", "description": "Worked on...", "postition_level": "entry level"}],
+          "skills": [{"segment_skill": "Programming", "skill": ["JavaScript", "Python"]}],
+          "job_suitable": [{"suitable_career": "Software Development", "suitable_job_position": "Junior Developer"}]
+        }
+      }];
+      const jsonString = `data:text/json;charset=utf-8,${encodeURIComponent(JSON.stringify(candidateTemplate, null, 2))}`;
+      const link = document.createElement("a");
+      link.href = jsonString;
+      link.download = "candidate_import_template.json";
+      link.click();
+      toast({ title: "Template Downloaded", description: "Candidate JSON import template has been downloaded." });
+    } else {
+        toast({ title: "Excel Template", description: "Excel template download not yet implemented.", variant: "default"});
+    }
   };
 
-
-  if (authError) {
-    return (
-        <div className="flex flex-col items-center justify-center h-[calc(100vh-10rem)] text-center p-4">
-            <ServerCrash className="w-16 h-16 text-destructive mb-4" />
-            <h2 className="text-2xl font-semibold text-foreground mb-2">Access Denied</h2>
-            <p className="text-muted-foreground mb-4 max-w-md">You need to be signed in to view this page or the API requires authentication.</p>
-            <Button onClick={() => signIn(undefined, { callbackUrl: pathname })} className="btn-hover-primary-gradient">Sign In</Button>
-        </div>
-    );
-  }
 
   if (isLoading && allCandidates.length === 0 && !fetchError ) {
     return (
@@ -324,7 +294,7 @@ export default function CandidatesPage() {
     );
   }
   
-  if (fetchError && !authError) {
+  if (fetchError) {
     const isMissingTableError = fetchError.toLowerCase().includes("relation") && fetchError.toLowerCase().includes("does not exist");
     return (
       <div className="flex flex-col items-center justify-center h-[calc(100vh-10rem)] text-center p-4">
@@ -367,7 +337,10 @@ export default function CandidatesPage() {
               <DropdownMenuItem onClick={() => setIsImportModalOpen(true)}>
                 <FileUp className="mr-2 h-4 w-4" /> Import Candidates (JSON)
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={handleDownloadTemplate}>
+              <DropdownMenuItem onClick={() => handleDownloadTemplate('excel')}>
+                <FileDown className="mr-2 h-4 w-4" /> Download Template (Excel)
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleDownloadTemplate('json')}>
                 <FileDown className="mr-2 h-4 w-4" /> Download Template (JSON)
               </DropdownMenuItem>
             </DropdownMenuContent>
@@ -375,7 +348,12 @@ export default function CandidatesPage() {
         </div>
       </div>
 
-      <CandidateFilters initialFilters={filters} onFilterChange={handleFilterChange} availablePositions={availablePositions} />
+      <CandidateFilters 
+        initialFilters={filters} 
+        onFilterChange={handleFilterChange} 
+        availablePositions={availablePositions} 
+        isLoading={isLoading && allCandidates.length > 0}
+      />
 
       {isLoading && allCandidates.length === 0 && !fetchError ? (
          <div className="flex flex-col items-center justify-center h-64 border rounded-lg bg-card shadow">
@@ -415,9 +393,8 @@ export default function CandidatesPage() {
       <ImportCandidatesModal
         isOpen={isImportModalOpen}
         onOpenChange={setIsImportModalOpen}
-        onImportSuccess={fetchCandidates} // Refresh list on successful import
+        onImportSuccess={fetchCandidates}
       />
     </div>
   );
 }
-
