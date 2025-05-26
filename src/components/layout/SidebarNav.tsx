@@ -1,9 +1,9 @@
 
 "use client"
-import * as React from "react"; 
+import * as React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Users, Briefcase, Settings, UsersRound, Code2, ListOrdered, Palette, Zap, Settings2, CheckSquare, FileText, ListTodo } from "lucide-react"; 
+import { LayoutDashboard, Users, Briefcase, Settings, UsersRound, Code2, ListOrdered, Palette, Zap, Settings2, CheckSquare, FileText, ListTodo } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   SidebarMenu,
@@ -62,11 +62,14 @@ export function SidebarNav() {
     if (isClient && isSetupDone) {
       items = items.filter(item => item.id !== "setup-link");
     }
+    // Filter out "Manage Users" if user is not Admin
+    if (userRole !== 'Admin') {
+      items = items.filter(item => item.href !== "/users");
+    }
     return items;
-  }, [isClient, isSetupDone]);
+  }, [isClient, isSetupDone, userRole]);
 
   const isSettingsSectionActive = settingsSubItems.some(item => pathname.startsWith(item.href));
-  
   const isMyTasksActive = pathname === "/my-tasks";
   const isAnyMainNavItemActive = mainNavItems.some(item => pathname === item.href || (item.href !== "/" && pathname.startsWith(item.href)));
 
@@ -78,8 +81,8 @@ export function SidebarNav() {
   React.useEffect(() => {
     if (isSettingsSectionActive) {
       setAccordionValue("settings-group");
-    } else if (isAnyMainNavItemActive || isMyTasksActive) { // Close accordion if a main nav or My Tasks item is active
-      setAccordionValue(undefined); 
+    } else if (isAnyMainNavItemActive || isMyTasksActive) { 
+      setAccordionValue(undefined);
     }
   }, [pathname, isSettingsSectionActive, isAnyMainNavItemActive, isMyTasksActive]);
 
@@ -94,7 +97,7 @@ export function SidebarNav() {
                 isActive={pathname === item.href || (item.href !== "/" && pathname.startsWith(item.href))}
                 className="w-full justify-start"
                 tooltip={item.label}
-                onClick={() => setAccordionValue(undefined)} 
+                onClick={() => setAccordionValue(undefined)}
                 size="default"
               >
                 <a>
@@ -117,7 +120,7 @@ export function SidebarNav() {
                 onClick={() => setAccordionValue(undefined)}
                 size="default"
               >
-                <a>
+                <a target="_blank" rel="noopener noreferrer"> {/* Added target and rel */}
                   <ListTodo className="h-5 w-5" />
                   <span className="truncate">My Tasks</span>
                 </a>
@@ -140,11 +143,11 @@ export function SidebarNav() {
                 <TooltipTrigger asChild>
                   <AccordionTrigger
                     className={cn(
-                      "flex w-full items-center gap-2 overflow-hidden rounded-md text-left text-sm outline-none ring-sidebar-ring transition-all focus-visible:ring-2 active:bg-sidebar-accent active:text-sidebar-accent-foreground disabled:pointer-events-none disabled:opacity-50", 
+                      "flex w-full items-center gap-2 overflow-hidden rounded-md px-3 py-2 text-left text-sm outline-none ring-sidebar-ring transition-all focus-visible:ring-2 active:bg-sidebar-accent active:text-sidebar-accent-foreground disabled:pointer-events-none disabled:opacity-50",
                       "justify-between group-data-[collapsible=icon]:!size-8 group-data-[collapsible=icon]:!p-2",
-                      isSettingsSectionActive && "bg-sidebar-active-background-l dark:bg-sidebar-active-background-d text-sidebar-active-foreground-l dark:text-sidebar-active-foreground-d", 
+                      isSettingsSectionActive && "bg-sidebar-active-background-l dark:bg-sidebar-active-background-d text-sidebar-active-foreground-l dark:text-sidebar-active-foreground-d",
                       !isSettingsSectionActive && "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
-                      "hover:no-underline px-3 py-2"
+                      "hover:no-underline"
                     )}
                   >
                     <div className="flex items-center gap-2 group-data-[collapsible=icon]:hidden">
@@ -168,7 +171,7 @@ export function SidebarNav() {
                         <SidebarMenuButton
                           isActive={pathname.startsWith(item.href)}
                           className="w-full justify-start"
-                          size="sm" 
+                          size="sm"
                           tooltip={item.label}
                         >
                           {item.icon && <item.icon className="h-4 w-4 ml-[1px]" />}
