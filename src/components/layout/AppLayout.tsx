@@ -22,7 +22,7 @@ const APP_LOGO_DATA_URL_KEY = 'appLogoDataUrl';
 
 function getPageTitle(pathname: string): string {
   if (pathname === "/") return "Dashboard";
-  if (pathname.startsWith("/candidates/(?!create-via-n8n)")) { 
+  if (pathname.startsWith("/candidates")) { 
     if (pathname.split('/').length === 3 && pathname.split('/')[2] !== '' && !pathname.includes('create-via-n8n')) {
         return "Candidate Details";
     }
@@ -35,7 +35,7 @@ function getPageTitle(pathname: string): string {
     return "Job Positions";
   }
   if (pathname.startsWith("/users")) return "Manage Users";
-  if (pathname.startsWith("/my-tasks")) return "My Tasks";
+  if (pathname.startsWith("/my-tasks")) return "My Task Board";
   if (pathname.startsWith("/settings/preferences")) return "Preferences";
   if (pathname.startsWith("/settings/integrations")) return "Integrations";
   if (pathname.startsWith("/api-docs")) return "API Documentation";
@@ -52,18 +52,22 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   const [isClient, setIsClient] = useState(false);
 
   const updateLogo = () => {
-    const storedLogo = localStorage.getItem(APP_LOGO_DATA_URL_KEY);
-    setAppLogoUrl(storedLogo);
+    if (typeof window !== 'undefined') {
+        const storedLogo = localStorage.getItem(APP_LOGO_DATA_URL_KEY);
+        setAppLogoUrl(storedLogo);
+    }
   };
 
   useEffect(() => {
     setIsClient(true);
     updateLogo();
 
-    window.addEventListener('logoChanged', updateLogo);
-    return () => {
-      window.removeEventListener('logoChanged', updateLogo);
-    };
+    if (typeof window !== 'undefined') {
+        window.addEventListener('logoChanged', updateLogo);
+        return () => {
+          window.removeEventListener('logoChanged', updateLogo);
+        };
+    }
   }, []);
 
 

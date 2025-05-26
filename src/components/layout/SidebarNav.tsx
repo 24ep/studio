@@ -31,7 +31,7 @@ const mainNavItems = [
   { href: "/positions", label: "Positions", icon: Briefcase },
 ];
 
-const myTasksNavItem = { href: "/my-tasks", label: "My Tasks", icon: ListTodo };
+const myTaskBoardNavItem = { href: "/my-tasks", label: "My Task Board", icon: ListTodo };
 
 const baseSettingsSubItems = [
   { href: "/settings/preferences", label: "Preferences", icon: Palette },
@@ -39,8 +39,6 @@ const baseSettingsSubItems = [
   { href: "/users", label: "Manage Users", icon: UsersRound, adminOnly: true },
   { href: "/api-docs", label: "API Docs", icon: Code2 },
   { href: "/logs", label: "Logs", icon: ListOrdered, adminOnly: true },
-  // { href: "/system-status", label: "System Status", icon: Info }, // Removed as per user request
-  // { href: "/setup", label: "Application Setup", icon: UserCog, clientOnly: true }, // Removed as per user request
 ];
 
 export function SidebarNav() {
@@ -50,46 +48,33 @@ export function SidebarNav() {
   const userRole = session?.user?.role;
 
   const [isClient, setIsClient] = React.useState(false);
-  // const [isSetupComplete, setIsSetupComplete] = React.useState(true); // Setup page removed
 
   React.useEffect(() => {
     setIsClient(true);
-    // const setupFlag = localStorage.getItem('setupComplete') === 'true'; // Setup page removed
-    // setIsSetupComplete(setupFlag); // Setup page removed
   }, []);
 
-  // Calculate initial active state for settings accordion trigger based *only* on pathname and base items
-  // This value is used for the `data-active` prop to ensure SSR consistency
   const initialIsSettingsSectionActive = React.useMemo(() => {
     return baseSettingsSubItems.some(item => {
-      // For "/users" and "/logs", only consider them active for initial SSR if the role is admin.
-      // If sessionStatus isn't 'authenticated', we can't know the role, so conservatively assume not active for these admin-only links.
-      if (item.adminOnly) {
-        // This check is tricky for SSR as session might not be fully resolved.
-        // For initial `data-active`, it's safer to be conservative or rely solely on path if roles are dynamic.
-        // A simpler approach for `data-active` might be to only check non-adminOnly items or always check path.
-        // Let's assume for `data-active` we just check path for now.
-        return pathname.startsWith(item.href);
+      if (item.adminOnly && userRole !== 'Admin' && sessionStatus === 'authenticated') { // Check only if session loaded and not admin
+        return false;
       }
       return pathname.startsWith(item.href);
     });
-  }, [pathname]);
+  }, [pathname, userRole, sessionStatus]);
 
 
   const clientSettingsSubItems = React.useMemo(() => {
     return baseSettingsSubItems.filter(item => {
-      // if (item.href === "/setup" && isSetupComplete) return false; // Setup page removed
       if (item.adminOnly && userRole !== 'Admin') {
         return false;
       }
       return true;
     });
-  }, [userRole]); // Removed isSetupComplete
+  }, [userRole]);
 
   const isAnyMainNavItemActive = mainNavItems.some(item => pathname === item.href || (item.href !== "/" && pathname.startsWith(item.href)));
-  const isMyTasksActive = myTasksNavItem.href === pathname || pathname.startsWith(myTasksNavItem.href + "/");
+  const isMyTaskBoardActive = myTaskBoardNavItem.href === pathname || pathname.startsWith(myTaskBoardNavItem.href + "/");
   
-  // This derived state is based on client-side resolved items and pathname
   const currentClientIsSettingsSectionActive = isClient && clientSettingsSubItems.some(item => pathname.startsWith(item.href));
 
   const [accordionValue, setAccordionValue] = React.useState<string | undefined>(() => {
@@ -102,12 +87,16 @@ export function SidebarNav() {
   React.useEffect(() => {
     if (isClient) {
       if (currentClientIsSettingsSectionActive) {
-        setAccordionValue("settings-group");
-      } else if (isAnyMainNavItemActive || isMyTasksActive) {
-        setAccordionValue(undefined);
+        if (accordionValue !== "settings-group") {
+          setAccordionValue("settings-group");
+        }
+      } else if (isAnyMainNavItemActive || isMyTaskBoardActive) {
+        if (accordionValue === "settings-group") {
+          setAccordionValue(undefined);
+        }
       }
     }
-  }, [pathname, currentClientIsSettingsSectionActive, isAnyMainNavItemActive, isMyTasksActive, isClient]);
+  }, [pathname, currentClientIsSettingsSectionActive, isAnyMainNavItemActive, isMyTaskBoardActive, isClient, accordionValue]);
 
 
   return (
@@ -138,24 +127,24 @@ export function SidebarNav() {
         ))}
 
         {isClient && (userRole === 'Recruiter' || userRole === 'Admin') && (
-          <SidebarMenuItem key={myTasksNavItem.href}>
-            <Link href={myTasksNavItem.href} passHref legacyBehavior>
+          <SidebarMenuItem key={myTaskBoardNavItem.href}>
+            <Link href={myTaskBoardNavItem.href} passHref legacyBehavior>
               <SidebarMenuButton
                 asChild
-                isActive={isMyTasksActive}
+                isActive={isMyTaskBoardActive}
                 className="w-full justify-start"
-                tooltip={myTasksNavItem.label}
+                tooltip={myTaskBoardNavItem.label}
                  onClick={() => {
                    if (accordionValue === "settings-group" && !currentClientIsSettingsSectionActive) {
                     setAccordionValue(undefined);
                    }
                  }}
                 size="default"
-                data-active={isMyTasksActive}
+                data-active={isMyTaskBoardActive}
               >
                 <a>
-                  <myTasksNavItem.icon className="h-5 w-5" />
-                  <span className="truncate">{myTasksNavItem.label}</span>
+                  <myTaskBoardNavItem.icon className="h-5 w-5" />
+                  <span className="truncate">{myTaskBoardNavItem.label}</span>
                 </a>
               </SidebarMenuButton>
             </Link>
@@ -199,35 +188,27 @@ export function SidebarNav() {
                   {isClient && clientSettingsSubItems.map((item) => (
                     <SidebarMenuItem key={item.href}>
                       <Link href={item.href} passHref legacyBehavior>
-                        {/*
-                          When Link has legacyBehavior, it expects an <a> tag as a direct child,
-                          or its child component must accept an href and forward a ref.
-                          SidebarMenuButton should render as a button by default.
-                          Link will wrap it with an <a> tag.
-                        */}
                         <SidebarMenuButton
                           isActive={pathname.startsWith(item.href)}
                           className="w-full justify-start"
                           size="sm"
                           tooltip={item.label}
                           data-active={pathname.startsWith(item.href)}
-                          // No asChild here, let Link render the <a>
                         >
-                          {/* Content directly inside SidebarMenuButton */}
                           {item.icon && <item.icon className="h-4 w-4 ml-[1px]" />}
                           <span className="truncate">{item.label}</span>
                         </SidebarMenuButton>
                       </Link>
                     </SidebarMenuItem>
                   ))}
-                  {!isClient && baseSettingsSubItems.filter(item => !item.adminOnly).map(item => (
+                  {!isClient && baseSettingsSubItems.filter(item => !item.adminOnly && item.href !== "/setup").map(item => ( // SSR fallback for non-admin items
                      <SidebarMenuItem key={item.href + "-ssr"}>
                         <SidebarMenuButton
-                          isActive={false}
-                          className="w-full justify-start pointer-events-none opacity-50"
+                          isActive={pathname.startsWith(item.href)}
+                          className="w-full justify-start"
                           size="sm"
                           tooltip={item.label}
-                          data-active={false}
+                          data-active={pathname.startsWith(item.href)}
                         >
                           {item.icon && <item.icon className="h-4 w-4 ml-[1px]" />}
                           <span className="truncate">{item.label}</span>
