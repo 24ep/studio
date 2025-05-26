@@ -1,7 +1,7 @@
 
 import { NextResponse, type NextRequest } from 'next/server';
-import { minioClient, MINIO_BUCKET_NAME } from '../../../lib/minio';
-import pool from '../../../lib/db';
+import { minioClient, MINIO_BUCKET_NAME } from '../../../../lib/minio';
+import pool from '../../../../lib/db';
 import type { Candidate } from '@/lib/types';
 import { logAudit } from '@/lib/auditLog';
 // import { getServerSession } from 'next-auth/next'; // Removed for public API
@@ -79,7 +79,7 @@ export async function POST(request: NextRequest) {
   } catch (dbError: any) {
      console.error('Database error fetching candidate:', dbError);
      await logAudit('ERROR', `Database error fetching candidate (ID: ${candidateId}) for resume upload. Error: ${dbError.message}`, 'API:Resumes', actingUserId, { targetCandidateId: candidateId });
-     return NextResponse.json({ message: 'Error verifying candidate', error: dbError.message || 'An unknown database error occurred while fetching candidate.' }, { status: 500 });
+     return NextResponse.json({ message: dbError.message || 'Error verifying candidate', error: dbError.message || 'An unknown database error occurred while fetching candidate.' }, { status: 500 });
   }
   
   try {
@@ -169,6 +169,7 @@ export async function POST(request: NextRequest) {
     if (error.code && error.message && typeof error.message === 'string') { 
         return NextResponse.json({ message: `MinIO Error: ${error.message}`, code: error.code }, { status: 500 });
     }
-    return NextResponse.json({ message: 'Error processing file upload', error: error.message || 'An unknown error occurred' }, { status: 500 });
+    return NextResponse.json({ message: error.message || 'Error processing file upload', error: error.message || 'An unknown error occurred' }, { status: 500 });
   }
 }
+
