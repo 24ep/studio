@@ -31,11 +31,9 @@ const mainNavItems = [
   { href: "/positions", label: "Positions", icon: Briefcase },
 ];
 
-// Base settings items - "Application Setup" will be filtered out if setup is complete
 const baseSettingsSubItems = [
   { href: "/settings/preferences", label: "Preferences", icon: Palette },
   { href: "/settings/integrations", label: "Integrations", icon: Zap },
-  { href: "/setup", label: "Application Setup", icon: Settings2, id: "setup-link" },
   { href: "/users", label: "Manage Users", icon: UsersRound },
   { href: "/api-docs", label: "API Docs", icon: Code2 },
   { href: "/logs", label: "Logs", icon: ListOrdered },
@@ -44,30 +42,17 @@ const baseSettingsSubItems = [
 export function SidebarNav() {
   const pathname = usePathname();
   const { state: sidebarState, isMobile } = useSidebar();
-  const [isClient, setIsClient] = React.useState(false);
-  const [isSetupDone, setIsSetupDone] = React.useState(false);
   const { data: session } = useSession();
   const userRole = session?.user?.role;
 
-  React.useEffect(() => {
-    setIsClient(true);
-    if (typeof window !== 'undefined') {
-      const setupComplete = localStorage.getItem('setupComplete') === 'true';
-      setIsSetupDone(setupComplete);
-    }
-  }, []);
-
   const settingsSubItems = React.useMemo(() => {
     let items = baseSettingsSubItems;
-    if (isClient && isSetupDone) {
-      items = items.filter(item => item.id !== "setup-link");
-    }
     // Filter out "Manage Users" if user is not Admin
     if (userRole !== 'Admin') {
       items = items.filter(item => item.href !== "/users");
     }
     return items;
-  }, [isClient, isSetupDone, userRole]);
+  }, [userRole]);
 
   const isSettingsSectionActive = settingsSubItems.some(item => pathname.startsWith(item.href));
   const isMyTasksActive = pathname === "/my-tasks";
@@ -81,7 +66,7 @@ export function SidebarNav() {
   React.useEffect(() => {
     if (isSettingsSectionActive) {
       setAccordionValue("settings-group");
-    } else if (isAnyMainNavItemActive || isMyTasksActive) { 
+    } else if (isAnyMainNavItemActive || isMyTasksActive) {
       setAccordionValue(undefined);
     }
   }, [pathname, isSettingsSectionActive, isAnyMainNavItemActive, isMyTasksActive]);
@@ -120,7 +105,7 @@ export function SidebarNav() {
                 onClick={() => setAccordionValue(undefined)}
                 size="default"
               >
-                <a target="_blank" rel="noopener noreferrer"> {/* Added target and rel */}
+                <a target="_blank" rel="noopener noreferrer">
                   <ListTodo className="h-5 w-5" />
                   <span className="truncate">My Tasks</span>
                 </a>
@@ -144,7 +129,7 @@ export function SidebarNav() {
                   <AccordionTrigger
                     className={cn(
                       "flex w-full items-center gap-2 overflow-hidden rounded-md px-3 py-2 text-left text-sm outline-none ring-sidebar-ring transition-all focus-visible:ring-2 active:bg-sidebar-accent active:text-sidebar-accent-foreground disabled:pointer-events-none disabled:opacity-50",
-                      "justify-between group-data-[collapsible=icon]:!size-8 group-data-[collapsible=icon]:!p-2",
+                      "my-1 justify-between group-data-[collapsible=icon]:!size-8 group-data-[collapsible=icon]:!p-2",
                       isSettingsSectionActive && "bg-sidebar-active-background-l dark:bg-sidebar-active-background-d text-sidebar-active-foreground-l dark:text-sidebar-active-foreground-d",
                       !isSettingsSectionActive && "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
                       "hover:no-underline"

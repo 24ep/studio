@@ -16,14 +16,13 @@ import Link from "next/link";
 import { Separator } from "@/components/ui/separator";
 import { Package2 } from "lucide-react";
 import { usePathname } from "next/navigation";
-import { SetupFlowHandler } from './SetupFlowHandler';
 import Image from 'next/image';
 
 const APP_LOGO_DATA_URL_KEY = 'appLogoDataUrl';
 
 function getPageTitle(pathname: string): string {
   if (pathname === "/") return "Dashboard";
-  if (pathname.startsWith("/candidates/(?!create-via-n8n)")) { // Exclude create-via-n8n
+  if (pathname.startsWith("/candidates/(?!create-via-n8n)")) { 
     if (pathname.split('/').length === 3 && pathname.split('/')[2] !== '' && !pathname.includes('create-via-n8n')) {
         return "Candidate Details";
     }
@@ -36,10 +35,9 @@ function getPageTitle(pathname: string): string {
     return "Job Positions";
   }
   if (pathname.startsWith("/users")) return "Manage Users";
-  if (pathname.startsWith("/my-tasks")) return "My Tasks"; // New page title
+  if (pathname.startsWith("/my-tasks")) return "My Tasks";
   if (pathname.startsWith("/settings/preferences")) return "Preferences";
   if (pathname.startsWith("/settings/integrations")) return "Integrations";
-  if (pathname.startsWith("/setup")) return "Application Setup";
   if (pathname.startsWith("/api-docs")) return "API Documentation";
   if (pathname.startsWith("/logs")) return "Application Logs";
   if (pathname.startsWith("/auth/signin")) return "Sign In";
@@ -60,7 +58,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     setIsClient(true);
-    updateLogo(); 
+    updateLogo();
 
     window.addEventListener('logoChanged', updateLogo);
     return () => {
@@ -74,7 +72,6 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <SetupFlowHandler>
       <SidebarProvider defaultOpen>
         <Sidebar collapsible="icon" variant="sidebar" className="border-r" data-sidebar="sidebar">
           <SidebarHeader className="p-4 flex items-center justify-center h-16">
@@ -112,6 +109,5 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
           </main>
         </SidebarInset>
       </SidebarProvider>
-    </SetupFlowHandler>
   );
 }
