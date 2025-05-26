@@ -14,18 +14,19 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { Progress } from '@/components/ui/progress';
 import { format, parseISO } from 'date-fns';
-import { ArrowLeft, Briefcase, CalendarDays, DollarSign, Edit, GraduationCap, HardDrive, Info, LinkIcon, ListChecks, Loader2, Mail, MapPin, MessageSquare, Percent, Phone, ServerCrash, ShieldAlert, Star, Tag, UploadCloud, User, UserCircle, UserCog, Users, Zap, ExternalLink, Edit3, Save, X } from 'lucide-react';
+import { ArrowLeft, Briefcase, CalendarDays, DollarSign, Edit, GraduationCap, HardDrive, Info, LinkIcon, ListChecks, Loader2, Mail, MapPin, MessageSquare, Percent, Phone, ServerCrash, ShieldAlert, Star, Tag, UploadCloud, User, UserCircle, UserCog, Users, Zap, ExternalLink, Edit3, Save, X, PlusCircle, Trash2 } from 'lucide-react';
 import { UploadResumeModal } from '@/components/candidates/UploadResumeModal';
 import { ManageTransitionsModal } from '@/components/candidates/ManageTransitionsModal';
-import { EditPositionModal, type EditPositionFormValues } from '@/components/positions/EditPositionModal';
+import { EditPositionModal } from '@/components/positions/EditPositionModal';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { useForm, Controller, useFieldArray } from 'react-hook-form';
+import { useForm, Controller, useFieldArray, FormProvider } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
+import { Checkbox } from '@/components/ui/checkbox';
 
 
 const getStatusBadgeVariant = (status: Candidate['status']): "default" | "secondary" | "destructive" | "outline" => {
@@ -37,7 +38,6 @@ const getStatusBadgeVariant = (status: Candidate['status']): "default" | "second
   }
 };
 
-// Zod schema for editing candidate details - fields are optional
 const personalInfoEditSchema = z.object({
   title_honorific: z.string().optional(),
   firstname: z.string().min(1, "First name is required").optional(),
@@ -54,7 +54,6 @@ const contactInfoEditSchema = z.object({
 }).deepPartial();
 
 const educationEntryEditSchema = z.object({
-    id: z.string().optional(), // Assuming existing entries have IDs
     major: z.string().optional(),
     field: z.string().optional(),
     period: z.string().optional(),
@@ -65,7 +64,6 @@ const educationEntryEditSchema = z.object({
 }).deepPartial();
 
 const experienceEntryEditSchema = z.object({
-    id: z.string().optional(),
     company: z.string().optional(),
     position: z.string().optional(),
     description: z.string().optional(),
@@ -76,14 +74,12 @@ const experienceEntryEditSchema = z.object({
 }).deepPartial();
 
 const skillEntryEditSchema = z.object({
-    id: z.string().optional(),
     segment_skill: z.string().optional(),
-    skill_string: z.string().optional(), // For comma-separated skills
-    skill: z.array(z.string()).optional(), // To hold the array of skills after processing
+    skill_string: z.string().optional(), 
+    skill: z.array(z.string()).optional(), 
 }).deepPartial();
 
 const jobSuitableEntryEditSchema = z.object({
-    id: z.string().optional(),
     suitable_career: z.string().optional(),
     suitable_job_position: z.string().optional(),
     suitable_job_level: z.string().optional(),
@@ -98,7 +94,6 @@ const candidateDetailsEditSchema = z.object({
   experience: z.array(experienceEntryEditSchema).optional(),
   skills: z.array(skillEntryEditSchema).optional(),
   job_suitable: z.array(jobSuitableEntryEditSchema).optional(),
-  // job_matches and associatedMatchDetails are typically read-only from n8n
 }).deepPartial();
 
 const editCandidateDetailSchema = z.object({
@@ -123,7 +118,7 @@ export default function CandidateDetailPage() {
   const [candidate, setCandidate] = useState<Candidate | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [fetchError, setFetchError] = useState<string | null>(null);
-  const [authError, setAuthError] = useState(false);
+  
   const [recruiters, setRecruiters] = useState<Pick<UserProfile, 'id' | 'name'>[]>([]);
   const [isAssigningRecruiter, setIsAssigningRecruiter] = useState(false);
 
@@ -144,20 +139,19 @@ export default function CandidateDetailPage() {
     defaultValues: {},
   });
 
-  const { control, register, handleSubmit, reset, setValue, watch } = form;
+  const { control, register, handleSubmit, reset, setValue, watch, formState: { errors } } = form;
 
-  const educationFieldArray = useFieldArray({ control, name: "parsedData.education" });
-  const experienceFieldArray = useFieldArray({ control, name: "parsedData.experience" });
-  const skillsFieldArray = useFieldArray({ control, name: "parsedData.skills" });
-  const jobSuitableFieldArray = useFieldArray({ control, name: "parsedData.job_suitable" });
+  const { fields: educationFields, append: appendEducation, remove: removeEducation } = useFieldArray({ control, name: "parsedData.education" });
+  const { fields: experienceFields, append: appendExperience, remove: removeExperience } = useFieldArray({ control, name: "parsedData.experience" });
+  const { fields: skillsFields, append: appendSkill, remove: removeSkill } = useFieldArray({ control, name: "parsedData.skills" });
+  const { fields: jobSuitableFields, append: appendJobSuitable, remove: removeJobSuitable } = useFieldArray({ control, name: "parsedData.job_suitable" });
 
 
   const fetchCandidateDetails = useCallback(async () => {
     if (!candidateId) return;
     setIsLoading(true);
     setFetchError(null);
-    setAuthError(false);
-
+    
     try {
       const response = await fetch(`/api/candidates/${candidateId}`);
       if (!response.ok) {
@@ -169,7 +163,6 @@ export default function CandidateDetailPage() {
       }
       const data: Candidate = await response.json();
       setCandidate(data);
-      // Reset form with fetched data
       reset({
         name: data.name,
         email: data.email,
@@ -210,7 +203,7 @@ export default function CandidateDetailPage() {
 
   const fetchAllPositions = useCallback(async () => {
     try {
-      const response = await fetch('/api/positions?isOpen=true');
+      const response = await fetch('/api/positions?isOpen=true'); // Fetch only open positions
       if (!response.ok) throw new Error('Failed to fetch positions');
       const data: Position[] = await response.json();
       setAllDbPositions(data);
@@ -221,18 +214,22 @@ export default function CandidateDetailPage() {
 
 
   useEffect(() => {
-    if (candidateId) {
-      fetchCandidateDetails();
-      fetchAllPositions();
-      if (sessionStatus === 'authenticated' && (session?.user?.role === 'Admin' || session?.user?.role === 'Recruiter')) {
-         fetchRecruiters();
-      }
+    if (sessionStatus === 'unauthenticated') {
+        signIn(undefined, { callbackUrl: `/candidates/${candidateId}` });
+    } else if (sessionStatus === 'authenticated') {
+        if (candidateId) {
+          fetchCandidateDetails();
+          fetchAllPositions();
+          if (session?.user?.role === 'Admin' || session?.user?.role === 'Recruiter') {
+             fetchRecruiters();
+          }
+        }
     }
-  }, [candidateId, sessionStatus, session, fetchCandidateDetails, fetchRecruiters, fetchAllPositions]);
+  }, [candidateId, sessionStatus, session, fetchCandidateDetails, fetchRecruiters, fetchAllPositions, signIn]);
 
   const handleUploadSuccess = (updatedCandidate: Candidate) => {
     setCandidate(updatedCandidate);
-    reset({ // Reset form with updated data
+    reset({
         name: updatedCandidate.name,
         email: updatedCandidate.email,
         phone: updatedCandidate.phone,
@@ -263,7 +260,7 @@ export default function CandidateDetailPage() {
             const errorData = await response.json().catch(() => ({ message: "An unknown error occurred" }));
             throw new Error(errorData.message || `Failed to update candidate status: ${response.statusText}`);
         }
-        await fetchCandidateDetails(); // Refetch details to get updated history
+        await fetchCandidateDetails(); 
         toast({ title: "Status Updated", description: `Candidate status updated to ${newStatus}.` });
     } catch (error) {
         toast({
@@ -289,7 +286,7 @@ export default function CandidateDetailPage() {
       }
       const updatedCandidate: Candidate = await response.json();
       setCandidate(updatedCandidate);
-      reset({ // Reset form with updated data
+      reset({ 
         name: updatedCandidate.name,
         email: updatedCandidate.email,
         phone: updatedCandidate.phone,
@@ -326,7 +323,7 @@ export default function CandidateDetailPage() {
   const handlePositionEdited = async () => {
     toast({ title: "Position Updated", description: "Position details have been saved." });
     setIsEditPositionModalOpen(false);
-    await fetchAllPositions(); // Refresh position list for n8n matching
+    await fetchAllPositions(); 
     if (candidateId) {
         await fetchCandidateDetails(); 
     }
@@ -335,21 +332,17 @@ export default function CandidateDetailPage() {
   const handleSaveDetails = async (data: EditCandidateFormValues) => {
     if (!candidate) return;
 
-    // Process skills string back into array
     const processedData = {
         ...data,
         parsedData: {
             ...data.parsedData,
             skills: data.parsedData?.skills?.map(s => ({
-                ...s,
-                skill: s.skill_string?.split(',').map(sk => sk.trim()).filter(sk => sk) || []
+                segment_skill: s.segment_skill,
+                skill: s.skill_string?.split(',').map(sk => sk.trim()).filter(sk => sk) || [],
             }))
         }
     };
-    // Remove skill_string if you don't want to save it
-    processedData.parsedData?.skills?.forEach(s => delete (s as any).skill_string);
-
-
+    
     try {
         const response = await fetch(`/api/candidates/${candidate.id}`, {
             method: 'PUT',
@@ -360,7 +353,7 @@ export default function CandidateDetailPage() {
             const errorData = await response.json().catch(() => ({ message: "An unknown error occurred" }));
             throw new Error(errorData.message || `Failed to update candidate: ${response.statusText}`);
         }
-        await fetchCandidateDetails(); // Refetch to get latest data
+        await fetchCandidateDetails(); 
         setIsEditing(false);
         toast({ title: "Details Saved", description: "Candidate details updated successfully." });
     } catch (error) {
@@ -370,7 +363,7 @@ export default function CandidateDetailPage() {
 
   const handleCancelEdit = () => {
     if (candidate) {
-        reset({ // Reset form to original candidate data
+        reset({ 
             name: candidate.name,
             email: candidate.email,
             phone: candidate.phone,
@@ -391,7 +384,7 @@ export default function CandidateDetailPage() {
   };
 
 
-  if (isLoading) {
+  if (sessionStatus === 'loading' || (isLoading && !fetchError)) {
     return (
       <div className="flex h-[calc(100vh-8rem)] items-center justify-center">
         <Loader2 className="h-16 w-16 animate-spin text-primary" />
@@ -445,10 +438,11 @@ export default function CandidateDetailPage() {
     );
   };
   
-  const MINIO_PUBLIC_BASE_URL = `http://localhost:9847`;
+  const MINIO_PUBLIC_BASE_URL = `http://localhost:9847`; 
   const MINIO_BUCKET = process.env.NEXT_PUBLIC_MINIO_BUCKET_NAME || "canditrack-resumes";
 
   return (
+    <FormProvider {...form}>
     <div className="space-y-6">
       <div className="flex justify-between items-center mb-4">
         <Button variant="outline" onClick={() => router.push('/candidates')}>
@@ -471,7 +465,6 @@ export default function CandidateDetailPage() {
     <form onSubmit={handleSubmit(handleSaveDetails)}>
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-6">
-          {/* Main Candidate Info Card */}
           <Card className="shadow-lg">
             <CardHeader className="flex flex-row items-start justify-between gap-4">
               <div className="flex items-center gap-4">
@@ -484,11 +477,11 @@ export default function CandidateDetailPage() {
                     <>
                       <Label htmlFor="name">Name</Label>
                       <Input id="name" {...register('name')} className="text-3xl font-bold" />
-                      {form.formState.errors.name && <p className="text-sm text-destructive">{form.formState.errors.name.message}</p>}
+                      {errors.name && <p className="text-sm text-destructive">{errors.name.message}</p>}
                       
                       <Label htmlFor="email" className="mt-1 block">Email</Label>
                       <Input id="email" {...register('email')} />
-                      {form.formState.errors.email && <p className="text-sm text-destructive">{form.formState.errors.email.message}</p>}
+                      {errors.email && <p className="text-sm text-destructive">{errors.email.message}</p>}
 
                       <Label htmlFor="phone" className="mt-1 block">Phone</Label>
                       <Input id="phone" {...register('phone')} />
@@ -540,7 +533,7 @@ export default function CandidateDetailPage() {
                     <>
                         <Label htmlFor="parsedData.cv_language">CV Language</Label>
                         <Input id="parsedData.cv_language" {...register('parsedData.cv_language')} />
-                        <Label htmlFor="positionId">Applied Position</Label>
+                        <Label htmlFor="positionId">Applied for Position</Label>
                          <Controller
                             name="positionId"
                             control={control}
@@ -635,7 +628,6 @@ export default function CandidateDetailPage() {
             </Card>
           )}
 
-          {/* Personal Info Card */}
             <Card>
                 <CardHeader><CardTitle className="flex items-center"><UserCircle className="mr-2 h-5 w-5 text-primary"/>Personal Information</CardTitle></CardHeader>
                 <CardContent className="space-y-3">
@@ -672,21 +664,29 @@ export default function CandidateDetailPage() {
                 </CardContent>
             </Card>
 
-          {/* Education Card */}
             <Card>
                 <CardHeader><CardTitle className="flex items-center"><GraduationCap className="mr-2 h-5 w-5 text-primary"/>Education</CardTitle></CardHeader>
                 <CardContent>
                     <ScrollArea className="h-[300px]">
                     {isEditing ? (
                         <div className="space-y-4">
-                            {educationFieldArray.fields.map((field, index) => (
-                                <div key={field.id} className="p-3 border rounded-md space-y-2 bg-muted/30">
+                            {educationFields.map((field, index) => (
+                                <div key={field.id} className="p-3 border rounded-md space-y-2 bg-muted/30 relative">
                                     <Input placeholder="University" {...register(`parsedData.education.${index}.university`)} />
                                     <Input placeholder="Major" {...register(`parsedData.education.${index}.major`)} />
                                     <Input placeholder="Field" {...register(`parsedData.education.${index}.field`)} />
-                                    {/* Add other education fields as inputs */}
+                                    <Input placeholder="Campus" {...register(`parsedData.education.${index}.campus`)} />
+                                    <Input placeholder="Period" {...register(`parsedData.education.${index}.period`)} />
+                                    <Input placeholder="Duration" {...register(`parsedData.education.${index}.duration`)} />
+                                    <Input placeholder="GPA" {...register(`parsedData.education.${index}.GPA`)} />
+                                    <Button type="button" variant="ghost" size="icon" className="absolute top-1 right-1 h-7 w-7" onClick={() => removeEducation(index)}>
+                                        <Trash2 className="h-4 w-4 text-destructive" />
+                                    </Button>
                                 </div>
                             ))}
+                             <Button type="button" variant="outline" className="mt-2" onClick={() => appendEducation({ university: '', major: '', field: '', campus: '', period: '', duration: '', GPA: '' })}>
+                                <PlusCircle className="mr-2 h-4 w-4" /> Add Education
+                            </Button>
                         </div>
                     ) : (
                         (parsed?.education && parsed.education.length > 0) ? (
@@ -710,21 +710,42 @@ export default function CandidateDetailPage() {
                 </CardContent>
             </Card>
 
-          {/* Experience Card */}
           <Card>
               <CardHeader><CardTitle className="flex items-center"><Briefcase className="mr-2 h-5 w-5 text-primary"/>Experience</CardTitle></CardHeader>
               <CardContent>
                   <ScrollArea className="h-[300px]">
                   {isEditing ? (
                         <div className="space-y-4">
-                            {experienceFieldArray.fields.map((field, index) => (
-                                <div key={field.id} className="p-3 border rounded-md space-y-2 bg-muted/30">
+                            {experienceFields.map((field, index) => (
+                                <div key={field.id} className="p-3 border rounded-md space-y-2 bg-muted/30 relative">
                                     <Input placeholder="Company" {...register(`parsedData.experience.${index}.company`)} />
                                     <Input placeholder="Position" {...register(`parsedData.experience.${index}.position`)} />
                                     <Textarea placeholder="Description" {...register(`parsedData.experience.${index}.description`)} />
-                                    {/* Add other experience fields as inputs */}
+                                    <Input placeholder="Period" {...register(`parsedData.experience.${index}.period`)} />
+                                    <Input placeholder="Duration" {...register(`parsedData.experience.${index}.duration`)} />
+                                    <Input placeholder="Position Level" {...register(`parsedData.experience.${index}.postition_level`)} />
+                                    <div className="flex items-center space-x-2">
+                                        <Controller
+                                            name={`parsedData.experience.${index}.is_current_position`}
+                                            control={control}
+                                            render={({ field: controllerField }) => (
+                                                <Checkbox
+                                                    id={`experience.${index}.is_current_position`}
+                                                    checked={!!controllerField.value}
+                                                    onCheckedChange={controllerField.onChange}
+                                                />
+                                            )}
+                                        />
+                                        <Label htmlFor={`experience.${index}.is_current_position`}>Current Position</Label>
+                                    </div>
+                                    <Button type="button" variant="ghost" size="icon" className="absolute top-1 right-1 h-7 w-7" onClick={() => removeExperience(index)}>
+                                        <Trash2 className="h-4 w-4 text-destructive" />
+                                    </Button>
                                 </div>
                             ))}
+                            <Button type="button" variant="outline" className="mt-2" onClick={() => appendExperience({ company: '', position: '', period: '', duration: '', is_current_position: false, description: '', postition_level: undefined })}>
+                                <PlusCircle className="mr-2 h-4 w-4" /> Add Experience
+                            </Button>
                         </div>
                     ) : (
                         (parsed?.experience && parsed.experience.length > 0) ? (
@@ -754,19 +775,24 @@ export default function CandidateDetailPage() {
               </CardContent>
           </Card>
           
-          {/* Skills Card */}
             <Card>
               <CardHeader><CardTitle className="flex items-center"><Star className="mr-2 h-5 w-5 text-primary"/>Skills</CardTitle></CardHeader>
               <CardContent>
                 <ScrollArea className="h-[300px]"> 
                 {isEditing ? (
                     <div className="space-y-4">
-                        {skillsFieldArray.fields.map((field, index) => (
-                            <div key={field.id} className="p-3 border rounded-md space-y-2 bg-muted/30">
+                        {skillsFields.map((field, index) => (
+                            <div key={field.id} className="p-3 border rounded-md space-y-2 bg-muted/30 relative">
                                 <Input placeholder="Skill Segment" {...register(`parsedData.skills.${index}.segment_skill`)} />
                                 <Textarea placeholder="Skills (comma-separated)" {...register(`parsedData.skills.${index}.skill_string`)} />
+                                <Button type="button" variant="ghost" size="icon" className="absolute top-1 right-1 h-7 w-7" onClick={() => removeSkill(index)}>
+                                    <Trash2 className="h-4 w-4 text-destructive" />
+                                </Button>
                             </div>
                         ))}
+                        <Button type="button" variant="outline" className="mt-2" onClick={() => appendSkill({ segment_skill: '', skill_string: '' })}>
+                            <PlusCircle className="mr-2 h-4 w-4" /> Add Skill Segment
+                        </Button>
                     </div>
                 ) : (
                     (parsed?.skills && parsed.skills.length > 0) ? (
@@ -792,20 +818,26 @@ export default function CandidateDetailPage() {
               </CardContent>
             </Card>
 
-          {/* Job Suitability Card */}
             <Card>
               <CardHeader><CardTitle className="flex items-center"><UserCog className="mr-2 h-5 w-5 text-primary"/>Job Suitability</CardTitle></CardHeader>
               <CardContent>
                 <ScrollArea className="h-[300px]"> 
                  {isEditing ? (
                     <div className="space-y-4">
-                        {jobSuitableFieldArray.fields.map((field, index) => (
-                            <div key={field.id} className="p-3 border rounded-md space-y-2 bg-muted/30">
+                        {jobSuitableFields.map((field, index) => (
+                            <div key={field.id} className="p-3 border rounded-md space-y-2 bg-muted/30 relative">
                                 <Input placeholder="Suitable Career Path" {...register(`parsedData.job_suitable.${index}.suitable_career`)} />
                                 <Input placeholder="Suitable Job Position" {...register(`parsedData.job_suitable.${index}.suitable_job_position`)} />
-                                {/* Add other job suitability fields as inputs */}
+                                <Input placeholder="Suitable Job Level" {...register(`parsedData.job_suitable.${index}.suitable_job_level`)} />
+                                <Input placeholder="Desired Salary (THB/Month)" {...register(`parsedData.job_suitable.${index}.suitable_salary_bath_month`)} />
+                                <Button type="button" variant="ghost" size="icon" className="absolute top-1 right-1 h-7 w-7" onClick={() => removeJobSuitable(index)}>
+                                    <Trash2 className="h-4 w-4 text-destructive" />
+                                </Button>
                             </div>
                         ))}
+                        <Button type="button" variant="outline" className="mt-2" onClick={() => appendJobSuitable({ suitable_career: '', suitable_job_position: '', suitable_job_level: '', suitable_salary_bath_month: '' })}>
+                            <PlusCircle className="mr-2 h-4 w-4" /> Add Job Suitability
+                        </Button>
                     </div>
                 ) : (
                     (parsed?.job_suitable && parsed.job_suitable.length > 0) ? (
@@ -864,7 +896,7 @@ export default function CandidateDetailPage() {
                 <CardDescription>Full list of job matches from n8n processing for this candidate.</CardDescription>
               </CardHeader>
               <CardContent>
-                <ScrollArea className="h-[calc(100vh-240px)]"> {/* Adjusted height */}
+                <ScrollArea className="h-[calc(100vh-240px)]">
                   <ul className="space-y-3">
                     {parsed.job_matches.map((match, index) => (
                       <li key={`match-${index}-${match.job_id || index}`} className="p-3 border rounded-md bg-muted/30">
@@ -923,5 +955,7 @@ export default function CandidateDetailPage() {
           />
       )}
     </div>
+    </FormProvider>
   );
 }
+
