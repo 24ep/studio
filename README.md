@@ -9,14 +9,14 @@ This is a Next.js application prototype for Candidate Matching, an Applicant Tra
 *   Candidate Management (View, Add, Update Status, Delete, Resume Upload via Modal)
     *   Detailed candidate profile structure.
     *   Transition history tracking with ability to edit notes and delete records.
+    *   Candidate assignment to Recruiters.
 *   Position Management (View, Add/Edit/Delete, including `position_level` attribute)
 *   User Management (View, Add/Edit/Delete users, manage module permissions - interacts with PostgreSQL)
     *   Passwords are hashed using `bcrypt`.
+*   My Task Board (for Recruiters/Admins to see assigned candidates)
 *   Settings:
     *   Preferences (Theme, App Logo - conceptual, stored in localStorage)
-    *   Integrations (n8n Webhook for specific candidate resumes, SMTP - conceptual, Generic PDF to n8n upload)
-    *   Setup Guide (Informational, with DB schema check)
-    *   System Status (Overview of service configurations, conceptual SSO toggle, MinIO bucket check)
+    *   Integrations (n8n Webhook for specific candidate resumes, SMTP - conceptual, Generic PDF to n8n upload for new candidate creation)
 *   API Documentation Page
 *   Application Logs Page (Database-backed, with audit trail for key actions)
 *   Authentication:
@@ -28,7 +28,6 @@ This is a Next.js application prototype for Candidate Matching, an Applicant Tra
 *   Generic PDF uploads (from Candidates page) can trigger a different n8n webhook (`N8N_GENERIC_PDF_WEBHOOK_URL`) for new candidate creation.
 *   Audit Logging: Key actions (CRUD operations, logins, logouts, settings changes) are logged to the database.
 *   Role-Based Access Control (RBAC) implemented for API endpoints.
-*   Initial Setup Flow: Directs to `/setup` page if setup isn't marked complete.
 
 ## Tech Stack
 
@@ -87,7 +86,7 @@ This is a Next.js application prototype for Candidate Matching, an Applicant Tra
 
 ### Default Admin Credentials (for Initial Setup)
 *   **Email:** `admin@ncc.com`
-*   **Password:** `nccadmin` (This is the plaintext password. The `init-db.sql` script includes a placeholder for its bcrypt hash. **You must replace this placeholder with the actual hash or create the admin user via the application after an initial admin with a hashed password is in the DB.**)
+*   **Password:** `nccadmin` (This is the plaintext password. The `pg-init-scripts/init-db.sql` script includes its bcrypt hash. **You must replace the placeholder `'YOUR_BCRYPT_HASH_OF_nccadmin_HERE'` in `pg-init-scripts/init-db.sql` ONLY if you change the default password or need to regenerate the hash for some reason.** The provided hash for `nccadmin` is `$2b$10$2BYzu2nUAp8IxK/SUReOd.yONfsS0IThoukn8zjvOFlamKvr58Rly`.)
 *   **It is highly recommended to change this password immediately after the first login.**
 
 ### Running with Docker (Recommended for Full Stack Development)
@@ -104,26 +103,26 @@ This is the recommended way to run the application along with its backend servic
     *   The PostgreSQL container is configured in `docker-compose.yml` to **automatically execute all `.sql` and `.sh` scripts located in the `./pg-init-scripts` directory** (relative to your project root) on its first startup when the database is initialized.
     *   **You must have a directory named `pg-init-scripts` in your project root, and your `init-db.sql` file (containing all `CREATE TABLE` statements) must be inside this directory.**
     *   This automatic initialization **only happens once when the `postgres_data` Docker volume is first created** (or if the volume is empty/being newly created).
-    *   The `init-db.sql` includes an `INSERT` statement for a default admin user (`admin@ncc.com`). **Crucially, you must replace the placeholder `'YOUR_BCRYPT_HASH_OF_nccadmin_HERE'` in `init-db.sql` with the actual bcrypt hash of the password `nccadmin`.** You can generate this hash using a simple Node.js script:
+    *   The `init-db.sql` includes an `INSERT` statement for a default admin user (`admin@ncc.com`) with a pre-hashed password.
+    *   If you need to generate a new hash for a different default password:
         ```javascript
         // save as generate-hash.js
         const bcrypt = require('bcrypt');
         const saltRounds = 10;
-        const plaintextPassword = 'nccadmin'; // Or your desired default password
+        const plaintextPassword = 'your_new_password';
 
         bcrypt.hash(plaintextPassword, saltRounds, function(err, hash) {
           if (err) { console.error("Error hashing password:", err); return; }
           console.log(`Bcrypt hash for '${plaintextPassword}': ${hash}`);
-          // Example output: $2b$10$abcdefghijklmnopqrstuv (use this in init-db.sql)
         });
         ```
-        Run `node generate-hash.js` and copy the output into `init-db.sql`.
+        Run `node generate-hash.js` and copy the output into `init-db.sql` for the admin user password.
 
 4.  **IMPORTANT: If Database Tables Are Missing (e.g., "relation ... does not exist" errors):**
     If your application logs errors indicating that tables like "Candidate", "Position", or "User" do not exist, it means the scripts in `./pg-init-scripts/` (specifically `init-db.sql`) did not run or did not complete successfully during the last PostgreSQL container startup.
     **This is almost always because the `postgres_data` Docker volume already existed with data, or there was an issue mounting the `./pg-init-scripts` directory into the container.**
 
-    **To force a fresh database initialization and ensure `init-db.sql` runs:**
+    **To force a fresh database initialization and ensure `pg-init-scripts/init-db.sql` runs:**
     *   **For Local Docker Compose:**
         1.  **Stop all services:** `docker-compose down`
         2.  **CRITICAL: Remove all Docker volumes (this will delete ALL existing database data and MinIO files):**
@@ -131,7 +130,7 @@ This is the recommended way to run the application along with its backend servic
             docker-compose down -v
             ```
             This command removes named volumes defined in `docker-compose.yml` and anonymous volumes attached to containers.
-        3.  **Ensure `pg-init-scripts/init-db.sql` exists and the admin password hash is updated:** Verify that you have a `pg-init-scripts` directory in your project root and that `init-db.sql` is inside it with the correct hashed password.
+        3.  **Ensure `pg-init-scripts/init-db.sql` exists and is correctly configured:** Verify that you have a `pg-init-scripts` directory in your project root and that `init-db.sql` is inside it with the correct hashed password for the default admin user.
         4.  **Restart the services (this will rebuild if necessary):**
             ```bash
             docker-compose up --build -d
@@ -142,25 +141,14 @@ This is the recommended way to run the application along with its backend servic
         2.  You may need to:
             *   Manually delete the `postgres_data` volume associated with your stack via Portainer's "Volumes" section before redeploying the stack. Ensure this volume is named according to your `docker-compose.yml` (e.g., `yourstackname_postgres_data`).
             *   Or, if Portainer provides an option during stack update/redeployment to "recreate" containers and specify "do not persist volumes" or "use new volumes" for the PostgreSQL service, select that.
-        3.  **Ensure `pg-init-scripts/init-db.sql` is in your Git repository and the admin password hash is updated:** If Portainer deploys from Git, the `pg-init-scripts` directory and its contents (with the hashed password in `init-db.sql`) must be in your repository for the volume mount to work correctly. The path `./pg-init-scripts` in `docker-compose.yml` will be relative to the root of the Git repository checked out by Portainer.
+        3.  **Ensure `pg-init-scripts/init-db.sql` is in your Git repository and correctly configured:** If Portainer deploys from Git, the `pg-init-scripts` directory and its contents (with the hashed password in `init-db.sql`) must be in your repository for the volume mount to work correctly. The path `./pg-init-scripts` in `docker-compose.yml` will be relative to the root of the Git repository checked out by Portainer.
         4.  After ensuring the volume will be fresh, deploy/update your stack in Portainer. The PostgreSQL container will initialize a new database and execute scripts from `/docker-entrypoint-initdb.d/`.
 
     **Check PostgreSQL Container Logs for Errors:**
     After startup, if you still suspect issues (especially if tables are missing), **check the logs of the PostgreSQL container**.
     *   Local Docker: `docker logs <your_postgres_container_name>` (Find `<your_postgres_container_name>` with `docker ps`)
     *   Portainer: View the logs for the PostgreSQL container within the Portainer UI.
-    Look for messages indicating scripts from `/docker-entrypoint-initdb.d/` are being run, or any SQL errors.
-
-    **Specific Error: `psql:/docker-entrypoint-initdb.d/init-db.sql: error: could not read from input file: Is a directory` (or similar if mounting a directory leads to issues with a file of the same name)**
-    If you see an error in the PostgreSQL container logs indicating it couldn't read `init-db.sql` (e.g., "Is a directory", "Permission denied", or the script simply doesn't execute), it means that when Docker (via `docker-compose` or Portainer) tried to mount your host's `./pg-init-scripts` directory (or the `init-db.sql` file directly in previous configurations) into the container at `/docker-entrypoint-initdb.d/`, it was incorrectly interpreted or inaccessible.
-    **Troubleshooting Steps for Mount/Execution Issues:**
-    1.  **Verify Host Directory and File:** Ensure that `pg-init-scripts` is a directory in your project root and `init-db.sql` is a file inside it. Check for typos.
-    2.  **Execution Context & Portainer:**
-        *   If running `docker-compose` commands manually, ensure you are running them from the **root directory of your project** (where `docker-compose.yml` and `pg-init-scripts` are located). The path `./pg-init-scripts` is relative to the directory where `docker-compose` is executed.
-        *   **If using Portainer from a Git repository:** Portainer checks out your repository. Ensure `pg-init-scripts/init-db.sql` is present at the correct path within your Git repository (i.e., `pg-init-scripts` directory at the root, containing `init-db.sql`). If the directory or file is missing or inaccessible in the checkout path Portainer uses, Docker might create an empty directory for the mount target inside the container, leading to the "Is a directory" error if the script itself is then expected.
-        *   **If using Portainer's Web Editor for the stack:** Relative host paths like `./pg-init-scripts` can be problematic as Portainer doesn't have a local file system context. For web editor deployments with Portainer, using a method where `init-db.sql` is already part of a custom image or accessible via a shared Docker volume pre-populated by other means is more reliable. **Using Portainer with a Git repository is generally recommended for such file mounts.**
-    3.  **File Permissions (Less Common):** On Linux/macOS, ensure that the `pg-init-scripts` directory and the `init-db.sql` file inside it have read permissions for the user running the Docker daemon or the user Portainer operates as.
-    4.  **Clean Docker State:** Even if you think the files are correct, try the full `docker-compose down -v` and `docker-compose up --build -d` again (or equivalent in Portainer by ensuring volumes are recreated). This can resolve issues related to Docker's cached state of volumes or mounts.
+    Look for messages indicating scripts from `/docker-entrypoint-initdb.d/` are being run, or any SQL errors. A common error is `psql:/docker-entrypoint-initdb.d/init-db.sql: error: could not read from input file: Is a directory`. This means Docker could not find the `pg-init-scripts` directory on the host and created an empty directory for the mount point inside the container. Ensure `pg-init-scripts` is at the root of your project (where `docker-compose.yml` is) and that Portainer has access to this path if deploying from Git.
 
 5.  **MinIO Bucket Creation (Automated by Application):**
     *   The MinIO bucket specified by `MINIO_BUCKET_NAME` (default: `canditrack-resumes`) will be **attempted to be created automatically by the application** when it first tries to interact with MinIO (e.g., during a resume upload via the `ensureBucketExists` function in `src/lib/minio.ts`).
