@@ -16,15 +16,14 @@ import { Progress } from '@/components/ui/progress';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 import { MoreHorizontal, FileEdit, Trash2, Eye, Users, UploadCloud } from 'lucide-react';
-import type { Candidate, CandidateStatus, TransitionRecord } from '@/lib/types';
+import type { Candidate, CandidateStatus } from '@/lib/types';
 import { ManageTransitionsModal } from './ManageTransitionsModal';
 import { format, parseISO } from 'date-fns';
-import { useToast } from "@/hooks/use-toast";
-import Link from 'next/link';
+import Link from 'next/link'; // Import Link
 
 interface CandidateTableProps {
   candidates: Candidate[];
-  onUpdateCandidate: (candidateId: string, status: CandidateStatus) => Promise<void>; // Removed newTransitionHistory from here
+  onUpdateCandidate: (candidateId: string, status: CandidateStatus) => Promise<void>;
   onDeleteCandidate: (candidateId: string) => Promise<void>;
   onOpenUploadModal: (candidate: Candidate) => void;
   isLoading?: boolean;
@@ -55,26 +54,10 @@ const getStatusBadgeVariant = (status: CandidateStatus): "default" | "secondary"
 export function CandidateTable({ candidates, onUpdateCandidate, onDeleteCandidate, onOpenUploadModal, isLoading, onRefreshCandidateData }: CandidateTableProps) {
   const [selectedCandidateForModal, setSelectedCandidateForModal] = useState<Candidate | null>(null);
   const [isTransitionsModalOpen, setIsTransitionsModalOpen] = useState(false);
-  const { toast } = useToast();
 
   const handleManageTransitionsClick = (candidate: Candidate) => {
     setSelectedCandidateForModal(candidate);
     setIsTransitionsModalOpen(true);
-  };
-
-  const handleDeleteClick = async (candidate: Candidate) => {
-    onDeleteCandidate(candidate.id);
-  };
-
-  const handleTransitionsModalUpdateCandidate = async (candidateId: string, status: CandidateStatus) => {
-    try {
-      await onUpdateCandidate(candidateId, status);
-      // Let parent handle UI update, modal might close or refresh based on parent's logic
-      // setIsTransitionsModalOpen(false); // Parent (CandidatesPage) should handle this if it re-fetches
-      onRefreshCandidateData(candidateId); // Ensure parent refreshes this specific candidate
-    } catch (error) {
-      // Error is toasted by parent or API call
-    }
   };
 
   if (isLoading) {
@@ -123,7 +106,9 @@ export function CandidateTable({ candidates, onUpdateCandidate, onDeleteCandidat
                       <AvatarFallback>{candidate.name.charAt(0).toUpperCase()}</AvatarFallback>
                     </Avatar>
                     <div>
-                      <div className="font-medium text-foreground">{candidate.name}</div>
+                      <Link href={`/candidates/${candidate.id}`} passHref>
+                        <span className="font-medium text-foreground hover:underline cursor-pointer">{candidate.name}</span>
+                      </Link>
                       <div className="text-xs text-muted-foreground">{candidate.email}</div>
                     </div>
                   </div>
@@ -137,7 +122,7 @@ export function CandidateTable({ candidates, onUpdateCandidate, onDeleteCandidat
                 <TableCell>
                   <div className="flex items-center gap-2">
                     <Progress value={candidate.fitScore || 0} className="h-2 w-[60px]" />
-                    <span className="text-sm font-medium text-foreground">{candidate.fitScore || 0}%</span>
+                    <span className="text-sm font-medium text-foreground">{(candidate.fitScore || 0)}%</span>
                   </div>
                 </TableCell>
                 <TableCell>
@@ -195,7 +180,7 @@ export function CandidateTable({ candidates, onUpdateCandidate, onDeleteCandidat
             setIsTransitionsModalOpen(isOpen);
             if (!isOpen) setSelectedCandidateForModal(null);
           }}
-          onUpdateCandidate={handleTransitionsModalUpdateCandidate}
+          onUpdateCandidate={onUpdateCandidate}
           onRefreshCandidateData={onRefreshCandidateData}
         />
       )}
