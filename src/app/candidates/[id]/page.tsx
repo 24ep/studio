@@ -3,7 +3,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import type { Candidate, CandidateDetails, TransitionRecord, EducationEntry, ExperienceEntry, SkillEntry, JobSuitableEntry, PersonalInfo, N8NJobMatch, UserProfile, Position } from '@/lib/types';
+import type { Candidate, CandidateDetails, TransitionRecord, EducationEntry, ExperienceEntry, SkillEntry, JobSuitableEntry, PersonalInfo, N8NJobMatch, UserProfile, Position, PositionLevel } from '@/lib/types';
 import { useToast } from "@/hooks/use-toast";
 import { signIn, useSession } from 'next-auth/react';
 import { Button } from '@/components/ui/button';
@@ -27,6 +27,9 @@ import { useForm, Controller, useFieldArray, FormProvider } from 'react-hook-for
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Checkbox } from '@/components/ui/checkbox';
+
+const PLACEHOLDER_VALUE_NONE = "___NOT_SPECIFIED___";
+const positionLevelOptions: PositionLevel[] = ['entry level', 'mid level', 'senior level', 'lead', 'manager', 'executive', 'officer', 'leader'];
 
 
 const getStatusBadgeVariant = (status: Candidate['status']): "default" | "secondary" | "destructive" | "outline" => {
@@ -70,7 +73,7 @@ const experienceEntryEditSchema = z.object({
     period: z.string().optional(),
     duration: z.string().optional(),
     is_current_position: z.boolean().optional(),
-    postition_level: z.string().optional(),
+    postition_level: z.string().optional().nullable(),
 }).deepPartial();
 
 const skillEntryEditSchema = z.object({
@@ -189,7 +192,7 @@ export default function CandidateDetailPage() {
   }, [candidateId, reset]);
 
   const fetchRecruiters = useCallback(async () => {
-    if (sessionStatus !== 'authenticated') return; 
+    // API is public, no session check needed here for fetching
     try {
       const response = await fetch('/api/users?role=Recruiter');
       if (!response.ok) throw new Error('Failed to fetch recruiters');
@@ -199,7 +202,7 @@ export default function CandidateDetailPage() {
       console.error("Error fetching recruiters:", error);
       toast({ title: "Error", description: "Could not load recruiters for assignment.", variant: "destructive" });
     }
-  }, [sessionStatus, toast]);
+  }, [toast]);
 
   const fetchAllPositions = useCallback(async () => {
     try {
@@ -214,18 +217,13 @@ export default function CandidateDetailPage() {
 
 
   useEffect(() => {
-    if (sessionStatus === 'unauthenticated') {
-        signIn(undefined, { callbackUrl: `/candidates/${candidateId}` });
-    } else if (sessionStatus === 'authenticated') {
-        if (candidateId) {
-          fetchCandidateDetails();
-          fetchAllPositions();
-          if (session?.user?.role === 'Admin' || session?.user?.role === 'Recruiter') {
-             fetchRecruiters();
-          }
-        }
+    // API is public, fetch directly
+    if (candidateId) {
+        fetchCandidateDetails();
+        fetchAllPositions();
+        fetchRecruiters(); // Fetch recruiters regardless of current user's role for assignment
     }
-  }, [candidateId, sessionStatus, session, fetchCandidateDetails, fetchRecruiters, fetchAllPositions, signIn]);
+  }, [candidateId, fetchCandidateDetails, fetchRecruiters, fetchAllPositions]);
 
   const handleUploadSuccess = (updatedCandidate: Candidate) => {
     setCandidate(updatedCandidate);
@@ -339,6 +337,10 @@ export default function CandidateDetailPage() {
             skills: data.parsedData?.skills?.map(s => ({
                 segment_skill: s.segment_skill,
                 skill: s.skill_string?.split(',').map(sk => sk.trim()).filter(sk => sk) || [],
+            })),
+            experience: data.parsedData?.experience?.map(exp => ({
+                ...exp,
+                postition_level: exp.postition_level === PLACEHOLDER_VALUE_NONE ? null : exp.postition_level
             }))
         }
     };
@@ -417,7 +419,7 @@ export default function CandidateDetailPage() {
   }
 
   const parsed = candidate.parsedData as CandidateDetails | null;
-  const canManageCandidate = session?.user?.role === 'Admin' || session?.user?.role === 'Recruiter';
+  const canManageCandidate = true; // Public API
 
   const renderField = (label: string, value?: string | number | null, icon?: React.ElementType, isLink?: boolean, linkHref?: string, linkTarget?: string) => {
     if (value === undefined || value === null || value === '' || (typeof value === 'number' && isNaN(value))) return null;
@@ -438,7 +440,7 @@ export default function CandidateDetailPage() {
     );
   };
   
-  const MINIO_PUBLIC_BASE_URL = `http://localhost:9847`; 
+  const MINIO_PUBLIC_BASE_URL = process.env.NEXT_PUBLIC_MINIO_URL || `http://localhost:9847`; 
   const MINIO_BUCKET = process.env.NEXT_PUBLIC_MINIO_BUCKET_NAME || "canditrack-resumes";
 
   return (
@@ -572,36 +574,57 @@ export default function CandidateDetailPage() {
             )}
           </Card>
 
-          {canManageCandidate && !isEditing && (
+          {canManageCandidate && ( // Show recruiter assignment whether editing or not
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center"><UserCog className="mr-2 h-5 w-5 text-primary"/>Assign Recruiter</CardTitle>
               </CardHeader>
               <CardContent>
-                {candidate.recruiter ? (
-                  <p className="text-sm mb-2">Currently assigned to: <span className="font-semibold">{candidate.recruiter.name}</span></p>
-                ) : (
-                  <p className="text-sm text-muted-foreground mb-2">Not assigned to any recruiter.</p>
-                )}
-                <div className="flex items-center gap-2">
-                  <Select
-                    value={candidate.recruiterId || "unassigned"}
-                    onValueChange={(value) => handleAssignRecruiter(value === "unassigned" ? null : value)}
-                    disabled={isAssigningRecruiter || recruiters.length === 0}
-                  >
-                    <SelectTrigger className="w-full md:w-[280px]">
-                      <SelectValue placeholder="Select Recruiter" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="unassigned">Unassign</SelectItem>
-                      {recruiters.map(r => (
-                        <SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  {isAssigningRecruiter && <Loader2 className="h-5 w-5 animate-spin" />}
-                </div>
-                {recruiters.length === 0 && <p className="text-xs text-muted-foreground mt-1">No recruiters available for assignment.</p>}
+                 {isEditing ? (
+                     <>
+                        <Label htmlFor="recruiterId">Assigned Recruiter</Label>
+                        <Controller
+                            name="recruiterId"
+                            control={control}
+                            render={({ field }) => (
+                                <Select onValueChange={(value) => field.onChange(value === "unassigned" ? null : value)} value={field.value ?? "unassigned"}>
+                                    <SelectTrigger id="recruiterId" className="mt-1"><SelectValue placeholder="Select Recruiter" /></SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="unassigned">Unassign</SelectItem>
+                                        {recruiters.map(r => <SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>)}
+                                    </SelectContent>
+                                </Select>
+                            )}
+                        />
+                     </>
+                 ) : (
+                    <>
+                        {candidate.recruiter ? (
+                        <p className="text-sm mb-2">Currently assigned to: <span className="font-semibold">{candidate.recruiter.name}</span></p>
+                        ) : (
+                        <p className="text-sm text-muted-foreground mb-2">Not assigned to any recruiter.</p>
+                        )}
+                        <div className="flex items-center gap-2">
+                        <Select
+                            value={candidate.recruiterId || "unassigned"}
+                            onValueChange={(value) => handleAssignRecruiter(value === "unassigned" ? null : value)}
+                            disabled={isAssigningRecruiter || recruiters.length === 0}
+                        >
+                            <SelectTrigger className="w-full md:w-[280px]">
+                            <SelectValue placeholder="Select Recruiter" />
+                            </SelectTrigger>
+                            <SelectContent>
+                            <SelectItem value="unassigned">Unassign</SelectItem>
+                            {recruiters.map(r => (
+                                <SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>
+                            ))}
+                            </SelectContent>
+                        </Select>
+                        {isAssigningRecruiter && <Loader2 className="h-5 w-5 animate-spin" />}
+                        </div>
+                        {recruiters.length === 0 && <p className="text-xs text-muted-foreground mt-1">No recruiters available for assignment.</p>}
+                    </>
+                 )}
               </CardContent>
             </Card>
           )}
@@ -704,7 +727,7 @@ export default function CandidateDetailPage() {
                                 </li>
                                 ))}
                             </ul>
-                        ) : <p className="text-sm text-muted-foreground">No education details provided.</p>
+                        ) : <div className="text-sm text-muted-foreground text-center py-4">No education details provided.</div>
                     )}
                     </ScrollArea>
                 </CardContent>
@@ -723,7 +746,22 @@ export default function CandidateDetailPage() {
                                     <Textarea placeholder="Description" {...register(`parsedData.experience.${index}.description`)} />
                                     <Input placeholder="Period" {...register(`parsedData.experience.${index}.period`)} />
                                     <Input placeholder="Duration" {...register(`parsedData.experience.${index}.duration`)} />
-                                    <Input placeholder="Position Level" {...register(`parsedData.experience.${index}.postition_level`)} />
+                                     <Controller
+                                        name={`parsedData.experience.${index}.postition_level`}
+                                        control={control}
+                                        render={({ field: controllerField }) => (
+                                            <Select
+                                                onValueChange={(value) => controllerField.onChange(value === PLACEHOLDER_VALUE_NONE ? null : value)}
+                                                value={controllerField.value ?? PLACEHOLDER_VALUE_NONE}
+                                            >
+                                            <SelectTrigger><SelectValue placeholder="Position Level" /></SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value={PLACEHOLDER_VALUE_NONE}>N/A / Not Specified</SelectItem>
+                                                {positionLevelOptions.map(level => <SelectItem key={level} value={level}>{level.charAt(0).toUpperCase() + level.slice(1)}</SelectItem>)}
+                                            </SelectContent>
+                                            </Select>
+                                        )}
+                                    />
                                     <div className="flex items-center space-x-2">
                                         <Controller
                                             name={`parsedData.experience.${index}.is_current_position`}
@@ -743,14 +781,14 @@ export default function CandidateDetailPage() {
                                     </Button>
                                 </div>
                             ))}
-                            <Button type="button" variant="outline" className="mt-2" onClick={() => appendExperience({ company: '', position: '', period: '', duration: '', is_current_position: false, description: '', postition_level: undefined })}>
+                            <Button type="button" variant="outline" className="mt-2" onClick={() => appendExperience({ company: '', position: '', period: '', duration: '', is_current_position: false, description: '', postition_level: null })}>
                                 <PlusCircle className="mr-2 h-4 w-4" /> Add Experience
                             </Button>
                         </div>
                     ) : (
                         (parsed?.experience && parsed.experience.length > 0) ? (
                             <ul className="space-y-4">
-                                {console.log('Experience data:', parsed.experience)}
+                                {console.log('Experience data for display:', parsed.experience)}
                                 {parsed.experience.map((exp, index) => (
                                 <li key={`exp-${index}-${exp.company || index}`} className="p-3 border rounded-md bg-muted/30">
                                     {renderField("Company", exp.company)}
@@ -769,7 +807,7 @@ export default function CandidateDetailPage() {
                                 </li>
                                 ))}
                             </ul>
-                        ) : <p className="text-sm text-muted-foreground">No experience details provided.</p>
+                        ) : <div className="text-sm text-muted-foreground text-center py-4">No experience details provided.</div>
                     )}
                   </ScrollArea>
               </CardContent>
@@ -812,7 +850,7 @@ export default function CandidateDetailPage() {
                             </li>
                             ))}
                         </ul>
-                    ) : <p className="text-sm text-muted-foreground">No skill details provided.</p>
+                    ) : <div className="text-sm text-muted-foreground text-center py-4">No skill details provided.</div>
                 )}
                 </ScrollArea>
               </CardContent>
@@ -852,7 +890,7 @@ export default function CandidateDetailPage() {
                             </li>
                             ))}
                         </ul>
-                    ) : <p className="text-sm text-muted-foreground">No job suitability details provided.</p>
+                    ) : <div className="text-sm text-muted-foreground text-center py-4">No job suitability details provided.</div>
                 )}
                 </ScrollArea>
               </CardContent>
@@ -883,7 +921,7 @@ export default function CandidateDetailPage() {
                   ))}
                 </ul>
                 </ScrollArea>
-              ) : <p className="text-sm text-muted-foreground">No transition history available.</p>}
+              ) : <div className="text-sm text-muted-foreground text-center py-4">No transition history available.</div>}
             </CardContent>
           </Card>
         </div>
@@ -896,7 +934,7 @@ export default function CandidateDetailPage() {
                 <CardDescription>Full list of job matches from n8n processing for this candidate.</CardDescription>
               </CardHeader>
               <CardContent>
-                <ScrollArea className="h-[calc(100vh-240px)]">
+                <ScrollArea className="h-[calc(100vh-240px)]"> {/* Adjust height as needed */}
                   <ul className="space-y-3">
                     {parsed.job_matches.map((match, index) => (
                       <li key={`match-${index}-${match.job_id || index}`} className="p-3 border rounded-md bg-muted/30">
@@ -925,11 +963,17 @@ export default function CandidateDetailPage() {
               </CardContent>
             </Card>
           )}
+           {!isEditing && (!parsed?.job_matches || parsed.job_matches.length === 0) && (
+             <Card>
+                <CardHeader><CardTitle className="flex items-center"><ListChecks className="mr-2 h-5 w-5 text-blue-600" />All n8n Job Matches</CardTitle></CardHeader>
+                <CardContent><p className="text-sm text-muted-foreground text-center py-4">No n8n job match data available.</p></CardContent>
+             </Card>
+           )}
         </div>
       </div>
     </form>
 
-      {candidate && canManageCandidate && (
+      {candidate && (
         <>
           <UploadResumeModal
               isOpen={isUploadModalOpen}
@@ -958,4 +1002,3 @@ export default function CandidateDetailPage() {
     </FormProvider>
   );
 }
-

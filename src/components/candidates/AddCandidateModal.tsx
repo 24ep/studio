@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
   Dialog,
   DialogContent,
@@ -27,22 +28,14 @@ import {
 } from '@/components/ui/select';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { PlusCircle, Trash2, UserPlus } from 'lucide-react';
-import type { CandidateDetails, PersonalInfo, ContactInfo, EducationEntry, ExperienceEntry, SkillEntry, JobSuitableEntry, Position, CandidateStatus } from '@/lib/types';
+import type { PersonalInfo, ContactInfo, EducationEntry, ExperienceEntry, SkillEntry, JobSuitableEntry, Position, CandidateStatus, PositionLevel } from '@/lib/types';
 
 const candidateStatusOptions: CandidateStatus[] = [
   'Applied', 'Screening', 'Shortlisted', 'Interview Scheduled', 'Interviewing',
   'Offer Extended', 'Offer Accepted', 'Hired', 'Rejected', 'On Hold'
 ];
-const experienceLevelOptionsRaw: string[] = ['entry level', 'mid level', 'senior level', 'lead', 'manager', 'executive'];
-// Ensure the enum values match exactly what Zod expects for ExperienceEntry['position_level']
-const experienceLevelEnumValues = experienceLevelOptionsRaw as [
-    "entry level",
-    "mid level",
-    "senior level",
-    "lead",
-    "manager",
-    "executive"
-];
+
+const positionLevelOptions: PositionLevel[] = ['entry level', 'mid level', 'senior level', 'lead', 'manager', 'executive', 'officer', 'leader'];
 
 
 // Zod Schemas for form validation (mirroring types and API schemas)
@@ -77,7 +70,7 @@ const experienceEntryFormSchema = z.object({
   period: z.string().optional(),
   duration: z.string().optional(),
   is_current_position: z.boolean().optional().default(false),
-  postition_level: z.enum(experienceLevelEnumValues).optional(),
+  postition_level: z.string().optional().nullable(), // Allow string, specific enum for PositionLevel type
 });
 
 const skillEntryFormSchema = z.object({
@@ -114,6 +107,8 @@ interface AddCandidateModalProps {
   onAddCandidate: (data: AddCandidateFormValues) => Promise<void>;
   availablePositions: Position[];
 }
+
+const PLACEHOLDER_VALUE_NONE = "___NOT_SPECIFIED___";
 
 export function AddCandidateModal({ isOpen, onOpenChange, onAddCandidate, availablePositions }: AddCandidateModalProps) {
   const form = useForm<AddCandidateFormValues>({
@@ -160,7 +155,7 @@ export function AddCandidateModal({ isOpen, onOpenChange, onAddCandidate, availa
         personal_info: { firstname: '', lastname: '' },
         contact_info: { email: '', phone: '' },
         education: [],
-        experience: [],
+        experience: [{ company: '', position: '', period: '', duration: '', is_current_position: false, description: '', postition_level: null }],
         skills: [{ segment_skill: '', skill_string: '' }],
         job_suitable: [{ suitable_career: '', suitable_job_position: '', suitable_job_level: '', suitable_salary_bath_month: ''}],
         positionId: null,
@@ -171,8 +166,13 @@ export function AddCandidateModal({ isOpen, onOpenChange, onAddCandidate, availa
   }, [isOpen, form]);
 
   const onSubmit = async (data: AddCandidateFormValues) => {
+    // Process postition_level: if it's our placeholder, set to null
     const processedData = {
       ...data,
+      experience: data.experience?.map(exp => ({
+        ...exp,
+        postition_level: exp.postition_level === PLACEHOLDER_VALUE_NONE ? null : exp.postition_level,
+      }))
     };
     await onAddCandidate(processedData);
   };
@@ -345,10 +345,14 @@ export function AddCandidateModal({ isOpen, onOpenChange, onAddCandidate, availa
                             name={`experience.${index}.postition_level`}
                             control={form.control}
                             render={({ field: controllerField }) => (
-                                <Select onValueChange={controllerField.onChange} value={controllerField.value} defaultValue="">
+                                <Select
+                                  onValueChange={(value) => controllerField.onChange(value === PLACEHOLDER_VALUE_NONE ? null : value)}
+                                  value={controllerField.value ?? PLACEHOLDER_VALUE_NONE}
+                                >
                                 <SelectTrigger><SelectValue placeholder="Position Level" /></SelectTrigger>
                                 <SelectContent>
-                                    {experienceLevelEnumValues.map(level => <SelectItem key={level} value={level}>{level}</SelectItem>)}
+                                    <SelectItem value={PLACEHOLDER_VALUE_NONE}>N/A / Not Specified</SelectItem>
+                                    {positionLevelOptions.map(level => <SelectItem key={level} value={level}>{level.charAt(0).toUpperCase() + level.slice(1)}</SelectItem>)}
                                 </SelectContent>
                                 </Select>
                             )}
@@ -358,11 +362,10 @@ export function AddCandidateModal({ isOpen, onOpenChange, onAddCandidate, availa
                                 name={`experience.${index}.is_current_position`}
                                 control={form.control}
                                 render={({ field: controllerField }) => (
-                                    <Input
-                                        type="checkbox"
+                                    <Checkbox
                                         id={`experience.${index}.is_current_position`}
                                         checked={!!controllerField.value}
-                                        onChange={e => controllerField.onChange(e.target.checked)}
+                                        onCheckedChange={controllerField.onChange}
                                         className="h-4 w-4"
                                     />
                                 )}
@@ -376,7 +379,7 @@ export function AddCandidateModal({ isOpen, onOpenChange, onAddCandidate, availa
                     </Button>
                   </div>
                 ))}
-                <Button type="button" variant="outline" onClick={() => appendExperience({ company: '', position: '', period: '', duration: '', is_current_position: false, description: '', postition_level: undefined })}>
+                <Button type="button" variant="outline" onClick={() => appendExperience({ company: '', position: '', period: '', duration: '', is_current_position: false, description: '', postition_level: null })}>
                   <PlusCircle className="mr-2 h-4 w-4" /> Add Experience
                 </Button>
               </fieldset>
@@ -438,6 +441,3 @@ export function AddCandidateModal({ isOpen, onOpenChange, onAddCandidate, availa
     </Dialog>
   );
 }
-
-
-    
