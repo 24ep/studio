@@ -17,8 +17,12 @@ import { Separator } from "@/components/ui/separator";
 import { Package2 } from "lucide-react";
 import { usePathname } from "next/navigation";
 import Image from 'next/image';
+import { SetupFlowHandler } from './SetupFlowHandler';
+
 
 const APP_LOGO_DATA_URL_KEY = 'appLogoDataUrl';
+const DEFAULT_LOGO_ICON = <Package2 className="h-6 w-6" />;
+const DEFAULT_LOGO_TEXT = "Candidate Matching";
 
 function getPageTitle(pathname: string): string {
   if (pathname === "/") return "Dashboard";
@@ -59,15 +63,14 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   };
 
   useEffect(() => {
-    setIsClient(true);
-    updateLogo();
+    setIsClient(true); // Indicate component has mounted
+    updateLogo(); // Initial load
 
-    if (typeof window !== 'undefined') {
-        window.addEventListener('logoChanged', updateLogo);
-        return () => {
-          window.removeEventListener('logoChanged', updateLogo);
-        };
-    }
+    // Listen for logo changes from settings page
+    window.addEventListener('logoChanged', updateLogo);
+    return () => {
+      window.removeEventListener('logoChanged', updateLogo);
+    };
   }, []);
 
 
@@ -75,25 +78,25 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
     return <>{children}</>;
   }
 
+  const renderLogo = (isCollapsed: boolean) => {
+    if (isClient && appLogoUrl) {
+      return <Image src={appLogoUrl} alt="App Logo" width={isCollapsed ? 32 : 32} height={isCollapsed ? 32 : 32} className={isCollapsed ? "h-8 w-8 object-contain" : "h-8 w-8 object-contain"} />;
+    }
+    return DEFAULT_LOGO_ICON;
+  };
+
   return (
+    <SetupFlowHandler>
       <SidebarProvider defaultOpen>
         <Sidebar collapsible="icon" variant="sidebar" className="border-r" data-sidebar="sidebar">
           <SidebarHeader className="p-4 flex items-center justify-center h-16">
             <Link href="/" className="flex items-center gap-2 font-semibold text-primary group-data-[collapsible=icon]:hidden">
-              {isClient && appLogoUrl ? (
-                <Image src={appLogoUrl} alt="App Logo" width={32} height={32} className="h-8 w-8 object-contain" />
-              ) : (
-                <Package2 className="h-6 w-6" />
-              )}
-              <span className="ml-1">Candidate Matching</span>
+              {renderLogo(false)}
+              <span className="ml-1">{DEFAULT_LOGO_TEXT}</span>
             </Link>
             <div className="hidden items-center justify-center group-data-[collapsible=icon]:flex group-data-[collapsible=icon]:w-full">
               <Link href="/" className="flex items-center gap-2 font-semibold text-primary">
-                 {isClient && appLogoUrl ? (
-                  <Image src={appLogoUrl} alt="App Logo" width={32} height={32} className="h-8 w-8 object-contain" />
-                ) : (
-                  <Package2 className="h-6 w-6" />
-                )}
+                 {renderLogo(true)}
               </Link>
             </div>
             <SidebarTrigger className="hidden md:group-data-[collapsible=icon]:hidden" />
@@ -103,7 +106,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
             <SidebarNav />
           </SidebarContent>
           <SidebarFooter className="p-4 border-t group-data-[collapsible=icon]:hidden">
-            <p className="text-xs text-muted-foreground">© {new Date().getFullYear()} Candidate Matching</p>
+            <p className="text-xs text-muted-foreground">© {new Date().getFullYear()} {DEFAULT_LOGO_TEXT}</p>
           </SidebarFooter>
         </Sidebar>
         <SidebarInset className="flex flex-col bg-background">
@@ -113,5 +116,6 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
           </main>
         </SidebarInset>
       </SidebarProvider>
+    </SetupFlowHandler>
   );
 }

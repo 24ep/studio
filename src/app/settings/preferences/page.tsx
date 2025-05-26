@@ -29,7 +29,7 @@ export default function PreferencesSettingsPage() {
 
   // App Logo state
   const [selectedLogoFile, setSelectedLogoFile] = useState<File | null>(null);
-  const [logoPreviewUrl, setLogoPreviewUrl] = useState<string | null>(null);
+  const [logoPreviewUrl, setLogoPreviewUrl] = useState<string | null>(null); // This will hold the data URL for preview
   const [savedLogoDataUrl, setSavedLogoDataUrl] = useState<string | null>(null);
 
 
@@ -45,7 +45,7 @@ export default function PreferencesSettingsPage() {
             const storedLogoDataUrl = localStorage.getItem(APP_LOGO_DATA_URL_KEY);
             if (storedLogoDataUrl) {
                 setSavedLogoDataUrl(storedLogoDataUrl);
-                setLogoPreviewUrl(storedLogoDataUrl);
+                setLogoPreviewUrl(storedLogoDataUrl); // Initialize preview with saved logo
             }
         }
     }
@@ -55,21 +55,28 @@ export default function PreferencesSettingsPage() {
     const file = event.target.files?.[0];
     if (file) {
       if (file.type.startsWith('image/')) {
+        if (file.size > 100 * 1024) { // Max 100KB
+            toast({ title: "Logo Too Large", description: "Please select an image smaller than 100KB.", variant: "destructive" });
+            setSelectedLogoFile(null);
+            setLogoPreviewUrl(savedLogoDataUrl); // Revert to saved logo if new one is too large
+            event.target.value = '';
+            return;
+        }
         setSelectedLogoFile(file);
         const reader = new FileReader();
         reader.onloadend = () => {
-          setLogoPreviewUrl(reader.result as string);
+          setLogoPreviewUrl(reader.result as string); // Set preview to the new file's data URL
         };
         reader.readAsDataURL(file);
       } else {
-        toast({ title: "Invalid File Type", description: "Please select an image file.", variant: "destructive" });
+        toast({ title: "Invalid File Type", description: "Please select an image file (e.g., PNG, JPG, SVG).", variant: "destructive" });
         setSelectedLogoFile(null);
-        setLogoPreviewUrl(savedLogoDataUrl);
+        setLogoPreviewUrl(savedLogoDataUrl); // Revert to saved logo if type is invalid
         event.target.value = '';
       }
     } else {
       setSelectedLogoFile(null);
-      setLogoPreviewUrl(savedLogoDataUrl);
+      setLogoPreviewUrl(savedLogoDataUrl); // Revert to saved logo if selection is cleared
     }
   };
 
@@ -83,10 +90,10 @@ export default function PreferencesSettingsPage() {
         localStorage.removeItem(APP_LOGO_DATA_URL_KEY);
         setSavedLogoDataUrl(null);
         setLogoPreviewUrl(null);
-        toast({ title: "Logo Cleared", description: "The application logo has been reset." });
-        window.dispatchEvent(new Event('logoChanged'));
+        toast({ title: "Logo Cleared", description: "The application logo has been reset to default." });
+        window.dispatchEvent(new Event('logoChanged')); // Notify layout to update
     } else {
-        setLogoPreviewUrl(savedLogoDataUrl);
+        setLogoPreviewUrl(savedLogoDataUrl); // Revert preview to the currently saved logo
     }
   };
 
@@ -94,18 +101,26 @@ export default function PreferencesSettingsPage() {
     if (!isClient) return;
     localStorage.setItem(APP_THEME_KEY, themePreference);
 
-    if (logoPreviewUrl && logoPreviewUrl !== savedLogoDataUrl) {
-      if (selectedLogoFile) {
-        localStorage.setItem(APP_LOGO_DATA_URL_KEY, logoPreviewUrl);
-        setSavedLogoDataUrl(logoPreviewUrl);
-      }
+    let logoUpdated = false;
+    if (selectedLogoFile && logoPreviewUrl) {
+      // If a new file was selected and preview (data URL) exists, save it
+      localStorage.setItem(APP_LOGO_DATA_URL_KEY, logoPreviewUrl);
+      setSavedLogoDataUrl(logoPreviewUrl);
+      logoUpdated = true;
+    } else if (!selectedLogoFile && !logoPreviewUrl && savedLogoDataUrl) {
+      // This case implies the user cleared a preview of a *new* file, wants to keep existing or cleared existing
+      // The removeSelectedLogo(true) case handles actual clearing from storage
     }
+
 
     toast({
       title: 'Preferences Saved',
       description: 'Your preferences have been updated locally.',
     });
-    window.dispatchEvent(new Event('logoChanged'));
+
+    if (logoUpdated) {
+        window.dispatchEvent(new Event('logoChanged')); // Notify layout to update the logo
+    }
   };
 
   if (sessionStatus === 'loading' || (sessionStatus === 'unauthenticated' && pathname !== '/auth/signin' && !pathname.startsWith('/_next/')) || !isClient) {
@@ -156,7 +171,7 @@ export default function PreferencesSettingsPage() {
               <ImageUp className="mr-2 h-5 w-5" /> App Logo
             </h3>
             <div>
-              <Label htmlFor="app-logo-upload">Change App Logo (Recommended: square, max 50KB)</Label>
+              <Label htmlFor="app-logo-upload">Change App Logo (Recommended: square, max 100KB)</Label>
               <Input
                 id="app-logo-upload"
                 type="file"
@@ -183,7 +198,7 @@ export default function PreferencesSettingsPage() {
               )}
               <p className="text-xs text-muted-foreground mt-1">
                 Select an image to replace the application logo. Changes apply after saving preferences.
-                Stored in browser localStorage (not suitable for large images or production).
+                Stored in browser localStorage as a data URL (max 100KB recommended).
               </p>
             </div>
           </section>
