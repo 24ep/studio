@@ -70,7 +70,7 @@ export function EditPositionModal({ isOpen, onOpenChange, onEditPosition, positi
     await onEditPosition(position.id, data);
   };
   
-  if (!position && isOpen) return null;
+  if (!position && isOpen) return null; 
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => {
@@ -115,6 +115,7 @@ export function EditPositionModal({ isOpen, onOpenChange, onEditPosition, positi
                 render={({ field }) => (
                     <Switch
                         id="isOpen-edit"
+                        className="switch-green"
                         checked={field.value}
                         onCheckedChange={field.onChange}
                     />

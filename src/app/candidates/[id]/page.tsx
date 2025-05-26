@@ -1,5 +1,4 @@
 
-// src/app/candidates/[id]/page.tsx
 "use client";
 
 import { useState, useEffect, useCallback } from 'react';
@@ -73,7 +72,6 @@ export default function CandidateDetailPage() {
       }
       const data: Candidate = await response.json();
       setCandidate(data);
-      console.log("Fetched candidate data:", data);
     } catch (error) {
       console.error("Error fetching candidate details:", error);
       setFetchError((error as Error).message || "Could not load candidate data.");
@@ -129,7 +127,7 @@ export default function CandidateDetailPage() {
             throw new Error(errorData.message || `Failed to update candidate status: ${response.statusText}`);
         }
         const updatedCandidateFromServer: Candidate = await response.json();
-        setCandidate(updatedCandidateFromServer);
+        setCandidate(updatedCandidateFromServer); // Update candidate with full data from server
         toast({ title: "Status Updated", description: `Candidate status updated to ${newStatus}.` });
     } catch (error) {
         toast({
@@ -389,9 +387,9 @@ export default function CandidateDetailPage() {
                 <CardTitle className="flex items-center"><Briefcase className="mr-2 h-5 w-5 text-primary"/>Experience</CardTitle>
               </CardHeader>
               <CardContent>
-                <ScrollArea className="max-h-[500px]">
+                <ScrollArea className="max-h-[300px] h-auto"> {/* Adjusted max-h for experience */}
                   <ul className="space-y-4">
-                    {console.log("Rendering experiences:", parsed.experience)}
+                    {/* console.log("Rendering experiences:", parsed.experience) */} {/* Removed for production */}
                     {parsed.experience.map((exp, index) => (
                       <li key={`exp-${index}`} className="p-3 border rounded-md bg-muted/30">
                         {renderField("Company", exp.company)}
@@ -515,10 +513,10 @@ export default function CandidateDetailPage() {
                 <CardDescription>Full list of job matches from n8n processing.</CardDescription>
               </CardHeader>
               <CardContent>
-                <ScrollArea className="max-h-[calc(100vh-120px)]"> {/* Adjust max-h as needed */}
+                <ScrollArea className="max-h-[calc(100vh-180px)]"> 
                   <ul className="space-y-3">
                     {parsed.job_matches.map((match, index) => (
-                      <li key={`match-${index}`} className="p-3 border rounded-md bg-muted/30">
+                      <li key={`match-${index}-${match.job_id || index}`} className="p-3 border rounded-md bg-muted/30">
                         <h4 className="font-semibold text-foreground">{match.job_title}</h4>
                         <div className="text-sm text-muted-foreground">
                           Fit Score: <span className="font-medium text-foreground">{match.fit_score}%</span>
@@ -555,8 +553,8 @@ export default function CandidateDetailPage() {
             candidate={candidate}
             isOpen={isTransitionsModalOpen}
             onOpenChange={setIsTransitionsModalOpen}
-            onUpdateCandidate={handleUpdateCandidateStatus} // This updates candidate status
-            onRefreshCandidateData={fetchCandidateDetails} // This refreshes full candidate details (incl. history)
+            onUpdateCandidate={handleUpdateCandidateStatus}
+            onRefreshCandidateData={fetchCandidateDetails}
         />
         </>
       )}

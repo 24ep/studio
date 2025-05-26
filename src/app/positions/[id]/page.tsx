@@ -1,5 +1,4 @@
 
-// src/app/positions/[id]/page.tsx
 "use client";
 
 import { useState, useEffect, useCallback } from 'react';
@@ -13,7 +12,7 @@ import { Badge } from '@/components/ui/badge';
 import { ArrowLeft, Briefcase, Building, CalendarDays, CheckCircle2, Info, ListFilter, Loader2, ServerCrash, ShieldAlert, Users } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import Link from 'next/link';
-import { CandidateTable } from '@/components/candidates/CandidateTable'; // Assuming CandidateTable can be reused or adapted
+import { CandidateTable } from '@/components/candidates/CandidateTable'; 
 
 export default function PositionDetailPage() {
   const params = useParams();
@@ -36,7 +35,6 @@ export default function PositionDetailPage() {
     setAuthError(false);
 
     try {
-      // Fetch position details
       const positionRes = await fetch(`/api/positions/${positionId}`);
       if (!positionRes.ok) {
         const errorData = await positionRes.json().catch(() => ({}));
@@ -51,15 +49,12 @@ export default function PositionDetailPage() {
       const positionData: Position = await positionRes.json();
       setPosition(positionData);
 
-      // Fetch candidates for this position
       const candidatesRes = await fetch(`/api/candidates?positionId=${positionId}`);
       if (!candidatesRes.ok) {
-        // Non-critical error for candidates, position data might still be useful
         console.error(`Failed to fetch candidates for position ${positionId}: ${candidatesRes.statusText}`);
-        setAssociatedCandidates([]); // Set to empty if fetch fails
+        setAssociatedCandidates([]);
       } else {
         const candidatesData: Candidate[] = await candidatesRes.json();
-        // Sort candidates by fitScore descending
         const sortedCandidates = candidatesData.sort((a, b) => (b.fitScore || 0) - (a.fitScore || 0));
         setAssociatedCandidates(sortedCandidates);
       }
@@ -72,7 +67,7 @@ export default function PositionDetailPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [positionId, sessionStatus, toast]);
+  }, [positionId, sessionStatus, toast]); // Added toast here
 
   useEffect(() => {
     if (sessionStatus === 'loading') return;
@@ -85,9 +80,21 @@ export default function PositionDetailPage() {
     }
   }, [positionId, sessionStatus, fetchPositionAndCandidates, signIn]);
 
-  // Dummy handlers as CandidateTable might expect them, though not primary actions on this page
   const handleUpdateCandidateStatus = async (candidateId: string, status: Candidate['status']) => {
     toast({ title: "Action Not Available", description: "Candidate status updates should be done from the main Candidates page or Candidate Detail page.", variant: "default" });
+    // Re-fetch candidates for this position to reflect any external changes
+    if (positionId) {
+        try {
+            const candidatesRes = await fetch(`/api/candidates?positionId=${positionId}`);
+            if (candidatesRes.ok) {
+                const candidatesData: Candidate[] = await candidatesRes.json();
+                const sortedCandidates = candidatesData.sort((a, b) => (b.fitScore || 0) - (a.fitScore || 0));
+                setAssociatedCandidates(sortedCandidates);
+            }
+        } catch (error) {
+            console.error("Error re-fetching candidates:", error);
+        }
+    }
   };
   const handleDeleteCandidate = async (candidateId: string) => {
      toast({ title: "Action Not Available", description: "Candidate deletion should be done from the main Candidates page.", variant: "default" });
@@ -96,10 +103,8 @@ export default function PositionDetailPage() {
     toast({ title: "Action Not Available", description: "Resume uploads should be done from the main Candidates page or Candidate Detail page.", variant: "default" });
   };
    const refreshCandidateInList = async (candidateId: string) => {
-    // Re-fetch all candidates for simplicity, or implement specific logic
     await fetchPositionAndCandidates();
   };
-
 
   if (isLoading) {
     return (
@@ -203,7 +208,7 @@ export default function PositionDetailPage() {
               onUpdateCandidate={handleUpdateCandidateStatus}
               onDeleteCandidate={handleDeleteCandidate}
               onOpenUploadModal={handleOpenUploadModal}
-              isLoading={isLoading && associatedCandidates.length === 0} // Only show table loading if candidates are expected but not yet loaded
+              isLoading={isLoading && associatedCandidates.length === 0} 
               onRefreshCandidateData={refreshCandidateInList}
             />
           ) : (

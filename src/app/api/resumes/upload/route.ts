@@ -4,6 +4,8 @@ import { minioClient, MINIO_BUCKET_NAME } from '../../../lib/minio';
 import pool from '../../../lib/db';
 import type { Candidate } from '@/lib/types';
 import { logAudit } from '@/lib/auditLog';
+import { getServerSession } from 'next-auth/next';
+import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 const ACCEPTED_FILE_TYPES = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
@@ -62,6 +64,9 @@ export async function POST(request: NextRequest) {
   if (!candidateId) {
     return NextResponse.json({ message: 'Candidate ID is required as a query parameter' }, { status: 400 });
   }
+  const session = await getServerSession(authOptions);
+  const actingUserId = session?.user?.id || null;
+  const actingUserName = session?.user?.name || session?.user?.email || 'System';
 
   let candidateDBRecord: Candidate | null = null;
   try {
@@ -73,7 +78,7 @@ export async function POST(request: NextRequest) {
     candidateDBRecord = candidateResult.rows[0];
   } catch (dbError) {
      console.error('Database error fetching candidate:', dbError);
-     await logAudit('ERROR', `Database error fetching candidate (ID: ${candidateId}) for resume upload. Error: ${(dbError as Error).message}`, 'API:Resumes', null, { targetCandidateId: candidateId });
+     await logAudit('ERROR', `Database error fetching candidate (ID: ${candidateId}) for resume upload. Error: ${(dbError as Error).message}`, 'API:Resumes', actingUserId, { targetCandidateId: candidateId });
      return NextResponse.json({ message: 'Error verifying candidate', error: (dbError as Error).message }, { status: 500 });
   }
   
@@ -105,21 +110,32 @@ export async function POST(request: NextRequest) {
     const updateQuery = 'UPDATE "Candidate" SET "resumePath" = $1, "updatedAt" = NOW() WHERE id = $2 RETURNING *;';
     await pool.query(updateQuery, [fileNameInMinio, candidateId]);
 
-    await logAudit('AUDIT', `Resume '${fileNameInMinio}' uploaded for candidate '${candidateDBRecord.name}' (ID: ${candidateId}).`, 'API:Resumes', null, { targetCandidateId: candidateId, filePath: fileNameInMinio, originalFileName: file.name });
+    await logAudit('AUDIT', `Resume '${fileNameInMinio}' uploaded for candidate '${candidateDBRecord.name}' (ID: ${candidateId}) by ${actingUserName}.`, 'API:Resumes', actingUserId, { targetCandidateId: candidateId, filePath: fileNameInMinio, originalFileName: file.name });
 
     const n8nResult = await sendToN8N(candidateId, candidateDBRecord.name, fileNameInMinio, file.name, file.type);
 
     const finalQuery = `
-        SELECT 
-            c.*, 
+        SELECT
+            c.id, c.name, c.email, c.phone, c."resumePath", c."parsedData",
+            c."positionId", c."fitScore", c.status, c."applicationDate",
+            c."recruiterId", c."createdAt", c."updatedAt",
             p.title as "positionTitle",
             p.department as "positionDepartment",
+            p.position_level as "positionLevel",
+            rec.name as "recruiterName",
             COALESCE(
-              (SELECT json_agg(th.* ORDER BY th.date DESC) FROM "TransitionRecord" th WHERE th."candidateId" = c.id), 
+              (SELECT json_agg(
+                json_build_object(
+                  'id', th.id, 'candidateId', th."candidateId", 'date', th.date, 'stage', th.stage, 'notes', th.notes,
+                  'actingUserId', th."actingUserId", 'actingUserName', u.name,
+                  'createdAt', th."createdAt", 'updatedAt', th."updatedAt"
+                ) ORDER BY th.date DESC
+               ) FROM "TransitionRecord" th LEFT JOIN "User" u ON th."actingUserId" = u.id WHERE th."candidateId" = c.id),
               '[]'::json
             ) as "transitionHistory"
         FROM "Candidate" c
         LEFT JOIN "Position" p ON c."positionId" = p.id
+        LEFT JOIN "User" rec ON c."recruiterId" = rec.id
         WHERE c.id = $1;
     `;
     const finalResult = await pool.query(finalQuery, [candidateId]);
@@ -130,7 +146,14 @@ export async function POST(request: NextRequest) {
             id: finalResult.rows[0].positionId,
             title: finalResult.rows[0].positionTitle,
             department: finalResult.rows[0].positionDepartment,
+            position_level: finalResult.rows[0].positionLevel,
         } : null,
+        recruiter: finalResult.rows[0].recruiterId ? {
+            id: finalResult.rows[0].recruiterId,
+            name: finalResult.rows[0].recruiterName,
+            email: null
+        } : null,
+        transitionHistory: finalResult.rows[0].transitionHistory || [],
     };
 
     return NextResponse.json({ 
@@ -142,12 +165,10 @@ export async function POST(request: NextRequest) {
 
   } catch (error: any) {
     console.error('Error uploading resume:', error);
-    await logAudit('ERROR', `Error uploading resume for candidate '${candidateDBRecord?.name || 'Unknown'}' (ID: ${candidateId}). Error: ${error.message}`, 'API:Resumes', null, { targetCandidateId: candidateId });
+    await logAudit('ERROR', `Error uploading resume for candidate '${candidateDBRecord?.name || 'Unknown'}' (ID: ${candidateId}) by ${actingUserName}. Error: ${error.message}`, 'API:Resumes', actingUserId, { targetCandidateId: candidateId });
     if (error.code && error.message) { 
         return NextResponse.json({ message: `MinIO Error: ${error.message}`, code: error.code }, { status: 500 });
     }
     return NextResponse.json({ message: 'Error processing file upload', error: error.message }, { status: 500 });
   }
 }
-
-    

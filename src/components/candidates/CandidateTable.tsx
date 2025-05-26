@@ -20,11 +20,11 @@ import type { Candidate, CandidateStatus, TransitionRecord } from '@/lib/types';
 import { ManageTransitionsModal } from './ManageTransitionsModal';
 import { format, parseISO } from 'date-fns';
 import { useToast } from "@/hooks/use-toast";
-import Link from 'next/link'; // Import Link
+import Link from 'next/link';
 
 interface CandidateTableProps {
   candidates: Candidate[];
-  onUpdateCandidate: (candidateId: string, status: CandidateStatus, newTransitionHistory?: TransitionRecord[]) => Promise<void>;
+  onUpdateCandidate: (candidateId: string, status: CandidateStatus) => Promise<void>; // Removed newTransitionHistory from here
   onDeleteCandidate: (candidateId: string) => Promise<void>;
   onOpenUploadModal: (candidate: Candidate) => void;
   isLoading?: boolean;
@@ -63,18 +63,17 @@ export function CandidateTable({ candidates, onUpdateCandidate, onDeleteCandidat
   };
 
   const handleDeleteClick = async (candidate: Candidate) => {
-    // This confirmation will be handled by an AlertDialog in CandidatesPage
-    // For now, directly call onDeleteCandidate if confirmation is managed by parent
     onDeleteCandidate(candidate.id);
   };
 
   const handleTransitionsModalUpdateCandidate = async (candidateId: string, status: CandidateStatus) => {
     try {
-      await onUpdateCandidate(candidateId, status); // Removed newTransitionHistory as it's handled by backend
-      setIsTransitionsModalOpen(false);
-      // Parent (CandidatesPage) will handle UI update and toast
+      await onUpdateCandidate(candidateId, status);
+      // Let parent handle UI update, modal might close or refresh based on parent's logic
+      // setIsTransitionsModalOpen(false); // Parent (CandidatesPage) should handle this if it re-fetches
+      onRefreshCandidateData(candidateId); // Ensure parent refreshes this specific candidate
     } catch (error) {
-      // Error is toasted by parent
+      // Error is toasted by parent or API call
     }
   };
 
@@ -106,7 +105,7 @@ export function CandidateTable({ candidates, onUpdateCandidate, onDeleteCandidat
           <TableHeader>
             <TableRow>
               <TableHead className="w-[250px]">Candidate</TableHead>
-              <TableHead>Applied Position</TableHead>
+              <TableHead>1st Fitting Position</TableHead>
               <TableHead className="w-[100px]">Fit Score</TableHead>
               <TableHead>Status</TableHead>
               <TableHead>Last Update</TableHead>

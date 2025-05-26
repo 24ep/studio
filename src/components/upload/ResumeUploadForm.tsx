@@ -9,7 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { UploadCloud, FileText, XCircle } from 'lucide-react';
+import { UploadCloud, FileText, XCircle, Loader2 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useToast } from "@/hooks/use-toast";
 import type { Candidate } from '@/lib/types';
@@ -21,15 +21,15 @@ const resumeUploadSchema = z.object({
   resume: z
     .custom<FileList>()
     .refine((files) => files && files.length === 1, 'Exactly one resume file is required.')
-    .refine((files) => files?.[0]?.size <= MAX_FILE_SIZE, `File size should be less than ${MAX_FILE_SIZE / (1024*1024)}MB.`)
-    .refine((files) => files?.[0] && ACCEPTED_FILE_TYPES.includes(files[0].type), '.pdf, .doc, .docx files are accepted.'),
+    .refine((files) => !!files && files[0]?.size <= MAX_FILE_SIZE, `File size should be less than ${MAX_FILE_SIZE / (1024*1024)}MB.`)
+    .refine((files) => !!files && files[0] && ACCEPTED_FILE_TYPES.includes(files[0].type), '.pdf, .doc, .docx files are accepted.'),
 });
 
 type ResumeUploadFormValues = z.infer<typeof resumeUploadSchema>;
 
 interface ResumeUploadFormProps {
   candidateId: string;
-  onUploadSuccess?: (updatedCandidate: Candidate, n8nResponse?: any) => void; // n8nResponse is now optional
+  onUploadSuccess?: (updatedCandidate: Candidate, n8nResponse?: any) => void;
   currentResumePath?: string | null;
   cardMode?: boolean; 
 }
@@ -45,6 +45,12 @@ export function ResumeUploadForm({ candidateId, onUploadSuccess, currentResumePa
       resume: undefined,
     },
   });
+
+  useEffect(() => {
+    // Reset file input if modal is closed or candidateId changes
+    setSelectedFile(null);
+    form.reset({ resume: undefined });
+  }, [form, candidateId]); // Depend on candidateId if the modal can be reused for different candidates
 
   const onSubmit = async (data: ResumeUploadFormValues) => {
     if (!candidateId || !data.resume?.[0]) {
@@ -68,10 +74,11 @@ export function ResumeUploadForm({ candidateId, onUploadSuccess, currentResumePa
         throw new Error(result.message || `Failed to upload resume. Status: ${response.status}`);
       }
 
-      let toastDescription = `Resume for candidate ${candidateId} uploaded successfully.`;
+      let toastDescription = `Resume uploaded successfully.`;
       if (result.n8nResponse) {
         if (result.n8nResponse.success) {
-          toastDescription += ` n8n processing initiated.`;
+          toastDescription += ` n8n processing status: ${result.n8nResponse.message || 'Initiated'}.`;
+          if(result.n8nResponse.data) console.log("n8n data:", result.n8nResponse.data);
         } else {
           toastDescription += ` n8n notification failed: ${result.n8nResponse.error || 'Unknown n8n error'}`;
         }
@@ -87,6 +94,8 @@ export function ResumeUploadForm({ candidateId, onUploadSuccess, currentResumePa
       }
       form.reset();
       setSelectedFile(null);
+       const fileInput = document.getElementById(`resume-upload-${candidateId}`) as HTMLInputElement;
+      if (fileInput) fileInput.value = '';
     } catch (error) {
       console.error("Error uploading resume:", error);
       toast({
@@ -103,9 +112,9 @@ export function ResumeUploadForm({ candidateId, onUploadSuccess, currentResumePa
     const file = event.target.files?.[0];
     if (file) {
       setSelectedFile(file);
-      const dataTransfer = new DataTransfer();
-      dataTransfer.items.add(file);
-      form.setValue('resume', dataTransfer.files, { shouldValidate: true });
+      const dataTransfer = new DataTransfer(); // Create a new DataTransfer object
+      dataTransfer.items.add(file); // Add the file to the DT object
+      form.setValue('resume', dataTransfer.files, { shouldValidate: true }); // Set the DT files to the form
     } else {
       setSelectedFile(null);
       form.setValue('resume', undefined, { shouldValidate: true });
@@ -146,7 +155,7 @@ export function ResumeUploadForm({ candidateId, onUploadSuccess, currentResumePa
                               type="file" 
                               className="sr-only" 
                               accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-                              onChange={handleFileChange}
+                              onChange={handleFileChange} // Use custom handler
                             />
                           </Label>
                           <p className="pl-1">or drag and drop</p>
@@ -179,12 +188,14 @@ export function ResumeUploadForm({ candidateId, onUploadSuccess, currentResumePa
         {cardMode && (
           <CardFooter>
             <Button type="submit" className="w-full btn-primary-gradient" disabled={isSubmitting || !selectedFile}>
+              {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <UploadCloud className="mr-2 h-4 w-4" />}
               {isSubmitting ? "Uploading..." : "Upload Resume"}
             </Button>
           </CardFooter>
         )}
         {!cardMode && (
              <Button type="submit" className="w-full btn-primary-gradient" disabled={isSubmitting || !selectedFile}>
+                {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <UploadCloud className="mr-2 h-4 w-4" />}
                 {isSubmitting ? "Uploading..." : "Upload Selected Resume"}
             </Button>
         )}

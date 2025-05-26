@@ -4,17 +4,22 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useSession, signIn } from 'next-auth/react';
 import { useRouter, usePathname } from 'next/navigation';
-import type { Candidate, UserProfile } from '@/lib/types';
+import type { Candidate, UserProfile, CandidateStatus } from '@/lib/types';
 import { CandidateTable } from '@/components/candidates/CandidateTable';
+import { CandidateKanbanView } from '@/components/candidates/CandidateKanbanView';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Loader2, ServerCrash, ShieldAlert, ListTodo, Users, Filter } from 'lucide-react';
+import { Loader2, ServerCrash, ShieldAlert, ListTodo, Users, Filter, LayoutGrid, List } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 
-const ALL_CANDIDATES_ADMIN_VALUE = "ALL_CANDIDATES_ADMIN"; // For Admins to see all candidates
-const MY_ASSIGNED_VALUE = "me"; // For Recruiters (or Admins viewing their own)
+const ALL_CANDIDATES_ADMIN_VALUE = "ALL_CANDIDATES_ADMIN";
+const MY_ASSIGNED_VALUE = "me";
+
+const KANBAN_STATUS_ORDER: CandidateStatus[] = [
+  'Applied', 'Screening', 'Shortlisted', 'Interview Scheduled', 'Interviewing', 'Offer Extended', 'Offer Accepted', 'Hired', 'Rejected', 'On Hold'
+];
 
 export default function MyTasksPage() {
   const { data: session, status: sessionStatus } = useSession();
@@ -22,12 +27,13 @@ export default function MyTasksPage() {
   const pathname = usePathname();
   const { toast } = useToast();
 
-  const [assignedCandidates, setAssignedCandidates] = useState<Candidate[]>([]);
+  const [candidates, setCandidates] = useState<Candidate[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [fetchError, setFetchError] = useState<string | null>(null);
   const [recruiters, setRecruiters] = useState<Pick<UserProfile, 'id' | 'name'>[]>([]);
   const [selectedRecruiterFilter, setSelectedRecruiterFilter] = useState<string>(MY_ASSIGNED_VALUE);
-
+  const [viewMode, setViewMode] = useState<'list' | 'kanban'>('kanban');
+  const [statusFilter, setStatusFilter] = useState<CandidateStatus | 'all'>('all');
 
   const fetchRecruitersForAdmin = useCallback(async () => {
     if (session?.user?.role !== 'Admin') return;
@@ -42,7 +48,7 @@ export default function MyTasksPage() {
     }
   }, [session, toast]);
 
-  const fetchAssignedCandidates = useCallback(async (filterRecruiterId: string) => {
+  const fetchTaskBoardCandidates = useCallback(async (filterRecruiterId: string) => {
     if (sessionStatus !== 'authenticated' || !session?.user?.id) {
       setIsLoading(false);
       return;
@@ -61,14 +67,13 @@ export default function MyTasksPage() {
 
     if (userRole === 'Admin') {
       if (filterRecruiterId === ALL_CANDIDATES_ADMIN_VALUE) {
-        // No specific recruiterId filter, admin sees all (respecting other filters if any)
-        recruiterQueryParam = 'assignedRecruiterId=ALL_CANDIDATES_ADMIN'; // Explicitly signal admin view all
+        recruiterQueryParam = 'assignedRecruiterId=ALL_CANDIDATES_ADMIN';
       } else if (filterRecruiterId === MY_ASSIGNED_VALUE) {
         recruiterQueryParam = `assignedRecruiterId=me`;
-      } else { // Specific recruiter ID selected by Admin
+      } else {
         recruiterQueryParam = `assignedRecruiterId=${filterRecruiterId}`;
       }
-    } else { // Recruiter role
+    } else {
       recruiterQueryParam = `assignedRecruiterId=me`;
     }
     
@@ -82,17 +87,17 @@ export default function MyTasksPage() {
           return;
         }
         setFetchError(errorData.message || 'Failed to fetch assigned candidates');
-        setAssignedCandidates([]);
+        setCandidates([]);
         return;
       }
       const data: Candidate[] = await response.json();
-      setAssignedCandidates(data);
+      setCandidates(data);
     } catch (error) {
       const errorMessage = (error as Error).message || "Could not load assigned candidates.";
       if (!(errorMessage.toLowerCase().includes("unauthorized") || errorMessage.toLowerCase().includes("forbidden"))) {
         setFetchError(errorMessage);
       }
-      setAssignedCandidates([]);
+      setCandidates([]);
     } finally {
       setIsLoading(false);
     }
@@ -104,32 +109,20 @@ export default function MyTasksPage() {
     } else if (sessionStatus === 'authenticated') {
       if (session.user.role === 'Admin') {
         fetchRecruitersForAdmin();
-        // For admin, default to 'ALL_CANDIDATES_ADMIN_VALUE' initially unless a filter is already set.
-        // Or maybe default to their own tasks if that makes more sense (current: 'me')
-        if(selectedRecruiterFilter === MY_ASSIGNED_VALUE && !recruiters.find(r => r.id === session.user.id) && session.user.role === 'Admin') {
-             fetchAssignedCandidates(ALL_CANDIDATES_ADMIN_VALUE); // If admin and no self-assignment, show all
-        } else {
-             fetchAssignedCandidates(selectedRecruiterFilter);
-        }
+         fetchTaskBoardCandidates(selectedRecruiterFilter);
       } else {
-        fetchAssignedCandidates(MY_ASSIGNED_VALUE); // Recruiters always see 'me'
+        fetchTaskBoardCandidates(MY_ASSIGNED_VALUE);
       }
     }
-  }, [sessionStatus, session, fetchAssignedCandidates, fetchRecruitersForAdmin, pathname, signIn, selectedRecruiterFilter]);
+  }, [sessionStatus, session, fetchTaskBoardCandidates, fetchRecruitersForAdmin, pathname, signIn, selectedRecruiterFilter]);
   
   const handleRecruiterFilterChange = (newFilter: string) => {
     setSelectedRecruiterFilter(newFilter);
-    // fetchAssignedCandidates will be re-triggered by useEffect due to selectedRecruiterFilter change
   };
 
-
   const handleUpdateCandidateOnTaskBoard = async (candidateId: string, status: Candidate['status']) => {
-    toast({ title: "Status Update", description: "To update status, please go to the main Candidates page or Candidate Detail page."});
-    if (session?.user?.role === 'Admin') {
-        fetchAssignedCandidates(selectedRecruiterFilter);
-    } else {
-        fetchAssignedCandidates(MY_ASSIGNED_VALUE);
-    }
+    toast({ title: "Action Recommendation", description: "To update status, please go to the main Candidates page or Candidate Detail page."});
+    refreshCurrentView();
   };
 
   const handleDeleteCandidateOnTaskBoard = async (candidateId: string) => {
@@ -142,12 +135,15 @@ export default function MyTasksPage() {
 
   const refreshCurrentView = () => {
     if (session?.user?.role === 'Admin') {
-      fetchAssignedCandidates(selectedRecruiterFilter);
+      fetchTaskBoardCandidates(selectedRecruiterFilter);
     } else {
-      fetchAssignedCandidates(MY_ASSIGNED_VALUE);
+      fetchTaskBoardCandidates(MY_ASSIGNED_VALUE);
     }
   }
 
+  const filteredCandidates = statusFilter === 'all' 
+    ? candidates 
+    : candidates.filter(c => c.status === statusFilter);
 
   if (sessionStatus === 'loading' || (isLoading && !fetchError && !pathname.startsWith('/auth/signin'))) {
     return (
@@ -168,7 +164,6 @@ export default function MyTasksPage() {
     );
   }
 
-
   if (fetchError) {
     return (
       <div className="flex flex-col items-center justify-center h-[calc(100vh-10rem)] text-center p-4">
@@ -184,13 +179,12 @@ export default function MyTasksPage() {
     ? (selectedRecruiterFilter === ALL_CANDIDATES_ADMIN_VALUE ? "All Candidates Overview" : 
        selectedRecruiterFilter === MY_ASSIGNED_VALUE ? "My Assigned Candidates (Admin)" :
        `Candidates for ${recruiters.find(r => r.id === selectedRecruiterFilter)?.name || 'Recruiter'}`)
-    : "My Assigned Candidates";
+    : "My Task Board";
   const pageDescription = session?.user?.role === 'Admin' 
     ? (selectedRecruiterFilter === ALL_CANDIDATES_ADMIN_VALUE ? "Overview of all candidates in the system." : 
        selectedRecruiterFilter === MY_ASSIGNED_VALUE ? "Candidates assigned to you (Admin)." :
        `Candidates assigned to ${recruiters.find(r => r.id === selectedRecruiterFilter)?.name || 'the selected recruiter'}.`)
     : "Candidates assigned to you for processing.";
-
 
   return (
     <div className="space-y-6">
@@ -203,50 +197,73 @@ export default function MyTasksPage() {
               </CardTitle>
               <CardDescription>{pageDescription}</CardDescription>
             </div>
-            {session?.user?.role === 'Admin' && (
+            <div className="flex flex-col sm:flex-row gap-2 items-center w-full sm:w-auto">
+              {session?.user?.role === 'Admin' && (
+                <div className="w-full sm:w-auto">
+                  <Label htmlFor="recruiter-filter-select" className="text-xs font-medium text-muted-foreground">View tasks for:</Label>
+                  <Select value={selectedRecruiterFilter} onValueChange={handleRecruiterFilterChange}>
+                    <SelectTrigger id="recruiter-filter-select" className="w-full sm:w-[280px] mt-1">
+                      <SelectValue placeholder="Select view" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value={ALL_CANDIDATES_ADMIN_VALUE}>All Candidates (Admin Overview)</SelectItem>
+                      <SelectItem value={MY_ASSIGNED_VALUE}>My Assigned Candidates (Admin)</SelectItem>
+                      {recruiters.map(recruiter => (
+                        <SelectItem key={recruiter.id} value={recruiter.id}>
+                          {recruiter.name}'s Candidates
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
               <div className="w-full sm:w-auto">
-                <Label htmlFor="recruiter-filter-select" className="text-sm font-medium">View tasks for:</Label>
-                <Select value={selectedRecruiterFilter} onValueChange={handleRecruiterFilterChange}>
-                  <SelectTrigger id="recruiter-filter-select" className="w-full sm:w-[280px] mt-1">
-                    <SelectValue placeholder="Select view" />
+                 <Label htmlFor="status-filter-select" className="text-xs font-medium text-muted-foreground">Filter by Status:</Label>
+                <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value as CandidateStatus | 'all')}>
+                  <SelectTrigger id="status-filter-select" className="w-full sm:w-[200px] mt-1">
+                    <SelectValue placeholder="Filter by status" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value={ALL_CANDIDATES_ADMIN_VALUE}>All Candidates (Admin Overview)</SelectItem>
-                    <SelectItem value={MY_ASSIGNED_VALUE}>My Assigned Candidates (Admin)</SelectItem>
-                    {recruiters.map(recruiter => (
-                      <SelectItem key={recruiter.id} value={recruiter.id}>
-                        {recruiter.name}'s Candidates
-                      </SelectItem>
-                    ))}
+                    <SelectItem value="all">All Statuses</SelectItem>
+                    {KANBAN_STATUS_ORDER.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>
-            )}
+              <div className="flex gap-1 mt-4 sm:mt-0 self-end sm:self-center">
+                <Button variant={viewMode === 'list' ? 'default' : 'outline'} size="icon" onClick={() => setViewMode('list')}>
+                  <List className="h-4 w-4" />
+                </Button>
+                <Button variant={viewMode === 'kanban' ? 'default' : 'outline'} size="icon" onClick={() => setViewMode('kanban')}>
+                  <LayoutGrid className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
           </div>
         </CardHeader>
         <CardContent>
-          {assignedCandidates.length === 0 && !isLoading ? (
+          {isLoading ? (
+             <div className="flex items-center justify-center h-64">
+                <Loader2 className="h-12 w-12 animate-spin text-primary" />
+             </div>
+          ) : filteredCandidates.length === 0 ? (
              <div className="text-center py-10">
               <Users className="mx-auto h-12 w-12 text-muted-foreground" />
-              <p className="mt-4 text-muted-foreground">
-                {session?.user?.role === 'Admin' && selectedRecruiterFilter === ALL_CANDIDATES_ADMIN_VALUE ? "No candidates found in the system." :
-                 session?.user?.role === 'Admin' && selectedRecruiterFilter !== MY_ASSIGNED_VALUE ? `No candidates assigned to ${recruiters.find(r => r.id === selectedRecruiterFilter)?.name || 'this recruiter'}.` :
-                 "No candidates are currently assigned to you."}
-              </p>
+              <p className="mt-4 text-muted-foreground">No candidates match the current filters.</p>
             </div>
-          ) : (
+          ) : viewMode === 'list' ? (
             <CandidateTable
-              candidates={assignedCandidates}
+              candidates={filteredCandidates}
               onUpdateCandidate={handleUpdateCandidateOnTaskBoard}
               onDeleteCandidate={handleDeleteCandidateOnTaskBoard}
               onOpenUploadModal={handleOpenUploadModalOnTaskBoard}
               isLoading={isLoading}
               onRefreshCandidateData={refreshCurrentView} 
             />
+          ) : (
+            <CandidateKanbanView candidates={filteredCandidates} statuses={KANBAN_STATUS_ORDER} />
           )}
         </CardContent>
       </Card>
     </div>
   );
 }
-

@@ -20,7 +20,6 @@ import {
   DialogClose,
 } from '@/components/ui/dialog';
 import { Briefcase } from 'lucide-react';
-// Removed unused Position type import
 
 const addPositionFormSchema = z.object({
   title: z.string().min(1, "Title is required"),
@@ -109,6 +108,7 @@ export function AddPositionModal({ isOpen, onOpenChange, onAddPosition }: AddPos
                 render={({ field }) => (
                     <Switch
                         id="isOpen-add"
+                        className="switch-green"
                         checked={field.value}
                         onCheckedChange={field.onChange}
                     />

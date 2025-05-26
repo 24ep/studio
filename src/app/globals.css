@@ -51,17 +51,22 @@ body {
     --chart-5: 220 14% 60%;
 
     /* Sidebar specific theme variables - Light Theme Updated for "Modern Trend" */
-    --sidebar-background-l: hsl(var(--card)); /* Clean, very light background (usually white/off-white) */
+    --sidebar-background-l: linear-gradient(to bottom, hsl(220 25% 97%), hsl(220 20% 94%)); /* Light gray gradient */
     --sidebar-foreground-l: 220 25% 30%; /* Dark grey text for readability */
 
     /* Active item in light theme: primary gradient background, white text */
     --sidebar-active-background-l: linear-gradient(to right, hsl(var(--primary-gradient-start-l)), hsl(var(--primary-gradient-end-l)));
     --sidebar-active-foreground-l: hsl(var(--primary-foreground)); /* This is white */
 
-    --sidebar-accent-l: 220 10% 94%;       /* Subtle darker grey for hover background on non-active items */
-    --sidebar-accent-foreground-l: 220 25% 20%; /* Darker text for hover */
-    --sidebar-border-l: 220 15% 88%;     /* Slightly more defined, but still light border */
+    --sidebar-accent-l: 220 10% 92%;       /* Subtle darker grey for hover background on non-active items */
+    --sidebar-accent-foreground-l: 220 25% 25%; /* Darker text for hover */
+    --sidebar-border-l: 220 15% 85%;     /* Slightly more defined, but still light border */
     --sidebar-ring-l: hsl(var(--ring));
+
+    /* Green color for specific checked states */
+    --custom-green-checked: 142 76% 36%;
+    --custom-green-checked-foreground: 0 0% 100%;
+
   }
 
   .dark {
@@ -116,6 +121,10 @@ body {
     --sidebar-accent-foreground-d: 210 30% 90%; /* Text for hover non-active */
     --sidebar-border-d: 220 15% 18%;
     --sidebar-ring-d: hsl(var(--primary-gradient-start-d));
+
+     /* Green color for specific checked states */
+    --custom-green-checked: 147 80% 40%;
+    --custom-green-checked-foreground: 0 0% 100%;
   }
 }
 
@@ -130,9 +139,9 @@ body {
 
 /* Updated styles for sidebar and active menu item */
 @layer components {
-  /* Sidebar base style for light theme - Clean, very light background */
+  /* Sidebar base style for light theme - Light Gray Gradient */
   :root:not(.dark) [data-sidebar="sidebar"] {
-    background-color: var(--sidebar-background-l); /* Solid light color */
+    background-image: var(--sidebar-background-l);
     color: hsl(var(--sidebar-foreground-l));
     border-right: 1px solid hsl(var(--sidebar-border-l));
   }
@@ -215,6 +224,20 @@ body {
     filter: none !important;
     box-shadow: 0 2px 10px -3px hsla(var(--primary-gradient-start-d), 0.4);
   }
-}
 
+  /* Custom green styles for checked states */
+  .checkbox-green[data-state="checked"] {
+    @apply bg-green-600 border-green-600 text-white;
+  }
+  .dark .checkbox-green[data-state="checked"] {
+    @apply bg-green-500 border-green-500 text-white;
+  }
+
+  .switch-green[data-state="checked"] {
+    background-color: hsl(var(--custom-green-checked)) !important;
+  }
+  .dark .switch-green[data-state="checked"] {
+     background-color: hsl(var(--custom-green-checked)) !important;
+  }
+}
     

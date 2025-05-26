@@ -18,7 +18,7 @@ export default async function SignInPage({
   const session = await getServerSession(authOptions);
 
   if (session) {
-    redirect("/"); // Redirect to dashboard if already signed in
+    redirect("/"); 
   }
 
   const isAzureAdConfigured = !!(
@@ -30,13 +30,11 @@ export default async function SignInPage({
   const error = searchParams?.error;
   let errorMessage = '';
   if (error) {
-    // Common NextAuth errors, you can customize these
     if (error === "CredentialsSignin") {
       errorMessage = "Invalid email or password. Please try again.";
     } else if (error === "OAuthSignin" || error === "OAuthCallback" || error === "OAuthCreateAccount" || error === "EmailCreateAccount" || error === "Callback" || error === "OAuthAccountNotLinked" || error === "EmailSignin" || error === "SessionRequired") {
       errorMessage = "There was an error signing in with Azure AD. Please try again or contact support.";
     } else {
-      // For custom errors thrown in authorize function
       errorMessage = decodeURIComponent(error as string);
     }
   }
@@ -47,7 +45,7 @@ export default async function SignInPage({
       <Card className="w-full max-w-md shadow-2xl">
         <CardHeader className="text-center">
           <Image 
-            src="/_next/image?url=https%3A%2F%2Fplacehold.co%2F100x100.png&w=128&q=75" // Placeholder logo
+            src="https://placehold.co/100x100/3F51B5/FFFFFF.png?text=CM" 
             alt="Candidate Matching Logo"
             width={80}
             height={80}
@@ -87,7 +85,7 @@ export default async function SignInPage({
               <AzureAdSignInButton />
             </>
           )}
-           {!isAzureAdConfigured && !errorMessage && ( // Show this only if Azure is not configured AND there's no other login error
+           {!isAzureAdConfigured && !errorMessage && ( 
             <Alert variant="destructive" className="mt-4">
               <AlertTriangle className="h-4 w-4" />
               <AlertTitle>SSO Not Configured</AlertTitle>
@@ -104,5 +102,3 @@ export default async function SignInPage({
     </div>
   );
 }
-
-    
