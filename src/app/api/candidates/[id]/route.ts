@@ -1,11 +1,24 @@
 
 import { NextResponse, type NextRequest } from 'next/server';
 import pool from '../../../../lib/db';
-import type { CandidateStatus, Candidate, CandidateDetails } from '@/lib/types'; // PersonalInfo, ContactInfo
+import type { CandidateStatus, Candidate, CandidateDetails, PersonalInfo, ContactInfo, PositionLevel } from '@/lib/types'; 
 import { z } from 'zod';
 import { logAudit } from '@/lib/auditLog';
+import { getServerSession } from 'next-auth/next';
+import { authOptions } from '@/app/api/auth/[...nextauth]/route';
+import { v4 as uuidv4 } from 'uuid';
 
 export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.id) {
+    return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+  }
+  // RBAC: Allow Admin, Recruiter, Hiring Manager to view
+  const allowedRoles: UserProfile['role'][] = ['Admin', 'Recruiter', 'Hiring Manager'];
+  if (!session.user.role || !allowedRoles.includes(session.user.role)) {
+    return NextResponse.json({ message: "Forbidden: Insufficient permissions" }, { status: 403 });
+  }
+
   try {
     const query = `
       SELECT 
@@ -13,7 +26,23 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
         p.title as "positionTitle",
         p.department as "positionDepartment",
         COALESCE(
-          (SELECT json_agg(th.* ORDER BY th.date DESC) FROM "TransitionRecord" th WHERE th."candidateId" = c.id), 
+          (SELECT json_agg(
+            json_build_object(
+              'id', th.id,
+              'candidateId', th."candidateId",
+              'date', th.date,
+              'stage', th.stage,
+              'notes', th.notes,
+              'actingUserId', th."actingUserId",
+              'actingUserName', u.name, -- Get the user's name
+              'createdAt', th."createdAt",
+              'updatedAt', th."updatedAt"
+            ) ORDER BY th.date DESC
+           ) 
+           FROM "TransitionRecord" th
+           LEFT JOIN "User" u ON th."actingUserId" = u.id -- Join with User table
+           WHERE th."candidateId" = c.id
+          ), 
           '[]'::json
         ) as "transitionHistory"
       FROM "Candidate" c
@@ -26,24 +55,30 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
       return NextResponse.json({ message: "Candidate not found" }, { status: 404 });
     }
     
+    const candidateRow = result.rows[0];
     const candidate = {
-        ...result.rows[0],
-        parsedData: result.rows[0].parsedData || { personal_info: {}, contact_info: {} },
-        position: {
-            id: result.rows[0].positionId,
-            title: result.rows[0].positionTitle,
-            department: result.rows[0].positionDepartment,
-        },
+        ...candidateRow,
+        parsedData: candidateRow.parsedData || { personal_info: {}, contact_info: {} },
+        position: candidateRow.positionId ? {
+            id: candidateRow.positionId,
+            title: candidateRow.positionTitle,
+            department: candidateRow.positionDepartment,
+        } : null,
+        transitionHistory: candidateRow.transitionHistory || [],
     };
     return NextResponse.json(candidate, { status: 200 });
   } catch (error) {
     console.error(`Failed to fetch candidate ${params.id}:`, error);
-    await logAudit('ERROR', `Failed to fetch candidate (ID: ${params.id}). Error: ${(error as Error).message}`, 'API:Candidates', null, { targetCandidateId: params.id });
+    await logAudit('ERROR', `Failed to fetch candidate (ID: ${params.id}). Error: ${(error as Error).message}`, 'API:Candidates', session?.user?.id, { targetCandidateId: params.id });
     return NextResponse.json({ message: "Error fetching candidate", error: (error as Error).message }, { status: 500 });
   }
 }
 
 const candidateStatusValues: [CandidateStatus, ...CandidateStatus[]] = ['Applied', 'Screening', 'Shortlisted', 'Interview Scheduled', 'Interviewing', 'Offer Extended', 'Offer Accepted', 'Hired', 'Rejected', 'On Hold'];
+const positionLevelEnumValues: [PositionLevel, ...PositionLevel[]] = [
+    'entry level', 'mid level', 'senior level', 'lead', 'manager', 'executive', 'officer', 'leader'
+];
+
 
 const personalInfoSchemaPartial = z.object({
   title_honorific: z.string().optional(),
@@ -52,6 +87,7 @@ const personalInfoSchemaPartial = z.object({
   nickname: z.string().optional(),
   location: z.string().optional(),
   introduction_aboutme: z.string().optional(),
+  avatar_url: z.string().url().optional().nullable(),
 }).deepPartial();
 
 const contactInfoSchemaPartial = z.object({
@@ -59,10 +95,38 @@ const contactInfoSchemaPartial = z.object({
   phone: z.string().optional(),
 }).deepPartial();
 
-const educationEntrySchemaPartial = z.object({ /* ... all fields optional ... */ }).deepPartial();
-const experienceEntrySchemaPartial = z.object({ /* ... all fields optional ... */ }).deepPartial();
-const skillEntrySchemaPartial = z.object({ /* ... all fields optional ... */ }).deepPartial();
-const jobSuitableEntrySchemaPartial = z.object({ /* ... all fields optional ... */ }).deepPartial();
+const educationEntrySchemaPartial = z.object({ 
+    major: z.string().optional(),
+    field: z.string().optional(),
+    period: z.string().optional(),
+    duration: z.string().optional(),
+    GPA: z.string().optional(),
+    university: z.string().optional(),
+    campus: z.string().optional(),
+}).deepPartial();
+
+const experienceEntrySchemaPartial = z.object({ 
+    company: z.string().optional(),
+    position: z.string().optional(),
+    description: z.string().optional(),
+    period: z.string().optional(),
+    duration: z.string().optional(),
+    is_current_position: z.union([z.boolean(), z.string()]).optional(),
+    postition_level: z.union([z.enum(positionLevelEnumValues), z.string()]).optional(),
+}).deepPartial();
+
+const skillEntrySchemaPartial = z.object({ 
+    segment_skill: z.string().optional(),
+    skill: z.array(z.string()).optional(),
+}).deepPartial();
+
+const jobSuitableEntrySchemaPartial = z.object({ 
+    suitable_career: z.string().optional(),
+    suitable_job_position: z.string().optional(),
+    suitable_job_level: z.string().optional(),
+    suitable_salary_bath_month: z.string().optional(),
+}).deepPartial();
+
 
 const candidateDetailsSchemaPartial = z.object({
   cv_language: z.string().optional(),
@@ -72,6 +136,12 @@ const candidateDetailsSchemaPartial = z.object({
   experience: z.array(experienceEntrySchemaPartial).optional(),
   skills: z.array(skillEntrySchemaPartial).optional(),
   job_suitable: z.array(jobSuitableEntrySchemaPartial).optional(),
+  associatedMatchDetails: z.object({
+    jobTitle: z.string(),
+    fitScore: z.number(),
+    reasons: z.array(z.string()),
+    n8nJobId: z.string().optional(),
+  }).optional(),
 }).deepPartial();
 
 const updateCandidateSchema = z.object({
@@ -86,6 +156,16 @@ const updateCandidateSchema = z.object({
 });
 
 export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.id) {
+    return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+  }
+  const allowedRoles: UserProfile['role'][] = ['Admin', 'Recruiter'];
+  if (!session.user.role || !allowedRoles.includes(session.user.role)) {
+    await logAudit('WARN', `Forbidden attempt to update candidate (ID: ${params.id}) by user ${session.user.email} (ID: ${session.user.id}). Required roles: Admin, Recruiter.`, 'API:Candidates', session.user.id, { targetCandidateId: params.id });
+    return NextResponse.json({ message: "Forbidden: Insufficient permissions" }, { status: 403 });
+  }
+
   let body;
   try {
     body = await request.json();
@@ -137,12 +217,13 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
           
           const mergedParsedData: CandidateDetails = {
             cv_language: newPD.cv_language ?? existingPD.cv_language,
-            personal_info: { ...(existingPD.personal_info || {}), ...(newPD.personal_info || {}) },
-            contact_info: { ...(existingPD.contact_info || {}), ...(newPD.contact_info || {}) },
+            personal_info: { ...(existingPD.personal_info || {}), ...(newPD.personal_info || {}) } as PersonalInfo,
+            contact_info: { ...(existingPD.contact_info || {}), ...(newPD.contact_info || {}) } as ContactInfo,
             education: newPD.education ?? existingPD.education,
             experience: newPD.experience ?? existingPD.experience,
             skills: newPD.skills ?? existingPD.skills,
             job_suitable: newPD.job_suitable ?? existingPD.job_suitable,
+            associatedMatchDetails: newPD.associatedMatchDetails ?? existingPD.associatedMatchDetails,
           };
           updateFields.push(`"parsedData" = $${paramIndex++}`);
           updateValues.push(mergedParsedData);
@@ -155,7 +236,38 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
 
     if (updateFields.length === 0) {
       await client.query('ROLLBACK'); 
-      return NextResponse.json(existingCandidate, { status: 200 });
+      // Refetch the candidate to ensure we return the latest transition history
+      const currentCandidateQuery = `
+          SELECT 
+              c.*, 
+              p.title as "positionTitle",
+              p.department as "positionDepartment",
+              COALESCE(
+                (SELECT json_agg(
+                  json_build_object(
+                    'id', th.id, 'candidateId', th."candidateId", 'date', th.date, 'stage', th.stage, 'notes', th.notes,
+                    'actingUserId', th."actingUserId", 'actingUserName', u.name,
+                    'createdAt', th."createdAt", 'updatedAt', th."updatedAt"
+                  ) ORDER BY th.date DESC
+                 ) FROM "TransitionRecord" th LEFT JOIN "User" u ON th."actingUserId" = u.id WHERE th."candidateId" = c.id), 
+                '[]'::json
+              ) as "transitionHistory"
+          FROM "Candidate" c
+          LEFT JOIN "Position" p ON c."positionId" = p.id
+          WHERE c.id = $1;
+      `;
+      const currentResult = await client.query(currentCandidateQuery, [params.id]);
+      const currentCandidateWithDetails = {
+        ...currentResult.rows[0],
+        parsedData: currentResult.rows[0].parsedData || { personal_info: {}, contact_info: {} },
+         position: currentResult.rows[0].positionId ? {
+            id: currentResult.rows[0].positionId,
+            title: currentResult.rows[0].positionTitle,
+            department: currentResult.rows[0].positionDepartment,
+        } : null,
+        transitionHistory: currentResult.rows[0].transitionHistory || [],
+      };
+      return NextResponse.json(currentCandidateWithDetails, { status: 200 });
     }
 
     updateFields.push(`"updatedAt" = NOW()`);
@@ -163,16 +275,21 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
 
     const updateQuery = `UPDATE "Candidate" SET ${updateFields.join(', ')} WHERE id = $${paramIndex} RETURNING *;`;
     const updatedResult = await client.query(updateQuery, updateValues);
-    let updatedCandidate = updatedResult.rows[0];
+    let updatedCandidateRow = updatedResult.rows[0];
 
     if (validatedData.status && validatedData.status !== existingCandidate.status) {
       const insertTransitionQuery = `
-        INSERT INTO "TransitionRecord" ("candidateId", date, stage, notes, "createdAt", "updatedAt")
-        VALUES ($1, NOW(), $2, $3, NOW(), NOW());
+        INSERT INTO "TransitionRecord" (id, "candidateId", date, stage, notes, "actingUserId", "createdAt", "updatedAt")
+        VALUES ($1, $2, NOW(), $3, $4, $5, NOW(), NOW());
       `;
-      // Using a generic note, actual acting user might be hard to get here without session
-      await client.query(insertTransitionQuery, [params.id, validatedData.status, `Status updated to ${validatedData.status}.`]);
-      await logAudit('AUDIT', `Candidate '${updatedCandidate.name}' (ID: ${params.id}) status changed to '${validatedData.status}'.`, 'API:Candidates', null, { targetCandidateId: params.id, newStatus: validatedData.status, oldStatus: existingCandidate.status });
+      await client.query(insertTransitionQuery, [
+        uuidv4(), 
+        params.id, 
+        validatedData.status, 
+        `Status updated to ${validatedData.status} by ${session.user.name || session.user.email}.`, 
+        session.user.id
+      ]);
+      await logAudit('AUDIT', `Candidate '${updatedCandidateRow.name}' (ID: ${params.id}) status changed to '${validatedData.status}'.`, 'API:Candidates', session.user.id, { targetCandidateId: params.id, newStatus: validatedData.status, oldStatus: existingCandidate.status });
     }
     
     await client.query('COMMIT');
@@ -182,28 +299,38 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
             c.*, 
             p.title as "positionTitle",
             p.department as "positionDepartment",
-            (SELECT json_agg(th.* ORDER BY th.date DESC) FROM "TransitionRecord" th WHERE th."candidateId" = c.id) as "transitionHistory"
+            COALESCE(
+              (SELECT json_agg(
+                json_build_object(
+                  'id', th.id, 'candidateId', th."candidateId", 'date', th.date, 'stage', th.stage, 'notes', th.notes,
+                  'actingUserId', th."actingUserId", 'actingUserName', u.name,
+                  'createdAt', th."createdAt", 'updatedAt', th."updatedAt"
+                ) ORDER BY th.date DESC
+               ) FROM "TransitionRecord" th LEFT JOIN "User" u ON th."actingUserId" = u.id WHERE th."candidateId" = c.id), 
+              '[]'::json
+            ) as "transitionHistory"
         FROM "Candidate" c
         LEFT JOIN "Position" p ON c."positionId" = p.id
         WHERE c.id = $1;
     `;
     const finalResult = await pool.query(finalQuery, [params.id]);
-    updatedCandidate = {
+    const updatedCandidateWithDetails = {
         ...finalResult.rows[0],
         parsedData: finalResult.rows[0].parsedData || { personal_info: {}, contact_info: {} },
-        position: {
+        position: finalResult.rows[0].positionId ? {
             id: finalResult.rows[0].positionId,
             title: finalResult.rows[0].positionTitle,
             department: finalResult.rows[0].positionDepartment,
-        },
+        } : null,
+        transitionHistory: finalResult.rows[0].transitionHistory || [],
     };
     
-    await logAudit('AUDIT', `Candidate '${updatedCandidate.name}' (ID: ${params.id}) updated.`, 'API:Candidates', null, { targetCandidateId: params.id, changes: Object.keys(validatedData) });
-    return NextResponse.json(updatedCandidate, { status: 200 });
+    await logAudit('AUDIT', `Candidate '${updatedCandidateWithDetails.name}' (ID: ${params.id}) updated.`, 'API:Candidates', session.user.id, { targetCandidateId: params.id, changes: Object.keys(validatedData) });
+    return NextResponse.json(updatedCandidateWithDetails, { status: 200 });
   } catch (error: any) {
     await client.query('ROLLBACK');
     console.error(`Failed to update candidate ${params.id}:`, error);
-    await logAudit('ERROR', `Failed to update candidate (ID: ${params.id}). Error: ${error.message}`, 'API:Candidates', null, { targetCandidateId: params.id });
+    await logAudit('ERROR', `Failed to update candidate (ID: ${params.id}). Error: ${error.message}`, 'API:Candidates', session.user.id, { targetCandidateId: params.id });
     if (error.code === '23505' && error.constraint === 'Candidate_email_key') {
       return NextResponse.json({ message: "A candidate with this email already exists." }, { status: 409 });
     }
@@ -214,6 +341,16 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
 }
 
 export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.id) {
+    return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+  }
+  const allowedRoles: UserProfile['role'][] = ['Admin', 'Recruiter'];
+   if (!session.user.role || !allowedRoles.includes(session.user.role)) {
+    await logAudit('WARN', `Forbidden attempt to delete candidate (ID: ${params.id}) by user ${session.user.email} (ID: ${session.user.id}). Required roles: Admin, Recruiter.`, 'API:Candidates', session.user.id, { targetCandidateId: params.id });
+    return NextResponse.json({ message: "Forbidden: Insufficient permissions" }, { status: 403 });
+  }
+
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
@@ -226,20 +363,21 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
     }
     const candidateName = candidateRes.rows[0].name;
     
-    const deleteTransitionsQuery = 'DELETE FROM "TransitionRecord" WHERE "candidateId" = $1';
-    await client.query(deleteTransitionsQuery, [params.id]);
+    // Deleting transition records is handled by ON DELETE CASCADE constraint in DB
+    // const deleteTransitionsQuery = 'DELETE FROM "TransitionRecord" WHERE "candidateId" = $1';
+    // await client.query(deleteTransitionsQuery, [params.id]);
     
     const deleteCandidateQuery = 'DELETE FROM "Candidate" WHERE id = $1';
     await client.query(deleteCandidateQuery, [params.id]);
     
     await client.query('COMMIT');
     
-    await logAudit('AUDIT', `Candidate '${candidateName}' (ID: ${params.id}) deleted.`, 'API:Candidates', null, { targetCandidateId: params.id, deletedCandidateName: candidateName });
+    await logAudit('AUDIT', `Candidate '${candidateName}' (ID: ${params.id}) deleted.`, 'API:Candidates', session.user.id, { targetCandidateId: params.id, deletedCandidateName: candidateName });
     return NextResponse.json({ message: "Candidate deleted successfully" }, { status: 200 });
   } catch (error) {
     await client.query('ROLLBACK');
     console.error(`Failed to delete candidate ${params.id}:`, error);
-    await logAudit('ERROR', `Failed to delete candidate (ID: ${params.id}). Error: ${(error as Error).message}`, 'API:Candidates', null, { targetCandidateId: params.id });
+    await logAudit('ERROR', `Failed to delete candidate (ID: ${params.id}). Error: ${(error as Error).message}`, 'API:Candidates', session.user.id, { targetCandidateId: params.id });
     return NextResponse.json({ message: "Error deleting candidate", error: (error as Error).message }, { status: 500 });
   } finally {
     client.release();

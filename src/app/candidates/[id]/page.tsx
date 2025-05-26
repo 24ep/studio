@@ -4,24 +4,22 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import type { Candidate, CandidateDetails, TransitionRecord, EducationEntry, ExperienceEntry, SkillEntry, JobSuitableEntry } from '@/lib/types';
+import type { Candidate, CandidateDetails, TransitionRecord, EducationEntry, ExperienceEntry, SkillEntry, JobSuitableEntry, PersonalInfo } from '@/lib/types';
 import { useToast } from "@/hooks/use-toast";
 import { signIn, useSession } from 'next-auth/react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { Progress } from '@/components/ui/progress';
 import { format, parseISO } from 'date-fns';
-import { ArrowLeft, Briefcase, CalendarDays, DollarSign, Download, Edit, GraduationCap, HardDrive, Info, LinkIcon, Loader2, Mail, MapPin, MessageSquare, Percent, Phone, ServerCrash, ShieldAlert, Star, Tag, Trash2, UploadCloud, UserCircle, UserCog, Zap } from 'lucide-react';
+import { ArrowLeft, Briefcase, CalendarDays, DollarSign, Edit, GraduationCap, HardDrive, Info, Loader2, Mail, MapPin, MessageSquare, Percent, Phone, ServerCrash, ShieldAlert, Star, Tag, UploadCloud, User, UserCircle, UserCog, Zap } from 'lucide-react';
 import { UploadResumeModal } from '@/components/candidates/UploadResumeModal';
 import { ManageTransitionsModal } from '@/components/candidates/ManageTransitionsModal';
 
 const getStatusBadgeVariant = (status: Candidate['status']): "default" | "secondary" | "destructive" | "outline" => {
-  // (Same as in CandidateTable, can be centralized later)
   switch (status) {
     case 'Hired': case 'Offer Accepted': return 'default';
     case 'Interview Scheduled': case 'Interviewing': case 'Offer Extended': return 'secondary';
@@ -75,7 +73,7 @@ export default function CandidateDetailPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [candidateId, sessionStatus, toast]);
+  }, [candidateId, sessionStatus, toast]); // toast removed as it's not directly used in this callback
 
   useEffect(() => {
     if (sessionStatus === 'loading') return;
@@ -86,22 +84,36 @@ export default function CandidateDetailPage() {
     if (candidateId) {
       fetchCandidateDetails();
     }
-  }, [candidateId, sessionStatus, fetchCandidateDetails]);
+  }, [candidateId, sessionStatus, fetchCandidateDetails, signIn]); // signIn added to dep array
 
   const handleUploadSuccess = (updatedCandidate: Candidate) => {
-    setCandidate(updatedCandidate); // Refresh with updated data
+    setCandidate(updatedCandidate); 
     setIsUploadModalOpen(false);
     toast({ title: "Resume Uploaded", description: "Resume successfully updated for this candidate." });
   };
 
-  const handleTransitionsUpdate = async (id: string, newStatus: Candidate['status'], newTransitionHistory?: TransitionRecord[]) => {
-    if (!candidate) return;
-    // Make API call to update candidate status (this might be part of a broader update function)
-    // For now, assume the parent on CandidateTable handles it, or this function makes the API call.
-    // Here, we'll just refresh the candidate data from the server.
-    await fetchCandidateDetails();
-    setIsTransitionsModalOpen(false);
-    toast({ title: "Status Updated", description: `Candidate status updated to ${newStatus}.` });
+  const handleUpdateCandidateStatus = async (id: string, newStatus: Candidate['status']) => {
+    try {
+        const response = await fetch(`/api/candidates/${id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ status: newStatus }),
+        });
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({ message: "An unknown error occurred" }));
+            throw new Error(errorData.message || `Failed to update candidate status: ${response.statusText}`);
+        }
+        const updatedCandidateFromServer: Candidate = await response.json();
+        setCandidate(updatedCandidateFromServer); // Update candidate with new history
+        toast({ title: "Status Updated", description: `Candidate status updated to ${newStatus}.` });
+        // No need to close modal here, modal might have its own logic or be for notes too
+    } catch (error) {
+        toast({
+            title: "Error Updating Status",
+            description: (error as Error).message || "Could not update candidate status.",
+            variant: "destructive",
+        });
+    }
   };
 
 
@@ -148,16 +160,16 @@ export default function CandidateDetailPage() {
     );
   }
 
-  const parsed = candidate.parsedData as CandidateDetails | null; // Type assertion
+  const parsed = candidate.parsedData as CandidateDetails | null; 
 
   const renderField = (label: string, value?: string | number | null, icon?: React.ElementType) => {
-    if (value === undefined || value === null || value === '') return null;
+    if (value === undefined || value === null || value === '' || (typeof value === 'number' && isNaN(value))) return null;
     const IconComponent = icon;
     return (
       <div className="flex items-start text-sm">
         {IconComponent && <IconComponent className="h-4 w-4 mr-2 mt-0.5 text-muted-foreground shrink-0" />}
         <span className="font-medium text-muted-foreground mr-1">{label}:</span>
-        <span className="text-foreground break-words">{value}</span>
+        <span className="text-foreground break-words">{String(value)}</span>
       </div>
     );
   };
@@ -172,7 +184,7 @@ export default function CandidateDetailPage() {
         <CardHeader className="flex flex-row items-start justify-between gap-4">
           <div className="flex items-center gap-4">
             <Avatar className="h-20 w-20 border-2 border-primary">
-              <AvatarImage src={parsed?.personal_info?.avatar_url || `https://placehold.co/80x80.png?text=${candidate.name.charAt(0)}`} alt={candidate.name} data-ai-hint="person avatar" />
+              <AvatarImage src={(parsed?.personal_info as PersonalInfo)?.avatar_url || `https://placehold.co/80x80.png?text=${candidate.name.charAt(0)}`} alt={candidate.name} data-ai-hint="person avatar" />
               <AvatarFallback className="text-3xl">{candidate.name.charAt(0).toUpperCase()}</AvatarFallback>
             </Avatar>
             <div>
@@ -184,9 +196,9 @@ export default function CandidateDetailPage() {
           <div className="flex flex-col items-end gap-2">
             <Badge variant={getStatusBadgeVariant(candidate.status)} className="text-base px-3 py-1 capitalize">{candidate.status}</Badge>
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Percent className="h-4 w-4" /> Fit Score: <span className="font-semibold text-foreground">{candidate.fitScore}%</span>
+              <Percent className="h-4 w-4" /> Fit Score: <span className="font-semibold text-foreground">{candidate.fitScore || 0}%</span>
             </div>
-            <Progress value={candidate.fitScore} className="w-32 h-2" />
+            <Progress value={candidate.fitScore || 0} className="w-32 h-2" />
           </div>
         </CardHeader>
         <CardContent className="space-y-2">
@@ -200,7 +212,6 @@ export default function CandidateDetailPage() {
                     <span className="text-primary hover:underline cursor-pointer break-all" title={candidate.resumePath}>
                         {candidate.resumePath.split('-').pop()?.split('.').slice(0,-1).join('.') || candidate.resumePath.split('-').pop()}
                     </span>
-                    {/* <Button variant="link" size="sm" className="h-auto p-0 ml-2"><Download className="h-3.5 w-3.5 mr-1" /> Download</Button> */}
                 </div>
             )}
         </CardContent>
@@ -232,7 +243,6 @@ export default function CandidateDetailPage() {
         </Card>
       )}
       
-      {/* Parsed Resume Data Sections */}
       {parsed && (
         <div className="grid md:grid-cols-2 gap-6">
           <Card>
@@ -240,15 +250,15 @@ export default function CandidateDetailPage() {
               <CardTitle className="flex items-center"><UserCircle className="mr-2 h-5 w-5 text-primary"/>Personal Information</CardTitle>
             </CardHeader>
             <CardContent className="space-y-1.5">
-              {renderField("Title", parsed.personal_info?.title_honorific)}
-              {renderField("First Name", parsed.personal_info?.firstname)}
-              {renderField("Last Name", parsed.personal_info?.lastname)}
-              {renderField("Nickname", parsed.personal_info?.nickname)}
-              {renderField("Location", parsed.personal_info?.location, MapPin)}
-              {parsed.personal_info?.introduction_aboutme && (
+              {renderField("Title", (parsed.personal_info as PersonalInfo)?.title_honorific)}
+              {renderField("First Name", (parsed.personal_info as PersonalInfo)?.firstname)}
+              {renderField("Last Name", (parsed.personal_info as PersonalInfo)?.lastname)}
+              {renderField("Nickname", (parsed.personal_info as PersonalInfo)?.nickname)}
+              {renderField("Location", (parsed.personal_info as PersonalInfo)?.location, MapPin)}
+              {(parsed.personal_info as PersonalInfo)?.introduction_aboutme && (
                 <div>
                   <h4 className="text-sm font-medium text-muted-foreground mb-1 flex items-center"><Info className="h-4 w-4 mr-2"/>About Me:</h4>
-                  <p className="text-sm text-foreground whitespace-pre-wrap bg-muted/50 p-3 rounded-md">{parsed.personal_info.introduction_aboutme}</p>
+                  <p className="text-sm text-foreground whitespace-pre-wrap bg-muted/50 p-3 rounded-md">{(parsed.personal_info as PersonalInfo).introduction_aboutme}</p>
                 </div>
               )}
             </CardContent>
@@ -282,22 +292,22 @@ export default function CandidateDetailPage() {
         </div>
       )}
 
-      {parsed?.experience && parsed.experience.length > 0 && (
+      {parsed?.experience && parsed.experience.length > 0 ? (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center"><Briefcase className="mr-2 h-5 w-5 text-primary"/>Experience</CardTitle>
           </CardHeader>
           <CardContent>
-            <ScrollArea className="max-h-[500px]"> {/* Increased max height for experience */}
+            <ScrollArea className="max-h-[500px]"> 
               <ul className="space-y-4">
                 {parsed.experience.map((exp, index) => (
                   <li key={index} className="p-3 border rounded-md bg-muted/30">
                     {renderField("Company", exp.company)}
                     {renderField("Position", exp.position)}
-                    {renderField("Level", exp.postition_level)}
+                    {renderField("Level", exp.postition_level as string)}
                     {renderField("Period", exp.period, CalendarDays)}
                     {renderField("Duration", exp.duration)}
-                    {exp.is_current_position !== undefined && renderField("Current Position", exp.is_current_position ? "Yes" : "No")}
+                    {exp.is_current_position !== undefined && renderField("Current Position", String(exp.is_current_position))}
                     {exp.description && (
                         <div>
                             <h4 className="text-sm font-medium text-muted-foreground mt-2 mb-1">Description:</h4>
@@ -311,9 +321,18 @@ export default function CandidateDetailPage() {
             </ScrollArea>
           </CardContent>
         </Card>
+      ) : (
+         <Card>
+            <CardHeader>
+                <CardTitle className="flex items-center"><Briefcase className="mr-2 h-5 w-5 text-primary"/>Experience</CardTitle>
+            </CardHeader>
+            <CardContent>
+                <p className="text-sm text-muted-foreground">No experience details provided.</p>
+            </CardContent>
+         </Card>
       )}
       
-      {parsed?.skills && parsed.skills.length > 0 && (
+      {parsed?.skills && parsed.skills.length > 0 ? (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center"><Star className="mr-2 h-5 w-5 text-primary"/>Skills</CardTitle>
@@ -339,9 +358,18 @@ export default function CandidateDetailPage() {
             </ScrollArea>
           </CardContent>
         </Card>
+      ) : (
+         <Card>
+            <CardHeader>
+                <CardTitle className="flex items-center"><Star className="mr-2 h-5 w-5 text-primary"/>Skills</CardTitle>
+            </CardHeader>
+            <CardContent>
+                <p className="text-sm text-muted-foreground">No skill details provided.</p>
+            </CardContent>
+         </Card>
       )}
 
-      {parsed?.job_suitable && parsed.job_suitable.length > 0 && (
+      {parsed?.job_suitable && parsed.job_suitable.length > 0 ? (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center"><UserCog className="mr-2 h-5 w-5 text-primary"/>Job Suitability</CardTitle>
@@ -362,6 +390,15 @@ export default function CandidateDetailPage() {
             </ScrollArea>
           </CardContent>
         </Card>
+      ) : (
+        <Card>
+            <CardHeader>
+                <CardTitle className="flex items-center"><UserCog className="mr-2 h-5 w-5 text-primary"/>Job Suitability</CardTitle>
+            </CardHeader>
+            <CardContent>
+                <p className="text-sm text-muted-foreground">No job suitability details provided.</p>
+            </CardContent>
+        </Card>
       )}
 
       <Card>
@@ -380,6 +417,7 @@ export default function CandidateDetailPage() {
                       <p className="text-sm font-semibold text-foreground">{record.stage}</p>
                       <p className="text-xs text-muted-foreground">
                         {format(parseISO(record.date), "MMM d, yyyy 'at' h:mm a")}
+                        {record.actingUserName && <span className="italic"> by {record.actingUserName}</span>}
                       </p>
                       {record.notes && <p className="text-sm text-foreground mt-1.5 whitespace-pre-wrap">{record.notes}</p>}
                     </div>
@@ -405,8 +443,8 @@ export default function CandidateDetailPage() {
             candidate={candidate}
             isOpen={isTransitionsModalOpen}
             onOpenChange={setIsTransitionsModalOpen}
-            onUpdateCandidate={handleTransitionsUpdate}
-            onRefreshCandidateData={fetchCandidateDetails}
+            onUpdateCandidate={handleUpdateCandidateStatus} // For status changes
+            onRefreshCandidateData={fetchCandidateDetails} // For note edits/deletes
         />
         </>
       )}

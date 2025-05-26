@@ -31,7 +31,7 @@ import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import type { Candidate, TransitionRecord, CandidateStatus } from '@/lib/types';
-import { PlusCircle, CalendarDays, Edit3, Trash2, Save, X } from 'lucide-react';
+import { PlusCircle, CalendarDays, Edit3, Trash2, Save, X, User } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { useToast } from "@/hooks/use-toast";
 
@@ -55,7 +55,7 @@ interface ManageTransitionsModalProps {
   isOpen: boolean;
   onOpenChange: (isOpen: boolean) => void;
   onUpdateCandidate: (candidateId: string, status: CandidateStatus, newTransitionHistory?: TransitionRecord[]) => Promise<void>; 
-  onRefreshCandidateData: (candidateId: string) => Promise<void>; // To refresh after note edit/delete
+  onRefreshCandidateData: (candidateId: string) => Promise<void>; 
 }
 
 export function ManageTransitionsModal({
@@ -84,7 +84,7 @@ export function ManageTransitionsModal({
         newStatus: candidate.status,
         notes: '',
       });
-      setEditingTransitionId(null); // Reset editing state
+      setEditingTransitionId(null); 
     }
   }, [candidate, isOpen, form]);
 
@@ -96,16 +96,12 @@ export function ManageTransitionsModal({
         return;
     }
     try {
-        await onUpdateCandidate(candidate.id, data.newStatus, [{ 
-            id: `temp-${Date.now()}`, 
-            date: new Date().toISOString(), 
-            stage: data.newStatus, 
-            notes: data.notes || `Status changed to ${data.newStatus}.`
-        }]);
+        // The API will create the transition record with actingUserId
+        await onUpdateCandidate(candidate.id, data.newStatus);
         form.reset({ newStatus: data.newStatus, notes: '' });
-        // Candidate data will be refreshed by parent via onUpdateCandidate
+        // Parent will refresh the candidate data which includes updated transition history
     } catch (error) {
-        // Error handled by parent
+        // Error handled by parent or API call
     }
   };
 
@@ -127,7 +123,7 @@ export function ManageTransitionsModal({
       }
       toast({ title: "Notes Updated", description: "Transition notes have been successfully updated." });
       setEditingTransitionId(null);
-      onRefreshCandidateData(candidate.id); // Refresh data in parent
+      await onRefreshCandidateData(candidate.id); 
     } catch (error) {
       toast({ title: "Error Updating Notes", description: (error as Error).message, variant: "destructive" });
     }
@@ -148,7 +144,7 @@ export function ManageTransitionsModal({
         throw new Error(errorData.message || `Failed to delete transition: ${response.statusText}`);
       }
       toast({ title: "Transition Deleted", description: "The transition record has been successfully deleted." });
-      onRefreshCandidateData(candidate.id); // Refresh data in parent
+      await onRefreshCandidateData(candidate.id); 
     } catch (error) {
       toast({ title: "Error Deleting Transition", description: (error as Error).message, variant: "destructive" });
     } finally {
@@ -161,9 +157,9 @@ export function ManageTransitionsModal({
     <>
       <Dialog open={isOpen} onOpenChange={(open) => {
         onOpenChange(open);
-        if (!open) setEditingTransitionId(null); // Clear editing state when modal closes
+        if (!open) setEditingTransitionId(null); 
       }}>
-        <DialogContent className="sm:max-w-3xl"> {/* Adjusted for potentially wider content */}
+        <DialogContent className="sm:max-w-3xl"> 
           <DialogHeader>
             <DialogTitle>Manage Transitions for {candidate.name}</DialogTitle>
             <DialogDescription>
@@ -172,7 +168,6 @@ export function ManageTransitionsModal({
           </DialogHeader>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4 py-4">
-            {/* Add New Transition Form */}
             <div className="md:border-r md:pr-6">
               <h3 className="text-lg font-semibold mb-3 text-foreground">Add New Transition</h3>
               <form onSubmit={form.handleSubmit(handleAddTransitionSubmit)} className="space-y-4">
@@ -216,7 +211,6 @@ export function ManageTransitionsModal({
               </form>
             </div>
 
-            {/* Transition History */}
             <div>
               <h3 className="text-lg font-semibold mb-3 text-foreground">Transition History</h3>
               <ScrollArea className="h-[350px] border rounded-md p-1 bg-muted/30">
@@ -230,6 +224,7 @@ export function ManageTransitionsModal({
                             <p className="text-sm font-semibold text-foreground">{record.stage}</p>
                             <p className="text-xs text-muted-foreground">
                               {format(parseISO(record.date), "MMM d, yyyy 'at' h:mm a")}
+                              {record.actingUserName && <span className="italic"> by {record.actingUserName}</span>}
                             </p>
                             {editingTransitionId === record.id ? (
                               <div className="mt-2 space-y-2">

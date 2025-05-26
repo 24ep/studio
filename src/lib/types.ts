@@ -61,6 +61,8 @@ export interface TransitionRecord {
   date: string; 
   stage: CandidateStatus;
   notes?: string;
+  actingUserId?: string | null;
+  actingUserName?: string | null; // For display purposes, populated by JOIN
   createdAt?: string;
   updatedAt?: string;
 }
@@ -72,6 +74,7 @@ export interface PersonalInfo {
   nickname?: string;
   location?: string;
   introduction_aboutme?: string;
+  avatar_url?: string; // Added for potential future use from parsed data
 }
 
 export interface ContactInfo {
@@ -96,8 +99,8 @@ export type PositionLevel =
   | 'lead' 
   | 'manager' 
   | 'executive'
-  | 'officer' // Added from new payload
-  | 'leader'; // Added from new payload
+  | 'officer'
+  | 'leader';
 
 export interface ExperienceEntry {
   company?: string;
@@ -105,8 +108,8 @@ export interface ExperienceEntry {
   description?: string;
   period?: string;
   duration?: string;
-  is_current_position?: boolean;
-  postition_level?: PositionLevel;
+  is_current_position?: boolean | string; // Allow string due to n8n payload
+  postition_level?: PositionLevel | string; // Allow string due to n8n payload
 }
 
 export interface SkillEntry {
@@ -121,9 +124,8 @@ export interface JobSuitableEntry {
   suitable_salary_bath_month?: string;
 }
 
-// For n8n webhook payload
 export interface N8NJobMatch {
-  job_id: string;
+  job_id?: string; // Made optional as per your last n8n example
   job_title: string;
   fit_score: number;
   match_reasons: string[];
@@ -145,14 +147,22 @@ export interface CandidateDetails {
   };
 }
 
-// This is the structure for a single candidate entry coming from n8n
+// For the n8n webhook that creates candidates
+export interface N8NCandidateInfoForWebhook {
+  cv_language?: string;
+  personal_info: PersonalInfo;
+  contact_info: ContactInfo;
+  education?: EducationEntry[];
+  experience?: ExperienceEntry[];
+  skills?: SkillEntry[];
+  job_suitable?: JobSuitableEntry[];
+}
 export interface N8NCandidateWebhookEntry {
-  candidate_info: CandidateDetails;
+  candidate_info: N8NCandidateInfoForWebhook; // This used to be CandidateDetails
   jobs: N8NJobMatch[];
 }
-
-// The overall payload from n8n is an array of these entries
-export type N8NWebhookPayload = N8NCandidateWebhookEntry[];
+// The overall payload from n8n is now a single object not an array
+export type N8NWebhookPayload = N8NCandidateWebhookEntry;
 
 
 // Kept for potential backward compatibility if some candidates have old data structure
@@ -173,7 +183,7 @@ export interface Position {
   department: string;
   description?: string | null; 
   isOpen: boolean;
-  position_level?: string | null; // Matches PositionLevel options
+  position_level?: string | null; 
   createdAt?: string;
   updatedAt?: string;
   candidates?: Candidate[]; 
@@ -204,7 +214,7 @@ export interface UserProfile {
   avatarUrl?: string;
   dataAiHint?: string;
   role: 'Admin' | 'Recruiter' | 'Hiring Manager';
-  password?: string; // This should be the hashed password in the DB
+  password?: string; 
   modulePermissions?: PlatformModuleId[]; 
   createdAt?: string;
   updatedAt?: string;
