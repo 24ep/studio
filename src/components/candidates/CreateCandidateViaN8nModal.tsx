@@ -22,10 +22,11 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { UploadCloud, FileText, XCircle, Loader2, Zap, Briefcase } from 'lucide-react';
+import { UploadCloud, FileText, XCircle, Loader2, Zap } from 'lucide-react';
 import type { Position } from '@/lib/types';
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+const NONE_POSITION_VALUE = "___NONE_POSITION___"; // Placeholder for SelectItem value
 
 interface CreateCandidateViaN8nModalProps {
   isOpen: boolean;
@@ -38,7 +39,7 @@ export function CreateCandidateViaN8nModal({ isOpen, onOpenChange, onProcessingS
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [availablePositions, setAvailablePositions] = useState<Position[]>([]);
-  const [selectedPositionId, setSelectedPositionId] = useState<string>("");
+  const [selectedPositionId, setSelectedPositionId] = useState<string>(""); // Internal state for form
 
   useEffect(() => {
     if (isOpen) {
@@ -60,7 +61,7 @@ export function CreateCandidateViaN8nModal({ isOpen, onOpenChange, onProcessingS
       // Reset state when modal closes
       setSelectedFile(null);
       setSelectedPositionId("");
-      setAvailablePositions([]);
+      // setAvailablePositions([]); // Keep positions if modal reopens quickly, or clear if fresh list always needed
       const fileInput = document.getElementById('n8n-candidate-pdf-upload') as HTMLInputElement;
       if (fileInput) fileInput.value = '';
     }
@@ -102,7 +103,7 @@ export function CreateCandidateViaN8nModal({ isOpen, onOpenChange, onProcessingS
     setIsUploading(true);
     const formData = new FormData();
     formData.append('pdfFile', selectedFile);
-    if (selectedPositionId) {
+    if (selectedPositionId) { // Only append if a position is actually selected (not the "None" placeholder)
       formData.append('positionId', selectedPositionId);
     }
 
@@ -127,7 +128,7 @@ export function CreateCandidateViaN8nModal({ isOpen, onOpenChange, onProcessingS
         description: result.message || `Resume "${selectedFile.name}" sent to n8n. A new candidate will be created if parsing is successful.`,
       });
       onProcessingStart();
-      onOpenChange(false);
+      onOpenChange(false); // Close modal on success
     } catch (error) {
       console.error("Error sending PDF to n8n for candidate creation:", error);
       toast({
@@ -180,12 +181,15 @@ export function CreateCandidateViaN8nModal({ isOpen, onOpenChange, onProcessingS
             )}
              <div>
               <Label htmlFor="n8n-target-position">Target Position (Optional)</Label>
-              <Select value={selectedPositionId} onValueChange={setSelectedPositionId}>
+              <Select 
+                value={selectedPositionId || NONE_POSITION_VALUE} 
+                onValueChange={(value) => setSelectedPositionId(value === NONE_POSITION_VALUE ? "" : value)}
+              >
                 <SelectTrigger id="n8n-target-position" className="mt-1">
                   <SelectValue placeholder="Select a position to apply to..." />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">None (General Application / Let n8n Match)</SelectItem>
+                  <SelectItem value={NONE_POSITION_VALUE}>None (General Application / Let n8n Match)</SelectItem>
                   {availablePositions.map(pos => (
                     <SelectItem key={pos.id} value={pos.id}>{pos.title}</SelectItem>
                   ))}
