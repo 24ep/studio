@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, type ChangeEvent, useEffect } from 'react'; // Added useEffect
+import { useState, type ChangeEvent, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -14,8 +14,16 @@ import {
   DialogFooter,
   DialogClose,
 } from '@/components/ui/dialog';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { UploadCloud, FileText, XCircle, Loader2, Zap } from 'lucide-react';
+import { UploadCloud, FileText, XCircle, Loader2, Zap, Briefcase } from 'lucide-react';
+import type { Position } from '@/lib/types';
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 
@@ -29,6 +37,34 @@ export function CreateCandidateViaN8nModal({ isOpen, onOpenChange, onProcessingS
   const { toast } = useToast();
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [availablePositions, setAvailablePositions] = useState<Position[]>([]);
+  const [selectedPositionId, setSelectedPositionId] = useState<string>("");
+
+  useEffect(() => {
+    if (isOpen) {
+      const fetchPositions = async () => {
+        try {
+          const response = await fetch('/api/positions?isOpen=true'); // Fetch only open positions
+          if (!response.ok) {
+            throw new Error('Failed to fetch positions');
+          }
+          const data: Position[] = await response.json();
+          setAvailablePositions(data);
+        } catch (error) {
+          console.error("Error fetching positions for n8n modal:", error);
+          toast({ title: "Error", description: "Could not load positions for selection.", variant: "destructive" });
+        }
+      };
+      fetchPositions();
+    } else {
+      // Reset state when modal closes
+      setSelectedFile(null);
+      setSelectedPositionId("");
+      setAvailablePositions([]);
+      const fileInput = document.getElementById('n8n-candidate-pdf-upload') as HTMLInputElement;
+      if (fileInput) fileInput.value = '';
+    }
+  }, [isOpen, toast]);
 
   const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -37,7 +73,7 @@ export function CreateCandidateViaN8nModal({ isOpen, onOpenChange, onProcessingS
         if (file.size > MAX_FILE_SIZE) {
             toast({ title: "File Too Large", description: `PDF file size should not exceed ${MAX_FILE_SIZE / (1024*1024)}MB.`, variant: "destructive" });
             setSelectedFile(null);
-            event.target.value = ''; 
+            event.target.value = '';
             return;
         }
         setSelectedFile(file);
@@ -66,6 +102,9 @@ export function CreateCandidateViaN8nModal({ isOpen, onOpenChange, onProcessingS
     setIsUploading(true);
     const formData = new FormData();
     formData.append('pdfFile', selectedFile);
+    if (selectedPositionId) {
+      formData.append('positionId', selectedPositionId);
+    }
 
     try {
       const response = await fetch('/api/candidates/upload-for-n8n', {
@@ -76,26 +115,24 @@ export function CreateCandidateViaN8nModal({ isOpen, onOpenChange, onProcessingS
       const result = await response.json();
 
       if (!response.ok) {
-        // This will throw the error that gets caught by the catch block below
-        throw new Error(result.message || `Failed to send PDF to n8n for candidate creation. Status: ${response.status}`);
+        let description = result.message || `Failed to send PDF to n8n for candidate creation. Status: ${response.status}`;
+        if (result.message === "n8n integration for candidate creation is not configured on the server.") {
+          description += " Please ensure the N8N_GENERIC_PDF_WEBHOOK_URL environment variable is set on the server.";
+        }
+        throw new Error(description);
       }
 
       toast({
         title: "Resume Sent for Processing",
         description: result.message || `Resume "${selectedFile.name}" sent to n8n. A new candidate will be created if parsing is successful.`,
       });
-      onProcessingStart(); // Notify parent page
-      onOpenChange(false); // Close modal
-      // No need to call removeFile() here as the modal closing will trigger it via useEffect or onOpenChange handler
+      onProcessingStart();
+      onOpenChange(false);
     } catch (error) {
       console.error("Error sending PDF to n8n for candidate creation:", error);
-      let description = (error as Error).message;
-      if (description === "n8n integration for candidate creation is not configured on the server.") {
-        description += " Please ensure the N8N_GENERIC_PDF_WEBHOOK_URL environment variable is set on the server.";
-      }
       toast({
         title: "Upload Failed",
-        description: description,
+        description: (error as Error).message,
         variant: "destructive",
       });
     } finally {
@@ -103,19 +140,9 @@ export function CreateCandidateViaN8nModal({ isOpen, onOpenChange, onProcessingS
     }
   };
   
-  // Reset file when modal is closed
-  useEffect(() => {
-    if (!isOpen) {
-        removeFile();
-    }
-  }, [isOpen]);
-
 
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => {
-        onOpenChange(open);
-        // No need for removeFile() here if useEffect handles it
-    }}>
+    <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle className="flex items-center">
@@ -123,7 +150,7 @@ export function CreateCandidateViaN8nModal({ isOpen, onOpenChange, onProcessingS
           </DialogTitle>
           <DialogDescription>
             Upload a PDF resume. It will be sent to an n8n workflow for parsing and candidate creation.
-            The n8n workflow must be configured to POST back to `/api/candidates` to create the user.
+            You can optionally select a position to associate the candidate with.
           </DialogDescription>
         </DialogHeader>
         
@@ -151,6 +178,23 @@ export function CreateCandidateViaN8nModal({ isOpen, onOpenChange, onProcessingS
                 </Button>
                 </div>
             )}
+             <div>
+              <Label htmlFor="n8n-target-position">Target Position (Optional)</Label>
+              <Select value={selectedPositionId} onValueChange={setSelectedPositionId}>
+                <SelectTrigger id="n8n-target-position" className="mt-1">
+                  <SelectValue placeholder="Select a position to apply to..." />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">None (General Application / Let n8n Match)</SelectItem>
+                  {availablePositions.map(pos => (
+                    <SelectItem key={pos.id} value={pos.id}>{pos.title}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground mt-1">
+                If selected, this position will be prioritized for the new candidate.
+              </p>
+            </div>
         </div>
         
         <DialogFooter className="mt-2">
