@@ -240,11 +240,12 @@ export default function CandidateDetailPage() {
 
   const fetchCandidateDetails = useCallback(async () => {
     if (!candidateId) return;
-    if (sessionStatus !== 'authenticated' && sessionStatus !== 'loading') { 
-        signIn(undefined, { callbackUrl: `/candidates/${candidateId}` });
-        return;
-    }
-    if(sessionStatus === 'loading') return;
+    // No session check needed for public API
+    // if (sessionStatus !== 'authenticated' && sessionStatus !== 'loading') { 
+    //     signIn(undefined, { callbackUrl: `/candidates/${candidateId}` });
+    //     return;
+    // }
+    // if(sessionStatus === 'loading') return;
 
     setIsLoading(true);
     setFetchError(null);
@@ -253,10 +254,10 @@ export default function CandidateDetailPage() {
       const response = await fetch(`/api/candidates/${candidateId}`);
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        if (response.status === 401) {
-            signIn(undefined, { callbackUrl: `/candidates/${candidateId}` });
-            return;
-        }
+        // if (response.status === 401) {
+        //     signIn(undefined, { callbackUrl: `/candidates/${candidateId}` });
+        //     return;
+        // }
         const errorMessage = errorData.message || `Failed to fetch candidate: ${response.statusText || `Status ${response.status}`}`;
         setFetchError(errorMessage);
         setCandidate(null);
@@ -264,6 +265,9 @@ export default function CandidateDetailPage() {
       }
       const data: Candidate = await response.json();
       setCandidate(data);
+      console.log("Fetched candidate data:", data);
+      console.log("Experience data:", data.parsedData?.experience);
+
       reset({
         name: data.name,
         email: data.email,
@@ -287,10 +291,10 @@ export default function CandidateDetailPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [candidateId, reset, sessionStatus, signIn]);
+  }, [candidateId, reset]); // Removed sessionStatus, signIn
 
   const fetchRecruiters = useCallback(async () => {
-    if (sessionStatus !== 'authenticated') return;
+    // Public API, no session check
     try {
       const response = await fetch('/api/users?role=Recruiter');
       if (!response.ok) throw new Error('Failed to fetch recruiters');
@@ -300,10 +304,10 @@ export default function CandidateDetailPage() {
       console.error("Error fetching recruiters:", error);
       toast({ title: "Error", description: "Could not load recruiters for assignment.", variant: "destructive" });
     }
-  }, [sessionStatus, toast]);
+  }, [toast]);
 
   const fetchAllPositions = useCallback(async () => {
-    if (sessionStatus !== 'authenticated') return;
+    // Public API, no session check
     try {
       const response = await fetch('/api/positions?isOpen=true'); 
       if (!response.ok) throw new Error('Failed to fetch positions');
@@ -312,20 +316,17 @@ export default function CandidateDetailPage() {
     } catch (error) {
       console.error("Error fetching all positions:", error);
     }
-  }, [sessionStatus]);
+  }, []);
 
 
   useEffect(() => {
-    if (sessionStatus === 'authenticated') {
-        if (candidateId) {
-            fetchCandidateDetails();
-            fetchAllPositions(); 
-            fetchRecruiters(); 
-        }
-    } else if (sessionStatus === 'unauthenticated') {
-         signIn(undefined, { callbackUrl: `/candidates/${candidateId}` });
+    // Public API, direct fetch
+    if (candidateId) {
+        fetchCandidateDetails();
+        fetchAllPositions(); 
+        fetchRecruiters(); 
     }
-  }, [candidateId, fetchCandidateDetails, fetchRecruiters, fetchAllPositions, sessionStatus, signIn]);
+  }, [candidateId, fetchCandidateDetails, fetchRecruiters, fetchAllPositions]); // Removed sessionStatus, signIn
 
   const handleUploadSuccess = (updatedCandidate: Candidate) => {
     setCandidate(updatedCandidate);
@@ -487,13 +488,22 @@ export default function CandidateDetailPage() {
     setIsEditing(false);
   };
 
-  if (sessionStatus === 'loading' || (isLoading && !fetchError)) {
+  // if (sessionStatus === 'loading' || (isLoading && !fetchError)) {
+  //   return (
+  //     <div className="flex h-[calc(100vh-8rem)] items-center justify-center">
+  //       <Loader2 className="h-16 w-16 animate-spin text-primary" />
+  //     </div>
+  //   );
+  // }
+
+  if (isLoading && !fetchError) {
     return (
       <div className="flex h-[calc(100vh-8rem)] items-center justify-center">
         <Loader2 className="h-16 w-16 animate-spin text-primary" />
       </div>
     );
   }
+
 
   if (fetchError) {
     return (
@@ -543,13 +553,14 @@ export default function CandidateDetailPage() {
   
   // Function to try and extract a user-friendly filename
   const getDisplayFilename = (filePath: string | null | undefined): string => {
-    if (!filePath) return "View Resume";
-    // Assuming format: candId-timestamp-original_filename.ext
+    if (!filePath) return "View Resume"; // Default text if no path
+    // Try to extract the original filename part: candId-timestamp-original_filename.ext
     const parts = filePath.split('-');
-    if (parts.length > 2) {
+    if (parts.length > 2) { // Check if there are enough parts for our assumed structure
       return parts.slice(2).join('-').replace(/_/g, ' '); // Join back parts of original filename and replace underscores
     }
-    return parts.pop() || "View Resume"; // Fallback to last part or default
+    // Fallback: if the structure is different, just use the last part (filename.ext)
+    return parts.pop() || "View Resume"; 
   };
 
   return (
@@ -669,6 +680,7 @@ export default function CandidateDetailPage() {
                     </>
                 )}
                 {/* Resume link - ensure your MinIO bucket has public read access or use pre-signed URLs for production */}
+                {/* For direct linking to work, MinIO bucket 'canditrack-resumes' needs public read policy. */}
                 {candidate.resumePath && !isEditing && renderField(
                   "Resume",
                   getDisplayFilename(candidate.resumePath),
@@ -1042,7 +1054,7 @@ export default function CandidateDetailPage() {
           {(parsed?.job_matches && parsed.job_matches.length > 0 && !isEditing) && (
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center"><ListChecks className="mr-2 h-5 w-5 text-blue-600" />All n8n Job Matches</CardTitle>
+                <CardTitle className="flex items-center"><ListChecks className="mr-2 h-5 w-5 text-blue-600" />Suggest jobs</CardTitle>
                 <CardDescription>Full list of job matches from n8n processing for this candidate.</CardDescription>
               </CardHeader>
               <CardContent>
@@ -1077,7 +1089,7 @@ export default function CandidateDetailPage() {
           )}
            {(!isEditing && (!parsed?.job_matches || parsed.job_matches.length === 0)) && (
              <Card>
-                <CardHeader><CardTitle className="flex items-center"><ListChecks className="mr-2 h-5 w-5 text-blue-600" />All n8n Job Matches</CardTitle></CardHeader>
+                <CardHeader><CardTitle className="flex items-center"><ListChecks className="mr-2 h-5 w-5 text-blue-600" />Suggest jobs</CardTitle></CardHeader>
                 <CardContent><p className="text-sm text-muted-foreground text-center py-4">No n8n job match data available.</p></CardContent>
              </Card>
            )}
@@ -1114,5 +1126,3 @@ export default function CandidateDetailPage() {
     </FormProvider>
   );
 }
-
-    
