@@ -14,9 +14,10 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { Progress } from '@/components/ui/progress';
 import { format, parseISO } from 'date-fns';
-import { ArrowLeft, Briefcase, CalendarDays, DollarSign, Edit, GraduationCap, HardDrive, Info, LinkIcon, ListChecks, Loader2, Mail, MapPin, MessageSquare, Percent, Phone, ServerCrash, ShieldAlert, Star, Tag, UploadCloud, User, UserCircle, UserCog, Users, Zap } from 'lucide-react';
+import { ArrowLeft, Briefcase, CalendarDays, DollarSign, Edit, GraduationCap, HardDrive, Info, LinkIcon, ListChecks, Loader2, Mail, MapPin, MessageSquare, Percent, Phone, ServerCrash, ShieldAlert, Star, Tag, UploadCloud, User, UserCircle, UserCog, Users, Zap, ExternalLink } from 'lucide-react';
 import { UploadResumeModal } from '@/components/candidates/UploadResumeModal';
 import { ManageTransitionsModal } from '@/components/candidates/ManageTransitionsModal';
+import { EditPositionModal, type EditPositionFormValues } from '@/components/positions/EditPositionModal'; // Import EditPositionModal
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
@@ -49,6 +50,12 @@ export default function CandidateDetailPage() {
 
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
   const [isTransitionsModalOpen, setIsTransitionsModalOpen] = useState(false);
+
+  // For EditPositionModal
+  const [allDbPositions, setAllDbPositions] = useState<Position[]>([]);
+  const [isEditPositionModalOpen, setIsEditPositionModalOpen] = useState(false);
+  const [selectedPositionForEdit, setSelectedPositionForEdit] = useState<Position | null>(null);
+
 
   const fetchCandidateDetails = useCallback(async () => {
     if (!candidateId || sessionStatus !== 'authenticated') return;
@@ -94,6 +101,19 @@ export default function CandidateDetailPage() {
     }
   }, [sessionStatus, session, toast]);
 
+  const fetchAllPositions = useCallback(async () => {
+    if (sessionStatus !== 'authenticated') return;
+    try {
+      const response = await fetch('/api/positions');
+      if (!response.ok) throw new Error('Failed to fetch positions for n8n matching');
+      const data: Position[] = await response.json();
+      setAllDbPositions(data);
+    } catch (error) {
+      console.error("Error fetching all positions:", error);
+      // Silently fail or show a subtle non-blocking error
+    }
+  }, [sessionStatus]);
+
 
   useEffect(() => {
     if (sessionStatus === 'loading') return;
@@ -103,11 +123,12 @@ export default function CandidateDetailPage() {
     }
     if (candidateId) {
       fetchCandidateDetails();
+      fetchAllPositions(); // Fetch all positions for n8n match clicking
       if (session?.user?.role === 'Admin' || session?.user?.role === 'Recruiter') {
         fetchRecruiters();
       }
     }
-  }, [candidateId, sessionStatus, fetchCandidateDetails, fetchRecruiters, signIn, session]);
+  }, [candidateId, sessionStatus, fetchCandidateDetails, fetchRecruiters, fetchAllPositions, signIn, session]);
 
   const handleUploadSuccess = (updatedCandidate: Candidate) => {
     setCandidate(updatedCandidate);
@@ -127,7 +148,7 @@ export default function CandidateDetailPage() {
             throw new Error(errorData.message || `Failed to update candidate status: ${response.statusText}`);
         }
         const updatedCandidateFromServer: Candidate = await response.json();
-        setCandidate(updatedCandidateFromServer); // Update candidate with full data from server
+        setCandidate(updatedCandidateFromServer); 
         toast({ title: "Status Updated", description: `Candidate status updated to ${newStatus}.` });
     } catch (error) {
         toast({
@@ -158,6 +179,25 @@ export default function CandidateDetailPage() {
       toast({ title: "Error Assigning Recruiter", description: (error as Error).message, variant: "destructive" });
     } finally {
       setIsAssigningRecruiter(false);
+    }
+  };
+
+  const handleN8nJobMatchClick = (n8nMatchTitle: string) => {
+    const matchedPosition = allDbPositions.find(p => p.title.toLowerCase() === n8nMatchTitle.toLowerCase());
+    if (matchedPosition) {
+      setSelectedPositionForEdit(matchedPosition);
+      setIsEditPositionModalOpen(true);
+    } else {
+      toast({ title: "Position Not Found", description: `Position "${n8nMatchTitle}" not found in the system.`, variant: "default" });
+    }
+  };
+
+  const handlePositionEdited = async () => {
+    toast({ title: "Position Updated", description: "Position details have been saved." });
+    setIsEditPositionModalOpen(false);
+    await fetchAllPositions(); // Re-fetch positions if needed for consistency
+    if (candidateId) {
+        await fetchCandidateDetails(); // Re-fetch candidate if their associated position might have changed
     }
   };
 
@@ -356,10 +396,10 @@ export default function CandidateDetailPage() {
                 <CardTitle  className="flex items-center"><GraduationCap className="mr-2 h-5 w-5 text-primary"/>Education</CardTitle>
                 </CardHeader>
                 <CardContent>
-                    <ScrollArea className="h-[300px]"> {/* Fixed height for scroll area */}
+                    <ScrollArea className="h-[300px]"> 
                     <ul className="space-y-4">
                         {parsed.education.map((edu, index) => (
-                        <li key={`edu-${index}`} className="p-3 border rounded-md bg-muted/30">
+                        <li key={`edu-${index}-${edu.university || index}`} className="p-3 border rounded-md bg-muted/30">
                             {renderField("University", edu.university)}
                             {renderField("Major", edu.major)}
                             {renderField("Field", edu.field)}
@@ -387,14 +427,14 @@ export default function CandidateDetailPage() {
                 <CardTitle className="flex items-center"><Briefcase className="mr-2 h-5 w-5 text-primary"/>Experience</CardTitle>
               </CardHeader>
               <CardContent>
-                <ScrollArea className="h-[300px]"> {/* Fixed height for scroll area */}
+                { /* console.log("Experience Data for Rendering:", candidate.parsedData?.experience) */ }
+                <ScrollArea className="h-[300px]"> 
                   <ul className="space-y-4">
-                    {/* console.log("Rendering experiences:", parsed.experience) */} {/* Removed for production */}
                     {parsed.experience.map((exp, index) => (
-                      <li key={`exp-${index}`} className="p-3 border rounded-md bg-muted/30">
+                      <li key={`exp-${index}-${exp.company || index}`} className="p-3 border rounded-md bg-muted/30">
                         {renderField("Company", exp.company)}
                         {renderField("Position", exp.position)}
-                        {renderField("Level", exp.postition_level as string)}
+                        {renderField("Level", String(exp.postition_level))}
                         {renderField("Period", exp.period, CalendarDays)}
                         {renderField("Duration", exp.duration)}
                         {exp.is_current_position !== undefined && renderField("Current Position", String(exp.is_current_position))}
@@ -422,16 +462,16 @@ export default function CandidateDetailPage() {
             <Card>
               <CardHeader><CardTitle className="flex items-center"><Star className="mr-2 h-5 w-5 text-primary"/>Skills</CardTitle></CardHeader>
               <CardContent>
-                <ScrollArea className="h-[300px]"> {/* Fixed height for scroll area */}
+                <ScrollArea className="h-[300px]"> 
                 <ul className="space-y-4">
                     {parsed.skills.map((skillEntry, index) => (
-                    <li key={`skill-${index}`} className="p-3 border rounded-md bg-muted/30">
+                    <li key={`skill-${index}-${skillEntry.segment_skill || index}`} className="p-3 border rounded-md bg-muted/30">
                         {renderField("Segment", skillEntry.segment_skill)}
                         {skillEntry.skill && skillEntry.skill.length > 0 && (
                         <div>
                             <h4 className="text-sm font-medium text-muted-foreground mt-1.5">Skills:</h4>
                             <div className="flex flex-wrap gap-1.5 mt-1">
-                            {skillEntry.skill.map((s, i) => <Badge key={i} variant="secondary">{s}</Badge>)}
+                            {skillEntry.skill.map((s, i) => <Badge key={`${index}-${i}-${s}`} variant="secondary">{s}</Badge>)}
                             </div>
                         </div>
                         )}
@@ -453,10 +493,10 @@ export default function CandidateDetailPage() {
             <Card>
               <CardHeader><CardTitle className="flex items-center"><UserCog className="mr-2 h-5 w-5 text-primary"/>Job Suitability</CardTitle></CardHeader>
               <CardContent>
-                <ScrollArea className="h-[300px]"> {/* Fixed height for scroll area */}
+                <ScrollArea className="h-[300px]"> 
                 <ul className="space-y-4">
                     {parsed.job_suitable.map((job, index) => (
-                    <li key={`jobsuit-${index}`} className="p-3 border rounded-md bg-muted/30">
+                    <li key={`jobsuit-${index}-${job.suitable_career || index}`} className="p-3 border rounded-md bg-muted/30">
                         {renderField("Career Path", job.suitable_career)}
                         {renderField("Job Position", job.suitable_job_position)}
                         {renderField("Job Level", job.suitable_job_level)}
@@ -479,7 +519,7 @@ export default function CandidateDetailPage() {
             <CardHeader><CardTitle className="flex items-center"><MessageSquare className="mr-2 h-5 w-5 text-primary"/>Transition History</CardTitle></CardHeader>
             <CardContent>
               {candidate.transitionHistory && candidate.transitionHistory.length > 0 ? (
-                <ScrollArea className="h-[300px]"> {/* Fixed height for scroll area */}
+                <ScrollArea className="h-[300px]"> 
                 <ul className="space-y-0">
                   {candidate.transitionHistory.sort((a,b) => parseISO(b.date).getTime() - parseISO(a.date).getTime()).map((record, index) => (
                     <li key={record.id} className="p-3 hover:bg-muted/50 transition-colors">
@@ -513,11 +553,16 @@ export default function CandidateDetailPage() {
                 <CardDescription>Full list of job matches from n8n processing for this candidate.</CardDescription>
               </CardHeader>
               <CardContent>
-                <ScrollArea className="h-[calc(100vh-200px)]"> {/* Adjusted height to fill available space */}
+                <ScrollArea className="h-[calc(100vh-200px)]"> 
                   <ul className="space-y-3">
                     {parsed.job_matches.map((match, index) => (
                       <li key={`match-${index}-${match.job_id || index}`} className="p-3 border rounded-md bg-muted/30">
-                        <h4 className="font-semibold text-foreground">{match.job_title}</h4>
+                        <h4 
+                          className="font-semibold text-foreground hover:text-primary hover:underline cursor-pointer"
+                          onClick={() => handleN8nJobMatchClick(match.job_title)}
+                        >
+                          {match.job_title} <ExternalLink className="inline h-3 w-3 ml-1 opacity-70" />
+                        </h4>
                         <div className="text-sm text-muted-foreground">
                           Fit Score: <span className="font-medium text-foreground">{match.fit_score}%</span>
                           {match.job_id && ` (ID: ${match.job_id})`}
@@ -543,20 +588,28 @@ export default function CandidateDetailPage() {
 
       {candidate && canManageCandidate && (
         <>
-        <UploadResumeModal
-            isOpen={isUploadModalOpen}
-            onOpenChange={setIsUploadModalOpen}
-            candidate={candidate}
-            onUploadSuccess={handleUploadSuccess}
-        />
-        <ManageTransitionsModal
-            candidate={candidate}
-            isOpen={isTransitionsModalOpen}
-            onOpenChange={setIsTransitionsModalOpen}
-            onUpdateCandidate={handleUpdateCandidateStatus}
-            onRefreshCandidateData={fetchCandidateDetails}
-        />
+          <UploadResumeModal
+              isOpen={isUploadModalOpen}
+              onOpenChange={setIsUploadModalOpen}
+              candidate={candidate}
+              onUploadSuccess={handleUploadSuccess}
+          />
+          <ManageTransitionsModal
+              candidate={candidate}
+              isOpen={isTransitionsModalOpen}
+              onOpenChange={setIsTransitionsModalOpen}
+              onUpdateCandidate={handleUpdateCandidateStatus}
+              onRefreshCandidateData={fetchCandidateDetails}
+          />
         </>
+      )}
+      {selectedPositionForEdit && (
+          <EditPositionModal
+            isOpen={isEditPositionModalOpen}
+            onOpenChange={setIsEditPositionModalOpen}
+            position={selectedPositionForEdit}
+            onEditPosition={handlePositionEdited}
+          />
       )}
     </div>
   );
