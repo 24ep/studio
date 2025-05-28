@@ -40,7 +40,7 @@ export function UploadResumeModal({ isOpen, onOpenChange, candidate, onUploadSuc
           </DialogTitle>
           <DialogDescription>
             Select a PDF, DOC, or DOCX file to upload for this candidate.
-            {candidate.resumePath && <p className="text-xs mt-1">Current resume: <span className="font-medium">{candidate.resumePath.split('-').pop()}</span></p>}
+            {candidate.resumePath && <div className="text-xs mt-1">Current resume: <span className="font-medium">{candidate.resumePath.split('-').pop()}</span></div>}
           </DialogDescription>
         </DialogHeader>
         
