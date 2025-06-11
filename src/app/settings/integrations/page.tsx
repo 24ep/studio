@@ -11,7 +11,7 @@ import { signIn, useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 
 
-const N8N_RESUME_WEBHOOK_URL_KEY = 'n8nResumeWebhookUrl'; 
+// Removed N8N_RESUME_WEBHOOK_URL_KEY as it's now server-configured
 const SMTP_HOST_KEY = 'smtpHost';
 const SMTP_PORT_KEY = 'smtpPort';
 const SMTP_USER_KEY = 'smtpUser';
@@ -22,7 +22,7 @@ export default function IntegrationsSettingsPage() {
   const { data: session, status: sessionStatus } = useSession();
   const router = useRouter();
 
-  const [resumeWebhookUrl, setResumeWebhookUrl] = useState('');
+  // Removed resumeWebhookUrl state
   
   const [smtpHost, setSmtpHost] = useState('');
   const [smtpPort, setSmtpPort] = useState('');
@@ -36,8 +36,7 @@ export default function IntegrationsSettingsPage() {
       signIn(undefined, { callbackUrl: window.location.pathname });
     } else if (sessionStatus === 'authenticated') {
         if (typeof window !== 'undefined') {
-            const storedResumeWebhookUrl = localStorage.getItem(N8N_RESUME_WEBHOOK_URL_KEY);
-            if (storedResumeWebhookUrl) setResumeWebhookUrl(storedResumeWebhookUrl);
+            // Removed loading resumeWebhookUrl from localStorage
 
             const storedSmtpHost = localStorage.getItem(SMTP_HOST_KEY);
             if (storedSmtpHost) setSmtpHost(storedSmtpHost);
@@ -53,14 +52,14 @@ export default function IntegrationsSettingsPage() {
 
   const handleSaveIntegrations = () => {
     if (!isClient) return;
-    localStorage.setItem(N8N_RESUME_WEBHOOK_URL_KEY, resumeWebhookUrl);
+    // Removed saving resumeWebhookUrl to localStorage
     localStorage.setItem(SMTP_HOST_KEY, smtpHost);
     localStorage.setItem(SMTP_PORT_KEY, smtpPort);
     localStorage.setItem(SMTP_USER_KEY, smtpUser);
     
     toast({
       title: 'Client-Side Settings Saved',
-      description: 'Your n8n (resume specific) and SMTP display settings have been updated locally in your browser.',
+      description: 'Your SMTP display settings have been updated locally in your browser.',
     });
   };
 
@@ -78,26 +77,25 @@ export default function IntegrationsSettingsPage() {
        <Card className="shadow-lg">
         <CardHeader>
           <CardTitle className="flex items-center">
-            <Zap className="mr-2 h-6 w-6 text-orange-500" /> Workflow Automation (n8n for Candidate Resumes)
+            <Zap className="mr-2 h-6 w-6 text-orange-500" /> Workflow Automation (n8n)
           </CardTitle>
-          <CardDescription>Configure your n8n webhook for automated processing of resumes uploaded to **existing candidates**.</CardDescription>
+          <CardDescription>Configure n8n webhooks for automated processing.</CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-4">
             <div>
-              <Label htmlFor="n8n-resume-webhook-url">n8n Resume Webhook URL (Client Setting)</Label>
-              <Input
-                id="n8n-resume-webhook-url"
-                type="url"
-                placeholder="https://your-n8n-instance.com/webhook/..."
-                value={resumeWebhookUrl}
-                onChange={(e) => setResumeWebhookUrl(e.target.value)}
-                className="mt-1"
-              />
+              <h4 className="font-medium text-foreground">n8n Resume Webhook (for Existing Candidates)</h4>
               <p className="text-sm text-muted-foreground mt-1">
-                Enter the URL for your n8n webhook. This setting is saved in browser localStorage. 
-                The server uses the `N8N_RESUME_WEBHOOK_URL` environment variable for processing resumes uploaded to specific candidates.
-                For creating candidates from PDF via n8n (on Candidates page), the `N8N_GENERIC_PDF_WEBHOOK_URL` environment variable is used by the server.
+                This webhook is used for processing resumes uploaded to **existing candidates** (via the "Upload Resume" button on candidate profiles or lists).
+                It is configured on the server using the <code className="font-mono text-xs bg-muted px-1 py-0.5 rounded">N8N_RESUME_WEBHOOK_URL</code> environment variable.
               </p>
+            </div>
+            <hr/>
+            <div>
+                <h4 className="font-medium text-foreground">n8n Generic PDF Webhook (for New Candidate Creation)</h4>
+                <p className="text-sm text-muted-foreground mt-1">
+                    This webhook is used by the "Create via Resume (n8n)" feature on the Candidates page to process a PDF and create a new candidate.
+                    It is configured on the server using the <code className="font-mono text-xs bg-muted px-1 py-0.5 rounded">N8N_GENERIC_PDF_WEBHOOK_URL</code> environment variable.
+                </p>
             </div>
         </CardContent>
       </Card>
@@ -164,9 +162,11 @@ export default function IntegrationsSettingsPage() {
       </Card>
       <div className="flex justify-end pt-4">
           <Button onClick={handleSaveIntegrations} size="lg">
-            <Save className="mr-2 h-4 w-4" /> Save Client-Side Settings
+            <Save className="mr-2 h-4 w-4" /> Save Client-Side SMTP Settings
           </Button>
       </div>
     </div>
   );
 }
+
+    
