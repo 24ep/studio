@@ -7,13 +7,15 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useToast } from '@/hooks/use-toast';
-import { Save, Palette, ImageUp, Trash2, Loader2, XCircle } from 'lucide-react';
+import { Save, Palette, ImageUp, Trash2, Loader2, XCircle, PenSquare } from 'lucide-react';
 import Image from 'next/image';
 import { signIn, useSession } from 'next-auth/react';
-import { useRouter, usePathname } from 'next/navigation'; // Import usePathname
+import { useRouter, usePathname } from 'next/navigation';
 
 const APP_THEME_KEY = 'appThemePreference';
 const APP_LOGO_DATA_URL_KEY = 'appLogoDataUrl';
+const APP_CONFIG_APP_NAME_KEY = 'appConfigAppName'; // Key for app name
+const DEFAULT_APP_NAME = "CandiTrack"; // Default app name
 
 type ThemePreference = "light" | "dark" | "system";
 
@@ -22,21 +24,22 @@ export default function PreferencesSettingsPage() {
   const [isClient, setIsClient] = useState(false);
   const { data: session, status: sessionStatus } = useSession();
   const router = useRouter();
-  const pathname = usePathname(); // Get current pathname
+  const pathname = usePathname();
 
   // Preferences state
   const [themePreference, setThemePreference] = useState<ThemePreference>('system');
+  const [appName, setAppName] = useState<string>(DEFAULT_APP_NAME);
 
   // App Logo state
   const [selectedLogoFile, setSelectedLogoFile] = useState<File | null>(null);
-  const [logoPreviewUrl, setLogoPreviewUrl] = useState<string | null>(null); // This will hold the data URL for preview
+  const [logoPreviewUrl, setLogoPreviewUrl] = useState<string | null>(null);
   const [savedLogoDataUrl, setSavedLogoDataUrl] = useState<string | null>(null);
 
 
   useEffect(() => {
     setIsClient(true);
     if (sessionStatus === 'unauthenticated') {
-      signIn(undefined, { callbackUrl: pathname }); // Use pathname
+      signIn(undefined, { callbackUrl: pathname });
     } else if (sessionStatus === 'authenticated') {
         if (typeof window !== 'undefined') {
             const storedTheme = localStorage.getItem(APP_THEME_KEY) as ThemePreference | null;
@@ -45,11 +48,14 @@ export default function PreferencesSettingsPage() {
             const storedLogoDataUrl = localStorage.getItem(APP_LOGO_DATA_URL_KEY);
             if (storedLogoDataUrl) {
                 setSavedLogoDataUrl(storedLogoDataUrl);
-                setLogoPreviewUrl(storedLogoDataUrl); // Initialize preview with saved logo
+                setLogoPreviewUrl(storedLogoDataUrl);
             }
+
+            const storedAppName = localStorage.getItem(APP_CONFIG_APP_NAME_KEY);
+            setAppName(storedAppName || DEFAULT_APP_NAME);
         }
     }
-  }, [sessionStatus, router, pathname, signIn]); // Added pathname and signIn to dependencies
+  }, [sessionStatus, router, pathname, signIn]);
 
   const handleLogoFileChange = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -58,25 +64,25 @@ export default function PreferencesSettingsPage() {
         if (file.size > 100 * 1024) { // Max 100KB
             toast({ title: "Logo Too Large", description: "Please select an image smaller than 100KB.", variant: "destructive" });
             setSelectedLogoFile(null);
-            setLogoPreviewUrl(savedLogoDataUrl); // Revert to saved logo if new one is too large
+            setLogoPreviewUrl(savedLogoDataUrl);
             event.target.value = '';
             return;
         }
         setSelectedLogoFile(file);
         const reader = new FileReader();
         reader.onloadend = () => {
-          setLogoPreviewUrl(reader.result as string); // Set preview to the new file's data URL
+          setLogoPreviewUrl(reader.result as string);
         };
         reader.readAsDataURL(file);
       } else {
         toast({ title: "Invalid File Type", description: "Please select an image file (e.g., PNG, JPG, SVG).", variant: "destructive" });
         setSelectedLogoFile(null);
-        setLogoPreviewUrl(savedLogoDataUrl); // Revert to saved logo if type is invalid
+        setLogoPreviewUrl(savedLogoDataUrl);
         event.target.value = '';
       }
     } else {
       setSelectedLogoFile(null);
-      setLogoPreviewUrl(savedLogoDataUrl); // Revert to saved logo if selection is cleared
+      setLogoPreviewUrl(savedLogoDataUrl);
     }
   };
 
@@ -91,36 +97,36 @@ export default function PreferencesSettingsPage() {
         setSavedLogoDataUrl(null);
         setLogoPreviewUrl(null);
         toast({ title: "Logo Cleared", description: "The application logo has been reset to default." });
-        window.dispatchEvent(new Event('logoChanged')); // Notify layout to update
+        window.dispatchEvent(new CustomEvent('appConfigChanged', { detail: { logoUrl: null } }));
     } else {
-        setLogoPreviewUrl(savedLogoDataUrl); // Revert preview to the currently saved logo
+        setLogoPreviewUrl(savedLogoDataUrl);
     }
   };
 
   const handleSavePreferences = () => {
     if (!isClient) return;
     localStorage.setItem(APP_THEME_KEY, themePreference);
+    localStorage.setItem(APP_CONFIG_APP_NAME_KEY, appName || DEFAULT_APP_NAME); // Save app name
 
     let logoUpdated = false;
     if (selectedLogoFile && logoPreviewUrl) {
-      // If a new file was selected and preview (data URL) exists, save it
       localStorage.setItem(APP_LOGO_DATA_URL_KEY, logoPreviewUrl);
       setSavedLogoDataUrl(logoPreviewUrl);
       logoUpdated = true;
-    } else if (!selectedLogoFile && !logoPreviewUrl && savedLogoDataUrl) {
-      // This case implies the user cleared a preview of a *new* file, wants to keep existing or cleared existing
-      // The removeSelectedLogo(true) case handles actual clearing from storage
     }
-
 
     toast({
       title: 'Preferences Saved',
       description: 'Your preferences have been updated locally.',
     });
 
-    if (logoUpdated) {
-        window.dispatchEvent(new Event('logoChanged')); // Notify layout to update the logo
-    }
+    // Dispatch a single event for any config change
+    window.dispatchEvent(new CustomEvent('appConfigChanged', { 
+      detail: { 
+        appName: appName || DEFAULT_APP_NAME,
+        logoUrl: logoUpdated ? logoPreviewUrl : savedLogoDataUrl 
+      } 
+    }));
   };
 
   if (sessionStatus === 'loading' || (sessionStatus === 'unauthenticated' && pathname !== '/auth/signin' && !pathname.startsWith('/_next/')) || !isClient) {
@@ -138,9 +144,29 @@ export default function PreferencesSettingsPage() {
           <CardTitle className="flex items-center">
             <Palette className="mr-2 h-6 w-6 text-primary" /> Preferences
           </CardTitle>
-          <CardDescription>Manage your application theme and logo preferences. Settings are saved locally.</CardDescription>
+          <CardDescription>Manage your application name, theme, and logo. Settings are saved locally.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
+          <section>
+            <h3 className="text-lg font-semibold text-foreground mb-2 flex items-center">
+                <PenSquare className="mr-2 h-5 w-5" /> App Name
+            </h3>
+            <div>
+                <Label htmlFor="app-name-input">Application Name</Label>
+                <Input
+                id="app-name-input"
+                type="text"
+                value={appName}
+                onChange={(e) => setAppName(e.target.value)}
+                className="mt-1"
+                placeholder="e.g., My ATS"
+                />
+                <p className="text-xs text-muted-foreground mt-1">
+                This name will be displayed in the application header and other relevant places.
+                </p>
+            </div>
+          </section>
+
           <section>
             <h3 className="text-lg font-semibold text-foreground mb-2">Theme</h3>
             <RadioGroup

@@ -3,36 +3,66 @@
 
 import { useEffect, useState } from "react";
 import { useSession, signIn } from "next-auth/react";
-import { useRouter, useSearchParams } from "next/navigation"; // Corrected: use "next/navigation" for App Router client-side redirect
+import { useRouter, useSearchParams } from "next/navigation";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { AzureAdSignInButton } from "@/components/auth/AzureAdSignInButton";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { AlertTriangle, Loader2 } from "lucide-react"; // Added Loader2
+import { AlertTriangle, Loader2 } from "lucide-react";
 import Image from 'next/image';
 import { CredentialsSignInForm } from "@/components/auth/CredentialsSignInForm";
 
-const APP_LOGO_DATA_URL_KEY = 'appLogoDataUrl'; // Key for localStorage
+const APP_LOGO_DATA_URL_KEY = 'appLogoDataUrl';
+const APP_CONFIG_APP_NAME_KEY = 'appConfigAppName';
+const DEFAULT_APP_NAME = "CandiTrack";
 
 export default function SignInPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
-  const nextSearchParams = useSearchParams(); // Use the hook here
+  const nextSearchParams = useSearchParams();
   const [appLogoUrl, setAppLogoUrl] = useState<string | null>(null);
+  const [currentAppName, setCurrentAppName] = useState<string>(DEFAULT_APP_NAME);
   const [isClient, setIsClient] = useState(false);
   
-  const callbackUrl = nextSearchParams.get('callbackUrl') || "/"; // Get callbackUrl using .get()
+  const callbackUrl = nextSearchParams.get('callbackUrl') || "/";
 
   useEffect(() => {
-    setIsClient(true); // Indicate component has mounted client-side
-    const storedLogo = localStorage.getItem(APP_LOGO_DATA_URL_KEY);
-    if (storedLogo) {
-      setAppLogoUrl(storedLogo);
-    }
+    setIsClient(true);
+    const updateAppConfig = () => {
+      if (typeof window !== 'undefined') {
+        const storedLogo = localStorage.getItem(APP_LOGO_DATA_URL_KEY);
+        if (storedLogo) {
+          setAppLogoUrl(storedLogo);
+        }
+        const storedAppName = localStorage.getItem(APP_CONFIG_APP_NAME_KEY);
+        setCurrentAppName(storedAppName || DEFAULT_APP_NAME);
+      }
+    };
+    updateAppConfig();
+
+    const handleAppConfigChange = (event: Event) => {
+        const customEvent = event as CustomEvent<{ appName?: string; logoUrl?: string | null }>;
+        if (customEvent.detail) {
+            if (customEvent.detail.appName) {
+                setCurrentAppName(customEvent.detail.appName);
+            }
+            if (customEvent.detail.logoUrl !== undefined) { // Check if logoUrl is part of the detail
+                 setAppLogoUrl(customEvent.detail.logoUrl);
+            }
+        } else {
+            // Fallback if event detail is not as expected
+            updateAppConfig();
+        }
+    };
+
+    window.addEventListener('appConfigChanged', handleAppConfigChange);
+    return () => {
+      window.removeEventListener('appConfigChanged', handleAppConfigChange);
+    };
   }, []);
 
   useEffect(() => {
     if (status === "authenticated" && session) {
-      router.replace(callbackUrl); // Use router.replace for client-side redirect
+      router.replace(callbackUrl);
     }
   }, [session, status, router, callbackUrl]);
 
@@ -40,13 +70,13 @@ export default function SignInPage() {
     process.env.NEXT_PUBLIC_AZURE_AD_CLIENT_ID &&
     process.env.NEXT_PUBLIC_AZURE_AD_CLIENT_SECRET &&
     process.env.NEXT_PUBLIC_AZURE_AD_TENANT_ID
-  ) || !!( // Fallback to non-public for initial check if server had real values (though this page is client)
+  ) || !!(
     process.env.AZURE_AD_CLIENT_ID &&
     process.env.AZURE_AD_CLIENT_SECRET &&
     process.env.AZURE_AD_TENANT_ID
   );
 
-  const errorParam = nextSearchParams.get('error'); // Get error using .get()
+  const errorParam = nextSearchParams.get('error');
   let errorMessage = '';
   if (errorParam) {
     if (errorParam === "CredentialsSignin") {
@@ -67,7 +97,6 @@ export default function SignInPage() {
   }
   
   if (status === "authenticated") {
-    // This state should be brief as the useEffect above will redirect.
     return (
        <div className="flex min-h-screen flex-col items-center justify-center bg-gradient-to-br from-slate-100 to-sky-100 dark:from-slate-900 dark:to-sky-900 p-4">
         <p>Redirecting...</p>
@@ -91,7 +120,7 @@ export default function SignInPage() {
             />
           )}
           <CardTitle className="text-3xl font-bold tracking-tight">
-            Welcome to<br />CandiTrack
+            Welcome to<br />{currentAppName}
           </CardTitle>
           <CardDescription className="text-muted-foreground">
             Sign in to manage your recruitment pipeline.
@@ -135,7 +164,7 @@ export default function SignInPage() {
         </CardContent>
       </Card>
       <footer className="mt-8 text-center text-sm text-muted-foreground">
-        © {new Date().getFullYear()} CandiTrack. All rights reserved.
+        © {new Date().getFullYear()} {currentAppName}. All rights reserved.
       </footer>
     </div>
   );

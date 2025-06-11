@@ -19,8 +19,13 @@ export function Header({ pageTitle }: { pageTitle: string }) {
   const { isMobile } = useSidebar();
   const { data: session, status } = useSession();
   const [mounted, setMounted] = useState(false);
+  const [effectivePageTitle, setEffectivePageTitle] = useState(pageTitle);
 
   useEffect(() => setMounted(true), []);
+
+  useEffect(() => {
+    setEffectivePageTitle(pageTitle); // Update title if prop changes
+  }, [pageTitle]);
 
 
   // Basic theme toggle example, can be expanded with context
@@ -50,7 +55,7 @@ export function Header({ pageTitle }: { pageTitle: string }) {
     <header className="flex h-16 items-center justify-between border-b bg-card px-4 md:px-6 sticky top-0 z-30">
       <div className="flex items-center gap-2">
         {isMobile && <SidebarTrigger />}
-        <h1 className="text-lg font-semibold text-foreground">{pageTitle}</h1>
+        <h1 className="text-lg font-semibold text-foreground">{effectivePageTitle}</h1>
       </div>
       <div className="flex items-center gap-3">
         <Button variant="ghost" size="icon" onClick={toggleTheme} aria-label="Toggle theme">
@@ -92,7 +97,7 @@ export function Header({ pageTitle }: { pageTitle: string }) {
             </DropdownMenuContent>
           </DropdownMenu>
         ) : (
-          <Button variant="outline" onClick={() => signIn()}> {/* Changed to signIn() without provider */}
+          <Button variant="outline" onClick={() => signIn()}>
             <LogIn className="mr-2 h-4 w-4" />
             Sign In
           </Button>

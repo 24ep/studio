@@ -21,8 +21,10 @@ import { SetupFlowHandler } from './SetupFlowHandler';
 
 
 const APP_LOGO_DATA_URL_KEY = 'appLogoDataUrl';
+const APP_CONFIG_APP_NAME_KEY = 'appConfigAppName';
+const DEFAULT_APP_NAME = "CandiTrack";
 const DEFAULT_LOGO_ICON = <Package2 className="h-6 w-6" />;
-const DEFAULT_LOGO_TEXT = "Candidate Matching";
+
 
 function getPageTitle(pathname: string): string {
   if (pathname === "/") return "Dashboard";
@@ -42,34 +44,54 @@ function getPageTitle(pathname: string): string {
   if (pathname.startsWith("/my-tasks")) return "My Task Board";
   if (pathname.startsWith("/settings/preferences")) return "Preferences";
   if (pathname.startsWith("/settings/integrations")) return "Integrations";
+  if (pathname.startsWith("/settings/stages")) return "Recruitment Stages";
   if (pathname.startsWith("/api-docs")) return "API Documentation";
   if (pathname.startsWith("/logs")) return "Application Logs";
   if (pathname.startsWith("/auth/signin")) return "Sign In";
-  return "Candidate Matching";
+  return DEFAULT_APP_NAME; // Use dynamic app name as fallback for unknown paths
 }
 
 
 export function AppLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const pageTitle = getPageTitle(pathname);
+  const [currentAppName, setCurrentAppName] = useState<string>(DEFAULT_APP_NAME);
+  const pageTitle = pathname === "/auth/signin" ? "Sign In" : getPageTitle(pathname) || currentAppName; // Use currentAppName in title if needed
+  
   const [appLogoUrl, setAppLogoUrl] = useState<string | null>(null);
   const [isClient, setIsClient] = useState(false);
 
-  const updateLogo = () => {
-    if (typeof window !== 'undefined') {
+  useEffect(() => {
+    setIsClient(true);
+    const updateAppConfig = () => {
+      if (typeof window !== 'undefined') {
         const storedLogo = localStorage.getItem(APP_LOGO_DATA_URL_KEY);
         setAppLogoUrl(storedLogo);
-    }
-  };
+        const storedAppName = localStorage.getItem(APP_CONFIG_APP_NAME_KEY);
+        setCurrentAppName(storedAppName || DEFAULT_APP_NAME);
+      }
+    };
 
-  useEffect(() => {
-    setIsClient(true); // Indicate component has mounted
-    updateLogo(); // Initial load
+    updateAppConfig(); // Initial load
 
-    // Listen for logo changes from settings page
-    window.addEventListener('logoChanged', updateLogo);
+    const handleAppConfigChange = (event: Event) => {
+        const customEvent = event as CustomEvent<{ appName?: string; logoUrl?: string | null }>;
+        if (customEvent.detail) {
+            if (customEvent.detail.appName) {
+                setCurrentAppName(customEvent.detail.appName);
+            }
+            // Check for logoUrl specifically, could be null if reset
+            if (customEvent.detail.logoUrl !== undefined) { 
+                 setAppLogoUrl(customEvent.detail.logoUrl);
+            }
+        } else {
+            // Fallback if event detail is not as expected
+            updateAppConfig();
+        }
+    };
+    
+    window.addEventListener('appConfigChanged', handleAppConfigChange);
     return () => {
-      window.removeEventListener('logoChanged', updateLogo);
+      window.removeEventListener('appConfigChanged', handleAppConfigChange);
     };
   }, []);
 
@@ -80,7 +102,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
 
   const renderLogo = (isCollapsed: boolean) => {
     if (isClient && appLogoUrl) {
-      return <Image src={appLogoUrl} alt="App Logo" width={isCollapsed ? 32 : 32} height={isCollapsed ? 32 : 32} className={isCollapsed ? "h-8 w-8 object-contain" : "h-8 w-8 object-contain"} />;
+      return <Image src={appLogoUrl} alt="App Logo" width={isCollapsed ? 32 : 32} height={isCollapsed ? 32 : 32} className={isCollapsed ? "h-8 w-8 object-contain" : "h-8 w-8 object-contain"} data-ai-hint="company logo" />;
     }
     return DEFAULT_LOGO_ICON;
   };
@@ -92,7 +114,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
           <SidebarHeader className="p-4 flex items-center justify-center h-16">
             <Link href="/" className="flex items-center gap-2 font-semibold text-primary group-data-[collapsible=icon]:hidden">
               {renderLogo(false)}
-              <span className="ml-1">{DEFAULT_LOGO_TEXT}</span>
+              <span className="ml-1">{currentAppName}</span>
             </Link>
             <div className="hidden items-center justify-center group-data-[collapsible=icon]:flex group-data-[collapsible=icon]:w-full">
               <Link href="/" className="flex items-center gap-2 font-semibold text-primary">
@@ -106,7 +128,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
             <SidebarNav />
           </SidebarContent>
           <SidebarFooter className="p-4 border-t group-data-[collapsible=icon]:hidden">
-            <p className="text-xs text-muted-foreground">© {new Date().getFullYear()} {DEFAULT_LOGO_TEXT}</p>
+            <p className="text-xs text-muted-foreground">© {new Date().getFullYear()} {currentAppName}</p>
           </SidebarFooter>
         </Sidebar>
         <SidebarInset className="flex flex-col bg-background">
