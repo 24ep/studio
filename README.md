@@ -130,12 +130,17 @@ This is the recommended way to run the application along with its backend servic
             ```bash
             docker-compose down -v
             ```
+            Alternatively, you can use the `start.sh` script with the `--reinit` flag for convenience:
+            ```bash
+            ./start.sh --reinit
+            ```
             This command removes named volumes defined in `docker-compose.yml` and anonymous volumes attached to containers.
         3.  **Ensure `pg-init-scripts/init-db.sql` exists and is correctly configured:** Verify that you have a `pg-init-scripts` directory in your project root and that `init-db.sql` is inside it with the correct hashed password for the default admin user.
         4.  **Restart the services (this will rebuild if necessary):**
             ```bash
             docker-compose up --build -d
             # or just: docker-compose up --build
+            # or use: ./start.sh (without --reinit if you've already manually done `down -v`)
             ```
     *   **When Deploying/Managing with Portainer:**
         1.  When deploying or updating your stack in Portainer, if you need the `init-db.sql` script to run (e.g., for a fresh setup or if tables are missing), you **must ensure that Portainer does not reuse an existing `postgres_data` volume that already contains a database.**
@@ -171,6 +176,10 @@ This is the recommended way to run the application along with its backend servic
     (Ensure the script is executable: `chmod +x start.sh`)
     ```bash
     ./start.sh
+    ```
+    To force re-initialization of the database and other volumes:
+    ```bash
+    ./start.sh --reinit
     ```
 
 9.  **Stopping the services (for local development):**
