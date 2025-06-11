@@ -7,13 +7,13 @@ import { CandidateTable } from '@/components/candidates/CandidateTable';
 import type { Candidate, CandidateStatus, Position } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { PlusCircle, Users, ServerCrash, Zap, Loader2, FileDown, FileUp, ChevronDown } from 'lucide-react';
+import { PlusCircle, Users, ServerCrash, Zap, Loader2, FileDown, FileUp, ChevronDown, FileSpreadsheet } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
 import { AddCandidateModal, type AddCandidateFormValues } from '@/components/candidates/AddCandidateModal';
 import { UploadResumeModal } from '@/components/candidates/UploadResumeModal';
 import { CreateCandidateViaN8nModal } from '@/components/candidates/CreateCandidateViaN8nModal';
 import { ImportCandidatesModal } from '@/components/candidates/ImportCandidatesModal';
-import { EditPositionModal, type EditPositionFormValues } from '@/components/positions/EditPositionModal'; 
+import { EditPositionModal, type EditPositionFormValues } from '@/components/positions/EditPositionModal';
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
 import { useSession, signIn } from 'next-auth/react';
@@ -61,9 +61,9 @@ export default function CandidatesPage() {
       setAllCandidates(prev => prev.map(c => c.id === candidateId ? updatedCandidate : c));
     } else {
       toast({ title: "Refresh Error", description: `Could not refresh data for candidate ${candidateId}.`, variant: "destructive"});
-       fetchCandidates(); 
+       fetchCandidates();
     }
-  }, [fetchCandidateById, toast]); 
+  }, [fetchCandidateById, toast]);
 
 
   const fetchPositions = useCallback(async () => {
@@ -83,7 +83,7 @@ export default function CandidatesPage() {
         return;
       }
       const data: Position[] = await response.json();
-      setAvailablePositions(data); 
+      setAvailablePositions(data);
     } catch (error) {
       console.error("Error fetching positions for modal:", error);
       setAvailablePositions([]);
@@ -148,7 +148,7 @@ export default function CandidatesPage() {
   };
 
 
-  const handleUpdateCandidateAPI = async (candidateId: string, status: CandidateStatus) => { 
+  const handleUpdateCandidateAPI = async (candidateId: string, status: CandidateStatus) => {
     try {
       const response = await fetch(`/api/candidates/${candidateId}`, {
         method: 'PUT',
@@ -277,39 +277,90 @@ export default function CandidatesPage() {
       description: "Resume sent to n8n. Candidate list will refresh shortly if successful.",
     });
     setTimeout(() => {
-        fetchCandidates(); 
-    }, 15000); 
+        fetchCandidates();
+    }, 15000);
   };
 
-  const handleDownloadTemplate = (type: 'json' | 'excel') => {
-    if (type === 'json') {
-      const candidateTemplate = [{
-        "name": "John Doe (Optional, or derive from personal_info)",
-        "email": "john.doe@example.com (Optional, or derive from contact_info)",
-        "phone": "123-456-7890 (Optional)",
-        "positionId": "valid-position-uuid-if-known (Optional)",
-        "fitScore": 0,
-        "status": "Applied",
-        "parsedData": {
-          "cv_language": "English",
-          "personal_info": {"firstname": "John", "lastname": "Doe", "location": "City, Country"},
-          "contact_info": {"email": "john.doe@example.com", "phone": "123-456-7890"},
-          "education": [{"university": "State University", "major": "Computer Science", "period": "2018-2022"}],
-          "experience": [{"company": "Tech Corp", "position": "Intern", "period": "Jun 2021 - Aug 2021", "description": "Worked on...", "postition_level": "entry level"}],
-          "skills": [{"segment_skill": "Programming", "skill": ["JavaScript", "Python"]}],
-          "job_suitable": [{"suitable_career": "Software Development", "suitable_job_position": "Junior Developer"}]
-        }
-      }];
-      const jsonString = `data:text/json;charset=utf-8,${encodeURIComponent(JSON.stringify(candidateTemplate, null, 2))}`;
-      const link = document.createElement("a");
-      link.href = jsonString;
-      link.download = "candidate_import_template.json";
-      link.click();
-      toast({ title: "Template Downloaded", description: "Candidate JSON import template has been downloaded." });
-    } else { // 'excel'
-        toast({ title: "Excel Template", description: "Excel template download not yet implemented.", variant: "default"});
+  const handleDownloadExcelTemplate = () => {
+    const columns = [
+      "name (Optional, or derive from personal_info.firstname/lastname)",
+      "email (Optional, or derive from contact_info.email)",
+      "phone (Optional)",
+      "positionId (UUID, Optional)",
+      "fitScore (Number 0-100, Optional, Default: 0)",
+      "status (Default: Applied, e.g., Applied, Screening)",
+      "applicationDate (ISO8601 datetime string, Optional, Default: now)",
+      "parsedData.cv_language (String, Optional)",
+      "parsedData.personal_info.firstname (String, Required if name not provided)",
+      "parsedData.personal_info.lastname (String, Required if name not provided)",
+      "parsedData.personal_info.title_honorific (String, Optional)",
+      "parsedData.personal_info.nickname (String, Optional)",
+      "parsedData.personal_info.location (String, Optional)",
+      "parsedData.personal_info.introduction_aboutme (String, Optional)",
+      "parsedData.contact_info.email (String, Required if top-level email not provided)",
+      "parsedData.contact_info.phone (String, Optional)",
+      // For education, experience, skills, job_suitable, job_matches: these are JSON arrays of objects.
+      // For simple Excel import, you might define columns like:
+      // education_1_university, education_1_major, education_2_university, etc.
+      // OR, accept JSON strings in cells for these complex fields.
+      // For this conceptual implementation, we'll assume the API expects the structured parsedData.
+      "parsedData.education (JSON string of array, Optional, e.g., '[{\"university\":\"U1\",\"major\":\"CS\"}]')",
+      "parsedData.experience (JSON string of array, Optional, e.g., '[{\"company\":\"C1\",\"position\":\"Dev\"}]')",
+      "parsedData.skills (JSON string of array, Optional, e.g., '[{\"segment_skill\":\"Lang\",\"skill\":[\"Java\",\"JS\"]}]')",
+      "parsedData.job_suitable (JSON string of array, Optional)",
+      "parsedData.job_matches (JSON string of array, Optional)",
+    ];
+    toast({
+        title: "Excel Import Template Columns",
+        description: (
+            <div className="max-h-60 overflow-y-auto">
+              <p className="mb-2">Your Excel file should have a header row with the following columns (or a subset). See API documentation for detailed structure of JSON fields.</p>
+              <ul className="list-disc list-inside text-xs">
+                {columns.map(col => <li key={col}>{col}</li>)}
+              </ul>
+            </div>
+        ),
+        duration: 15000,
+    });
+    // In a real implementation, this would trigger a file download.
+    // e.g., create a Blob with CSV data and a link to download it.
+  };
+
+  const handleExportToExcel = async () => {
+    setIsLoading(true);
+    try {
+      const query = new URLSearchParams();
+      if (filters.name) query.append('name', filters.name);
+      if (filters.positionId && filters.positionId !== "__ALL_POSITIONS__") query.append('positionId', filters.positionId);
+      // Add other filters if your export API supports them
+
+      const response = await fetch(`/api/candidates/export?${query.toString()}`);
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ message: "Error exporting data." }));
+        throw new Error(errorData.message);
+      }
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      const filename = response.headers.get('content-disposition')?.split('filename=')[1]?.replace(/"/g, '') || 'candidates_export.csv';
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+
+      toast({ title: "Export Successful", description: "Candidates exported to Excel (CSV format for this prototype)." });
+
+    } catch (error) {
+      console.error("Error exporting candidates:", error);
+      toast({ title: "Export Failed", description: (error as Error).message, variant: "destructive" });
+    } finally {
+      setIsLoading(false);
     }
   };
+
 
   const handleOpenEditPositionModal = (position: Position) => {
     setSelectedPositionForEdit(position);
@@ -319,8 +370,8 @@ export default function CandidatesPage() {
   const handlePositionEdited = async () => {
     toast({ title: "Position Updated", description: "Position details have been saved." });
     setIsEditPositionModalOpen(false);
-    await fetchPositions(); 
-    await fetchCandidates(); 
+    await fetchPositions();
+    await fetchCandidates();
   };
 
   if (sessionStatus === 'loading' || (sessionStatus === 'unauthenticated' && !pathname.startsWith('/auth/signin')) || (isLoading && !fetchError && allCandidates.length === 0)) {
@@ -341,7 +392,7 @@ export default function CandidatesPage() {
         </div>
     );
   }
-  
+
   if (fetchError) {
     const isMissingTableError = fetchError.toLowerCase().includes("relation") && fetchError.toLowerCase().includes("does not exist");
     return (
@@ -383,20 +434,23 @@ export default function CandidatesPage() {
                 <PlusCircle className="mr-2 h-4 w-4" /> Add Candidate Manually
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => setIsImportModalOpen(true)}>
-                <FileUp className="mr-2 h-4 w-4" /> Import Candidates (JSON)
+                <FileUp className="mr-2 h-4 w-4" /> Import Candidates (Excel)
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleDownloadTemplate('json')}>
-                <FileDown className="mr-2 h-4 w-4" /> Download Template (JSON)
+              <DropdownMenuItem onClick={handleDownloadExcelTemplate}>
+                <FileDown className="mr-2 h-4 w-4" /> Download Excel Template Guide
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={handleExportToExcel} disabled={isLoading}>
+                <FileSpreadsheet className="mr-2 h-4 w-4" /> Export Candidates (Excel/CSV)
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
       </div>
 
-      <CandidateFilters 
-        initialFilters={filters} 
-        onFilterChange={handleFilterChange} 
-        availablePositions={availablePositions} 
+      <CandidateFilters
+        initialFilters={filters}
+        onFilterChange={handleFilterChange}
+        availablePositions={availablePositions}
         isLoading={isLoading && allCandidates.length > 0}
       />
 
@@ -456,3 +510,5 @@ export default function CandidatesPage() {
     </div>
   );
 }
+
+    

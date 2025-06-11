@@ -16,13 +16,21 @@ import {
 } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 import { FileUp, Loader2, Users } from 'lucide-react';
-import type { Candidate } from '@/lib/types'; 
+import type { Candidate } from '@/lib/types';
 
 interface ImportCandidatesModalProps {
   isOpen: boolean;
   onOpenChange: (isOpen: boolean) => void;
-  onImportSuccess: () => void; 
+  onImportSuccess: () => void;
 }
+
+const ACCEPTED_EXCEL_TYPES = [
+  '.xlsx',
+  '.xls',
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  'application/vnd.ms-excel'
+].join(',');
+
 
 export function ImportCandidatesModal({ isOpen, onOpenChange, onImportSuccess }: ImportCandidatesModalProps) {
   const { toast } = useToast();
@@ -32,10 +40,14 @@ export function ImportCandidatesModal({ isOpen, onOpenChange, onImportSuccess }:
   const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
-      if (file.type === 'application/json') {
+      const fileType = file.type;
+      const fileName = file.name.toLowerCase();
+      const acceptedMimeTypes = ACCEPTED_EXCEL_TYPES.split(',');
+      
+      if (acceptedMimeTypes.includes(fileType) || fileName.endsWith('.xlsx') || fileName.endsWith('.xls')) {
         setSelectedFile(file);
       } else {
-        toast({ title: "Invalid File Type", description: "Please select a JSON file (.json).", variant: "destructive" });
+        toast({ title: "Invalid File Type", description: "Please select an Excel file (.xlsx, .xls).", variant: "destructive" });
         setSelectedFile(null);
         event.target.value = '';
       }
@@ -46,18 +58,17 @@ export function ImportCandidatesModal({ isOpen, onOpenChange, onImportSuccess }:
 
   const handleImport = async () => {
     if (!selectedFile) {
-      toast({ title: "No File Selected", description: "Please select a JSON file to import.", variant: "destructive" });
+      toast({ title: "No File Selected", description: "Please select an Excel file to import.", variant: "destructive" });
       return;
     }
     setIsImporting(true);
-    try {
-      const fileContent = await selectedFile.text();
-      const candidatesToImport = JSON.parse(fileContent);
+    const formData = new FormData();
+    formData.append('file', selectedFile);
 
+    try {
       const response = await fetch('/api/candidates/import', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(candidatesToImport),
+        body: formData, // Send as FormData
       });
 
       const result = await response.json();
@@ -65,7 +76,7 @@ export function ImportCandidatesModal({ isOpen, onOpenChange, onImportSuccess }:
       if (!response.ok) {
         throw new Error(result.message || `Failed to import candidates. Status: ${response.status}`);
       }
-      
+
       let successMessage = `Import process completed.`;
       if (result.successfulImports !== undefined && result.failedImports !== undefined) {
         successMessage += ` ${result.successfulImports} candidates imported successfully. ${result.failedImports} failed.`;
@@ -78,8 +89,8 @@ export function ImportCandidatesModal({ isOpen, onOpenChange, onImportSuccess }:
       toast({ title: "Import Complete", description: successMessage });
       onImportSuccess();
       onOpenChange(false);
-      setSelectedFile(null); 
-      const fileInput = document.getElementById('candidate-json-import') as HTMLInputElement;
+      setSelectedFile(null);
+      const fileInput = document.getElementById('candidate-excel-import') as HTMLInputElement;
       if (fileInput) fileInput.value = '';
 
     } catch (error) {
@@ -100,27 +111,26 @@ export function ImportCandidatesModal({ isOpen, onOpenChange, onImportSuccess }:
       if (!open) {
         setSelectedFile(null);
         setIsImporting(false);
-        const fileInput = document.getElementById('candidate-json-import') as HTMLInputElement;
+        const fileInput = document.getElementById('candidate-excel-import') as HTMLInputElement;
         if (fileInput) fileInput.value = '';
       }
     }}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center">
-            <Users className="mr-2 h-5 w-5 text-primary" /> Import Candidates (JSON)
+            <Users className="mr-2 h-5 w-5 text-primary" /> Import Candidates (Excel)
           </DialogTitle>
           <DialogDescription>
-            Upload a JSON file containing an array of candidate objects. 
-            Refer to the downloaded JSON template for the expected structure. 
-            (Excel support is planned for a future update).
+            Upload an Excel file (.xlsx, .xls) containing candidate data.
+            Refer to the downloaded Excel template guide for the expected structure.
           </DialogDescription>
         </DialogHeader>
         <div className="py-4 space-y-2">
-          <Label htmlFor="candidate-json-import">Select JSON File</Label>
+          <Label htmlFor="candidate-excel-import">Select Excel File</Label>
           <Input
-            id="candidate-json-import"
+            id="candidate-excel-import"
             type="file"
-            accept=".json,application/json"
+            accept={ACCEPTED_EXCEL_TYPES}
             onChange={handleFileChange}
             className="mt-1"
           />
@@ -139,3 +149,5 @@ export function ImportCandidatesModal({ isOpen, onOpenChange, onImportSuccess }:
     </Dialog>
   );
 }
+
+    
