@@ -54,14 +54,22 @@ const experienceEntrySchema = z.object({
     },
     z.boolean().optional().default(false)
   ),
-  postition_level: z.string().optional().nullable().preprocess(val => {
-    if (typeof val === 'string') {
+  postition_level: z.preprocess(
+    (val: unknown) => {
+      if (typeof val === 'string') {
         const lowerVal = val.toLowerCase();
-        if (lowerVal === 'none' || lowerVal === '') return undefined; // Treat "None" or empty as not specified
-        return lowerVal; // Return lowercase string for direct storage
-    }
-    return undefined;
-  }),
+        if (lowerVal === 'none' || lowerVal === '') {
+          return null; 
+        }
+        return lowerVal;
+      }
+      if (val === null || val === undefined) {
+        return null; 
+      }
+      return val; 
+    },
+    z.string().optional().nullable() 
+  ),
 }).passthrough();
 
 const skillEntrySchema = z.object({
