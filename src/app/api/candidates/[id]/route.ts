@@ -1,7 +1,7 @@
 
 import { NextResponse, type NextRequest } from 'next/server';
 import pool from '../../../../lib/db';
-import type { CandidateStatus, Candidate, CandidateDetails, PersonalInfo, ContactInfo, PositionLevel, UserProfile } from '@/lib/types';
+import type { CandidateStatus, Candidate, CandidateDetails, PersonalInfo, ContactInfo, PositionLevel, UserProfile, N8NJobMatch } from '@/lib/types';
 import { z } from 'zod';
 import { logAudit } from '@/lib/auditLog';
 import { getServerSession } from 'next-auth/next';
@@ -15,12 +15,12 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
       SELECT
         c.id, c.name, c.email, c.phone, c."resumePath", c."parsedData",
         c."positionId", c."fitScore", c.status, c."applicationDate",
-        c."recruiterId", 
+        c."recruiterId",
         c."createdAt", c."updatedAt",
         p.title as "positionTitle",
         p.department as "positionDepartment",
         p.position_level as "positionLevel",
-        rec.name as "recruiterName", 
+        rec.name as "recruiterName",
         COALESCE(
           (SELECT json_agg(
             json_build_object(
@@ -30,20 +30,20 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
               'stage', th.stage,
               'notes', th.notes,
               'actingUserId', th."actingUserId",
-              'actingUserName', u.name, 
+              'actingUserName', u.name,
               'createdAt', th."createdAt",
               'updatedAt', th."updatedAt"
             ) ORDER BY th.date DESC
            )
            FROM "TransitionRecord" th
-           LEFT JOIN "User" u ON th."actingUserId" = u.id 
+           LEFT JOIN "User" u ON th."actingUserId" = u.id
            WHERE th."candidateId" = c.id
           ),
           '[]'::json
         ) as "transitionHistory"
       FROM "Candidate" c
       LEFT JOIN "Position" p ON c."positionId" = p.id
-      LEFT JOIN "User" rec ON c."recruiterId" = rec.id 
+      LEFT JOIN "User" rec ON c."recruiterId" = rec.id
       WHERE c.id = $1;
     `;
     const result = await pool.query(query, [params.id]);
@@ -53,19 +53,41 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
     }
 
     const candidateRow = result.rows[0];
+    let parsedDataFromDb: CandidateDetails | null = candidateRow.parsedData || { personal_info: {}, contact_info: {} };
+
+    // Sync job_matches titles with current Position table
+    if (parsedDataFromDb && Array.isArray(parsedDataFromDb.job_matches) && parsedDataFromDb.job_matches.length > 0) {
+      const jobIdsToFetch = parsedDataFromDb.job_matches
+        .map(match => match.job_id)
+        .filter(id => id != null) as string[]; // Filter out null/undefined IDs
+
+      if (jobIdsToFetch.length > 0) {
+        const uniqueJobIds = [...new Set(jobIdsToFetch)];
+        const positionTitlesRes = await pool.query('SELECT id, title FROM "Position" WHERE id = ANY($1::uuid[])', [uniqueJobIds]);
+        const positionTitleMap = new Map(positionTitlesRes.rows.map(row => [row.id, row.title]));
+
+        parsedDataFromDb.job_matches = parsedDataFromDb.job_matches.map(match => {
+          if (match.job_id && positionTitleMap.has(match.job_id)) {
+            return { ...match, job_title: positionTitleMap.get(match.job_id)! };
+          }
+          return match;
+        });
+      }
+    }
+
     const candidate = {
         ...candidateRow,
-        parsedData: candidateRow.parsedData || { personal_info: {}, contact_info: {} },
+        parsedData: parsedDataFromDb,
         position: candidateRow.positionId ? {
             id: candidateRow.positionId,
             title: candidateRow.positionTitle,
             department: candidateRow.positionDepartment,
             position_level: candidateRow.positionLevel,
         } : null,
-        recruiter: candidateRow.recruiterId ? { 
+        recruiter: candidateRow.recruiterId ? {
             id: candidateRow.recruiterId,
             name: candidateRow.recruiterName,
-            email: null 
+            email: null
         } : null,
         transitionHistory: candidateRow.transitionHistory || [],
     };
@@ -141,11 +163,11 @@ const candidateDetailsSchemaPartial = z.object({
   skills: z.array(skillEntrySchemaPartial).optional(),
   job_suitable: z.array(jobSuitableEntrySchemaPartial).optional(),
   associatedMatchDetails: z.object({
-    jobTitle: z.string(),
-    fitScore: z.number(),
-    reasons: z.array(z.string()),
+    jobTitle: z.string().optional(),
+    fitScore: z.number().optional(),
+    reasons: z.array(z.string()).optional(),
     n8nJobId: z.string().optional(),
-  }).optional(),
+  }).deepPartial().optional(),
   job_matches: z.array(n8nJobMatchSchemaPartial).optional(),
 }).deepPartial();
 
@@ -154,9 +176,9 @@ const updateCandidateSchema = z.object({
   email: z.string().email().optional(),
   phone: z.string().optional().nullable(),
   positionId: z.string().uuid().nullable().optional(),
-  recruiterId: z.string().uuid().nullable().optional(), 
+  recruiterId: z.string().uuid().nullable().optional(),
   fitScore: z.number().min(0).max(100).optional(),
-  status: z.string().min(1).optional(), // Changed from z.enum to z.string
+  status: z.string().min(1).optional(),
   parsedData: candidateDetailsSchemaPartial.optional(),
   resumePath: z.string().optional().nullable(),
 });
@@ -220,7 +242,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
       }
     }
     if (validatedData.recruiterId) {
-        const recruiterCheckQuery = 'SELECT id FROM "User" WHERE id = $1 AND role = $2'; 
+        const recruiterCheckQuery = 'SELECT id FROM "User" WHERE id = $1 AND role = $2';
         const recruiterResult = await client.query(recruiterCheckQuery, [validatedData.recruiterId, 'Recruiter']);
         if (recruiterResult.rows.length === 0) {
           await client.query('ROLLBACK');
@@ -234,7 +256,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
     let paramIndex = 1;
 
     Object.entries(validatedData).forEach(([key, value]) => {
-      if (value !== undefined) { 
+      if (value !== undefined) {
         if (key === 'parsedData') {
           const existingPD = (existingCandidate.parsedData || {}) as CandidateDetails;
           const newPD = value as Partial<CandidateDetails>;
@@ -254,13 +276,13 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
           updateValues.push(mergedParsedData);
         } else {
           updateFields.push(`"${key}" = $${paramIndex++}`);
-          updateValues.push(value); 
+          updateValues.push(value);
         }
       }
     });
 
     if (updateFields.length === 0 && (!validatedData.status || validatedData.status === existingCandidate.status)) {
-      await client.query('ROLLBACK'); 
+      await client.query('ROLLBACK');
       const currentCandidateQuery = `
           SELECT
               c.*,
@@ -318,7 +340,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
         params.id,
         validatedData.status,
         `Status updated to ${validatedData.status} by ${actingUserName}.`,
-        actingUserId 
+        actingUserId
       ]);
       await logAudit('AUDIT', `Candidate '${existingCandidate.name}' (ID: ${params.id}) status changed from '${oldStatus}' to '${validatedData.status}' by ${actingUserName}.`, 'API:Candidates:UpdateStatus', actingUserId, { targetCandidateId: params.id, newStatus: validatedData.status, oldStatus: oldStatus });
     }
@@ -331,6 +353,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
 
     await client.query('COMMIT');
 
+    // Re-fetch with synced job_matches titles
     const finalQuery = `
         SELECT
             c.id, c.name, c.email, c.phone, c."resumePath", c."parsedData",
@@ -356,9 +379,30 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
         WHERE c.id = $1;
     `;
     const finalResult = await client.query(finalQuery, [params.id]);
+    let updatedParsedData: CandidateDetails | null = finalResult.rows[0].parsedData || { personal_info: {}, contact_info: {} };
+
+    if (updatedParsedData && Array.isArray(updatedParsedData.job_matches) && updatedParsedData.job_matches.length > 0) {
+      const jobIdsToFetch = updatedParsedData.job_matches
+        .map(match => match.job_id)
+        .filter(id => id != null) as string[];
+
+      if (jobIdsToFetch.length > 0) {
+        const uniqueJobIds = [...new Set(jobIdsToFetch)];
+        const positionTitlesRes = await client.query('SELECT id, title FROM "Position" WHERE id = ANY($1::uuid[])', [uniqueJobIds]);
+        const positionTitleMap = new Map(positionTitlesRes.rows.map(row => [row.id, row.title]));
+        updatedParsedData.job_matches = updatedParsedData.job_matches.map(match => {
+          if (match.job_id && positionTitleMap.has(match.job_id)) {
+            return { ...match, job_title: positionTitleMap.get(match.job_id)! };
+          }
+          return match;
+        });
+      }
+    }
+
+
     const updatedCandidateWithDetails = {
         ...finalResult.rows[0],
-        parsedData: finalResult.rows[0].parsedData || { personal_info: {}, contact_info: {} },
+        parsedData: updatedParsedData,
         position: finalResult.rows[0].positionId ? {
             id: finalResult.rows[0].positionId,
             title: finalResult.rows[0].positionTitle,
