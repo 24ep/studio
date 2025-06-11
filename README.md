@@ -71,11 +71,11 @@ This is a Next.js application prototype for Candidate Matching, an Applicant Tra
 3.  **Set up Environment Variables:**
     *   Copy the example environment file:
         ```bash
-        cp .env.local.example .env.local
+        cp .env.example .env.local
         ```
     *   Open `.env.local` and fill in your actual credentials and configurations for:
         *   Azure AD (Client ID, Client Secret, Tenant ID) - if using Azure SSO.
-        *   `NEXTAUTH_URL` (e.g., `http://localhost:9002` for local dev).
+        *   `NEXTAUTH_URL`: **Crucial for correct redirects.** This should be the URL you use to access the application in your browser. If using the default Docker Compose setup, this will likely be `http://localhost:9846`.
         *   `NEXTAUTH_SECRET` (Generate a strong secret: `openssl rand -base64 32`).
         *   PostgreSQL credentials (`POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB`) - if different from defaults.
         *   `DATABASE_URL` (e.g., `postgresql://devuser:devpassword@localhost:5432/canditrack_db` if running app outside Docker but DB in Docker, or `postgresql://devuser:devpassword@postgres:5432/canditrack_db` if app also runs in Docker).
@@ -95,6 +95,7 @@ This is the recommended way to run the application along with its backend servic
 
 1.  **Ensure Docker and Docker Compose are installed and running.**
 2.  **Set up your `.env.local` file as described in Step 3 of Installation.**
+    *   **Important:** `NEXTAUTH_URL` should be set to the URL you use to access the app in your browser (e.g., `http://localhost:9846` with default Docker setup).
     *   The `DATABASE_URL` for the Next.js app (running in Docker) should point to the Docker service name: `postgresql://devuser:devpassword@postgres:5432/canditrack_db` (or use the `${DATABASE_URL}` variable which defaults to this if `.env.local` doesn't override it).
     *   The `MINIO_ENDPOINT` for the app should be `minio` (the service name).
     *   The `REDIS_URL` for the app should be `redis://redis:6379`.
@@ -160,7 +161,7 @@ This is the recommended way to run the application along with its backend servic
     *   If you see connection error messages, verify your `.env.local` settings, Docker networking, and that the backend services are running correctly.
 
 7.  **Accessing Services:**
-    *   **Candidate Matching App:** `http://localhost:9002` (or your configured host/port in Portainer, default exposed on host port 9846)
+    *   **Candidate Matching App:** `http://localhost:9846` (This is the default host port mapped to the app's internal port 9002. Ensure your `NEXTAUTH_URL` in `.env.local` matches this if using default Docker setup).
     *   **PostgreSQL:** Accessible on `localhost:5432` from your host machine (or `postgres:5432` from within the Docker network, or as exposed by Portainer).
     *   **MinIO API:** `http://localhost:9000` (from host, or as exposed by Portainer on host port 9847).
     *   **MinIO Console:** `http://localhost:9001` (Login with `MINIO_ROOT_USER` and `MINIO_ROOT_PASSWORD` from your `.env.local` or `docker-compose.yml` defaults. Exposed on host port 9848 by default).
@@ -207,5 +208,7 @@ This application is a prototype. For production readiness, consider the followin
 
 *   **PostgreSQL:** The application attempts to connect and execute a test query (`SELECT NOW()`) when the `src/lib/db.ts` module is initialized. Check your application server's console logs for "Successfully connected to PostgreSQL database..." or connection error messages.
 *   **MinIO:** The application attempts to connect and check/create the resume bucket when `src/lib/minio.ts` is initialized. Check application server logs for "Successfully connected to MinIO server..." or "MinIO: Bucket ... already exists/created..." or related error messages.
+
+    
 
     
