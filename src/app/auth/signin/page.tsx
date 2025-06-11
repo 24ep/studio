@@ -45,11 +45,10 @@ export default function SignInPage() {
             if (customEvent.detail.appName) {
                 setCurrentAppName(customEvent.detail.appName);
             }
-            if (customEvent.detail.logoUrl !== undefined) { // Check if logoUrl is part of the detail
+            if (customEvent.detail.logoUrl !== undefined) { 
                  setAppLogoUrl(customEvent.detail.logoUrl);
             }
         } else {
-            // Fallback if event detail is not as expected
             updateAppConfig();
         }
     };
@@ -151,15 +150,6 @@ export default function SignInPage() {
               </div>
               <AzureAdSignInButton />
             </>
-          )}
-           {!isAzureAdConfigured && !errorMessage && (
-            <Alert variant="destructive" className="mt-4">
-              <AlertTriangle className="h-4 w-4" />
-              <AlertTitle>SSO Not Configured</AlertTitle>
-              <AlertDescription>
-                Single Sign-On (Azure AD) is not currently configured.
-              </AlertDescription>
-            </Alert>
           )}
         </CardContent>
       </Card>
