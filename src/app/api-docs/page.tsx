@@ -288,19 +288,11 @@ const apiEndpoints: ApiEndpoint[] = [
   },
   {
     method: "GET",
-    path: "/api/setup/check-db-schema",
+    path: "/api/system/initial-setup-check",
     description: "Checks if essential database tables exist.",
     requestBody: "N/A",
-    response: "JSON: `{ status: 'ok' | 'partial' | 'error', message: string, missingTables?: string[] }`",
-    curlExample: `curl http://localhost:9002/api/setup/check-db-schema`,
-  },
-  {
-    method: "GET",
-    path: "/api/setup/check-minio-bucket",
-    description: "Checks if the configured MinIO resume bucket exists.",
-    requestBody: "N/A",
-    response: "JSON: `{ status: 'ok' | 'error', message: string }` or 404 if bucket not found.",
-    curlExample: `curl http://localhost:9002/api/setup/check-minio-bucket`,
+    response: "JSON: `{ schemaInitialized: boolean, message: string, missingTables?: string[], error?: string }`",
+    curlExample: `curl http://localhost:9002/api/system/initial-setup-check`,
   },
   {
     method: "POST",
