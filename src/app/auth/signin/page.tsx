@@ -3,7 +3,7 @@
 
 import { useEffect, useState } from "react";
 import { useSession, signIn } from "next-auth/react";
-import { useRouter } from "next/navigation"; // Corrected: use "next/navigation" for App Router client-side redirect
+import { useRouter, useSearchParams } from "next/navigation"; // Corrected: use "next/navigation" for App Router client-side redirect
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { AzureAdSignInButton } from "@/components/auth/AzureAdSignInButton";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -13,17 +13,14 @@ import { CredentialsSignInForm } from "@/components/auth/CredentialsSignInForm";
 
 const APP_LOGO_DATA_URL_KEY = 'appLogoDataUrl'; // Key for localStorage
 
-export default function SignInPage({
-  searchParams,
-}: {
-  searchParams?: { [key: string]: string | string[] | undefined };
-}) {
+export default function SignInPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
+  const nextSearchParams = useSearchParams(); // Use the hook here
   const [appLogoUrl, setAppLogoUrl] = useState<string | null>(null);
   const [isClient, setIsClient] = useState(false);
   
-  const callbackUrl = searchParams?.callbackUrl || "/";
+  const callbackUrl = nextSearchParams.get('callbackUrl') || "/"; // Get callbackUrl using .get()
 
   useEffect(() => {
     setIsClient(true); // Indicate component has mounted client-side
@@ -49,7 +46,7 @@ export default function SignInPage({
     process.env.AZURE_AD_TENANT_ID
   );
 
-  const errorParam = searchParams?.error;
+  const errorParam = nextSearchParams.get('error'); // Get error using .get()
   let errorMessage = '';
   if (errorParam) {
     if (errorParam === "CredentialsSignin") {
