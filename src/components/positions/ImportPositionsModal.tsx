@@ -23,6 +23,13 @@ interface ImportPositionsModalProps {
   onImportSuccess: () => void; 
 }
 
+const ACCEPTED_EXCEL_TYPES = [
+  '.xlsx',
+  '.xls',
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  'application/vnd.ms-excel'
+].join(',');
+
 export function ImportPositionsModal({ isOpen, onOpenChange, onImportSuccess }: ImportPositionsModalProps) {
   const { toast } = useToast();
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -31,10 +38,14 @@ export function ImportPositionsModal({ isOpen, onOpenChange, onImportSuccess }: 
   const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
-      if (file.type === 'application/json') {
+      const fileType = file.type;
+      const fileName = file.name.toLowerCase();
+      const acceptedMimeTypes = ACCEPTED_EXCEL_TYPES.split(',');
+      
+      if (acceptedMimeTypes.includes(fileType) || fileName.endsWith('.xlsx') || fileName.endsWith('.xls')) {
         setSelectedFile(file);
       } else {
-        toast({ title: "Invalid File Type", description: "Please select a JSON file (.json).", variant: "destructive" });
+        toast({ title: "Invalid File Type", description: "Please select an Excel file (.xlsx, .xls).", variant: "destructive" });
         setSelectedFile(null);
         event.target.value = '';
       }
@@ -45,18 +56,17 @@ export function ImportPositionsModal({ isOpen, onOpenChange, onImportSuccess }: 
 
   const handleImport = async () => {
     if (!selectedFile) {
-      toast({ title: "No File Selected", description: "Please select a JSON file to import.", variant: "destructive" });
+      toast({ title: "No File Selected", description: "Please select an Excel file to import.", variant: "destructive" });
       return;
     }
     setIsImporting(true);
-    try {
-      const fileContent = await selectedFile.text();
-      const positionsToImport = JSON.parse(fileContent);
+    const formData = new FormData();
+    formData.append('file', selectedFile);
 
+    try {
       const response = await fetch('/api/positions/import', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(positionsToImport),
+        body: formData, // Send as FormData
       });
 
       const result = await response.json();
@@ -74,14 +84,12 @@ export function ImportPositionsModal({ isOpen, onOpenChange, onImportSuccess }: 
         }
       }
 
-
       toast({ title: "Import Complete", description: successMessage});
       onImportSuccess();
       onOpenChange(false);
       setSelectedFile(null);
-      const fileInput = document.getElementById('position-json-import') as HTMLInputElement;
+      const fileInput = document.getElementById('position-excel-import') as HTMLInputElement;
       if (fileInput) fileInput.value = '';
-
 
     } catch (error) {
       console.error("Error importing positions:", error);
@@ -101,27 +109,26 @@ export function ImportPositionsModal({ isOpen, onOpenChange, onImportSuccess }: 
       if (!open) {
         setSelectedFile(null);
         setIsImporting(false);
-        const fileInput = document.getElementById('position-json-import') as HTMLInputElement;
+        const fileInput = document.getElementById('position-excel-import') as HTMLInputElement;
         if (fileInput) fileInput.value = '';
       }
     }}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center">
-            <Briefcase className="mr-2 h-5 w-5 text-primary" /> Import Positions (JSON)
+            <Briefcase className="mr-2 h-5 w-5 text-primary" /> Import Positions (Excel)
           </DialogTitle>
           <DialogDescription>
-            Upload a JSON file containing an array of position objects. 
-            Required fields: title, department, isOpen. Optional: description, position_level.
-            (Excel support is planned for a future update).
+            Upload an Excel file (.xlsx, .xls) containing position data.
+            Refer to the downloaded Excel template guide for the expected structure.
           </DialogDescription>
         </DialogHeader>
         <div className="py-4 space-y-2">
-          <Label htmlFor="position-json-import">Select JSON File</Label>
+          <Label htmlFor="position-excel-import">Select Excel File</Label>
           <Input
-            id="position-json-import"
+            id="position-excel-import"
             type="file"
-            accept=".json,application/json"
+            accept={ACCEPTED_EXCEL_TYPES}
             onChange={handleFileChange}
             className="mt-1"
           />

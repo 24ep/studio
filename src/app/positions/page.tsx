@@ -4,7 +4,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button, buttonVariants } from "@/components/ui/button"; 
-import { PlusCircle, Briefcase, Edit, Trash2, ServerCrash, Loader2, FileDown, FileUp, ChevronDown } from "lucide-react";
+import { PlusCircle, Briefcase, Edit, Trash2, ServerCrash, Loader2, FileDown, FileUp, ChevronDown, FileSpreadsheet } from "lucide-react";
 import type { Position } from "@/lib/types";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -179,7 +179,7 @@ export default function PositionsPage() {
         method: 'DELETE',
       });
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ message: "An unknown error occurred" }));
+        const errorData = await response.json().catch(() => ({ message: "Failed to delete position." }));
         throw new Error(errorData.message || `Failed to delete position: ${response.statusText}`);
       }
       setPositions(prevPositions => prevPositions.filter(p => p.id !== positionToDelete!.id));
@@ -196,23 +196,62 @@ export default function PositionsPage() {
     }
   };
 
-  const handleDownloadTemplate = (type: 'json' | 'excel') => {
-    if (type === 'json') {
-      const positionTemplate = [{
-        "title": "Sample Position Title",
-        "department": "Sample Department",
-        "description": "Optional description here.",
-        "isOpen": true,
-        "position_level": "e.g., Senior, Mid-Level"
-      }];
-      const jsonString = `data:text/json;charset=utf-8,${encodeURIComponent(JSON.stringify(positionTemplate, null, 2))}`;
-      const link = document.createElement("a");
-      link.href = jsonString;
-      link.download = "position_import_template.json";
-      link.click();
-      toast({ title: "Template Downloaded", description: "Position JSON import template has been downloaded." });
-    } else { // 'excel'
-        toast({ title: "Excel Template", description: "Excel template download not yet implemented.", variant: "default"});
+  const handleDownloadExcelTemplateGuide = () => {
+    const columns = [
+      "title (String, Required)",
+      "department (String, Required)",
+      "description (String, Optional)",
+      "isOpen (Boolean, Required, true/false)",
+      "position_level (String, Optional, e.g., Senior, Entry Level)",
+    ];
+    toast({
+      title: "Position Excel Import Template Guide",
+      description: (
+        <div className="max-h-60 overflow-y-auto">
+          <p className="mb-2">Your Excel file should have a header row with the following columns. `isOpen` should contain TRUE or FALSE.</p>
+          <ul className="list-disc list-inside text-xs">
+            {columns.map(col => <li key={col}>{col}</li>)}
+          </ul>
+        </div>
+      ),
+      duration: 15000,
+    });
+  };
+
+  const handleExportToExcel = async () => {
+    setIsLoading(true);
+    try {
+      // Add any active filters to the export query if your API supports them
+      const query = new URLSearchParams();
+      if (filters.title) query.append('title', filters.title);
+      if (filters.department) query.append('department', filters.department);
+      if (filters.isOpen && filters.isOpen !== "all") query.append('isOpen', String(filters.isOpen === "true"));
+      if (filters.positionLevel) query.append('position_level', filters.positionLevel);
+
+      const response = await fetch(`/api/positions/export?${query.toString()}`);
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ message: "Error exporting position data." }));
+        throw new Error(errorData.message);
+      }
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      const filename = response.headers.get('content-disposition')?.split('filename=')[1]?.replace(/"/g, '') || 'positions_export.csv';
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+
+      toast({ title: "Export Successful", description: "Positions exported (CSV format for this prototype)." });
+
+    } catch (error) {
+      console.error("Error exporting positions:", error);
+      toast({ title: "Export Failed", description: (error as Error).message, variant: "destructive" });
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -267,10 +306,13 @@ export default function PositionsPage() {
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start">
               <DropdownMenuItem onClick={() => setIsImportModalOpen(true)}>
-                  <FileUp className="mr-2 h-4 w-4" /> Import Positions (JSON)
+                  <FileUp className="mr-2 h-4 w-4" /> Import Positions (Excel)
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleDownloadTemplate('json')}>
-                  <FileDown className="mr-2 h-4 w-4" /> Download Template (JSON)
+              <DropdownMenuItem onClick={handleDownloadExcelTemplateGuide}>
+                  <FileDown className="mr-2 h-4 w-4" /> Download Excel Template Guide
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={handleExportToExcel} disabled={isLoading}>
+                  <FileSpreadsheet className="mr-2 h-4 w-4" /> Export Positions (Excel/CSV)
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
