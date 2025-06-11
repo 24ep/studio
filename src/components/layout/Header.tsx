@@ -84,12 +84,9 @@ export function Header({ pageTitle }: { pageTitle: string }) {
                 </div>
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
-              <DropdownMenuItem disabled> {/* Profile page can be added later */}
-                <UserCircle className="mr-2 h-4 w-4" />
-                Profile
-              </DropdownMenuItem>
+              {/* Profile item removed */}
               {/* Add more items like Settings, etc. */}
-              <DropdownMenuSeparator />
+              {/* <DropdownMenuSeparator /> */} {/* Removed separator if profile was the only item before logout */}
               <DropdownMenuItem onClick={() => signOut()}>
                 <LogOut className="mr-2 h-4 w-4" />
                 Log out
