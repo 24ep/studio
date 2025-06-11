@@ -23,8 +23,6 @@ export default function DashboardPage() {
 
   const fetchData = useCallback(async () => {
     if (sessionStatus !== 'authenticated') {
-      // This case should ideally be caught by the useEffect redirect,
-      // but as a safeguard if fetchData is called prematurely.
       setIsLoading(false);
       return;
     }
@@ -42,7 +40,7 @@ export default function DashboardPage() {
         const errorText = candidatesRes.statusText || `Status: ${candidatesRes.status}`;
         if (candidatesRes.status === 401) {
           signIn(undefined, { callbackUrl: window.location.pathname });
-          return; // Stop further processing, redirect will occur
+          return; 
         }
         accumulatedFetchError += `Failed to fetch candidates: ${errorText}. `;
         setCandidates([]);
@@ -55,7 +53,7 @@ export default function DashboardPage() {
         const errorText = positionsRes.statusText || `Status: ${positionsRes.status}`;
         if (positionsRes.status === 401) {
           signIn(undefined, { callbackUrl: window.location.pathname });
-          return; // Stop further processing, redirect will occur
+          return; 
         }
         accumulatedFetchError += `Failed to fetch positions: ${errorText}. `;
         setPositions([]);
@@ -77,7 +75,7 @@ export default function DashboardPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [sessionStatus]); 
+  }, [sessionStatus, signIn]); 
 
   useEffect(() => {
     if (sessionStatus === 'unauthenticated') {
@@ -85,7 +83,7 @@ export default function DashboardPage() {
     } else if (sessionStatus === 'authenticated') {
       fetchData();
     }
-  }, [sessionStatus, fetchData, router]);
+  }, [sessionStatus, fetchData, signIn]);
 
 
   const totalCandidates = candidates.length;
@@ -122,7 +120,7 @@ export default function DashboardPage() {
     return !hasCandidates;
   });
 
-  if (sessionStatus === 'loading' || isLoading || sessionStatus === 'unauthenticated') {
+  if (sessionStatus === 'loading' || isLoading || (sessionStatus === 'unauthenticated' && !window.location.pathname.startsWith('/auth/signin'))) {
     return (
       <div className="flex h-screen w-screen items-center justify-center bg-background fixed inset-0 z-50">
         <Loader2 className="h-16 w-16 animate-spin text-primary" />

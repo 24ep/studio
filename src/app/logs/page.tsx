@@ -12,14 +12,14 @@ import type { LogEntry, LogLevel } from '@/lib/types';
 import { useToast } from "@/hooks/use-toast";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { signIn, useSession } from "next-auth/react";
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation'; // Added usePathname
 
 const getLogLevelBadgeVariant = (level: LogLevel): "default" | "secondary" | "destructive" | "outline" => {
   switch (level) {
     case 'ERROR':
       return 'destructive';
     case 'WARN':
-    case 'AUDIT': // Adding Audit to secondary for visual distinction
+    case 'AUDIT': 
       return 'secondary'; 
     case 'INFO':
       return 'default'; 
@@ -35,7 +35,7 @@ const getLogLevelIcon = (level: LogLevel) => {
     case 'ERROR':
       return <ServerCrash className="h-4 w-4 mr-1.5" />;
     case 'WARN':
-      return <AlertTriangle className="h-4 w-4 mr-1.5" />; // Changed for better visibility
+      return <AlertTriangle className="h-4 w-4 mr-1.5" />; 
     case 'AUDIT':
       return <ShieldAlert className="h-4 w-4 mr-1.5" />;
     case 'INFO':
@@ -62,6 +62,7 @@ export default function LogsPage() {
 
   const { data: session, status: sessionStatus } = useSession();
   const router = useRouter();
+  const pathname = usePathname();
 
   const totalPages = Math.ceil(totalLogs / ITEMS_PER_PAGE);
 
@@ -92,7 +93,7 @@ export default function LogsPage() {
         }
 
         if (response.status === 401 || (errorMessageFromServer && errorMessageFromServer.toLowerCase().includes("unauthorized"))) {
-            signIn(undefined, { callbackUrl: window.location.pathname });
+            signIn(undefined, { callbackUrl: pathname });
             return;
         }
         setFetchError(errorMessageFromServer || `An unknown error occurred. Status: ${response.status}`);
@@ -120,16 +121,16 @@ export default function LogsPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [sessionStatus, toast]); 
+  }, [sessionStatus, toast, pathname, signIn]); 
 
   useEffect(() => {
     setIsClient(true);
     if (sessionStatus === 'unauthenticated') {
-      signIn(undefined, { callbackUrl: window.location.pathname });
+      signIn(undefined, { callbackUrl: pathname });
     } else if (sessionStatus === 'authenticated') {
       fetchLogs(currentPage, levelFilter);
     }
-  }, [sessionStatus, fetchLogs, currentPage, levelFilter, router]);
+  }, [sessionStatus, fetchLogs, currentPage, levelFilter, pathname, signIn]);
 
 
   const handleRefresh = () => {
@@ -145,7 +146,7 @@ export default function LogsPage() {
     setCurrentPage(1); 
   };
 
-  if (sessionStatus === 'loading' || (sessionStatus === 'unauthenticated' && !router.asPath.startsWith('/auth/signin')) || (isLoading && !fetchError && !isClient)) { 
+  if (sessionStatus === 'loading' || (sessionStatus === 'unauthenticated' && !pathname.startsWith('/auth/signin')) || (isLoading && !fetchError && !isClient)) { 
     return (
       <div className="flex h-screen w-screen items-center justify-center bg-background fixed inset-0 z-50">
         <Loader2 className="h-16 w-16 animate-spin text-primary" />

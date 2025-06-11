@@ -133,13 +133,13 @@ export default function MyTasksPage() {
      toast({ title: "Action Not Available", description: "To upload resumes, please use the main Candidates page or Candidate Detail page."});
   };
 
-  const refreshCurrentView = () => {
+  const refreshCurrentView = useCallback(() => {
     if (session?.user?.role === 'Admin') {
       fetchTaskBoardCandidates(selectedRecruiterFilter);
     } else {
       fetchTaskBoardCandidates(MY_ASSIGNED_VALUE);
     }
-  }
+  }, [session, fetchTaskBoardCandidates, selectedRecruiterFilter]);
 
   const filteredCandidates = statusFilter === 'all' 
     ? candidates 
@@ -253,9 +253,11 @@ export default function MyTasksPage() {
           ) : viewMode === 'list' ? (
             <CandidateTable
               candidates={filteredCandidates}
+              availablePositions={[]} /* Pass empty or all positions if needed */
               onUpdateCandidate={handleUpdateCandidateOnTaskBoard}
               onDeleteCandidate={handleDeleteCandidateOnTaskBoard}
               onOpenUploadModal={handleOpenUploadModalOnTaskBoard}
+              onEditPosition={() => toast({title: "Action Not Available", description: "Position editing from Task Board is not available."})}
               isLoading={isLoading}
               onRefreshCandidateData={refreshCurrentView} 
             />
