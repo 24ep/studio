@@ -30,21 +30,13 @@ import { Separator } from '@/components/ui/separator';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import type { Candidate, TransitionRecord, CandidateStatus } from '@/lib/types';
+import type { Candidate, TransitionRecord, CandidateStatus, RecruitmentStage } from '@/lib/types';
 import { PlusCircle, CalendarDays, Edit3, Trash2, Save, X, User } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { useToast } from "@/hooks/use-toast";
 
-
-const candidateStatusOptions: CandidateStatus[] = [
-  'Applied', 'Screening', 'Shortlisted', 'Interview Scheduled', 'Interviewing',
-  'Offer Extended', 'Offer Accepted', 'Hired', 'Rejected', 'On Hold'
-];
-
 const transitionFormSchema = z.object({
-  newStatus: z.custom<CandidateStatus>((val) => candidateStatusOptions.includes(val as CandidateStatus), {
-    message: "Invalid status selected",
-  }),
+  newStatus: z.string().min(1, "New status is required"),
   notes: z.string().optional(),
 });
 
@@ -56,6 +48,7 @@ interface ManageTransitionsModalProps {
   onOpenChange: (isOpen: boolean) => void;
   onUpdateCandidate: (candidateId: string, status: CandidateStatus, newTransitionHistory?: TransitionRecord[]) => Promise<void>;
   onRefreshCandidateData: (candidateId: string) => Promise<void>;
+  availableStages: RecruitmentStage[]; // New prop
 }
 
 export function ManageTransitionsModal({
@@ -64,6 +57,7 @@ export function ManageTransitionsModal({
   onOpenChange,
   onUpdateCandidate,
   onRefreshCandidateData,
+  availableStages,
 }: ManageTransitionsModalProps) {
   const { toast } = useToast();
   const [editingTransitionId, setEditingTransitionId] = useState<string | null>(null);
@@ -73,7 +67,7 @@ export function ManageTransitionsModal({
   const form = useForm<TransitionFormValues>({
     resolver: zodResolver(transitionFormSchema),
     defaultValues: {
-      newStatus: candidate?.status || 'Applied',
+      newStatus: candidate?.status || (availableStages[0]?.name || 'Applied'),
       notes: '',
     },
   });
@@ -98,9 +92,8 @@ export function ManageTransitionsModal({
     try {
         await onUpdateCandidate(candidate.id, data.newStatus);
         form.reset({ newStatus: data.newStatus, notes: '' });
-        // Parent will refresh the candidate data which includes updated transition history
     } catch (error) {
-        // Error handled by parent or API call
+        // Error handled by parent
     }
   };
 
@@ -179,14 +172,14 @@ export function ManageTransitionsModal({
                     name="newStatus"
                     control={form.control}
                     render={({ field }) => (
-                      <Select onValueChange={field.onChange} value={field.value} defaultValue={candidate.status}>
+                      <Select onValueChange={field.onChange} value={field.value}>
                         <SelectTrigger id="newStatus" className="mt-1">
                           <SelectValue placeholder="Select new stage" />
                         </SelectTrigger>
                         <SelectContent>
-                          {candidateStatusOptions.map((status) => (
-                            <SelectItem key={status} value={status}>
-                              {status}
+                          {availableStages.map((stage) => (
+                            <SelectItem key={stage.id} value={stage.name}>
+                              {stage.name}
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -300,5 +293,3 @@ export function ManageTransitionsModal({
     </>
   );
 }
-
-    

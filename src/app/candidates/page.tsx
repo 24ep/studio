@@ -4,7 +4,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { CandidateFilters, type CandidateFilterValues } from '@/components/candidates/CandidateFilters';
 import { CandidateTable } from '@/components/candidates/CandidateTable';
-import type { Candidate, CandidateStatus, Position } from '@/lib/types';
+import type { Candidate, CandidateStatus, Position, RecruitmentStage } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { PlusCircle, Users, ServerCrash, Zap, Loader2, FileDown, FileUp, ChevronDown, FileSpreadsheet } from 'lucide-react';
@@ -29,6 +29,7 @@ export default function CandidatesPage() {
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [selectedCandidateForUpload, setSelectedCandidateForUpload] = useState<Candidate | null>(null);
   const [availablePositions, setAvailablePositions] = useState<Position[]>([]);
+  const [availableStages, setAvailableStages] = useState<RecruitmentStage[]>([]);
   const { toast } = useToast();
   const router = useRouter();
   const pathname = usePathname();
@@ -63,7 +64,7 @@ export default function CandidatesPage() {
       toast({ title: "Refresh Error", description: `Could not refresh data for candidate ${candidateId}.`, variant: "destructive"});
        fetchCandidates();
     }
-  }, [fetchCandidateById, toast]);
+  }, [fetchCandidateById, toast, fetchCandidates]);
 
 
   const fetchPositions = useCallback(async () => {
@@ -89,6 +90,27 @@ export default function CandidatesPage() {
       setAvailablePositions([]);
     }
   }, [sessionStatus, pathname, signIn]);
+
+  const fetchRecruitmentStages = useCallback(async () => {
+    if (sessionStatus !== 'authenticated') return;
+    try {
+      const response = await fetch('/api/settings/recruitment-stages');
+      if (!response.ok) {
+        if (response.status === 401) {
+            setAuthError(true);
+            signIn(undefined, { callbackUrl: pathname });
+            return;
+        }
+        throw new Error('Failed to fetch recruitment stages');
+      }
+      const data: RecruitmentStage[] = await response.json();
+      setAvailableStages(data);
+    } catch (error) {
+      console.error("Error fetching recruitment stages:", error);
+      toast({ title: "Error", description: "Could not load recruitment stages for status selection.", variant: "destructive" });
+      setAvailableStages([]); // Keep a default or empty list
+    }
+  }, [sessionStatus, pathname, signIn, toast]);
 
   const fetchCandidates = useCallback(async () => {
     if (sessionStatus !== 'authenticated') {
@@ -139,8 +161,9 @@ export default function CandidatesPage() {
     } else if (sessionStatus === 'authenticated') {
       fetchCandidates();
       fetchPositions();
+      fetchRecruitmentStages();
     }
-  }, [filters, sessionStatus, fetchCandidates, fetchPositions, pathname, signIn]);
+  }, [filters, sessionStatus, fetchCandidates, fetchPositions, fetchRecruitmentStages, pathname, signIn]);
 
 
   const handleFilterChange = (newFilters: CandidateFilterValues) => {
@@ -288,7 +311,7 @@ export default function CandidatesPage() {
       "phone (Optional)",
       "positionId (UUID, Optional)",
       "fitScore (Number 0-100, Optional, Default: 0)",
-      "status (Default: Applied, e.g., Applied, Screening)",
+      "status (Default: Applied, e.g., Applied, Screening - use a valid stage name from Settings > Recruitment Stages)",
       "applicationDate (ISO8601 datetime string, Optional, Default: now)",
       "parsedData.cv_language (String, Optional)",
       "parsedData.personal_info.firstname (String, Required if name not provided)",
@@ -299,11 +322,6 @@ export default function CandidatesPage() {
       "parsedData.personal_info.introduction_aboutme (String, Optional)",
       "parsedData.contact_info.email (String, Required if top-level email not provided)",
       "parsedData.contact_info.phone (String, Optional)",
-      // For education, experience, skills, job_suitable, job_matches: these are JSON arrays of objects.
-      // For simple Excel import, you might define columns like:
-      // education_1_university, education_1_major, education_2_university, etc.
-      // OR, accept JSON strings in cells for these complex fields.
-      // For this conceptual implementation, we'll assume the API expects the structured parsedData.
       "parsedData.education (JSON string of array, Optional, e.g., '[{\"university\":\"U1\",\"major\":\"CS\"}]')",
       "parsedData.experience (JSON string of array, Optional, e.g., '[{\"company\":\"C1\",\"position\":\"Dev\"}]')",
       "parsedData.skills (JSON string of array, Optional, e.g., '[{\"segment_skill\":\"Lang\",\"skill\":[\"Java\",\"JS\"]}]')",
@@ -322,8 +340,6 @@ export default function CandidatesPage() {
         ),
         duration: 15000,
     });
-    // In a real implementation, this would trigger a file download.
-    // e.g., create a Blob with CSV data and a link to download it.
   };
 
   const handleExportToExcel = async () => {
@@ -332,7 +348,6 @@ export default function CandidatesPage() {
       const query = new URLSearchParams();
       if (filters.name) query.append('name', filters.name);
       if (filters.positionId && filters.positionId !== "__ALL_POSITIONS__") query.append('positionId', filters.positionId);
-      // Add other filters if your export API supports them
 
       const response = await fetch(`/api/candidates/export?${query.toString()}`);
       if (!response.ok) {
@@ -464,6 +479,7 @@ export default function CandidatesPage() {
         <CandidateTable
           candidates={allCandidates}
           availablePositions={availablePositions}
+          availableStages={availableStages}
           onUpdateCandidate={handleUpdateCandidateAPI}
           onDeleteCandidate={handleDeleteCandidate}
           onOpenUploadModal={handleOpenUploadModal}
@@ -478,6 +494,7 @@ export default function CandidatesPage() {
         onOpenChange={setIsAddModalOpen}
         onAddCandidate={handleAddCandidateSubmit}
         availablePositions={availablePositions}
+        availableStages={availableStages}
       />
 
       <UploadResumeModal
@@ -510,5 +527,3 @@ export default function CandidatesPage() {
     </div>
   );
 }
-
-    

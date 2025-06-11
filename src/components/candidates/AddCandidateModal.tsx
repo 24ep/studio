@@ -28,12 +28,7 @@ import {
 } from '@/components/ui/select';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { PlusCircle, Trash2, UserPlus } from 'lucide-react';
-import type { PersonalInfo, ContactInfo, EducationEntry, ExperienceEntry, SkillEntry, JobSuitableEntry, Position, CandidateStatus, PositionLevel } from '@/lib/types';
-
-const candidateStatusOptions: CandidateStatus[] = [
-  'Applied', 'Screening', 'Shortlisted', 'Interview Scheduled', 'Interviewing',
-  'Offer Extended', 'Offer Accepted', 'Hired', 'Rejected', 'On Hold'
-];
+import type { PersonalInfo, ContactInfo, EducationEntry, ExperienceEntry, SkillEntry, JobSuitableEntry, Position, CandidateStatus, PositionLevel, RecruitmentStage } from '@/lib/types';
 
 const positionLevelOptions: PositionLevel[] = ['entry level', 'mid level', 'senior level', 'lead', 'manager', 'executive', 'officer', 'leader'];
 
@@ -70,12 +65,12 @@ const experienceEntryFormSchema = z.object({
   period: z.string().optional(),
   duration: z.string().optional(),
   is_current_position: z.boolean().optional().default(false),
-  postition_level: z.string().optional().nullable(), // Allow string, specific enum for PositionLevel type
+  postition_level: z.string().optional().nullable(), 
 });
 
 const skillEntryFormSchema = z.object({
   segment_skill: z.string().optional(),
-  skill_string: z.string().optional(), // For comma-separated skills input
+  skill_string: z.string().optional(), 
 });
 
 const jobSuitableEntryFormSchema = z.object({
@@ -95,7 +90,7 @@ const addCandidateFormSchema = z.object({
   skills: z.array(skillEntryFormSchema).optional(),
   job_suitable: z.array(jobSuitableEntryFormSchema).optional(),
   positionId: z.string().uuid("Position is required").nullable(),
-  status: z.enum(candidateStatusOptions as [CandidateStatus, ...CandidateStatus[]]).default('Applied'),
+  status: z.string().min(1, "Status is required").default('Applied'), // Changed from enum
   fitScore: z.number().min(0).max(100).optional().default(0),
 });
 
@@ -106,11 +101,12 @@ interface AddCandidateModalProps {
   onOpenChange: (isOpen: boolean) => void;
   onAddCandidate: (data: AddCandidateFormValues) => Promise<void>;
   availablePositions: Position[];
+  availableStages: RecruitmentStage[]; // New prop
 }
 
 const PLACEHOLDER_VALUE_NONE = "___NOT_SPECIFIED___";
 
-export function AddCandidateModal({ isOpen, onOpenChange, onAddCandidate, availablePositions }: AddCandidateModalProps) {
+export function AddCandidateModal({ isOpen, onOpenChange, onAddCandidate, availablePositions, availableStages }: AddCandidateModalProps) {
   const form = useForm<AddCandidateFormValues>({
     resolver: zodResolver(addCandidateFormSchema),
     defaultValues: {
@@ -122,7 +118,7 @@ export function AddCandidateModal({ isOpen, onOpenChange, onAddCandidate, availa
       skills: [{ segment_skill: '', skill_string: '' }],
       job_suitable: [{ suitable_career: '', suitable_job_position: '', suitable_job_level: '', suitable_salary_bath_month: ''}],
       positionId: null,
-      status: 'Applied',
+      status: availableStages.find(s => s.name.toLowerCase() === 'applied')?.name || availableStages[0]?.name || 'Applied',
       fitScore: 0,
     },
   });
@@ -159,14 +155,13 @@ export function AddCandidateModal({ isOpen, onOpenChange, onAddCandidate, availa
         skills: [{ segment_skill: '', skill_string: '' }],
         job_suitable: [{ suitable_career: '', suitable_job_position: '', suitable_job_level: '', suitable_salary_bath_month: ''}],
         positionId: null,
-        status: 'Applied',
+        status: availableStages.find(s => s.name.toLowerCase() === 'applied')?.name || availableStages[0]?.name || 'Applied',
         fitScore: 0,
       });
     }
-  }, [isOpen, form]);
+  }, [isOpen, form, availableStages]);
 
   const onSubmit = async (data: AddCandidateFormValues) => {
-    // Process postition_level: if it's our placeholder, set to null
     const processedData = {
       ...data,
       experience: data.experience?.map(exp => ({
@@ -189,13 +184,11 @@ export function AddCandidateModal({ isOpen, onOpenChange, onAddCandidate, availa
         <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col flex-grow overflow-hidden">
           <ScrollArea className="flex-grow overflow-y-auto p-6 pt-4">
             <div className="space-y-6">
-              {/* CV Language */}
               <div>
                 <Label htmlFor="cv_language">CV Language</Label>
                 <Input id="cv_language" {...form.register('cv_language')} className="mt-1" />
               </div>
 
-              {/* Personal Info */}
               <fieldset className="space-y-3 border p-4 rounded-md">
                 <legend className="text-lg font-semibold">Personal Information</legend>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -228,7 +221,6 @@ export function AddCandidateModal({ isOpen, onOpenChange, onAddCandidate, availa
                 </div>
               </fieldset>
 
-              {/* Contact Info */}
               <fieldset className="space-y-3 border p-4 rounded-md">
                 <legend className="text-lg font-semibold">Contact Information</legend>
                 <div>
@@ -275,18 +267,19 @@ export function AddCandidateModal({ isOpen, onOpenChange, onAddCandidate, availa
                             name="status"
                             control={form.control}
                             render={({ field }) => (
-                                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                <Select onValueChange={field.onChange} value={field.value} >
                                 <SelectTrigger id="status" className="mt-1">
                                     <SelectValue placeholder="Select status" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    {candidateStatusOptions.map(s => (
-                                    <SelectItem key={s} value={s}>{s}</SelectItem>
+                                    {availableStages.map(s => (
+                                    <SelectItem key={s.id} value={s.name}>{s.name}</SelectItem>
                                     ))}
                                 </SelectContent>
                                 </Select>
                             )}
                         />
+                         {form.formState.errors.status && <p className="text-sm text-destructive mt-1">{form.formState.errors.status.message}</p>}
                     </div>
                 </div>
                 <div>
@@ -307,7 +300,6 @@ export function AddCandidateModal({ isOpen, onOpenChange, onAddCandidate, availa
                 </div>
               </fieldset>
 
-              {/* Education */}
               <fieldset className="space-y-3 border p-4 rounded-md">
                 <legend className="text-lg font-semibold">Education</legend>
                 {educationFields.map((field, index) => (
@@ -331,7 +323,6 @@ export function AddCandidateModal({ isOpen, onOpenChange, onAddCandidate, availa
                 </Button>
               </fieldset>
 
-              {/* Experience */}
               <fieldset className="space-y-3 border p-4 rounded-md">
                 <legend className="text-lg font-semibold">Experience</legend>
                 {experienceFields.map((field, index) => (

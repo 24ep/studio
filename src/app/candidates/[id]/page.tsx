@@ -3,7 +3,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import type { Candidate, CandidateDetails, TransitionRecord, EducationEntry, ExperienceEntry, SkillEntry, JobSuitableEntry, PersonalInfo, N8NJobMatch, UserProfile, Position, PositionLevel } from '@/lib/types';
+import type { Candidate, CandidateDetails, TransitionRecord, EducationEntry, ExperienceEntry, SkillEntry, JobSuitableEntry, PersonalInfo, N8NJobMatch, UserProfile, Position, PositionLevel, RecruitmentStage } from '@/lib/types';
 import { useToast } from "@/hooks/use-toast";
 import { useSession, signIn } from 'next-auth/react';
 import { Button } from '@/components/ui/button';
@@ -28,9 +28,6 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Checkbox } from '@/components/ui/checkbox';
 
-// Environment variables for client-side MinIO URL construction
-// Ensure these are set in your .env.local file, prefixed with NEXT_PUBLIC_
-// For direct linking to work, your MinIO bucket (MINIO_BUCKET) must have a public read policy.
 const MINIO_PUBLIC_BASE_URL = process.env.NEXT_PUBLIC_MINIO_URL || `http://localhost:9847`;
 const MINIO_BUCKET = process.env.NEXT_PUBLIC_MINIO_BUCKET_NAME || "canditrack-resumes";
 
@@ -47,7 +44,6 @@ const getStatusBadgeVariant = (status: Candidate['status']): "default" | "second
   }
 };
 
-// Zod schemas for editing candidate details
 const personalInfoEditSchema = z.object({
   title_honorific: z.string().optional().nullable(),
   firstname: z.string().min(1, "First name is required").optional(),
@@ -85,8 +81,8 @@ const experienceEntryEditSchema = z.object({
 
 const skillEntryEditSchema = z.object({
     segment_skill: z.string().optional().nullable(),
-    skill_string: z.string().optional().nullable(), // For comma-separated skills input
-    skill: z.array(z.string()).optional(), // This will be derived from skill_string
+    skill_string: z.string().optional().nullable(), 
+    skill: z.array(z.string()).optional(), 
 }).deepPartial();
 
 const jobSuitableEntryEditSchema = z.object({
@@ -104,7 +100,6 @@ const candidateDetailsEditSchema = z.object({
   experience: z.array(experienceEntryEditSchema).optional(),
   skills: z.array(skillEntryEditSchema).optional(),
   job_suitable: z.array(jobSuitableEntryEditSchema).optional(),
-  // job_matches and associatedMatchDetails are typically read-only derived from n8n, not directly edited here
 }).deepPartial();
 
 const editCandidateDetailSchema = z.object({
@@ -114,7 +109,7 @@ const editCandidateDetailSchema = z.object({
   positionId: z.string().uuid().nullable().optional(),
   recruiterId: z.string().uuid().nullable().optional(),
   fitScore: z.number().min(0).max(100).optional(),
-  status: z.enum(['Applied', 'Screening', 'Shortlisted', 'Interview Scheduled', 'Interviewing', 'Offer Extended', 'Offer Accepted', 'Hired', 'Rejected', 'On Hold'] as [string, ...string[]]).optional(),
+  status: z.string().min(1, "Status is required").optional(), // Changed from enum
   parsedData: candidateDetailsEditSchema.optional(),
 });
 
@@ -222,6 +217,7 @@ export default function CandidateDetailPage() {
   const [allDbPositions, setAllDbPositions] = useState<Position[]>([]);
   const [isEditPositionModalOpen, setIsEditPositionModalOpen] = useState(false);
   const [selectedPositionForEdit, setSelectedPositionForEdit] = useState<Position | null>(null);
+  const [availableStages, setAvailableStages] = useState<RecruitmentStage[]>([]);
 
   const [isEditing, setIsEditing] = useState(false);
 
@@ -240,13 +236,6 @@ export default function CandidateDetailPage() {
 
   const fetchCandidateDetails = useCallback(async () => {
     if (!candidateId) return;
-    // No session check needed for public API
-    // if (sessionStatus !== 'authenticated' && sessionStatus !== 'loading') { 
-    //     signIn(undefined, { callbackUrl: `/candidates/${candidateId}` });
-    //     return;
-    // }
-    // if(sessionStatus === 'loading') return;
-
     setIsLoading(true);
     setFetchError(null);
     
@@ -254,10 +243,6 @@ export default function CandidateDetailPage() {
       const response = await fetch(`/api/candidates/${candidateId}`);
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        // if (response.status === 401) {
-        //     signIn(undefined, { callbackUrl: `/candidates/${candidateId}` });
-        //     return;
-        // }
         const errorMessage = errorData.message || `Failed to fetch candidate: ${response.statusText || `Status ${response.status}`}`;
         setFetchError(errorMessage);
         setCandidate(null);
@@ -265,9 +250,6 @@ export default function CandidateDetailPage() {
       }
       const data: Candidate = await response.json();
       setCandidate(data);
-      console.log("Fetched candidate data:", data);
-      console.log("Experience data:", data.parsedData?.experience);
-
       reset({
         name: data.name,
         email: data.email,
@@ -291,10 +273,9 @@ export default function CandidateDetailPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [candidateId, reset]); // Removed sessionStatus, signIn
+  }, [candidateId, reset]);
 
   const fetchRecruiters = useCallback(async () => {
-    // Public API, no session check
     try {
       const response = await fetch('/api/users?role=Recruiter');
       if (!response.ok) throw new Error('Failed to fetch recruiters');
@@ -307,7 +288,6 @@ export default function CandidateDetailPage() {
   }, [toast]);
 
   const fetchAllPositions = useCallback(async () => {
-    // Public API, no session check
     try {
       const response = await fetch('/api/positions?isOpen=true'); 
       if (!response.ok) throw new Error('Failed to fetch positions');
@@ -318,15 +298,27 @@ export default function CandidateDetailPage() {
     }
   }, []);
 
+  const fetchRecruitmentStages = useCallback(async () => {
+    try {
+      const response = await fetch('/api/settings/recruitment-stages');
+      if (!response.ok) throw new Error('Failed to fetch recruitment stages');
+      const data: RecruitmentStage[] = await response.json();
+      setAvailableStages(data);
+    } catch (error) {
+      console.error("Error fetching recruitment stages:", error);
+      toast({ title: "Error", description: "Could not load recruitment stages for status selection.", variant: "destructive" });
+    }
+  }, [toast]);
+
 
   useEffect(() => {
-    // Public API, direct fetch
     if (candidateId) {
         fetchCandidateDetails();
         fetchAllPositions(); 
         fetchRecruiters(); 
+        fetchRecruitmentStages();
     }
-  }, [candidateId, fetchCandidateDetails, fetchRecruiters, fetchAllPositions]); // Removed sessionStatus, signIn
+  }, [candidateId, fetchCandidateDetails, fetchRecruiters, fetchAllPositions, fetchRecruitmentStages]);
 
   const handleUploadSuccess = (updatedCandidate: Candidate) => {
     setCandidate(updatedCandidate);
@@ -488,13 +480,6 @@ export default function CandidateDetailPage() {
     setIsEditing(false);
   };
 
-  // if (sessionStatus === 'loading' || (isLoading && !fetchError)) {
-  //   return (
-  //     <div className="flex h-[calc(100vh-8rem)] items-center justify-center">
-  //       <Loader2 className="h-16 w-16 animate-spin text-primary" />
-  //     </div>
-  //   );
-  // }
 
   if (isLoading && !fetchError) {
     return (
@@ -551,15 +536,12 @@ export default function CandidateDetailPage() {
     );
   };
   
-  // Function to try and extract a user-friendly filename
   const getDisplayFilename = (filePath: string | null | undefined): string => {
-    if (!filePath) return "View Resume"; // Default text if no path
-    // Try to extract the original filename part: candId-timestamp-original_filename.ext
+    if (!filePath) return "View Resume"; 
     const parts = filePath.split('-');
-    if (parts.length > 2) { // Check if there are enough parts for our assumed structure
-      return parts.slice(2).join('-').replace(/_/g, ' '); // Join back parts of original filename and replace underscores
+    if (parts.length > 2) { 
+      return parts.slice(2).join('-').replace(/_/g, ' '); 
     }
-    // Fallback: if the structure is different, just use the last part (filename.ext)
     return parts.pop() || "View Resume"; 
   };
 
@@ -588,7 +570,6 @@ export default function CandidateDetailPage() {
     <form onSubmit={handleSubmit(handleSaveDetails)}>
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-6">
-          {/* Candidate Info Card */}
           <Card className="shadow-lg">
             <CardHeader className="flex flex-row items-start justify-between gap-4">
               <div className="flex items-center gap-4">
@@ -630,13 +611,14 @@ export default function CandidateDetailPage() {
                                 <Select onValueChange={field.onChange} value={field.value}>
                                     <SelectTrigger className="text-base px-3 py-1 capitalize"><SelectValue /></SelectTrigger>
                                     <SelectContent>
-                                        {['Applied', 'Screening', 'Shortlisted', 'Interview Scheduled', 'Interviewing', 'Offer Extended', 'Offer Accepted', 'Hired', 'Rejected', 'On Hold'].map(s => (
-                                            <SelectItem key={s} value={s}>{s}</SelectItem>
+                                        {availableStages.map(s => (
+                                            <SelectItem key={s.id} value={s.name}>{s.name}</SelectItem>
                                         ))}
                                     </SelectContent>
                                 </Select>
                             )}
                         />
+                        {errors.status && <p className="text-sm text-destructive">{errors.status.message}</p>}
                         <Label htmlFor="fitScore" className="mt-1">Fit Score (Applied Position)</Label>
                         <Input id="fitScore" type="number" {...register('fitScore', { valueAsNumber: true })} className="w-32 text-right" />
 
@@ -679,8 +661,6 @@ export default function CandidateDetailPage() {
                         {renderField("CV Language", parsed?.cv_language, Tag)}
                     </>
                 )}
-                {/* Resume link - ensure your MinIO bucket has public read access or use pre-signed URLs for production */}
-                {/* For direct linking to work, MinIO bucket 'canditrack-resumes' needs public read policy. */}
                 {candidate.resumePath && !isEditing && renderField(
                   "Resume",
                   getDisplayFilename(candidate.resumePath),
@@ -714,62 +694,7 @@ export default function CandidateDetailPage() {
           )}
 
 
-          {/* Recruiter Assignment Card */}
           <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center"><UserCog className="mr-2 h-5 w-5 text-primary"/>Assign Recruiter</CardTitle>
-              </CardHeader>
-              <CardContent>
-                 {isEditing ? (
-                     <>
-                        <Label htmlFor="recruiterId">Assigned Recruiter</Label>
-                        <Controller
-                            name="recruiterId"
-                            control={control}
-                            render={({ field }) => (
-                                <Select onValueChange={(value) => field.onChange(value === "unassigned" ? null : value)} value={field.value ?? "unassigned"}>
-                                    <SelectTrigger id="recruiterId" className="mt-1"><SelectValue placeholder="Select Recruiter" /></SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="unassigned">Unassign</SelectItem>
-                                        {recruiters.map(r => <SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>)}
-                                    </SelectContent>
-                                </Select>
-                            )}
-                        />
-                     </>
-                 ) : (
-                    <>
-                        {candidate.recruiter ? (
-                        <p className="text-sm mb-2">Currently assigned to: <span className="font-semibold">{candidate.recruiter.name}</span></p>
-                        ) : (
-                        <p className="text-sm text-muted-foreground mb-2">Not assigned to any recruiter.</p>
-                        )}
-                        <div className="flex items-center gap-2">
-                        <Select
-                            value={candidate.recruiterId || "unassigned"}
-                            onValueChange={(value) => handleAssignRecruiter(value === "unassigned" ? null : value)}
-                            disabled={isAssigningRecruiter || recruiters.length === 0}
-                        >
-                            <SelectTrigger className="w-full md:w-[280px]">
-                            <SelectValue placeholder="Select Recruiter" />
-                            </SelectTrigger>
-                            <SelectContent>
-                            <SelectItem value="unassigned">Unassign</SelectItem>
-                            {recruiters.map(r => (
-                                <SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>
-                            ))}
-                            </SelectContent>
-                        </Select>
-                        {isAssigningRecruiter && <Loader2 className="h-5 w-5 animate-spin" />}
-                        </div>
-                        {recruiters.length === 0 && <p className="text-xs text-muted-foreground mt-1">No recruiters available for assignment.</p>}
-                    </>
-                 )}
-              </CardContent>
-            </Card>
-          
-          {/* Personal Info Card */}
-            <Card>
                 <CardHeader><CardTitle className="flex items-center"><UserCircle className="mr-2 h-5 w-5 text-primary"/>Personal Information</CardTitle></CardHeader>
                 <CardContent className="space-y-3">
                     {isEditing ? (
@@ -807,7 +732,6 @@ export default function CandidateDetailPage() {
                 </CardContent>
             </Card>
           
-          {/* Education Card */}
             <Card>
                 <CardHeader><CardTitle className="flex items-center"><GraduationCap className="mr-2 h-5 w-5 text-primary"/>Education</CardTitle></CardHeader>
                 <CardContent>
@@ -854,7 +778,6 @@ export default function CandidateDetailPage() {
                 </CardContent>
             </Card>
           
-          {/* Experience Card */}
           <Card>
               <CardHeader><CardTitle className="flex items-center"><Briefcase className="mr-2 h-5 w-5 text-primary"/>Experience</CardTitle></CardHeader>
               <CardContent>
@@ -934,7 +857,6 @@ export default function CandidateDetailPage() {
               </CardContent>
           </Card>
           
-          {/* Skills Card */}
             <Card>
               <CardHeader><CardTitle className="flex items-center"><Star className="mr-2 h-5 w-5 text-primary"/>Skills</CardTitle></CardHeader>
               <CardContent>
@@ -978,7 +900,6 @@ export default function CandidateDetailPage() {
               </CardContent>
             </Card>
           
-          {/* Job Suitability Card */}
             <Card>
               <CardHeader><CardTitle className="flex items-center"><UserCog className="mr-2 h-5 w-5 text-primary"/>Job Suitability</CardTitle></CardHeader>
               <CardContent>
@@ -1019,7 +940,6 @@ export default function CandidateDetailPage() {
               </CardContent>
             </Card>
 
-          {/* Transition History Card */}
           <Card>
             <CardHeader><CardTitle className="flex items-center"><MessageSquare className="mr-2 h-5 w-5 text-primary"/>Transition History</CardTitle></CardHeader>
             <CardContent>
@@ -1049,7 +969,6 @@ export default function CandidateDetailPage() {
           </Card>
         </div>
 
-        {/* Right Column - n8n Job Matches */}
         <div className="lg:col-span-1 space-y-6">
           {(parsed?.job_matches && parsed.job_matches.length > 0 && !isEditing) && (
             <Card>
@@ -1058,7 +977,7 @@ export default function CandidateDetailPage() {
                 <CardDescription>Full list of job matches from n8n processing for this candidate.</CardDescription>
               </CardHeader>
               <CardContent>
-                <ScrollArea className="h-[calc(100vh-240px)]"> {/* Adjust height as needed */}
+                <ScrollArea className="h-[calc(100vh-240px)]"> 
                   <ul className="space-y-3">
                     {parsed.job_matches.map((match, index) => (
                       <li key={`match-${index}-${match.job_id || index}`} className="p-3 border rounded-md bg-muted/30">
@@ -1111,6 +1030,7 @@ export default function CandidateDetailPage() {
               onOpenChange={setIsTransitionsModalOpen}
               onUpdateCandidate={handleUpdateCandidateStatus} 
               onRefreshCandidateData={fetchCandidateDetails} 
+              availableStages={availableStages}
           />
         </>
       )}

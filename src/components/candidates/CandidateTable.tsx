@@ -16,18 +16,19 @@ import { Progress } from '@/components/ui/progress';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 import { MoreHorizontal, FileEdit, Trash2, Eye, Users, UploadCloud, Briefcase } from 'lucide-react';
-import type { Candidate, CandidateStatus, Position } from '@/lib/types';
+import type { Candidate, CandidateStatus, Position, RecruitmentStage } from '@/lib/types';
 import { ManageTransitionsModal } from './ManageTransitionsModal';
 import { format, parseISO } from 'date-fns';
 import Link from 'next/link';
 
 interface CandidateTableProps {
   candidates: Candidate[];
-  availablePositions: Position[]; // New prop
+  availablePositions: Position[]; 
+  availableStages: RecruitmentStage[]; // New prop
   onUpdateCandidate: (candidateId: string, status: CandidateStatus) => Promise<void>;
   onDeleteCandidate: (candidateId: string) => Promise<void>;
   onOpenUploadModal: (candidate: Candidate) => void;
-  onEditPosition: (position: Position) => void; // New prop
+  onEditPosition: (position: Position) => void; 
   isLoading?: boolean;
   onRefreshCandidateData: (candidateId: string) => Promise<void>;
 }
@@ -56,6 +57,7 @@ const getStatusBadgeVariant = (status: CandidateStatus): "default" | "secondary"
 export function CandidateTable({
   candidates,
   availablePositions,
+  availableStages,
   onUpdateCandidate,
   onDeleteCandidate,
   onOpenUploadModal,
@@ -213,6 +215,7 @@ export function CandidateTable({
           }}
           onUpdateCandidate={onUpdateCandidate}
           onRefreshCandidateData={onRefreshCandidateData}
+          availableStages={availableStages}
         />
       )}
     </>
