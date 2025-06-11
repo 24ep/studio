@@ -37,7 +37,7 @@ import { useToast } from "@/hooks/use-toast";
 
 
 const candidateStatusOptions: CandidateStatus[] = [
-  'Applied', 'Screening', 'Shortlisted', 'Interview Scheduled', 'Interviewing', 
+  'Applied', 'Screening', 'Shortlisted', 'Interview Scheduled', 'Interviewing',
   'Offer Extended', 'Offer Accepted', 'Hired', 'Rejected', 'On Hold'
 ];
 
@@ -54,8 +54,8 @@ interface ManageTransitionsModalProps {
   candidate: Candidate | null;
   isOpen: boolean;
   onOpenChange: (isOpen: boolean) => void;
-  onUpdateCandidate: (candidateId: string, status: CandidateStatus, newTransitionHistory?: TransitionRecord[]) => Promise<void>; 
-  onRefreshCandidateData: (candidateId: string) => Promise<void>; 
+  onUpdateCandidate: (candidateId: string, status: CandidateStatus, newTransitionHistory?: TransitionRecord[]) => Promise<void>;
+  onRefreshCandidateData: (candidateId: string) => Promise<void>;
 }
 
 export function ManageTransitionsModal({
@@ -84,7 +84,7 @@ export function ManageTransitionsModal({
         newStatus: candidate.status,
         notes: '',
       });
-      setEditingTransitionId(null); 
+      setEditingTransitionId(null);
     }
   }, [candidate, isOpen, form]);
 
@@ -96,7 +96,6 @@ export function ManageTransitionsModal({
         return;
     }
     try {
-        // The API will create the transition record with actingUserId
         await onUpdateCandidate(candidate.id, data.newStatus);
         form.reset({ newStatus: data.newStatus, notes: '' });
         // Parent will refresh the candidate data which includes updated transition history
@@ -123,7 +122,7 @@ export function ManageTransitionsModal({
       }
       toast({ title: "Notes Updated", description: "Transition notes have been successfully updated." });
       setEditingTransitionId(null);
-      await onRefreshCandidateData(candidate.id); 
+      await onRefreshCandidateData(candidate.id);
     } catch (error) {
       toast({ title: "Error Updating Notes", description: (error as Error).message, variant: "destructive" });
     }
@@ -144,7 +143,7 @@ export function ManageTransitionsModal({
         throw new Error(errorData.message || `Failed to delete transition: ${response.statusText}`);
       }
       toast({ title: "Transition Deleted", description: "The transition record has been successfully deleted." });
-      await onRefreshCandidateData(candidate.id); 
+      await onRefreshCandidateData(candidate.id);
     } catch (error) {
       toast({ title: "Error Deleting Transition", description: (error as Error).message, variant: "destructive" });
     } finally {
@@ -157,9 +156,9 @@ export function ManageTransitionsModal({
     <>
       <Dialog open={isOpen} onOpenChange={(open) => {
         onOpenChange(open);
-        if (!open) setEditingTransitionId(null); 
+        if (!open) setEditingTransitionId(null);
       }}>
-        <DialogContent className="sm:max-w-3xl"> 
+        <DialogContent className="sm:max-w-3xl">
           <DialogHeader>
             <DialogTitle>Manage Transitions for {candidate.name}</DialogTitle>
             <DialogDescription>
@@ -169,7 +168,10 @@ export function ManageTransitionsModal({
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4 py-4">
             <div className="md:border-r md:pr-6">
-              <h3 className="text-lg font-semibold mb-3 text-foreground">Add New Transition</h3>
+              <h3 className="text-lg font-semibold mb-1 text-foreground">Add New Transition</h3>
+              <p className="text-xs text-muted-foreground mb-3">
+                Select a new stage and add notes. This will update the candidate's current status and record the change.
+              </p>
               <form onSubmit={form.handleSubmit(handleAddTransitionSubmit)} className="space-y-4">
                 <div>
                   <Label htmlFor="newStatus" className="text-sm font-medium text-muted-foreground">New Stage</Label>
@@ -205,7 +207,7 @@ export function ManageTransitionsModal({
                   />
                 </div>
                 <Button type="submit" className="w-full btn-primary-gradient" disabled={form.formState.isSubmitting}>
-                  <PlusCircle className="mr-2 h-4 w-4" /> 
+                  <PlusCircle className="mr-2 h-4 w-4" />
                   {form.formState.isSubmitting ? 'Saving...' : 'Add Transition & Update Status'}
                 </Button>
               </form>
@@ -228,9 +230,9 @@ export function ManageTransitionsModal({
                             </p>
                             {editingTransitionId === record.id ? (
                               <div className="mt-2 space-y-2">
-                                <Textarea 
-                                  value={editingNotes} 
-                                  onChange={(e) => setEditingNotes(e.target.value)} 
+                                <Textarea
+                                  value={editingNotes}
+                                  onChange={(e) => setEditingNotes(e.target.value)}
                                   className="text-sm min-h-[60px]"
                                   placeholder="Edit notes..."
                                 />
@@ -298,3 +300,5 @@ export function ManageTransitionsModal({
     </>
   );
 }
+
+    
