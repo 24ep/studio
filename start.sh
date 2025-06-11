@@ -16,10 +16,11 @@ if [ ! -f .env.local ]; then
     echo "Pay special attention to NEXTAUTH_URL - it should be http://localhost:9846 if using default docker-compose port mapping."
     echo "The default admin credentials are admin@ncc.com / nccadmin (defined in pg-init-scripts/init-db.sql)."
     echo "Make sure to update the bcrypt hash in init-db.sql if you change the default admin password BEFORE first run."
+    echo "" # Adding a blank line for readability
 fi
 
 if [ "$REINIT_DB" = true ]; then
-    echo "--- Re-initializing ---"
+    echo "--- Re-initializing Database and Volumes ---"
     echo "WARNING: The --reinit flag was provided."
     echo "This will REMOVE ALL DOCKER VOLUMES (database, MinIO files, etc.) and then restart the services."
     echo "The init-db.sql script will run, creating a fresh database schema and default admin user."
@@ -35,9 +36,15 @@ if [ "$REINIT_DB" = true ]; then
         exit 1
     fi
     echo "Volumes removed."
+    echo "" # Adding a blank line for readability
 fi
 
 echo "Building and starting Candidate Matching services..."
+if [ "$REINIT_DB" = false ]; then
+    echo "Note: The database schema (init-db.sql) is applied by PostgreSQL only if the database volume is new or empty."
+    echo "      For a forced database re-initialization (which will delete existing data), use './start.sh --reinit'."
+    echo "" # Adding a blank line for readability
+fi
 docker-compose up --build -d
 
 if [ $? -eq 0 ]; then
