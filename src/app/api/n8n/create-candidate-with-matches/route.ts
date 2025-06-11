@@ -59,16 +59,16 @@ const experienceEntrySchema = z.object({
       if (typeof val === 'string') {
         const lowerVal = val.toLowerCase();
         if (lowerVal === 'none' || lowerVal === '') {
-          return null; 
+          return null;
         }
         return lowerVal;
       }
       if (val === null || val === undefined) {
-        return null; 
+        return null;
       }
-      return val; 
+      return val;
     },
-    z.string().optional().nullable() 
+    z.string().optional().nullable()
   ),
 }).passthrough();
 
@@ -110,25 +110,45 @@ const n8nCandidateWebhookEntrySchema = z.object({
   targetPositionLevel: z.string().optional().nullable(),
 });
 
+// This is the schema the API route will validate AFTER extracting the nested payload.
 const n8nWebhookPayloadSchema = n8nCandidateWebhookEntrySchema;
 
 
 export async function POST(request: NextRequest) {
-  let body;
+  let rawRequestBody;
+  let actualPayloadToValidate;
+
   try {
-    body = await request.json();
+    rawRequestBody = await request.json();
+    
+    // Attempt to extract the nested payload
+    if (
+      Array.isArray(rawRequestBody) && rawRequestBody.length > 0 &&
+      rawRequestBody[0] && typeof rawRequestBody[0] === 'object' &&
+      rawRequestBody[0].result_json && Array.isArray(rawRequestBody[0].result_json) && rawRequestBody[0].result_json.length > 0 &&
+      rawRequestBody[0].result_json[0] && typeof rawRequestBody[0].result_json[0] === 'object' &&
+      rawRequestBody[0].result_json[0].json
+    ) {
+      actualPayloadToValidate = rawRequestBody[0].result_json[0].json;
+    } else {
+      // If the expected nested structure is not found, log and return an error
+      console.error("N8N Webhook: Received payload does not match expected nested structure `body[0].result_json[0].json`.", JSON.stringify(rawRequestBody, null, 2));
+      await logAudit('ERROR', 'N8N Webhook: Payload structure mismatch.', 'API:N8N:CreateCandidateWithMatches', null, { receivedStructure: JSON.stringify(rawRequestBody).substring(0, 500) }); // Log part of the structure
+      return NextResponse.json({ message: "Invalid payload structure. Expected nested JSON.", error: "Payload structure mismatch" }, { status: 400 });
+    }
+
   } catch (error) {
     console.error("N8N Webhook: Error parsing request body:", error);
     await logAudit('ERROR', 'N8N Webhook: Error parsing request body.', 'API:N8N:CreateCandidateWithMatches', null, { error: (error as Error).message });
     return NextResponse.json({ message: "Error parsing request body", error: (error as Error).message }, { status: 400 });
   }
 
-  const validationResult = n8nWebhookPayloadSchema.safeParse(body);
+  const validationResult = n8nWebhookPayloadSchema.safeParse(actualPayloadToValidate);
   if (!validationResult.success) {
-    console.error("N8N Webhook: Invalid input:", JSON.stringify(validationResult.error.flatten(), null, 2));
-    await logAudit('ERROR', 'N8N Webhook: Invalid input received from n8n.', 'API:N8N:CreateCandidateWithMatches', null, { errors: validationResult.error.flatten() });
+    console.error("N8N Webhook: Invalid input after extracting payload:", JSON.stringify(validationResult.error.flatten(), null, 2));
+    await logAudit('ERROR', 'N8N Webhook: Invalid input received from n8n (after extraction).', 'API:N8N:CreateCandidateWithMatches', null, { errors: validationResult.error.flatten() });
     return NextResponse.json(
-      { message: "Invalid input for n8n candidate creation", errors: validationResult.error.flatten().fieldErrors },
+      { message: "Invalid input for n8n candidate creation (after extraction)", errors: validationResult.error.flatten().fieldErrors },
       { status: 400 }
     );
   }
@@ -167,7 +187,7 @@ export async function POST(request: NextRequest) {
       experience: candidate_info.experience || [],
       skills: candidate_info.skills || [],
       job_suitable: candidate_info.job_suitable || [],
-      job_matches: jobs || [],
+      job_matches: jobs || [], // Store all n8n job matches
     };
 
     await client.query('BEGIN');
@@ -201,11 +221,11 @@ export async function POST(request: NextRequest) {
             n8nJobId: n8nMatchForTarget.job_id,
           };
         } else {
-          finalFitScore = 0; // Default fit score if no specific n8n match for the target
+          finalFitScore = 0; 
           associatedMatchDetails = {
              jobTitle: targetPositionTitle || matchedJobTitle,
              fitScore: 0, 
-             reasons: ["User-selected position during upload"], 
+             reasons: ["User-selected position during upload or system-assigned target"], 
              n8nJobId: targetPositionId 
           };
         }
@@ -216,7 +236,7 @@ export async function POST(request: NextRequest) {
         await logAudit('WARN', `N8N Webhook: Pre-selected targetPositionId '${targetPositionId}' for candidate '${candidateName}' is invalid or not open. Candidate will be created without position assignment.`, 'API:N8N:CreateCandidateWithMatches', null);
       }
     } else if (jobs && jobs.length > 0) {
-      const topMatch = jobs.sort((a,b) => b.fit_score - a.fit_score)[0]; // Ensure we pick the highest score
+      const topMatch = jobs.sort((a,b) => b.fit_score - a.fit_score)[0]; 
       const positionQuery = 'SELECT id, title FROM "Position" WHERE title ILIKE $1 AND "isOpen" = TRUE LIMIT 1';
       const positionResult = await client.query(positionQuery, [topMatch.job_title]);
 
@@ -328,3 +348,5 @@ export async function POST(request: NextRequest) {
     }
   }
 }
+
+    
