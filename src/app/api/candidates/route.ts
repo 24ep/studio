@@ -9,8 +9,8 @@ import { v4 as uuidv4 } from 'uuid';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 
-
-const candidateStatusValues: [CandidateStatus, ...CandidateStatus[]] = ['Applied', 'Screening', 'Shortlisted', 'Interview Scheduled', 'Interviewing', 'Offer Extended', 'Offer Accepted', 'Hired', 'Rejected', 'On Hold'];
+// Core statuses for fallback or specific logic, full list comes from DB
+const coreCandidateStatusValues: [CandidateStatus, ...CandidateStatus[]] = ['Applied', 'Screening', 'Shortlisted', 'Interview Scheduled', 'Interviewing', 'Offer Extended', 'Offer Accepted', 'Hired', 'Rejected', 'On Hold'];
 
 const personalInfoSchema = z.object({
   title_honorific: z.string().optional().default(''),
@@ -90,7 +90,7 @@ const createCandidateSchema = z.object({
   positionId: z.string().uuid({ message: "Valid Position ID (UUID) is required" }).nullable().optional(),
   recruiterId: z.string().uuid().nullable().optional(),
   fitScore: z.number().min(0).max(100).optional().default(0),
-  status: z.enum(candidateStatusValues).optional().default('Applied'),
+  status: z.string().min(1).default('Applied'), // Changed from z.enum to z.string
   applicationDate: z.string().datetime({ message: "Invalid datetime string. Must be UTC ISO8601" }).optional(),
   parsedData: candidateDetailsSchema.optional(),
   resumePath: z.string().optional().nullable(),
@@ -171,28 +171,22 @@ export async function GET(request: NextRequest) {
     if (assignedRecruiterIdParam) {
       if (assignedRecruiterIdParam === 'me') {
         if (!session?.user?.id) {
-          // Should not happen if page access is controlled, but good for API robustness
           return NextResponse.json({ message: "Unauthorized: User session required for 'me' filter." }, { status: 401 });
         }
         conditions.push(`c."recruiterId" = $${paramIndex++}`);
         queryParams.push(session.user.id);
       } else if (z.string().uuid().safeParse(assignedRecruiterIdParam).success) {
-        // If it's a specific UUID, only Admins can use this
         if (userRole !== 'Admin') {
           return NextResponse.json({ message: "Forbidden: Only Admins can filter by specific recruiter ID." }, { status: 403 });
         }
         conditions.push(`c."recruiterId" = $${paramIndex++}`);
         queryParams.push(assignedRecruiterIdParam);
       } else if (assignedRecruiterIdParam === 'ALL_CANDIDATES_ADMIN') {
-        // For admin to see all, no specific recruiter filter is applied unless other filters are active
         if (userRole !== 'Admin') {
           return NextResponse.json({ message: "Forbidden: Only Admins can view all candidates without recruiter filter." }, { status: 403 });
         }
-        // No additional condition needed for this case if it means truly all candidates (subject to other filters)
       }
     } else {
-      // Default behavior if no assignedRecruiterIdParam is given:
-      // Recruiters see their own, Hiring Managers might see candidates for their positions (not implemented here), Admins see all.
       if (userRole === 'Recruiter') {
          if (!session?.user?.id) {
             return NextResponse.json({ message: "Unauthorized: User session required for Recruiter view." }, { status: 401 });
@@ -200,13 +194,8 @@ export async function GET(request: NextRequest) {
         conditions.push(`c."recruiterId" = $${paramIndex++}`);
         queryParams.push(session.user.id);
       } else if (userRole === 'Hiring Manager') {
-        // TODO: Future: Filter candidates for positions a Hiring Manager is associated with.
-        // For now, Hiring Managers see no candidates by default if not assigned to them.
-        // Or, remove this else-if to let them see candidates matching other filters, if that's desired.
-        // To see nothing by default if no recruiterIdParam is set and role is HM:
-        // conditions.push(`1=0`); // This effectively returns no results
+        // Default behavior for Hiring Manager (can be adjusted)
       }
-      // Admins see all if no specific recruiter filter is applied from client
     }
 
 
@@ -322,6 +311,14 @@ export async function POST(request: NextRequest) {
   try {
     await client.query('BEGIN');
 
+    // Validate status against RecruitmentStage table
+    const stageCheck = await client.query('SELECT id FROM "RecruitmentStage" WHERE name = $1', [rawData.status]);
+    if (stageCheck.rows.length === 0) {
+      await client.query('ROLLBACK');
+      return NextResponse.json({ message: `Invalid candidate status: '${rawData.status}'. Stage not found.` }, { status: 400 });
+    }
+
+
     if (rawData.positionId) {
         const positionCheckQuery = 'SELECT id FROM "Position" WHERE id = $1';
         const positionResult = await client.query(positionCheckQuery, [rawData.positionId]);
@@ -370,8 +367,8 @@ export async function POST(request: NextRequest) {
       uuidv4(),
       newCandidate.id,
       rawData.status,
-      `Application received by ${session?.user?.name || session?.user?.email || 'System'}.`, // Added System as fallback
-      session?.user?.id || null, // Default to null if no session user
+      `Application received by ${session?.user?.name || session?.user?.email || 'System'}.`, 
+      session?.user?.id || null, 
     ];
     await client.query(insertTransitionQuery, transitionValues);
 
@@ -435,4 +432,4 @@ export async function POST(request: NextRequest) {
     client.release();
   }
 }
-
+    

@@ -3,7 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Users, Briefcase, Settings, UsersRound, Code2, ListOrdered, Palette, Zap, ListTodo, FileText, UserCog, Info } from "lucide-react";
+import { LayoutDashboard, Users, Briefcase, Settings, UsersRound, Code2, ListOrdered, Palette, Zap, ListTodo, FileText, UserCog, Info, KanbanSquare } from "lucide-react"; // Added KanbanSquare
 import { cn } from "@/lib/utils";
 import {
   SidebarMenu,
@@ -36,6 +36,7 @@ const myTaskBoardNavItem = { href: "/my-tasks", label: "My Task Board", icon: Li
 const baseSettingsSubItems = [
   { href: "/settings/preferences", label: "Preferences", icon: Palette },
   { href: "/settings/integrations", label: "Integrations", icon: Zap },
+  { href: "/settings/stages", label: "Recruitment Stages", icon: KanbanSquare, adminOnly: true }, // New item
   { href: "/users", label: "Manage Users", icon: UsersRound, adminOnly: true },
   { href: "/api-docs", label: "API Docs", icon: Code2 },
   { href: "/logs", label: "Logs", icon: ListOrdered, adminOnly: true },
@@ -46,6 +47,7 @@ export function SidebarNav() {
   const { state: sidebarState, isMobile } = useSidebar();
   const { data: session, status: sessionStatus } = useSession();
   const userRole = session?.user?.role;
+  const modulePermissions = session?.user?.modulePermissions || [];
 
   const [isClient, setIsClient] = React.useState(false);
 
@@ -53,24 +55,24 @@ export function SidebarNav() {
     setIsClient(true);
   }, []);
 
+  const canAccess = (item: { adminOnly?: boolean, permissionId?: string }) => {
+    if (!isClient || sessionStatus !== 'authenticated') return false; // Don't render restricted items until session is loaded
+    if (item.adminOnly && userRole !== 'Admin') return false;
+    if (item.permissionId && !modulePermissions.includes(item.permissionId as any) && userRole !== 'Admin') return false;
+    return true;
+  };
+
   const initialIsSettingsSectionActive = React.useMemo(() => {
     return baseSettingsSubItems.some(item => {
-      if (item.adminOnly && userRole !== 'Admin' && sessionStatus === 'authenticated') { // Check only if session loaded and not admin
-        return false;
-      }
+       if (!canAccess({adminOnly: item.adminOnly, permissionId: (item.href === '/settings/stages' ? 'RECRUITMENT_STAGES_MANAGE' : undefined)})) return false;
       return pathname.startsWith(item.href);
     });
-  }, [pathname, userRole, sessionStatus]);
+  }, [pathname, userRole, sessionStatus, modulePermissions, isClient]);
 
 
   const clientSettingsSubItems = React.useMemo(() => {
-    return baseSettingsSubItems.filter(item => {
-      if (item.adminOnly && userRole !== 'Admin') {
-        return false;
-      }
-      return true;
-    });
-  }, [userRole]);
+    return baseSettingsSubItems.filter(item => canAccess({adminOnly: item.adminOnly, permissionId: (item.href === '/settings/stages' ? 'RECRUITMENT_STAGES_MANAGE' : undefined)}));
+  }, [userRole, modulePermissions, isClient, sessionStatus]);
 
   const isAnyMainNavItemActive = mainNavItems.some(item => pathname === item.href || (item.href !== "/" && pathname.startsWith(item.href)));
   const isMyTaskBoardActive = myTaskBoardNavItem.href === pathname || pathname.startsWith(myTaskBoardNavItem.href + "/");
@@ -201,20 +203,6 @@ export function SidebarNav() {
                       </Link>
                     </SidebarMenuItem>
                   ))}
-                  {!isClient && baseSettingsSubItems.filter(item => !item.adminOnly && item.href !== "/setup").map(item => ( // SSR fallback for non-admin items
-                     <SidebarMenuItem key={item.href + "-ssr"}>
-                        <SidebarMenuButton
-                          isActive={pathname.startsWith(item.href)}
-                          className="w-full justify-start"
-                          size="sm"
-                          tooltip={item.label}
-                          data-active={pathname.startsWith(item.href)}
-                        >
-                          {item.icon && <item.icon className="h-4 w-4 ml-[1px]" />}
-                          <span className="truncate">{item.label}</span>
-                        </SidebarMenuButton>
-                    </SidebarMenuItem>
-                  ))}
                 </SidebarMenu>
               </AccordionContent>
             </AccordionItem>
@@ -223,3 +211,4 @@ export function SidebarNav() {
       </SidebarMenu>
   );
 }
+    

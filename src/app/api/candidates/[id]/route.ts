@@ -10,12 +10,6 @@ import { v4 as uuidv4 } from 'uuid';
 
 export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
   const session = await getServerSession(authOptions);
-  // Public access for GET by ID for now as per user request to make APIs public
-  // const allowedRoles: UserProfile['role'][] = ['Admin', 'Recruiter', 'Hiring Manager'];
-  // if (!session?.user?.id || !session.user.role || !allowedRoles.includes(session.user.role)) {
-  //   return NextResponse.json({ message: "Forbidden: Insufficient permissions" }, { status: 403 });
-  // }
-
   try {
     const query = `
       SELECT
@@ -36,13 +30,13 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
               'stage', th.stage,
               'notes', th.notes,
               'actingUserId', th."actingUserId",
-              'actingUserName', u.name, -- User's name who made the transition
+              'actingUserName', u.name, 
               'createdAt', th."createdAt",
               'updatedAt', th."updatedAt"
             ) ORDER BY th.date DESC
            )
            FROM "TransitionRecord" th
-           LEFT JOIN "User" u ON th."actingUserId" = u.id -- Join User table here
+           LEFT JOIN "User" u ON th."actingUserId" = u.id 
            WHERE th."candidateId" = c.id
           ),
           '[]'::json
@@ -82,12 +76,6 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
     return NextResponse.json({ message: "Error fetching candidate", error: (error as Error).message }, { status: 500 });
   }
 }
-
-const candidateStatusValues: [CandidateStatus, ...CandidateStatus[]] = ['Applied', 'Screening', 'Shortlisted', 'Interview Scheduled', 'Interviewing', 'Offer Extended', 'Offer Accepted', 'Hired', 'Rejected', 'On Hold'];
-const positionLevelEnumValuesForZod: [PositionLevel, ...PositionLevel[]] = [
-    'entry level', 'mid level', 'senior level', 'lead', 'manager', 'executive', 'officer', 'leader'
-];
-
 
 const personalInfoSchemaPartial = z.object({
   title_honorific: z.string().optional(),
@@ -168,19 +156,13 @@ const updateCandidateSchema = z.object({
   positionId: z.string().uuid().nullable().optional(),
   recruiterId: z.string().uuid().nullable().optional(), 
   fitScore: z.number().min(0).max(100).optional(),
-  status: z.enum(candidateStatusValues).optional(),
+  status: z.string().min(1).optional(), // Changed from z.enum to z.string
   parsedData: candidateDetailsSchemaPartial.optional(),
   resumePath: z.string().optional().nullable(),
 });
 
 export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {
   const session = await getServerSession(authOptions);
-  // Public access for now
-  // const allowedRoles: UserProfile['role'][] = ['Admin', 'Recruiter'];
-  // if (!session?.user?.id || !session.user.role || !allowedRoles.includes(session.user.role)) {
-  //   await logAudit('WARN', `Forbidden attempt to update candidate (ID: ${params.id}) by user ${session?.user?.email || 'Unknown'} (ID: ${session?.user?.id || 'N/A'}). Required roles: Admin, Recruiter.`, 'API:Candidates:Update', session?.user?.id, { targetCandidateId: params.id });
-  //   return NextResponse.json({ message: "Forbidden: Insufficient permissions" }, { status: 403 });
-  // }
   const actingUserId = session?.user?.id || null;
   const actingUserName = session?.user?.name || session?.user?.email || 'System';
 
@@ -210,6 +192,14 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
   try {
     await client.query('BEGIN');
 
+    if (validatedData.status) {
+      const stageCheck = await client.query('SELECT id FROM "RecruitmentStage" WHERE name = $1', [validatedData.status]);
+      if (stageCheck.rows.length === 0) {
+        await client.query('ROLLBACK');
+        return NextResponse.json({ message: `Invalid candidate status: '${validatedData.status}'. Stage not found.` }, { status: 400 });
+      }
+    }
+
     const existingCandidateQuery = 'SELECT * FROM "Candidate" WHERE id = $1';
     const existingCandidateResult = await client.query(existingCandidateQuery, [params.id]);
     if (existingCandidateResult.rows.length === 0) {
@@ -230,7 +220,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
       }
     }
     if (validatedData.recruiterId) {
-        const recruiterCheckQuery = 'SELECT id FROM "User" WHERE id = $1 AND role = $2'; // Assuming only Recruiters can be assigned
+        const recruiterCheckQuery = 'SELECT id FROM "User" WHERE id = $1 AND role = $2'; 
         const recruiterResult = await client.query(recruiterCheckQuery, [validatedData.recruiterId, 'Recruiter']);
         if (recruiterResult.rows.length === 0) {
           await client.query('ROLLBACK');
@@ -271,7 +261,6 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
 
     if (updateFields.length === 0 && (!validatedData.status || validatedData.status === existingCandidate.status)) {
       await client.query('ROLLBACK'); 
-      // No actual DB update needed, release lock and fetch current data
       const currentCandidateQuery = `
           SELECT
               c.*,
@@ -401,12 +390,6 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
 
 export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
   const session = await getServerSession(authOptions);
-  // Public access for now
-  // const allowedRoles: UserProfile['role'][] = ['Admin', 'Recruiter'];
-  //  if (!session?.user?.id || !session.user.role || !allowedRoles.includes(session.user.role)) {
-  //   await logAudit('WARN', `Forbidden attempt to delete candidate (ID: ${params.id}) by user ${session?.user?.email || 'Unknown'} (ID: ${session?.user?.id || 'N/A'}). Required roles: Admin, Recruiter.`, 'API:Candidates:Delete', session?.user?.id, { targetCandidateId: params.id });
-  //   return NextResponse.json({ message: "Forbidden: Insufficient permissions" }, { status: 403 });
-  // }
   const actingUserId = session?.user?.id || null;
   const actingUserName = session?.user?.name || session?.user?.email || 'System';
 
@@ -414,7 +397,6 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
   try {
     await client.query('BEGIN');
 
-    // Delete associated transition records first
     const deleteTransitionsQuery = 'DELETE FROM "TransitionRecord" WHERE "candidateId" = $1';
     await client.query(deleteTransitionsQuery, [params.id]);
 
@@ -442,3 +424,4 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
     client.release();
   }
 }
+    

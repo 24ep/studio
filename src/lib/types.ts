@@ -1,3 +1,4 @@
+
 // This declares the shape of the user object returned by the session callback
 // and available in useSession() or getServerSession()
 // It needs to be augmented if you add custom properties to the session token
@@ -11,6 +12,7 @@ export const PLATFORM_MODULES = [
   { id: 'POSITIONS_MANAGE', label: 'Manage Positions (Add, Edit, Delete)' },
   { id: 'USERS_MANAGE', label: 'Manage Users & Permissions' },
   { id: 'SETTINGS_ACCESS', label: 'Access System Settings' },
+  { id: 'RECRUITMENT_STAGES_MANAGE', label: 'Manage Recruitment Stages' }, // New permission
   { id: 'LOGS_VIEW', label: 'View Application Logs' },
 ] as const;
 
@@ -27,7 +29,7 @@ declare module 'next-auth' {
   }
 
   interface User extends DefaultUser { // NextAuth User object
-    id: string; 
+    id: string;
     role?: UserProfile['role'];
     modulePermissions?: PlatformModuleId[];
   }
@@ -41,8 +43,9 @@ declare module 'next-auth/jwt' {
   }
 }
 
-
-export type CandidateStatus =
+// Core system statuses - these might still be useful for specific logic,
+// but the full list of available stages will come from the RecruitmentStage table.
+export type CoreCandidateStatus =
   | 'Applied'
   | 'Screening'
   | 'Shortlisted'
@@ -54,11 +57,24 @@ export type CandidateStatus =
   | 'Rejected'
   | 'On Hold';
 
+// This type will represent any stage name, whether core or custom.
+export type CandidateStatus = string;
+
+export interface RecruitmentStage {
+  id: string;
+  name: string;
+  description?: string | null;
+  is_system: boolean;
+  sort_order?: number | null;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
 export interface TransitionRecord {
   id: string;
   candidateId?: string;
   date: string;
-  stage: CandidateStatus;
+  stage: CandidateStatus; // Now a string to accommodate custom stages
   notes?: string;
   actingUserId?: string | null;
   actingUserName?: string | null; // For display purposes, populated by JOIN
@@ -150,9 +166,13 @@ export interface CandidateDetails {
 export interface N8NCandidateWebhookEntry {
   candidate_info: CandidateDetails; // n8n sends all candidate details here
   jobs: N8NJobMatch[]; // n8n sends job matches here
+  targetPositionId?: string | null;
+  targetPositionTitle?: string | null;
+  targetPositionDescription?: string | null;
+  targetPositionLevel?: string | null;
 }
 
-export type N8NWebhookPayload = N8NCandidateWebhookEntry; // Updated to reflect single entry
+export type N8NWebhookPayload = N8NCandidateWebhookEntry;
 
 // Kept for potential backward compatibility if some candidates have old data structure
 export interface OldParsedResumeData {
@@ -188,7 +208,7 @@ export interface Candidate {
   positionId: string | null;
   position?: Position | null; // For display, if joined
   fitScore: number;
-  status: CandidateStatus;
+  status: CandidateStatus; // Now a string to accommodate custom stages
   applicationDate: string;
   recruiterId?: string | null; // New: Assigned recruiter ID
   recruiter?: Pick<UserProfile, 'id' | 'name' | 'email'> | null; // New: Assigned recruiter info
@@ -224,3 +244,4 @@ export interface LogEntry {
   details?: Record<string, any> | null;
   createdAt?: string;
 }
+    

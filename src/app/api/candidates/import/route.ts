@@ -6,22 +6,18 @@ import { z } from 'zod';
 import { v4 as uuidv4 } from 'uuid';
 import type { CandidateStatus, CandidateDetails, PersonalInfo, ContactInfo } from '@/lib/types';
 import { logAudit } from '@/lib/auditLog';
-// No session needed for public API
 
-const candidateStatusValues: [CandidateStatus, ...CandidateStatus[]] = ['Applied', 'Screening', 'Shortlisted', 'Interview Scheduled', 'Interviewing', 'Offer Extended', 'Offer Accepted', 'Hired', 'Rejected', 'On Hold'];
+// Core statuses for fallback, full list comes from DB
+const coreCandidateStatusValues: [CandidateStatus, ...CandidateStatus[]] = ['Applied', 'Screening', 'Shortlisted', 'Interview Scheduled', 'Interviewing', 'Offer Extended', 'Offer Accepted', 'Hired', 'Rejected', 'On Hold'];
 
-// Simplified schema for import - expecting essential details
-// n8n will send more detailed parsedData, manual import might be simpler
 const importCandidateItemSchema = z.object({
-  name: z.string().min(1, "Name is required").optional(), // Will derive if personal_info provided
-  email: z.string().email("Invalid email address").optional(), // Will derive if contact_info provided
+  name: z.string().min(1, "Name is required").optional(), 
+  email: z.string().email("Invalid email address").optional(), 
   phone: z.string().optional().nullable(),
   positionId: z.string().uuid().nullable().optional(),
   fitScore: z.number().min(0).max(100).optional().default(0),
-  status: z.enum(candidateStatusValues).optional().default('Applied'),
+  status: z.string().min(1).optional().default('Applied'), // Changed from z.enum
   applicationDate: z.string().datetime().optional(),
-  // For simplicity, the import will expect a structure similar to what `CandidateDetails` would be.
-  // Or, n8n output can be directly used if `parsedData` is structured this way.
   parsedData: z.object({
     personal_info: z.object({
         firstname: z.string().min(1),
@@ -36,7 +32,7 @@ const importCandidateItemSchema = z.object({
         phone: z.string().optional().default('')
     }).passthrough(),
     cv_language: z.string().optional().default(''),
-    education: z.array(z.any()).optional().default([]), // Keep flexible for now
+    education: z.array(z.any()).optional().default([]), 
     experience: z.array(z.any()).optional().default([]),
     skills: z.array(z.any()).optional().default([]),
     job_suitable: z.array(z.any()).optional().default([]),
@@ -109,17 +105,27 @@ export async function POST(request: NextRequest) {
         job_suitable: item.parsedData.job_suitable || [],
         associatedMatchDetails: item.parsedData.associatedMatchDetails,
         job_matches: item.parsedData.job_matches || [],
-      } : { // Minimal fallback if no parsedData
+      } : { 
         personal_info: { firstname: candidateName.split(' ')[0] || '', lastname: candidateName.split(' ').slice(1).join(' ') || '' },
         contact_info: { email: candidateEmail, phone: item.phone || '' },
       };
 
+      const candidateStatus = item.status || 'Applied';
 
       try {
         await client.query('BEGIN');
         const existingCandidate = await client.query('SELECT id FROM "Candidate" WHERE email = $1', [candidateEmail]);
         if (existingCandidate.rows.length > 0) {
           errors.push({ itemIndex: i, email: candidateEmail, error: "Candidate with this email already exists." });
+          failedImports++;
+          await client.query('ROLLBACK');
+          continue;
+        }
+
+        // Validate status against RecruitmentStage table
+        const stageCheck = await client.query('SELECT id FROM "RecruitmentStage" WHERE name = $1', [candidateStatus]);
+        if (stageCheck.rows.length === 0) {
+          errors.push({ itemIndex: i, email: candidateEmail, error: `Invalid candidate status: '${candidateStatus}'. Stage not found.` });
           failedImports++;
           await client.query('ROLLBACK');
           continue;
@@ -137,7 +143,7 @@ export async function POST(request: NextRequest) {
           item.phone || finalParsedData.contact_info.phone || null,
           item.positionId || null,
           item.fitScore || 0,
-          item.status || 'Applied',
+          candidateStatus,
           item.applicationDate ? new Date(item.applicationDate) : new Date(),
           finalParsedData,
         ]);
@@ -149,7 +155,7 @@ export async function POST(request: NextRequest) {
         await client.query(insertTransitionQuery, [
           uuidv4(),
           newCandidateId,
-          item.status || 'Applied',
+          candidateStatus,
           `Candidate imported by ${actingUserName}.`,
           actingUserId,
         ]);
@@ -172,10 +178,10 @@ export async function POST(request: NextRequest) {
     }, { status: 200 });
 
   } catch (error) {
-    // This catch is for errors outside the loop, e.g., initial connection or parsing the whole array
     await logAudit('ERROR', `Critical error during candidate import process: ${(error as Error).message}`, 'API:Candidates:Import', actingUserId);
     return NextResponse.json({ message: "Error processing candidate import", error: (error as Error).message }, { status: 500 });
   } finally {
     client.release();
   }
 }
+    
