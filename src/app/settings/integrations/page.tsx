@@ -79,7 +79,7 @@ export default function IntegrationsSettingsPage() {
             <div>
               <h4 className="font-medium text-foreground">Resume Processing Webhook (for Existing Candidates)</h4>
               <p className="text-sm text-muted-foreground mt-1">
-                This webhook is used for processing resumes uploaded to **existing candidates** (via the "Upload Resume" button on candidate profiles or lists).
+                This webhook is used for automated processing of resumes uploaded to **existing candidates** (via the "Upload Resume" button on candidate profiles or lists).
                 It is configured on the server using the <code className="font-mono text-xs bg-muted px-1 py-0.5 rounded">N8N_RESUME_WEBHOOK_URL</code> environment variable.
               </p>
             </div>
@@ -87,7 +87,7 @@ export default function IntegrationsSettingsPage() {
             <div>
                 <h4 className="font-medium text-foreground">New Candidate PDF Webhook</h4>
                 <p className="text-sm text-muted-foreground mt-1">
-                    This webhook is used by the "Create via Resume (Automated)" feature on the Candidates page to process a PDF and create a new candidate.
+                    This webhook is used by the "Create via Resume (Automated)" feature on the Candidates page to process a PDF and create a new candidate via a workflow.
                     It is configured on the server using the <code className="font-mono text-xs bg-muted px-1 py-0.5 rounded">N8N_GENERIC_PDF_WEBHOOK_URL</code> environment variable.
                 </p>
             </div>

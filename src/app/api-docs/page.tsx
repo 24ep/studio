@@ -62,7 +62,7 @@ const apiEndpoints: ApiEndpoint[] = [
   {
     method: "POST",
     path: "/api/n8n/create-candidate-with-matches",
-    description: "Webhook endpoint for an external system (e.g., n8n) to create a candidate with job matching details. Expects a single candidate entry object in a specific nested structure.",
+    description: "Webhook endpoint for an external system (e.g., an automation workflow) to create a candidate with job matching details. Expects a single candidate entry object in a specific nested structure.",
     requestBody: "JSON: `body[0].result_json[0].json = { candidate_info: CandidateDetails, jobs: N8NJobMatch[] }` (See `N8NCandidateWebhookEntry` type in `lib/types.ts`)",
     response: "JSON: `{ status: 'success' | 'skipped' | 'error', candidate?: Candidate, email?: string, message?: string, candidateId?: string }`",
     curlExample: `curl -X POST \\\n` +

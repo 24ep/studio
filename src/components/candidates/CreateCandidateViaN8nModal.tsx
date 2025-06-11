@@ -126,7 +126,7 @@ export function CreateCandidateViaN8nModal({ isOpen, onOpenChange, onProcessingS
 
       if (!response.ok) {
         let description = result.message || `Failed to send PDF for automated candidate creation. Status: ${response.status}`;
-        if (result.message === "n8n integration for candidate creation is not configured on the server.") { // This message comes from API
+        if (result.message === "n8n integration for candidate creation is not configured on the server.") { 
           description = "Automated candidate creation is not configured on the server. Please ensure the Generic PDF Webhook URL environment variable is set.";
         }
         throw new Error(description);

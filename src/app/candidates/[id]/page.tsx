@@ -144,14 +144,14 @@ const RoleSuggestionSummary: React.FC<RoleSuggestionSummaryProps> = ({ candidate
 
   const openPositionsMap = new Map(allDbPositions.filter(p => p.isOpen).map(p => [p.title.toLowerCase(), p]));
 
-  for (const n8nMatch of (candidate.parsedData as CandidateDetails).job_matches!) {
-    const n8nMatchTitleLower = n8nMatch.job_title.toLowerCase();
-    const dbPositionMatch = openPositionsMap.get(n8nMatchTitleLower);
+  for (const jobMatch of (candidate.parsedData as CandidateDetails).job_matches!) {
+    const jobMatchTitleLower = jobMatch.job_title.toLowerCase();
+    const dbPositionMatch = openPositionsMap.get(jobMatchTitleLower);
 
     if (dbPositionMatch && dbPositionMatch.id !== currentAppliedPositionId) {
-      if (n8nMatch.fit_score > bestAlternativeScore && (n8nMatch.fit_score - currentFitScore >= 10)) {
-        bestAlternativeScore = n8nMatch.fit_score;
-        bestAlternativeMatch = n8nMatch;
+      if (jobMatch.fit_score > bestAlternativeScore && (jobMatch.fit_score - currentFitScore >= 10)) {
+        bestAlternativeScore = jobMatch.fit_score;
+        bestAlternativeMatch = jobMatch;
         bestAlternativePositionInDb = dbPositionMatch;
       }
     }
