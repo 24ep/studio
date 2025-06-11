@@ -205,7 +205,7 @@ export function CreateCandidateViaN8nModal({ isOpen, onOpenChange, onProcessingS
                 </SelectContent>
               </Select>
               <p className="text-xs text-muted-foreground mt-1">
-                If selected, this position will be prioritized for the new candidate.
+                If selected, this position will be prioritized for the new candidate. Its description will also be sent to n8n.
               </p>
             </div>
         </div>
@@ -228,3 +228,4 @@ export function CreateCandidateViaN8nModal({ isOpen, onOpenChange, onProcessingS
     </Dialog>
   );
 }
+
