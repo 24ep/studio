@@ -3,7 +3,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from 'react';
-import { Button } from '@/components/ui/button';
+import { Button, buttonVariants } from '@/components/ui/button';
 import {
   Table,
   TableBody,
@@ -78,12 +78,23 @@ export default function RecruitmentStagesPage() {
     try {
       const response = await fetch('/api/settings/recruitment-stages');
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
+        let messageFromServer = `Failed to fetch stages. Status: ${response.status}`;
+        try {
+          const errorData = await response.json();
+          // The API route /api/settings/recruitment-stages returns a JSON object
+          // with { message: "wrapper", error: "original_error_message" } on 500.
+          // Prioritize displaying the more specific 'error' field.
+          messageFromServer = errorData.error || errorData.message || messageFromServer;
+        } catch (e) {
+          // If response is not JSON (unexpected for this API's 500 error), use statusText
+          messageFromServer = response.statusText || messageFromServer;
+        }
+
         if (response.status === 401 || response.status === 403) {
             signIn(undefined, { callbackUrl: pathname });
             return;
         }
-        throw new Error(errorData.message || 'Failed to fetch stages');
+        throw new Error(messageFromServer);
       }
       const data: RecruitmentStage[] = await response.json();
       setStages(data);
@@ -92,7 +103,7 @@ export default function RecruitmentStagesPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [sessionStatus, pathname]);
+  }, [sessionStatus, pathname, signIn]);
 
   useEffect(() => {
     if (sessionStatus === 'unauthenticated') {
@@ -105,7 +116,7 @@ export default function RecruitmentStagesPage() {
         fetchStages();
       }
     }
-  }, [sessionStatus, session, fetchStages, pathname]);
+  }, [sessionStatus, session, fetchStages, pathname, signIn]);
 
   const handleOpenModal = (stage: RecruitmentStage | null = null) => {
     setEditingStage(stage);
@@ -117,12 +128,9 @@ export default function RecruitmentStagesPage() {
     const url = editingStage ? `/api/settings/recruitment-stages/${editingStage.id}` : '/api/settings/recruitment-stages';
     const method = editingStage ? 'PUT' : 'POST';
 
-    // For system stages, don't send the name if it hasn't changed or if it's not allowed to change
     const payload = { ...data };
     if (editingStage?.is_system && editingStage.name === data.name) {
       delete (payload as any).name;
-    } else if (editingStage?.is_system && !editingStage) { // Prevent name change for system stage on create (though is_system is false for create)
-        // This case should not happen for create, but defensive
     }
 
 
@@ -137,7 +145,7 @@ export default function RecruitmentStagesPage() {
       
       toast({ title: `Stage ${editingStage ? 'Updated' : 'Created'}`, description: `Stage "${result.name}" was successfully ${editingStage ? 'updated' : 'created'}.` });
       setIsModalOpen(false);
-      fetchStages(); // Refresh list
+      fetchStages(); 
     } catch (error) {
       toast({ title: `Error ${editingStage ? 'Updating' : 'Creating'} Stage`, description: (error as Error).message, variant: "destructive" });
     }
@@ -156,7 +164,7 @@ export default function RecruitmentStagesPage() {
         throw new Error(errorData.message || 'Failed to delete stage');
       }
       toast({ title: "Stage Deleted", description: `Stage "${stageToDelete.name}" has been deleted.` });
-      fetchStages(); // Refresh list
+      fetchStages(); 
     } catch (error) {
       toast({ title: "Error Deleting Stage", description: (error as Error).message, variant: "destructive" });
     } finally {
@@ -173,13 +181,22 @@ export default function RecruitmentStagesPage() {
   }
 
   if (fetchError) {
+    const isPermissionError = fetchError === "You do not have permission to manage recruitment stages.";
+    const isTableMissingError = fetchError.toLowerCase().includes("relation") && fetchError.toLowerCase().includes("does not exist");
     return (
       <div className="flex flex-col items-center justify-center h-[calc(100vh-10rem)] text-center p-4">
         <ServerCrash className="w-16 h-16 text-destructive mb-4" />
         <h2 className="text-2xl font-semibold text-foreground mb-2">Error Loading Data</h2>
         <p className="text-muted-foreground mb-4 max-w-md">{fetchError}</p>
-        {fetchError === "You do not have permission to manage recruitment stages." && (
+        {isPermissionError && (
             <Button onClick={() => router.push('/')} className="btn-hover-primary-gradient">Go to Dashboard</Button>
+        )}
+        {isTableMissingError && (
+           <div className="mb-6 p-4 border border-destructive bg-destructive/10 rounded-md text-sm">
+              <p className="font-semibold">It looks like the "RecruitmentStage" database table might be missing or there was an issue querying it.</p>
+              <p className="mt-1">This can happen if the database initialization script (`pg-init-scripts/init-db.sql`) did not run correctly.</p>
+              <p className="mt-2">Please check your Next.js server logs for specific database errors and review the PostgreSQL container logs for script execution details. Refer to `README.md` for database setup troubleshooting.</p>
+          </div>
         )}
       </div>
     );
