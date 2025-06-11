@@ -40,7 +40,6 @@ export default function CandidatesPage() {
   const [selectedPositionForEdit, setSelectedPositionForEdit] = useState<Position | null>(null);
   const { data: session, status: sessionStatus } = useSession();
 
-
   const fetchCandidateById = useCallback(async (candidateId: string): Promise<Candidate | null> => {
     try {
       const response = await fetch(`/api/candidates/${candidateId}`);
@@ -56,12 +55,55 @@ export default function CandidatesPage() {
     }
   }, []);
 
+  const fetchCandidates = useCallback(async () => {
+    if (sessionStatus !== 'authenticated') {
+        setIsLoading(false); // Prevent indefinite loading if not authenticated
+        return;
+    }
+    setIsLoading(true);
+    setFetchError(null);
+    setAuthError(false);
+    try {
+      const query = new URLSearchParams();
+      if (filters.name) query.append('name', filters.name);
+      if (filters.positionId && filters.positionId !== "__ALL_POSITIONS__") query.append('positionId', filters.positionId);
+      if (filters.education) query.append('education', filters.education);
+      if (filters.minFitScore !== undefined) query.append('minFitScore', String(filters.minFitScore));
+      if (filters.maxFitScore !== undefined) query.append('maxFitScore', String(filters.maxFitScore));
+
+      const response = await fetch(`/api/candidates?${query.toString()}`);
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ message: response.statusText || `Status: ${response.status}` }));
+        const errorMessage = errorData.message || `Failed to fetch candidates: ${response.statusText || `Status: ${response.status}`}`;
+        if (response.status === 401) {
+            setAuthError(true);
+            signIn(undefined, { callbackUrl: pathname });
+            return;
+        }
+        setFetchError(errorMessage);
+        setAllCandidates([]);
+        return;
+      }
+      const data: Candidate[] = await response.json();
+      setAllCandidates(data);
+    } catch (error) {
+      console.error("Error fetching candidates:", error);
+      const errorMessage = (error as Error).message || "Could not load candidate data.";
+       if (!(errorMessage.toLowerCase().includes("unauthorized") || errorMessage.toLowerCase().includes("forbidden"))) {
+        setFetchError(errorMessage);
+      }
+      setAllCandidates([]);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [filters, sessionStatus, pathname, signIn]);
+
   const refreshCandidateInList = useCallback(async (candidateId: string) => {
     const updatedCandidate = await fetchCandidateById(candidateId);
     if (updatedCandidate) {
       setAllCandidates(prev => prev.map(c => c.id === candidateId ? updatedCandidate : c));
     } else {
-      toast({ title: "Refresh Error", description: `Could not refresh data for candidate ${candidateId}.`, variant: "destructive"});
+      toast({ title: "Refresh Error", description: `Could not refresh data for candidate ${candidateId}. Attempting full list refresh.`, variant: "destructive"});
        fetchCandidates();
     }
   }, [fetchCandidateById, toast, fetchCandidates]);
@@ -111,49 +153,6 @@ export default function CandidatesPage() {
       setAvailableStages([]); // Keep a default or empty list
     }
   }, [sessionStatus, pathname, signIn, toast]);
-
-  const fetchCandidates = useCallback(async () => {
-    if (sessionStatus !== 'authenticated') {
-        setIsLoading(false); // Prevent indefinite loading if not authenticated
-        return;
-    }
-    setIsLoading(true);
-    setFetchError(null);
-    setAuthError(false);
-    try {
-      const query = new URLSearchParams();
-      if (filters.name) query.append('name', filters.name);
-      if (filters.positionId && filters.positionId !== "__ALL_POSITIONS__") query.append('positionId', filters.positionId);
-      if (filters.education) query.append('education', filters.education);
-      if (filters.minFitScore !== undefined) query.append('minFitScore', String(filters.minFitScore));
-      if (filters.maxFitScore !== undefined) query.append('maxFitScore', String(filters.maxFitScore));
-
-      const response = await fetch(`/api/candidates?${query.toString()}`);
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ message: response.statusText || `Status: ${response.status}` }));
-        const errorMessage = errorData.message || `Failed to fetch candidates: ${response.statusText || `Status: ${response.status}`}`;
-        if (response.status === 401) {
-            setAuthError(true);
-            signIn(undefined, { callbackUrl: pathname });
-            return;
-        }
-        setFetchError(errorMessage);
-        setAllCandidates([]);
-        return;
-      }
-      const data: Candidate[] = await response.json();
-      setAllCandidates(data);
-    } catch (error) {
-      console.error("Error fetching candidates:", error);
-      const errorMessage = (error as Error).message || "Could not load candidate data.";
-       if (!(errorMessage.toLowerCase().includes("unauthorized") || errorMessage.toLowerCase().includes("forbidden"))) {
-        setFetchError(errorMessage);
-      }
-      setAllCandidates([]);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [filters, sessionStatus, pathname, signIn]);
 
   useEffect(() => {
     if (sessionStatus === 'unauthenticated') {
