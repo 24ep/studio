@@ -24,9 +24,9 @@ const apiEndpoints: ApiEndpoint[] = [
   {
     method: "POST",
     path: "/api/resumes/upload",
-    description: "Upload a candidate resume. Requires candidateId as query param. Sends resume to n8n if N8N_RESUME_WEBHOOK_URL is set.",
+    description: "Upload a candidate resume. Requires candidateId as query param. Sends resume for automated processing if a resume webhook URL is set.",
     requestBody: "FormData: `resume`: File (PDF, DOC, DOCX)",
-    response: "JSON: `{ message: 'Resume uploaded successfully', filePath: '...', candidate: Candidate, n8nResponse?: {success: boolean, data?: any, error?: string} }`",
+    response: "JSON: `{ message: 'Resume uploaded successfully', filePath: '...', candidate: Candidate, n8nResponse?: {success: boolean, data?: any, error?: string} }` (n8nResponse field name is kept for API contract)",
     curlExample: `curl -X POST \\\n` +
                  `  -F 'resume=@resume.pdf' \\\n` +
                  `  'http://localhost:9002/api/resumes/upload?candidateId=your-candidate-id'`,
@@ -62,21 +62,24 @@ const apiEndpoints: ApiEndpoint[] = [
   {
     method: "POST",
     path: "/api/n8n/create-candidate-with-matches",
-    description: "Webhook endpoint for n8n to create a candidate with job matching details. Expects a single candidate entry object.",
-    requestBody: "JSON: `{ candidate_info: CandidateDetails, jobs: N8NJobMatch[] }` (See `N8NCandidateWebhookEntry` type in `lib/types.ts`)",
+    description: "Webhook endpoint for an external system (e.g., n8n) to create a candidate with job matching details. Expects a single candidate entry object in a specific nested structure.",
+    requestBody: "JSON: `body[0].result_json[0].json = { candidate_info: CandidateDetails, jobs: N8NJobMatch[] }` (See `N8NCandidateWebhookEntry` type in `lib/types.ts`)",
     response: "JSON: `{ status: 'success' | 'skipped' | 'error', candidate?: Candidate, email?: string, message?: string, candidateId?: string }`",
     curlExample: `curl -X POST \\\n` +
                  `  -H 'Content-Type: application/json' \\\n` +
-                 `  -d '{ \\\n` +
-                 `    "candidate_info": { \\\n` +
-                 `      "personal_info": { "firstname": "Jane", "lastname": "Parsed" }, \\\n` +
-                 `      "contact_info": { "email": "jane.parsed@example.com" }, \\\n` +
-                 `      "education": [], "experience": [], "skills": [], "job_suitable": [] \\\n` +
-                 `    }, \\\n` +
-                 `    "jobs": [ \\\n` +
-                 `      { "job_id": "N8N_JOB_001", "job_title": "Software Engineer", "fit_score": 90, "match_reasons": ["Strong Python skill"] } \\\n` +
-                 `    ] \\\n` +
-                 `  }' \\\n` +
+                 `  -d '[{ \\\n` +
+                 `    "result_json": [{ \\\n` +
+                 `      "json": { \\\n` +
+                 `        "candidate_info": { \\\n` +
+                 `          "personal_info": { "firstname": "Jane", "lastname": "Parsed" }, \\\n` +
+                 `          "contact_info": { "email": "jane.parsed@example.com" } \\\n` +
+                 `        }, \\\n` +
+                 `        "jobs": [ \\\n` +
+                 `          { "job_id": "MATCH_JOB_001", "job_title": "Software Engineer", "fit_score": 90, "match_reasons": ["Strong Python skill"] } \\\n` +
+                 `        ] \\\n` +
+                 `      } \\\n` +
+                 `    }] \\\n` +
+                 `  }]' \\\n` +
                  `  http://localhost:9002/api/n8n/create-candidate-with-matches`,
   },
   {
@@ -111,11 +114,12 @@ const apiEndpoints: ApiEndpoint[] = [
   {
     method: "POST",
     path: "/api/candidates/upload-for-n8n",
-    description: "Upload a PDF resume to be sent to an n8n workflow for new candidate creation (n8n uses /api/n8n/create-candidate-with-matches to post back). Requires N8N_GENERIC_PDF_WEBHOOK_URL set on server.",
-    requestBody: "FormData: `pdfFile`: File (PDF)",
-    response: "JSON: `{ message: 'PDF successfully sent to n8n workflow for candidate creation.', n8nResponse?: any }`",
+    description: "Upload a PDF resume to be sent to an automated workflow for new candidate creation (workflow uses /api/n8n/create-candidate-with-matches to post back). Requires a Generic PDF Webhook URL set on server.",
+    requestBody: "FormData: `pdfFile`: File (PDF), `positionId` (optional), `targetPositionDescription` (optional), `targetPositionLevel` (optional)",
+    response: "JSON: `{ message: 'PDF successfully sent to workflow for candidate creation.', n8nResponse?: any }`",
     curlExample: `curl -X POST \\\n` +
                  `  -F 'pdfFile=@new_candidate_resume.pdf' \\\n` +
+                 `  -F 'positionId=some-position-uuid' \\\n` +
                  `  http://localhost:9002/api/candidates/upload-for-n8n`,
   },
   {
@@ -249,7 +253,7 @@ const apiEndpoints: ApiEndpoint[] = [
     response: "JSON: `{ message: 'Password changed successfully.' }` or error message.",
     curlExample: `curl -X POST \\\n` +
                  `  -H 'Content-Type: application/json' \\\n` +
-                 `  -H 'Authorization: Bearer <YOUR_AUTH_TOKEN_OR_COOKIE>' \\\n` + // Kept for this specific auth endpoint
+                 `  -H 'Authorization: Bearer <YOUR_AUTH_TOKEN_OR_COOKIE>' \\\n` + 
                  `  -d '{ \\\n` +
                  `    "currentPassword": "oldPassword123", \\\n` +
                  `    "newPassword": "newStrongPassword456" \\\n` +
@@ -263,7 +267,7 @@ const apiEndpoints: ApiEndpoint[] = [
     requestBody: "N/A",
     response: "JSON: Session object or null.",
     curlExample: `curl http://localhost:9002/api/auth/session \\\n` +
-                 `  -H 'Cookie: next-auth.session-token=your-session-token-here'`, // Session typically cookie-based
+                 `  -H 'Cookie: next-auth.session-token=your-session-token-here'`, 
   },
   {
     method: "PUT",
@@ -297,15 +301,15 @@ const apiEndpoints: ApiEndpoint[] = [
   {
     method: "POST",
     path: "/api/n8n/webhook-proxy",
-    description: "Client uploads FormData (with 'pdfFile'). API proxies this to a generic n8n webhook (N8N_GENERIC_PDF_WEBHOOK_URL), sending JSON with file as data URI.",
-    requestBody: "Client: FormData (`pdfFile`). n8n receives: JSON `{ fileName: string, mimeType: string, fileDataUri: string, ... }`",
-    response: "JSON: `{ message: 'PDF successfully sent to n8n workflow.', n8nResponse?: any }`",
+    description: "Client uploads FormData (with 'pdfFile'). API proxies this to a generic processing webhook (configured via N8N_GENERIC_PDF_WEBHOOK_URL), sending JSON with file as data URI.",
+    requestBody: "Client: FormData (`pdfFile`). External system receives: JSON `{ fileName: string, mimeType: string, fileDataUri: string, ... }`",
+    response: "JSON: `{ message: 'PDF successfully sent to workflow.', n8nResponse?: any }`",
     curlExample: `# To test /api/n8n/webhook-proxy (client-side call):\n` +
                  `curl -X POST \\\n` +
                  `  -F 'pdfFile=@generic_document.pdf' \\\n` +
                  `  http://localhost:9002/api/n8n/webhook-proxy\n\n`+
-                 `# Example of what n8n receives from this proxy:\n` +
-                 `# POST <N8N_GENERIC_PDF_WEBHOOK_URL>\n`+
+                 `# Example of what the external system receives from this proxy:\n` +
+                 `# POST <YOUR_GENERIC_PROCESSING_WEBHOOK_URL>\n`+
                  `# Content-Type: application/json\n`+
                  `# Body:\n` +
                  `# { \\\n` +
@@ -370,7 +374,7 @@ export default function ApiDocumentationPage() {
             <Code2 className="mr-2 h-6 w-6 text-primary" /> API Documentation
           </CardTitle>
           <CardDescription>
-            Overview of available API endpoints for NCC Candidate Management.
+            Overview of available API endpoints for Candidate Management.
             The base URL is <code>http://localhost:9002</code> for these examples.
           </CardDescription>
         </CardHeader>
@@ -464,3 +468,4 @@ export default function ApiDocumentationPage() {
     </div>
   );
 }
+

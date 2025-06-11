@@ -11,7 +11,6 @@ import { signIn, useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 
 
-// Removed N8N_RESUME_WEBHOOK_URL_KEY as it's now server-configured
 const SMTP_HOST_KEY = 'smtpHost';
 const SMTP_PORT_KEY = 'smtpPort';
 const SMTP_USER_KEY = 'smtpUser';
@@ -21,8 +20,6 @@ export default function IntegrationsSettingsPage() {
   const [isClient, setIsClient] = useState(false);
   const { data: session, status: sessionStatus } = useSession();
   const router = useRouter();
-
-  // Removed resumeWebhookUrl state
   
   const [smtpHost, setSmtpHost] = useState('');
   const [smtpPort, setSmtpPort] = useState('');
@@ -36,8 +33,6 @@ export default function IntegrationsSettingsPage() {
       signIn(undefined, { callbackUrl: window.location.pathname });
     } else if (sessionStatus === 'authenticated') {
         if (typeof window !== 'undefined') {
-            // Removed loading resumeWebhookUrl from localStorage
-
             const storedSmtpHost = localStorage.getItem(SMTP_HOST_KEY);
             if (storedSmtpHost) setSmtpHost(storedSmtpHost);
 
@@ -52,7 +47,6 @@ export default function IntegrationsSettingsPage() {
 
   const handleSaveIntegrations = () => {
     if (!isClient) return;
-    // Removed saving resumeWebhookUrl to localStorage
     localStorage.setItem(SMTP_HOST_KEY, smtpHost);
     localStorage.setItem(SMTP_PORT_KEY, smtpPort);
     localStorage.setItem(SMTP_USER_KEY, smtpUser);
@@ -77,13 +71,13 @@ export default function IntegrationsSettingsPage() {
        <Card className="shadow-lg">
         <CardHeader>
           <CardTitle className="flex items-center">
-            <Zap className="mr-2 h-6 w-6 text-orange-500" /> Workflow Automation (n8n)
+            <Zap className="mr-2 h-6 w-6 text-orange-500" /> Workflow Automation
           </CardTitle>
-          <CardDescription>Configure n8n webhooks for automated processing.</CardDescription>
+          <CardDescription>Configure webhooks for automated processing.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
             <div>
-              <h4 className="font-medium text-foreground">n8n Resume Webhook (for Existing Candidates)</h4>
+              <h4 className="font-medium text-foreground">Resume Processing Webhook (for Existing Candidates)</h4>
               <p className="text-sm text-muted-foreground mt-1">
                 This webhook is used for processing resumes uploaded to **existing candidates** (via the "Upload Resume" button on candidate profiles or lists).
                 It is configured on the server using the <code className="font-mono text-xs bg-muted px-1 py-0.5 rounded">N8N_RESUME_WEBHOOK_URL</code> environment variable.
@@ -91,9 +85,9 @@ export default function IntegrationsSettingsPage() {
             </div>
             <hr/>
             <div>
-                <h4 className="font-medium text-foreground">n8n Generic PDF Webhook (for New Candidate Creation)</h4>
+                <h4 className="font-medium text-foreground">New Candidate PDF Webhook</h4>
                 <p className="text-sm text-muted-foreground mt-1">
-                    This webhook is used by the "Create via Resume (n8n)" feature on the Candidates page to process a PDF and create a new candidate.
+                    This webhook is used by the "Create via Resume (Automated)" feature on the Candidates page to process a PDF and create a new candidate.
                     It is configured on the server using the <code className="font-mono text-xs bg-muted px-1 py-0.5 rounded">N8N_GENERIC_PDF_WEBHOOK_URL</code> environment variable.
                 </p>
             </div>
@@ -169,4 +163,3 @@ export default function IntegrationsSettingsPage() {
   );
 }
 
-    

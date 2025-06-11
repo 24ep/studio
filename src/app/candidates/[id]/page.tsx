@@ -129,7 +129,7 @@ const RoleSuggestionSummary: React.FC<RoleSuggestionSummaryProps> = ({ candidate
           <CardTitle className="flex items-center text-lg"><Lightbulb className="mr-2 h-5 w-5 text-yellow-500" />Role Suggestion</CardTitle>
         </CardHeader>
         <CardContent>
-          <p className="text-sm text-muted-foreground">No n8n job match data to provide suggestions.</p>
+          <p className="text-sm text-muted-foreground">No automated job match data to provide suggestions.</p>
         </CardContent>
       </Card>
     );
@@ -169,7 +169,7 @@ const RoleSuggestionSummary: React.FC<RoleSuggestionSummaryProps> = ({ candidate
               Consider {candidate.name} for the role of <strong>{bestAlternativeMatch.job_title}</strong> (Open Position).
             </p>
             <p className="text-xs text-muted-foreground mt-0.5">
-              n8n Fit Score for this role: <span className="font-semibold text-foreground">{bestAlternativeMatch.fit_score}%</span>.
+              Automated Fit Score for this role: <span className="font-semibold text-foreground">{bestAlternativeMatch.fit_score}%</span>.
             </p>
             {currentAppliedPosition ? (
               <p className="text-xs text-muted-foreground">
@@ -180,7 +180,7 @@ const RoleSuggestionSummary: React.FC<RoleSuggestionSummaryProps> = ({ candidate
             )}
             {bestAlternativeMatch.match_reasons && bestAlternativeMatch.match_reasons.length > 0 && (
               <div className="mt-1.5">
-                <p className="text-xs font-medium text-muted-foreground">Top n8n Match Reasons for Suggested Role:</p>
+                <p className="text-xs font-medium text-muted-foreground">Top Match Reasons for Suggested Role:</p>
                 <ul className="list-disc list-inside pl-3 text-xs text-foreground">
                   {bestAlternativeMatch.match_reasons.slice(0, 2).map((reason, i) => <li key={`reason-sugg-${i}`}>{reason}</li>)}
                 </ul>
@@ -188,7 +188,7 @@ const RoleSuggestionSummary: React.FC<RoleSuggestionSummaryProps> = ({ candidate
             )}
           </div>
         ) : (
-          <p className="text-sm text-muted-foreground">Candidate appears well-suited for their current applied role, or no significantly stronger alternative open roles were identified from n8n matches.</p>
+          <p className="text-sm text-muted-foreground">Candidate appears well-suited for their current applied role, or no significantly stronger alternative open roles were identified from automated matches.</p>
         )}
       </CardContent>
     </Card>
@@ -403,13 +403,13 @@ export default function CandidateDetailPage() {
     }
   };
 
-  const handleN8nJobMatchClick = (n8nMatchTitle: string) => {
-    const matchedPosition = allDbPositions.find(p => p.title.toLowerCase() === n8nMatchTitle.toLowerCase());
+  const handleJobMatchClick = (jobMatchTitle: string) => {
+    const matchedPosition = allDbPositions.find(p => p.title.toLowerCase() === jobMatchTitle.toLowerCase());
     if (matchedPosition) {
       setSelectedPositionForEdit(matchedPosition);
       setIsEditPositionModalOpen(true);
     } else {
-      toast({ title: "Position Not Found", description: `Position "${n8nMatchTitle}" not found in the system.`, variant: "default" });
+      toast({ title: "Position Not Found", description: `Position "${jobMatchTitle}" not found in the system.`, variant: "default" });
     }
   };
 
@@ -672,11 +672,11 @@ export default function CandidateDetailPage() {
                  {(parsed?.associatedMatchDetails && !isEditing) && (
                   <Card className="mt-4 bg-muted/50 p-3">
                     <CardHeader className="p-0 pb-1">
-                      <CardTitle className="text-sm font-semibold flex items-center"><Zap className="mr-2 h-4 w-4 text-orange-500" /> Initial n8n Match Suggestion</CardTitle>
+                      <CardTitle className="text-sm font-semibold flex items-center"><Zap className="mr-2 h-4 w-4 text-orange-500" /> Initial Processed Match</CardTitle>
                     </CardHeader>
                     <CardContent className="p-0 text-xs space-y-0.5">
                       {renderField("Matched Job", parsed.associatedMatchDetails.jobTitle)}
-                      {renderField("n8n Fit Score", `${parsed.associatedMatchDetails.fitScore}%`)}
+                      {renderField("Processed Fit Score", `${parsed.associatedMatchDetails.fitScore}%`)}
                     </CardContent>
                   </Card>
                 )}
@@ -973,8 +973,8 @@ export default function CandidateDetailPage() {
           {(parsed?.job_matches && parsed.job_matches.length > 0 && !isEditing) && (
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center"><ListChecks className="mr-2 h-5 w-5 text-blue-600" />Suggest jobs</CardTitle>
-                <CardDescription>Full list of job matches from n8n processing for this candidate.</CardDescription>
+                <CardTitle className="flex items-center"><ListChecks className="mr-2 h-5 w-5 text-blue-600" />Suggested Jobs</CardTitle>
+                <CardDescription>Full list of job matches from automated processing for this candidate.</CardDescription>
               </CardHeader>
               <CardContent>
                 <ScrollArea className="h-[calc(100vh-240px)]"> 
@@ -983,13 +983,13 @@ export default function CandidateDetailPage() {
                       <li key={`match-${index}-${match.job_id || index}`} className="p-3 border rounded-md bg-muted/30">
                         <h4 
                           className="font-semibold text-foreground hover:text-primary hover:underline cursor-pointer"
-                          onClick={() => handleN8nJobMatchClick(match.job_title)}
+                          onClick={() => handleJobMatchClick(match.job_title)}
                         >
                           {match.job_title} <ExternalLink className="inline h-3 w-3 ml-1 opacity-70" />
                         </h4>
                         <div className="text-sm text-muted-foreground">
                           Fit Score: <span className="font-medium text-foreground">{match.fit_score}%</span>
-                          {match.job_id && ` (n8n ID: ${match.job_id})`}
+                          {match.job_id && ` (Match ID: ${match.job_id})`}
                         </div>
                         {match.match_reasons && match.match_reasons.length > 0 && (
                           <div className="mt-1.5">
@@ -1008,8 +1008,8 @@ export default function CandidateDetailPage() {
           )}
            {(!isEditing && (!parsed?.job_matches || parsed.job_matches.length === 0)) && (
              <Card>
-                <CardHeader><CardTitle className="flex items-center"><ListChecks className="mr-2 h-5 w-5 text-blue-600" />Suggest jobs</CardTitle></CardHeader>
-                <CardContent><p className="text-sm text-muted-foreground text-center py-4">No n8n job match data available.</p></CardContent>
+                <CardHeader><CardTitle className="flex items-center"><ListChecks className="mr-2 h-5 w-5 text-blue-600" />Suggested Jobs</CardTitle></CardHeader>
+                <CardContent><p className="text-sm text-muted-foreground text-center py-4">No automated job match data available.</p></CardContent>
              </Card>
            )}
         </div>
@@ -1046,3 +1046,4 @@ export default function CandidateDetailPage() {
     </FormProvider>
   );
 }
+

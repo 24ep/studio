@@ -52,7 +52,7 @@ export function CreateCandidateViaN8nModal({ isOpen, onOpenChange, onProcessingS
           const data: Position[] = await response.json();
           setAvailablePositions(data);
         } catch (error) {
-          console.error("Error fetching positions for n8n modal:", error);
+          console.error("Error fetching positions for modal:", error);
           toast({ title: "Error", description: "Could not load positions for selection.", variant: "destructive" });
         }
       };
@@ -61,7 +61,7 @@ export function CreateCandidateViaN8nModal({ isOpen, onOpenChange, onProcessingS
       // Reset state when modal closes
       setSelectedFile(null);
       setSelectedPositionId("");
-      const fileInput = document.getElementById('n8n-candidate-pdf-upload') as HTMLInputElement;
+      const fileInput = document.getElementById('automated-candidate-pdf-upload') as HTMLInputElement;
       if (fileInput) fileInput.value = '';
     }
   }, [isOpen, toast]);
@@ -89,11 +89,11 @@ export function CreateCandidateViaN8nModal({ isOpen, onOpenChange, onProcessingS
 
   const removeFile = () => {
     setSelectedFile(null);
-    const fileInput = document.getElementById('n8n-candidate-pdf-upload') as HTMLInputElement;
+    const fileInput = document.getElementById('automated-candidate-pdf-upload') as HTMLInputElement;
     if (fileInput) fileInput.value = '';
   };
 
-  const handleUploadToN8n = async () => {
+  const handleUploadForProcessing = async () => {
     if (!selectedFile) {
       toast({ title: "No PDF Selected", description: "Please select a PDF file to upload.", variant: "destructive" });
       return;
@@ -125,21 +125,21 @@ export function CreateCandidateViaN8nModal({ isOpen, onOpenChange, onProcessingS
       const result = await response.json();
 
       if (!response.ok) {
-        let description = result.message || `Failed to send PDF to n8n for candidate creation. Status: ${response.status}`;
-        if (result.message === "n8n integration for candidate creation is not configured on the server.") {
-          description += " Please ensure the N8N_GENERIC_PDF_WEBHOOK_URL environment variable is set on the server.";
+        let description = result.message || `Failed to send PDF for automated candidate creation. Status: ${response.status}`;
+        if (result.message === "n8n integration for candidate creation is not configured on the server.") { // This message comes from API
+          description = "Automated candidate creation is not configured on the server. Please ensure the Generic PDF Webhook URL environment variable is set.";
         }
         throw new Error(description);
       }
 
       toast({
         title: "Resume Sent for Processing",
-        description: result.message || `Resume "${selectedFile.name}" sent to n8n. A new candidate will be created if parsing is successful.`,
+        description: result.message || `Resume "${selectedFile.name}" sent for automated processing. A new candidate will be created if parsing is successful.`,
       });
       onProcessingStart();
       onOpenChange(false); // Close modal on success
     } catch (error) {
-      console.error("Error sending PDF to n8n for candidate creation:", error);
+      console.error("Error sending PDF for automated candidate creation:", error);
       toast({
         title: "Upload Failed",
         description: (error as Error).message,
@@ -156,19 +156,19 @@ export function CreateCandidateViaN8nModal({ isOpen, onOpenChange, onProcessingS
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle className="flex items-center">
-            <Zap className="mr-2 h-5 w-5 text-orange-500" /> Create Candidate via Resume (n8n)
+            <Zap className="mr-2 h-5 w-5 text-orange-500" /> Create Candidate via Resume (Automated)
           </DialogTitle>
           <DialogDescription>
-            Upload a PDF resume. It will be sent to an n8n workflow for parsing and candidate creation.
+            Upload a PDF resume. It will be sent for automated parsing and candidate creation.
             You can optionally select a position to associate the candidate with.
           </DialogDescription>
         </DialogHeader>
         
         <div className="py-4 space-y-4">
             <div>
-                <Label htmlFor="n8n-candidate-pdf-upload">Select PDF Resume (Max 10MB)</Label>
+                <Label htmlFor="automated-candidate-pdf-upload">Select PDF Resume (Max 10MB)</Label>
                 <Input
-                id="n8n-candidate-pdf-upload"
+                id="automated-candidate-pdf-upload"
                 type="file"
                 accept="application/pdf"
                 onChange={handleFileChange}
@@ -189,23 +189,23 @@ export function CreateCandidateViaN8nModal({ isOpen, onOpenChange, onProcessingS
                 </div>
             )}
              <div>
-              <Label htmlFor="n8n-target-position">Target Position (Optional)</Label>
+              <Label htmlFor="target-position-automated">Target Position (Optional)</Label>
               <Select 
                 value={selectedPositionId || NONE_POSITION_VALUE} 
                 onValueChange={(value) => setSelectedPositionId(value === NONE_POSITION_VALUE ? "" : value)}
               >
-                <SelectTrigger id="n8n-target-position" className="mt-1">
+                <SelectTrigger id="target-position-automated" className="mt-1">
                   <SelectValue placeholder="Select a position to apply to..." />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value={NONE_POSITION_VALUE}>None (General Application / Let n8n Match)</SelectItem>
+                  <SelectItem value={NONE_POSITION_VALUE}>None (General Application / Let system match)</SelectItem>
                   {availablePositions.map(pos => (
                     <SelectItem key={pos.id} value={pos.id}>{pos.title}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
               <p className="text-xs text-muted-foreground mt-1">
-                If selected, this position will be prioritized for the new candidate. Its description will also be sent to n8n.
+                If selected, this position will be prioritized. Its description will also be sent for processing.
               </p>
             </div>
         </div>
@@ -217,11 +217,11 @@ export function CreateCandidateViaN8nModal({ isOpen, onOpenChange, onProcessingS
             </Button>
           </DialogClose>
           <Button 
-              onClick={handleUploadToN8n} 
+              onClick={handleUploadForProcessing} 
               disabled={!selectedFile || isUploading}
             >
               {isUploading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <UploadCloud className="mr-2 h-4 w-4" />}
-              {isUploading ? 'Sending...' : 'Send to n8n for Creation'}
+              {isUploading ? 'Sending...' : 'Send for Automated Creation'}
             </Button>
         </DialogFooter>
       </DialogContent>

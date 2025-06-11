@@ -40,21 +40,6 @@ export default function CandidatesPage() {
   const [selectedPositionForEdit, setSelectedPositionForEdit] = useState<Position | null>(null);
   const { data: session, status: sessionStatus } = useSession();
 
-  const fetchCandidateById = useCallback(async (candidateId: string): Promise<Candidate | null> => {
-    try {
-      const response = await fetch(`/api/candidates/${candidateId}`);
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        console.error(`Failed to fetch candidate ${candidateId}: ${errorData.message || response.statusText}`);
-        return null;
-      }
-      return await response.json();
-    } catch (error) {
-      console.error(`Error fetching candidate ${candidateId}:`, error);
-      return null;
-    }
-  }, []);
-
   const fetchCandidates = useCallback(async () => {
     if (sessionStatus !== 'authenticated') {
         setIsLoading(false); // Prevent indefinite loading if not authenticated
@@ -97,6 +82,21 @@ export default function CandidatesPage() {
       setIsLoading(false);
     }
   }, [filters, sessionStatus, pathname, signIn]);
+
+  const fetchCandidateById = useCallback(async (candidateId: string): Promise<Candidate | null> => {
+    try {
+      const response = await fetch(`/api/candidates/${candidateId}`);
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        console.error(`Failed to fetch candidate ${candidateId}: ${errorData.message || response.statusText}`);
+        return null;
+      }
+      return await response.json();
+    } catch (error) {
+      console.error(`Error fetching candidate ${candidateId}:`, error);
+      return null;
+    }
+  }, []);
 
   const refreshCandidateInList = useCallback(async (candidateId: string) => {
     const updatedCandidate = await fetchCandidateById(candidateId);
@@ -293,10 +293,10 @@ export default function CandidatesPage() {
     toast({ title: "Resume Uploaded", description: `Resume for ${updatedCandidate.name} successfully updated.`});
   };
 
-  const handleN8nProcessingStart = () => {
+  const handleAutomatedProcessingStart = () => {
     toast({
       title: "Processing Started",
-      description: "Resume sent to n8n. Candidate list will refresh shortly if successful.",
+      description: "Resume sent for automated processing. Candidate list will refresh shortly if successful.",
     });
     setTimeout(() => {
         fetchCandidates();
@@ -435,7 +435,7 @@ export default function CandidatesPage() {
         </h1>
         <div className="w-full flex flex-col sm:flex-row gap-2 items-center sm:justify-end">
           <Button onClick={() => setIsCreateViaN8nModalOpen(true)} className="w-full sm:w-auto btn-primary-gradient">
-            <Zap className="mr-2 h-4 w-4" /> Create via Resume (n8n)
+            <Zap className="mr-2 h-4 w-4" /> Create via Resume (Automated)
           </Button>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -505,7 +505,7 @@ export default function CandidatesPage() {
       <CreateCandidateViaN8nModal
         isOpen={isCreateViaN8nModalOpen}
         onOpenChange={setIsCreateViaN8nModalOpen}
-        onProcessingStart={handleN8nProcessingStart}
+        onProcessingStart={handleAutomatedProcessingStart}
       />
       <ImportCandidatesModal
         isOpen={isImportModalOpen}
@@ -526,3 +526,4 @@ export default function CandidatesPage() {
     </div>
   );
 }
+
