@@ -1,46 +1,29 @@
 
-"use client"; // <-- Add this directive
+"use client";
 
-import { useEffect, useState } from "react"; // <-- Import hooks
-import { getServerSession } from "next-auth/next"; // Still needed for server-side redirect check
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
-import { redirect } from "next/navigation";
+import { useEffect, useState } from "react";
+import { useSession, signIn } from "next-auth/react";
+import { useRouter } from "next/navigation"; // Corrected: use "next/navigation" for App Router client-side redirect
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { AzureAdSignInButton } from "@/components/auth/AzureAdSignInButton";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { AlertTriangle } from "lucide-react";
+import { AlertTriangle, Loader2 } from "lucide-react"; // Added Loader2
 import Image from 'next/image';
 import { CredentialsSignInForm } from "@/components/auth/CredentialsSignInForm";
 
 const APP_LOGO_DATA_URL_KEY = 'appLogoDataUrl'; // Key for localStorage
-
-// This part needs to run server-side or be adapted for client-side if page is fully client
-// For now, keeping server-side check for session and redirect if already logged in.
-// If full client component, this check would move to a useEffect or similar.
-async function getSessionAndRedirect() {
-  const session = await getServerSession(authOptions);
-  if (session) {
-    redirect("/");
-  }
-}
 
 export default function SignInPage({
   searchParams,
 }: {
   searchParams?: { [key: string]: string | string[] | undefined };
 }) {
+  const { data: session, status } = useSession();
+  const router = useRouter();
   const [appLogoUrl, setAppLogoUrl] = useState<string | null>(null);
   const [isClient, setIsClient] = useState(false);
-
-  // Perform server-side check for session and redirect if necessary
-  // This is a bit of a hybrid approach due to Next.js App Router patterns.
-  // Ideally, for a fully client component, session checks would also be client-side.
-  // However, redirecting from server is cleaner if session exists.
-  const [sessionChecked, setSessionChecked] = useState(false);
-  useEffect(() => {
-    getSessionAndRedirect().finally(() => setSessionChecked(true));
-  }, []);
-
+  
+  const callbackUrl = searchParams?.callbackUrl || "/";
 
   useEffect(() => {
     setIsClient(true); // Indicate component has mounted client-side
@@ -50,40 +33,51 @@ export default function SignInPage({
     }
   }, []);
 
+  useEffect(() => {
+    if (status === "authenticated" && session) {
+      router.replace(callbackUrl); // Use router.replace for client-side redirect
+    }
+  }, [session, status, router, callbackUrl]);
+
   const isAzureAdConfigured = !!(
-    process.env.NEXT_PUBLIC_AZURE_AD_CLIENT_ID && // Ensure these are NEXT_PUBLIC_ if read client-side
+    process.env.NEXT_PUBLIC_AZURE_AD_CLIENT_ID &&
     process.env.NEXT_PUBLIC_AZURE_AD_CLIENT_SECRET &&
     process.env.NEXT_PUBLIC_AZURE_AD_TENANT_ID
-  ) || !!( // Fallback to non-public for initial check, server has real values
+  ) || !!( // Fallback to non-public for initial check if server had real values (though this page is client)
     process.env.AZURE_AD_CLIENT_ID &&
     process.env.AZURE_AD_CLIENT_SECRET &&
     process.env.AZURE_AD_TENANT_ID
   );
 
-
-  const error = searchParams?.error;
+  const errorParam = searchParams?.error;
   let errorMessage = '';
-  if (error) {
-    if (error === "CredentialsSignin") {
+  if (errorParam) {
+    if (errorParam === "CredentialsSignin") {
       errorMessage = "Invalid email or password. Please try again.";
-    } else if (error === "OAuthSignin" || error === "OAuthCallback" || error === "OAuthCreateAccount" || error === "EmailCreateAccount" || error === "Callback" || error === "OAuthAccountNotLinked" || error === "EmailSignin" || error === "SessionRequired") {
+    } else if (errorParam === "OAuthSignin" || errorParam === "OAuthCallback" || errorParam === "OAuthCreateAccount" || errorParam === "EmailCreateAccount" || errorParam === "Callback" || errorParam === "OAuthAccountNotLinked" || errorParam === "EmailSignin" || errorParam === "SessionRequired") {
       errorMessage = "There was an error signing in with Azure AD. Please try again or contact support.";
     } else {
-      errorMessage = decodeURIComponent(error as string);
+      errorMessage = decodeURIComponent(errorParam as string);
     }
   }
-  
-  if (!sessionChecked && !isClient) {
-    // Still performing server-side session check or initial client render, show minimal loading
+
+  if (status === "loading" || !isClient) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center bg-gradient-to-br from-slate-100 to-sky-100 dark:from-slate-900 dark:to-sky-900 p-4">
-        <Card className="w-full max-w-md shadow-2xl opacity-0 animate-fadeIn">
-           {/* Basic skeleton while session check completes or client mounts */}
-        </Card>
+        <Loader2 className="h-12 w-12 animate-spin text-primary" />
       </div>
     );
   }
-
+  
+  if (status === "authenticated") {
+    // This state should be brief as the useEffect above will redirect.
+    return (
+       <div className="flex min-h-screen flex-col items-center justify-center bg-gradient-to-br from-slate-100 to-sky-100 dark:from-slate-900 dark:to-sky-900 p-4">
+        <p>Redirecting...</p>
+        <Loader2 className="h-8 w-8 animate-spin text-primary mt-2" />
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-gradient-to-br from-slate-100 to-sky-100 dark:from-slate-900 dark:to-sky-900 p-4">
@@ -95,7 +89,7 @@ export default function SignInPage({
               alt="Application Logo"
               width={80}
               height={80}
-              className="mx-auto mb-4 rounded-lg object-contain" // Use rounded-lg for potentially non-square logos
+              className="mx-auto mb-4 rounded-lg object-contain"
               data-ai-hint="company logo"
             />
           )}
