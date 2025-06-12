@@ -49,8 +49,8 @@ const experienceEntrySchema = z.object({
         if (lowerVal === 'true') return true;
         if (lowerVal === 'false' || lowerVal === 'none' || lowerVal === '') return false;
       }
-      if (val === null || val === undefined) return false; // Handle null/undefined explicitly
-      return val; // Pass through booleans
+      if (val === null || val === undefined) return false; 
+      return val; 
     },
     z.boolean().optional().default(false)
   ),
@@ -95,23 +95,28 @@ const candidateDetailsSchemaForN8N = z.object({
 }).passthrough();
 
 const n8nJobMatchSchema = z.object({
-  job_id: z.string().optional().nullable(),
+  job_id: z.string().uuid().optional().nullable(),
   job_title: z.string().min(1, "Job title is required"),
   fit_score: z.number().min(0).max(100, "Fit score must be between 0 and 100"),
   match_reasons: z.array(z.string()).optional().default([]),
 }).passthrough();
 
-const n8nCandidateWebhookEntrySchema = z.object({
+const appliedJobSchema = z.object({
+  job_id: z.string().uuid("Invalid Job ID in job_applied").optional().nullable(),
+  job_title: z.string().optional().nullable(), // n8n might not send title if only ID is primary
+  fit_score: z.number().min(0).max(100).optional().nullable(),
+  match_reasons: z.array(z.string()).optional().default([]),
+}).passthrough().optional().nullable();
+
+const n8nWebhookPayloadSchema = z.object({
   candidate_info: candidateDetailsSchemaForN8N,
   jobs: z.array(n8nJobMatchSchema).optional().default([]),
   targetPositionId: z.string().uuid().optional().nullable(),
   targetPositionTitle: z.string().optional().nullable(),
   targetPositionDescription: z.string().optional().nullable(),
   targetPositionLevel: z.string().optional().nullable(),
+  job_applied: appliedJobSchema, // Added job_applied field
 });
-
-// This is the schema the API route will validate AFTER extracting the nested payload.
-const n8nWebhookPayloadSchema = n8nCandidateWebhookEntrySchema;
 
 
 export async function POST(request: NextRequest) {
@@ -121,20 +126,13 @@ export async function POST(request: NextRequest) {
   try {
     rawRequestBody = await request.json();
     
-    // Attempt to extract the nested payload
-    if (
-      Array.isArray(rawRequestBody) && rawRequestBody.length > 0 &&
-      rawRequestBody[0] && typeof rawRequestBody[0] === 'object' &&
-      rawRequestBody[0].result_json && Array.isArray(rawRequestBody[0].result_json) && rawRequestBody[0].result_json.length > 0 &&
-      rawRequestBody[0].result_json[0] && typeof rawRequestBody[0].result_json[0] === 'object' &&
-      rawRequestBody[0].result_json[0].json
-    ) {
-      actualPayloadToValidate = rawRequestBody[0].result_json[0].json;
+    // Check if data is nested under a "body" key, as seen in n8n's HTTP Request node output
+    if (rawRequestBody && typeof rawRequestBody === 'object' && 'body' in rawRequestBody && rawRequestBody.body && typeof rawRequestBody.body === 'object') {
+      actualPayloadToValidate = rawRequestBody.body;
     } else {
-      // If the expected nested structure is not found, log and return an error
-      console.error("N8N Webhook: Received payload does not match expected nested structure `body[0].result_json[0].json`.", JSON.stringify(rawRequestBody, null, 2));
-      await logAudit('ERROR', 'N8N Webhook: Payload structure mismatch.', 'API:N8N:CreateCandidateWithMatches', null, { receivedStructure: JSON.stringify(rawRequestBody).substring(0, 500) }); // Log part of the structure
-      return NextResponse.json({ message: "Invalid payload structure. Expected nested JSON.", error: "Payload structure mismatch" }, { status: 400 });
+      // If not nested under "body", assume the root of the request is the payload
+      actualPayloadToValidate = rawRequestBody;
+      // console.log("N8N Webhook: Payload not nested under 'body' key. Using root object.", JSON.stringify(rawRequestBody, null, 2));
     }
 
   } catch (error) {
@@ -159,7 +157,7 @@ export async function POST(request: NextRequest) {
   try {
     client = await pool.connect();
 
-    const { candidate_info, jobs, targetPositionId, targetPositionTitle, targetPositionDescription, targetPositionLevel } = payload;
+    const { candidate_info, jobs, targetPositionId, targetPositionTitle, targetPositionDescription, targetPositionLevel, job_applied } = payload;
     const { personal_info, contact_info } = candidate_info;
 
     const candidateName = `${personal_info.firstname} ${personal_info.lastname}`.trim();
@@ -175,7 +173,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ status: 'error', name: candidateName, message: "Candidate email cannot be empty."}, { status: 400});
     }
 
-    let finalPositionId: string | null = targetPositionId || null;
+    let finalPositionId: string | null = null;
     let finalFitScore: number = 0;
     let associatedMatchDetails = null;
 
@@ -187,7 +185,7 @@ export async function POST(request: NextRequest) {
       experience: candidate_info.experience || [],
       skills: candidate_info.skills || [],
       job_suitable: candidate_info.job_suitable || [],
-      job_matches: jobs || [], // Store all n8n job matches
+      job_matches: jobs || [], 
     };
 
     await client.query('BEGIN');
@@ -201,7 +199,27 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ status: 'skipped', email, message: `Candidate with email ${email} already exists.`, candidateId: existingId }, { status: 409 });
     }
 
-    if (targetPositionId) {
+    // Priority 1: Use job_applied if present
+    if (job_applied?.job_id) {
+        const positionCheck = await client.query('SELECT title, description, position_level FROM "Position" WHERE id = $1 AND "isOpen" = TRUE', [job_applied.job_id]);
+        if (positionCheck.rows.length > 0) {
+            finalPositionId = job_applied.job_id;
+            finalFitScore = job_applied.fit_score || 0;
+            associatedMatchDetails = {
+                jobTitle: job_applied.job_title || positionCheck.rows[0].title, // Use title from DB if not in job_applied
+                fitScore: finalFitScore,
+                reasons: job_applied.match_reasons || [],
+                n8nJobId: job_applied.job_id,
+            };
+            fullParsedDataForDB.associatedMatchDetails = associatedMatchDetails;
+            await logAudit('INFO', `N8N Webhook: Candidate '${candidateName}' associated with position from 'job_applied': '${associatedMatchDetails.jobTitle}' (ID: ${finalPositionId}). Fit score: ${finalFitScore}.`, 'API:N8N:CreateCandidateWithMatches', null);
+        } else {
+            await logAudit('WARN', `N8N Webhook: 'job_applied.job_id' ('${job_applied.job_id}') for candidate '${candidateName}' is invalid or not open. Proceeding without this direct assignment.`, 'API:N8N:CreateCandidateWithMatches', null);
+        }
+    }
+    
+    // Priority 2: Use targetPositionId if finalPositionId is not yet set
+    if (!finalPositionId && targetPositionId) {
       const positionCheck = await client.query('SELECT title, description, position_level FROM "Position" WHERE id = $1 AND "isOpen" = TRUE', [targetPositionId]);
       if (positionCheck.rows.length > 0) {
         finalPositionId = targetPositionId;
@@ -230,29 +248,48 @@ export async function POST(request: NextRequest) {
           };
         }
          fullParsedDataForDB.associatedMatchDetails = associatedMatchDetails;
-        await logAudit('INFO', `N8N Webhook: Candidate '${candidateName}' will be associated with pre-selected position '${targetPositionTitle || matchedJobTitle}' (ID: ${finalPositionId}). Fit score: ${finalFitScore}.`, 'API:N8N:CreateCandidateWithMatches', null);
+        await logAudit('INFO', `N8N Webhook: Candidate '${candidateName}' will be associated with pre-selected position (targetPositionId) '${targetPositionTitle || matchedJobTitle}' (ID: ${finalPositionId}). Fit score: ${finalFitScore}.`, 'API:N8N:CreateCandidateWithMatches', null);
       } else {
-        finalPositionId = null;
-        await logAudit('WARN', `N8N Webhook: Pre-selected targetPositionId '${targetPositionId}' for candidate '${candidateName}' is invalid or not open. Candidate will be created without position assignment.`, 'API:N8N:CreateCandidateWithMatches', null);
+        await logAudit('WARN', `N8N Webhook: Pre-selected targetPositionId '${targetPositionId}' for candidate '${candidateName}' is invalid or not open. Candidate will be created without position assignment if no other match found.`, 'API:N8N:CreateCandidateWithMatches', null);
       }
-    } else if (jobs && jobs.length > 0) {
+    }
+    
+    // Priority 3: Use top match from 'jobs' array if finalPositionId is still not set
+    if (!finalPositionId && jobs && jobs.length > 0) {
       const topMatch = jobs.sort((a,b) => b.fit_score - a.fit_score)[0]; 
-      const positionQuery = 'SELECT id, title FROM "Position" WHERE title ILIKE $1 AND "isOpen" = TRUE LIMIT 1';
-      const positionResult = await client.query(positionQuery, [topMatch.job_title]);
+      if (topMatch.job_id) { // If n8n provided a job_id for its top match
+        const positionCheck = await client.query('SELECT title FROM "Position" WHERE id = $1 AND "isOpen" = TRUE', [topMatch.job_id]);
+        if (positionCheck.rows.length > 0) {
+            finalPositionId = topMatch.job_id;
+            finalFitScore = topMatch.fit_score;
+            associatedMatchDetails = {
+                jobTitle: topMatch.job_title,
+                fitScore: topMatch.fit_score,
+                reasons: topMatch.match_reasons || [],
+                n8nJobId: topMatch.job_id,
+            };
+        }
+      }
+      if (!finalPositionId) { // If topMatch job_id was not valid or not provided, try matching by title
+        const positionQuery = 'SELECT id, title FROM "Position" WHERE title ILIKE $1 AND "isOpen" = TRUE LIMIT 1';
+        const positionResult = await client.query(positionQuery, [topMatch.job_title]);
+        if (positionResult.rows.length > 0) {
+            finalPositionId = positionResult.rows[0].id;
+            finalFitScore = topMatch.fit_score;
+            associatedMatchDetails = {
+                jobTitle: topMatch.job_title, // n8n's title
+                fitScore: topMatch.fit_score,
+                reasons: topMatch.match_reasons || [],
+                n8nJobId: topMatch.job_id || positionResult.rows[0].id, // Use n8n's job_id if available, else our db id
+            };
+        }
+      }
 
-      if (positionResult.rows.length > 0) {
-        finalPositionId = positionResult.rows[0].id;
-        finalFitScore = topMatch.fit_score;
-        associatedMatchDetails = {
-          jobTitle: topMatch.job_title,
-          fitScore: topMatch.fit_score,
-          reasons: topMatch.match_reasons || [],
-          n8nJobId: topMatch.job_id,
-        };
+      if (finalPositionId && associatedMatchDetails) {
         fullParsedDataForDB.associatedMatchDetails = associatedMatchDetails;
-        await logAudit('INFO', `N8N Webhook: Matched candidate '${candidateName}' to position '${topMatch.job_title}' (ID: ${finalPositionId}) with fit score ${finalFitScore}.`, 'API:N8N:CreateCandidateWithMatches', null);
+        await logAudit('INFO', `N8N Webhook: Matched candidate '${candidateName}' to position '${associatedMatchDetails.jobTitle}' (ID: ${finalPositionId}) with fit score ${finalFitScore} based on n8n 'jobs' array.`, 'API:N8N:CreateCandidateWithMatches', null);
       } else {
-        await logAudit('INFO', `N8N Webhook: No open position found matching n8n's top job title '${topMatch.job_title}' for candidate '${candidateName}'. Candidate will be created without position assignment.`, 'API:N8N:CreateCandidateWithMatches', null);
+        await logAudit('INFO', `N8N Webhook: No open position found matching n8n's top job suggestions for candidate '${candidateName}'. Candidate will be created without position assignment.`, 'API:N8N:CreateCandidateWithMatches', null);
       }
     }
 
@@ -270,7 +307,7 @@ export async function POST(request: NextRequest) {
       phone,
       finalPositionId,
       finalFitScore,
-      'Applied' as CandidateStatus,
+      'Applied' as CandidateStatus, // Default status for n8n created candidates
       new Date().toISOString(),
       fullParsedDataForDB,
     ];
@@ -285,8 +322,8 @@ export async function POST(request: NextRequest) {
       uuidv4(),
       newCandidateDb.id,
       'Applied' as CandidateStatus,
-      'Candidate created via n8n webhook from resume processing.',
-      null, 
+      'Candidate created via automated workflow.',
+      null, // actingUserId is null for n8n system actions
     ]);
 
     await client.query('COMMIT');
@@ -348,5 +385,3 @@ export async function POST(request: NextRequest) {
     }
   }
 }
-
-    
