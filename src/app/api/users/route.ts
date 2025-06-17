@@ -3,7 +3,7 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { z } from 'zod';
 import pool from '../../../lib/db';
-import type { UserProfile, PlatformModuleId } from '@/lib/types';
+import type { UserProfile, PlatformModuleId, UserGroup } from '@/lib/types';
 import { PLATFORM_MODULES } from '@/lib/types';
 import { v4 as uuidv4 } from 'uuid';
 import bcrypt from 'bcrypt';
@@ -22,6 +22,7 @@ const createUserSchema = z.object({
   password: z.string().min(6, "Password must be at least 6 characters long"),
   role: userRoleEnum,
   modulePermissions: z.array(z.enum(platformModuleIds)).optional().default([]),
+  groupIds: z.array(z.string().uuid()).optional().default([]), // New: for group assignment
 });
 
 export async function GET(request: NextRequest) {
@@ -34,30 +35,53 @@ export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const filterRole = searchParams.get('role');
 
-  let query = 'SELECT id, name, email, role, "avatarUrl", "dataAiHint", "modulePermissions", "createdAt", "updatedAt" FROM "User"';
+  let query = `
+    SELECT 
+      u.id, u.name, u.email, u.role, u."avatarUrl", u."dataAiHint", u."modulePermissions", 
+      u."createdAt", u."updatedAt",
+      COALESCE(
+        (SELECT json_agg(json_build_object('id', g.id, 'name', g.name))
+         FROM "UserGroup" g
+         JOIN "User_UserGroup" ugg ON g.id = ugg."groupId"
+         WHERE ugg."userId" = u.id), 
+        '[]'::json
+      ) as groups
+    FROM "User" u
+  `;
   const queryParams = [];
+  let paramIndex = 1;
+  const conditions = [];
 
   if (userRole === 'Admin') {
     if (filterRole) {
-      query += ' WHERE role = $1';
+      conditions.push(`u.role = $${paramIndex++}`);
       queryParams.push(filterRole);
     }
   } else if (userRole === 'Recruiter') {
     // Recruiters can only fetch other Recruiters (for assignment dropdowns)
-    query += ' WHERE role = $1';
+    conditions.push(`u.role = $${paramIndex++}`);
     queryParams.push('Recruiter');
-  } else {
-    // Hiring Managers or other roles cannot list users by default
+  } else if (userRole !== 'Admin' && !session.user.modulePermissions?.includes('USERS_MANAGE')) {
+    // Hiring Managers or other roles cannot list users by default unless they have USERS_MANAGE permission
+    // For now, this also covers the case where no specific role filter means they can't list users.
+     await logAudit('WARN', `Forbidden attempt to list users by ${session.user.name} (Role: ${userRole}).`, 'API:Users:Get', session.user.id);
     return NextResponse.json({ message: "Forbidden: Insufficient permissions" }, { status: 403 });
   }
+  // If userRole is Admin and no filterRole, or userRole has USERS_MANAGE, they see all users (respecting other filters if any)
+
+
+  if (conditions.length > 0) {
+    query += ' WHERE ' + conditions.join(' AND ');
+  }
   
-  query += ' ORDER BY "createdAt" DESC';
+  query += ' ORDER BY u."createdAt" DESC';
 
   try {
     const result = await pool.query(query, queryParams);
     return NextResponse.json(result.rows.map(user => ({
       ...user,
-      modulePermissions: user.modulePermissions || [] // Ensure it's always an array
+      modulePermissions: user.modulePermissions || [],
+      groups: user.groups || [],
     })), { status: 200 });
   } catch (error) {
     console.error("Failed to fetch users:", error);
@@ -69,7 +93,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   const session = await getServerSession(authOptions);
   if (session?.user?.role !== 'Admin') {
-    await logAudit('WARN', `Forbidden attempt to create user by ${session?.user?.email || 'Unknown'} (ID: ${session?.user?.id || 'N/A'}). Required role: Admin.`, 'API:Users:Create', session?.user?.id);
+    await logAudit('WARN', `Forbidden attempt to create user by ${session?.user?.email || 'Unknown'} (ID: ${session?.user?.id || 'N/A'}). Required role: Admin.`, 'API:Users:Create', session.user.id);
     return NextResponse.json({ message: "Forbidden: You must be an Admin to create users." }, { status: 403 });
   }
   
@@ -89,7 +113,7 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const { name, email, password, role, modulePermissions } = validationResult.data;
+  const { name, email, password, role, modulePermissions, groupIds } = validationResult.data;
 
   const saltRounds = 10;
   let hashedPassword;
@@ -115,19 +139,42 @@ export async function POST(request: NextRequest) {
     const defaultDataAiHint = "profile person";
     const newUserId = uuidv4();
 
-    const insertQuery = `
+    const insertUserQuery = `
       INSERT INTO "User" (id, name, email, password, role, "avatarUrl", "dataAiHint", "modulePermissions", "createdAt", "updatedAt")
       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW(), NOW())
       RETURNING id, name, email, role, "avatarUrl", "dataAiHint", "modulePermissions", "createdAt", "updatedAt";
     `;
-    const result = await client.query(insertQuery, [newUserId, name, email, hashedPassword, role, defaultAvatarUrl, defaultDataAiHint, modulePermissions || []]);
-    const newUser = {
-        ...result.rows[0],
-        modulePermissions: result.rows[0].modulePermissions || []
-    };
+    const userResult = await client.query(insertUserQuery, [newUserId, name, email, hashedPassword, role, defaultAvatarUrl, defaultDataAiHint, modulePermissions || []]);
+    let newUser = userResult.rows[0];
+
+    if (groupIds && groupIds.length > 0) {
+      const insertGroupPromises = groupIds.map(groupId => {
+        return client.query('INSERT INTO "User_UserGroup" ("userId", "groupId") VALUES ($1, $2)', [newUserId, groupId]);
+      });
+      await Promise.all(insertGroupPromises);
+    }
+
+    // Fetch the user again with group data
+     const finalUserQuery = `
+      SELECT 
+        u.*,
+        COALESCE(
+          (SELECT json_agg(json_build_object('id', g.id, 'name', g.name))
+          FROM "UserGroup" g
+          JOIN "User_UserGroup" ugg ON g.id = ugg."groupId"
+          WHERE ugg."userId" = u.id), 
+          '[]'::json
+        ) as groups
+      FROM "User" u
+      WHERE u.id = $1
+    `;
+    const finalUserResult = await client.query(finalUserQuery, [newUserId]);
+    newUser = { ...finalUserResult.rows[0], modulePermissions: finalUserResult.rows[0].modulePermissions || [], groups: finalUserResult.rows[0].groups || [] };
+
+
     await client.query('COMMIT');
     
-    await logAudit('AUDIT', `User account '${newUser.name}' (ID: ${newUser.id}) created by ${session.user.name}.`, 'API:Users:Create', session.user.id, { targetUserId: newUser.id, role: newUser.role, permissions: newUser.modulePermissions });
+    await logAudit('AUDIT', `User account '${newUser.name}' (ID: ${newUser.id}) created by ${session.user.name}.`, 'API:Users:Create', session.user.id, { targetUserId: newUser.id, role: newUser.role, permissions: newUser.modulePermissions, groups: groupIds });
     return NextResponse.json(newUser, { status: 201 });
 
   } catch (error: any) {

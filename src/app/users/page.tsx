@@ -4,7 +4,7 @@
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button, buttonVariants } from "@/components/ui/button"; 
 import { PlusCircle, UsersRound, ShieldAlert, Edit3, Trash2, ServerCrash, Loader2, MoreHorizontal, KeyRound } from "lucide-react"; // Added KeyRound
-import type { UserProfile } from "@/lib/types";
+import type { UserProfile, UserGroup } from "@/lib/types";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -22,7 +22,6 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger, 
 } from "@/components/ui/alert-dialog";
 import {
   DropdownMenu,
@@ -85,9 +84,14 @@ export default function ManageUsersPage() {
     if (sessionStatus === 'unauthenticated') {
       signIn(undefined, { callbackUrl: pathname }); 
     } else if (sessionStatus === 'authenticated') {
-      fetchUsers();
+        if (session.user.role !== 'Admin' && !session.user.modulePermissions?.includes('USERS_MANAGE')) {
+            setFetchError("You do not have permission to view this page.");
+            setIsLoading(false);
+        } else {
+            fetchUsers();
+        }
     }
-  }, [sessionStatus, fetchUsers, pathname, signIn]); 
+  }, [sessionStatus, session, fetchUsers, pathname, signIn]); 
 
   const handleAddUser = async (data: AddUserFormValues) => {
     try {
@@ -169,25 +173,6 @@ export default function ManageUsersPage() {
     }
   };
 
-  const handleGenerateApiToken = (user: UserProfile) => {
-    const mockToken = `mock_token_${user.id}_${Date.now().toString(36)}`;
-    navigator.clipboard.writeText(mockToken)
-      .then(() => {
-        toast({
-          title: "Mock API Token Generated",
-          description: `Token for ${user.name} copied to clipboard: ${mockToken}`,
-        });
-      })
-      .catch(err => {
-        toast({
-          title: "Mock API Token Generated (Copy Failed)",
-          description: `Token: ${mockToken}. Failed to copy to clipboard: ${err}`,
-          variant: "destructive"
-        });
-      });
-  };
-
-
   if (sessionStatus === 'loading' || (sessionStatus === 'unauthenticated' && !pathname.startsWith('/auth/signin')) || (isLoading && !fetchError && users.length === 0)) {
     return (
       <div className="flex h-screen w-screen items-center justify-center bg-background fixed inset-0 z-50">
@@ -202,7 +187,11 @@ export default function ManageUsersPage() {
         <ServerCrash className="w-16 h-16 text-destructive mb-4" />
         <h2 className="text-2xl font-semibold text-foreground mb-2">Error Loading Users</h2>
         <p className="text-muted-foreground mb-4 max-w-md">{fetchError}</p>
-        <Button onClick={fetchUsers} className="btn-hover-primary-gradient">Try Again</Button>
+        {fetchError === "You do not have permission to view this page." ? (
+            <Button onClick={() => router.push('/')} className="btn-hover-primary-gradient">Go to Dashboard</Button>
+        ) : (
+            <Button onClick={fetchUsers} className="btn-hover-primary-gradient">Try Again</Button>
+        )}
       </div>
     );
   }
@@ -211,9 +200,11 @@ export default function ManageUsersPage() {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-center gap-2">
         <div></div> 
-        <Button className="w-full sm:w-auto btn-primary-gradient" onClick={() => setIsAddUserModalOpen(true)}> 
-          <PlusCircle className="mr-2 h-4 w-4" /> Add New User
-        </Button>
+        {session?.user?.role === 'Admin' && (
+            <Button className="w-full sm:w-auto btn-primary-gradient" onClick={() => setIsAddUserModalOpen(true)}> 
+            <PlusCircle className="mr-2 h-4 w-4" /> Add New User
+            </Button>
+        )}
       </div>
 
       <Card className="shadow-sm">
@@ -235,9 +226,11 @@ export default function ManageUsersPage() {
             <div className="text-center py-10">
               <UsersRound className="mx-auto h-12 w-12 text-muted-foreground" />
               <p className="mt-4 text-muted-foreground">No users found in the database.</p>
+                {session?.user?.role === 'Admin' && (
                  <Button className="mt-4 btn-primary-gradient" onClick={() => setIsAddUserModalOpen(true)}> 
                     <PlusCircle className="mr-2 h-4 w-4" /> Add First User
                 </Button>
+                )}
             </div>
           ) : (
             <div className="border rounded-lg overflow-hidden">
@@ -247,6 +240,7 @@ export default function ManageUsersPage() {
                   <TableHead>Name</TableHead>
                   <TableHead>Email</TableHead>
                   <TableHead>Role</TableHead>
+                  <TableHead>Groups</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -268,28 +262,36 @@ export default function ManageUsersPage() {
                         {user.role}
                       </Badge>
                     </TableCell>
+                    <TableCell>
+                      {user.groups && user.groups.length > 0 
+                        ? user.groups.map(g => <Badge key={g.id} variant="outline" className="mr-1 mb-1">{g.name}</Badge>) 
+                        : <span className="text-xs text-muted-foreground">No groups</span>
+                      }
+                    </TableCell>
                     <TableCell className="text-right">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon" className="h-8 w-8">
-                            <MoreHorizontal className="h-4 w-4" />
-                            <span className="sr-only">Actions</span>
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => openEditModal(user)}>
-                            <Edit3 className="mr-2 h-4 w-4" /> Edit User
-                          </DropdownMenuItem>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem 
-                            onClick={() => confirmDeleteUser(user)} 
-                            disabled={session?.user?.id === user.id}
-                            className="text-destructive hover:!bg-destructive/10 focus:!bg-destructive/10 focus:!text-destructive"
-                          >
-                            <Trash2 className="mr-2 h-4 w-4" /> Delete User
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+                      {session?.user?.role === 'Admin' && (
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-8 w-8">
+                              <MoreHorizontal className="h-4 w-4" />
+                              <span className="sr-only">Actions</span>
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => openEditModal(user)}>
+                              <Edit3 className="mr-2 h-4 w-4" /> Edit User
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem 
+                              onClick={() => confirmDeleteUser(user)} 
+                              disabled={session?.user?.id === user.id} // Prevent admin from deleting self
+                              className="text-destructive hover:!bg-destructive/10 focus:!bg-destructive/10 focus:!text-destructive"
+                            >
+                              <Trash2 className="mr-2 h-4 w-4" /> Delete User
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      )}
                     </TableCell>
                   </TableRow>
                 ))}
@@ -300,7 +302,7 @@ export default function ManageUsersPage() {
            <div className="mt-4 p-3 bg-secondary/30 border border-secondary/50 rounded-md flex items-start text-sm text-secondary-foreground">
             <ShieldAlert className="h-5 w-5 mr-2 mt-0.5 text-primary shrink-0" />
             <div>
-              <span className="font-semibold">Security Note:</span> User creation, deletion, and role modification are restricted to 'Admin' users. User passwords are securely hashed using bcrypt.
+              <span className="font-semibold">Security Note:</span> User creation, deletion, and modification of roles/permissions are restricted to 'Admin' users. User passwords are securely hashed using bcrypt.
             </div>
           </div>
         </CardContent>
@@ -324,9 +326,7 @@ export default function ManageUsersPage() {
 
       {userToDelete && (
         <AlertDialog open={!!userToDelete} onOpenChange={(open) => { if(!open) setUserToDelete(null);}}>
-          <AlertDialogTrigger asChild>
-            <button style={{display: 'none'}}></button>
-          </AlertDialogTrigger>
+          {/* AlertDialogTrigger is not needed if open is controlled by state */}
           <AlertDialogContent>
             <AlertDialogHeader>
               <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
@@ -346,4 +346,3 @@ export default function ManageUsersPage() {
     </div>
   );
 }
-    

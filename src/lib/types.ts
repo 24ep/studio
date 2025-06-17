@@ -10,11 +10,12 @@ export const PLATFORM_MODULES = [
   { id: 'CANDIDATES_MANAGE', label: 'Manage Candidates (Add, Edit, Delete)' },
   { id: 'POSITIONS_VIEW', label: 'View Positions' },
   { id: 'POSITIONS_MANAGE', label: 'Manage Positions (Add, Edit, Delete)' },
-  { id: 'USERS_MANAGE', label: 'Manage Users & Permissions' },
+  { id: 'USERS_MANAGE', label: 'Manage Users & Permissions' }, // This permission is for accessing the user management page
+  { id: 'USER_GROUPS_MANAGE', label: 'Manage User Groups' }, // New Permission
   { id: 'SETTINGS_ACCESS', label: 'Access System Settings' },
   { id: 'RECRUITMENT_STAGES_MANAGE', label: 'Manage Recruitment Stages' },
-  { id: 'DATA_MODELS_MANAGE', label: 'Manage Data Model Preferences (Client)' }, // Clarified it's client-side preferences
-  { id: 'CUSTOM_FIELDS_MANAGE', label: 'Manage Custom Field Definitions (Server)' }, // New Permission
+  { id: 'DATA_MODELS_MANAGE', label: 'Manage Data Model Preferences (Client)' },
+  { id: 'CUSTOM_FIELDS_MANAGE', label: 'Manage Custom Field Definitions (Server)' },
   { id: 'WEBHOOK_MAPPING_MANAGE', label: 'Manage Webhook Mappings' },
   { id: 'LOGS_VIEW', label: 'View Application Logs' },
 ] as const;
@@ -202,10 +203,18 @@ export interface Position {
   description?: string | null;
   isOpen: boolean;
   position_level?: string | null;
-  custom_attributes?: Record<string, any> | null; // New
+  custom_attributes?: Record<string, any> | null;
   createdAt?: string;
   updatedAt?: string;
   candidates?: Candidate[]; // Relation for dashboard chart
+}
+
+export interface UserGroup {
+  id: string;
+  name: string;
+  description?: string | null;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface Candidate {
@@ -220,9 +229,9 @@ export interface Candidate {
   fitScore: number;
   status: CandidateStatus; // Now a string to accommodate custom stages
   applicationDate: string;
-  recruiterId?: string | null; // New: Assigned recruiter ID
-  recruiter?: Pick<UserProfile, 'id' | 'name' | 'email'> | null; // New: Assigned recruiter info
-  custom_attributes?: Record<string, any> | null; // New
+  recruiterId?: string | null;
+  recruiter?: Pick<UserProfile, 'id' | 'name' | 'email'> | null;
+  custom_attributes?: Record<string, any> | null;
   createdAt?: string;
   updatedAt?: string;
   transitionHistory: TransitionRecord[];
@@ -238,6 +247,7 @@ export interface UserProfile {
   role: 'Admin' | 'Recruiter' | 'Hiring Manager';
   password?: string; // Only used for creation/validation, not sent to client
   modulePermissions?: PlatformModuleId[];
+  groups?: UserGroup[]; // New: Assigned groups
   createdAt?: string;
   updatedAt?: string;
 }

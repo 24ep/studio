@@ -3,7 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Users, Briefcase, Settings, UsersRound, Code2, ListOrdered, Palette, Zap, ListTodo, DatabaseZap, SlidersHorizontal, KanbanSquare, Settings2 } from "lucide-react"; 
+import { LayoutDashboard, Users, Briefcase, Settings, UsersRound, Code2, ListOrdered, Palette, Zap, ListTodo, DatabaseZap, SlidersHorizontal, KanbanSquare, Settings2, UserCog } from "lucide-react"; 
 import { cn } from "@/lib/utils";
 import {
   SidebarMenu,
@@ -40,8 +40,9 @@ const baseSettingsSubItems = [
   { href: "/settings/stages", label: "Recruitment Stages", icon: KanbanSquare, permissionId: 'RECRUITMENT_STAGES_MANAGE' as PlatformModuleId },
   { href: "/settings/data-models", label: "Data Models (Client)", icon: DatabaseZap, permissionId: 'DATA_MODELS_MANAGE' as PlatformModuleId },
   { href: "/settings/custom-fields", label: "Custom Fields (Server)", icon: Settings2, permissionId: 'CUSTOM_FIELDS_MANAGE' as PlatformModuleId },
-  { href: "/settings/webhook-mapping", label: "Webhook Mapping", icon: SlidersHorizontal, permissionId: 'WEBHOOK_MAPPING_MANAGE' as PlatformModuleId },
+  { href: "/settings/webhook-mapping", label: "Webhook Payload Mapping", icon: SlidersHorizontal, permissionId: 'WEBHOOK_MAPPING_MANAGE' as PlatformModuleId },
   { href: "/users", label: "Manage Users", icon: UsersRound, adminOnly: true },
+  { href: "/settings/user-groups", label: "Manage User Groups", icon: UserCog, permissionId: 'USER_GROUPS_MANAGE' as PlatformModuleId, adminOnlyOrPermission: true }, // New item
   { href: "/api-docs", label: "API Docs", icon: Code2 },
   { href: "/logs", label: "Logs", icon: ListOrdered, adminOnly: true },
 ];
@@ -59,9 +60,14 @@ export function SidebarNav() {
     setIsClient(true);
   }, []);
 
-  const canAccess = (item: { adminOnly?: boolean, permissionId?: PlatformModuleId }) => {
+  const canAccess = (item: { adminOnly?: boolean, permissionId?: PlatformModuleId, adminOnlyOrPermission?: boolean }) => {
     if (!isClient || sessionStatus !== 'authenticated') return false;
     if (item.adminOnly && userRole !== 'Admin') return false;
+    if (item.adminOnlyOrPermission) { // If true, user needs to be Admin OR have the permission
+      if (userRole === 'Admin') return true;
+      if (item.permissionId && modulePermissions.includes(item.permissionId)) return true;
+      return false;
+    }
     if (item.permissionId && userRole !== 'Admin' && !modulePermissions.includes(item.permissionId)) return false;
     return true;
   };
