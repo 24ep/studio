@@ -128,7 +128,7 @@ export interface ExperienceEntry {
   period?: string;
   duration?: string;
   is_current_position?: boolean | string; // Allow string for n8n, preprocess in Zod
-  postition_level?: string | undefined; // Allow flexible string from n8n
+  postition_level?: string | null | undefined; // Changed to allow null
 }
 
 export interface SkillEntry {
@@ -145,7 +145,7 @@ export interface JobSuitableEntry {
 
 export interface N8NJobMatch {
   job_id?: string;
-  job_title?: string; // Changed to optional
+  job_title?: string | null; // Changed to optional and nullable
   fit_score: number;
   match_reasons?: string[];
 }
@@ -326,4 +326,3 @@ export interface CustomFieldDefinition {
   createdAt?: string;
   updatedAt?: string;
 }
-

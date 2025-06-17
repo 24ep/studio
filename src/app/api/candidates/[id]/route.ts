@@ -1,3 +1,4 @@
+
 import { NextResponse, type NextRequest } from 'next/server';
 import pool from '../../../../lib/db';
 import type { CandidateStatus, Candidate, CandidateDetails, PersonalInfo, ContactInfo, PositionLevel, UserProfile, N8NJobMatch } from '@/lib/types';
@@ -45,7 +46,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
     }
 
     const candidateRow = result.rows[0];
-    let parsedDataFromDb: CandidateDetails | null = candidateRow.parsedData || { personal_info: {}, contact_info: {} };
+    let parsedDataFromDb: CandidateDetails | null = candidateRow.parsedData || { personal_info: {} as PersonalInfo, contact_info: {} as ContactInfo };
 
     // Sync job_matches titles with current Position table
     if (parsedDataFromDb && Array.isArray(parsedDataFromDb.job_matches) && parsedDataFromDb.job_matches.length > 0) {
@@ -93,54 +94,54 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
 }
 
 const personalInfoSchemaPartial = z.object({
-  title_honorific: z.string().optional(),
+  title_honorific: z.string().optional().nullable(),
   firstname: z.string().min(1, "First name is required").optional(),
   lastname: z.string().min(1, "Last name is required").optional(),
-  nickname: z.string().optional(),
-  location: z.string().optional(),
-  introduction_aboutme: z.string().optional(),
+  nickname: z.string().optional().nullable(),
+  location: z.string().optional().nullable(),
+  introduction_aboutme: z.string().optional().nullable(),
   avatar_url: z.string().url().optional().nullable(),
 }).deepPartial();
 
 const contactInfoSchemaPartial = z.object({
   email: z.string().email("Invalid email address").optional(),
-  phone: z.string().optional(),
+  phone: z.string().optional().nullable(),
 }).deepPartial();
 
 const educationEntrySchemaPartial = z.object({
-    major: z.string().optional(),
-    field: z.string().optional(),
-    period: z.string().optional(),
-    duration: z.string().optional(),
-    GPA: z.string().optional(),
-    university: z.string().optional(),
-    campus: z.string().optional(),
+    major: z.string().optional().nullable(),
+    field: z.string().optional().nullable(),
+    period: z.string().optional().nullable(),
+    duration: z.string().optional().nullable(),
+    GPA: z.string().optional().nullable(),
+    university: z.string().optional().nullable(),
+    campus: z.string().optional().nullable(),
 }).deepPartial();
 
 const experienceEntrySchemaPartial = z.object({
-    company: z.string().optional(),
-    position: z.string().optional(),
-    description: z.string().optional(),
-    period: z.string().optional(),
-    duration: z.string().optional(),
+    company: z.string().optional().nullable(),
+    position: z.string().optional().nullable(),
+    description: z.string().optional().nullable(),
+    period: z.string().optional().nullable(),
+    duration: z.string().optional().nullable(),
     is_current_position: z.union([z.boolean(), z.string()]).optional(),
-    postition_level: z.string().optional(),
+    postition_level: z.string().optional().nullable(), // Changed to .nullable()
 }).deepPartial();
 
 const skillEntrySchemaPartial = z.object({
-    segment_skill: z.string().optional(),
+    segment_skill: z.string().optional().nullable(),
     skill: z.array(z.string()).optional(),
 }).deepPartial();
 
 const jobSuitableEntrySchemaPartial = z.object({
-    suitable_career: z.string().optional(),
-    suitable_job_position: z.string().optional(),
-    suitable_job_level: z.string().optional(),
-    suitable_salary_bath_month: z.string().optional(),
+    suitable_career: z.string().optional().nullable(),
+    suitable_job_position: z.string().optional().nullable(),
+    suitable_job_level: z.string().optional().nullable(),
+    suitable_salary_bath_month: z.string().optional().nullable(),
 }).deepPartial();
 
 const n8nJobMatchSchemaPartial = z.object({
-  job_id: z.string().optional(),
+  job_id: z.string().optional().nullable(),
   job_title: z.string().min(1, "Job title is required").optional(),
   fit_score: z.number().min(0).max(100, "Fit score must be between 0 and 100").optional(),
   match_reasons: z.array(z.string()).optional(),
@@ -148,7 +149,7 @@ const n8nJobMatchSchemaPartial = z.object({
 
 
 const candidateDetailsSchemaPartial = z.object({
-  cv_language: z.string().optional(),
+  cv_language: z.string().optional().nullable(),
   personal_info: personalInfoSchemaPartial.optional(),
   contact_info: contactInfoSchemaPartial.optional(),
   education: z.array(educationEntrySchemaPartial).optional(),
@@ -252,19 +253,19 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
     Object.entries(validatedData).forEach(([key, value]) => {
       if (value !== undefined) {
         if (key === 'parsedData') {
-          const existingPD = (existingCandidate.parsedData || {}) as CandidateDetails;
+          const existingPD = (existingCandidate.parsedData || { personal_info: {} as PersonalInfo, contact_info: {} as ContactInfo }) as CandidateDetails;
           const newPD = value as Partial<CandidateDetails>;
 
           const mergedParsedData: CandidateDetails = {
-            cv_language: newPD.cv_language ?? existingPD.cv_language,
-            personal_info: { ...(existingPD.personal_info || {}), ...(newPD.personal_info || {}) } as PersonalInfo,
-            contact_info: { ...(existingPD.contact_info || {}), ...(newPD.contact_info || {}) } as ContactInfo,
-            education: newPD.education ?? existingPD.education,
-            experience: newPD.experience ?? existingPD.experience,
-            skills: newPD.skills ?? existingPD.skills,
-            job_suitable: newPD.job_suitable ?? existingPD.job_suitable,
-            associatedMatchDetails: newPD.associatedMatchDetails ?? existingPD.associatedMatchDetails,
-            job_matches: newPD.job_matches ?? existingPD.job_matches,
+            cv_language: newPD.cv_language !== undefined ? newPD.cv_language : existingPD.cv_language,
+            personal_info: { ...(existingPD.personal_info || {} as PersonalInfo), ...(newPD.personal_info || {} as PersonalInfo) } as PersonalInfo,
+            contact_info: { ...(existingPD.contact_info || {} as ContactInfo), ...(newPD.contact_info || {} as ContactInfo) } as ContactInfo,
+            education: newPD.education !== undefined ? newPD.education : existingPD.education,
+            experience: newPD.experience !== undefined ? newPD.experience : existingPD.experience,
+            skills: newPD.skills !== undefined ? newPD.skills : existingPD.skills,
+            job_suitable: newPD.job_suitable !== undefined ? newPD.job_suitable : existingPD.job_suitable,
+            associatedMatchDetails: newPD.associatedMatchDetails !== undefined ? newPD.associatedMatchDetails : existingPD.associatedMatchDetails,
+            job_matches: newPD.job_matches !== undefined ? newPD.job_matches : existingPD.job_matches,
           };
           updateFields.push(`"parsedData" = $${paramIndex++}`);
           updateValues.push(mergedParsedData);
@@ -306,7 +307,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
       const currentResult = await client.query(currentCandidateQuery, [params.id]);
       const currentCandidateWithDetails = {
         ...currentResult.rows[0],
-        parsedData: currentResult.rows[0].parsedData || { personal_info: {}, contact_info: {} },
+        parsedData: currentResult.rows[0].parsedData || { personal_info: {} as PersonalInfo, contact_info: {} as ContactInfo },
         custom_attributes: currentResult.rows[0].custom_attributes || {},
          position: currentResult.rows[0].positionId ? {
             id: currentResult.rows[0].positionId,
@@ -348,7 +349,10 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
 
     if (validatedData.recruiterId !== undefined && validatedData.recruiterId !== oldRecruiterId) {
         const newRecruiterName = validatedData.recruiterId ? (await client.query('SELECT name FROM "User" WHERE id = $1', [validatedData.recruiterId])).rows[0]?.name : 'Unassigned';
-        const oldRecruiterName = oldRecruiterId ? (await client.query('SELECT name FROM "User" WHERE id = $1', [oldRecruiterId])).rows[0]?.name : 'Unassigned';
+        const oldRecruiterNameQuery = oldRecruiterId ? 'SELECT name FROM "User" WHERE id = $1' : null;
+        const oldRecruiterNameResult = oldRecruiterNameQuery ? await client.query(oldRecruiterNameQuery, [oldRecruiterId]) : null;
+        const oldRecruiterName = oldRecruiterNameResult && oldRecruiterNameResult.rows.length > 0 ? oldRecruiterNameResult.rows[0].name : 'Unassigned';
+        
         await logAudit('AUDIT', `Candidate '${existingCandidate.name}' (ID: ${params.id}) recruiter changed from '${oldRecruiterName}' to '${newRecruiterName}' by ${actingUserName}.`, 'API:Candidates:AssignRecruiter', actingUserId, { targetCandidateId: params.id, newRecruiterId: validatedData.recruiterId, oldRecruiterId: oldRecruiterId });
     }
 
@@ -383,7 +387,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
         WHERE c.id = $1;
     `;
     const finalResult = await client.query(finalQuery, [params.id]);
-    let updatedParsedData: CandidateDetails | null = finalResult.rows[0].parsedData || { personal_info: {}, contact_info: {} };
+    let updatedParsedData: CandidateDetails | null = finalResult.rows[0].parsedData || { personal_info: {} as PersonalInfo, contact_info: {} as ContactInfo };
 
     if (updatedParsedData && Array.isArray(updatedParsedData.job_matches) && updatedParsedData.job_matches.length > 0) {
       const jobIdsToFetch = updatedParsedData.job_matches
