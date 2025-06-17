@@ -5,11 +5,9 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-      args:
-        NODE_ENV: ${NODE_ENV:-production}
     pull_policy: always
     ports:
-      - "9846:3000" # Match the port exposed in Dockerfile
+      - "9846:9002" # Match the port in package.json dev script
     # For production deployments, you typically want the application code to be self-contained
     # within the Docker image. The volume mount `.:/app` is primarily for local development to
     # reflect code changes without rebuilding the image. It's commented out for production-like behavior.
@@ -49,7 +47,12 @@ services:
       N8N_GENERIC_PDF_WEBHOOK_URL: "${N8N_GENERIC_PDF_WEBHOOK_URL:-https://n8n.bondarys.com/webhook/upload-cv}" # Optional n8n webhook URL for generic PDF uploads
 
       # --- General Application Settings ---
-      NODE_ENV: ${NODE_ENV:-production}
+      NODE_ENV: development
+      PORT: 9002
+    volumes:
+      - .:/app
+      - /app/node_modules
+      - /app/.next
     depends_on:
       - postgres
       - minio
