@@ -21,7 +21,6 @@ import { format, parseISO } from 'date-fns';
 import Link from 'next/link';
 import React from 'react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Skeleton } from "@/components/ui/skeleton";
 
 interface CandidateTableProps {
   candidates: Candidate[];
@@ -213,47 +212,15 @@ export function CandidateTable({ candidates, ...props }: CandidateTableProps) {
   };
 
   if (props.isLoading) {
-    return (
-      <div className="space-y-4">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Candidate</TableHead>
-              <TableHead>Position</TableHead>
-              <TableHead>Fit Score</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Last Updated</TableHead>
-              <TableHead>Resume</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {Array.from({ length: 5 }).map((_, index) => (
-              <TableRow key={index}>
-                <TableCell>
-                  <div className="flex items-center gap-3">
-                    <Skeleton className="h-10 w-10 rounded-full" />
-                    <div className="space-y-2">
-                      <Skeleton className="h-4 w-[200px]" />
-                      <Skeleton className="h-3 w-[150px]" />
-                    </div>
-                  </div>
-                </TableCell>
-                <TableCell><Skeleton className="h-4 w-[150px]" /></TableCell>
-                <TableCell><Skeleton className="h-4 w-[100px]" /></TableCell>
-                <TableCell><Skeleton className="h-4 w-[80px]" /></TableCell>
-                <TableCell><Skeleton className="h-4 w-[100px]" /></TableCell>
-                <TableCell><Skeleton className="h-4 w-[80px]" /></TableCell>
-                <TableCell className="text-right">
-                  <Skeleton className="h-8 w-8 ml-auto" />
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+     return (
+      <div className="flex flex-col items-center justify-center h-64 border rounded-lg bg-card shadow">
+        <Users className="w-16 h-16 text-muted-foreground animate-pulse mb-4" />
+        <h3 className="text-xl font-semibold text-foreground">Loading Candidates...</h3>
+        <p className="text-muted-foreground">Please wait while we fetch the data.</p>
       </div>
     );
   }
+
 
   if (candidates.length === 0) {
     return (

@@ -28,14 +28,7 @@ interface CandidatesPageClientProps {
   permissionError?: boolean;
 }
 
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      staleTime: 1000 * 60 * 5, // 5 minutes
-      gcTime: 1000 * 60 * 30, // 30 minutes (previously cacheTime)
-    },
-  },
-});
+const queryClient = new QueryClient();
 
 function CandidatesPageClientInner({
   initialCandidates,
@@ -78,14 +71,26 @@ function CandidatesPageClientInner({
     error: queryError,
     refetch
   } = useQuery({
-    queryKey: ['candidates', page, pageSize, filters],
+    queryKey: ['candidates', filters, page, pageSize],
     queryFn: async () => {
-      const response = await fetch(`/api/candidates?page=${page}&pageSize=${pageSize}&filters=${JSON.stringify(filters)}`);
-      if (!response.ok) throw new Error('Failed to fetch candidates');
-      return response.json();
+      const query = new URLSearchParams();
+      if (filters.name) query.append('name', filters.name);
+      if (filters.positionId && filters.positionId !== "__ALL_POSITIONS__") query.append('positionId', filters.positionId);
+      if (filters.education) query.append('education', filters.education);
+      if (filters.minFitScore !== undefined) query.append('minFitScore', String(filters.minFitScore));
+      if (filters.maxFitScore !== undefined) query.append('maxFitScore', String(filters.maxFitScore));
+      query.append('limit', String(pageSize));
+      query.append('offset', String((page - 1) * pageSize));
+      const response = await fetch(`/api/candidates?${query.toString()}`);
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ message: response.statusText || `Status: ${response.status}` }));
+        throw new Error(errorData.message || `Failed to fetch candidates: ${response.statusText || `Status: ${response.status}`}`);
+      }
+      return await response.json();
     },
-    initialData: initialCandidates,
-    placeholderData: (previousData) => previousData,
+    keepPreviousData: true,
+    enabled: sessionStatus === 'authenticated' && !authError && !permissionError,
+    initialData: { candidates: initialCandidates, total: initialCandidates.length },
   });
 
   const fetchFilteredCandidatesOnClient = useCallback(async (currentFilters: CandidateFilterValues, pageOverride?: number, pageSizeOverride?: number) => {

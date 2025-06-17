@@ -32,14 +32,13 @@ import {
 import { signIn, useSession } from "next-auth/react";
 import { Pagination } from '@/components/ui/pagination';
 import { useQuery, QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { UserTable } from '@/components/users/UserTable';
-import { UserFilters } from '@/components/users/UserFilters';
+import type { EditUserFormValues } from "@/components/users/EditUserModal";
 
 const queryClient = new QueryClient();
 
 const EditUserModal = dynamic(() => import('@/components/users/EditUserModal'), {
-  ssr: false,
-  loading: () => <div>Loading...</div>
+  loading: () => <div>Loading...</div>,
+  ssr: false
 });
 
 function ManageUsersPageInner() {

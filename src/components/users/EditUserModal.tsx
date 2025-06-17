@@ -52,7 +52,7 @@ interface EditUserModalProps {
   user: UserProfile | null;
 }
 
-export default function EditUserModal({ isOpen, onOpenChange, onEditUser, user }: EditUserModalProps) {
+const EditUserModal = ({ isOpen, onOpenChange, onEditUser, user }: EditUserModalProps) => {
   const { toast } = useToast();
   const [availableGroups, setAvailableGroups] = useState<UserGroup[]>([]);
 
@@ -287,4 +287,6 @@ export default function EditUserModal({ isOpen, onOpenChange, onEditUser, user }
       </DialogContent>
     </Dialog>
   );
-}
+};
+
+export default EditUserModal;

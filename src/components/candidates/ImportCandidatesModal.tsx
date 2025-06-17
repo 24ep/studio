@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, type ChangeEvent } from 'react';
@@ -106,7 +105,7 @@ export function ImportCandidatesModal({ isOpen, onOpenChange, onImportSuccess }:
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => {
+    <Dialog open={isOpen} onOpenChange={(open: boolean) => {
       onOpenChange(open);
       if (!open) {
         setSelectedFile(null);
