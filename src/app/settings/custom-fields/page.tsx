@@ -1,3 +1,4 @@
+
 // src/app/settings/custom-fields/page.tsx
 "use client";
 
@@ -52,6 +53,15 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import {
+  Form,
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form"; // Added missing imports
 
 const customFieldOptionSchemaClient = z.object({
   value: z.string().min(1, "Option value is required"),
@@ -291,141 +301,143 @@ export default function CustomFieldsPage() {
             </DialogDescription>
           </DialogHeader>
           <ScrollArea className="flex-grow pr-2">
-            <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-4 py-2 pl-1">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <FormField
-                  control={form.control}
-                  name="model_name"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Model *</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value} disabled={!!editingDefinition}>
-                        <FormControl><SelectTrigger><SelectValue placeholder="Select model" /></SelectTrigger></FormControl>
-                        <SelectContent>
-                          <SelectItem value="Candidate">Candidate</SelectItem>
-                          <SelectItem value="Position">Position</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                       {!!editingDefinition && <p className="text-xs text-muted-foreground">Model cannot be changed after creation.</p>}
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="field_key"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Field Key *</FormLabel>
-                      <FormControl><Input {...field} placeholder="e.g., linkedin_url" disabled={!!editingDefinition} /></FormControl>
-                      <FormMessage />
-                       {!!editingDefinition && <p className="text-xs text-muted-foreground">Field key cannot be changed after creation.</p>}
-                    </FormItem>
-                  )}
-                />
-              </div>
-              <FormField
-                control={form.control}
-                name="label"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Label *</FormLabel>
-                    <FormControl><Input {...field} placeholder="e.g., LinkedIn Profile URL" /></FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <FormField
-                  control={form.control}
-                  name="field_type"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Field Type *</FormLabel>
-                      <Select onValueChange={(value) => {
-                          field.onChange(value);
-                          if (!['select_single', 'select_multiple'].includes(value)) {
-                              replaceOptions([]); // Clear options if not a select type
-                          }
-                      }} value={field.value}>
-                        <FormControl><SelectTrigger><SelectValue placeholder="Select field type" /></SelectTrigger></FormControl>
-                        <SelectContent>
-                          {CUSTOM_FIELD_TYPES.map(type => <SelectItem key={type} value={type}>{type}</SelectItem>)}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                 <FormField
+            <Form {...form}> {/* This FormProvider wrapper is important */}
+              <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-4 py-2 pl-1">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <FormField
                     control={form.control}
-                    name="sort_order"
+                    name="model_name"
                     render={({ field }) => (
-                        <FormItem>
-                        <FormLabel>Sort Order</FormLabel>
-                        <FormControl><Input type="number" {...field} /></FormControl>
+                      <FormItem>
+                        <FormLabel>Model *</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value} disabled={!!editingDefinition}>
+                          <FormControl><SelectTrigger><SelectValue placeholder="Select model" /></SelectTrigger></FormControl>
+                          <SelectContent>
+                            <SelectItem value="Candidate">Candidate</SelectItem>
+                            <SelectItem value="Position">Position</SelectItem>
+                          </SelectContent>
+                        </Select>
                         <FormMessage />
-                        </FormItem>
+                        {!!editingDefinition && <p className="text-xs text-muted-foreground">Model cannot be changed after creation.</p>}
+                      </FormItem>
                     )}
-                 />
-              </div>
-
-              {['select_single', 'select_multiple'].includes(watchFieldType) && (
-                <div className="space-y-3 border p-3 rounded-md">
-                  <Label className="text-sm font-medium">Options for Select</Label>
-                  {optionsFields.map((optionField, index) => (
-                    <div key={optionField.id} className="flex items-end gap-2 p-2 border rounded bg-muted/30">
-                      <FormField
-                        control={form.control}
-                        name={`options.${index}.value`}
-                        render={({ field }) => (
-                          <FormItem className="flex-1">
-                            <FormLabel htmlFor={`option-value-${index}`} className="text-xs">Value</FormLabel>
-                            <FormControl><Input id={`option-value-${index}`} {...field} placeholder="Option Value" className="text-xs h-8" /></FormControl>
-                            <FormMessage className="text-xs" />
-                          </FormItem>
-                        )}
-                      />
-                       <FormField
-                        control={form.control}
-                        name={`options.${index}.label`}
-                        render={({ field }) => (
-                          <FormItem className="flex-1">
-                            <FormLabel htmlFor={`option-label-${index}`} className="text-xs">Label</FormLabel>
-                            <FormControl><Input id={`option-label-${index}`} {...field} placeholder="Option Label" className="text-xs h-8" /></FormControl>
-                            <FormMessage className="text-xs" />
-                          </FormItem>
-                        )}
-                      />
-                      <Button type="button" variant="ghost" size="icon" className="h-8 w-8 shrink-0" onClick={() => removeOption(index)}>
-                        <Trash2 className="h-4 w-4 text-destructive" />
-                      </Button>
-                    </div>
-                  ))}
-                  <Button type="button" variant="outline" size="sm" onClick={() => appendOption({ value: '', label: '' })}>
-                    <PlusCircle className="mr-2 h-4 w-4" /> Add Option
-                  </Button>
+                  />
+                  <FormField
+                    control={form.control}
+                    name="field_key"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Field Key *</FormLabel>
+                        <FormControl><Input {...field} placeholder="e.g., linkedin_url" disabled={!!editingDefinition} /></FormControl>
+                        <FormMessage />
+                        {!!editingDefinition && <p className="text-xs text-muted-foreground">Field key cannot be changed after creation.</p>}
+                      </FormItem>
+                    )}
+                  />
                 </div>
-              )}
+                <FormField
+                  control={form.control}
+                  name="label"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Label *</FormLabel>
+                      <FormControl><Input {...field} placeholder="e.g., LinkedIn Profile URL" /></FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="field_type"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Field Type *</FormLabel>
+                        <Select onValueChange={(value) => {
+                            field.onChange(value);
+                            if (!['select_single', 'select_multiple'].includes(value)) {
+                                replaceOptions([]); // Clear options if not a select type
+                            }
+                        }} value={field.value}>
+                          <FormControl><SelectTrigger><SelectValue placeholder="Select field type" /></SelectTrigger></FormControl>
+                          <SelectContent>
+                            {CUSTOM_FIELD_TYPES.map(type => <SelectItem key={type} value={type}>{type}</SelectItem>)}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                      control={form.control}
+                      name="sort_order"
+                      render={({ field }) => (
+                          <FormItem>
+                          <FormLabel>Sort Order</FormLabel>
+                          <FormControl><Input type="number" {...field} /></FormControl>
+                          <FormMessage />
+                          </FormItem>
+                      )}
+                  />
+                </div>
 
-              <FormField
-                control={form.control}
-                name="is_required"
-                render={({ field }) => (
-                  <FormItem className="flex flex-row items-center space-x-2 pt-2">
-                    <FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange} /></FormControl>
-                    <FormLabel className="font-normal">Field is Required</FormLabel>
-                  </FormItem>
+                {['select_single', 'select_multiple'].includes(watchFieldType) && (
+                  <div className="space-y-3 border p-3 rounded-md">
+                    <Label className="text-sm font-medium">Options for Select</Label>
+                    {optionsFields.map((optionField, index) => (
+                      <div key={optionField.id} className="flex items-end gap-2 p-2 border rounded bg-muted/30">
+                        <FormField
+                          control={form.control}
+                          name={`options.${index}.value`}
+                          render={({ field }) => (
+                            <FormItem className="flex-1">
+                              <FormLabel htmlFor={`option-value-${index}`} className="text-xs">Value</FormLabel>
+                              <FormControl><Input id={`option-value-${index}`} {...field} placeholder="Option Value" className="text-xs h-8" /></FormControl>
+                              <FormMessage className="text-xs" />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={form.control}
+                          name={`options.${index}.label`}
+                          render={({ field }) => (
+                            <FormItem className="flex-1">
+                              <FormLabel htmlFor={`option-label-${index}`} className="text-xs">Label</FormLabel>
+                              <FormControl><Input id={`option-label-${index}`} {...field} placeholder="Option Label" className="text-xs h-8" /></FormControl>
+                              <FormMessage className="text-xs" />
+                            </FormItem>
+                          )}
+                        />
+                        <Button type="button" variant="ghost" size="icon" className="h-8 w-8 shrink-0" onClick={() => removeOption(index)}>
+                          <Trash2 className="h-4 w-4 text-destructive" />
+                        </Button>
+                      </div>
+                    ))}
+                    <Button type="button" variant="outline" size="sm" onClick={() => appendOption({ value: '', label: '' })}>
+                      <PlusCircle className="mr-2 h-4 w-4" /> Add Option
+                    </Button>
+                  </div>
                 )}
-              />
-              <DialogFooter className="pt-4 sticky bottom-0 bg-dialog pb-1">
-                <DialogClose asChild><Button type="button" variant="outline">Cancel</Button></DialogClose>
-                <Button type="submit" disabled={form.formState.isSubmitting} className="btn-primary-gradient">
-                  {form.formState.isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Save className="mr-2 h-4 w-4"/>}
-                  {editingDefinition ? 'Save Changes' : 'Create Definition'}
-                </Button>
-              </DialogFooter>
-            </form>
+
+                <FormField
+                  control={form.control}
+                  name="is_required"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-row items-center space-x-2 pt-2">
+                      <FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange} /></FormControl>
+                      <FormLabel className="font-normal">Field is Required</FormLabel>
+                    </FormItem>
+                  )}
+                />
+                <DialogFooter className="pt-4 sticky bottom-0 bg-dialog pb-1">
+                  <DialogClose asChild><Button type="button" variant="outline">Cancel</Button></DialogClose>
+                  <Button type="submit" disabled={form.formState.isSubmitting} className="btn-primary-gradient">
+                    {form.formState.isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Save className="mr-2 h-4 w-4"/>}
+                    {editingDefinition ? 'Save Changes' : 'Create Definition'}
+                  </Button>
+                </DialogFooter>
+              </form>
+            </Form>
           </ScrollArea>
         </DialogContent>
       </Dialog>
@@ -452,3 +464,8 @@ export default function CustomFieldsPage() {
     </div>
   );
 }
+
+    
+    
+    
+    
