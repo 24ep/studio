@@ -128,6 +128,14 @@ export function CreateCandidateViaN8nModal({ isOpen, onOpenChange, onProcessingS
         let description = result.message || `Failed to send PDF for automated candidate creation. Status: ${response.status}`;
         if (result.message === "n8n integration for candidate creation is not configured on the server.") { 
           description = "Automated candidate creation is not configured on the server. Please ensure the Generic PDF Webhook URL environment variable is set.";
+        } else if (response.status === 500 && result.message?.includes("n8n responded with status 500") && result.errorDetails) {
+            // More specific message if n8n returned 500 and we have details from n8n
+            const detailsSnippet = String(result.errorDetails).substring(0, 150) + (String(result.errorDetails).length > 150 ? '...' : '');
+            description = `The n8n workflow encountered an internal server error (500). Please check your n8n workflow logs for details. n8n Output: ${detailsSnippet}`;
+        } else if (result.errorDetails) {
+            // General case if errorDetails are present
+            const detailsSnippet = String(result.errorDetails).substring(0, 150) + (String(result.errorDetails).length > 150 ? '...' : '');
+            description = `${result.message || 'Failed to send PDF.'} Details: ${detailsSnippet}`;
         }
         throw new Error(description);
       }
