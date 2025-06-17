@@ -158,7 +158,7 @@ const appliedJobSchema = z.object({
   job_id: z.string().uuid("Invalid Job ID in job_applied").optional().nullable(),
   job_title: z.string().optional().nullable(), 
   fit_score: z.number().min(0).max(100).optional().nullable(),
-  match_reasons: z.array(z.string()).optional().default([]),
+  justification: z.array(z.string()).optional().default([]), // Changed from match_reasons
 }).passthrough().optional().nullable();
 
 const n8nWebhookPayloadSchema = z.object({
@@ -218,9 +218,8 @@ export async function POST(request: NextRequest) {
     
     await logAudit('ERROR', 'N8N Webhook: Invalid input received from n8n (after transformation).', 'API:N8N:CreateCandidateWithMatches', null, { 
         errors: validationResult.error.flatten(), 
-        // Include a snippet or indication of payloads to avoid overly large log entries if necessary
         originalPayloadSnippet: JSON.stringify(payloadToProcess, null, 2).substring(0, 1000), 
-        transformedPayload: transformedPayload 
+        transformedPayloadForDebug: transformedPayload, // Changed for consistency
     });
     return NextResponse.json(
       { 
@@ -290,7 +289,7 @@ export async function POST(request: NextRequest) {
             associatedMatchDetails = {
                 jobTitle: job_applied.job_title || positionCheck.rows[0].title,
                 fitScore: finalFitScore,
-                reasons: job_applied.match_reasons || [],
+                reasons: job_applied.justification || [], // Changed from match_reasons
                 n8nJobId: job_applied.job_id,
             };
             fullParsedDataForDB.associatedMatchDetails = associatedMatchDetails;

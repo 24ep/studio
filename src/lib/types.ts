@@ -178,7 +178,7 @@ export interface N8NCandidateWebhookEntry {
     job_id?: string | null;
     job_title?: string | null;
     fit_score?: number | null;
-    match_reasons?: string[];
+    justification?: string[]; // Changed from match_reasons
   } | null;
 }
 
@@ -326,3 +326,4 @@ export interface CustomFieldDefinition {
   createdAt?: string;
   updatedAt?: string;
 }
+

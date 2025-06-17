@@ -37,7 +37,7 @@ const TARGET_CANDIDATE_ATTRIBUTES_CONFIG: { path: string; label: string; type: s
   { path: 'job_applied.job_id', label: 'Applied Job - ID', type: 'string (UUID)', example: 'payload.application.jobReferenceID', defaultNotes: 'ID of the job applied for.' },
   { path: 'job_applied.job_title', label: 'Applied Job - Title', type: 'string', example: 'payload.application.jobTitle', defaultNotes: 'Title of the job applied for.' },
   { path: 'job_applied.fit_score', label: 'Applied Job - Fit Score', type: 'number', example: 'payload.application.matchScore', defaultNotes: 'Fit score for the applied job.' },
-  { path: 'job_applied.match_reasons', label: 'Applied Job - Match Reasons (Array)', type: 'array of strings', example: 'payload.application.reasons', defaultNotes: 'Reasons for the match score.' },
+  { path: 'job_applied.justification', label: 'Applied Job - Justification (Array)', type: 'array of strings', example: 'payload.application.justificationText', defaultNotes: 'Justification for the match score.' },
   { path: 'targetPositionId', label: 'Target Position ID (Hint)', type: 'string (UUID)', example: 'payload.initialTarget.id', defaultNotes: 'Hint from uploader about target position ID.' },
   { path: 'targetPositionTitle', label: 'Target Position Title (Hint)', type: 'string', example: 'payload.initialTarget.title', defaultNotes: 'Hint from uploader about target position title.' },
   { path: 'targetPositionDescription', label: 'Target Position Description (Hint)', type: 'string', example: 'payload.initialTarget.description', defaultNotes: 'Hint from uploader about target position description.' },
@@ -269,3 +269,4 @@ export default function WebhookMappingPage() {
     </div>
   );
 }
+
