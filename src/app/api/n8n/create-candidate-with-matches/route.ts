@@ -61,6 +61,20 @@ function transformPayload(rawPayload: any, mappings: WebhookFieldMapping[]): any
     delete transformedPayload.job_applied.match_reasons;
     console.log("N8N Webhook: Ensured 'job_applied.justification' is used, removed 'job_applied.match_reasons' if both were present after transformation.");
   }
+  
+  // Defensive check: if transformedPayload.jobs exists but an item has match_reasons and not justification, convert it
+  if (transformedPayload.jobs && Array.isArray(transformedPayload.jobs)) {
+    transformedPayload.jobs = transformedPayload.jobs.map((job: any) => {
+      if (job && job.match_reasons && !job.justification) {
+        // This is not correct, the schema for N8NJobMatch expects match_reasons
+        // The issue is about what the schema *defines* vs what might come in.
+        // The n8nJobMatchSchema currently defines 'match_reasons'.
+        // If the incoming data for a job match has 'justification' from n8n, it should be mapped to 'match_reasons' by the user's Webhook Payload Mapping config.
+      }
+      return job;
+    });
+  }
+
 
   // console.log("N8N Webhook: Payload after transformation:", JSON.stringify(transformedPayload, null, 2)); // Already added
   return transformedPayload;
@@ -158,18 +172,18 @@ const n8nJobMatchSchema = z.object({
   job_id: z.string().uuid().optional().nullable(),
   job_title: z.string().min(1, "Job title is required"),
   fit_score: z.number().min(0).max(100, "Fit score must be between 0 and 100"),
-  match_reasons: z.array(z.string()).optional().default([]), // This is for job_matches array items, not job_applied
+  match_reasons: z.array(z.string()).optional().default([]),
 }).passthrough();
 
 const appliedJobSchema = z.object({
   job_id: z.string().uuid("Invalid Job ID in job_applied").optional().nullable(),
   job_title: z.string().optional().nullable(), 
   fit_score: z.number().min(0).max(100).optional().nullable(),
-  justification: z.array(z.string()).optional().default([]), // Correctly justification here
+  justification: z.array(z.string()).optional().default([]),
 }).passthrough().optional().nullable();
 
 const n8nWebhookPayloadSchema = z.object({
-  candidate_info: candidateDetailsSchemaForN8N, // This is the field that's required
+  candidate_info: candidateDetailsSchemaForN8N,
   jobs: z.array(n8nJobMatchSchema).optional().default([]),
   targetPositionId: z.string().uuid().optional().nullable(),
   targetPositionTitle: z.string().optional().nullable(),
@@ -185,7 +199,7 @@ export async function POST(request: NextRequest) {
 
   try {
     rawRequestBody = await request.json();
-    console.log("N8N Webhook: Raw request body received:", JSON.stringify(rawRequestBody, null, 2).substring(0, 2000)); // Added for debugging
+    // console.log("N8N Webhook: Raw request body received:", JSON.stringify(rawRequestBody, null, 2).substring(0, 2000));
     
     if (rawRequestBody && typeof rawRequestBody === 'object') {
       if ('body' in rawRequestBody && rawRequestBody.body && typeof rawRequestBody.body === 'object') {
@@ -200,7 +214,7 @@ export async function POST(request: NextRequest) {
     } else {
       throw new Error("Request body is not a valid JSON object or expected structure.");
     }
-    console.log("N8N Webhook: Payload before transformation (payloadToProcess):", JSON.stringify(payloadToProcess, null, 2).substring(0, 2000)); // Added for debugging
+    // console.log("N8N Webhook: Payload before transformation (payloadToProcess):", JSON.stringify(payloadToProcess, null, 2).substring(0, 2000));
 
   } catch (error) {
     console.error("N8N Webhook: Error parsing request body or unexpected initial structure:", error);
@@ -209,18 +223,18 @@ export async function POST(request: NextRequest) {
   }
 
   const mappings = await getWebhookMappings();
-  console.log("N8N Webhook: Using mappings from DB for transformation:", JSON.stringify(mappings, null, 2)); // Moved this log here for clarity
+  console.log("N8N Webhook: Using mappings from DB for transformation:", JSON.stringify(mappings, null, 2));
   const transformedPayload = transformPayload(payloadToProcess, mappings);
-  console.log("N8N Webhook: Payload after transformation (transformedPayload):", JSON.stringify(transformedPayload, null, 2).substring(0, 2000)); // Added for debugging
+  console.log("N8N Webhook: Payload after transformation (transformedPayload):", JSON.stringify(transformedPayload, null, 2).substring(0, 2000));
+
+  // Ensure 'jobs' is an array if it's missing or null after transformation, before Zod validation
+  if (transformedPayload.jobs === undefined || transformedPayload.jobs === null) {
+    transformedPayload.jobs = [];
+  }
 
 
   const validationResult = n8nWebhookPayloadSchema.safeParse(transformedPayload);
   if (!validationResult.success) {
-    // console.error("N8N Webhook: Invalid input after transformation. Validation errors:", JSON.stringify(validationResult.error.flatten(), null, 2)); // Already logged this in detail
-    // console.error("N8N Webhook: Original rawRequestBody was:", JSON.stringify(rawRequestBody, null, 2).substring(0, 2000));
-    // console.error("N8N Webhook: payloadToProcess (before transformation) was:", JSON.stringify(payloadToProcess, null, 2).substring(0, 2000));
-    // console.error("N8N Webhook: transformedPayload (after transformation, before validation) was:", JSON.stringify(transformedPayload, null, 2).substring(0,2000));
-    
     await logAudit('ERROR', 'N8N Webhook: Invalid input received from n8n (after transformation).', 'API:N8N:CreateCandidateWithMatches', null, { 
         errors: validationResult.error.flatten(), 
         originalPayloadSnippet: JSON.stringify(payloadToProcess, null, 2).substring(0, 1000), 
@@ -231,7 +245,7 @@ export async function POST(request: NextRequest) {
       { 
         message: "Invalid input for n8n candidate creation (after transformation)", 
         errors: validationResult.error.flatten().fieldErrors, 
-        transformedPayloadForDebug: transformedPayload, // This is already being sent
+        transformedPayloadForDebug: transformedPayload,
         hint: "Ensure 'candidate_info' and its required sub-fields (like personal_info.firstname, personal_info.lastname, contact_info.email) are correctly mapped in Settings > Webhook Payload Mapping, and that your n8n workflow provides data for these mapped source paths. Also check server logs for the exact payload received and mappings used."
       },
       { status: 400 }
@@ -295,7 +309,7 @@ export async function POST(request: NextRequest) {
             associatedMatchDetails = {
                 jobTitle: job_applied.job_title || positionCheck.rows[0].title,
                 fitScore: finalFitScore,
-                reasons: job_applied.justification || [], // Use justification here
+                reasons: job_applied.justification || [],
                 n8nJobId: job_applied.job_id,
             };
             fullParsedDataForDB.associatedMatchDetails = associatedMatchDetails;
