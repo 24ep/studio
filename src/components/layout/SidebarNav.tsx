@@ -3,7 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Users, Briefcase, Settings, UsersRound, Code2, ListOrdered, Palette, Zap, ListTodo, FileText, UserCog, Info, KanbanSquare, DatabaseZap, SlidersHorizontal } from "lucide-react"; // Added DatabaseZap, SlidersHorizontal
+import { LayoutDashboard, Users, Briefcase, Settings, UsersRound, Code2, ListOrdered, Palette, Zap, ListTodo, DatabaseZap, SlidersHorizontal, KanbanSquare } from "lucide-react"; 
 import { cn } from "@/lib/utils";
 import {
   SidebarMenu,
@@ -23,6 +23,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { useSession } from "next-auth/react";
+import type { PlatformModuleId } from '@/lib/types';
 
 
 const mainNavItems = [
@@ -36,9 +37,9 @@ const myTaskBoardNavItem = { href: "/my-tasks", label: "My Task Board", icon: Li
 const baseSettingsSubItems = [
   { href: "/settings/preferences", label: "Preferences", icon: Palette },
   { href: "/settings/integrations", label: "Integrations", icon: Zap },
-  { href: "/settings/stages", label: "Recruitment Stages", icon: KanbanSquare, permissionId: 'RECRUITMENT_STAGES_MANAGE' },
-  { href: "/settings/data-models", label: "Data Models", icon: DatabaseZap, permissionId: 'DATA_MODELS_MANAGE' },
-  { href: "/settings/webhook-mapping", label: "Webhook Mapping", icon: SlidersHorizontal, permissionId: 'WEBHOOK_MAPPING_MANAGE' },
+  { href: "/settings/stages", label: "Recruitment Stages", icon: KanbanSquare, permissionId: 'RECRUITMENT_STAGES_MANAGE' as PlatformModuleId },
+  { href: "/settings/data-models", label: "Data Models", icon: DatabaseZap, permissionId: 'DATA_MODELS_MANAGE' as PlatformModuleId },
+  { href: "/settings/webhook-mapping", label: "Webhook Mapping", icon: SlidersHorizontal, permissionId: 'WEBHOOK_MAPPING_MANAGE' as PlatformModuleId },
   { href: "/users", label: "Manage Users", icon: UsersRound, adminOnly: true },
   { href: "/api-docs", label: "API Docs", icon: Code2 },
   { href: "/logs", label: "Logs", icon: ListOrdered, adminOnly: true },
@@ -57,11 +58,10 @@ export function SidebarNav() {
     setIsClient(true);
   }, []);
 
-  const canAccess = (item: { adminOnly?: boolean, permissionId?: string }) => {
+  const canAccess = (item: { adminOnly?: boolean, permissionId?: PlatformModuleId }) => {
     if (!isClient || sessionStatus !== 'authenticated') return false;
     if (item.adminOnly && userRole !== 'Admin') return false;
-    // If a specific permissionId is required, user must have it OR be an Admin (Admin bypasses specific perm checks)
-    if (item.permissionId && userRole !== 'Admin' && !modulePermissions.includes(item.permissionId as any)) return false;
+    if (item.permissionId && userRole !== 'Admin' && !modulePermissions.includes(item.permissionId)) return false;
     return true;
   };
 
@@ -70,11 +70,13 @@ export function SidebarNav() {
        if (!canAccess(item)) return false;
       return pathname.startsWith(item.href);
     });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pathname, userRole, sessionStatus, modulePermissions, isClient]);
 
 
   const clientSettingsSubItems = React.useMemo(() => {
     return baseSettingsSubItems.filter(item => canAccess(item));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userRole, modulePermissions, isClient, sessionStatus]);
 
   const isAnyMainNavItemActive = mainNavItems.some(item => pathname === item.href || (item.href !== "/" && pathname.startsWith(item.href)));

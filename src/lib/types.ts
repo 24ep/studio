@@ -13,8 +13,8 @@ export const PLATFORM_MODULES = [
   { id: 'USERS_MANAGE', label: 'Manage Users & Permissions' },
   { id: 'SETTINGS_ACCESS', label: 'Access System Settings' },
   { id: 'RECRUITMENT_STAGES_MANAGE', label: 'Manage Recruitment Stages' },
-  { id: 'DATA_MODELS_MANAGE', label: 'Manage Data Model Preferences' }, // New permission
-  { id: 'WEBHOOK_MAPPING_MANAGE', label: 'Manage Webhook Mappings' }, // New permission
+  { id: 'DATA_MODELS_MANAGE', label: 'Manage Data Model Preferences' },
+  { id: 'WEBHOOK_MAPPING_MANAGE', label: 'Manage Webhook Mappings' },
   { id: 'LOGS_VIEW', label: 'View Application Logs' },
 ] as const;
 
@@ -167,7 +167,7 @@ export interface CandidateDetails {
 
 export interface N8NCandidateWebhookEntry {
   candidate_info: CandidateDetails;
-  jobs: N8NJobMatch[];
+  jobs?: N8NJobMatch[]; // Made optional to handle cases where it might not be sent
   targetPositionId?: string | null;
   targetPositionTitle?: string | null;
   targetPositionDescription?: string | null;

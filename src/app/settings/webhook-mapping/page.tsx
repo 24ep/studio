@@ -34,17 +34,17 @@ const TARGET_CANDIDATE_ATTRIBUTES: { path: string; label: string; type: string; 
   // Arrays need special handling - user maps to the array, n8n workflow must format the array items.
   // Or user maps individual items if the source provides them flatly.
   // For now, let's assume the user maps to the top-level array path and n8n sends a pre-formatted array.
-  { path: 'candidate_info.education', label: 'Education (Array)', type: 'array of objects', example: '[{"university":"State U", "major":"CS"}]' },
-  { path: 'candidate_info.experience', label: 'Experience (Array)', type: 'array of objects', example: '[{"company":"Tech Corp", "position":"Dev"}]' },
-  { path: 'candidate_info.skills', label: 'Skills (Array)', type: 'array of objects', example: '[{"segment_skill":"Programming", "skill":["JS","Python"]}]' },
-  { path: 'candidate_info.job_suitable', label: 'Job Suitability (Array)', type: 'array of objects', example: '[{"suitable_career":"Dev", "suitable_job_level":"Senior"}]' },
+  { path: 'candidate_info.education', label: 'Education (Array)', type: 'array of objects', example: '[{\"university\":\"State U\", \"major\":\"CS\"}]' },
+  { path: 'candidate_info.experience', label: 'Experience (Array)', type: 'array of objects', example: '[{\"company\":\"Tech Corp\", \"position\":\"Dev\"}]' },
+  { path: 'candidate_info.skills', label: 'Skills (Array)', type: 'array of objects', example: '[{\"segment_skill\":\"Programming\", \"skill\":[\"JS\",\"Python\"]}]' },
+  { path: 'candidate_info.job_suitable', label: 'Job Suitability (Array)', type: 'array of objects', example: '[{\"suitable_career\":\"Dev\", \"suitable_job_level\":\"Senior\"}]' },
   // jobs array (n8n suggested matches)
-  { path: 'jobs', label: 'Job Matches (Array)', type: 'array of N8NJobMatch objects', example: '[{"job_title":"SE", "fit_score":90}]' },
+  { path: 'jobs', label: 'Job Matches (Array)', type: 'array of N8NJobMatch objects', example: '[{\"job_title\":\"SE\", \"fit_score\":90}]' },
   // job_applied object (the job this resume was for, if applicable)
   { path: 'job_applied.job_id', label: 'Applied Job - ID', type: 'string (UUID)', example: 'uuid-of-job' },
   { path: 'job_applied.job_title', label: 'Applied Job - Title', type: 'string', example: 'Senior Developer' },
   { path: 'job_applied.fit_score', label: 'Applied Job - Fit Score', type: 'number', example: '85' },
-  { path: 'job_applied.match_reasons', label: 'Applied Job - Match Reasons (Array)', type: 'array of strings', example: '["Skill X", "Experience Y"]' },
+  { path: 'job_applied.match_reasons', label: 'Applied Job - Match Reasons (Array)', type: 'array of strings', example: '[\"Skill X\", \"Experience Y\"]' },
   // Top-level target position hints (optional, can be passed by initial uploader)
   { path: 'targetPositionId', label: 'Target Position ID (Hint)', type: 'string (UUID)', example: 'uuid-of-target-job' },
   { path: 'targetPositionTitle', label: 'Target Position Title (Hint)', type: 'string', example: 'Specific Role Name' },
