@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect, useCallback } from 'react';
@@ -58,8 +57,8 @@ export default function DashboardPage() {
         accumulatedFetchError += `Failed to fetch positions: ${errorText}. `;
         setPositions([]);
       } else {
-        const positionsData: Position[] = await positionsRes.json();
-        setPositions(positionsData);
+        const positionsJson = await positionsRes.json();
+        setPositions(Array.isArray(positionsJson) ? positionsJson : positionsJson.positions);
       }
       
       if (accumulatedFetchError) {
