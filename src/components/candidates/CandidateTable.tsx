@@ -21,17 +21,18 @@ import { format, parseISO } from 'date-fns';
 import Link from 'next/link';
 import React from 'react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface CandidateTableProps {
   candidates: Candidate[];
   availablePositions: Position[];
-  availableStages: RecruitmentStage[]; // New prop
-  onUpdateCandidate: (candidateId: string, status: CandidateStatus) => Promise<void>;
+  availableStages: RecruitmentStage[];
+  onUpdateCandidate: (candidateId: string, status: string, newTransitionHistory?: TransitionRecord[]) => Promise<void>;
   onDeleteCandidate: (candidateId: string) => Promise<void>;
   onOpenUploadModal: (candidate: Candidate) => void;
   onEditPosition: (position: Position) => void;
-  isLoading?: boolean;
   onRefreshCandidateData: (candidateId: string) => Promise<void>;
+  isLoading?: boolean;
 }
 
 const getStatusBadgeVariant = (status: CandidateStatus): "default" | "secondary" | "destructive" | "outline" => {
@@ -168,35 +169,32 @@ const Row = React.memo(({ index, style }: { index: number; style: React.CSSPrope
   );
 });
 
-export function CandidateTable({ candidates, ...props }: CandidateTableProps) {
-  const {
-    availablePositions,
-    availableStages,
-    onUpdateCandidate,
-    onDeleteCandidate,
-    onOpenUploadModal,
-    onEditPosition,
-    onRefreshCandidateData
-  } = props;
-
-  // Pagination state
+export function CandidateTable({
+  candidates,
+  availablePositions,
+  availableStages,
+  onUpdateCandidate,
+  onDeleteCandidate,
+  onOpenUploadModal,
+  onEditPosition,
+  onRefreshCandidateData,
+  isLoading = false,
+}: CandidateTableProps) {
   const [currentPage, setCurrentPage] = React.useState(1);
   const [pageSize, setPageSize] = React.useState(20);
   const totalPages = Math.ceil(candidates.length / pageSize);
   
-  // Calculate current page items
   const startIndex = (currentPage - 1) * pageSize;
   const endIndex = startIndex + pageSize;
   const currentCandidates = candidates.slice(startIndex, endIndex);
 
-  // Navigation handlers
   const goToPage = (page: number) => {
     setCurrentPage(Math.max(1, Math.min(page, totalPages)));
   };
 
   const handlePageSizeChange = (newSize: string) => {
     setPageSize(Number(newSize));
-    setCurrentPage(1); // Reset to first page when changing page size
+    setCurrentPage(1);
   };
 
   const [selectedCandidateForModal, setSelectedCandidateForModal] = useState<Candidate | null>(null);
@@ -211,16 +209,23 @@ export function CandidateTable({ candidates, ...props }: CandidateTableProps) {
     onEditPosition(position);
   };
 
-  if (props.isLoading) {
-     return (
-      <div className="flex flex-col items-center justify-center h-64 border rounded-lg bg-card shadow">
-        <Users className="w-16 h-16 text-muted-foreground animate-pulse mb-4" />
-        <h3 className="text-xl font-semibold text-foreground">Loading Candidates...</h3>
-        <p className="text-muted-foreground">Please wait while we fetch the data.</p>
+  if (isLoading) {
+    return (
+      <div className="rounded-md border">
+        <div className="p-4">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <div key={i} className="flex items-center space-x-4 py-4">
+              <Skeleton className="h-12 w-12 rounded-full" />
+              <div className="space-y-2">
+                <Skeleton className="h-4 w-[250px]" />
+                <Skeleton className="h-4 w-[200px]" />
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
     );
   }
-
 
   if (candidates.length === 0) {
     return (
@@ -331,7 +336,6 @@ export function CandidateTable({ candidates, ...props }: CandidateTableProps) {
         </TableBody>
       </Table>
 
-      {/* Pagination Controls */}
       <div className="flex items-center justify-between px-2">
         <div className="flex items-center space-x-2">
           <p className="text-sm text-muted-foreground">

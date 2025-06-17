@@ -7,6 +7,7 @@ import { logAudit } from '@/lib/auditLog';
 import { v4 as uuidv4 } from 'uuid';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/app/api/auth/[...nextauth]/route';
+import { getCachedData, setCachedData, CACHE_KEYS } from '@/lib/redis';
 
 // Core statuses for fallback or specific logic, full list comes from DB
 const coreCandidateStatusValues: [CandidateStatus, ...CandidateStatus[]] = ['Applied', 'Screening', 'Shortlisted', 'Interview Scheduled', 'Interviewing', 'Offer Extended', 'Offer Accepted', 'Hired', 'Rejected', 'On Hold'];
@@ -102,29 +103,23 @@ export async function GET(request: NextRequest) {
 
   try {
     const { searchParams } = new URL(request.url);
+    const page = parseInt(searchParams.get('page') || '1');
+    const pageSize = parseInt(searchParams.get('pageSize') || '20');
+
+    // Try to get from cache first
+    const cacheKey = CACHE_KEYS.CANDIDATES(page, pageSize);
+    const cachedData = await getCachedData(cacheKey);
+    
+    if (cachedData) {
+      return NextResponse.json(cachedData);
+    }
+
     const nameFilter = searchParams.get('name');
     const positionIdFilter = searchParams.get('positionId');
     const educationFilter = searchParams.get('education'); // This uses ILIKE on text cast of JSONB.
     const minFitScoreParam = searchParams.get('minFitScore');
     const maxFitScoreParam = searchParams.get('maxFitScore');
     const assignedRecruiterIdParam = searchParams.get('assignedRecruiterId');
-    const limitParam = searchParams.get('limit');
-    const offsetParam = searchParams.get('offset');
-
-    let limit = 20;
-    if (limitParam) {
-      const parsedLimit = parseInt(limitParam, 10);
-      if (!isNaN(parsedLimit) && parsedLimit > 0 && parsedLimit <= 100) {
-        limit = parsedLimit;
-      }
-    }
-    let offset = 0;
-    if (offsetParam) {
-      const parsedOffset = parseInt(offsetParam, 10);
-      if (!isNaN(parsedOffset) && parsedOffset >= 0) {
-        offset = parsedOffset;
-      }
-    }
 
     let query = `
       SELECT
@@ -212,7 +207,6 @@ export async function GET(request: NextRequest) {
       }
     }
 
-
     if (conditions.length > 0) {
       query += ' WHERE ' + conditions.join(' AND ');
     }
@@ -223,7 +217,7 @@ export async function GET(request: NextRequest) {
 
     query += ' ORDER BY c."createdAt" DESC';
     query += ` LIMIT $${paramIndex++} OFFSET $${paramIndex++}`;
-    queryParams.push(limit, offset);
+    queryParams.push(pageSize, (page - 1) * pageSize);
 
     const result = await pool.query(query, queryParams);
 
@@ -245,12 +239,17 @@ export async function GET(request: NextRequest) {
         transitionHistory: row.transitionHistory || [],
     }));
 
-    return NextResponse.json({ candidates, total }, {
-      status: 200,
-      headers: {
-        'Cache-Control': 'private, no-cache, must-revalidate',
-      },
-    });
+    const response = {
+      candidates,
+      total,
+      page,
+      pageSize,
+    };
+
+    // Cache the response
+    await setCachedData(cacheKey, response);
+
+    return NextResponse.json(response);
   } catch (error) {
     console.error("Failed to fetch candidates:", error);
     await logAudit('ERROR', `Failed to fetch candidates. Error: ${(error as Error).message}`, 'API:Candidates:GetAll', session?.user?.id);

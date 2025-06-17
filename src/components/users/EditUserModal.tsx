@@ -30,9 +30,6 @@ import type { UserProfile, PlatformModuleId, UserGroup } from '@/lib/types';
 import { PLATFORM_MODULES } from '@/lib/types';
 import { ScrollArea } from '../ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
-import dynamic from 'next/dynamic';
-
-const EditUserModal = dynamic(() => import('./EditUserModal'), { ssr: false });
 
 const userRoleOptions: UserProfile['role'][] = ['Admin', 'Recruiter', 'Hiring Manager'];
 const platformModuleIds = PLATFORM_MODULES.map(m => m.id) as [PlatformModuleId, ...PlatformModuleId[]];
@@ -55,7 +52,7 @@ interface EditUserModalProps {
   user: UserProfile | null;
 }
 
-export function EditUserModal({ isOpen, onOpenChange, onEditUser, user }: EditUserModalProps) {
+export default function EditUserModal({ isOpen, onOpenChange, onEditUser, user }: EditUserModalProps) {
   const { toast } = useToast();
   const [availableGroups, setAvailableGroups] = useState<UserGroup[]>([]);
 

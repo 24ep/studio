@@ -18,7 +18,8 @@ import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
 import { useSession, signIn } from 'next-auth/react';
 import { Pagination } from '@/components/ui/pagination';
-import { useQuery, QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { useQuery, QueryClient, QueryClientProvider, useQueryClient } from '@tanstack/react-query';
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface CandidatesPageClientProps {
   initialCandidates: Candidate[];
@@ -64,14 +65,8 @@ function CandidatesPageClientInner({
   const [pageSize, setPageSize] = useState(20);
   const [total, setTotal] = useState(initialCandidates.length);
 
-  // React Query for candidates
-  const {
-    data: candidatesData,
-    isLoading: queryIsLoading,
-    error: queryError,
-    refetch
-  } = useQuery({
-    queryKey: ['candidates', filters, page, pageSize],
+  const { data: candidatesData, isLoading: isCandidatesLoading } = useQuery({
+    queryKey: ['candidates', page, pageSize, filters],
     queryFn: async () => {
       const query = new URLSearchParams();
       if (filters.name) query.append('name', filters.name);
@@ -81,16 +76,15 @@ function CandidatesPageClientInner({
       if (filters.maxFitScore !== undefined) query.append('maxFitScore', String(filters.maxFitScore));
       query.append('limit', String(pageSize));
       query.append('offset', String((page - 1) * pageSize));
+      
       const response = await fetch(`/api/candidates?${query.toString()}`);
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ message: response.statusText || `Status: ${response.status}` }));
-        throw new Error(errorData.message || `Failed to fetch candidates: ${response.statusText || `Status: ${response.status}`}`);
-      }
-      return await response.json();
+      if (!response.ok) throw new Error('Failed to fetch candidates');
+      const data = await response.json();
+      setTotal(data.total);
+      return data.candidates;
     },
-    keepPreviousData: true,
-    enabled: sessionStatus === 'authenticated' && !authError && !permissionError,
-    initialData: { candidates: initialCandidates, total: initialCandidates.length },
+    initialData: initialCandidates,
+    staleTime: 1000 * 60 * 5, // 5 minutes
   });
 
   const fetchFilteredCandidatesOnClient = useCallback(async (currentFilters: CandidateFilterValues, pageOverride?: number, pageSizeOverride?: number) => {
@@ -404,6 +398,30 @@ function CandidatesPageClientInner({
             </div>
         )}
         <Button onClick={() => fetchFilteredCandidatesOnClient(filters, 1)} className="btn-hover-primary-gradient">Try Again</Button>
+      </div>
+    );
+  }
+
+  if (isLoading) {
+    return (
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <Skeleton className="h-8 w-[200px]" />
+          <Skeleton className="h-8 w-[100px]" />
+        </div>
+        <div className="rounded-md border">
+          <div className="p-4">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <div key={i} className="flex items-center space-x-4 py-4">
+                <Skeleton className="h-12 w-12 rounded-full" />
+                <div className="space-y-2">
+                  <Skeleton className="h-4 w-[250px]" />
+                  <Skeleton className="h-4 w-[200px]" />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
     );
   }
