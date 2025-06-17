@@ -2,7 +2,10 @@
 const nextConfig = {
   output: 'standalone',
   experimental: {
-    serverActions: true,
+    serverActions: {
+      allowedOrigins: ['localhost:9002', 'localhost:3000'],
+      bodySizeLimit: '2mb'
+    }
   },
   // Enable static optimization for images
   images: {
@@ -13,6 +16,10 @@ const nextConfig = {
         hostname: '**',
       },
     ],
+  },
+  webpack: (config) => {
+    config.externals = [...(config.externals || []), { canvas: "canvas" }];
+    return config;
   },
 };
 
