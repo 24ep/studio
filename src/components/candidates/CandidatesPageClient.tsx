@@ -1,3 +1,4 @@
+
 // src/components/candidates/CandidatesPageClient.tsx
 "use client";
 
@@ -197,7 +198,7 @@ export function CandidatesPageClient({
   const handleAddCandidateSubmit = async (formData: AddCandidateFormValues) => {
     setIsLoading(true);
     try {
-      const apiPayload = { /* ... as before ... */ 
+      const apiPayload = { 
         name: `${formData.personal_info.firstname} ${formData.personal_info.lastname}`.trim(),
         email: formData.contact_info.email,
         phone: formData.contact_info.phone || null,
@@ -225,7 +226,7 @@ export function CandidatesPageClient({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(apiPayload),
       });
-      if (!response.ok) { /* ... error handling ... */ 
+      if (!response.ok) { 
         const errorData = await response.json().catch(() => ({ message: "An unknown error occurred" }));
         throw new Error(errorData.message || `Failed to add candidate: ${response.statusText || `Status: ${response.status}`}`);
       }
@@ -233,7 +234,7 @@ export function CandidatesPageClient({
       setAllCandidates(prev => [newCandidate, ...prev].sort((a,b) => new Date(b.createdAt!).getTime() - new Date(a.createdAt!).getTime()));
       setIsAddModalOpen(false);
       toast({ title: "Candidate Added", description: `${newCandidate.name} has been successfully added.` });
-    } catch (error) { /* ... error handling ... */ 
+    } catch (error) { 
         console.error("Error adding candidate:", error);
         toast({ title: "Error Adding Candidate", description: (error as Error).message, variant: "destructive" });
     } finally { setIsLoading(false); }
@@ -245,7 +246,7 @@ export function CandidatesPageClient({
   };
 
   const handleUploadSuccess = (updatedCandidate: Candidate) => {
-    refreshCandidateInList(updatedCandidate.id); // Use refresh to get full latest data
+    refreshCandidateInList(updatedCandidate.id); 
     toast({ title: "Resume Uploaded", description: `Resume for ${updatedCandidate.name} successfully updated.`});
   };
 
@@ -254,7 +255,7 @@ export function CandidatesPageClient({
     setTimeout(() => { fetchFilteredCandidatesOnClient(filters); }, 15000);
   };
   
-  const handleDownloadExcelTemplate = () => { /* ... as before ... */
+  const handleDownloadExcelTemplate = () => {
     const columns = [
       "name (Optional, or derive from personal_info.firstname/lastname)",
       "email (Optional, or derive from contact_info.email)",
@@ -282,7 +283,7 @@ export function CandidatesPageClient({
     });
   };
 
-  const handleExportToExcel = async () => { /* ... as before ... */ 
+  const handleExportToExcel = async () => { 
     setIsLoading(true);
     try {
       const query = new URLSearchParams();
@@ -290,7 +291,7 @@ export function CandidatesPageClient({
       if (filters.positionId && filters.positionId !== "__ALL_POSITIONS__") query.append('positionId', filters.positionId);
 
       const response = await fetch(`/api/candidates/export?${query.toString()}`);
-      if (!response.ok) { /* ... */ throw new Error("Export failed"); }
+      if (!response.ok) { throw new Error("Export failed"); }
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -301,7 +302,7 @@ export function CandidatesPageClient({
       a.remove();
       window.URL.revokeObjectURL(url);
       toast({ title: "Export Successful", description: "Candidates exported." });
-    } catch (error) { /* ... */ toast({ title: "Export Failed", description: (error as Error).message, variant: "destructive" });
+    } catch (error) { toast({ title: "Export Failed", description: (error as Error).message, variant: "destructive" });
     } finally { setIsLoading(false); }
   };
 
@@ -313,9 +314,6 @@ export function CandidatesPageClient({
   const handlePositionEdited = async () => {
     toast({ title: "Position Updated", description: "Position details have been saved." });
     setIsEditPositionModalOpen(false);
-    // Re-fetch positions for the filter dropdown and candidates as positions might have changed
-    // This simple approach re-fetches based on current client filters.
-    // A more granular update of availablePositions and then candidates might be possible.
     if (sessionStatus === 'authenticated') {
         const posResponse = await fetch('/api/positions');
         if (posResponse.ok) setAvailablePositions(await posResponse.json());
@@ -351,7 +349,13 @@ export function CandidatesPageClient({
         <ServerCrash className="w-16 h-16 text-destructive mb-4" />
         <h2 className="text-2xl font-semibold text-foreground mb-2">Error Loading Candidates</h2>
         <p className="text-muted-foreground mb-4 max-w-md">{fetchError}</p>
-        {isMissingTableError && ( /* ... */ )}
+        {isMissingTableError && (
+            <div className="mb-6 p-4 border border-destructive bg-destructive/10 rounded-md text-sm">
+                <p className="font-semibold">It looks like a required database table (or a related one) is missing.</p>
+                <p className="mt-1">This usually means the database initialization script (`pg-init-scripts/init-db.sql`) did not run correctly.</p>
+                <p className="mt-2">Please refer to the troubleshooting steps in the `README.md` for guidance on how to resolve this.</p>
+            </div>
+        )}
         <Button onClick={() => fetchFilteredCandidatesOnClient(filters)} className="btn-hover-primary-gradient">Try Again</Button>
       </div>
     );
