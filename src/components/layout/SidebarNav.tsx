@@ -224,4 +224,5 @@ const SidebarNavComponent = function SidebarNav() {
   );
 };
 
-export const SidebarNav = React.memo(SidebarNavComponent);
+const SidebarNav = React.memo(SidebarNavComponent);
+export default SidebarNav;
