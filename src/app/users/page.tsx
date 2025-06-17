@@ -10,7 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { useState, useEffect, useCallback } from 'react';
 import { useToast } from "@/hooks/use-toast";
 import { AddUserModal, type AddUserFormValues } from "@/components/users/AddUserModal";
-import dynamic from 'next/dynamic';
+import { EditUserModal, type EditUserFormValues } from "@/components/users/EditUserModal";
 import { useRouter, usePathname } from 'next/navigation'; 
 import {
   AlertDialog,
@@ -32,14 +32,8 @@ import {
 import { signIn, useSession } from "next-auth/react";
 import { Pagination } from '@/components/ui/pagination';
 import { useQuery, QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import type { EditUserFormValues } from "@/components/users/EditUserModal";
 
 const queryClient = new QueryClient();
-
-const EditUserModal = dynamic(() => import('@/components/users/EditUserModal'), {
-  loading: () => <div>Loading...</div>,
-  ssr: false
-});
 
 function ManageUsersPageInner() {
   const [users, setUsers] = useState<UserProfile[]>([]);

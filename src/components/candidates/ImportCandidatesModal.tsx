@@ -105,7 +105,7 @@ export function ImportCandidatesModal({ isOpen, onOpenChange, onImportSuccess }:
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={(open: boolean) => {
+    <Dialog open={isOpen} onOpenChange={(open) => {
       onOpenChange(open);
       if (!open) {
         setSelectedFile(null);

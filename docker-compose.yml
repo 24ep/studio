@@ -5,9 +5,11 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+      args:
+        NODE_ENV: ${NODE_ENV:-production}
     pull_policy: always
     ports:
-      - "9846:9002" # Next.js dev server port (from package.json's dev script, or 3000 for `next start` if not overridden)
+      - "9846:3000" # Match the port exposed in Dockerfile
     # For production deployments, you typically want the application code to be self-contained
     # within the Docker image. The volume mount `.:/app` is primarily for local development to
     # reflect code changes without rebuilding the image. It's commented out for production-like behavior.
@@ -20,15 +22,15 @@ services:
     # The named volumes below are generally fine and can be useful for persisting
     # node_modules and the .next build cache across container restarts, potentially
     # speeding up subsequent starts if the underlying image hasn't changed significantly.
-    volumes:
-      - app_node_modules:/app/node_modules
-      - app_next:/app/.next
+    # volumes:
+    #   - app_node_modules:/app/node_modules
+    #   - app_next:/app/.next
     environment:
       # --- NextAuth & Azure AD Configuration ---
       AZURE_AD_CLIENT_ID: "${AZURE_AD_CLIENT_ID:-your_azure_ad_application_client_id}"
       AZURE_AD_CLIENT_SECRET: "${AZURE_AD_CLIENT_SECRET:-your_azure_ad_client_secret_value}"
       AZURE_AD_TENANT_ID: "${AZURE_AD_TENANT_ID:-your_azure_ad_directory_tenant_id}"
-      NEXTAUTH_URL: "${NEXTAUTH_URL:-http://localhost:9002}"
+      NEXTAUTH_URL: "${NEXTAUTH_URL:-http://localhost:9846}"
       NEXTAUTH_SECRET: "${NEXTAUTH_SECRET:-super-secret-nextauth-key-replace-this}" # Generate with: openssl rand -base64 32
 
       # --- Genkit Configuration ---
@@ -47,7 +49,7 @@ services:
       N8N_GENERIC_PDF_WEBHOOK_URL: "${N8N_GENERIC_PDF_WEBHOOK_URL:-https://n8n.bondarys.com/webhook/upload-cv}" # Optional n8n webhook URL for generic PDF uploads
 
       # --- General Application Settings ---
-      NODE_ENV: development # Change to "production" for actual production builds
+      NODE_ENV: ${NODE_ENV:-production}
     depends_on:
       - postgres
       - minio
@@ -99,5 +101,6 @@ volumes:
   postgres_data:
   minio_data:
   redis_data:
-  app_node_modules:
-  app_next:
+  # Remove unused volumes
+  # app_node_modules:
+  # app_next:
