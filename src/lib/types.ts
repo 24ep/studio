@@ -145,7 +145,7 @@ export interface JobSuitableEntry {
 
 export interface N8NJobMatch {
   job_id?: string;
-  job_title: string;
+  job_title?: string; // Changed to optional
   fit_score: number;
   match_reasons?: string[];
 }
@@ -178,7 +178,7 @@ export interface N8NCandidateWebhookEntry {
     job_id?: string | null;
     job_title?: string | null;
     fit_score?: number | null;
-    justification?: string[]; // Changed from match_reasons
+    justification?: string[];
   } | null;
 }
 

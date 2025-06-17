@@ -170,7 +170,7 @@ const candidateDetailsSchemaForN8N = z.object({
 
 const n8nJobMatchSchema = z.object({
   job_id: z.string().uuid().optional().nullable(),
-  job_title: z.string().min(1, "Job title is required"),
+  job_title: z.string().min(1, "Job title is required").optional(), // Made optional
   fit_score: z.number().min(0).max(100, "Fit score must be between 0 and 100"),
   match_reasons: z.array(z.string()).optional().default([]),
 }).passthrough();
@@ -230,6 +230,10 @@ export async function POST(request: NextRequest) {
   // Ensure 'jobs' is an array if it's missing or null after transformation, before Zod validation
   if (transformedPayload.jobs === undefined || transformedPayload.jobs === null) {
     transformedPayload.jobs = [];
+  }
+  // Defensive check: if transformedPayload.job_applied exists and both justification and match_reasons are present, remove match_reasons
+  if (transformedPayload.job_applied && transformedPayload.job_applied.justification && transformedPayload.job_applied.match_reasons) {
+    delete transformedPayload.job_applied.match_reasons;
   }
 
 
@@ -332,7 +336,7 @@ export async function POST(request: NextRequest) {
         if (n8nMatchForTarget) {
           finalFitScore = n8nMatchForTarget.fit_score;
           associatedMatchDetails = {
-            jobTitle: n8nMatchForTarget.job_title,
+            jobTitle: n8nMatchForTarget.job_title || matchedJobTitle,
             fitScore: n8nMatchForTarget.fit_score,
             reasons: n8nMatchForTarget.match_reasons || [],
             n8nJobId: n8nMatchForTarget.job_id,
@@ -361,14 +365,14 @@ export async function POST(request: NextRequest) {
             finalPositionId = topMatch.job_id;
             finalFitScore = topMatch.fit_score;
             associatedMatchDetails = {
-                jobTitle: topMatch.job_title,
+                jobTitle: topMatch.job_title || positionCheck.rows[0].title,
                 fitScore: topMatch.fit_score,
                 reasons: topMatch.match_reasons || [],
                 n8nJobId: topMatch.job_id,
             };
         }
       }
-      if (!finalPositionId) {
+      if (!finalPositionId && topMatch.job_title) { // Check if job_title exists before querying with it
         const positionQuery = 'SELECT id, title FROM "Position" WHERE title ILIKE $1 AND "isOpen" = TRUE LIMIT 1';
         const positionResult = await client.query(positionQuery, [topMatch.job_title]);
         if (positionResult.rows.length > 0) {
@@ -483,5 +487,3 @@ export async function POST(request: NextRequest) {
     }
   }
 }
-
-    
