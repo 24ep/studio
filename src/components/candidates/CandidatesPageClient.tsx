@@ -17,7 +17,7 @@ import { EditPositionModal } from '@/components/positions/EditPositionModal';
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
 import { useSession, signIn } from 'next-auth/react';
-import { Pagination } from '@/components/ui/pagination';
+import { Pagination } from '../ui/pagination';
 
 interface CandidatesPageClientProps {
   initialCandidates: Candidate[];
