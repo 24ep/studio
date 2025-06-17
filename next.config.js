@@ -1,14 +1,12 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  output: 'standalone',
-  experimental: {
-    serverActions: true,
-  },
+  reactStrictMode: true,
+  swcMinify: true,
   typescript: {
-    ignoreBuildErrors: true, // Temporarily ignore TS errors during build
+    ignoreBuildErrors: true,
   },
   eslint: {
-    ignoreDuringBuilds: true, // Temporarily ignore ESLint errors during build
+    ignoreDuringBuilds: true,
   },
 }
 
