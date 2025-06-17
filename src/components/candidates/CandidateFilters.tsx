@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState, useEffect } from 'react';
@@ -11,6 +10,8 @@ import { Label } from '@/components/ui/label';
 import { Search, FilterX, ListFilter, Check, ChevronsUpDown } from 'lucide-react';
 import type { Position } from '@/lib/types';
 import { cn } from "@/lib/utils";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 export interface CandidateFilterValues {
   name?: string;
@@ -77,6 +78,17 @@ export function CandidateFilters({ initialFilters = {}, onFilterChange, availabl
       maxFitScore: 100,
     });
   };
+
+  if (isLoading) {
+    return (
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <Skeleton className="h-10 w-full" />
+        <Skeleton className="h-10 w-full" />
+        <Skeleton className="h-10 w-full" />
+        <Skeleton className="h-10 w-full" />
+      </div>
+    );
+  }
 
   return (
     <div className="mb-6 p-4 border rounded-lg bg-card shadow">

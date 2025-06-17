@@ -18,8 +18,7 @@ import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
 import { useSession, signIn } from 'next-auth/react';
 import { Pagination } from '@/components/ui/pagination';
-import { useQuery, QueryClient, QueryClientProvider, useQueryClient } from '@tanstack/react-query';
-import { Skeleton } from "@/components/ui/skeleton";
+import { useQuery, QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 interface CandidatesPageClientProps {
   initialCandidates: Candidate[];
@@ -29,7 +28,14 @@ interface CandidatesPageClientProps {
   permissionError?: boolean;
 }
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 1000 * 60 * 5, // 5 minutes
+      gcTime: 1000 * 60 * 30, // 30 minutes (previously cacheTime)
+    },
+  },
+});
 
 function CandidatesPageClientInner({
   initialCandidates,
@@ -65,26 +71,21 @@ function CandidatesPageClientInner({
   const [pageSize, setPageSize] = useState(20);
   const [total, setTotal] = useState(initialCandidates.length);
 
-  const { data: candidatesData, isLoading: isCandidatesLoading } = useQuery({
+  // React Query for candidates
+  const {
+    data: candidatesData,
+    isLoading: queryIsLoading,
+    error: queryError,
+    refetch
+  } = useQuery({
     queryKey: ['candidates', page, pageSize, filters],
     queryFn: async () => {
-      const query = new URLSearchParams();
-      if (filters.name) query.append('name', filters.name);
-      if (filters.positionId && filters.positionId !== "__ALL_POSITIONS__") query.append('positionId', filters.positionId);
-      if (filters.education) query.append('education', filters.education);
-      if (filters.minFitScore !== undefined) query.append('minFitScore', String(filters.minFitScore));
-      if (filters.maxFitScore !== undefined) query.append('maxFitScore', String(filters.maxFitScore));
-      query.append('limit', String(pageSize));
-      query.append('offset', String((page - 1) * pageSize));
-      
-      const response = await fetch(`/api/candidates?${query.toString()}`);
+      const response = await fetch(`/api/candidates?page=${page}&pageSize=${pageSize}&filters=${JSON.stringify(filters)}`);
       if (!response.ok) throw new Error('Failed to fetch candidates');
-      const data = await response.json();
-      setTotal(data.total);
-      return data.candidates;
+      return response.json();
     },
     initialData: initialCandidates,
-    staleTime: 1000 * 60 * 5, // 5 minutes
+    placeholderData: (previousData) => previousData,
   });
 
   const fetchFilteredCandidatesOnClient = useCallback(async (currentFilters: CandidateFilterValues, pageOverride?: number, pageSizeOverride?: number) => {
@@ -398,30 +399,6 @@ function CandidatesPageClientInner({
             </div>
         )}
         <Button onClick={() => fetchFilteredCandidatesOnClient(filters, 1)} className="btn-hover-primary-gradient">Try Again</Button>
-      </div>
-    );
-  }
-
-  if (isLoading) {
-    return (
-      <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <Skeleton className="h-8 w-[200px]" />
-          <Skeleton className="h-8 w-[100px]" />
-        </div>
-        <div className="rounded-md border">
-          <div className="p-4">
-            {Array.from({ length: 5 }).map((_, i) => (
-              <div key={i} className="flex items-center space-x-4 py-4">
-                <Skeleton className="h-12 w-12 rounded-full" />
-                <div className="space-y-2">
-                  <Skeleton className="h-4 w-[250px]" />
-                  <Skeleton className="h-4 w-[200px]" />
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
       </div>
     );
   }

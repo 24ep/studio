@@ -26,13 +26,13 @@ import { Skeleton } from "@/components/ui/skeleton";
 interface CandidateTableProps {
   candidates: Candidate[];
   availablePositions: Position[];
-  availableStages: RecruitmentStage[];
-  onUpdateCandidate: (candidateId: string, status: string, newTransitionHistory?: TransitionRecord[]) => Promise<void>;
+  availableStages: RecruitmentStage[]; // New prop
+  onUpdateCandidate: (candidateId: string, status: CandidateStatus) => Promise<void>;
   onDeleteCandidate: (candidateId: string) => Promise<void>;
   onOpenUploadModal: (candidate: Candidate) => void;
   onEditPosition: (position: Position) => void;
-  onRefreshCandidateData: (candidateId: string) => Promise<void>;
   isLoading?: boolean;
+  onRefreshCandidateData: (candidateId: string) => Promise<void>;
 }
 
 const getStatusBadgeVariant = (status: CandidateStatus): "default" | "secondary" | "destructive" | "outline" => {
@@ -169,32 +169,35 @@ const Row = React.memo(({ index, style }: { index: number; style: React.CSSPrope
   );
 });
 
-export function CandidateTable({
-  candidates,
-  availablePositions,
-  availableStages,
-  onUpdateCandidate,
-  onDeleteCandidate,
-  onOpenUploadModal,
-  onEditPosition,
-  onRefreshCandidateData,
-  isLoading = false,
-}: CandidateTableProps) {
+export function CandidateTable({ candidates, ...props }: CandidateTableProps) {
+  const {
+    availablePositions,
+    availableStages,
+    onUpdateCandidate,
+    onDeleteCandidate,
+    onOpenUploadModal,
+    onEditPosition,
+    onRefreshCandidateData
+  } = props;
+
+  // Pagination state
   const [currentPage, setCurrentPage] = React.useState(1);
   const [pageSize, setPageSize] = React.useState(20);
   const totalPages = Math.ceil(candidates.length / pageSize);
   
+  // Calculate current page items
   const startIndex = (currentPage - 1) * pageSize;
   const endIndex = startIndex + pageSize;
   const currentCandidates = candidates.slice(startIndex, endIndex);
 
+  // Navigation handlers
   const goToPage = (page: number) => {
     setCurrentPage(Math.max(1, Math.min(page, totalPages)));
   };
 
   const handlePageSizeChange = (newSize: string) => {
     setPageSize(Number(newSize));
-    setCurrentPage(1);
+    setCurrentPage(1); // Reset to first page when changing page size
   };
 
   const [selectedCandidateForModal, setSelectedCandidateForModal] = useState<Candidate | null>(null);
@@ -209,20 +212,45 @@ export function CandidateTable({
     onEditPosition(position);
   };
 
-  if (isLoading) {
+  if (props.isLoading) {
     return (
-      <div className="rounded-md border">
-        <div className="p-4">
-          {Array.from({ length: 5 }).map((_, i) => (
-            <div key={i} className="flex items-center space-x-4 py-4">
-              <Skeleton className="h-12 w-12 rounded-full" />
-              <div className="space-y-2">
-                <Skeleton className="h-4 w-[250px]" />
-                <Skeleton className="h-4 w-[200px]" />
-              </div>
-            </div>
-          ))}
-        </div>
+      <div className="space-y-4">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Candidate</TableHead>
+              <TableHead>Position</TableHead>
+              <TableHead>Fit Score</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead>Last Updated</TableHead>
+              <TableHead>Resume</TableHead>
+              <TableHead className="text-right">Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {Array.from({ length: 5 }).map((_, index) => (
+              <TableRow key={index}>
+                <TableCell>
+                  <div className="flex items-center gap-3">
+                    <Skeleton className="h-10 w-10 rounded-full" />
+                    <div className="space-y-2">
+                      <Skeleton className="h-4 w-[200px]" />
+                      <Skeleton className="h-3 w-[150px]" />
+                    </div>
+                  </div>
+                </TableCell>
+                <TableCell><Skeleton className="h-4 w-[150px]" /></TableCell>
+                <TableCell><Skeleton className="h-4 w-[100px]" /></TableCell>
+                <TableCell><Skeleton className="h-4 w-[80px]" /></TableCell>
+                <TableCell><Skeleton className="h-4 w-[100px]" /></TableCell>
+                <TableCell><Skeleton className="h-4 w-[80px]" /></TableCell>
+                <TableCell className="text-right">
+                  <Skeleton className="h-8 w-8 ml-auto" />
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
       </div>
     );
   }
@@ -336,6 +364,7 @@ export function CandidateTable({
         </TableBody>
       </Table>
 
+      {/* Pagination Controls */}
       <div className="flex items-center justify-between px-2">
         <div className="flex items-center space-x-2">
           <p className="text-sm text-muted-foreground">

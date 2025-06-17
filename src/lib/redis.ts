@@ -69,32 +69,28 @@ export async function preloadCommonData() {
     const usersKey = CACHE_KEYS.USERS(1, 20);
     const groupsKey = CACHE_KEYS.GROUPS;
 
-    // Set initial cache with empty data to prevent cache misses
+    // Set initial empty data with longer cache duration
     await Promise.all([
-      setCachedData(candidatesKey, { candidates: [], total: 0, page: 1, pageSize: 20 }),
-      setCachedData(positionsKey, { positions: [], total: 0, page: 1, pageSize: 20 }),
-      setCachedData(usersKey, { users: [], total: 0, page: 1, pageSize: 20 }),
-      setCachedData(groupsKey, [])
+      setCachedData(candidatesKey, { candidates: [], total: 0, page: 1, pageSize: 20 }, 3600),
+      setCachedData(positionsKey, { positions: [], total: 0, page: 1, pageSize: 20 }, 3600),
+      setCachedData(usersKey, { users: [], total: 0, page: 1, pageSize: 20 }, 3600),
+      setCachedData(groupsKey, [], 3600)
     ]);
 
     console.log('Common data preloaded successfully');
   } catch (error) {
-    console.error('Failed to preload common data:', error);
+    console.error('Error preloading common data:', error);
   }
 }
 
-// Warm up cache for specific data
-export async function warmupCache<T>(
-  key: string,
-  fetchData: () => Promise<T>,
-  duration: number = CACHE_DURATION.CANDIDATES
-): Promise<void> {
-  try {
-    const data = await fetchData();
-    await setCachedData(key, data, duration);
-  } catch (error) {
-    console.error(`Failed to warm up cache for key ${key}:`, error);
-  }
-}
+// Initialize Redis and preload data
+redis.on('connect', () => {
+  console.log('Redis connected');
+  preloadCommonData();
+});
+
+redis.on('error', (error) => {
+  console.error('Redis error:', error);
+});
 
 export default redis; 
