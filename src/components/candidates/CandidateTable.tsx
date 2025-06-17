@@ -23,12 +23,12 @@ import Link from 'next/link';
 
 interface CandidateTableProps {
   candidates: Candidate[];
-  availablePositions: Position[]; 
+  availablePositions: Position[];
   availableStages: RecruitmentStage[]; // New prop
   onUpdateCandidate: (candidateId: string, status: CandidateStatus) => Promise<void>;
   onDeleteCandidate: (candidateId: string) => Promise<void>;
   onOpenUploadModal: (candidate: Candidate) => void;
-  onEditPosition: (position: Position) => void; 
+  onEditPosition: (position: Position) => void;
   isLoading?: boolean;
   onRefreshCandidateData: (candidateId: string) => Promise<void>;
 }
@@ -118,90 +118,111 @@ export function CandidateTable({
             </TableRow>
           </TableHeader>
           <TableBody>
-            {candidates.map((candidate) => (
-              <TableRow key={candidate.id} className="hover:bg-muted/50 transition-colors">
-                <TableCell>
-                  <div className="flex items-center gap-3">
-                    <Avatar className="h-10 w-10">
-                      <AvatarImage src={(candidate.parsedData as any)?.personal_info?.avatar_url || `https://placehold.co/40x40.png?text=${candidate.name.charAt(0)}`} alt={candidate.name} data-ai-hint="person avatar" />
-                      <AvatarFallback>{candidate.name.charAt(0).toUpperCase()}</AvatarFallback>
-                    </Avatar>
-                    <div>
-                      <Link href={`/candidates/${candidate.id}`} passHref>
-                        <span className="font-medium text-foreground hover:underline cursor-pointer">{candidate.name}</span>
-                      </Link>
-                      <div className="text-xs text-muted-foreground">{candidate.email}</div>
-                    </div>
-                  </div>
-                </TableCell>
-                <TableCell>
-                  {candidate.position?.title ? (
-                    <span
-                      className="font-medium text-primary hover:underline cursor-pointer"
-                      onClick={() => handleEditPositionClick(candidate.positionId)}
-                      title={`Edit ${candidate.position.title}`}
-                    >
-                      {candidate.position.title}
-                    </span>
-                  ) : (
-                    <span className="text-muted-foreground">N/A</span>
-                  )}
-                </TableCell>
-                <TableCell>
-                  <div className="flex items-center gap-2">
-                    <Progress value={candidate.fitScore || 0} className="h-2 w-[60px]" />
-                    <span className="text-sm font-medium text-foreground">{(candidate.fitScore || 0)}%</span>
-                  </div>
-                </TableCell>
-                <TableCell>
-                  <Badge variant={getStatusBadgeVariant(candidate.status)} className="capitalize">
-                    {candidate.status}
-                  </Badge>
-                </TableCell>
-                <TableCell className="text-sm text-muted-foreground">
-                  {format(parseISO(candidate.updatedAt || candidate.createdAt!), "MMM d, yyyy")}
-                </TableCell>
-                <TableCell className="text-xs">
-                  {candidate.resumePath ?
-                    <span className="text-green-600 truncate block max-w-[100px] hover:underline cursor-pointer" title={candidate.resumePath}>
-                      {candidate.resumePath.split('-').pop()?.split('.').slice(0,-1).join('.') || candidate.resumePath.split('-').pop()}
-                    </span>
-                    : <span className="text-muted-foreground">No resume</span>}
-                </TableCell>
-                <TableCell className="text-right">
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon" className="h-8 w-8">
-                        <MoreHorizontal className="h-4 w-4" />
-                        <span className="sr-only">Actions</span>
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem asChild>
-                        <Link href={`/candidates/${candidate.id}`}>
-                          <Eye className="mr-2 h-4 w-4" /> View Details
+            {candidates.map((candidate) => {
+              const dateValue = candidate.updatedAt || candidate.createdAt;
+              let displayDate = 'N/A';
+              if (dateValue && typeof dateValue === 'string') {
+                try {
+                  displayDate = format(parseISO(dateValue), "MMM d, yyyy");
+                } catch (e) {
+                  console.error("Failed to parse date for candidate " + candidate.id + ": " + dateValue, e);
+                  displayDate = 'Invalid Date';
+                }
+              } else if (dateValue) {
+                // Fallback for non-string (e.g. Date object or number timestamp, though type says string)
+                try {
+                  displayDate = format(new Date(dateValue as any), "MMM d, yyyy");
+                } catch (e) {
+                   console.error("Failed to format non-string date for candidate " + candidate.id + ": " + dateValue, e);
+                   displayDate = 'Invalid Date';
+                }
+              }
+
+              return (
+                <TableRow key={candidate.id} className="hover:bg-muted/50 transition-colors">
+                  <TableCell>
+                    <div className="flex items-center gap-3">
+                      <Avatar className="h-10 w-10">
+                        <AvatarImage src={(candidate.parsedData as any)?.personal_info?.avatar_url || `https://placehold.co/40x40.png?text=${candidate.name.charAt(0)}`} alt={candidate.name} data-ai-hint="person avatar" />
+                        <AvatarFallback>{candidate.name.charAt(0).toUpperCase()}</AvatarFallback>
+                      </Avatar>
+                      <div>
+                        <Link href={`/candidates/${candidate.id}`} passHref>
+                          <span className="font-medium text-foreground hover:underline cursor-pointer">{candidate.name}</span>
                         </Link>
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => handleManageTransitionsClick(candidate)}>
-                        <FileEdit className="mr-2 h-4 w-4" /> Manage Transitions
-                      </DropdownMenuItem>
-                       <DropdownMenuItem onClick={() => onOpenUploadModal(candidate)}>
-                        <UploadCloud className="mr-2 h-4 w-4" /> Upload Resume
-                      </DropdownMenuItem>
-                      {candidate.positionId && (
-                        <DropdownMenuItem onClick={() => handleEditPositionClick(candidate.positionId)}>
-                          <Briefcase className="mr-2 h-4 w-4" /> Edit Applied Job
+                        <div className="text-xs text-muted-foreground">{candidate.email}</div>
+                      </div>
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    {candidate.position?.title ? (
+                      <span
+                        className="font-medium text-primary hover:underline cursor-pointer"
+                        onClick={() => handleEditPositionClick(candidate.positionId)}
+                        title={`Edit ${candidate.position.title}`}
+                      >
+                        {candidate.position.title}
+                      </span>
+                    ) : (
+                      <span className="text-muted-foreground">N/A</span>
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-2">
+                      <Progress value={candidate.fitScore || 0} className="h-2 w-[60px]" />
+                      <span className="text-sm font-medium text-foreground">{(candidate.fitScore || 0)}%</span>
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant={getStatusBadgeVariant(candidate.status)} className="capitalize">
+                      {candidate.status}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="text-sm text-muted-foreground">
+                    {displayDate}
+                  </TableCell>
+                  <TableCell className="text-xs">
+                    {candidate.resumePath ?
+                      <span className="text-green-600 truncate block max-w-[100px] hover:underline cursor-pointer" title={candidate.resumePath}>
+                        {candidate.resumePath.split('-').pop()?.split('.').slice(0,-1).join('.') || candidate.resumePath.split('-').pop()}
+                      </span>
+                      : <span className="text-muted-foreground">No resume</span>}
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon" className="h-8 w-8">
+                          <MoreHorizontal className="h-4 w-4" />
+                          <span className="sr-only">Actions</span>
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem asChild>
+                          <Link href={`/candidates/${candidate.id}`}>
+                            <Eye className="mr-2 h-4 w-4" /> View Details
+                          </Link>
                         </DropdownMenuItem>
-                      )}
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem onClick={() => onDeleteCandidate(candidate.id)} className="text-destructive hover:!bg-destructive/10 focus:!bg-destructive/10 focus:!text-destructive">
-                        <Trash2 className="mr-2 h-4 w-4" /> Delete
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </TableCell>
-              </TableRow>
-            ))}
+                        <DropdownMenuItem onClick={() => handleManageTransitionsClick(candidate)}>
+                          <FileEdit className="mr-2 h-4 w-4" /> Manage Transitions
+                        </DropdownMenuItem>
+                         <DropdownMenuItem onClick={() => onOpenUploadModal(candidate)}>
+                          <UploadCloud className="mr-2 h-4 w-4" /> Upload Resume
+                        </DropdownMenuItem>
+                        {candidate.positionId && (
+                          <DropdownMenuItem onClick={() => handleEditPositionClick(candidate.positionId)}>
+                            <Briefcase className="mr-2 h-4 w-4" /> Edit Applied Job
+                          </DropdownMenuItem>
+                        )}
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem onClick={() => onDeleteCandidate(candidate.id)} className="text-destructive hover:!bg-destructive/10 focus:!bg-destructive/10 focus:!text-destructive">
+                          <Trash2 className="mr-2 h-4 w-4" /> Delete
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </TableCell>
+                </TableRow>
+              );
+            })}
           </TableBody>
         </Table>
       </div>
