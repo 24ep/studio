@@ -1,11 +1,20 @@
 "use client";
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import type { Candidate, Position } from "@/lib/types";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Users, Briefcase, CheckCircle2, UserPlus, FileWarning, UserRoundSearch, ServerCrash, Loader2 } from "lucide-react";
-import { isToday, parseISO } from 'date-fns';
+import { 
+  Users, 
+  Briefcase, 
+  CheckCircle2, 
+  UserPlus, 
+  FileWarning, 
+  UserRoundSearch, 
+  ServerCrash, 
+  Loader2 
+} from "lucide-react";
+import { isToday, parseISO } from "date-fns";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { signIn, useSession } from "next-auth/react";
@@ -44,8 +53,8 @@ export default function DashboardPage() {
         accumulatedFetchError += `Failed to fetch candidates: ${errorText}. `;
         setCandidates([]);
       } else {
-        const candidatesData: Candidate[] = await candidatesRes.json();
-        setCandidates(candidatesData);
+        const candidatesJson = await candidatesRes.json();
+        setCandidates(Array.isArray(candidatesJson) ? candidatesJson : candidatesJson.candidates);
       }
 
       if (!positionsRes.ok) {
@@ -170,10 +179,14 @@ export default function DashboardPage() {
           <CardContent>
             {newCandidatesTodayList.length > 0 ? (
               <ul className="space-y-3">
-                {newCandidatesTodayList.slice(0, 5).map(candidate => (
+                {newCandidatesTodayList.slice(0, 5).map((candidate: Candidate) => (
                   <li key={candidate.id} className="flex items-center space-x-3 p-2 bg-muted/50 rounded-md hover:bg-muted/80 transition-colors">
                     <Avatar className="h-9 w-9">
-                      <AvatarImage src={`https://placehold.co/40x40.png?text=${candidate.name.charAt(0)}`} alt={candidate.name} data-ai-hint="person avatar"/>
+                      <AvatarImage 
+                        src={`https://placehold.co/40x40.png?text=${candidate.name.charAt(0)}`} 
+                        alt={candidate.name} 
+                        data-ai-hint="person avatar"
+                      />
                       <AvatarFallback>{candidate.name.charAt(0).toUpperCase()}</AvatarFallback>
                     </Avatar>
                     <div>
