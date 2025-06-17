@@ -1,4 +1,3 @@
-
 "use client"
 import * as React from "react";
 import Link from "next/link";
@@ -47,7 +46,8 @@ const baseSettingsSubItems = [
   { href: "/logs", label: "Logs", icon: ListOrdered, adminOnly: true },
 ];
 
-export function SidebarNav() {
+// Memoize SidebarNav to prevent unnecessary re-renders
+const SidebarNavComponent = function SidebarNav() {
   const pathname = usePathname();
   const { state: sidebarState, isMobile } = useSidebar();
   const { data: session, status: sessionStatus } = useSession();
@@ -222,4 +222,6 @@ export function SidebarNav() {
         </SidebarMenuItem>
       </SidebarMenu>
   );
-}
+};
+
+export const SidebarNav = React.memo(SidebarNavComponent);

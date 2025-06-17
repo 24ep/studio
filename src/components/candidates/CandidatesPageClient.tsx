@@ -17,7 +17,8 @@ import { EditPositionModal } from '@/components/positions/EditPositionModal';
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
 import { useSession, signIn } from 'next-auth/react';
-import { Pagination } from '../ui/pagination';
+import { Pagination } from '@/components/ui/pagination';
+import { useQuery, QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 interface CandidatesPageClientProps {
   initialCandidates: Candidate[];
@@ -27,7 +28,9 @@ interface CandidatesPageClientProps {
   permissionError?: boolean;
 }
 
-export function CandidatesPageClient({
+const queryClient = new QueryClient();
+
+function CandidatesPageClientInner({
   initialCandidates,
   initialAvailablePositions,
   initialAvailableStages,
@@ -58,8 +61,37 @@ export function CandidatesPageClient({
   const { data: session, status: sessionStatus } = useSession();
 
   const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(20);
+  const const [pageSize, setPageSize] = useState(20);
   const [total, setTotal] = useState(initialCandidates.length);
+
+  // React Query for candidates
+  const {
+    data: candidatesData,
+    isLoading: queryIsLoading,
+    error: queryError,
+    refetch
+  } = useQuery({
+    queryKey: ['candidates', filters, page, pageSize],
+    queryFn: async () => {
+      const query = new URLSearchParams();
+      if (filters.name) query.append('name', filters.name);
+      if (filters.positionId && filters.positionId !== "__ALL_POSITIONS__") query.append('positionId', filters.positionId);
+      if (filters.education) query.append('education', filters.education);
+      if (filters.minFitScore !== undefined) query.append('minFitScore', String(filters.minFitScore));
+      if (filters.maxFitScore !== undefined) query.append('maxFitScore', String(filters.maxFitScore));
+      query.append('limit', String(pageSize));
+      query.append('offset', String((page - 1) * pageSize));
+      const response = await fetch(`/api/candidates?${query.toString()}`);
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ message: response.statusText || `Status: ${response.status}` }));
+        throw new Error(errorData.message || `Failed to fetch candidates: ${response.statusText || `Status: ${response.status}`}`);
+      }
+      return await response.json();
+    },
+    keepPreviousData: true,
+    enabled: sessionStatus === 'authenticated' && !authError && !permissionError,
+    initialData: { candidates: initialCandidates, total: initialCandidates.length },
+  });
 
   const fetchFilteredCandidatesOnClient = useCallback(async (currentFilters: CandidateFilterValues, pageOverride?: number, pageSizeOverride?: number) => {
     if (sessionStatus !== 'authenticated') {
@@ -481,5 +513,13 @@ export function CandidatesPageClient({
         />
       )}
     </div>
+  );
+}
+
+export function CandidatesPageClient(props: CandidatesPageClientProps) {
+  return (
+    <QueryClientProvider client={queryClient}>
+      <CandidatesPageClientInner {...props} />
+    </QueryClientProvider>
   );
 }

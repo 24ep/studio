@@ -1,4 +1,3 @@
-
 "use client";
 import React, { type ReactNode, useState, useEffect } from "react";
 import {
@@ -10,7 +9,7 @@ import {
   SidebarInset,
   SidebarTrigger,
 } from "@/components/ui/sidebar";
-import { SidebarNav } from "./SidebarNav";
+import dynamic from 'next/dynamic';
 import { Header } from "./Header";
 import Link from "next/link";
 import { Separator } from "@/components/ui/separator";
@@ -25,6 +24,7 @@ const APP_CONFIG_APP_NAME_KEY = 'appConfigAppName';
 const DEFAULT_APP_NAME = "CandiTrack";
 const DEFAULT_LOGO_ICON = <Package2 className="h-6 w-6" />;
 
+const SidebarNav = dynamic(() => import('./SidebarNav'), { ssr: false });
 
 function getPageTitle(pathname: string): string {
   if (pathname === "/") return "Dashboard";

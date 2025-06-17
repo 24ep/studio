@@ -31,9 +31,11 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { signIn, useSession } from "next-auth/react";
 import { Pagination } from '@/components/ui/pagination';
+import { useQuery, QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
+const queryClient = new QueryClient();
 
-export default function ManageUsersPage() {
+function ManageUsersPageInner() {
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
@@ -49,7 +51,6 @@ export default function ManageUsersPage() {
   const [isEditUserModalOpen, setIsEditUserModalOpen] = useState(false);
   const [selectedUserForEdit, setSelectedUserForEdit] = useState<UserProfile | null>(null);
   const [userToDelete, setUserToDelete] = useState<UserProfile | null>(null);
-
 
   const fetchUsers = useCallback(async (pageOverride?: number, pageSizeOverride?: number) => {
     if (sessionStatus !== 'authenticated') {
@@ -364,5 +365,13 @@ export default function ManageUsersPage() {
         onPageSizeChange={setPageSize}
       />
     </div>
+  );
+}
+
+export default function ManageUsersPage() {
+  return (
+    <QueryClientProvider client={queryClient}>
+      <ManageUsersPageInner />
+    </QueryClientProvider>
   );
 }

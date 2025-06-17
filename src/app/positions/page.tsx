@@ -33,6 +33,9 @@ import {
   DropdownMenuTrigger
 } from '@/components/ui/dropdown-menu';
 import { Pagination } from '@/components/ui/pagination';
+import { useQuery, QueryClient, QueryClientProvider } from '@tanstack/react-query';
+
+const queryClient = new QueryClient();
 
 function downloadFile(content: string, filename: string, contentType: string) {
   const blob = new Blob([content], { type: contentType });
@@ -47,7 +50,7 @@ function downloadFile(content: string, filename: string, contentType: string) {
   URL.revokeObjectURL(url);
 }
 
-export default function PositionsPage() {
+function PositionsPageInner() {
   const [positions, setPositions] = useState<Position[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [filters, setFilters] = useState<PositionFilterValues>({ isOpen: "all" });
@@ -66,7 +69,6 @@ export default function PositionsPage() {
   const [selectedPositionForEdit, setSelectedPositionForEdit] = useState<Position | null>(null);
   const [positionToDelete, setPositionToDelete] = useState<Position | null>(null);
   const { data: session, status: sessionStatus } = useSession();
-
 
   const fetchPositions = useCallback(async (pageOverride?: number, pageSizeOverride?: number) => {
     if (sessionStatus !== 'authenticated') {
@@ -127,7 +129,6 @@ export default function PositionsPage() {
       fetchPositions(page);
     }
   }, [page, sessionStatus, fetchPositions]);
-
 
   const handleFilterChange = (newFilters: PositionFilterValues) => {
     setFilters(newFilters);
@@ -260,7 +261,6 @@ export default function PositionsPage() {
     }
   };
 
-
   if (sessionStatus === 'loading' || (sessionStatus === 'unauthenticated' && !pathname.startsWith('/auth/signin')) || (isLoading && !fetchError && positions.length === 0)) {
     return (
       <div className="flex h-screen w-screen items-center justify-center bg-background fixed inset-0 z-50">
@@ -298,7 +298,6 @@ export default function PositionsPage() {
     );
   }
 
-
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-center gap-2">
@@ -328,7 +327,6 @@ export default function PositionsPage() {
       </div>
 
       <PositionFilters initialFilters={filters} onFilterChange={handleFilterChange} isLoading={isLoading} />
-
 
       <Card className="shadow-sm">
         <CardHeader>
@@ -450,5 +448,13 @@ export default function PositionsPage() {
         onPageSizeChange={setPageSize}
       />
     </div>
+  );
+}
+
+export default function PositionsPage() {
+  return (
+    <QueryClientProvider client={queryClient}>
+      <PositionsPageInner />
+    </QueryClientProvider>
   );
 }
