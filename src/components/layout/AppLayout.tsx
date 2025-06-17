@@ -46,6 +46,7 @@ function getPageTitle(pathname: string): string {
   if (pathname.startsWith("/settings/integrations")) return "Integrations";
   if (pathname.startsWith("/settings/stages")) return "Recruitment Stages";
   if (pathname.startsWith("/settings/data-models")) return "Data Model Preferences";
+  if (pathname.startsWith("/settings/custom-fields")) return "Custom Field Definitions";
   if (pathname.startsWith("/settings/webhook-mapping")) return "Webhook Payload Mapping";
   if (pathname.startsWith("/api-docs")) return "API Documentation";
   if (pathname.startsWith("/logs")) return "Application Logs";

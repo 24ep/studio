@@ -13,7 +13,8 @@ export const PLATFORM_MODULES = [
   { id: 'USERS_MANAGE', label: 'Manage Users & Permissions' },
   { id: 'SETTINGS_ACCESS', label: 'Access System Settings' },
   { id: 'RECRUITMENT_STAGES_MANAGE', label: 'Manage Recruitment Stages' },
-  { id: 'DATA_MODELS_MANAGE', label: 'Manage Data Model Preferences' },
+  { id: 'DATA_MODELS_MANAGE', label: 'Manage Data Model Preferences (Client)' }, // Clarified it's client-side preferences
+  { id: 'CUSTOM_FIELDS_MANAGE', label: 'Manage Custom Field Definitions (Server)' }, // New Permission
   { id: 'WEBHOOK_MAPPING_MANAGE', label: 'Manage Webhook Mappings' },
   { id: 'LOGS_VIEW', label: 'View Application Logs' },
 ] as const;
@@ -201,6 +202,7 @@ export interface Position {
   description?: string | null;
   isOpen: boolean;
   position_level?: string | null;
+  custom_attributes?: Record<string, any> | null; // New
   createdAt?: string;
   updatedAt?: string;
   candidates?: Candidate[]; // Relation for dashboard chart
@@ -220,6 +222,7 @@ export interface Candidate {
   applicationDate: string;
   recruiterId?: string | null; // New: Assigned recruiter ID
   recruiter?: Pick<UserProfile, 'id' | 'name' | 'email'> | null; // New: Assigned recruiter info
+  custom_attributes?: Record<string, any> | null; // New
   createdAt?: string;
   updatedAt?: string;
   transitionHistory: TransitionRecord[];
@@ -271,8 +274,8 @@ export interface DataModelPreferences {
 export interface WebhookFieldMapping {
   id?: string; // Optional: only present when fetched from DB
   targetPath: string; // e.g., "candidate_info.personal_info.firstname"
-  sourcePath: string; // e.g., "data.profile.firstName"
-  notes?: string;
+  sourcePath: string | null; // e.g., "data.profile.firstName" from n8n JSON - allow null
+  notes?: string | null;
   createdAt?: string; // from DB
   updatedAt?: string; // from DB
 }
@@ -291,4 +294,25 @@ export interface ModelAttributeDefinition {
   description?: string;
   subAttributes?: ModelAttributeDefinition[]; // For nested objects
   arrayItemType?: string; // For arrays of simple types or objects
+}
+
+// Custom Field Definitions
+export type CustomFieldType = 'text' | 'textarea' | 'number' | 'boolean' | 'date' | 'select_single' | 'select_multiple';
+export const CUSTOM_FIELD_TYPES: CustomFieldType[] = ['text', 'textarea', 'number', 'boolean', 'date', 'select_single', 'select_multiple'];
+
+export interface CustomFieldOption {
+  value: string;
+  label: string;
+}
+export interface CustomFieldDefinition {
+  id: string;
+  model_name: 'Candidate' | 'Position';
+  field_key: string;
+  label: string;
+  field_type: CustomFieldType;
+  options?: CustomFieldOption[] | null; // For select types
+  is_required?: boolean;
+  sort_order?: number;
+  createdAt?: string;
+  updatedAt?: string;
 }

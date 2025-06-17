@@ -3,7 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Users, Briefcase, Settings, UsersRound, Code2, ListOrdered, Palette, Zap, ListTodo, DatabaseZap, SlidersHorizontal, KanbanSquare } from "lucide-react"; 
+import { LayoutDashboard, Users, Briefcase, Settings, UsersRound, Code2, ListOrdered, Palette, Zap, ListTodo, DatabaseZap, SlidersHorizontal, KanbanSquare, Settings2 } from "lucide-react"; 
 import { cn } from "@/lib/utils";
 import {
   SidebarMenu,
@@ -38,7 +38,8 @@ const baseSettingsSubItems = [
   { href: "/settings/preferences", label: "Preferences", icon: Palette },
   { href: "/settings/integrations", label: "Integrations", icon: Zap },
   { href: "/settings/stages", label: "Recruitment Stages", icon: KanbanSquare, permissionId: 'RECRUITMENT_STAGES_MANAGE' as PlatformModuleId },
-  { href: "/settings/data-models", label: "Data Models", icon: DatabaseZap, permissionId: 'DATA_MODELS_MANAGE' as PlatformModuleId },
+  { href: "/settings/data-models", label: "Data Models (Client)", icon: DatabaseZap, permissionId: 'DATA_MODELS_MANAGE' as PlatformModuleId },
+  { href: "/settings/custom-fields", label: "Custom Fields (Server)", icon: Settings2, permissionId: 'CUSTOM_FIELDS_MANAGE' as PlatformModuleId },
   { href: "/settings/webhook-mapping", label: "Webhook Mapping", icon: SlidersHorizontal, permissionId: 'WEBHOOK_MAPPING_MANAGE' as PlatformModuleId },
   { href: "/users", label: "Manage Users", icon: UsersRound, adminOnly: true },
   { href: "/api-docs", label: "API Docs", icon: Code2 },

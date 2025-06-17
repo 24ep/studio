@@ -6,12 +6,16 @@ import { logAudit } from '@/lib/auditLog';
 
 export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
   try {
-    const query = 'SELECT * FROM "Position" WHERE id = $1';
+    const query = 'SELECT id, title, department, description, "isOpen", position_level, custom_attributes, "createdAt", "updatedAt" FROM "Position" WHERE id = $1';
     const result = await pool.query(query, [params.id]);
     if (result.rows.length === 0) {
       return NextResponse.json({ message: "Position not found" }, { status: 404 });
     }
-    return NextResponse.json(result.rows[0], { status: 200 });
+    const position = {
+        ...result.rows[0],
+        custom_attributes: result.rows[0].custom_attributes || {},
+    };
+    return NextResponse.json(position, { status: 200 });
   } catch (error) {
     console.error(`Failed to fetch position ${params.id}:`, error);
     await logAudit('ERROR', `Failed to fetch position ${params.id}. Error: ${(error as Error).message}`, 'API:Positions', null, { targetPositionId: params.id });
@@ -25,6 +29,7 @@ const updatePositionSchema = z.object({
   description: z.string().optional().nullable(),
   isOpen: z.boolean().optional(),
   position_level: z.string().optional().nullable(),
+  custom_attributes: z.record(z.any()).optional().nullable(), // New
 });
 
 export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {
@@ -47,11 +52,12 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
   const validatedData = validationResult.data;
   
   try {
-    const positionExistsQuery = 'SELECT id FROM "Position" WHERE id = $1';
+    const positionExistsQuery = 'SELECT id, custom_attributes FROM "Position" WHERE id = $1';
     const positionResult = await pool.query(positionExistsQuery, [params.id]);
     if (positionResult.rows.length === 0) {
       return NextResponse.json({ message: "Position not found" }, { status: 404 });
     }
+    const existingPosition = positionResult.rows[0];
 
     const updateFields: string[] = [];
     const updateValues: any[] = [];
@@ -59,14 +65,19 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
 
     Object.entries(validatedData).forEach(([key, value]) => {
       if (value !== undefined) {
-        updateFields.push(`"${key}" = $${paramIndex++}`);
-        updateValues.push(value);
+        if (key === 'custom_attributes') {
+            updateFields.push(`"custom_attributes" = $${paramIndex++}`);
+            updateValues.push(value || {}); // Ensure it's an object
+        } else {
+            updateFields.push(`"${key}" = $${paramIndex++}`);
+            updateValues.push(value);
+        }
       }
     });
 
     if (updateFields.length === 0) {
         const currentPosition = await pool.query('SELECT * FROM "Position" WHERE id = $1', [params.id]);
-        return NextResponse.json(currentPosition.rows[0], { status: 200 });
+        return NextResponse.json({ ...currentPosition.rows[0], custom_attributes: currentPosition.rows[0].custom_attributes || {} }, { status: 200 });
     }
 
     updateFields.push(`"updatedAt" = NOW()`);
@@ -74,7 +85,10 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
 
     const updateQuery = `UPDATE "Position" SET ${updateFields.join(', ')} WHERE id = $${paramIndex} RETURNING *;`;
     const updatedResult = await pool.query(updateQuery, updateValues);
-    const updatedPosition = updatedResult.rows[0];
+    const updatedPosition = {
+        ...updatedResult.rows[0],
+        custom_attributes: updatedResult.rows[0].custom_attributes || {},
+    };
 
     await logAudit('AUDIT', `Position '${updatedPosition.title}' (ID: ${updatedPosition.id}) updated.`, 'API:Positions', null, { targetPositionId: updatedPosition.id, changes: Object.keys(validatedData) });
     return NextResponse.json(updatedPosition, { status: 200 });
@@ -114,5 +128,3 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
     return NextResponse.json({ message: "Error deleting position", error: error.message }, { status: 500 });
   }
 }
-
-    

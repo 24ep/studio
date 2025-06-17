@@ -1,4 +1,3 @@
-
 import { NextResponse, type NextRequest } from 'next/server';
 import pool from '../../../../lib/db';
 import type { CandidateStatus, Candidate, CandidateDetails, PersonalInfo, ContactInfo, PositionLevel, UserProfile, N8NJobMatch } from '@/lib/types';
@@ -13,7 +12,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
   try {
     const query = `
       SELECT
-        c.id, c.name, c.email, c.phone, c."resumePath", c."parsedData",
+        c.id, c.name, c.email, c.phone, c."resumePath", c."parsedData", c.custom_attributes,
         c."positionId", c."fitScore", c.status, c."applicationDate",
         c."recruiterId",
         c."createdAt", c."updatedAt",
@@ -78,6 +77,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
     const candidate = {
         ...candidateRow,
         parsedData: parsedDataFromDb,
+        custom_attributes: candidateRow.custom_attributes || {},
         position: candidateRow.positionId ? {
             id: candidateRow.positionId,
             title: candidateRow.positionTitle,
@@ -180,6 +180,7 @@ const updateCandidateSchema = z.object({
   fitScore: z.number().min(0).max(100).optional(),
   status: z.string().min(1).optional(),
   parsedData: candidateDetailsSchemaPartial.optional(),
+  custom_attributes: z.record(z.any()).optional().nullable(), // New
   resumePath: z.string().optional().nullable(),
 });
 
@@ -274,6 +275,9 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
           };
           updateFields.push(`"parsedData" = $${paramIndex++}`);
           updateValues.push(mergedParsedData);
+        } else if (key === 'custom_attributes') {
+            updateFields.push(`"custom_attributes" = $${paramIndex++}`);
+            updateValues.push(value || {}); // Ensure it's an object, even if null/undefined
         } else {
           updateFields.push(`"${key}" = $${paramIndex++}`);
           updateValues.push(value);
@@ -307,6 +311,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
       const currentCandidateWithDetails = {
         ...currentResult.rows[0],
         parsedData: currentResult.rows[0].parsedData || { personal_info: {}, contact_info: {} },
+        custom_attributes: currentResult.rows[0].custom_attributes || {},
          position: currentResult.rows[0].positionId ? {
             id: currentResult.rows[0].positionId,
             title: currentResult.rows[0].positionTitle,
@@ -356,7 +361,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
     // Re-fetch with synced job_matches titles
     const finalQuery = `
         SELECT
-            c.id, c.name, c.email, c.phone, c."resumePath", c."parsedData",
+            c.id, c.name, c.email, c.phone, c."resumePath", c."parsedData", c.custom_attributes,
             c."positionId", c."fitScore", c.status, c."applicationDate",
             c."recruiterId", c."createdAt", c."updatedAt",
             p.title as "positionTitle",
@@ -403,6 +408,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
     const updatedCandidateWithDetails = {
         ...finalResult.rows[0],
         parsedData: updatedParsedData,
+        custom_attributes: finalResult.rows[0].custom_attributes || {},
         position: finalResult.rows[0].positionId ? {
             id: finalResult.rows[0].positionId,
             title: finalResult.rows[0].positionTitle,
@@ -462,7 +468,7 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
   } catch (error) {
     await client.query('ROLLBACK');
     console.error(`Failed to delete candidate ${params.id}:`, error);
-    await logAudit('ERROR', `Failed to delete candidate (ID: ${params.id}) by ${actingUserName}. Error: ${(error as Error).message}`, 'API:Candidates:Delete', actingUserId, { targetCandidateId: params.id });
+    await logAudit('ERROR', `Failed to delete candidate (ID: ${params.id}) by ${actingUserName}. Error: ${error.message}`, 'API:Candidates:Delete', actingUserId, { targetCandidateId: params.id });
     return NextResponse.json({ message: "Error deleting candidate", error: (error as Error).message }, { status: 500 });
   } finally {
     client.release();

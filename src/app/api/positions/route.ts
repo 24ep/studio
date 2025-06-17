@@ -21,7 +21,7 @@ export async function GET(request: NextRequest) {
     const positionLevelFilter = searchParams.get('position_level');
 
 
-    let query = 'SELECT * FROM "Position"';
+    let query = 'SELECT id, title, department, description, "isOpen", position_level, custom_attributes, "createdAt", "updatedAt" FROM "Position"';
     const conditions = [];
     const queryParams = [];
     let paramIndex = 1;
@@ -51,7 +51,11 @@ export async function GET(request: NextRequest) {
     query += ' ORDER BY "createdAt" DESC';
     
     const result = await pool.query(query, queryParams);
-    return NextResponse.json(result.rows, { status: 200 });
+    const positions = result.rows.map(row => ({
+        ...row,
+        custom_attributes: row.custom_attributes || {},
+    }));
+    return NextResponse.json(positions, { status: 200 });
   } catch (error) {
     console.error("Failed to fetch positions:", error);
     await logAudit('ERROR', `Failed to fetch positions. Error: ${(error as Error).message}`, 'API:Positions:GetAll', null);
@@ -65,6 +69,7 @@ const createPositionSchema = z.object({
   description: z.string().optional().nullable(),
   isOpen: z.boolean({ required_error: "isOpen status is required" }),
   position_level: z.string().optional().nullable(),
+  custom_attributes: z.record(z.any()).optional().nullable(), // New
 });
 
 export async function POST(request: NextRequest) {
@@ -100,8 +105,8 @@ export async function POST(request: NextRequest) {
   try {
     const newPositionId = uuidv4();
     const insertQuery = `
-      INSERT INTO "Position" (id, title, department, description, "isOpen", position_level, "createdAt", "updatedAt")
-      VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW())
+      INSERT INTO "Position" (id, title, department, description, "isOpen", position_level, custom_attributes, "createdAt", "updatedAt")
+      VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), NOW())
       RETURNING *;
     `;
     const values = [
@@ -111,9 +116,13 @@ export async function POST(request: NextRequest) {
       validatedData.description || null,
       validatedData.isOpen,
       validatedData.position_level || null,
+      validatedData.custom_attributes || {}, // New
     ];
     const result = await pool.query(insertQuery, values);
-    const newPosition = result.rows[0];
+    const newPosition = {
+        ...result.rows[0],
+        custom_attributes: result.rows[0].custom_attributes || {},
+    };
 
     await logAudit('AUDIT', `Position '${newPosition.title}' (ID: ${newPosition.id}) created by ${actingUserName}.`, 'API:Positions:Create', actingUserId, { targetPositionId: newPosition.id, title: newPosition.title, department: newPosition.department, position_level: newPosition.position_level });
     return NextResponse.json(newPosition, { status: 201 });

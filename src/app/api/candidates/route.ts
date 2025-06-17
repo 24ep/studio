@@ -1,4 +1,3 @@
-
 // src/app/api/candidates/route.ts
 import { NextResponse, type NextRequest } from 'next/server';
 import pool from '../../../lib/db';
@@ -93,6 +92,7 @@ const createCandidateSchema = z.object({
   status: z.string().min(1).default('Applied'), // Changed from z.enum to z.string
   applicationDate: z.string().datetime({ message: "Invalid datetime string. Must be UTC ISO8601" }).optional(),
   parsedData: candidateDetailsSchema.optional(),
+  custom_attributes: z.record(z.any()).optional().nullable(), // New
   resumePath: z.string().optional().nullable(),
 });
 
@@ -111,7 +111,7 @@ export async function GET(request: NextRequest) {
 
     let query = `
       SELECT
-        c.id, c.name, c.email, c.phone, c."resumePath", c."parsedData",
+        c.id, c.name, c.email, c.phone, c."resumePath", c."parsedData", c.custom_attributes,
         c."positionId", c."fitScore", c.status, c."applicationDate",
         c."recruiterId", 
         c."createdAt", c."updatedAt",
@@ -209,6 +209,7 @@ export async function GET(request: NextRequest) {
     const candidates = result.rows.map(row => ({
         ...row,
         parsedData: row.parsedData || { personal_info: {}, contact_info: {} },
+        custom_attributes: row.custom_attributes || {},
         position: row.positionId ? {
             id: row.positionId,
             title: row.positionTitle,
@@ -338,8 +339,8 @@ export async function POST(request: NextRequest) {
 
 
     const insertCandidateQuery = `
-      INSERT INTO "Candidate" (id, name, email, phone, "positionId", "recruiterId", "fitScore", status, "applicationDate", "parsedData", "resumePath", "createdAt", "updatedAt")
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, NOW(), NOW())
+      INSERT INTO "Candidate" (id, name, email, phone, "positionId", "recruiterId", "fitScore", status, "applicationDate", "parsedData", "custom_attributes", "resumePath", "createdAt", "updatedAt")
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, NOW(), NOW())
       RETURNING *;
     `;
     const candidateValues = [
@@ -353,6 +354,7 @@ export async function POST(request: NextRequest) {
       rawData.status,
       rawData.applicationDate ? new Date(rawData.applicationDate) : new Date(),
       finalParsedData,
+      rawData.custom_attributes || {}, // New
       rawData.resumePath,
     ];
     const candidateResult = await client.query(insertCandidateQuery, candidateValues);
@@ -376,7 +378,7 @@ export async function POST(request: NextRequest) {
 
     const finalQuery = `
         SELECT
-            c.id, c.name, c.email, c.phone, c."resumePath", c."parsedData",
+            c.id, c.name, c.email, c.phone, c."resumePath", c."parsedData", c.custom_attributes,
             c."positionId", c."fitScore", c.status, c."applicationDate",
             c."recruiterId", c."createdAt", c."updatedAt",
             p.title as "positionTitle",
@@ -402,6 +404,7 @@ export async function POST(request: NextRequest) {
     const createdCandidateWithDetails = {
         ...finalResult.rows[0],
         parsedData: finalResult.rows[0].parsedData || { personal_info: {}, contact_info: {} },
+        custom_attributes: finalResult.rows[0].custom_attributes || {},
         position: finalResult.rows[0].positionId ? {
             id: finalResult.rows[0].positionId,
             title: finalResult.rows[0].positionTitle,
