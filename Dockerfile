@@ -1,14 +1,14 @@
-# Use an official Node.js runtime as a parent image
-FROM node:18-alpine AS base
+# Use a specific Node.js version
+FROM node:18.17.0-alpine AS base
 
 # Install dependencies only when needed
 FROM base AS deps
-RUN apk add --no-cache libc6-compat python3 make g++
+RUN apk add --no-cache libc6-compat python3 make g++ git
 WORKDIR /app
 
 # Install dependencies based on the preferred package manager
 COPY package.json package-lock.json* ./
-RUN npm install --production=false --verbose
+RUN npm install --production=false
 
 # Rebuild the source code only when needed
 FROM base AS builder
