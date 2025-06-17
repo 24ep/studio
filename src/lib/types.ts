@@ -12,7 +12,9 @@ export const PLATFORM_MODULES = [
   { id: 'POSITIONS_MANAGE', label: 'Manage Positions (Add, Edit, Delete)' },
   { id: 'USERS_MANAGE', label: 'Manage Users & Permissions' },
   { id: 'SETTINGS_ACCESS', label: 'Access System Settings' },
-  { id: 'RECRUITMENT_STAGES_MANAGE', label: 'Manage Recruitment Stages' }, // New permission
+  { id: 'RECRUITMENT_STAGES_MANAGE', label: 'Manage Recruitment Stages' },
+  { id: 'DATA_MODELS_MANAGE', label: 'Manage Data Model Preferences' }, // New permission
+  { id: 'WEBHOOK_MAPPING_MANAGE', label: 'Manage Webhook Mappings' }, // New permission
   { id: 'LOGS_VIEW', label: 'View Application Logs' },
 ] as const;
 
@@ -164,12 +166,18 @@ export interface CandidateDetails {
 }
 
 export interface N8NCandidateWebhookEntry {
-  candidate_info: CandidateDetails; // n8n sends all candidate details here
-  jobs: N8NJobMatch[]; // n8n sends job matches here
+  candidate_info: CandidateDetails;
+  jobs: N8NJobMatch[];
   targetPositionId?: string | null;
   targetPositionTitle?: string | null;
   targetPositionDescription?: string | null;
   targetPositionLevel?: string | null;
+  job_applied?: { // Field to capture job applied for specifically
+    job_id?: string | null;
+    job_title?: string | null;
+    fit_score?: number | null;
+    match_reasons?: string[];
+  } | null;
 }
 
 export type N8NWebhookPayload = N8NCandidateWebhookEntry;
@@ -244,4 +252,39 @@ export interface LogEntry {
   details?: Record<string, any> | null;
   createdAt?: string;
 }
-    
+
+// Data Model Attribute Preferences
+export type UIDisplayPreference = "Standard" | "Emphasized" | "Hidden";
+
+export interface AttributePreference {
+  path: string; // e.g., "Candidate.name", "Position.description"
+  uiPreference: UIDisplayPreference;
+  customNote: string;
+}
+
+export interface DataModelPreferences {
+  candidateAttributes: Record<string, Partial<Pick<AttributePreference, 'uiPreference' | 'customNote'>>>;
+  positionAttributes: Record<string, Partial<Pick<AttributePreference, 'uiPreference' | 'customNote'>>>;
+}
+
+// Webhook Mapping Types
+export interface WebhookFieldMapping {
+  targetPath: string; // e.g., "personal_info.firstname"
+  sourcePath: string; // e.g., "user_profile.general.first_name"
+  notes?: string;
+}
+
+export interface WebhookMappingConfiguration {
+  webhookUrlName: string; // e.g., "Default Candidate Creation Webhook"
+  mappings: WebhookFieldMapping[];
+}
+
+// Definitions for Data Model Viewer
+export interface ModelAttributeDefinition {
+  key: string; // The actual key in the data object, e.g., 'name', 'personal_info.firstname'
+  label: string; // User-friendly label, e.g., 'Full Name', 'First Name'
+  type: string; // e.g., 'string', 'number', 'boolean', 'date', 'object', 'array'
+  description?: string;
+  subAttributes?: ModelAttributeDefinition[]; // For nested objects
+  arrayItemType?: string; // For arrays of simple types or objects
+}
