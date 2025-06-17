@@ -50,9 +50,12 @@ services:
       NODE_ENV: development
       PORT: 9002
     volumes:
-      - .:/app
-      - /app/node_modules
-      - /app/.next
+      - ./src:/app/src
+      - ./public:/app/public
+      - ./next.config.mjs:/app/next.config.mjs
+      - ./tsconfig.json:/app/tsconfig.json
+      - ./postcss.config.js:/app/postcss.config.js
+      - ./tailwind.config.js:/app/tailwind.config.js
     depends_on:
       - postgres
       - minio
