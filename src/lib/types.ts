@@ -167,12 +167,12 @@ export interface CandidateDetails {
 
 export interface N8NCandidateWebhookEntry {
   candidate_info: CandidateDetails;
-  jobs?: N8NJobMatch[]; // Made optional to handle cases where it might not be sent
+  jobs?: N8NJobMatch[];
   targetPositionId?: string | null;
   targetPositionTitle?: string | null;
   targetPositionDescription?: string | null;
   targetPositionLevel?: string | null;
-  job_applied?: { // Field to capture job applied for specifically
+  job_applied?: {
     job_id?: string | null;
     job_title?: string | null;
     fit_score?: number | null;
@@ -269,15 +269,19 @@ export interface DataModelPreferences {
 
 // Webhook Mapping Types
 export interface WebhookFieldMapping {
-  targetPath: string; // e.g., "personal_info.firstname"
-  sourcePath: string; // e.g., "user_profile.general.first_name"
+  id?: string; // Optional: only present when fetched from DB
+  targetPath: string; // e.g., "candidate_info.personal_info.firstname"
+  sourcePath: string; // e.g., "data.profile.firstName"
   notes?: string;
+  createdAt?: string; // from DB
+  updatedAt?: string; // from DB
 }
 
-export interface WebhookMappingConfiguration {
-  webhookUrlName: string; // e.g., "Default Candidate Creation Webhook"
+export interface WebhookMappingConfiguration { // This type might be less used if mappings are stored individually
+  webhookUrlName: string;
   mappings: WebhookFieldMapping[];
 }
+
 
 // Definitions for Data Model Viewer
 export interface ModelAttributeDefinition {
