@@ -210,12 +210,25 @@ export async function POST(request: NextRequest) {
 
   const validationResult = n8nWebhookPayloadSchema.safeParse(transformedPayload);
   if (!validationResult.success) {
-    console.error("N8N Webhook: Invalid input after transformation:", JSON.stringify(validationResult.error.flatten(), null, 2));
-    console.error("N8N Webhook: Original payloadToProcess was:", JSON.stringify(payloadToProcess, null, 2));
-    console.error("N8N Webhook: Transformed payload was:", JSON.stringify(transformedPayload, null, 2));
-    await logAudit('ERROR', 'N8N Webhook: Invalid input received from n8n (after transformation).', 'API:N8N:CreateCandidateWithMatches', null, { errors: validationResult.error.flatten(), originalPayload: payloadToProcess, transformedPayload: transformedPayload });
+    // Log the raw and processed payloads for easier debugging
+    console.error("N8N Webhook: Invalid input after transformation. Validation errors:", JSON.stringify(validationResult.error.flatten(), null, 2));
+    console.error("N8N Webhook: Original rawRequestBody was:", JSON.stringify(rawRequestBody, null, 2));
+    console.error("N8N Webhook: payloadToProcess (before transformation) was:", JSON.stringify(payloadToProcess, null, 2));
+    console.error("N8N Webhook: transformedPayload (after transformation, before validation) was:", JSON.stringify(transformedPayload, null, 2));
+    
+    await logAudit('ERROR', 'N8N Webhook: Invalid input received from n8n (after transformation).', 'API:N8N:CreateCandidateWithMatches', null, { 
+        errors: validationResult.error.flatten(), 
+        // Include a snippet or indication of payloads to avoid overly large log entries if necessary
+        originalPayloadSnippet: JSON.stringify(payloadToProcess, null, 2).substring(0, 1000), 
+        transformedPayload: transformedPayload 
+    });
     return NextResponse.json(
-      { message: "Invalid input for n8n candidate creation (after transformation)", errors: validationResult.error.flatten().fieldErrors, transformedPayloadForDebug: transformedPayload },
+      { 
+        message: "Invalid input for n8n candidate creation (after transformation)", 
+        errors: validationResult.error.flatten().fieldErrors, 
+        transformedPayloadForDebug: transformedPayload,
+        hint: "Ensure 'candidate_info' and its required sub-fields (like personal_info.firstname, personal_info.lastname, contact_info.email) are correctly mapped in Settings > Webhook Payload Mapping, and that your n8n workflow provides data for these mapped source paths."
+      },
       { status: 400 }
     );
   }
@@ -451,3 +464,4 @@ export async function POST(request: NextRequest) {
     }
   }
 }
+
