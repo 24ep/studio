@@ -59,8 +59,8 @@ const jobSuitableEntrySchema = z.object({
 });
 
 const n8nJobMatchSchemaForCandidate = z.object({
-  job_id: z.string().optional(),
-  job_title: z.string().min(1, "Job title is required"),
+  job_id: z.string().optional().nullable(), // Made optional
+  job_title: z.string().min(1, "Job title is required").optional(), // Made optional
   fit_score: z.number().min(0).max(100, "Fit score must be between 0 and 100"),
   match_reasons: z.array(z.string()).optional().default([]),
 });
@@ -92,7 +92,7 @@ const createCandidateSchema = z.object({
   status: z.string().min(1).default('Applied'), // Changed from z.enum to z.string
   applicationDate: z.string().datetime({ message: "Invalid datetime string. Must be UTC ISO8601" }).optional(),
   parsedData: candidateDetailsSchema.optional(),
-  custom_attributes: z.record(z.any()).optional().nullable(), // New
+  custom_attributes: z.record(z.any()).optional().nullable(),
   resumePath: z.string().optional().nullable(),
 });
 
@@ -104,7 +104,7 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const nameFilter = searchParams.get('name');
     const positionIdFilter = searchParams.get('positionId');
-    const educationFilter = searchParams.get('education');
+    const educationFilter = searchParams.get('education'); // This uses ILIKE on text cast of JSONB.
     const minFitScoreParam = searchParams.get('minFitScore');
     const maxFitScoreParam = searchParams.get('maxFitScore');
     const assignedRecruiterIdParam = searchParams.get('assignedRecruiterId');
@@ -119,23 +119,22 @@ export async function GET(request: NextRequest) {
         p.department as "positionDepartment",
         p.position_level as "positionLevel",
         rec.name as "recruiterName", 
-        COALESCE(
-          (SELECT json_agg(
-            json_build_object(
-              'id', th.id, 'candidateId', th."candidateId", 'date', th.date, 'stage', th.stage, 'notes', th.notes,
-              'actingUserId', th."actingUserId", 'actingUserName', u.name,
-              'createdAt', th."createdAt", 'updatedAt', th."updatedAt"
-            ) ORDER BY th.date DESC
-           )
-           FROM "TransitionRecord" th
-           LEFT JOIN "User" u ON th."actingUserId" = u.id
-           WHERE th."candidateId" = c.id
-          ),
-          '[]'::json
-        ) as "transitionHistory"
+        COALESCE(th_data.history, '[]'::json) as "transitionHistory"
       FROM "Candidate" c
       LEFT JOIN "Position" p ON c."positionId" = p.id
-      LEFT JOIN "User" rec ON c."recruiterId" = rec.id 
+      LEFT JOIN "User" rec ON c."recruiterId" = rec.id
+      LEFT JOIN LATERAL (
+        SELECT json_agg(
+          json_build_object(
+            'id', th.id, 'candidateId', th."candidateId", 'date', th.date, 'stage', th.stage, 
+            'notes', th.notes, 'actingUserId', th."actingUserId", 'actingUserName', u_th.name, 
+            'createdAt', th."createdAt", 'updatedAt', th."updatedAt"
+          ) ORDER BY th.date DESC
+        ) AS history
+        FROM "TransitionRecord" th
+        LEFT JOIN "User" u_th ON th."actingUserId" = u_th.id
+        WHERE th."candidateId" = c.id
+      ) AS th_data ON true
     `;
     const conditions = [];
     const queryParams = [];
@@ -150,6 +149,10 @@ export async function GET(request: NextRequest) {
       queryParams.push(positionIdFilter);
     }
     if (educationFilter) {
+      // Example of specific JSONB filtering (if educationFilter was a university name to match exactly):
+      // conditions.push(`EXISTS (SELECT 1 FROM jsonb_array_elements(c."parsedData"->'education') as edu WHERE edu->>'university' = $${paramIndex++})`);
+      // queryParams.push(educationFilter);
+      // For now, keeping the existing general text search within parsedData for education:
       conditions.push(`c."parsedData"::text ILIKE $${paramIndex++}`);
       queryParams.push(`%${educationFilter}%`);
     }
@@ -185,8 +188,10 @@ export async function GET(request: NextRequest) {
         if (userRole !== 'Admin') {
           return NextResponse.json({ message: "Forbidden: Only Admins can view all candidates without recruiter filter." }, { status: 403 });
         }
+        // No condition added, Admin sees all
       }
     } else {
+      // Default filtering by role if no specific assignedRecruiterIdParam is given
       if (userRole === 'Recruiter') {
          if (!session?.user?.id) {
             return NextResponse.json({ message: "Unauthorized: User session required for Recruiter view." }, { status: 401 });
@@ -194,8 +199,11 @@ export async function GET(request: NextRequest) {
         conditions.push(`c."recruiterId" = $${paramIndex++}`);
         queryParams.push(session.user.id);
       } else if (userRole === 'Hiring Manager') {
-        // Default behavior for Hiring Manager (can be adjusted)
+        // Default behavior for Hiring Manager (can be adjusted, e.g., show no candidates by default unless filtered)
+        // For now, they see all candidates unless a specific filter is applied by them (if UI allows).
+        // To restrict by default: conditions.push('FALSE'); // Effectively shows no candidates
       }
+      // Admin sees all by default if no assignedRecruiterIdParam
     }
 
 
@@ -224,7 +232,12 @@ export async function GET(request: NextRequest) {
         transitionHistory: row.transitionHistory || [],
     }));
 
-    return NextResponse.json(candidates, { status: 200 });
+    return NextResponse.json(candidates, {
+      status: 200,
+      headers: {
+        'Cache-Control': 'public, max-age=60', // Added Cache-Control header
+      },
+    });
   } catch (error) {
     console.error("Failed to fetch candidates:", error);
     await logAudit('ERROR', `Failed to fetch candidates. Error: ${(error as Error).message}`, 'API:Candidates:GetAll', session?.user?.id);
@@ -354,7 +367,7 @@ export async function POST(request: NextRequest) {
       rawData.status,
       rawData.applicationDate ? new Date(rawData.applicationDate) : new Date(),
       finalParsedData,
-      rawData.custom_attributes || {}, // New
+      rawData.custom_attributes || {},
       rawData.resumePath,
     ];
     const candidateResult = await client.query(insertCandidateQuery, candidateValues);
@@ -385,19 +398,22 @@ export async function POST(request: NextRequest) {
             p.department as "positionDepartment",
             p.position_level as "positionLevel",
             rec.name as "recruiterName",
-            COALESCE(
-              (SELECT json_agg(
-                json_build_object(
-                  'id', th.id, 'candidateId', th."candidateId", 'date', th.date, 'stage', th.stage, 'notes', th.notes,
-                  'actingUserId', th."actingUserId", 'actingUserName', u.name,
-                  'createdAt', th."createdAt", 'updatedAt', th."updatedAt"
-                ) ORDER BY th.date DESC
-               ) FROM "TransitionRecord" th LEFT JOIN "User" u ON th."actingUserId" = u.id WHERE th."candidateId" = c.id),
-              '[]'::json
-            ) as "transitionHistory"
+            COALESCE(th_data.history, '[]'::json) as "transitionHistory"
         FROM "Candidate" c
         LEFT JOIN "Position" p ON c."positionId" = p.id
         LEFT JOIN "User" rec ON c."recruiterId" = rec.id
+        LEFT JOIN LATERAL (
+            SELECT json_agg(
+                json_build_object(
+                'id', th.id, 'candidateId', th."candidateId", 'date', th.date, 'stage', th.stage, 
+                'notes', th.notes, 'actingUserId', th."actingUserId", 'actingUserName', u_th.name, 
+                'createdAt', th."createdAt", 'updatedAt', th."updatedAt"
+                ) ORDER BY th.date DESC
+            ) AS history
+            FROM "TransitionRecord" th
+            LEFT JOIN "User" u_th ON th."actingUserId" = u_th.id
+            WHERE th."candidateId" = c.id
+        ) AS th_data ON true
         WHERE c.id = $1;
     `;
     const finalResult = await client.query(finalQuery, [newCandidate.id]);
@@ -435,4 +451,3 @@ export async function POST(request: NextRequest) {
     client.release();
   }
 }
-    

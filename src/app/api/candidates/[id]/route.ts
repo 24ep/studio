@@ -20,29 +20,22 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
         p.department as "positionDepartment",
         p.position_level as "positionLevel",
         rec.name as "recruiterName",
-        COALESCE(
-          (SELECT json_agg(
-            json_build_object(
-              'id', th.id,
-              'candidateId', th."candidateId",
-              'date', th.date,
-              'stage', th.stage,
-              'notes', th.notes,
-              'actingUserId', th."actingUserId",
-              'actingUserName', u.name,
-              'createdAt', th."createdAt",
-              'updatedAt', th."updatedAt"
-            ) ORDER BY th.date DESC
-           )
-           FROM "TransitionRecord" th
-           LEFT JOIN "User" u ON th."actingUserId" = u.id
-           WHERE th."candidateId" = c.id
-          ),
-          '[]'::json
-        ) as "transitionHistory"
+        COALESCE(th_data.history, '[]'::json) as "transitionHistory"
       FROM "Candidate" c
       LEFT JOIN "Position" p ON c."positionId" = p.id
       LEFT JOIN "User" rec ON c."recruiterId" = rec.id
+      LEFT JOIN LATERAL (
+        SELECT json_agg(
+          json_build_object(
+            'id', th.id, 'candidateId', th."candidateId", 'date', th.date, 'stage', th.stage,
+            'notes', th.notes, 'actingUserId', th."actingUserId", 'actingUserName', u_th.name,
+            'createdAt', th."createdAt", 'updatedAt', th."updatedAt"
+          ) ORDER BY th.date DESC
+        ) AS history
+        FROM "TransitionRecord" th
+        LEFT JOIN "User" u_th ON th."actingUserId" = u_th.id
+        WHERE th."candidateId" = c.id
+      ) AS th_data ON true
       WHERE c.id = $1;
     `;
     const result = await pool.query(query, [params.id]);
@@ -58,7 +51,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
     if (parsedDataFromDb && Array.isArray(parsedDataFromDb.job_matches) && parsedDataFromDb.job_matches.length > 0) {
       const jobIdsToFetch = parsedDataFromDb.job_matches
         .map(match => match.job_id)
-        .filter(id => id != null) as string[]; // Filter out null/undefined IDs
+        .filter(id => id != null) as string[]; 
 
       if (jobIdsToFetch.length > 0) {
         const uniqueJobIds = [...new Set(jobIdsToFetch)];
@@ -87,7 +80,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
         recruiter: candidateRow.recruiterId ? {
             id: candidateRow.recruiterId,
             name: candidateRow.recruiterName,
-            email: null
+            email: null 
         } : null,
         transitionHistory: candidateRow.transitionHistory || [],
     };
@@ -180,7 +173,7 @@ const updateCandidateSchema = z.object({
   fitScore: z.number().min(0).max(100).optional(),
   status: z.string().min(1).optional(),
   parsedData: candidateDetailsSchemaPartial.optional(),
-  custom_attributes: z.record(z.any()).optional().nullable(), // New
+  custom_attributes: z.record(z.any()).optional().nullable(),
   resumePath: z.string().optional().nullable(),
 });
 
@@ -277,7 +270,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
           updateValues.push(mergedParsedData);
         } else if (key === 'custom_attributes') {
             updateFields.push(`"custom_attributes" = $${paramIndex++}`);
-            updateValues.push(value || {}); // Ensure it's an object, even if null/undefined
+            updateValues.push(value || {}); 
         } else {
           updateFields.push(`"${key}" = $${paramIndex++}`);
           updateValues.push(value);
@@ -292,19 +285,22 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
               c.*,
               p.title as "positionTitle", p.department as "positionDepartment", p.position_level as "positionLevel",
               rec.name as "recruiterName",
-              COALESCE(
-                (SELECT json_agg(
-                  json_build_object(
-                    'id', th.id, 'candidateId', th."candidateId", 'date', th.date, 'stage', th.stage, 'notes', th.notes,
-                    'actingUserId', th."actingUserId", 'actingUserName', u.name,
-                    'createdAt', th."createdAt", 'updatedAt', th."updatedAt"
-                  ) ORDER BY th.date DESC
-                 ) FROM "TransitionRecord" th LEFT JOIN "User" u ON th."actingUserId" = u.id WHERE th."candidateId" = c.id),
-                '[]'::json
-              ) as "transitionHistory"
+              COALESCE(th_data.history, '[]'::json) as "transitionHistory"
           FROM "Candidate" c
           LEFT JOIN "Position" p ON c."positionId" = p.id
           LEFT JOIN "User" rec ON c."recruiterId" = rec.id
+          LEFT JOIN LATERAL (
+            SELECT json_agg(
+                json_build_object(
+                'id', th.id, 'candidateId', th."candidateId", 'date', th.date, 'stage', th.stage, 
+                'notes', th.notes, 'actingUserId', th."actingUserId", 'actingUserName', u_th.name, 
+                'createdAt', th."createdAt", 'updatedAt', th."updatedAt"
+                ) ORDER BY th.date DESC
+            ) AS history
+            FROM "TransitionRecord" th
+            LEFT JOIN "User" u_th ON th."actingUserId" = u_th.id
+            WHERE th."candidateId" = c.id
+          ) AS th_data ON true
           WHERE c.id = $1;
       `;
       const currentResult = await client.query(currentCandidateQuery, [params.id]);
@@ -321,7 +317,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
         recruiter: currentResult.rows[0].recruiterId ? {
             id: currentResult.rows[0].recruiterId,
             name: currentResult.rows[0].recruiterName,
-            email: null
+            email: null 
         } : null,
         transitionHistory: currentResult.rows[0].transitionHistory || [],
       };
@@ -368,19 +364,22 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
             p.department as "positionDepartment",
             p.position_level as "positionLevel",
             rec.name as "recruiterName",
-            COALESCE(
-              (SELECT json_agg(
-                json_build_object(
-                  'id', th.id, 'candidateId', th."candidateId", 'date', th.date, 'stage', th.stage, 'notes', th.notes,
-                  'actingUserId', th."actingUserId", 'actingUserName', u.name,
-                  'createdAt', th."createdAt", 'updatedAt', th."updatedAt"
-                ) ORDER BY th.date DESC
-               ) FROM "TransitionRecord" th LEFT JOIN "User" u ON th."actingUserId" = u.id WHERE th."candidateId" = c.id),
-              '[]'::json
-            ) as "transitionHistory"
+            COALESCE(th_data.history, '[]'::json) as "transitionHistory"
         FROM "Candidate" c
         LEFT JOIN "Position" p ON c."positionId" = p.id
         LEFT JOIN "User" rec ON c."recruiterId" = rec.id
+        LEFT JOIN LATERAL (
+            SELECT json_agg(
+                json_build_object(
+                'id', th.id, 'candidateId', th."candidateId", 'date', th.date, 'stage', th.stage, 
+                'notes', th.notes, 'actingUserId', th."actingUserId", 'actingUserName', u_th.name, 
+                'createdAt', th."createdAt", 'updatedAt', th."updatedAt"
+                ) ORDER BY th.date DESC
+            ) AS history
+            FROM "TransitionRecord" th
+            LEFT JOIN "User" u_th ON th."actingUserId" = u_th.id
+            WHERE th."candidateId" = c.id
+        ) AS th_data ON true
         WHERE c.id = $1;
     `;
     const finalResult = await client.query(finalQuery, [params.id]);
@@ -418,7 +417,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
         recruiter: finalResult.rows[0].recruiterId ? {
             id: finalResult.rows[0].recruiterId,
             name: finalResult.rows[0].recruiterName,
-            email: null
+            email: null 
         } : null,
         transitionHistory: finalResult.rows[0].transitionHistory || [],
     };
@@ -474,4 +473,3 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
     client.release();
   }
 }
-    
