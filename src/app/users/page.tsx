@@ -284,7 +284,7 @@ export default function ManageUsersPage() {
                             <DropdownMenuSeparator />
                             <DropdownMenuItem 
                               onClick={() => confirmDeleteUser(user)} 
-                              disabled={session?.user?.id === user.id} // Prevent admin from deleting self
+                              disabled={session?.user?.id === user.id} 
                               className="text-destructive hover:!bg-destructive/10 focus:!bg-destructive/10 focus:!text-destructive"
                             >
                               <Trash2 className="mr-2 h-4 w-4" /> Delete User
@@ -326,7 +326,6 @@ export default function ManageUsersPage() {
 
       {userToDelete && (
         <AlertDialog open={!!userToDelete} onOpenChange={(open) => { if(!open) setUserToDelete(null);}}>
-          {/* AlertDialogTrigger is not needed if open is controlled by state */}
           <AlertDialogContent>
             <AlertDialogHeader>
               <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
