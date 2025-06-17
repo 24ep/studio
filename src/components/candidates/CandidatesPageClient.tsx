@@ -61,7 +61,7 @@ function CandidatesPageClientInner({
   const { data: session, status: sessionStatus } = useSession();
 
   const [page, setPage] = useState(1);
-  const const [pageSize, setPageSize] = useState(20);
+  const [pageSize, setPageSize] = useState(20);
   const [total, setTotal] = useState(initialCandidates.length);
 
   // React Query for candidates
