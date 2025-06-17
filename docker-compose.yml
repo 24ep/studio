@@ -1,4 +1,3 @@
-
 version: '3.8'
 
 services:
@@ -43,8 +42,8 @@ services:
       MINIO_BUCKET_NAME: "${MINIO_BUCKET_NAME:-canditrack-resumes}"
       MINIO_USE_SSL: "${MINIO_USE_SSL:-false}"
       REDIS_URL: "${REDIS_URL:-redis://redis:6379}" # Service name for Docker internal communication
-      N8N_RESUME_WEBHOOK_URL: "${N8N_RESUME_WEBHOOK_URL:-}" # Optional n8n webhook URL for candidate resumes
-      N8N_GENERIC_PDF_WEBHOOK_URL: "${N8N_GENERIC_PDF_WEBHOOK_URL:-}" # Optional n8n webhook URL for generic PDF uploads
+      N8N_RESUME_WEBHOOK_URL: "${N8N_RESUME_WEBHOOK_URL:-https://n8n.bondarys.com/webhook/upload-cv}" # Optional n8n webhook URL for candidate resumes
+      N8N_GENERIC_PDF_WEBHOOK_URL: "${N8N_GENERIC_PDF_WEBHOOK_URL:-https://n8n.bondarys.com/webhook/upload-cv}" # Optional n8n webhook URL for generic PDF uploads
 
       # --- General Application Settings ---
       NODE_ENV: development # Change to "production" for actual production builds
@@ -68,15 +67,9 @@ services:
       POSTGRES_DB: "${POSTGRES_DB:-canditrack_db}"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      # Mount the entire pg-init-scripts directory.
-      # PostgreSQL will execute all .sql and .sh files found in /docker-entrypoint-initdb.d/ on first startup
-      # when the postgres_data volume is empty or being newly created.
-      # Ensure your init-db.sql file is inside a 'pg-init-scripts' directory in your project root.
-      # The path './pg-init-scripts' is relative to the directory where 'docker-compose' is executed.
-      # If using Portainer with a Git repository, this path is relative to the root of the checked-out repository.
-      # If Docker cannot find the source directory, it may create an empty directory in the container,
-      # leading to the "psql: ... Is a directory" error if it then tries to execute a file that isn't there
-      # or if it expects a file but finds a directory.
+      # IMPORTANT: Mount initialization scripts for first-time DB setup.
+      # Place any .sql or .sh files (such as init-db.sql) in the pg-init-scripts directory.
+      # These will be executed automatically by the Postgres container on first startup with a new data volume.
       - ./pg-init-scripts:/docker-entrypoint-initdb.d
     restart: unless-stopped
 
