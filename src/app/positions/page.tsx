@@ -3,7 +3,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Button, buttonVariants } from "@/components/ui/button"; 
+import { Button, buttonVariants } from "@/components/ui/button";
 import { PlusCircle, Briefcase, Edit, Trash2, ServerCrash, Loader2, FileDown, FileUp, ChevronDown, FileSpreadsheet } from "lucide-react";
 import type { Position } from "@/lib/types";
 import { Badge } from "@/components/ui/badge";
@@ -34,6 +34,18 @@ import {
   DropdownMenuTrigger
 } from '@/components/ui/dropdown-menu';
 
+function downloadFile(content: string, filename: string, contentType: string) {
+  const blob = new Blob([content], { type: contentType });
+  const link = document.createElement("a");
+  const url = URL.createObjectURL(blob);
+  link.setAttribute("href", url);
+  link.setAttribute("download", filename);
+  link.style.visibility = 'hidden';
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+}
 
 export default function PositionsPage() {
   const [positions, setPositions] = useState<Position[]>([]);
@@ -55,7 +67,7 @@ export default function PositionsPage() {
 
   const fetchPositions = useCallback(async () => {
     if (sessionStatus !== 'authenticated') {
-        setIsLoading(false); // Prevent indefinite loading
+        setIsLoading(false);
         return;
     }
     setIsLoading(true);
@@ -65,7 +77,7 @@ export default function PositionsPage() {
       const query = new URLSearchParams();
       if (filters.title) query.append('title', filters.title);
       if (filters.department) query.append('department', filters.department);
-      if (filters.isOpen && filters.isOpen !== "all") query.append('isOpen', String(filters.isOpen === "true")); 
+      if (filters.isOpen && filters.isOpen !== "all") query.append('isOpen', String(filters.isOpen === "true"));
       if (filters.positionLevel) query.append('position_level', filters.positionLevel);
 
 
@@ -94,7 +106,7 @@ export default function PositionsPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [filters, sessionStatus, pathname, signIn]); 
+  }, [filters, sessionStatus, pathname, signIn]);
 
   useEffect(() => {
     if (sessionStatus === 'unauthenticated') {
@@ -102,7 +114,7 @@ export default function PositionsPage() {
     } else if (sessionStatus === 'authenticated') {
       fetchPositions();
     }
-  }, [filters, sessionStatus, fetchPositions, pathname, signIn]); 
+  }, [filters, sessionStatus, fetchPositions, pathname, signIn]);
 
 
   const handleFilterChange = (newFilters: PositionFilterValues) => {
@@ -179,7 +191,7 @@ export default function PositionsPage() {
         method: 'DELETE',
       });
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ message: "Failed to delete position." }));
+        const errorData = await response.json().catch(() => ({message: "Failed to delete position."}));
         throw new Error(errorData.message || `Failed to delete position: ${response.statusText}`);
       }
       setPositions(prevPositions => prevPositions.filter(p => p.id !== positionToDelete!.id));
@@ -196,32 +208,20 @@ export default function PositionsPage() {
     }
   };
 
-  const handleDownloadExcelTemplateGuide = () => {
-    const columns = [
-      "title (String, Required)",
-      "department (String, Required)",
-      "description (String, Optional)",
-      "isOpen (Boolean, Required, true/false)",
-      "position_level (String, Optional, e.g., Senior, Entry Level)",
-    ];
+  const handleDownloadCsvTemplate = () => {
+    const headers = ["title", "department", "description", "isOpen", "position_level"];
+    const exampleRow = ["Example Software Engineer", "Technology", "Develop amazing software", "true", "Senior"];
+    const csvContent = [headers.join(','), exampleRow.join(',')].join('\n');
+    downloadFile(csvContent, 'positions_template.csv', 'text/csv');
     toast({
-      title: "Position Excel Import Template Guide",
-      description: (
-        <div className="max-h-60 overflow-y-auto">
-          <p className="mb-2">Your Excel file should have a header row with the following columns. `isOpen` should contain TRUE or FALSE.</p>
-          <ul className="list-disc list-inside text-xs">
-            {columns.map(col => <li key={col}>{col}</li>)}
-          </ul>
-        </div>
-      ),
-      duration: 15000,
+      title: "Template Downloaded",
+      description: "A CSV template for positions has been downloaded.",
     });
   };
 
-  const handleExportToExcel = async () => {
+  const handleExportToCsv = async () => {
     setIsLoading(true);
     try {
-      // Add any active filters to the export query if your API supports them
       const query = new URLSearchParams();
       if (filters.title) query.append('title', filters.title);
       if (filters.department) query.append('department', filters.department);
@@ -235,17 +235,10 @@ export default function PositionsPage() {
       }
 
       const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
       const filename = response.headers.get('content-disposition')?.split('filename=')[1]?.replace(/"/g, '') || 'positions_export.csv';
-      a.download = filename;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      window.URL.revokeObjectURL(url);
+      downloadFile(await blob.text(), filename, blob.type);
 
-      toast({ title: "Export Successful", description: "Positions exported (CSV format for this prototype)." });
+      toast({ title: "Export Successful", description: "Positions exported as CSV." });
 
     } catch (error) {
       console.error("Error exporting positions:", error);
@@ -256,7 +249,7 @@ export default function PositionsPage() {
   };
 
 
-  if (sessionStatus === 'loading' || (sessionStatus === 'unauthenticated' && !pathname.startsWith('/auth/signin')) || (isLoading && !fetchError && positions.length === 0)) { 
+  if (sessionStatus === 'loading' || (sessionStatus === 'unauthenticated' && !pathname.startsWith('/auth/signin')) || (isLoading && !fetchError && positions.length === 0)) {
     return (
       <div className="flex h-screen w-screen items-center justify-center bg-background fixed inset-0 z-50">
         <Loader2 className="h-16 w-16 animate-spin text-primary" />
@@ -306,13 +299,13 @@ export default function PositionsPage() {
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start">
               <DropdownMenuItem onClick={() => setIsImportModalOpen(true)}>
-                  <FileUp className="mr-2 h-4 w-4" /> Import Positions (Excel)
+                  <FileUp className="mr-2 h-4 w-4" /> Import Positions (Excel/CSV)
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={handleDownloadExcelTemplateGuide}>
-                  <FileDown className="mr-2 h-4 w-4" /> Download Excel Template Guide
+              <DropdownMenuItem onClick={handleDownloadCsvTemplate}>
+                  <FileDown className="mr-2 h-4 w-4" /> Download CSV Template
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={handleExportToExcel} disabled={isLoading}>
-                  <FileSpreadsheet className="mr-2 h-4 w-4" /> Export Positions (Excel/CSV)
+              <DropdownMenuItem onClick={handleExportToCsv} disabled={isLoading}>
+                  <FileSpreadsheet className="mr-2 h-4 w-4" /> Export Positions (CSV)
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -338,7 +331,7 @@ export default function PositionsPage() {
               <Briefcase className="mx-auto h-12 w-12 text-muted-foreground animate-pulse" />
               <p className="mt-4 text-muted-foreground">Loading positions...</p>
             </div>
-          ) : !isLoading && positions.length === 0 && !fetchError ? ( 
+          ) : !isLoading && positions.length === 0 && !fetchError ? (
             <div className="text-center py-10">
               <Briefcase className="mx-auto h-12 w-12 text-muted-foreground" />
               <p className="mt-4 text-muted-foreground">No positions found. Try adjusting filters or add a new position.</p>
@@ -435,7 +428,7 @@ export default function PositionsPage() {
       <ImportPositionsModal
         isOpen={isImportModalOpen}
         onOpenChange={setIsImportModalOpen}
-        onImportSuccess={fetchPositions} 
+        onImportSuccess={fetchPositions}
       />
     </div>
   );

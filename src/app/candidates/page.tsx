@@ -1,3 +1,4 @@
+
 // src/app/candidates/page.tsx - Server Component
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/app/api/auth/[...nextauth]/route';
@@ -22,8 +23,8 @@ async function getInitialCandidatesData(session: any): Promise<{ candidates: Can
     LEFT JOIN LATERAL (
       SELECT json_agg(
         json_build_object(
-          'id', th.id, 'candidateId', th."candidateId", 'date', th.date, 'stage', th.stage, 
-          'notes', th.notes, 'actingUserId', th."actingUserId", 'actingUserName', u_th.name, 
+          'id', th.id, 'candidateId', th."candidateId", 'date', th.date, 'stage', th.stage,
+          'notes', th.notes, 'actingUserId', th."actingUserId", 'actingUserName', u_th.name,
           'createdAt', th."createdAt", 'updatedAt', th."updatedAt"
         ) ORDER BY th.date DESC
       ) AS history
@@ -36,7 +37,6 @@ async function getInitialCandidatesData(session: any): Promise<{ candidates: Can
   let paramIndex = 1;
   const conditions = [];
 
-  // Default filtering for initial load based on role
   if (userRole === 'Recruiter') {
     if (!session?.user?.id) {
       return { candidates: [], authError: true, error: "User session required for Recruiter view." };
@@ -44,12 +44,12 @@ async function getInitialCandidatesData(session: any): Promise<{ candidates: Can
     conditions.push(`c."recruiterId" = $${paramIndex++}`);
     queryParams.push(session.user.id);
   }
-  // Admin sees all by default. Hiring Manager sees all by default (can be changed if needed).
+
 
   if (conditions.length > 0) {
     initialQuery += ' WHERE ' + conditions.join(' AND ');
   }
-  initialQuery += ' ORDER BY c."createdAt" DESC LIMIT 50;'; // Add a reasonable limit for initial load
+  initialQuery += ' ORDER BY c."createdAt" DESC LIMIT 50;';
 
   try {
     const result = await pool.query(initialQuery, queryParams);
@@ -63,10 +63,10 @@ async function getInitialCandidatesData(session: any): Promise<{ candidates: Can
           department: row.positionDepartment,
           position_level: row.positionLevel,
       } : null,
-      recruiter: row.recruiterId ? { 
+      recruiter: row.recruiterId ? {
           id: row.recruiterId,
           name: row.recruiterName,
-          email: null 
+          email: null
       } : null,
       transitionHistory: row.transitionHistory || [],
     }));
@@ -81,29 +81,22 @@ export default async function CandidatesPageServer() {
   const session = await getServerSession(authOptions);
 
   if (!session?.user) {
-    // Pass authError to client to handle redirect/message
     return <CandidatesPageClient initialCandidates={[]} initialAvailablePositions={[]} initialAvailableStages={[]} authError={true} />;
   }
-  
-  // Example permission check (can be more granular)
-  // if (session.user.role !== 'Admin' && !session.user.modulePermissions?.includes('CANDIDATES_VIEW')) {
-  //   return <CandidatesPageClient initialCandidates={[]} initialAvailablePositions={[]} initialAvailableStages={[]} permissionError={true} />;
-  // }
+
 
   const { candidates: initialCandidates, error: candidatesError, authError: candidatesAuthError, permissionError: candidatesPermissionError } = await getInitialCandidatesData(session);
   const initialPositions = await fetchAllPositionsDb();
   const initialStages = await fetchAllRecruitmentStagesDb();
 
   if (candidatesAuthError || candidatesPermissionError || candidatesError) {
-    // Pass error states to client component to render appropriate UI
     return (
-        <CandidatesPageClient 
-            initialCandidates={[]} 
-            initialAvailablePositions={initialPositions} 
-            initialAvailableStages={initialStages} 
+        <CandidatesPageClient
+            initialCandidates={[]}
+            initialAvailablePositions={initialPositions}
+            initialAvailableStages={initialStages}
             authError={candidatesAuthError}
             permissionError={candidatesPermissionError}
-            // You might want to pass the candidatesError message too if client handles its display
         />
     );
   }

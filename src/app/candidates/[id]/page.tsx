@@ -81,8 +81,8 @@ const experienceEntryEditSchema = z.object({
 
 const skillEntryEditSchema = z.object({
     segment_skill: z.string().optional().nullable(),
-    skill_string: z.string().optional().nullable(), 
-    skill: z.array(z.string()).optional(), 
+    skill_string: z.string().optional().nullable(),
+    skill: z.array(z.string()).optional(),
 }).deepPartial();
 
 const jobSuitableEntryEditSchema = z.object({
@@ -109,7 +109,7 @@ const editCandidateDetailSchema = z.object({
   positionId: z.string().uuid().nullable().optional(),
   recruiterId: z.string().uuid().nullable().optional(),
   fitScore: z.number().min(0).max(100).optional(),
-  status: z.string().min(1, "Status is required").optional(), // Changed from enum
+  status: z.string().min(1, "Status is required").optional(),
   parsedData: candidateDetailsEditSchema.optional(),
 });
 
@@ -145,7 +145,9 @@ const RoleSuggestionSummary: React.FC<RoleSuggestionSummaryProps> = ({ candidate
   const openPositionsMap = new Map(allDbPositions.filter(p => p.isOpen).map(p => [p.title.toLowerCase(), p]));
 
   for (const jobMatch of (candidate.parsedData as CandidateDetails).job_matches!) {
-    const jobMatchTitleLower = jobMatch.job_title.toLowerCase();
+    const jobMatchTitleLower = jobMatch.job_title?.toLowerCase(); // job_title can be optional/null
+    if (!jobMatchTitleLower) continue;
+
     const dbPositionMatch = openPositionsMap.get(jobMatchTitleLower);
 
     if (dbPositionMatch && dbPositionMatch.id !== currentAppliedPositionId) {
@@ -204,7 +206,7 @@ export default function CandidateDetailPage() {
   const [candidate, setCandidate] = useState<Candidate | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [fetchError, setFetchError] = useState<string | null>(null);
-  
+
   const [recruiters, setRecruiters] = useState<Pick<UserProfile, 'id' | 'name'>[]>([]);
   const [isAssigningRecruiter, setIsAssigningRecruiter] = useState(false);
 
@@ -238,7 +240,7 @@ export default function CandidateDetailPage() {
     if (!candidateId) return;
     setIsLoading(true);
     setFetchError(null);
-    
+
     try {
       const response = await fetch(`/api/candidates/${candidateId}`);
       if (!response.ok) {
@@ -289,7 +291,7 @@ export default function CandidateDetailPage() {
 
   const fetchAllPositions = useCallback(async () => {
     try {
-      const response = await fetch('/api/positions?isOpen=true'); 
+      const response = await fetch('/api/positions?isOpen=true');
       if (!response.ok) throw new Error('Failed to fetch positions');
       const data: Position[] = await response.json();
       setAllDbPositions(data);
@@ -314,8 +316,8 @@ export default function CandidateDetailPage() {
   useEffect(() => {
     if (candidateId) {
         fetchCandidateDetails();
-        fetchAllPositions(); 
-        fetchRecruiters(); 
+        fetchAllPositions();
+        fetchRecruiters();
         fetchRecruitmentStages();
     }
   }, [candidateId, fetchCandidateDetails, fetchRecruiters, fetchAllPositions, fetchRecruitmentStages]);
@@ -353,7 +355,7 @@ export default function CandidateDetailPage() {
             const errorData = await response.json().catch(() => ({ message: "An unknown error occurred" }));
             throw new Error(errorData.message || `Failed to update candidate status: ${response.statusText}`);
         }
-        await fetchCandidateDetails(); 
+        await fetchCandidateDetails();
         toast({ title: "Status Updated", description: `Candidate status updated to ${newStatus}.` });
     } catch (error) {
         toast({
@@ -379,7 +381,7 @@ export default function CandidateDetailPage() {
       }
       const updatedCandidate: Candidate = await response.json();
       setCandidate(updatedCandidate);
-      reset({ 
+      reset({
         name: updatedCandidate.name,
         email: updatedCandidate.email,
         phone: updatedCandidate.phone,
@@ -403,7 +405,11 @@ export default function CandidateDetailPage() {
     }
   };
 
-  const handleJobMatchClick = (jobMatchTitle: string) => {
+  const handleJobMatchClick = (jobMatchTitle: string | null | undefined) => {
+    if (!jobMatchTitle) {
+        toast({ title: "Position Title Missing", description: `Job match data is incomplete.`, variant: "default" });
+        return;
+    }
     const matchedPosition = allDbPositions.find(p => p.title.toLowerCase() === jobMatchTitle.toLowerCase());
     if (matchedPosition) {
       setSelectedPositionForEdit(matchedPosition);
@@ -416,9 +422,9 @@ export default function CandidateDetailPage() {
   const handlePositionEdited = async () => {
     toast({ title: "Position Updated", description: "Position details have been saved." });
     setIsEditPositionModalOpen(false);
-    await fetchAllPositions(); 
+    await fetchAllPositions();
     if (candidateId) {
-        await fetchCandidateDetails(); 
+        await fetchCandidateDetails();
     }
   };
 
@@ -439,7 +445,7 @@ export default function CandidateDetailPage() {
             }))
         }
     };
-    
+
     try {
         const response = await fetch(`/api/candidates/${candidate.id}`, {
             method: 'PUT',
@@ -450,7 +456,7 @@ export default function CandidateDetailPage() {
             const errorData = await response.json().catch(() => ({ message: "An unknown error occurred" }));
             throw new Error(errorData.message || `Failed to update candidate: ${response.statusText}`);
         }
-        await fetchCandidateDetails(); 
+        await fetchCandidateDetails();
         setIsEditing(false);
         toast({ title: "Details Saved", description: "Candidate details updated successfully." });
     } catch (error) {
@@ -460,7 +466,7 @@ export default function CandidateDetailPage() {
 
   const handleCancelEdit = () => {
     if (candidate) {
-        reset({ 
+        reset({
             name: candidate.name,
             email: candidate.email,
             phone: candidate.phone,
@@ -535,14 +541,16 @@ export default function CandidateDetailPage() {
       </div>
     );
   };
-  
+
   const getDisplayFilename = (filePath: string | null | undefined): string => {
-    if (!filePath) return "View Resume"; 
+    if (!filePath) return "View Resume";
+    // Ensure filePath is a string before attempting to split
+    if (typeof filePath !== 'string') return "Invalid Path";
     const parts = filePath.split('-');
-    if (parts.length > 2) { 
-      return parts.slice(2).join('-').replace(/_/g, ' '); 
+    if (parts.length > 2) {
+      return parts.slice(2).join('-').replace(/_/g, ' ');
     }
-    return parts.pop() || "View Resume"; 
+    return parts.pop() || "View Resume";
   };
 
   return (
@@ -558,7 +566,7 @@ export default function CandidateDetailPage() {
         {isEditing && (
             <div className="flex gap-2">
                 <Button onClick={handleSubmit(handleSaveDetails)} variant="default" disabled={isSubmitting} className="btn-primary-gradient">
-                    {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Save className="mr-2 h-4 w-4"/>} 
+                    {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Save className="mr-2 h-4 w-4"/>}
                     {isSubmitting ? 'Saving...' : 'Save Changes'}
                 </Button>
                 <Button variant="outline" onClick={handleCancelEdit} disabled={isSubmitting}>
@@ -583,7 +591,7 @@ export default function CandidateDetailPage() {
                       <Label htmlFor="name">Name</Label>
                       <Input id="name" {...register('name')} className="text-3xl font-bold" />
                       {errors.name && <p className="text-sm text-destructive">{errors.name.message}</p>}
-                      
+
                       <Label htmlFor="email" className="mt-1 block">Email</Label>
                       <Input id="email" {...register('email')} />
                       {errors.email && <p className="text-sm text-destructive">{errors.email.message}</p>}
@@ -661,12 +669,13 @@ export default function CandidateDetailPage() {
                         {renderField("CV Language", parsed?.cv_language, Tag)}
                     </>
                 )}
+                {/* Resume Download Link - Ensure your MinIO bucket allows public reads or implement a presigned URL strategy if private */}
                 {candidate.resumePath && !isEditing && renderField(
                   "Resume",
                   getDisplayFilename(candidate.resumePath),
                   HardDrive,
                   true,
-                  `${MINIO_PUBLIC_BASE_URL}/${MINIO_BUCKET}/${candidate.resumePath}`,
+                  `${MINIO_PUBLIC_BASE_URL}/${MINIO_BUCKET}/${candidate.resumePath}`, // This link assumes public bucket or appropriate proxy
                   "_blank"
                 )}
                  {(parsed?.associatedMatchDetails && !isEditing) && (
@@ -731,7 +740,7 @@ export default function CandidateDetailPage() {
                     )}
                 </CardContent>
             </Card>
-          
+
             <Card>
                 <CardHeader><CardTitle className="flex items-center"><GraduationCap className="mr-2 h-5 w-5 text-primary"/>Education</CardTitle></CardHeader>
                 <CardContent>
@@ -777,7 +786,7 @@ export default function CandidateDetailPage() {
                     </ScrollArea>
                 </CardContent>
             </Card>
-          
+
           <Card>
               <CardHeader><CardTitle className="flex items-center"><Briefcase className="mr-2 h-5 w-5 text-primary"/>Experience</CardTitle></CardHeader>
               <CardContent>
@@ -856,11 +865,11 @@ export default function CandidateDetailPage() {
                   </ScrollArea>
               </CardContent>
           </Card>
-          
+
             <Card>
               <CardHeader><CardTitle className="flex items-center"><Star className="mr-2 h-5 w-5 text-primary"/>Skills</CardTitle></CardHeader>
               <CardContent>
-                <ScrollArea className="h-[300px]"> 
+                <ScrollArea className="h-[300px]">
                 {isEditing ? (
                     <div className="space-y-4">
                         {skillsFields.map((field, index) => (
@@ -899,11 +908,11 @@ export default function CandidateDetailPage() {
                 </ScrollArea>
               </CardContent>
             </Card>
-          
+
             <Card>
               <CardHeader><CardTitle className="flex items-center"><UserCog className="mr-2 h-5 w-5 text-primary"/>Job Suitability</CardTitle></CardHeader>
               <CardContent>
-                <ScrollArea className="h-[300px]"> 
+                <ScrollArea className="h-[300px]">
                  {isEditing ? (
                     <div className="space-y-4">
                         {jobSuitableFields.map((field, index) => (
@@ -944,7 +953,7 @@ export default function CandidateDetailPage() {
             <CardHeader><CardTitle className="flex items-center"><MessageSquare className="mr-2 h-5 w-5 text-primary"/>Transition History</CardTitle></CardHeader>
             <CardContent>
               {candidate.transitionHistory && candidate.transitionHistory.length > 0 ? (
-                <ScrollArea className="h-[300px]"> 
+                <ScrollArea className="h-[300px]">
                 <ul className="space-y-0">
                   {candidate.transitionHistory.sort((a,b) => parseISO(b.date).getTime() - parseISO(a.date).getTime()).map((record, index) => (
                     <li key={record.id} className="p-3 hover:bg-muted/50 transition-colors">
@@ -977,15 +986,15 @@ export default function CandidateDetailPage() {
                 <CardDescription>Full list of job matches from automated processing for this candidate.</CardDescription>
               </CardHeader>
               <CardContent>
-                <ScrollArea className="h-[calc(100vh-240px)]"> 
+                <ScrollArea className="h-[calc(100vh-240px)]">
                   <ul className="space-y-3">
                     {parsed.job_matches.map((match, index) => (
                       <li key={`match-${index}-${match.job_id || index}`} className="p-3 border rounded-md bg-muted/30">
-                        <h4 
+                        <h4
                           className="font-semibold text-foreground hover:text-primary hover:underline cursor-pointer"
                           onClick={() => handleJobMatchClick(match.job_title)}
                         >
-                          {match.job_title} <ExternalLink className="inline h-3 w-3 ml-1 opacity-70" />
+                          {match.job_title || 'Job Title Missing'} <ExternalLink className="inline h-3 w-3 ml-1 opacity-70" />
                         </h4>
                         <div className="text-sm text-muted-foreground">
                           Fit Score: <span className="font-medium text-foreground">{match.fit_score}%</span>
@@ -1028,8 +1037,8 @@ export default function CandidateDetailPage() {
               candidate={candidate}
               isOpen={isTransitionsModalOpen}
               onOpenChange={setIsTransitionsModalOpen}
-              onUpdateCandidate={handleUpdateCandidateStatus} 
-              onRefreshCandidateData={fetchCandidateDetails} 
+              onUpdateCandidate={handleUpdateCandidateStatus}
+              onRefreshCandidateData={fetchCandidateDetails}
               availableStages={availableStages}
           />
         </>
@@ -1046,4 +1055,3 @@ export default function CandidateDetailPage() {
     </FormProvider>
   );
 }
-

@@ -48,11 +48,10 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
     const candidateRow = result.rows[0];
     let parsedDataFromDb: CandidateDetails | null = candidateRow.parsedData || { personal_info: {} as PersonalInfo, contact_info: {} as ContactInfo };
 
-    // Sync job_matches titles with current Position table
     if (parsedDataFromDb && Array.isArray(parsedDataFromDb.job_matches) && parsedDataFromDb.job_matches.length > 0) {
       const jobIdsToFetch = parsedDataFromDb.job_matches
         .map(match => match.job_id)
-        .filter(id => id != null) as string[]; 
+        .filter(id => id != null) as string[];
 
       if (jobIdsToFetch.length > 0) {
         const uniqueJobIds = [...new Set(jobIdsToFetch)];
@@ -81,7 +80,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
         recruiter: candidateRow.recruiterId ? {
             id: candidateRow.recruiterId,
             name: candidateRow.recruiterName,
-            email: null 
+            email: null
         } : null,
         transitionHistory: candidateRow.transitionHistory || [],
     };
@@ -125,7 +124,7 @@ const experienceEntrySchemaPartial = z.object({
     period: z.string().optional().nullable(),
     duration: z.string().optional().nullable(),
     is_current_position: z.union([z.boolean(), z.string()]).optional(),
-    postition_level: z.string().optional().nullable(), // Changed to .nullable()
+    postition_level: z.string().optional().nullable(),
 }).deepPartial();
 
 const skillEntrySchemaPartial = z.object({
@@ -271,7 +270,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
           updateValues.push(mergedParsedData);
         } else if (key === 'custom_attributes') {
             updateFields.push(`"custom_attributes" = $${paramIndex++}`);
-            updateValues.push(value || {}); 
+            updateValues.push(value || {});
         } else {
           updateFields.push(`"${key}" = $${paramIndex++}`);
           updateValues.push(value);
@@ -293,8 +292,8 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
           LEFT JOIN LATERAL (
             SELECT json_agg(
                 json_build_object(
-                'id', th.id, 'candidateId', th."candidateId", 'date', th.date, 'stage', th.stage, 
-                'notes', th.notes, 'actingUserId', th."actingUserId", 'actingUserName', u_th.name, 
+                'id', th.id, 'candidateId', th."candidateId", 'date', th.date, 'stage', th.stage,
+                'notes', th.notes, 'actingUserId', th."actingUserId", 'actingUserName', u_th.name,
                 'createdAt', th."createdAt", 'updatedAt', th."updatedAt"
                 ) ORDER BY th.date DESC
             ) AS history
@@ -318,7 +317,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
         recruiter: currentResult.rows[0].recruiterId ? {
             id: currentResult.rows[0].recruiterId,
             name: currentResult.rows[0].recruiterName,
-            email: null 
+            email: null
         } : null,
         transitionHistory: currentResult.rows[0].transitionHistory || [],
       };
@@ -333,18 +332,25 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
     }
 
     if (validatedData.status && validatedData.status !== existingCandidate.status) {
-      const insertTransitionQuery = `
-        INSERT INTO "TransitionRecord" (id, "candidateId", date, stage, notes, "actingUserId", "createdAt", "updatedAt")
-        VALUES ($1, $2, NOW(), $3, $4, $5, NOW(), NOW());
-      `;
-      await client.query(insertTransitionQuery, [
-        uuidv4(),
-        params.id,
-        validatedData.status,
-        `Status updated to ${validatedData.status} by ${actingUserName}.`,
-        actingUserId
-      ]);
-      await logAudit('AUDIT', `Candidate '${existingCandidate.name}' (ID: ${params.id}) status changed from '${oldStatus}' to '${validatedData.status}' by ${actingUserName}.`, 'API:Candidates:UpdateStatus', actingUserId, { targetCandidateId: params.id, newStatus: validatedData.status, oldStatus: oldStatus });
+      try {
+          const insertTransitionQuery = `
+            INSERT INTO "TransitionRecord" (id, "candidateId", date, stage, notes, "actingUserId", "createdAt", "updatedAt")
+            VALUES ($1, $2, NOW(), $3, $4, $5, NOW(), NOW());
+          `;
+          await client.query(insertTransitionQuery, [
+            uuidv4(),
+            params.id,
+            validatedData.status,
+            `Status updated to ${validatedData.status} by ${actingUserName}.`,
+            actingUserId
+          ]);
+          await logAudit('AUDIT', `Candidate '${existingCandidate.name}' (ID: ${params.id}) status changed from '${oldStatus}' to '${validatedData.status}' by ${actingUserName}.`, 'API:Candidates:UpdateStatus', actingUserId, { targetCandidateId: params.id, newStatus: validatedData.status, oldStatus: oldStatus });
+      } catch (transitionError: any) {
+          console.error(`DB Error creating transition record for candidate ${params.id}:`, transitionError);
+          await logAudit('ERROR', `DB Error creating transition record for candidate ${params.id} by ${actingUserName}. Error: ${transitionError.message}. Code: ${transitionError.code}, Constraint: ${transitionError.constraint}`, 'API:Candidates:Update', actingUserId, { targetCandidateId: params.id, errorCode: transitionError.code, errorConstraint: transitionError.constraint });
+          // Do not re-throw here if we want to commit other changes, or throw if transition is critical
+          throw new Error(`Failed to create transition record: ${transitionError.message}`); // Re-throw to trigger rollback
+      }
     }
 
     if (validatedData.recruiterId !== undefined && validatedData.recruiterId !== oldRecruiterId) {
@@ -352,13 +358,12 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
         const oldRecruiterNameQuery = oldRecruiterId ? 'SELECT name FROM "User" WHERE id = $1' : null;
         const oldRecruiterNameResult = oldRecruiterNameQuery ? await client.query(oldRecruiterNameQuery, [oldRecruiterId]) : null;
         const oldRecruiterName = oldRecruiterNameResult && oldRecruiterNameResult.rows.length > 0 ? oldRecruiterNameResult.rows[0].name : 'Unassigned';
-        
+
         await logAudit('AUDIT', `Candidate '${existingCandidate.name}' (ID: ${params.id}) recruiter changed from '${oldRecruiterName}' to '${newRecruiterName}' by ${actingUserName}.`, 'API:Candidates:AssignRecruiter', actingUserId, { targetCandidateId: params.id, newRecruiterId: validatedData.recruiterId, oldRecruiterId: oldRecruiterId });
     }
 
     await client.query('COMMIT');
 
-    // Re-fetch with synced job_matches titles
     const finalQuery = `
         SELECT
             c.id, c.name, c.email, c.phone, c."resumePath", c."parsedData", c.custom_attributes,
@@ -375,8 +380,8 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
         LEFT JOIN LATERAL (
             SELECT json_agg(
                 json_build_object(
-                'id', th.id, 'candidateId', th."candidateId", 'date', th.date, 'stage', th.stage, 
-                'notes', th.notes, 'actingUserId', th."actingUserId", 'actingUserName', u_th.name, 
+                'id', th.id, 'candidateId', th."candidateId", 'date', th.date, 'stage', th.stage,
+                'notes', th.notes, 'actingUserId', th."actingUserId", 'actingUserName', u_th.name,
                 'createdAt', th."createdAt", 'updatedAt', th."updatedAt"
                 ) ORDER BY th.date DESC
             ) AS history
@@ -421,7 +426,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
         recruiter: finalResult.rows[0].recruiterId ? {
             id: finalResult.rows[0].recruiterId,
             name: finalResult.rows[0].recruiterName,
-            email: null 
+            email: null
         } : null,
         transitionHistory: finalResult.rows[0].transitionHistory || [],
     };
@@ -431,7 +436,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
   } catch (error: any) {
     await client.query('ROLLBACK');
     console.error(`Failed to update candidate ${params.id}:`, error);
-    await logAudit('ERROR', `Failed to update candidate (ID: ${params.id}) by ${actingUserName}. Error: ${error.message}`, 'API:Candidates:Update', actingUserId, { targetCandidateId: params.id });
+    await logAudit('ERROR', `Failed to update candidate (ID: ${params.id}) by ${actingUserName}. Error: ${error.message}. Code: ${error.code}, Constraint: ${error.constraint}`, 'API:Candidates:Update', actingUserId, { targetCandidateId: params.id, errorCode: error.code, errorConstraint: error.constraint });
     if (error.code === '23505' && error.constraint === 'Candidate_email_key') {
       return NextResponse.json({ message: "A candidate with this email already exists." }, { status: 409 });
     }
@@ -471,7 +476,7 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
   } catch (error) {
     await client.query('ROLLBACK');
     console.error(`Failed to delete candidate ${params.id}:`, error);
-    await logAudit('ERROR', `Failed to delete candidate (ID: ${params.id}) by ${actingUserName}. Error: ${error.message}`, 'API:Candidates:Delete', actingUserId, { targetCandidateId: params.id });
+    await logAudit('ERROR', `Failed to delete candidate (ID: ${params.id}) by ${actingUserName}. Error: ${(error as Error).message}`, 'API:Candidates:Delete', actingUserId, { targetCandidateId: params.id });
     return NextResponse.json({ message: "Error deleting candidate", error: (error as Error).message }, { status: 500 });
   } finally {
     client.release();

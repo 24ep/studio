@@ -24,10 +24,10 @@ export async function GET(request: NextRequest) {
   try {
     const result = await pool.query('SELECT id, name, description, "createdAt", "updatedAt" FROM "UserGroup" ORDER BY name ASC');
     return NextResponse.json(result.rows, { status: 200 });
-  } catch (error) {
+  } catch (error: any) {
     console.error("Failed to fetch user groups:", error);
-    await logAudit('ERROR', `Failed to fetch user groups by ${session?.user?.name}. Error: ${(error as Error).message}`, 'API:UserGroups:Get', session?.user?.id);
-    return NextResponse.json({ message: "Error fetching user groups", error: (error as Error).message }, { status: 500 });
+    await logAudit('ERROR', `Failed to fetch user groups by ${session?.user?.name}. Error: ${error.message}. Code: ${error.code}, Constraint: ${error.constraint}`, 'API:UserGroups:Get', session?.user?.id, {errorCode: error.code, errorConstraint: error.constraint});
+    return NextResponse.json({ message: "Error fetching user groups", error: error.message, code: error.code }, { status: 500 });
   }
 }
 

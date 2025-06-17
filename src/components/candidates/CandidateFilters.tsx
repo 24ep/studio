@@ -1,22 +1,20 @@
 
 "use client";
 
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-// Command components removed as they are not found
-// import { Command, CommandInput, CommandEmpty, CommandGroup, CommandItem, CommandList } from '@/components/ui/command';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'; // Added Select
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { Slider } from '@/components/ui/slider';
 import { Label } from '@/components/ui/label';
-import { Search, FilterX, ListFilter } from 'lucide-react'; // Removed Check, ChevronsUpDown
+import { Search, FilterX, ListFilter, Check, ChevronsUpDown } from 'lucide-react';
 import type { Position } from '@/lib/types';
 import { cn } from "@/lib/utils";
 
 export interface CandidateFilterValues {
   name?: string;
-  positionId?: string; // Will hold the ID of the selected position
+  positionId?: string;
   education?: string;
   minFitScore?: number;
   maxFitScore?: number;
@@ -39,14 +37,23 @@ export function CandidateFilters({ initialFilters = {}, onFilterChange, availabl
     initialFilters.minFitScore || 0,
     initialFilters.maxFitScore || 100,
   ]);
-  // const [positionComboboxOpen, setPositionComboboxOpen] = useState(false); // Removed for Select
+  const [positionSearchOpen, setPositionSearchOpen] = useState(false);
+  const [currentPositionSearchDisplayValue, setCurrentPositionSearchDisplayValue] = useState(
+    availablePositions.find(p => p.id === (initialFilters.positionId || ALL_POSITIONS_SELECT_VALUE))?.title || "All Positions"
+  );
 
   useEffect(() => {
-    setPositionId(initialFilters.positionId || ALL_POSITIONS_SELECT_VALUE);
     setName(initialFilters.name || '');
     setEducation(initialFilters.education || '');
     setFitScoreRange([initialFilters.minFitScore || 0, initialFilters.maxFitScore || 100]);
-  }, [initialFilters]);
+    const initialPosId = initialFilters.positionId || ALL_POSITIONS_SELECT_VALUE;
+    setPositionId(initialPosId);
+    setCurrentPositionSearchDisplayValue(
+      initialPosId === ALL_POSITIONS_SELECT_VALUE
+        ? "All Positions"
+        : availablePositions.find(p => p.id === initialPosId)?.title || "All Positions"
+    );
+  }, [initialFilters, availablePositions]);
 
   const handleApplyFilters = () => {
     onFilterChange({
@@ -61,6 +68,7 @@ export function CandidateFilters({ initialFilters = {}, onFilterChange, availabl
   const handleResetFilters = () => {
     setName('');
     setPositionId(ALL_POSITIONS_SELECT_VALUE);
+    setCurrentPositionSearchDisplayValue("All Positions");
     setEducation('');
     setFitScoreRange([0, 100]);
     onFilterChange({
@@ -72,10 +80,6 @@ export function CandidateFilters({ initialFilters = {}, onFilterChange, availabl
 
   return (
     <div className="mb-6 p-4 border rounded-lg bg-card shadow">
-      {/* Comment explaining the change for future reference
-          Searchable Combobox for Position filter was removed due to missing 'Command' component.
-          To re-enable, run 'npx shadcn-ui@latest add command popover' and then update this component.
-      */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
         <div>
           <Label htmlFor="name-search">Name</Label>
@@ -89,24 +93,70 @@ export function CandidateFilters({ initialFilters = {}, onFilterChange, availabl
           />
         </div>
         <div>
-          <Label htmlFor="position-select">Position</Label>
-          <Select
-            value={positionId}
-            onValueChange={(value) => setPositionId(value)}
-            disabled={isLoading}
-          >
-            <SelectTrigger id="position-select" className="w-full mt-1">
-              <SelectValue placeholder="Select position" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value={ALL_POSITIONS_SELECT_VALUE}>All Positions</SelectItem>
-              {availablePositions.map((pos) => (
-                <SelectItem key={pos.id} value={pos.id}>
-                  {pos.title}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <Label htmlFor="position-combobox">Position</Label>
+          <Popover open={positionSearchOpen} onOpenChange={setPositionSearchOpen}>
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                role="combobox"
+                aria-expanded={positionSearchOpen}
+                className="w-full justify-between mt-1"
+                disabled={isLoading}
+              >
+                <span className="truncate">
+                  {currentPositionSearchDisplayValue}
+                </span>
+                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-[--trigger-width] p-0 dropdown-content-height">
+              <Command>
+                <CommandInput placeholder="Search position..." />
+                <CommandList>
+                  <CommandEmpty>No position found.</CommandEmpty>
+                  <CommandGroup>
+                    <CommandItem
+                      key={ALL_POSITIONS_SELECT_VALUE}
+                      value="All Positions"
+                      onSelect={() => {
+                        setPositionId(ALL_POSITIONS_SELECT_VALUE);
+                        setCurrentPositionSearchDisplayValue("All Positions");
+                        setPositionSearchOpen(false);
+                      }}
+                    >
+                      <Check
+                        className={cn(
+                          "mr-2 h-4 w-4",
+                          positionId === ALL_POSITIONS_SELECT_VALUE ? "opacity-100" : "opacity-0"
+                        )}
+                      />
+                      All Positions
+                    </CommandItem>
+                    {availablePositions.map((pos) => (
+                      <CommandItem
+                        key={pos.id}
+                        value={pos.title}
+                        onSelect={(currentValue) => {
+                          const selectedPos = availablePositions.find(p => p.title.toLowerCase() === currentValue.toLowerCase());
+                          setPositionId(selectedPos ? selectedPos.id : ALL_POSITIONS_SELECT_VALUE);
+                          setCurrentPositionSearchDisplayValue(selectedPos ? selectedPos.title : "All Positions");
+                          setPositionSearchOpen(false);
+                        }}
+                      >
+                        <Check
+                          className={cn(
+                            "mr-2 h-4 w-4",
+                            positionId === pos.id ? "opacity-100" : "opacity-0"
+                          )}
+                        />
+                        {pos.title}
+                      </CommandItem>
+                    ))}
+                  </CommandGroup>
+                </CommandList>
+              </Command>
+            </PopoverContent>
+          </Popover>
         </div>
         <div>
           <Label htmlFor="education-search">Education</Label>
