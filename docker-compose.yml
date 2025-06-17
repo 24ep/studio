@@ -5,6 +5,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+    pull_policy: always
     ports:
       - "9846:9002" # Next.js dev server port (from package.json's dev script, or 3000 for `next start` if not overridden)
     # For production deployments, you typically want the application code to be self-contained
