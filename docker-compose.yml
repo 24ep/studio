@@ -51,7 +51,8 @@ services:
       PORT: 9002
     volumes:
       - ./src:/app/src
-      - ./public:/app/public
+      - ./lib:/app/lib
+      - ./prisma:/app/prisma
       - ./next.config.mjs:/app/next.config.mjs
       - ./tsconfig.json:/app/tsconfig.json
       - ./postcss.config.mjs:/app/postcss.config.mjs

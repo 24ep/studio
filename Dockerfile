@@ -18,12 +18,10 @@ COPY components.json ./
 # Install project dependencies
 RUN npm install
 
-# Create necessary directories
-RUN mkdir -p src public
-
-# Copy source code and public files
+# Copy source code and other necessary files
 COPY src/ ./src/
-COPY public/ ./public/
+COPY lib/ ./lib/
+COPY prisma/ ./prisma/
 
 # Expose the port the app runs on
 EXPOSE 9002
