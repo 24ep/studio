@@ -26,8 +26,13 @@ ENV NODE_ENV production
 # Add output configuration for Next.js
 ENV NEXT_OUTPUT standalone
 
-# Add verbose logging to build
-RUN npm run build --verbose
+# Debug: List files and check node_modules
+RUN ls -la && \
+    ls -la node_modules && \
+    npm list --depth=0
+
+# Build with more detailed output
+RUN npm run build
 
 # Production image, copy all the files and run next
 FROM base AS runner
