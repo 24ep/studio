@@ -8,7 +8,7 @@ WORKDIR /app
 
 # Install dependencies based on the preferred package manager
 COPY package.json package-lock.json* ./
-RUN npm install --production=false
+RUN npm install --production=false --verbose
 
 # Rebuild the source code only when needed
 FROM base AS builder
@@ -21,7 +21,13 @@ COPY . .
 # Uncomment the following line in case you want to disable telemetry during the build.
 ENV NEXT_TELEMETRY_DISABLED 1
 
-RUN npm run build
+ENV NODE_ENV production
+
+# Add output configuration for Next.js
+ENV NEXT_OUTPUT standalone
+
+# Add verbose logging to build
+RUN npm run build --verbose
 
 # Production image, copy all the files and run next
 FROM base AS runner
@@ -29,6 +35,16 @@ WORKDIR /app
 
 ENV NODE_ENV production
 ENV NEXT_TELEMETRY_DISABLED 1
+
+# Add environment variables
+ENV REDIS_HOST=redis
+ENV REDIS_PORT=6379
+ENV REDIS_PASSWORD=${REDIS_PASSWORD}
+ENV DATABASE_URL=${DATABASE_URL}
+ENV NEXTAUTH_URL=${NEXTAUTH_URL}
+ENV NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
+ENV GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
+ENV GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
 
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
