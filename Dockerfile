@@ -22,7 +22,6 @@ RUN npm install
 COPY src/ ./src/
 COPY lib/ ./lib/
 COPY prisma/ ./prisma/
-COPY app/ ./app/
 
 # Generate Prisma client
 RUN npx prisma generate
@@ -33,10 +32,8 @@ RUN npm run build
 # Expose the port
 EXPOSE 9002
 
-# Set environment variables
-ENV NODE_ENV=development
-ENV PORT=9002
+# Set hostname for Next.js
 ENV HOSTNAME="0.0.0.0"
 
-# Set the default command to run the app in development mode
+# Start the application
 CMD ["npm", "run", "dev"]
