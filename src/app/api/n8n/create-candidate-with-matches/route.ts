@@ -41,21 +41,22 @@ async function getWebhookMappings(): Promise<WebhookFieldMapping[]> {
 
 function transformPayload(rawPayload: any, mappings: WebhookFieldMapping[]): any {
   if (!mappings || mappings.length === 0) {
-    return rawPayload; // No mappings, return raw payload
+    console.log("N8N Webhook: No mappings found or provided. Returning raw payload for validation.");
+    return rawPayload;
   }
 
   const transformedPayload: any = {};
+  console.log("N8N Webhook: Starting transformation with mappings:", JSON.stringify(mappings, null, 2));
   for (const mapping of mappings) {
-    if (mapping.sourcePath) { // Only map if sourcePath is defined
+    if (mapping.sourcePath) { 
       const value = getValueFromPath(rawPayload, mapping.sourcePath);
-      if (value !== undefined) { // Only set if value is found
+      // console.log(`N8N Webhook: Mapping: Target='${mapping.targetPath}', Source='${mapping.sourcePath}', Value Found='${value !== undefined}'`);
+      if (value !== undefined) { 
         setValueByPath(transformedPayload, mapping.targetPath, value);
       }
     }
   }
-  // Ensure top-level structure matches what Zod schema expects if transformation is partial
-  // e.g. if candidate_info wasn't a targetPath itself but its sub-fields were.
-  // For now, assumes mappings correctly construct the N8NCandidateWebhookEntry structure.
+  console.log("N8N Webhook: Payload after transformation:", JSON.stringify(transformedPayload, null, 2));
   return transformedPayload;
 }
 
@@ -158,7 +159,7 @@ const appliedJobSchema = z.object({
   job_id: z.string().uuid("Invalid Job ID in job_applied").optional().nullable(),
   job_title: z.string().optional().nullable(), 
   fit_score: z.number().min(0).max(100).optional().nullable(),
-  justification: z.array(z.string()).optional().default([]), // Changed from match_reasons
+  justification: z.array(z.string()).optional().default([]),
 }).passthrough().optional().nullable();
 
 const n8nWebhookPayloadSchema = z.object({
@@ -179,18 +180,14 @@ export async function POST(request: NextRequest) {
   try {
     rawRequestBody = await request.json();
     
-    // Determine the actual payload structure based on n8n's typical outputs
     if (rawRequestBody && typeof rawRequestBody === 'object') {
       if ('body' in rawRequestBody && rawRequestBody.body && typeof rawRequestBody.body === 'object') {
-        // Case: { "body": { /* actual payload */ } }
         payloadToProcess = rawRequestBody.body;
       } else if (Array.isArray(rawRequestBody) && rawRequestBody.length > 0 && 
                  rawRequestBody[0].result_json && Array.isArray(rawRequestBody[0].result_json) && rawRequestBody[0].result_json.length > 0 &&
                  rawRequestBody[0].result_json[0].json && typeof rawRequestBody[0].result_json[0].json === 'object') {
-        // Case: [ { "result_json": [ { "json": { /* actual payload */ } } ] } ]
         payloadToProcess = rawRequestBody[0].result_json[0].json;
       } else {
-        // Case: Payload is at the root
         payloadToProcess = rawRequestBody;
       }
     } else {
@@ -199,34 +196,35 @@ export async function POST(request: NextRequest) {
 
   } catch (error) {
     console.error("N8N Webhook: Error parsing request body or unexpected initial structure:", error);
-    await logAudit('ERROR', 'N8N Webhook: Error parsing request body or unexpected structure.', 'API:N8N:CreateCandidateWithMatches', null, { error: (error as Error).message });
+    await logAudit('ERROR', 'N8N Webhook: Error parsing request body or unexpected structure.', 'API:N8N:CreateCandidateWithMatches', null, { error: (error as Error).message, rawRequestBody: JSON.stringify(rawRequestBody).substring(0, 500) });
     return NextResponse.json({ message: "Error parsing request body or unexpected structure", error: (error as Error).message }, { status: 400 });
   }
 
-  // Fetch mappings and transform the payload
   const mappings = await getWebhookMappings();
+  // Log the fetched mappings for easier debugging
+  console.log("N8N Webhook: Fetched mappings from DB:", JSON.stringify(mappings, null, 2));
   const transformedPayload = transformPayload(payloadToProcess, mappings);
 
 
   const validationResult = n8nWebhookPayloadSchema.safeParse(transformedPayload);
   if (!validationResult.success) {
-    // Log the raw and processed payloads for easier debugging
     console.error("N8N Webhook: Invalid input after transformation. Validation errors:", JSON.stringify(validationResult.error.flatten(), null, 2));
-    console.error("N8N Webhook: Original rawRequestBody was:", JSON.stringify(rawRequestBody, null, 2));
-    console.error("N8N Webhook: payloadToProcess (before transformation) was:", JSON.stringify(payloadToProcess, null, 2));
-    console.error("N8N Webhook: transformedPayload (after transformation, before validation) was:", JSON.stringify(transformedPayload, null, 2));
+    console.error("N8N Webhook: Original rawRequestBody was:", JSON.stringify(rawRequestBody, null, 2).substring(0, 2000));
+    console.error("N8N Webhook: payloadToProcess (before transformation) was:", JSON.stringify(payloadToProcess, null, 2).substring(0, 2000));
+    console.error("N8N Webhook: transformedPayload (after transformation, before validation) was:", JSON.stringify(transformedPayload, null, 2).substring(0,2000));
     
     await logAudit('ERROR', 'N8N Webhook: Invalid input received from n8n (after transformation).', 'API:N8N:CreateCandidateWithMatches', null, { 
         errors: validationResult.error.flatten(), 
         originalPayloadSnippet: JSON.stringify(payloadToProcess, null, 2).substring(0, 1000), 
-        transformedPayloadForDebug: transformedPayload, // Changed for consistency
+        transformedPayloadForDebug: transformedPayload,
+        fetchedMappingsForDebug: mappings, // Log the mappings used
     });
     return NextResponse.json(
       { 
         message: "Invalid input for n8n candidate creation (after transformation)", 
         errors: validationResult.error.flatten().fieldErrors, 
         transformedPayloadForDebug: transformedPayload,
-        hint: "Ensure 'candidate_info' and its required sub-fields (like personal_info.firstname, personal_info.lastname, contact_info.email) are correctly mapped in Settings > Webhook Payload Mapping, and that your n8n workflow provides data for these mapped source paths."
+        hint: "Ensure 'candidate_info' and its required sub-fields (like personal_info.firstname, personal_info.lastname, contact_info.email) are correctly mapped in Settings > Webhook Payload Mapping, and that your n8n workflow provides data for these mapped source paths. Also check server logs for the exact payload received and mappings used."
       },
       { status: 400 }
     );
@@ -289,7 +287,7 @@ export async function POST(request: NextRequest) {
             associatedMatchDetails = {
                 jobTitle: job_applied.job_title || positionCheck.rows[0].title,
                 fitScore: finalFitScore,
-                reasons: job_applied.justification || [], // Changed from match_reasons
+                reasons: job_applied.justification || [],
                 n8nJobId: job_applied.job_id,
             };
             fullParsedDataForDB.associatedMatchDetails = associatedMatchDetails;
@@ -449,13 +447,13 @@ export async function POST(request: NextRequest) {
     } : null;
 
 
-    await logAudit('AUDIT', `N8N Webhook: Candidate '${newCandidateDb.name}' (ID: ${newCandidateDb.id}) created successfully. Associated Position ID: ${finalPositionId || 'N/A'}.`, 'API:N8N:CreateCandidateWithMatches', null, { candidateId: newCandidateDb.id, name: newCandidateDb.name, associatedPositionId: finalPositionId, originalPayload: payloadToProcess, transformedPayload: transformedPayload });
+    await logAudit('AUDIT', `N8N Webhook: Candidate '${newCandidateDb.name}' (ID: ${newCandidateDb.id}) created successfully. Associated Position ID: ${finalPositionId || 'N/A'}.`, 'API:N8N:CreateCandidateWithMatches', null, { candidateId: newCandidateDb.id, name: newCandidateDb.name, associatedPositionId: finalPositionId, originalPayload: JSON.stringify(payloadToProcess).substring(0,1000), transformedPayload: JSON.stringify(transformedPayload).substring(0,1000) });
     return NextResponse.json({ status: 'success', candidate: createdCandidateWithDetails, message: `Candidate ${candidateName} created.` }, { status: 201 });
 
   } catch (error: any) {
     if (client) await client.query('ROLLBACK').catch(rbError => console.error("N8N Webhook: Rollback error:", rbError));
     console.error("N8N Webhook: Error processing webhook request:", error);
-    await logAudit('ERROR', `N8N Webhook: Error processing webhook request. Error: ${error.message}`, 'API:N8N:CreateCandidateWithMatches', null, { error: error.message, originalPayload: payloadToProcess, transformedPayload: transformedPayload });
+    await logAudit('ERROR', `N8N Webhook: Error processing webhook request. Error: ${error.message}`, 'API:N8N:CreateCandidateWithMatches', null, { error: error.message, originalPayload: JSON.stringify(payloadToProcess).substring(0,1000), transformedPayload: JSON.stringify(transformedPayload).substring(0,1000) });
     return NextResponse.json({ message: "Error processing webhook request.", error: error.message }, { status: 500 });
   } finally {
     if (client) {
@@ -464,3 +462,4 @@ export async function POST(request: NextRequest) {
   }
 }
 
+    
