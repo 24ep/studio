@@ -19,7 +19,7 @@ import type { Candidate, CandidateStatus, Position, RecruitmentStage } from '@/l
 import { ManageTransitionsModal } from './ManageTransitionsModal';
 import { format, parseISO } from 'date-fns';
 import Link from 'next/link';
-import { FixedSizeList as List, ListChildComponentProps } from 'react-window';
+import { AutoSizer, List, ListRowProps } from 'react-virtualized';
 import React from 'react';
 
 interface CandidateTableProps {
@@ -55,8 +55,8 @@ const getStatusBadgeVariant = (status: CandidateStatus): "default" | "secondary"
   }
 };
 
-const Row = React.memo(({ index, style, data }: ListChildComponentProps) => {
-  const candidate = data.candidates[index];
+const Row = React.memo(({ index, style, key }: ListRowProps) => {
+  const candidate = candidates[index];
   const {
     availablePositions,
     availableStages,
@@ -86,7 +86,7 @@ const Row = React.memo(({ index, style, data }: ListChildComponentProps) => {
   }
 
   return (
-    <TableRow key={candidate.id} style={style} className="hover:bg-muted/50 transition-colors">
+    <TableRow key={key} style={style} className="hover:bg-muted/50 transition-colors">
       <TableCell>
         <div className="flex items-center gap-3">
           <Avatar className="h-10 w-10">
@@ -239,15 +239,19 @@ export function CandidateTable({
             </TableRow>
           </TableHeader>
           <TableBody>
-            <List
-              height={600}
-              itemCount={candidates.length}
-              itemSize={70}
-              width={"100%"}
-              itemData={itemData}
-            >
-              {Row}
-            </List>
+            <div style={{ height: 600 }}>
+              <AutoSizer>
+                {({ height, width }) => (
+                  <List
+                    height={height}
+                    rowCount={candidates.length}
+                    rowHeight={48}
+                    width={width}
+                    rowRenderer={Row}
+                  />
+                )}
+              </AutoSizer>
+            </div>
           </TableBody>
         </Table>
       </div>
