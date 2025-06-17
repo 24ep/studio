@@ -1,64 +1,21 @@
 # Use an official Node.js runtime as a parent image
-FROM node:18-alpine AS base
+FROM node:20-alpine AS base
 
-# Install dependencies only when needed
-FROM base AS deps
-# Install necessary system packages
-RUN apk add --no-cache libc6-compat python3 make g++ git
+# Set the working directory in the container
 WORKDIR /app
 
-# Install dependencies based on the preferred package manager
-COPY package.json package-lock.json* ./
-# Use npm install instead of npm ci for better compatibility
+# Install dependencies
+# Copy package.json and package-lock.json (if available)
+COPY package*.json ./
+
+# Install project dependencies
 RUN npm install
 
-# Rebuild the source code only when needed
-FROM base AS builder
-WORKDIR /app
-COPY --from=deps /app/node_modules ./node_modules
+# Copy the rest of the application code into the container
 COPY . .
 
-# Next.js collects completely anonymous telemetry data about general usage.
-# Learn more here: https://nextjs.org/telemetry
-# Uncomment the following line in case you want to disable telemetry during the build.
-ENV NEXT_TELEMETRY_DISABLED 1
+# Expose the port the app runs on (as defined in package.json dev script)
+EXPOSE 9002
 
-# Set build-time environment variables
-ARG NODE_ENV=production
-ENV NODE_ENV=${NODE_ENV}
-
-# Build the application
-RUN npm run build
-
-# Production image, copy all the files and run next
-FROM base AS runner
-WORKDIR /app
-
-ENV NEXT_TELEMETRY_DISABLED 1
-
-RUN addgroup --system --gid 1001 nodejs
-RUN adduser --system --uid 1001 nextjs
-
-COPY --from=builder /app/public ./public
-
-# Set the correct permission for prerender cache
-RUN mkdir .next
-RUN chown nextjs:nodejs .next
-
-# Automatically leverage output traces to reduce image size
-# https://nextjs.org/docs/advanced-features/output-file-tracing
-COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
-COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
-
-USER nextjs
-
-# Add healthcheck
-HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
-  CMD wget --no-verbose --tries=1 --spider http://localhost:3000/api/health || exit 1
-
-EXPOSE 3000
-
-ENV PORT 3000
-ENV HOSTNAME "0.0.0.0"
-
-CMD ["node", "server.js"]
+# Set the default command to run the app in development mode
+CMD ["npm", "run", "dev"]
