@@ -3,12 +3,14 @@ FROM node:18-alpine AS base
 
 # Install dependencies only when needed
 FROM base AS deps
-RUN apk add --no-cache libc6-compat
+# Install necessary system packages
+RUN apk add --no-cache libc6-compat python3 make g++ git
 WORKDIR /app
 
 # Install dependencies based on the preferred package manager
 COPY package.json package-lock.json* ./
-RUN npm ci
+# Use npm install instead of npm ci for better compatibility
+RUN npm install
 
 # Rebuild the source code only when needed
 FROM base AS builder
@@ -25,6 +27,7 @@ ENV NEXT_TELEMETRY_DISABLED 1
 ARG NODE_ENV=production
 ENV NODE_ENV=${NODE_ENV}
 
+# Build the application
 RUN npm run build
 
 # Production image, copy all the files and run next
