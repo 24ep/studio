@@ -1,4 +1,3 @@
-
 "use client";
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -31,6 +30,7 @@ import {
   DropdownMenuSeparator
 } from "@/components/ui/dropdown-menu";
 import { signIn, useSession } from "next-auth/react";
+import { Pagination } from '@/components/ui/pagination';
 
 
 export default function ManageUsersPage() {
@@ -41,6 +41,9 @@ export default function ManageUsersPage() {
   const router = useRouter();
   const pathname = usePathname(); 
   const [fetchError, setFetchError] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
+  const [total, setTotal] = useState(0);
 
   const [isAddUserModalOpen, setIsAddUserModalOpen] = useState(false);
   const [isEditUserModalOpen, setIsEditUserModalOpen] = useState(false);
@@ -48,14 +51,17 @@ export default function ManageUsersPage() {
   const [userToDelete, setUserToDelete] = useState<UserProfile | null>(null);
 
 
-  const fetchUsers = useCallback(async () => {
+  const fetchUsers = useCallback(async (pageOverride?: number, pageSizeOverride?: number) => {
     if (sessionStatus !== 'authenticated') {
         return;
     }
     setIsLoading(true);
     setFetchError(null);
     try {
-      const response = await fetch('/api/users');
+      const query = new URLSearchParams();
+      query.append('limit', String(pageSizeOverride || pageSize));
+      query.append('offset', String(((pageOverride || page) - 1) * (pageSizeOverride || pageSize)));
+      const response = await fetch(`/api/users?${query.toString()}`);
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({ message: response.statusText || `Status: ${response.status}` }));
         if (response.status === 401 || response.status === 403) {
@@ -66,8 +72,9 @@ export default function ManageUsersPage() {
         setUsers([]); 
         return;
       }
-      const data: UserProfile[] = await response.json();
-      setUsers(data);
+      const data = await response.json();
+      setUsers(data.users);
+      setTotal(data.total);
     } catch (error) {
       console.error("Error fetching users:", error);
       const errorMessage = (error as Error).message || "An unexpected error occurred.";
@@ -78,7 +85,7 @@ export default function ManageUsersPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [sessionStatus, pathname, signIn]); 
+  }, [sessionStatus, pathname, signIn, page, pageSize]); 
 
   useEffect(() => {
     if (sessionStatus === 'unauthenticated') {
@@ -88,10 +95,17 @@ export default function ManageUsersPage() {
             setFetchError("You do not have permission to view this page.");
             setIsLoading(false);
         } else {
-            fetchUsers();
+            setPage(1);
+            fetchUsers(1);
         }
     }
   }, [sessionStatus, session, fetchUsers, pathname, signIn]); 
+
+  useEffect(() => {
+    if (sessionStatus === 'authenticated') {
+      fetchUsers(page);
+    }
+  }, [page, sessionStatus, fetchUsers]);
 
   const handleAddUser = async (data: AddUserFormValues) => {
     try {
@@ -342,6 +356,13 @@ export default function ManageUsersPage() {
           </AlertDialogContent>
         </AlertDialog>
       )}
+      <Pagination
+        page={page}
+        pageSize={pageSize}
+        total={total}
+        onPageChange={setPage}
+        onPageSizeChange={setPageSize}
+      />
     </div>
   );
 }

@@ -108,6 +108,23 @@ export async function GET(request: NextRequest) {
     const minFitScoreParam = searchParams.get('minFitScore');
     const maxFitScoreParam = searchParams.get('maxFitScore');
     const assignedRecruiterIdParam = searchParams.get('assignedRecruiterId');
+    const limitParam = searchParams.get('limit');
+    const offsetParam = searchParams.get('offset');
+
+    let limit = 20;
+    if (limitParam) {
+      const parsedLimit = parseInt(limitParam, 10);
+      if (!isNaN(parsedLimit) && parsedLimit > 0 && parsedLimit <= 100) {
+        limit = parsedLimit;
+      }
+    }
+    let offset = 0;
+    if (offsetParam) {
+      const parsedOffset = parseInt(offsetParam, 10);
+      if (!isNaN(parsedOffset) && parsedOffset >= 0) {
+        offset = parsedOffset;
+      }
+    }
 
     let query = `
       SELECT
@@ -199,7 +216,14 @@ export async function GET(request: NextRequest) {
     if (conditions.length > 0) {
       query += ' WHERE ' + conditions.join(' AND ');
     }
+    // Get total count for pagination
+    const countQuery = `SELECT COUNT(*) FROM "Candidate" c${conditions.length > 0 ? ' WHERE ' + conditions.join(' AND ') : ''}`;
+    const countResult = await pool.query(countQuery, queryParams);
+    const total = parseInt(countResult.rows[0].count, 10);
+
     query += ' ORDER BY c."createdAt" DESC';
+    query += ` LIMIT $${paramIndex++} OFFSET $${paramIndex++}`;
+    queryParams.push(limit, offset);
 
     const result = await pool.query(query, queryParams);
 
@@ -221,7 +245,7 @@ export async function GET(request: NextRequest) {
         transitionHistory: row.transitionHistory || [],
     }));
 
-    return NextResponse.json(candidates, {
+    return NextResponse.json({ candidates, total }, {
       status: 200,
       headers: {
         'Cache-Control': 'private, no-cache, must-revalidate',

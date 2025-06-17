@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect, useCallback } from 'react';
@@ -33,6 +32,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger
 } from '@/components/ui/dropdown-menu';
+import { Pagination } from '@/components/ui/pagination';
 
 function downloadFile(content: string, filename: string, contentType: string) {
   const blob = new Blob([content], { type: contentType });
@@ -51,6 +51,9 @@ export default function PositionsPage() {
   const [positions, setPositions] = useState<Position[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [filters, setFilters] = useState<PositionFilterValues>({ isOpen: "all" });
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
+  const [total, setTotal] = useState(0);
   const { toast } = useToast();
   const router = useRouter();
   const pathname = usePathname();
@@ -65,7 +68,7 @@ export default function PositionsPage() {
   const { data: session, status: sessionStatus } = useSession();
 
 
-  const fetchPositions = useCallback(async () => {
+  const fetchPositions = useCallback(async (pageOverride?: number, pageSizeOverride?: number) => {
     if (sessionStatus !== 'authenticated') {
         setIsLoading(false);
         return;
@@ -79,7 +82,8 @@ export default function PositionsPage() {
       if (filters.department) query.append('department', filters.department);
       if (filters.isOpen && filters.isOpen !== "all") query.append('isOpen', String(filters.isOpen === "true"));
       if (filters.positionLevel) query.append('position_level', filters.positionLevel);
-
+      query.append('limit', String(pageSizeOverride || pageSize));
+      query.append('offset', String(((pageOverride || page) - 1) * (pageSizeOverride || pageSize)));
 
       const response = await fetch(`/api/positions?${query.toString()}`);
       if (!response.ok) {
@@ -94,8 +98,9 @@ export default function PositionsPage() {
         setPositions([]);
         return;
       }
-      const data: Position[] = await response.json();
-      setPositions(data);
+      const data = await response.json();
+      setPositions(data.positions);
+      setTotal(data.total);
     } catch (error) {
       console.error("Error fetching positions:", error);
       const errorMessage = (error as Error).message || "Could not load position data.";
@@ -106,15 +111,22 @@ export default function PositionsPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [filters, sessionStatus, pathname, signIn]);
+  }, [filters, sessionStatus, pathname, signIn, page, pageSize]);
 
   useEffect(() => {
     if (sessionStatus === 'unauthenticated') {
       signIn(undefined, { callbackUrl: pathname });
     } else if (sessionStatus === 'authenticated') {
-      fetchPositions();
+      setPage(1);
+      fetchPositions(1);
     }
   }, [filters, sessionStatus, fetchPositions, pathname, signIn]);
+
+  useEffect(() => {
+    if (sessionStatus === 'authenticated') {
+      fetchPositions(page);
+    }
+  }, [page, sessionStatus, fetchPositions]);
 
 
   const handleFilterChange = (newFilters: PositionFilterValues) => {
@@ -429,6 +441,13 @@ export default function PositionsPage() {
         isOpen={isImportModalOpen}
         onOpenChange={setIsImportModalOpen}
         onImportSuccess={fetchPositions}
+      />
+      <Pagination
+        page={page}
+        pageSize={pageSize}
+        total={total}
+        onPageChange={setPage}
+        onPageSizeChange={setPageSize}
       />
     </div>
   );

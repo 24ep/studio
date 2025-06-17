@@ -1,4 +1,3 @@
-
 import { NextResponse, type NextRequest } from 'next/server';
 import pool from '../../../lib/db';
 import { z } from 'zod';
@@ -19,7 +18,23 @@ export async function GET(request: NextRequest) {
     const departmentFilter = searchParams.get('department');
     const isOpenFilter = searchParams.get('isOpen'); // "true", "false", or null
     const positionLevelFilter = searchParams.get('position_level');
+    const limitParam = searchParams.get('limit');
+    const offsetParam = searchParams.get('offset');
 
+    let limit = 20;
+    if (limitParam) {
+      const parsedLimit = parseInt(limitParam, 10);
+      if (!isNaN(parsedLimit) && parsedLimit > 0 && parsedLimit <= 100) {
+        limit = parsedLimit;
+      }
+    }
+    let offset = 0;
+    if (offsetParam) {
+      const parsedOffset = parseInt(offsetParam, 10);
+      if (!isNaN(parsedOffset) && parsedOffset >= 0) {
+        offset = parsedOffset;
+      }
+    }
 
     let query = 'SELECT id, title, department, description, "isOpen", position_level, custom_attributes, "createdAt", "updatedAt" FROM "Position"';
     const conditions = [];
@@ -44,18 +59,24 @@ export async function GET(request: NextRequest) {
       queryParams.push(`%${positionLevelFilter}%`);
     }
 
-
     if (conditions.length > 0) {
       query += ' WHERE ' + conditions.join(' AND ');
     }
+    // Get total count for pagination
+    const countQuery = `SELECT COUNT(*) FROM "Position"${conditions.length > 0 ? ' WHERE ' + conditions.join(' AND ') : ''}`;
+    const countResult = await pool.query(countQuery, queryParams);
+    const total = parseInt(countResult.rows[0].count, 10);
+
     query += ' ORDER BY "createdAt" DESC';
-    
+    query += ` LIMIT $${paramIndex++} OFFSET $${paramIndex++}`;
+    queryParams.push(limit, offset);
+
     const result = await pool.query(query, queryParams);
     const positions = result.rows.map(row => ({
         ...row,
         custom_attributes: row.custom_attributes || {},
     }));
-    return NextResponse.json(positions, { status: 200 });
+    return NextResponse.json({ positions, total }, { status: 200 });
   } catch (error) {
     console.error("Failed to fetch positions:", error);
     await logAudit('ERROR', `Failed to fetch positions. Error: ${(error as Error).message}`, 'API:Positions:GetAll', null);

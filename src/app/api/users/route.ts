@@ -1,4 +1,3 @@
-
 // src/app/api/users/route.ts
 import { NextResponse, type NextRequest } from 'next/server';
 import { z } from 'zod';
@@ -34,6 +33,23 @@ export async function GET(request: NextRequest) {
   const userRole = session.user.role;
   const { searchParams } = new URL(request.url);
   const filterRole = searchParams.get('role');
+  const limitParam = searchParams.get('limit');
+  const offsetParam = searchParams.get('offset');
+
+  let limit = 20;
+  if (limitParam) {
+    const parsedLimit = parseInt(limitParam, 10);
+    if (!isNaN(parsedLimit) && parsedLimit > 0 && parsedLimit <= 100) {
+      limit = parsedLimit;
+    }
+  }
+  let offset = 0;
+  if (offsetParam) {
+    const parsedOffset = parseInt(offsetParam, 10);
+    if (!isNaN(parsedOffset) && parsedOffset >= 0) {
+      offset = parsedOffset;
+    }
+  }
 
   let query = `
     SELECT 
@@ -74,15 +90,22 @@ export async function GET(request: NextRequest) {
     query += ' WHERE ' + conditions.join(' AND ');
   }
   
+  // Get total count for pagination
+  const countQuery = `SELECT COUNT(*) FROM "User" u${conditions.length > 0 ? ' WHERE ' + conditions.join(' AND ') : ''}`;
+  const countResult = await pool.query(countQuery, queryParams);
+  const total = parseInt(countResult.rows[0].count, 10);
+
   query += ' ORDER BY u."createdAt" DESC';
+  query += ` LIMIT $${paramIndex++} OFFSET $${paramIndex++}`;
+  queryParams.push(limit, offset);
 
   try {
     const result = await pool.query(query, queryParams);
-    return NextResponse.json(result.rows.map(user => ({
+    return NextResponse.json({ users: result.rows.map(user => ({
       ...user,
       modulePermissions: user.modulePermissions || [],
       groups: user.groups || [],
-    })), { status: 200 });
+    })), total }, { status: 200 });
   } catch (error) {
     console.error("Failed to fetch users:", error);
     await logAudit('ERROR', `Failed to fetch users by ${session.user.name}. Error: ${(error as Error).message}`, 'API:Users:Get', session.user.id);

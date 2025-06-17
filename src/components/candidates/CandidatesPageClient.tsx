@@ -1,4 +1,3 @@
-
 // src/components/candidates/CandidatesPageClient.tsx
 "use client";
 
@@ -18,6 +17,7 @@ import { EditPositionModal } from '@/components/positions/EditPositionModal';
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
 import { useSession, signIn } from 'next-auth/react';
+import { Pagination } from '@/components/ui/pagination';
 
 interface CandidatesPageClientProps {
   initialCandidates: Candidate[];
@@ -57,7 +57,11 @@ export function CandidatesPageClient({
   const [selectedPositionForEdit, setSelectedPositionForEdit] = useState<Position | null>(null);
   const { data: session, status: sessionStatus } = useSession();
 
-  const fetchFilteredCandidatesOnClient = useCallback(async (currentFilters: CandidateFilterValues) => {
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
+  const [total, setTotal] = useState(initialCandidates.length);
+
+  const fetchFilteredCandidatesOnClient = useCallback(async (currentFilters: CandidateFilterValues, pageOverride?: number, pageSizeOverride?: number) => {
     if (sessionStatus !== 'authenticated') {
       setIsLoading(false);
       return;
@@ -74,6 +78,8 @@ export function CandidatesPageClient({
       if (currentFilters.education) query.append('education', currentFilters.education);
       if (currentFilters.minFitScore !== undefined) query.append('minFitScore', String(currentFilters.minFitScore));
       if (currentFilters.maxFitScore !== undefined) query.append('maxFitScore', String(currentFilters.maxFitScore));
+      query.append('limit', String(pageSizeOverride || pageSize));
+      query.append('offset', String(((pageOverride || page) - 1) * (pageSizeOverride || pageSize)));
 
       const response = await fetch(`/api/candidates?${query.toString()}`);
       if (!response.ok) {
@@ -94,8 +100,9 @@ export function CandidatesPageClient({
         setAllCandidates([]);
         return;
       }
-      const data: Candidate[] = await response.json();
-      setAllCandidates(data);
+      const data = await response.json();
+      setAllCandidates(data.candidates);
+      setTotal(data.total);
     } catch (error) {
       console.error("Error fetching candidates (client-side):", error);
       const errorMessage = (error as Error).message || "Could not load candidate data.";
@@ -106,14 +113,22 @@ export function CandidatesPageClient({
     } finally {
       setIsLoading(false);
     }
-  }, [sessionStatus, pathname, signIn]);
+  }, [sessionStatus, pathname, signIn, page, pageSize]);
 
   // Effect for handling filter changes
   useEffect(() => {
     if (sessionStatus === 'authenticated' && !serverAuthError && !serverPermissionError) {
-      fetchFilteredCandidatesOnClient(filters);
+      setPage(1); // Reset to first page on filter change
+      fetchFilteredCandidatesOnClient(filters, 1);
     }
   }, [filters, sessionStatus, serverAuthError, serverPermissionError, fetchFilteredCandidatesOnClient]);
+
+  // Effect for handling page changes
+  useEffect(() => {
+    if (sessionStatus === 'authenticated' && !serverAuthError && !serverPermissionError) {
+      fetchFilteredCandidatesOnClient(filters, page);
+    }
+  }, [page, sessionStatus, serverAuthError, serverPermissionError, fetchFilteredCandidatesOnClient]);
 
   // Effect for handling authentication state changes (e.g., session expiring)
    useEffect(() => {
@@ -153,7 +168,7 @@ export function CandidatesPageClient({
       setAllCandidates(prev => prev.map(c => c.id === candidateId ? updatedCandidate : c));
     } else {
       toast({ title: "Refresh Error", description: `Could not refresh data for candidate ${candidateId}. Attempting full list refresh.`, variant: "destructive"});
-      fetchFilteredCandidatesOnClient(filters);
+      fetchFilteredCandidatesOnClient(filters, 1);
     }
   }, [fetchCandidateById, toast, fetchFilteredCandidatesOnClient, filters]);
 
@@ -252,7 +267,7 @@ export function CandidatesPageClient({
 
   const handleAutomatedProcessingStart = () => {
     toast({ title: "Processing Started", description: "Resume sent for automated processing. Candidate list will refresh if successful." });
-    setTimeout(() => { fetchFilteredCandidatesOnClient(filters); }, 15000);
+    setTimeout(() => { fetchFilteredCandidatesOnClient(filters, 1); }, 15000);
   };
   
   const handleDownloadExcelTemplate = () => {
@@ -317,7 +332,7 @@ export function CandidatesPageClient({
     if (sessionStatus === 'authenticated') {
         const posResponse = await fetch('/api/positions');
         if (posResponse.ok) setAvailablePositions(await posResponse.json());
-        fetchFilteredCandidatesOnClient(filters);
+        fetchFilteredCandidatesOnClient(filters, 1);
     }
   };
 
@@ -356,7 +371,7 @@ export function CandidatesPageClient({
                 <p className="mt-2">Please refer to the troubleshooting steps in the `README.md` for guidance on how to resolve this.</p>
             </div>
         )}
-        <Button onClick={() => fetchFilteredCandidatesOnClient(filters)} className="btn-hover-primary-gradient">Try Again</Button>
+        <Button onClick={() => fetchFilteredCandidatesOnClient(filters, 1)} className="btn-hover-primary-gradient">Try Again</Button>
       </div>
     );
   }
@@ -422,6 +437,14 @@ export function CandidatesPageClient({
         />
       )}
 
+      <Pagination
+        page={page}
+        pageSize={pageSize}
+        total={total}
+        onPageChange={setPage}
+        onPageSizeChange={setPageSize}
+      />
+
       <AddCandidateModal
         isOpen={isAddModalOpen}
         onOpenChange={setIsAddModalOpen}
@@ -444,7 +467,7 @@ export function CandidatesPageClient({
       <ImportCandidatesModal
         isOpen={isImportModalOpen}
         onOpenChange={setIsImportModalOpen}
-        onImportSuccess={() => fetchFilteredCandidatesOnClient(filters)} // Refresh after import
+        onImportSuccess={() => fetchFilteredCandidatesOnClient(filters, 1)} // Refresh after import
       />
       {selectedPositionForEdit && (
         <EditPositionModal
