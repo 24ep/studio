@@ -5,111 +5,36 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    pull_policy: always
-    ports:
-      - "9846:9002" # Next.js dev server port (from package.json's dev script, or 3000 for `next start` if not overridden)
-    # For production deployments, you typically want the application code to be self-contained
-    # within the Docker image. The volume mount `.:/app` is primarily for local development to
-    # reflect code changes without rebuilding the image. It's commented out for production-like behavior.
-    # If this mount is active in a production-like environment (e.g., Portainer deploying from an image
-    # or a CI/CD pipeline), and the host path "." does not contain your application code (including package.json),
-    # it will overwrite the files copied into the image, leading to "package.json not found" errors.
-    # volumes:
-    #   - .:/app # Ensure this is commented out or removed for production deployments where the image is self-contained.
-    #
-    # The named volumes below are generally fine and can be useful for persisting
-    # node_modules and the .next build cache across container restarts, potentially
-    # speeding up subsequent starts if the underlying image hasn't changed significantly.
-    volumes:
-      - app_node_modules:/app/node_modules
-      - app_next:/app/.next
     environment:
-      # --- NextAuth & Azure AD Configuration ---
-      AZURE_AD_CLIENT_ID: "${AZURE_AD_CLIENT_ID:-your_azure_ad_application_client_id}"
-      AZURE_AD_CLIENT_SECRET: "${AZURE_AD_CLIENT_SECRET:-your_azure_ad_client_secret_value}"
-      AZURE_AD_TENANT_ID: "${AZURE_AD_TENANT_ID:-your_azure_ad_directory_tenant_id}"
-      NEXTAUTH_URL: "${NEXTAUTH_URL:-http://localhost:9002}"
-      NEXTAUTH_SECRET: "${NEXTAUTH_SECRET:-super-secret-nextauth-key-replace-this}" # Generate with: openssl rand -base64 32
-
-      # --- Genkit Configuration ---
-      # GOOGLE_API_KEY: "${GOOGLE_API_KEY:-your_google_api_key}"
-
-      # --- Backend Service Connection Configuration ---
-      DATABASE_URL: "${DATABASE_URL:-postgresql://devuser:devpassword@postgres:5432/canditrack_db}"
-      MINIO_ENDPOINT: "${MINIO_ENDPOINT:-minio}" # Service name for Docker internal communication
-      MINIO_PORT: "${MINIO_PORT:-9000}"
-      MINIO_ACCESS_KEY: "${MINIO_ACCESS_KEY:-minioadmin}"
-      MINIO_SECRET_KEY: "${MINIO_SECRET_KEY:-minio_secret_password}"
-      MINIO_BUCKET_NAME: "${MINIO_BUCKET_NAME:-canditrack-resumes}"
-      MINIO_USE_SSL: "${MINIO_USE_SSL:-false}"
-      REDIS_HOST: redis
-      REDIS_PORT: 6379
-      REDIS_PASSWORD: ${REDIS_PASSWORD}
-      N8N_RESUME_WEBHOOK_URL: "${N8N_RESUME_WEBHOOK_URL:-https://n8n.bondarys.com/webhook/upload-cv}" # Optional n8n webhook URL for candidate resumes
-      N8N_GENERIC_PDF_WEBHOOK_URL: "${N8N_GENERIC_PDF_WEBHOOK_URL:-https://n8n.bondarys.com/webhook/upload-cv}" # Optional n8n webhook URL for generic PDF uploads
-
-      # --- General Application Settings ---
-      NODE_ENV: production
-      UPSTASH_REDIS_REST_URL: redis://redis:6379
-      UPSTASH_REDIS_REST_TOKEN: ${UPSTASH_REDIS_REST_TOKEN}
+      - NODE_ENV=production
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+      - DATABASE_URL=${DATABASE_URL}
+      - NEXTAUTH_URL=${NEXTAUTH_URL}
+      - NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
+      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
+    ports:
+      - "3000:3000"
     depends_on:
-      - postgres
-      - minio
       - redis
-    restart: unless-stopped
-    # The command to run the application is typically defined in the Dockerfile's CMD instruction.
-    # For Next.js, this is often `npm run start` (which runs `next start`).
-    # You can override it here if needed, but it's usually better to keep it in the Dockerfile.
-    # command: ["npm", "run", "start"]
     networks:
       - app-network
 
-  postgres:
-    image: postgres:14-alpine
-    ports:
-      - "5432:5432"
-    environment:
-      POSTGRES_USER: "${POSTGRES_USER:-devuser}"
-      POSTGRES_PASSWORD: "${POSTGRES_PASSWORD:-devpassword}"
-      POSTGRES_DB: "${POSTGRES_DB:-canditrack_db}"
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-      # IMPORTANT: Mount initialization scripts for first-time DB setup.
-      # Place any .sql or .sh files (such as init-db.sql) in the pg-init-scripts directory.
-      # These will be executed automatically by the Postgres container on first startup with a new data volume.
-      - ./pg-init-scripts:/docker-entrypoint-initdb.d
-    restart: unless-stopped
-
-  minio:
-    image: minio/minio:latest
-    ports:
-      - "9847:9000" # MinIO API port
-      - "9848:9001" # MinIO Console port
-    environment:
-      MINIO_ROOT_USER: "${MINIO_ROOT_USER:-minioadmin}"
-      MINIO_ROOT_PASSWORD: "${MINIO_ROOT_PASSWORD:-minio_secret_password}"
-    command: server /data --console-address ":9001"
-    volumes:
-      - minio_data:/data
-    restart: unless-stopped
-
   redis:
     image: redis:alpine
+    command: redis-server --requirepass ${REDIS_PASSWORD}
     ports:
       - "6379:6379"
     volumes:
       - redis-data:/data
-    command: redis-server --requirepass ${REDIS_PASSWORD} --appendonly yes
     networks:
       - app-network
-
-volumes:
-  postgres_data:
-  minio_data:
-  redis-data:
-  app_node_modules:
-  app_next:
 
 networks:
   app-network:
     driver: bridge
+
+volumes:
+  redis-data:

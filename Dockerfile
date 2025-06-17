@@ -26,12 +26,6 @@ ENV NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
 ENV GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
 ENV GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
 
-# Debug: Show Node and npm versions
-RUN node -v && npm -v
-
-# Debug: List installed packages
-RUN npm list --depth=0
-
 # Build the application with more memory
 ENV NODE_OPTIONS="--max-old-space-size=4096"
 RUN npm run build
