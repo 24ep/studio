@@ -18,10 +18,10 @@ body {
     --popover: 0 0% 100%;
     --popover-foreground: 220 25% 20%;
 
-    /* Primary Gradient Definition for Light Theme */
-    --primary-gradient-start-l: 231 48% 48%; /* #3F51B5 Deep Blue */
-    --primary-gradient-end-l: 231 55% 60%; /* Slightly lighter/varied blue */
-    --primary: hsl(var(--primary-gradient-start-l));
+    /* Primary Gradient Definition for Light Theme - UPDATED */
+    --primary-gradient-start-l: 195 100% 50%; /* #00d2ff */
+    --primary-gradient-end-l: 235 61% 50%;   /* #3a47d5 */
+    --primary: hsl(var(--primary-gradient-start-l)); /* Base primary color derived from start of gradient */
     --primary-foreground: 0 0% 100%; /* White text on primary */
 
 
@@ -46,8 +46,8 @@ body {
     /* Chart colors - can be customized further if specific chart palette is needed */
     --chart-1: hsl(var(--primary-gradient-start-l));
     --chart-2: hsl(var(--accent));
-    --chart-3: 231 48% 68%;
-    --chart-4: 187 100% 62%;
+    --chart-3: 235 61% 65%; /* Lighter shade of end gradient for charts */
+    --chart-4: 195 100% 65%; /* Lighter shade of start gradient for charts */
     --chart-5: 220 14% 60%;
 
     /* Sidebar specific theme variables - Light Theme Updated for "Modern Trend" */
@@ -86,10 +86,10 @@ body {
     --popover: 220 15% 16%; /* Popover a bit lighter */
     --popover-foreground: 210 30% 95%;
 
-    /* Primary Gradient Definition for Dark Theme */
-    --primary-gradient-start-d: 210 100% 60%; /* Vibrant blue */
-    --primary-gradient-end-d: 210 90% 70%;   /* Slightly lighter/varied vibrant blue */
-    --primary: hsl(var(--primary-gradient-start-d));
+    /* Primary Gradient Definition for Dark Theme - UPDATED */
+    --primary-gradient-start-d: 195 100% 50%; /* #00d2ff */
+    --primary-gradient-end-d: 235 61% 50%;   /* #3a47d5 */
+    --primary: hsl(var(--primary-gradient-start-d)); /* Base primary color derived from start of gradient */
     --primary-foreground: hsl(0 0% 100%); /* Explicitly white for primary actions text in dark mode */
 
     --secondary: 220 15% 25%; /* Darker secondary elements */
@@ -111,8 +111,8 @@ body {
      /* Chart colors */
     --chart-1: hsl(var(--primary-gradient-start-d));
     --chart-2: hsl(var(--accent));
-    --chart-3: 210 100% 75%;
-    --chart-4: 200 100% 70%;
+    --chart-3: 235 61% 65%;
+    --chart-4: 195 100% 65%;
     --chart-5: 220 15% 50%;
 
     /* Sidebar dark theme variables - Modernized */
@@ -211,11 +211,11 @@ body {
   }
   .dark .btn-primary-gradient {
     background-image: linear-gradient(to right, hsl(var(--primary-gradient-start-d)), hsl(var(--primary-gradient-end-d)));
-    color: hsl(var(--primary-foreground)); 
+    color: hsl(var(--primary-foreground));
   }
   .btn-primary-gradient:hover {
     filter: brightness(1.1);
-    box-shadow: 0 2px 10px -3px hsla(var(--primary), 0.4);
+    box-shadow: 0 2px 10px -3px hsla(var(--primary), 0.4); /* Uses updated --primary which is derived from start of gradient */
   }
 
   /* Blue gradient hover for secondary and outline button types */
@@ -241,7 +241,7 @@ body {
   .checkbox-primary[data-state="checked"] {
     @apply bg-transparent border-primary text-primary;
   }
-  
+
   /* Green variant checkbox: green border, green check icon, transparent background */
   .checkbox-green[data-state="checked"] {
     background-color: transparent !important; /* Ensure background is transparent */
