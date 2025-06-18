@@ -4,6 +4,7 @@
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button, buttonVariants } from "@/components/ui/button"; 
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label"; // Added missing import
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { PlusCircle, UsersRound, ShieldAlert, Edit3, Trash2, ServerCrash, Loader2, MoreHorizontal, KeyRound, Filter, Search, XCircle } from "lucide-react";
 import type { UserProfile, UserGroup } from '@/lib/types';
