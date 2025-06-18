@@ -26,8 +26,8 @@ body {
     --popover-foreground: 220 25% 20%;
 
     /* Primary Gradient Definition for Light Theme - UPDATED */
-    --primary-gradient-start-l: 195 100% 50%; /* #00d2ff */
-    --primary-gradient-end-l: 235 61% 50%;   /* #3a47d5 */
+    --primary-gradient-start-l: 192 95% 50%; /* #07C8F9 hsla(192, 95%, 50%, 1) */
+    --primary-gradient-end-l: 225 89% 47%;   /* #0D41E1 hsla(225, 89%, 47%, 1) */
     --primary: hsl(var(--primary-gradient-start-l)); /* Base primary color derived from start of gradient */
     --primary-foreground: 0 0% 100%; /* White text on primary */
 
@@ -100,8 +100,8 @@ body {
     --popover-foreground: 210 30% 95%;
 
     /* Primary Gradient Definition for Dark Theme - UPDATED */
-    --primary-gradient-start-d: 195 100% 50%; /* #00d2ff */
-    --primary-gradient-end-d: 235 61% 50%;   /* #3a47d5 */
+    --primary-gradient-start-d: 192 95% 50%; /* #07C8F9 hsla(192, 95%, 50%, 1) */
+    --primary-gradient-end-d: 225 89% 47%;   /* #0D41E1 hsla(225, 89%, 47%, 1) */
     --primary: hsl(var(--primary-gradient-start-d)); /* Base primary color derived from start of gradient */
     --primary-foreground: hsl(0 0% 100%); /* Explicitly white for primary actions text in dark mode */
 
@@ -288,3 +288,5 @@ body {
     background-image: linear-gradient(to bottom right, hsl(var(--preferences-left-panel-gradient-start)), hsl(var(--preferences-left-panel-gradient-end)));
   }
 }
+
+    

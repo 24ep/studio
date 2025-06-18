@@ -5,7 +5,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { CandidateFilters, type CandidateFilterValues } from '@/components/candidates/CandidateFilters';
 import { CandidateTable } from '@/components/candidates/CandidateTable';
-import type { Candidate, CandidateStatus, Position, RecruitmentStage, UserProfile, FilterableAttribute } from '@/lib/types';
+import type { Candidate, CandidateStatus, Position, RecruitmentStage, UserProfile } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { PlusCircle, Users, ServerCrash, Zap, Loader2, FileDown, FileUp, ChevronDown, FileSpreadsheet, ShieldAlert, Brain } from 'lucide-react';
@@ -19,21 +19,7 @@ import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
 import { useSession, signIn } from 'next-auth/react';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-
-// Define filterable attributes here or import from a shared location
-const FILTERABLE_CANDIDATE_ATTRIBUTES: FilterableAttribute[] = [
-  { path: 'name', label: 'Name (Top Level)', type: 'string' },
-  { path: 'email', label: 'Email (Top Level)', type: 'string' },
-  { path: 'phone', label: 'Phone (Top Level)', type: 'string' },
-  { path: 'parsedData.personal_info.location', label: 'Location (Resume)', type: 'string' },
-  { path: 'parsedData.personal_info.introduction_aboutme', label: 'About Me (Resume)', type: 'string' },
-  { path: 'parsedData.education.[].university', label: 'University (Resume)', type: 'array_string' },
-  { path: 'parsedData.education.[].major', label: 'Major (Resume)', type: 'array_string' },
-  { path: 'parsedData.experience.[].company', label: 'Company (Resume)', type: 'array_string' },
-  { path: 'parsedData.experience.[].position', label: 'Past Position (Resume)', type: 'array_string' },
-  { path: 'parsedData.skills.[].skill_string', label: 'Skills String (Resume)', type: 'array_string' }, // Assuming skill_string exists and is searchable
-  { path: 'parsedData.cv_language', label: 'CV Language (Resume)', type: 'string' },
-];
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 
 interface CandidatesPageClientProps {
@@ -64,7 +50,7 @@ export function CandidatesPageClient({
   authError: serverAuthError = false,
   permissionError: serverPermissionError = false,
 }: CandidatesPageClientProps) {
-  const [filters, setFilters] = useState<CandidateFilterValues>({ minFitScore: 0, maxFitScore: 100, positionId: "__ALL_POSITIONS__", status: "all", attributePath: "__NO_ATTRIBUTE_FILTER__" });
+  const [filters, setFilters] = useState<CandidateFilterValues>({ minFitScore: 0, maxFitScore: 100, positionId: "__ALL_POSITIONS__", status: "all" });
 
   const [allCandidates, setAllCandidates] = useState<Candidate[]>(initialCandidates || []);
   const [availablePositions, setAvailablePositions] = useState<Position[]>(initialAvailablePositions || []);
@@ -128,22 +114,16 @@ export function CandidatesPageClient({
     try {
       const query = new URLSearchParams();
       if (currentFilters.name) query.append('name', currentFilters.name);
+      if (currentFilters.email) query.append('email', currentFilters.email);
+      if (currentFilters.phone) query.append('phone', currentFilters.phone);
       if (currentFilters.positionId && currentFilters.positionId !== "__ALL_POSITIONS__") query.append('positionId', currentFilters.positionId);
       if (currentFilters.status && currentFilters.status !== "all") query.append('status', currentFilters.status);
       if (currentFilters.education) query.append('education', currentFilters.education);
       if (currentFilters.minFitScore !== undefined) query.append('minFitScore', String(currentFilters.minFitScore));
       if (currentFilters.maxFitScore !== undefined) query.append('maxFitScore', String(currentFilters.maxFitScore));
-      if (currentFilters.email) query.append('email', currentFilters.email);
-      if (currentFilters.phone) query.append('phone', currentFilters.phone);
       if (currentFilters.applicationDateStart) query.append('applicationDateStart', currentFilters.applicationDateStart.toISOString());
       if (currentFilters.applicationDateEnd) query.append('applicationDateEnd', currentFilters.applicationDateEnd.toISOString());
       if (currentFilters.recruiterId && currentFilters.recruiterId !== "__ALL_RECRUITERS__") query.append('recruiterId', currentFilters.recruiterId);
-      // if (currentFilters.keywords) query.append('keywords', currentFilters.keywords); // Removed
-      if (currentFilters.attributePath && currentFilters.attributePath !== "__NO_ATTRIBUTE_FILTER__" && currentFilters.attributeValue) {
-        query.append('attributePath', currentFilters.attributePath);
-        query.append('attributeValue', currentFilters.attributeValue);
-      }
-
 
       const response = await fetch(`/api/candidates?${query.toString()}`);
       if (!response.ok) {
@@ -206,7 +186,7 @@ export function CandidatesPageClient({
     } catch (error) {
       console.error("AI Search Error:", error);
       toast({ title: "AI Search Error", description: (error as Error).message, variant: "destructive" });
-      setAiMatchedCandidateIds([]); // Show no results on error
+      setAiMatchedCandidateIds([]); 
     } finally {
       setIsAiSearching(false);
     }
@@ -219,7 +199,7 @@ export function CandidatesPageClient({
       fetchRecruiters();
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filters, sessionStatus, serverAuthError, serverPermissionError]); // fetchFilteredCandidatesOnClient and fetchRecruiters are memoized by useCallback
+  }, [filters, sessionStatus, serverAuthError, serverPermissionError]); 
 
    useEffect(() => {
     if (sessionStatus === 'unauthenticated' && !serverAuthError && !serverPermissionError) {
@@ -233,7 +213,7 @@ export function CandidatesPageClient({
 
 
   const handleFilterChange = (newFilters: CandidateFilterValues) => {
-    setFilters(prevFilters => ({ ...prevFilters, ...newFilters, aiSearchQuery: undefined })); // Clear AI search on standard filter change
+    setFilters(prevFilters => ({ ...prevFilters, ...newFilters, aiSearchQuery: undefined })); 
     setAiMatchedCandidateIds(null);
     setAiSearchReasoning(null);
   };
@@ -408,18 +388,16 @@ export function CandidatesPageClient({
     try {
       const query = new URLSearchParams();
       if (filters.name) query.append('name', filters.name);
-      if (filters.positionId && filters.positionId !== "__ALL_POSITIONS__") query.append('positionId', filters.positionId);
-      if (filters.status && filters.status !== "all") query.append('status', filters.status);
       if (filters.email) query.append('email', filters.email);
       if (filters.phone) query.append('phone', filters.phone);
+      if (filters.positionId && filters.positionId !== "__ALL_POSITIONS__") query.append('positionId', filters.positionId);
+      if (filters.status && filters.status !== "all") query.append('status', filters.status);
+      if (filters.education) query.append('education', filters.education);
+      if (filters.minFitScore !== undefined) query.append('minFitScore', String(filters.minFitScore));
+      if (filters.maxFitScore !== undefined) query.append('maxFitScore', String(filters.maxFitScore));
       if (filters.applicationDateStart) query.append('applicationDateStart', filters.applicationDateStart.toISOString());
       if (filters.applicationDateEnd) query.append('applicationDateEnd', filters.applicationDateEnd.toISOString());
       if (filters.recruiterId && filters.recruiterId !== "__ALL_RECRUITERS__") query.append('recruiterId', filters.recruiterId);
-      // if (filters.keywords) query.append('keywords', filters.keywords); // Removed
-      if (filters.attributePath && filters.attributePath !== "__NO_ATTRIBUTE_FILTER__" && filters.attributeValue) {
-        query.append('attributePath', filters.attributePath);
-        query.append('attributeValue', filters.attributeValue);
-      }
 
 
       const response = await fetch(`/api/candidates/export?${query.toString()}`);
@@ -473,25 +451,14 @@ export function CandidatesPageClient({
     : allCandidates;
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row justify-between items-center gap-2">
-        <h1 className="text-2xl font-semibold text-foreground hidden md:block"> Candidate Management </h1>
-        <div className="w-full flex flex-col sm:flex-row gap-2 items-center sm:justify-end">
-          <Button onClick={() => setIsCreateViaN8nModalOpen(true)} className="w-full sm:w-auto btn-primary-gradient"> <Zap className="mr-2 h-4 w-4" /> Create via Resume (Automated) </Button>
-          <DropdownMenu>
-             <DropdownMenuTrigger asChild><Button variant="outline" className="w-full sm:w-auto"> More Actions <ChevronDown className="ml-2 h-4 w-4" /> </Button></DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => setIsAddModalOpen(true)}> <PlusCircle className="mr-2 h-4 w-4" /> Add Candidate Manually </DropdownMenuItem>
-              {canImportCandidates && (<DropdownMenuItem onClick={() => setIsImportModalOpen(true)}> <FileUp className="mr-2 h-4 w-4" /> Import Candidates (CSV) </DropdownMenuItem>)}
-              {canImportCandidates && (<DropdownMenuItem onClick={handleDownloadCsvTemplateGuide}> <FileDown className="mr-2 h-4 w-4" /> Download CSV Template </DropdownMenuItem>)}
-              {canExportCandidates && (<DropdownMenuItem onClick={handleExportToCsv} disabled={isLoading}> <FileSpreadsheet className="mr-2 h-4 w-4" /> Export Candidates (CSV) </DropdownMenuItem>)}
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
-      </div>
-
-      <div className="flex flex-col md:flex-row gap-6">
-        <div className="md:w-80 lg:w-96 flex-shrink-0"> {/* Filters Panel */}
+    <div className="flex flex-col md:flex-row gap-6 h-full"> {/* Ensure parent flex takes full height */}
+      {/* Filters Panel - Left Sidebar */}
+      <aside className="w-full md:w-72 lg:w-80 flex-shrink-0 md:sticky md:top-0 md:h-screen">
+        <ScrollArea className="h-full md:max-h-[calc(100vh-var(--header-height,4rem)-2rem)] md:pr-2"> {/* Adjust var(--header-height) if your header height is different */}
+          <div className="flex justify-between items-center mb-3 md:hidden">
+            <h1 className="text-xl font-semibold">Filters</h1>
+            {/* Potentially add a button to toggle filter visibility on mobile if needed */}
+          </div>
           <CandidateFilters
             initialFilters={filters}
             onFilterChange={handleFilterChange}
@@ -499,31 +466,46 @@ export function CandidatesPageClient({
             availablePositions={availablePositions}
             availableStages={availableStages}
             availableRecruiters={availableRecruiters}
-            filterableAttributes={FILTERABLE_CANDIDATE_ATTRIBUTES}
             isLoading={isLoading || isAiSearching}
             isAiSearching={isAiSearching}
           />
-        </div>
+        </ScrollArea>
+      </aside>
 
-        <div className="flex-1 space-y-4 min-w-0"> {/* Content Panel, min-w-0 for flexbox to shrink */}
-          {aiSearchReasoning && (
-            <Alert variant="default" className="bg-blue-50 border-blue-300 dark:bg-blue-900/30 dark:border-blue-700">
-              <Brain className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-              <AlertTitle className="font-semibold text-blue-700 dark:text-blue-300">AI Search Results</AlertTitle>
-              <AlertDescription className="text-blue-700 dark:text-blue-300">
-                {aiSearchReasoning}
-                {aiMatchedCandidateIds && aiMatchedCandidateIds.length === 0 && " No strong matches found."}
-              </AlertDescription>
-            </Alert>
-          )}
-
-          {(isLoading || isAiSearching) && displayedCandidates.length === 0 && !fetchError ? ( <div className="flex flex-col items-center justify-center h-64 border rounded-lg bg-card shadow"> <Users className="w-16 h-16 text-muted-foreground animate-pulse mb-4" /> <h3 className="text-xl font-semibold text-foreground"> {isAiSearching ? "AI Searching Candidates..." : "Loading Candidates..."}</h3> <p className="text-muted-foreground">Please wait while we fetch the data.</p> </div>
-          ) : (
-            <CandidateTable candidates={displayedCandidates} availablePositions={availablePositions} availableStages={availableStages} onUpdateCandidate={handleUpdateCandidateAPI} onDeleteCandidate={handleDeleteCandidate} onOpenUploadModal={handleOpenUploadModal} onEditPosition={handleOpenEditPositionModal} isLoading={(isLoading || isAiSearching) && displayedCandidates.length > 0 && !fetchError} onRefreshCandidateData={refreshCandidateInList} />
-          )}
+      {/* Main Content Area - Right Panel */}
+      <div className="flex-1 space-y-6 min-w-0">
+        <div className="flex flex-col sm:flex-row justify-between items-center gap-2">
+          <h1 className="text-2xl font-semibold text-foreground hidden md:block"> Candidate Management </h1>
+          <div className="w-full md:w-auto flex flex-col sm:flex-row gap-2 items-center sm:justify-end">
+            <Button onClick={() => setIsCreateViaN8nModalOpen(true)} className="w-full sm:w-auto btn-primary-gradient"> <Zap className="mr-2 h-4 w-4" /> Create via Resume </Button>
+            <DropdownMenu>
+               <DropdownMenuTrigger asChild><Button variant="outline" className="w-full sm:w-auto"> More Actions <ChevronDown className="ml-2 h-4 w-4" /> </Button></DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => setIsAddModalOpen(true)}> <PlusCircle className="mr-2 h-4 w-4" /> Add Manually </DropdownMenuItem>
+                {canImportCandidates && (<DropdownMenuItem onClick={() => setIsImportModalOpen(true)}> <FileUp className="mr-2 h-4 w-4" /> Import (CSV) </DropdownMenuItem>)}
+                {canImportCandidates && (<DropdownMenuItem onClick={handleDownloadCsvTemplateGuide}> <FileDown className="mr-2 h-4 w-4" /> Download CSV Template </DropdownMenuItem>)}
+                {canExportCandidates && (<DropdownMenuItem onClick={handleExportToCsv} disabled={isLoading}> <FileSpreadsheet className="mr-2 h-4 w-4" /> Export (CSV) </DropdownMenuItem>)}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         </div>
+        
+        {aiSearchReasoning && (
+          <Alert variant="default" className="bg-blue-50 border-blue-300 dark:bg-blue-900/30 dark:border-blue-700">
+            <Brain className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+            <AlertTitle className="font-semibold text-blue-700 dark:text-blue-300">AI Search Results</AlertTitle>
+            <AlertDescription className="text-blue-700 dark:text-blue-300">
+              {aiSearchReasoning}
+              {aiMatchedCandidateIds && aiMatchedCandidateIds.length === 0 && " No strong matches found."}
+            </AlertDescription>
+          </Alert>
+        )}
+
+        {(isLoading || isAiSearching) && displayedCandidates.length === 0 && !fetchError ? ( <div className="flex flex-col items-center justify-center h-64 border rounded-lg bg-card shadow"> <Users className="w-16 h-16 text-muted-foreground animate-pulse mb-4" /> <h3 className="text-xl font-semibold text-foreground"> {isAiSearching ? "AI Searching Candidates..." : "Loading Candidates..."}</h3> <p className="text-muted-foreground">Please wait while we fetch the data.</p> </div>
+        ) : (
+          <CandidateTable candidates={displayedCandidates} availablePositions={availablePositions} availableStages={availableStages} onUpdateCandidate={handleUpdateCandidateAPI} onDeleteCandidate={handleDeleteCandidate} onOpenUploadModal={handleOpenUploadModal} onEditPosition={handleOpenEditPositionModal} isLoading={(isLoading || isAiSearching) && displayedCandidates.length > 0 && !fetchError} onRefreshCandidateData={refreshCandidateInList} />
+        )}
       </div>
-
 
       <AddCandidateModal isOpen={isAddModalOpen} onOpenChange={setIsAddModalOpen} onAddCandidate={handleAddCandidateSubmit} availablePositions={availablePositions} availableStages={availableStages} />
       <UploadResumeModal isOpen={isUploadModalOpen} onOpenChange={setIsUploadModalOpen} candidate={selectedCandidateForUpload} onUploadSuccess={handleUploadSuccess} />
@@ -534,4 +516,4 @@ export function CandidatesPageClient({
   );
 }
 
-
+    

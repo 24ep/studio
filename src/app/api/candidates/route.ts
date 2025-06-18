@@ -49,7 +49,7 @@ const experienceEntrySchema = z.object({
 const skillEntrySchema = z.object({
   segment_skill: z.string().optional().default(''),
   skill: z.array(z.string()).optional().default([]),
-  skill_string: z.string().optional(), // For UI binding if skills are comma-separated in input
+  skill_string: z.string().optional(), 
 });
 
 const jobSuitableEntrySchema = z.object({
@@ -121,9 +121,6 @@ export async function GET(request: NextRequest) {
     const applicationDateEndFilter = searchParams.get('applicationDateEnd');
     const recruiterIdFilter = searchParams.get('recruiterId');
     const assignedRecruiterIdParam = searchParams.get('assignedRecruiterId'); 
-    // const keywordsFilter = searchParams.get('keywords'); // Replaced
-    const attributePathFilter = searchParams.get('attributePath');
-    const attributeValueFilter = searchParams.get('attributeValue');
 
     let query = `
       SELECT
@@ -159,7 +156,7 @@ export async function GET(request: NextRequest) {
     if (nameFilter) { conditions.push(`c.name ILIKE $${paramIndex++}`); queryParams.push(`%${nameFilter}%`); }
     if (positionIdFilter) { conditions.push(`c."positionId" = $${paramIndex++}`); queryParams.push(positionIdFilter); }
     if (statusFilter) { conditions.push(`c.status = $${paramIndex++}`); queryParams.push(statusFilter); }
-    if (educationFilter) { conditions.push(`c."parsedData"::text ILIKE $${paramIndex++}`); queryParams.push(`%${educationFilter}%`); }
+    if (educationFilter) { conditions.push(`(c."parsedData"->'education')::text ILIKE $${paramIndex++}`); queryParams.push(`%${educationFilter}%`); } // Search specifically in education
     if (minFitScoreParam) { const minFitScore = parseInt(minFitScoreParam, 10); if (!isNaN(minFitScore)) { conditions.push(`c."fitScore" >= $${paramIndex++}`); queryParams.push(minFitScore); } }
     if (maxFitScoreParam) { const maxFitScore = parseInt(maxFitScoreParam, 10); if (!isNaN(maxFitScore)) { conditions.push(`c."fitScore" <= $${paramIndex++}`); queryParams.push(maxFitScore); } }
     if (emailFilter) { conditions.push(`c.email ILIKE $${paramIndex++}`); queryParams.push(`%${emailFilter}%`); }
@@ -193,42 +190,6 @@ export async function GET(request: NextRequest) {
             return NextResponse.json({ message: "Forbidden: Insufficient permissions to view candidates." }, { status: 403 });
         }
     }
-    // if (keywordsFilter) { conditions.push(`c."parsedData"::text ILIKE $${paramIndex++}`); queryParams.push(`%${keywordsFilter}%`); } // Replaced
-
-    if (attributePathFilter && attributeValueFilter) {
-        const pathParts = attributePathFilter.split('.');
-        if (pathParts[0] === 'parsedData' && pathParts.length > 1) {
-            // Filtering within JSONB 'parsedData'
-            // Example: parsedData.personal_info.location -> #>>'{personal_info,location}'
-            // This basic example handles direct string paths. Searching in arrays like skills.[].skill is more complex.
-            const jsonPath = pathParts.slice(1).join(',');
-             // For arrays, a simple ILIKE on the text representation might work for some cases.
-            // A more robust solution for arrays would involve jsonb_array_elements_text or similar.
-            if (attributePathFilter.includes("[]")) { // Heuristic for array search
-                 const arrayPath = pathParts.slice(1, -1).join(','); // Path to array
-                 const fieldInArray = pathParts.slice(-1)[0]; // Field within array objects
-                 // This is a simplified approach; a proper array search is more complex
-                 conditions.push(`EXISTS (
-                    SELECT 1 FROM jsonb_array_elements(c."parsedData" #> '{${arrayPath}}') elem
-                    WHERE elem ->> '${fieldInArray}' ILIKE $${paramIndex++}
-                 )`);
-                 queryParams.push(`%${attributeValueFilter}%`);
-
-            } else {
-                conditions.push(`c."parsedData"#>>'{${jsonPath}}' ILIKE $${paramIndex++}`);
-                queryParams.push(`%${attributeValueFilter}%`);
-            }
-        } else if (['name', 'email', 'phone', 'status'].includes(attributePathFilter)) {
-            // Filtering on top-level columns
-            conditions.push(`c."${attributePathFilter}" ILIKE $${paramIndex++}`);
-            queryParams.push(`%${attributeValueFilter}%`);
-        } else {
-            // Fallback for keywords if path is not specific enough or not top-level known
-             conditions.push(`c."parsedData"::text ILIKE $${paramIndex++}`);
-             queryParams.push(`%${attributeValueFilter}%`);
-        }
-    }
-
 
     if (conditions.length > 0) {
       query += ' WHERE ' + conditions.join(' AND ');
@@ -473,3 +434,4 @@ export async function POST(request: NextRequest) {
   }
 }
 
+    

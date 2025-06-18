@@ -7,31 +7,28 @@ import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Slider } from '@/components/ui/slider';
 import { Label } from '@/components/ui/label';
-import { Search, FilterX, ListFilter, Check, ChevronsUpDown, Loader2, CalendarIcon, Brain, Database } from 'lucide-react';
-import type { Position, CandidateStatus, RecruitmentStage, UserProfile, FilterableAttribute } from '@/lib/types';
+import { Search, FilterX, Check, ChevronsUpDown, Loader2, CalendarIcon, Brain, Users, Briefcase, Tag, Star, Building } from 'lucide-react';
+import type { Position, CandidateStatus, RecruitmentStage, UserProfile } from '@/lib/types';
 import { cn } from "@/lib/utils";
 import { ScrollArea } from '../ui/scroll-area';
 import { Calendar } from "@/components/ui/calendar";
 import { format, parseISO } from 'date-fns';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 
 
 export interface CandidateFilterValues {
   name?: string;
-  positionId?: string;
-  status?: CandidateStatus | 'all';
-  education?: string;
-  minFitScore?: number;
-  maxFitScore?: number;
   email?: string;
   phone?: string;
+  positionId?: string;
+  status?: CandidateStatus | 'all';
+  education?: string; // Education Keywords
+  minFitScore?: number;
+  maxFitScore?: number;
   applicationDateStart?: Date;
   applicationDateEnd?: Date;
   recruiterId?: string;
-  // keywords?: string; // Replaced by attribute specific filter
-  attributePath?: string;
-  attributeValue?: string;
-  aiSearchQuery?: string; // For AI-powered search
+  aiSearchQuery?: string; 
 }
 
 interface CandidateFiltersProps {
@@ -41,7 +38,6 @@ interface CandidateFiltersProps {
   availablePositions: Position[];
   availableStages: RecruitmentStage[];
   availableRecruiters: Pick<UserProfile, 'id' | 'name'>[];
-  filterableAttributes: FilterableAttribute[]; // New prop
   isLoading?: boolean;
   isAiSearching?: boolean; 
 }
@@ -49,21 +45,20 @@ interface CandidateFiltersProps {
 const ALL_POSITIONS_SELECT_VALUE = "__ALL_POSITIONS__";
 const ALL_STATUSES_SELECT_VALUE = "all";
 const ALL_RECRUITERS_SELECT_VALUE = "__ALL_RECRUITERS__";
-const NO_ATTRIBUTE_FILTER_VALUE = "__NO_ATTRIBUTE_FILTER__";
-
 
 export function CandidateFilters({
-    initialFilters = { isOpen: "all" } as any,
+    initialFilters = {},
     onFilterChange,
     onAiSearch,
     availablePositions,
     availableStages,
     availableRecruiters,
-    filterableAttributes,
     isLoading,
     isAiSearching
 }: CandidateFiltersProps) {
   const [name, setName] = useState(initialFilters.name || '');
+  const [email, setEmail] = useState(initialFilters.email || '');
+  const [phone, setPhone] = useState(initialFilters.phone || '');
   const [positionId, setPositionId] = useState(initialFilters.positionId || ALL_POSITIONS_SELECT_VALUE);
   const [status, setStatus] = useState<CandidateStatus | 'all'>(initialFilters.status || ALL_STATUSES_SELECT_VALUE);
   const [education, setEducation] = useState(initialFilters.education || '');
@@ -71,16 +66,10 @@ export function CandidateFilters({
     initialFilters.minFitScore || 0,
     initialFilters.maxFitScore || 100,
   ]);
-  const [email, setEmail] = useState(initialFilters.email || '');
-  const [phone, setPhone] = useState(initialFilters.phone || '');
   const [applicationDateStart, setApplicationDateStart] = useState<Date | undefined>(initialFilters.applicationDateStart);
   const [applicationDateEnd, setApplicationDateEnd] = useState<Date | undefined>(initialFilters.applicationDateEnd);
   const [recruiterId, setRecruiterId] = useState(initialFilters.recruiterId || ALL_RECRUITERS_SELECT_VALUE);
-  // const [keywords, setKeywords] = useState(initialFilters.keywords || ''); // Removed
-  const [selectedAttributePath, setSelectedAttributePath] = useState(initialFilters.attributePath || NO_ATTRIBUTE_FILTER_VALUE);
-  const [attributeFilterValue, setAttributeFilterValue] = useState(initialFilters.attributeValue || '');
   const [aiSearchQueryInput, setAiSearchQueryInput] = useState(initialFilters.aiSearchQuery || '');
-
 
   const [positionSearchOpen, setPositionSearchOpen] = useState(false);
   const [positionSearchQuery, setPositionSearchQuery] = useState('');
@@ -88,7 +77,6 @@ export function CandidateFilters({
   const [statusSearchQuery, setStatusSearchQuery] = useState('');
   const [recruiterSearchOpen, setRecruiterSearchOpen] = useState(false);
   const [recruiterSearchQuery, setRecruiterSearchQuery] = useState('');
-
 
   const getCurrentPositionDisplayValue = () => {
     if (positionId === ALL_POSITIONS_SELECT_VALUE) return "All Positions";
@@ -105,26 +93,17 @@ export function CandidateFilters({
     return availableRecruiters.find(r => r.id === recruiterId)?.name || "All Recruiters";
   }
   
-  const getCurrentAttributeDisplayValue = () => {
-    if (selectedAttributePath === NO_ATTRIBUTE_FILTER_VALUE) return "Select Attribute...";
-    return filterableAttributes.find(attr => attr.path === selectedAttributePath)?.label || "Select Attribute...";
-  }
-
-
   useEffect(() => {
     setName(initialFilters.name || '');
+    setEmail(initialFilters.email || '');
+    setPhone(initialFilters.phone || '');
     setPositionId(initialFilters.positionId || ALL_POSITIONS_SELECT_VALUE);
     setStatus(initialFilters.status || ALL_STATUSES_SELECT_VALUE);
     setEducation(initialFilters.education || '');
     setFitScoreRange([initialFilters.minFitScore || 0, initialFilters.maxFitScore || 100]);
-    setEmail(initialFilters.email || '');
-    setPhone(initialFilters.phone || '');
     setApplicationDateStart(initialFilters.applicationDateStart ? parseISO(String(initialFilters.applicationDateStart)) : undefined);
     setApplicationDateEnd(initialFilters.applicationDateEnd ? parseISO(String(initialFilters.applicationDateEnd)) : undefined);
     setRecruiterId(initialFilters.recruiterId || ALL_RECRUITERS_SELECT_VALUE);
-    // setKeywords(initialFilters.keywords || ''); // Removed
-    setSelectedAttributePath(initialFilters.attributePath || NO_ATTRIBUTE_FILTER_VALUE);
-    setAttributeFilterValue(initialFilters.attributeValue || '');
     setAiSearchQueryInput(initialFilters.aiSearchQuery || '');
   }, [initialFilters]);
 
@@ -132,19 +111,16 @@ export function CandidateFilters({
   const handleApplyStandardFilters = () => {
     onFilterChange({
       name: name || undefined,
+      email: email || undefined,
+      phone: phone || undefined,
       positionId: positionId === ALL_POSITIONS_SELECT_VALUE ? undefined : positionId,
       status: status === ALL_STATUSES_SELECT_VALUE ? undefined : status,
       education: education || undefined,
       minFitScore: fitScoreRange[0],
       maxFitScore: fitScoreRange[1],
-      email: email || undefined,
-      phone: phone || undefined,
       applicationDateStart: applicationDateStart,
       applicationDateEnd: applicationDateEnd,
       recruiterId: recruiterId === ALL_RECRUITERS_SELECT_VALUE ? undefined : recruiterId,
-      // keywords: keywords || undefined, // Removed
-      attributePath: selectedAttributePath === NO_ATTRIBUTE_FILTER_VALUE ? undefined : selectedAttributePath,
-      attributeValue: (selectedAttributePath !== NO_ATTRIBUTE_FILTER_VALUE && attributeFilterValue.trim()) ? attributeFilterValue.trim() : undefined,
       aiSearchQuery: undefined, 
     });
   };
@@ -157,18 +133,15 @@ export function CandidateFilters({
 
   const handleResetFilters = () => {
     setName('');
+    setEmail('');
+    setPhone('');
     setPositionId(ALL_POSITIONS_SELECT_VALUE);
     setStatus(ALL_STATUSES_SELECT_VALUE);
     setEducation('');
     setFitScoreRange([0, 100]);
-    setEmail('');
-    setPhone('');
     setApplicationDateStart(undefined);
     setApplicationDateEnd(undefined);
     setRecruiterId(ALL_RECRUITERS_SELECT_VALUE);
-    // setKeywords(''); // Removed
-    setSelectedAttributePath(NO_ATTRIBUTE_FILTER_VALUE);
-    setAttributeFilterValue('');
     setAiSearchQueryInput('');
     setPositionSearchQuery('');
     setStatusSearchQuery('');
@@ -179,9 +152,6 @@ export function CandidateFilters({
       positionId: undefined,
       status: undefined,
       recruiterId: undefined,
-      // keywords: undefined, // Removed
-      attributePath: undefined,
-      attributeValue: undefined,
       aiSearchQuery: undefined,
     });
   };
@@ -198,67 +168,25 @@ export function CandidateFilters({
     ? availableRecruiters.filter(r => r.name.toLowerCase().includes(recruiterSearchQuery.toLowerCase()))
     : availableRecruiters;
 
-
-  return (
-    <div className="p-4 border rounded-lg bg-card shadow-md">
-      <div className="grid grid-cols-1 gap-y-6">
-        <div>
-            <Label htmlFor="ai-search-query" className="text-sm font-medium">AI Powered Search</Label>
-            <div className="flex gap-2 mt-1">
-                <Input id="ai-search-query" placeholder="e.g., 'candidates with 5+ years Java experience...'" value={aiSearchQueryInput} onChange={(e) => setAiSearchQueryInput(e.target.value)} disabled={isLoading || isAiSearching} className="flex-grow"/>
-                <Button onClick={handleAiSearchClick} disabled={isLoading || isAiSearching || !aiSearchQueryInput.trim()} className="whitespace-nowrap">
-                    {isAiSearching ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Brain className="mr-2 h-4 w-4" />}
-                    AI Search
-                </Button>
-            </div>
-        </div>
-        
-        <div className="flex items-center">
-          <span className="flex-grow border-t"></span>
-          <span className="mx-2 text-xs text-muted-foreground uppercase">Or</span>
-          <span className="flex-grow border-t"></span>
-        </div>
-
-        <div>
-          <Label className="text-sm font-medium text-muted-foreground mb-2 block">Standard Attribute Filters</Label>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-end">
-            <div>
-                <Label htmlFor="attribute-path-select" className="text-xs">Filter by Attribute</Label>
-                <Select
-                    value={selectedAttributePath}
-                    onValueChange={setSelectedAttributePath}
-                    disabled={isLoading || isAiSearching}
-                >
-                    <SelectTrigger id="attribute-path-select" className="mt-1">
-                        <SelectValue placeholder="Select attribute to filter..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                        <SelectItem value={NO_ATTRIBUTE_FILTER_VALUE}>None</SelectItem>
-                        {filterableAttributes.map(attr => (
-                            <SelectItem key={attr.path} value={attr.path}>{attr.label}</SelectItem>
-                        ))}
-                    </SelectContent>
-                </Select>
-            </div>
-            <div>
-                <Label htmlFor="attribute-value-input" className="text-xs">Attribute Value</Label>
-                <Input
-                    id="attribute-value-input"
-                    placeholder="Enter value for selected attribute..."
-                    value={attributeFilterValue}
-                    onChange={(e) => setAttributeFilterValue(e.target.value)}
-                    className="mt-1"
-                    disabled={isLoading || isAiSearching || selectedAttributePath === NO_ATTRIBUTE_FILTER_VALUE}
-                />
-            </div>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-end">
+  const filterGroups = [
+    {
+      title: "Basic Info",
+      icon: Users,
+      defaultOpen: true,
+      fields: (
+        <>
           <div><Label htmlFor="name-search" className="text-xs">Name</Label><Input id="name-search" placeholder="Filter by name..." value={name} onChange={(e) => setName(e.target.value)} className="mt-1" disabled={isLoading || isAiSearching}/></div>
           <div><Label htmlFor="email-search" className="text-xs">Email</Label><Input id="email-search" placeholder="Filter by email..." value={email} onChange={(e) => setEmail(e.target.value)} className="mt-1" disabled={isLoading || isAiSearching}/></div>
           <div><Label htmlFor="phone-search" className="text-xs">Phone</Label><Input id="phone-search" placeholder="Filter by phone..." value={phone} onChange={(e) => setPhone(e.target.value)} className="mt-1" disabled={isLoading || isAiSearching}/></div>
-          <div><Label htmlFor="education-search" className="text-xs">Education Keywords</Label><Input id="education-search" placeholder="e.g., BSc, Computer Science..." value={education} onChange={(e) => setEducation(e.target.value)} className="mt-1" disabled={isLoading || isAiSearching}/></div>
+        </>
+      )
+    },
+    {
+      title: "Job Details",
+      icon: Briefcase,
+      defaultOpen: true,
+      fields: (
+        <>
           <div>
             <Label htmlFor="position-combobox" className="text-xs">Position</Label>
             <Popover open={positionSearchOpen} onOpenChange={setPositionSearchOpen}>
@@ -286,14 +214,17 @@ export function CandidateFilters({
                   {filteredRecruiters.length === 0 && recruiterSearchQuery && (<p className="p-2 text-xs text-muted-foreground text-center">No recruiter found.</p>)}
                   {filteredRecruiters.map((rec) => (<Button key={rec.id} variant="ghost" className={cn("w-full justify-start px-2 py-1.5 text-xs font-normal h-auto", recruiterId === rec.id && "bg-accent text-accent-foreground")} onClick={() => {setRecruiterId(rec.id); setRecruiterSearchOpen(false); setRecruiterSearchQuery('');}}><Check className={cn("mr-2 h-4 w-4", recruiterId === rec.id ? "opacity-100" : "opacity-0")}/>{rec.name}</Button>))}
                 </ScrollArea></PopoverContent></Popover></div>
-          <div className="sm:col-span-2">
-            <Label className="text-xs">Application Date Range</Label>
-            <div className="flex flex-col sm:flex-row gap-2 mt-1">
-              <Popover><PopoverTrigger asChild><Button variant={"outline"} className={cn("w-full justify-start text-left font-normal text-xs", !applicationDateStart && "text-muted-foreground")} disabled={isLoading || isAiSearching}><CalendarIcon className="mr-2 h-4 w-4" />{applicationDateStart ? format(applicationDateStart, "PPP") : <span>Start Date</span>}</Button></PopoverTrigger><PopoverContent className="w-auto p-0"><Calendar mode="single" selected={applicationDateStart} onSelect={setApplicationDateStart} initialFocus /></PopoverContent></Popover>
-              <Popover><PopoverTrigger asChild><Button variant={"outline"} className={cn("w-full justify-start text-left font-normal text-xs", !applicationDateEnd && "text-muted-foreground")} disabled={isLoading || isAiSearching}><CalendarIcon className="mr-2 h-4 w-4" />{applicationDateEnd ? format(applicationDateEnd, "PPP") : <span>End Date</span>}</Button></PopoverTrigger><PopoverContent className="w-auto p-0"><Calendar mode="single" selected={applicationDateEnd} onSelect={setApplicationDateEnd} initialFocus /></PopoverContent></Popover>
-            </div>
-          </div>
-          <div className="sm:col-span-2">
+        </>
+      )
+    },
+    {
+      title: "Profile Attributes",
+      icon: Tag,
+      defaultOpen: false,
+      fields: (
+        <>
+          <div><Label htmlFor="education-search" className="text-xs">Education Keywords</Label><Input id="education-search" placeholder="e.g., BSc, CompSci..." value={education} onChange={(e) => setEducation(e.target.value)} className="mt-1" disabled={isLoading || isAiSearching}/></div>
+          <div>
               <Label className="text-xs">Fit Score ({fitScoreRange[0]}% - {fitScoreRange[1]}%)</Label>
               <Popover>
                   <PopoverTrigger asChild><Button variant="outline" className="w-full mt-1 justify-start text-left font-normal text-xs" disabled={isLoading || isAiSearching}><span>{fitScoreRange[0]} - {fitScoreRange[1]}%</span><ListFilter className="ml-auto h-4 w-4 opacity-50" /></Button></PopoverTrigger>
@@ -301,15 +232,71 @@ export function CandidateFilters({
                   <div className="flex justify-between text-xs text-muted-foreground"><span>{fitScoreRange[0]}%</span><span>{fitScoreRange[1]}%</span></div></PopoverContent>
               </Popover>
           </div>
-           <div className="sm:col-span-full flex justify-end">
-              <Button onClick={handleApplyStandardFilters} disabled={isLoading || isAiSearching} className="w-full sm:w-auto">
+        </>
+      )
+    },
+    {
+      title: "Application Dates",
+      icon: CalendarIcon,
+      defaultOpen: false,
+      fields: (
+         <div className="flex flex-col gap-2">
+            <Popover><PopoverTrigger asChild><Button variant={"outline"} className={cn("w-full justify-start text-left font-normal text-xs", !applicationDateStart && "text-muted-foreground")} disabled={isLoading || isAiSearching}><CalendarIcon className="mr-2 h-4 w-4" />{applicationDateStart ? format(applicationDateStart, "PPP") : <span>Start Date</span>}</Button></PopoverTrigger><PopoverContent className="w-auto p-0"><Calendar mode="single" selected={applicationDateStart} onSelect={setApplicationDateStart} initialFocus /></PopoverContent></Popover>
+            <Popover><PopoverTrigger asChild><Button variant={"outline"} className={cn("w-full justify-start text-left font-normal text-xs", !applicationDateEnd && "text-muted-foreground")} disabled={isLoading || isAiSearching}><CalendarIcon className="mr-2 h-4 w-4" />{applicationDateEnd ? format(applicationDateEnd, "PPP") : <span>End Date</span>}</Button></PopoverTrigger><PopoverContent className="w-auto p-0"><Calendar mode="single" selected={applicationDateEnd} onSelect={setApplicationDateEnd} initialFocus /></PopoverContent></Popover>
+         </div>
+      )
+    }
+  ];
+
+  return (
+    <div className="p-4 border rounded-lg bg-card shadow-sm">
+      <div className="space-y-4">
+        <div>
+            <Label htmlFor="ai-search-query" className="text-sm font-medium">AI Powered Search</Label>
+            <div className="flex gap-2 mt-1">
+                <Input id="ai-search-query" placeholder="e.g., 'Java developer with React skills...'" value={aiSearchQueryInput} onChange={(e) => setAiSearchQueryInput(e.target.value)} disabled={isLoading || isAiSearching} className="flex-grow"/>
+                <Button onClick={handleAiSearchClick} disabled={isLoading || isAiSearching || !aiSearchQueryInput.trim()} className="whitespace-nowrap btn-primary-gradient">
+                    {isAiSearching ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Brain className="mr-2 h-4 w-4" />}
+                    AI Search
+                </Button>
+            </div>
+        </div>
+        
+        <div className="flex items-center my-3">
+          <span className="flex-grow border-t"></span>
+          <span className="mx-2 text-xs text-muted-foreground uppercase">Or</span>
+          <span className="flex-grow border-t"></span>
+        </div>
+
+        <Label className="text-sm font-medium text-muted-foreground mb-2 block">Standard Filters</Label>
+        <Accordion type="multiple" defaultValue={filterGroups.filter(g => g.defaultOpen).map(g => g.title)} className="w-full">
+          {filterGroups.map(group => (
+            <AccordionItem value={group.title} key={group.title}>
+              <AccordionTrigger className="py-2 text-sm hover:no-underline">
+                <div className="flex items-center">
+                  <group.icon className="mr-2 h-4 w-4 text-primary/80" />
+                  {group.title}
+                </div>
+              </AccordionTrigger>
+              <AccordionContent>
+                <div className="space-y-3 p-1">{group.fields}</div>
+              </AccordionContent>
+            </AccordionItem>
+          ))}
+        </Accordion>
+        
+        <div className="mt-6 flex flex-col sm:flex-row justify-end gap-2 pt-4 border-t">
+            <Button variant="outline" onClick={handleResetFilters} disabled={isLoading || isAiSearching} className="w-full sm:w-auto">
+                <FilterX className="mr-2 h-4 w-4" /> Reset All Filters
+            </Button>
+            <Button onClick={handleApplyStandardFilters} disabled={isLoading || isAiSearching} className="w-full sm:w-auto">
                 {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Search className="mr-2 h-4 w-4" />}
                 Apply Standard Filters
-              </Button>
-          </div>
+            </Button>
         </div>
       </div>
     </div>
   );
 }
 
+    
