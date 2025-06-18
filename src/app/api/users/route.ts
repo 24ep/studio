@@ -53,28 +53,21 @@ export async function GET(request: NextRequest) {
   const canManageUsers = userRole === 'Admin' || (session.user.modulePermissions?.includes('USERS_MANAGE') ?? false);
 
   if (canManageUsers) {
-    // Admin or user with USERS_MANAGE can filter by any role or see all
     if (filterRoleInput && filterRoleInput !== "ALL_ROLES") {
       conditions.push(`u.role = $${paramIndex++}`);
       queryParams.push(filterRoleInput);
     }
   } else if (userRole === 'Recruiter') {
-    // Recruiters without USERS_MANAGE can only see other Recruiters
     conditions.push(`u.role = 'Recruiter'`);
-    // If filterRoleInput is present and not 'Recruiter' or 'ALL_ROLES', it will effectively result in no users if combined with u.role = 'Recruiter'
-    // This is acceptable, as they are restricted to seeing 'Recruiter' roles only.
     if (filterRoleInput && filterRoleInput !== "ALL_ROLES" && filterRoleInput !== "Recruiter") {
-        // Add a condition that will always be false to return no results if a Recruiter tries to filter for non-Recruiter roles
         conditions.push(`1=0`); 
     }
   } else {
-    // Any other role without USERS_MANAGE permission cannot list users
     const userNameForLog = session?.user?.name || session?.user?.email || 'Unknown User';
     await logAudit('WARN', `Forbidden attempt to list users by ${userNameForLog} (Role: ${userRole}). Lacks USERS_MANAGE.`, 'API:Users:Get', session.user.id);
     return NextResponse.json({ message: "Forbidden: Insufficient permissions to list users." }, { status: 403 });
   }
 
-  // Add name and email filters (these are always allowed if the user can list some users based on above role checks)
   if (filterNameInput) {
     conditions.push(`u.name ILIKE $${paramIndex++}`);
     queryParams.push(`%${filterNameInput}%`);
@@ -95,11 +88,12 @@ export async function GET(request: NextRequest) {
 
   try {
     const result = await pool.query(query, queryParams);
-    return NextResponse.json(result.rows.map(user => ({
+    const usersToReturn = result.rows.map(user => ({
       ...user,
       modulePermissions: user.modulePermissions || [],
-      groups: user.groups || [],
-    })), { status: 200 });
+      groups: user.groups || [], 
+    }));
+    return NextResponse.json(usersToReturn, { status: 200 });
   } catch (error) {
     console.error("Failed to fetch users (SQL Error):", error);
     const userNameForLog = session?.user?.name || session?.user?.email || 'Unknown User';
@@ -107,7 +101,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ 
         message: "Error fetching users due to a server-side database error.", 
         error: (error as Error).message, 
-        code: (error as any).code // Include SQL error code if available
+        code: (error as any).code 
     }, { status: 500 });
   }
 }

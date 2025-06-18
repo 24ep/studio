@@ -21,8 +21,9 @@ import { useRouter, usePathname } from 'next/navigation';
 import { useSession, signIn } from 'next-auth/react';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'; // For bulk status change
-import { Textarea } from '@/components/ui/textarea'; // For bulk status change notes
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'; 
+import { Textarea } from '@/components/ui/textarea'; 
 
 
 interface CandidatesPageClientProps {
@@ -31,6 +32,7 @@ interface CandidatesPageClientProps {
   initialAvailableStages: RecruitmentStage[];
   authError?: boolean;
   permissionError?: boolean;
+  initialFetchError?: string; // Added for server-side errors
 }
 
 function downloadFile(content: string, filename: string, contentType: string) {
@@ -52,6 +54,7 @@ export function CandidatesPageClient({
   initialAvailableStages,
   authError: serverAuthError = false,
   permissionError: serverPermissionError = false,
+  initialFetchError,
 }: CandidatesPageClientProps) {
   const [filters, setFilters] = useState<CandidateFilterValues>({ minFitScore: 0, maxFitScore: 100, positionId: "__ALL_POSITIONS__", status: "all" });
 
@@ -60,7 +63,7 @@ export function CandidatesPageClient({
   const [availableStages, setAvailableStages] = useState<RecruitmentStage[]>(initialAvailableStages || []);
   const [availableRecruiters, setAvailableRecruiters] = useState<Pick<UserProfile, 'id' | 'name'>[]>([]);
 
-  const [isLoading, setIsLoading] = useState(false); 
+  const [isLoading, setIsLoading] = useState(true); 
   const [isAiSearching, setIsAiSearching] = useState(false); 
   const [aiSearchReasoning, setAiSearchReasoning] = useState<string | null>(null);
   const [aiMatchedCandidateIds, setAiMatchedCandidateIds] = useState<string[] | null>(null);
@@ -73,7 +76,7 @@ export function CandidatesPageClient({
   const { toast } = useToast();
   const router = useRouter();
   const pathname = usePathname();
-  const [fetchError, setFetchError] = useState<string | null>(null);
+  const [fetchError, setFetchError] = useState<string | null>(initialFetchError || null);
   const [authError, setAuthError] = useState(serverAuthError);
   const [permissionError, setPermissionError] = useState(serverPermissionError);
 
@@ -102,7 +105,10 @@ export function CandidatesPageClient({
           const errorData = await response.json().catch(() => ({ message: 'Failed to fetch recruiters' }));
           throw new Error(errorData.message || 'Failed to fetch recruiters');
       }
-      const recruitersData: UserProfile[] = await response.json();
+      const recruitersData: UserProfile[] | undefined = await response.json(); // Expect UserProfile[] or handle undefined
+      if (!recruitersData || !Array.isArray(recruitersData)) {
+        throw new Error('Invalid data format received for recruiters.');
+      }
       setAvailableRecruiters(recruitersData.map(r => ({ id: r.id, name: r.name })));
     } catch (error) {
       console.error("Error fetching recruiters:", error);
@@ -136,11 +142,7 @@ export function CandidatesPageClient({
       if (currentFilters.applicationDateStart) query.append('applicationDateStart', currentFilters.applicationDateStart.toISOString());
       if (currentFilters.applicationDateEnd) query.append('applicationDateEnd', currentFilters.applicationDateEnd.toISOString());
       if (currentFilters.recruiterId && currentFilters.recruiterId !== "__ALL_RECRUITERS__") query.append('recruiterId', currentFilters.recruiterId);
-      if (currentFilters.attributePath && currentFilters.attributeValue) {
-        query.append('attributePath', currentFilters.attributePath);
-        query.append('attributeValue', currentFilters.attributeValue);
-      }
-
+      // attributePath and attributeValue are not standard filters for candidates list
 
       const response = await fetch(`/api/candidates?${query.toString()}`);
       if (!response.ok) {
@@ -209,13 +211,17 @@ export function CandidatesPageClient({
     }
   };
 
-
   useEffect(() => {
+    setIsLoading(initialCandidates.length === 0 && !initialFetchError); // Only set loading if initial data wasn't provided or there was an error
     if (sessionStatus === 'authenticated' && !serverAuthError && !serverPermissionError) {
-      fetchFilteredCandidatesOnClient(filters);
-      fetchRecruiters();
+      fetchRecruiters(); // Fetch recruiters on client side
+      if (initialCandidates.length === 0 && !initialFetchError) { // Fetch candidates if not pre-loaded
+        fetchFilteredCandidatesOnClient(filters);
+      }
     }
-  }, [filters, sessionStatus, serverAuthError, serverPermissionError, fetchFilteredCandidatesOnClient, fetchRecruiters]); 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sessionStatus, serverAuthError, serverPermissionError, fetchRecruiters]); 
+
 
    useEffect(() => {
     if (sessionStatus === 'unauthenticated' && !serverAuthError && !serverPermissionError) {
@@ -229,9 +235,11 @@ export function CandidatesPageClient({
 
 
   const handleFilterChange = (newFilters: CandidateFilterValues) => {
-    setFilters(prevFilters => ({ ...prevFilters, ...newFilters, aiSearchQuery: undefined })); 
+    const combinedFilters = { ...filters, ...newFilters, aiSearchQuery: undefined };
+    setFilters(combinedFilters); 
     setAiMatchedCandidateIds(null);
     setAiSearchReasoning(null);
+    fetchFilteredCandidatesOnClient(combinedFilters);
   };
 
   const fetchCandidateById = useCallback(async (candidateId: string): Promise<Candidate | null> => {
@@ -252,7 +260,8 @@ export function CandidatesPageClient({
   const refreshCandidateInList = useCallback(async (candidateId: string) => {
     if (aiMatchedCandidateIds !== null) {
         toast({title: "AI Search Active", description: "Please clear AI search or re-run it to see specific updates.", variant: "default" });
-        fetchFilteredCandidatesOnClient(filters); 
+        // Optionally, refetch the entire list if AI search results are displayed
+        // fetchFilteredCandidatesOnClient(filters); 
         return;
     }
 
@@ -287,7 +296,7 @@ export function CandidatesPageClient({
     } catch (error) {
       console.error("Error updating candidate:", error);
       toast({ title: "Error Updating Candidate", description: (error as Error).message, variant: "destructive" });
-      throw error;
+      throw error; // Re-throw for ManageTransitionsModal or other callers to handle
     }
   };
 
@@ -299,11 +308,12 @@ export function CandidatesPageClient({
         throw new Error(errorData.message || `Failed to delete candidate: ${response.statusText || `Status: ${response.status}`}`);
       }
       setAllCandidates(prev => prev.filter(c => c.id !== candidateId));
+      setSelectedCandidateIds(prev => { const newSet = new Set(prev); newSet.delete(candidateId); return newSet; });
       toast({ title: "Candidate Deleted", description: `Candidate successfully deleted.` });
     } catch (error) {
       console.error("Error deleting candidate:", error);
       toast({ title: "Error Deleting Candidate", description: (error as Error).message, variant: "destructive" });
-      throw error;
+      throw error; // Re-throw for table to handle
     }
   };
 
@@ -311,6 +321,7 @@ export function CandidatesPageClient({
     setIsLoading(true);
     try {
       const apiPayload = {
+        // Name and email derived from parsedData or top-level fields
         name: `${formData.personal_info.firstname} ${formData.personal_info.lastname}`.trim(),
         email: formData.contact_info.email,
         phone: formData.contact_info.phone || null,
@@ -364,7 +375,7 @@ export function CandidatesPageClient({
 
   const handleAutomatedProcessingStart = () => {
     toast({ title: "Processing Started", description: "Resume sent for automated processing. Candidate list will refresh if successful." });
-    setTimeout(() => { fetchFilteredCandidatesOnClient(filters); }, 15000);
+    setTimeout(() => { fetchFilteredCandidatesOnClient(filters); }, 15000); // Optimistic refresh after 15s
   };
 
   const handleDownloadCsvTemplateGuide = () => {
@@ -415,15 +426,18 @@ export function CandidatesPageClient({
       if (filters.applicationDateEnd) query.append('applicationDateEnd', filters.applicationDateEnd.toISOString());
       if (filters.recruiterId && filters.recruiterId !== "__ALL_RECRUITERS__") query.append('recruiterId', filters.recruiterId);
 
-
       const response = await fetch(`/api/candidates/export?${query.toString()}`);
-      if (!response.ok) { throw new Error("Export failed"); }
+      if (!response.ok) { 
+        const errorData = await response.json().catch(() => ({ message: "Error exporting candidate data." }));
+        throw new Error(errorData.message);
+      }
       const blob = await response.blob();
       const filename = response.headers.get('content-disposition')?.split('filename=')[1]?.replace(/"/g, '') || 'candidates_export.csv';
       downloadFile(await blob.text(), filename, blob.type);
 
       toast({ title: "Export Successful", description: "Candidates exported as CSV." });
-    } catch (error) { toast({ title: "Export Failed", description: (error as Error).message, variant: "destructive" });
+    } catch (error) { 
+      toast({ title: "Export Failed", description: (error as Error).message, variant: "destructive" });
     } finally { setIsLoading(false); }
   };
 
@@ -436,9 +450,9 @@ export function CandidatesPageClient({
     toast({ title: "Position Updated", description: "Position details have been saved." });
     setIsEditPositionModalOpen(false);
     if (sessionStatus === 'authenticated') {
-        const posResponse = await fetch('/api/positions');
+        const posResponse = await fetch('/api/positions'); // Re-fetch all positions
         if (posResponse.ok) setAvailablePositions(await posResponse.json());
-        fetchFilteredCandidatesOnClient(filters);
+        fetchFilteredCandidatesOnClient(filters); // Refresh candidates list
     }
   };
 
@@ -454,8 +468,15 @@ export function CandidatesPageClient({
     });
   };
 
+  const displayedCandidates = useMemo(() => {
+    return aiMatchedCandidateIds !== null
+      ? allCandidates.filter(c => aiMatchedCandidateIds.includes(c.id))
+      : allCandidates;
+  }, [allCandidates, aiMatchedCandidateIds]);
+
+
   const handleToggleSelectAllCandidates = () => {
-    if (selectedCandidateIds.size === displayedCandidates.length) {
+    if (selectedCandidateIds.size === displayedCandidates.length && displayedCandidates.length > 0) {
       setSelectedCandidateIds(new Set());
     } else {
       setSelectedCandidateIds(new Set(displayedCandidates.map(c => c.id)));
@@ -502,8 +523,8 @@ export function CandidatesPageClient({
       if (!response.ok) throw new Error(result.message || 'Bulk action failed');
       
       toast({ title: "Bulk Action Successful", description: `${result.successCount} candidate(s) affected. ${result.failCount > 0 ? `${result.failCount} failed.` : ''}`});
-      setSelectedCandidateIds(new Set());
-      fetchFilteredCandidatesOnClient(filters);
+      setSelectedCandidateIds(new Set()); // Clear selection
+      fetchFilteredCandidatesOnClient(filters); // Refresh list
     } catch (error) {
       toast({ title: "Bulk Action Error", description: (error as Error).message, variant: "destructive" });
     } finally {
@@ -520,29 +541,27 @@ export function CandidatesPageClient({
   if (permissionError) {
      return ( <div className="flex flex-col items-center justify-center h-[calc(100vh-10rem)] text-center p-4"> <ShieldAlert className="w-16 h-16 text-destructive mb-4" /> <h2 className="text-2xl font-semibold text-foreground mb-2">Permission Denied</h2> <p className="text-muted-foreground mb-4 max-w-md">{fetchError || "You do not have sufficient permissions to view this page."}</p> <Button onClick={() => router.push('/')} className="btn-hover-primary-gradient">Go to Dashboard</Button> </div> );
   }
+  if (sessionStatus === 'loading' || (isLoading && allCandidates.length === 0 && !fetchError)) {
+    return ( <div className="flex h-screen w-screen items-center justify-center bg-background fixed inset-0 z-50"><Loader2 className="h-16 w-16 animate-spin text-primary" /></div> );
+  }
 
-  if (fetchError) {
+  if (fetchError && !isLoading) {
     const isMissingTableError = fetchError.toLowerCase().includes("relation") && fetchError.toLowerCase().includes("does not exist");
     return (
       <div className="flex flex-col items-center justify-center h-[calc(100vh-10rem)] text-center p-4">
         <ServerCrash className="w-16 h-16 text-destructive mb-4" />
         <h2 className="text-2xl font-semibold text-foreground mb-2">Error Loading Candidates</h2>
         <p className="text-muted-foreground mb-4 max-w-md">{fetchError}</p>
-        {isMissingTableError && ( <div className="mb-6 p-4 border border-destructive bg-destructive/10 rounded-md text-sm"> <p className="font-semibold">It looks like a required database table (or a related one) is missing.</p> <p className="mt-1">This usually means the database initialization script (`pg-init-scripts/init-db.sql`) did not run correctly.</p> <p className="mt-2">Please refer to the troubleshooting steps in the `README.md` for guidance on how to resolve this.</p> </div> )}
+        {isMissingTableError && ( <div className="mb-6 p-4 border border-destructive bg-destructive/10 rounded-md text-sm"> <p className="font-semibold">It looks like a required database table (e.g., "Candidate", "Position", "User", "RecruitmentStage") is missing or not accessible.</p> <p className="mt-1">This usually means the database initialization script (`pg-init-scripts/init-db.sql`) did not run correctly when the PostgreSQL Docker container started.</p> <p className="mt-2">Please refer to the troubleshooting steps in the `README.md` for guidance on how to resolve this, typically involving a clean Docker volume reset.</p> </div> )}
         <Button onClick={() => fetchFilteredCandidatesOnClient(filters)} className="btn-hover-primary-gradient">Try Again</Button>
       </div>
     );
   }
 
-  const displayedCandidates = aiMatchedCandidateIds !== null
-    ? allCandidates.filter(c => aiMatchedCandidateIds.includes(c.id))
-    : allCandidates;
-
   return (
-    <div className="flex flex-col md:flex-row gap-6 h-full"> {/* Ensure parent flex takes full height */}
-      {/* Filters Panel - Left Sidebar */}
+    <div className="flex flex-col md:flex-row gap-6 h-full"> 
       <aside className="w-full md:w-72 lg:w-80 flex-shrink-0 md:sticky md:top-0 md:h-screen">
-        <ScrollArea className="h-full md:max-h-[calc(100vh-var(--header-height,4rem)-2rem)] md:pr-2"> {/* Adjust var(--header-height) if your header height is different */}
+        <ScrollArea className="h-full md:max-h-[calc(100vh-var(--header-height,4rem)-2rem)] md:pr-2"> 
           <div className="flex justify-between items-center mb-3 md:hidden">
             <h1 className="text-xl font-semibold">Filters</h1>
           </div>
@@ -559,7 +578,6 @@ export function CandidatesPageClient({
         </ScrollArea>
       </aside>
 
-      {/* Main Content Area - Right Panel */}
       <div className="flex-1 space-y-6 min-w-0">
         <div className="flex flex-col sm:flex-row justify-between items-center gap-2">
           <h1 className="text-2xl font-semibold text-foreground hidden md:block"> Candidate Management </h1>
@@ -584,11 +602,13 @@ export function CandidatesPageClient({
                 </DropdownMenuContent>
               </DropdownMenu>
             )}
-            <Button onClick={() => setIsCreateViaN8nModalOpen(true)} className="w-full sm:w-auto btn-primary-gradient"> <Zap className="mr-2 h-4 w-4" /> Create via Resume </Button>
+            {canManageCandidates && (
+                <Button onClick={() => setIsCreateViaN8nModalOpen(true)} className="w-full sm:w-auto btn-primary-gradient"> <Zap className="mr-2 h-4 w-4" /> Create via Resume </Button>
+            )}
             <DropdownMenu>
                <DropdownMenuTrigger asChild><Button variant="outline" className="w-full sm:w-auto"> More Actions <ChevronDown className="ml-2 h-4 w-4" /> </Button></DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => setIsAddModalOpen(true)}> <PlusCircle className="mr-2 h-4 w-4" /> Add Manually </DropdownMenuItem>
+                {canManageCandidates && (<DropdownMenuItem onClick={() => setIsAddModalOpen(true)}> <PlusCircle className="mr-2 h-4 w-4" /> Add Manually </DropdownMenuItem>)}
                 {canImportCandidates && (<DropdownMenuItem onClick={() => setIsImportModalOpen(true)}> <FileUp className="mr-2 h-4 w-4" /> Import (CSV) </DropdownMenuItem>)}
                 {canImportCandidates && (<DropdownMenuItem onClick={handleDownloadCsvTemplateGuide}> <FileDown className="mr-2 h-4 w-4" /> Download CSV Template </DropdownMenuItem>)}
                 {canExportCandidates && (<DropdownMenuItem onClick={handleExportToCsv} disabled={isLoading}> <FileSpreadsheet className="mr-2 h-4 w-4" /> Export (CSV) </DropdownMenuItem>)}
@@ -628,10 +648,10 @@ export function CandidatesPageClient({
         )}
       </div>
 
-      <AddCandidateModal isOpen={isAddModalOpen} onOpenChange={setIsAddModalOpen} onAddCandidate={handleAddCandidateSubmit} availablePositions={availablePositions} availableStages={availableStages} />
-      <UploadResumeModal isOpen={isUploadModalOpen} onOpenChange={setIsUploadModalOpen} candidate={selectedCandidateForUpload} onUploadSuccess={handleUploadSuccess} />
-      <CreateCandidateViaN8nModal isOpen={isCreateViaN8nModalOpen} onOpenChange={setIsCreateViaN8nModalOpen} onProcessingStart={handleAutomatedProcessingStart} />
-      <ImportCandidatesModal isOpen={isImportModalOpen} onOpenChange={setIsImportModalOpen} onImportSuccess={() => fetchFilteredCandidatesOnClient(filters)} />
+      {canManageCandidates && <AddCandidateModal isOpen={isAddModalOpen} onOpenChange={setIsAddModalOpen} onAddCandidate={handleAddCandidateSubmit} availablePositions={availablePositions} availableStages={availableStages} />}
+      {canManageCandidates && <UploadResumeModal isOpen={isUploadModalOpen} onOpenChange={setIsUploadModalOpen} candidate={selectedCandidateForUpload} onUploadSuccess={handleUploadSuccess} />}
+      {canManageCandidates && <CreateCandidateViaN8nModal isOpen={isCreateViaN8nModalOpen} onOpenChange={setIsCreateViaN8nModalOpen} onProcessingStart={handleAutomatedProcessingStart} />}
+      {canImportCandidates && <ImportCandidatesModal isOpen={isImportModalOpen} onOpenChange={setIsImportModalOpen} onImportSuccess={() => fetchFilteredCandidatesOnClient(filters)} />}
       {selectedPositionForEdit && ( <EditPositionModal isOpen={isEditPositionModalOpen} onOpenChange={(isOpen) => { setIsEditPositionModalOpen(isOpen); if (!isOpen) setSelectedPositionForEdit(null); }} position={selectedPositionForEdit} onEditPosition={handlePositionEdited} /> )}
     
       <AlertDialog open={isBulkActionConfirmOpen} onOpenChange={setIsBulkActionConfirmOpen}>

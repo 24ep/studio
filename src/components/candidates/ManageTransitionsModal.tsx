@@ -24,8 +24,8 @@ import {
 import { Button, buttonVariants } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'; // For searchable select
-import { Input } from '@/components/ui/input'; // For search input in Popover
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'; 
+import { Input } from '@/components/ui/input'; 
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { useForm, Controller } from 'react-hook-form';
@@ -48,7 +48,7 @@ interface ManageTransitionsModalProps {
   candidate: Candidate | null;
   isOpen: boolean;
   onOpenChange: (isOpen: boolean) => void;
-  onUpdateCandidate: (candidateId: string, status: CandidateStatus, newTransitionHistory?: TransitionRecord[]) => Promise<void>;
+  onUpdateCandidate: (candidateId: string, status: CandidateStatus, notes?: string) => Promise<void>; // Modified to accept notes
   onRefreshCandidateData: (candidateId: string) => Promise<void>;
   availableStages: RecruitmentStage[];
 }
@@ -84,7 +84,7 @@ export function ManageTransitionsModal({
       });
       setEditingTransitionId(null);
     }
-  }, [candidate, isOpen, form]);
+  }, [candidate, isOpen, form, availableStages]); // Added availableStages to deps
 
   if (!candidate) return null;
 
@@ -94,11 +94,14 @@ export function ManageTransitionsModal({
         return;
     }
     try {
-        await onUpdateCandidate(candidate.id, data.newStatus, undefined); 
-        form.reset({ newStatus: data.newStatus, notes: '' });
+        // Pass notes to onUpdateCandidate, which now is handleUpdateCandidateAPI directly or similar.
+        await onUpdateCandidate(candidate.id, data.newStatus, data.notes); 
+        form.reset({ newStatus: data.newStatus, notes: '' }); // Keep new status, clear notes
         setStatusSearchQuery(''); 
+        // onRefreshCandidateData should be called by the parent component after onUpdateCandidate if needed
     } catch (error) {
         console.error("Error during onUpdateCandidate in ManageTransitionsModal:", error);
+        // Toast for error is likely handled by the calling function (e.g. handleUpdateCandidateAPI)
     }
   };
 

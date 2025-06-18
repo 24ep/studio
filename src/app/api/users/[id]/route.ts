@@ -39,7 +39,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
         u.id, u.name, u.email, u.role, u."avatarUrl", u."dataAiHint", u."modulePermissions", 
         u."createdAt", u."updatedAt",
         COALESCE(
-          (SELECT json_agg(json_build_object('id', g.id, 'name', g.name))
+          (SELECT json_agg(DISTINCT json_build_object('id', g.id, 'name', g.name)) FILTER (WHERE g.id IS NOT NULL)
            FROM "UserGroup" g
            JOIN "User_UserGroup" ugg ON g.id = ugg."groupId"
            WHERE ugg."userId" = u.id), 
@@ -47,6 +47,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
         ) as groups
       FROM "User" u
       WHERE u.id = $1
+      GROUP BY u.id; 
     `;
     const result = await pool.query(query, [params.id]);
     if (result.rows.length === 0) {
@@ -93,7 +94,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
   }
 
   const updates = validationResult.data;
-  // If self-editing and not admin, ensure restricted fields are not in the payload
+  
   if (isSelfEdit && !isAdmin) {
     if (updates.role !== undefined || updates.modulePermissions !== undefined || updates.groupIds !== undefined) {
       await logAudit('WARN', `User ${session.user.email} attempted to modify restricted fields during self-edit.`, 'API:Users:Update', session.user.id, { targetUserId: params.id });
@@ -130,7 +131,6 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
 
     for (const [key, value] of Object.entries(updates)) {
       if (value !== undefined) {
-        // Admin-only fields or self-edit allowed fields
         if (key === 'name' || key === 'email') {
           auditChanges.push(key);
           updateFields.push(`"${key}" = $${paramIndex++}`);
@@ -142,7 +142,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
             updateValues.push(hashedPassword);
             auditChanges.push('password (hashed)');
           }
-        } else if (isAdmin) { // These fields can only be changed by an Admin
+        } else if (isAdmin) { 
           auditChanges.push(key);
           if (key === 'modulePermissions') {
               updateFields.push(`"${key}" = $${paramIndex++}`);
@@ -164,7 +164,6 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
       await client.query(updateUserQuery, updateValues);
     }
 
-    // Handle group assignments - only if Admin
     if (isAdmin && updates.groupIds !== undefined) {
       auditChanges.push('groupIds');
       await client.query('DELETE FROM "User_UserGroup" WHERE "userId" = $1', [params.id]);
@@ -179,7 +178,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
     if (updateFields.length === 0 && (!isAdmin || updates.groupIds === undefined)) {
       await client.query('ROLLBACK'); 
       const currentUserQuery = `
-        SELECT u.*, COALESCE(json_agg(json_build_object('id', g.id, 'name', g.name)) FILTER (WHERE g.id IS NOT NULL), '[]'::json) as groups
+        SELECT u.*, COALESCE(json_agg(DISTINCT json_build_object('id', g.id, 'name', g.name)) FILTER (WHERE g.id IS NOT NULL), '[]'::json) as groups
         FROM "User" u
         LEFT JOIN "User_UserGroup" ugg ON u.id = ugg."userId"
         LEFT JOIN "UserGroup" g ON ugg."groupId" = g.id
@@ -199,7 +198,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
         u.id, u.name, u.email, u.role, u."avatarUrl", u."dataAiHint", u."modulePermissions", 
         u."createdAt", u."updatedAt",
         COALESCE(
-          (SELECT json_agg(json_build_object('id', g.id, 'name', g.name))
+          (SELECT json_agg(DISTINCT json_build_object('id', g.id, 'name', g.name)) FILTER (WHERE g.id IS NOT NULL)
            FROM "UserGroup" g
            JOIN "User_UserGroup" ugg ON g.id = ugg."groupId"
            WHERE ugg."userId" = u.id), 
@@ -207,6 +206,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
         ) as groups
       FROM "User" u
       WHERE u.id = $1
+      GROUP BY u.id;
     `;
     const updatedResult = await pool.query(finalUserQuery, [params.id]);
     const updatedUser = {
@@ -262,7 +262,7 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
   } catch (error) {
     await client.query('ROLLBACK');
     console.error(`Failed to delete user ${params.id}:`, error);
-    await logAudit('ERROR', `Failed to delete user ${params.id} by ${session.user.name}. Error: ${error.message}`, 'API:Users:Delete', session.user.id, { targetUserId: params.id });
+    await logAudit('ERROR', `Failed to delete user ${params.id} by ${session.user.name}. Error: ${(error as Error).message}`, 'API:Users:Delete', session.user.id, { targetUserId: params.id });
     return NextResponse.json({ message: "Error deleting user", error: (error as Error).message }, { status: 500 });
   } finally {
     client.release();

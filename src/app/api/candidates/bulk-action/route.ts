@@ -123,7 +123,7 @@ export async function POST(request: NextRequest) {
     }
 
     await client.query('COMMIT');
-    await logAudit('AUDIT', `Bulk candidate action '${action}' performed by ${actingUserName}. Success: ${successCount}, Fail: ${failCount}. Target IDs: ${candidateIds.join(', ')}.`, 'API:Candidates:BulkAction', actingUserId, { action, successCount, failCount, candidateIds, failedDetails: failCount > 0 ? failedDetails : undefined });
+    await logAudit('AUDIT', `Bulk candidate action '${action}' performed by ${actingUserName}. Success: ${successCount}, Fail: ${failCount}. Target IDs: ${candidateIds.join(', ')}.`, 'API:Candidates:BulkAction', actingUserId, { action, successCount, failCount, candidateIds, failedDetails: failCount > 0 ? failedDetails : undefined, newStatus: newStatus, newRecruiterId: newRecruiterId, notes: notes });
     
     return NextResponse.json({ 
       message: `Bulk action '${action}' processed. Success: ${successCount}, Failed: ${failCount}.`,

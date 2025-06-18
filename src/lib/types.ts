@@ -365,8 +365,8 @@ export type SystemSettingKey =
   | 'appName'
   | 'appLogoDataUrl'
   | 'appThemePreference'
-  | 'primaryGradientStart' // New for customizable primary color
-  | 'primaryGradientEnd'   // New for customizable primary color
+  | 'primaryGradientStart' 
+  | 'primaryGradientEnd'   
   | 'smtpHost'
   | 'smtpPort'
   | 'smtpUser'
@@ -467,12 +467,13 @@ export interface FilterableAttribute {
 
 // For Bulk Actions
 export type CandidateBulkAction = 'delete' | 'change_status' | 'assign_recruiter';
-export type PositionBulkAction = 'delete' | 'change_status';
+export type PositionBulkAction = 'delete' | 'change_status'; // Added 'change_status'
 
 export interface CandidateBulkActionPayload {
   action: CandidateBulkAction;
   candidateIds: string[];
   newStatus?: CandidateStatus; // For 'change_status'
+  notes?: string | null; // For 'change_status' transition notes
   newRecruiterId?: string | null; // For 'assign_recruiter'
 }
 
@@ -481,6 +482,3 @@ export interface PositionBulkActionPayload {
   positionIds: string[];
   newIsOpenStatus?: boolean; // For 'change_status'
 }
-
-    
-

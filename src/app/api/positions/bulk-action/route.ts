@@ -86,7 +86,7 @@ export async function POST(request: NextRequest) {
     }
 
     await client.query('COMMIT');
-    await logAudit('AUDIT', `Bulk position action '${action}' performed by ${actingUserName}. Success: ${successCount}, Fail: ${failCount}. Target IDs: ${positionIds.join(', ')}.`, 'API:Positions:BulkAction', actingUserId, { action, successCount, failCount, positionIds, failedDetails: failCount > 0 ? failedDetails : undefined });
+    await logAudit('AUDIT', `Bulk position action '${action}' performed by ${actingUserName}. Success: ${successCount}, Fail: ${failCount}. Target IDs: ${positionIds.join(', ')}.`, 'API:Positions:BulkAction', actingUserId, { action, successCount, failCount, positionIds, newIsOpenStatus: newIsOpenStatus, failedDetails: failCount > 0 ? failedDetails : undefined });
     
     return NextResponse.json({ 
       message: `Bulk action '${action}' processed. Success: ${successCount}, Failed: ${failCount}.`,

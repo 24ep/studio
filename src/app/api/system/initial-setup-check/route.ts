@@ -12,7 +12,7 @@ export async function GET() {
         'UserGroup', 'User_UserGroup', 'UserGroup_PlatformModule', 
         'CustomFieldDefinition', 'SystemSetting', 'UserUIDisplayPreference',
         'WebhookFieldMapping', 'NotificationEvent', 'NotificationChannel', 'NotificationSetting',
-        'ResumeHistory'
+        'ResumeHistory' // Added ResumeHistory
     ];
     let allTablesExist = true;
     const missingTables: string[] = [];

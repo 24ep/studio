@@ -285,9 +285,17 @@ export default function CustomFieldsPage() {
                         <Button variant="ghost" size="icon" onClick={() => handleOpenModal(def)} className="mr-1 h-8 w-8">
                           <Edit3 className="h-4 w-4" />
                         </Button>
-                        <Button variant="ghost" size="icon" onClick={() => confirmDelete(def)} className="text-destructive hover:text-destructive h-8 w-8">
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+                        <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                                <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive h-8 w-8" onClick={() => confirmDelete(def)}><Trash2 className="h-4 w-4" /></Button>
+                            </AlertDialogTrigger>
+                            {definitionToDelete?.id === def.id && (
+                                <AlertDialogContent>
+                                    <AlertDialogHeader><AlertDialogTitle>Are you sure?</AlertDialogTitle><AlertDialogDescription>This will delete the custom field definition "<strong>{def.label}</strong>". This does not delete data already stored, but the definition will be removed.</AlertDialogDescription></AlertDialogHeader>
+                                    <AlertDialogFooter><AlertDialogCancel onClick={() => setDefinitionToDelete(null)}>Cancel</AlertDialogCancel><AlertDialogAction onClick={handleDelete} className={buttonVariants({ variant: "destructive" })}>Delete Definition</AlertDialogAction></AlertDialogFooter>
+                                </AlertDialogContent>
+                            )}
+                        </AlertDialog>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -447,26 +455,6 @@ export default function CustomFieldsPage() {
           </ScrollArea>
         </DialogContent>
       </Dialog>
-
-      {definitionToDelete && (
-        <AlertDialog open={!!definitionToDelete} onOpenChange={(open) => { if(!open) setDefinitionToDelete(null);}}>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-              <AlertDialogDescription>
-                This will delete the custom field definition "<strong>{definitionToDelete.label}</strong>".
-                This does not delete data already stored in candidate/position records under this field's key, but the definition will be removed.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel onClick={() => setDefinitionToDelete(null)}>Cancel</AlertDialogCancel>
-              <AlertDialogAction onClick={handleDelete} className={buttonVariants({ variant: "destructive" })}>
-                Delete Definition
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
-      )}
     </div>
   );
 }

@@ -33,6 +33,8 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger
 } from '@/components/ui/dropdown-menu';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 function downloadFile(content: string, filename: string, contentType: string) {
   const blob = new Blob([content], { type: contentType });
@@ -260,7 +262,7 @@ export default function PositionsPage() {
   };
 
   const handleToggleSelectAllPositions = () => {
-    if (selectedPositionIds.size === positions.length) {
+    if (selectedPositionIds.size === positions.length && positions.length > 0) {
       setSelectedPositionIds(new Set());
     } else {
       setSelectedPositionIds(new Set(positions.map(p => p.id)));
@@ -275,27 +277,44 @@ export default function PositionsPage() {
   const handleBulkPositionAction = (action: 'delete' | 'change_status') => {
     setBulkActionType(action);
     if (action === 'change_status') {
-      setBulkNewIsOpenStatus(true); // Default to "Open" for change status
+      setBulkNewIsOpenStatus(true); 
     }
     setIsBulkConfirmOpen(true);
   };
 
   const executeBulkPositionAction = async () => {
-    // This is a placeholder for now. Full backend logic would be added here.
     if (!bulkActionType || selectedPositionIds.size === 0) return;
     setIsLoading(true);
-    toast({ title: "Bulk Action (Positions)", description: `Action '${bulkActionType}' on ${selectedPositionIds.size} positions would be executed here. Backend not yet implemented.`, variant: "default"});
-    console.log(`Bulk action ${bulkActionType} on positions:`, Array.from(selectedPositionIds));
-    if (bulkActionType === 'change_status') console.log(`New isOpen status: ${bulkNewIsOpenStatus}`);
-    
-    // Simulate API call
-    setTimeout(() => {
-      setIsLoading(false);
-      setIsBulkConfirmOpen(false);
-      setBulkActionType(null);
-      setSelectedPositionIds(new Set());
-      // fetchPositions(); // Uncomment when API is ready
-    }, 1500);
+    try {
+        const payload = {
+            action: bulkActionType,
+            positionIds: Array.from(selectedPositionIds),
+            ...(bulkActionType === 'change_status' && { newIsOpenStatus: bulkNewIsOpenStatus }),
+        };
+        const response = await fetch('/api/positions/bulk-action', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+        });
+        const result = await response.json();
+        if (!response.ok) throw new Error(result.message || 'Bulk position action failed');
+        
+        toast({ title: "Bulk Action Successful", description: `${result.successCount} position(s) affected. ${result.failCount > 0 ? `${result.failCount} failed.` : ''}`});
+        if (result.failCount > 0 && result.failedDetails) {
+            result.failedDetails.forEach((detail: {positionId: string, reason: string}) => {
+                const pos = positions.find(p => p.id === detail.positionId);
+                toast({ title: `Action Failed for ${pos?.title || detail.positionId}`, description: detail.reason, variant: "warning" });
+            });
+        }
+        setSelectedPositionIds(new Set());
+        fetchPositions();
+    } catch (error) {
+        toast({ title: "Bulk Action Error", description: (error as Error).message, variant: "destructive" });
+    } finally {
+        setIsLoading(false);
+        setIsBulkConfirmOpen(false);
+        setBulkActionType(null);
+    }
   };
 
 
@@ -352,7 +371,9 @@ export default function PositionsPage() {
             </DropdownMenuContent>
           </DropdownMenu>
          </div>
-        <Button onClick={() => setIsAddModalOpen(true)} className="w-full sm:w-auto btn-primary-gradient"> <PlusCircle className="mr-2 h-4 w-4" /> Add New Position </Button>
+         {canManagePositions && (
+            <Button onClick={() => setIsAddModalOpen(true)} className="w-full sm:w-auto btn-primary-gradient"> <PlusCircle className="mr-2 h-4 w-4" /> Add New Position </Button>
+         )}
       </div>
 
       <PositionFilters initialFilters={filters} onFilterChange={handleFilterChange} isLoading={isLoading} availableDepartments={availableDepartments} />
@@ -372,6 +393,7 @@ export default function PositionsPage() {
                     checked={isAllPositionsSelected}
                     onCheckedChange={handleToggleSelectAllPositions}
                     aria-label="Select all positions"
+                    disabled={isLoading || !canManagePositions}
                   />
                 </TableHead>
                 <TableHead>Title</TableHead> <TableHead>Department</TableHead> <TableHead>Level</TableHead> <TableHead>Status</TableHead> <TableHead className="hidden md:table-cell">Description</TableHead> <TableHead className="text-right">Actions</TableHead> </TableRow> </TableHeader>
@@ -383,6 +405,7 @@ export default function PositionsPage() {
                         checked={selectedPositionIds.has(pos.id)}
                         onCheckedChange={() => handleToggleSelectPosition(pos.id)}
                         aria-label={`Select position ${pos.title}`}
+                        disabled={isLoading || !canManagePositions}
                       />
                     </TableCell>
                     <TableCell className="font-medium"> <Link href={`/positions/${pos.id}`} passHref> <span className="hover:underline text-primary cursor-pointer">{pos.title}</span> </Link> </TableCell>
@@ -391,10 +414,10 @@ export default function PositionsPage() {
                     <TableCell> <Badge variant={pos.isOpen ? "default" : "outline"} className={pos.isOpen ? "bg-green-500 hover:bg-green-600 text-primary-foreground" : ""}> {pos.isOpen ? "Open" : "Closed"} </Badge> </TableCell>
                     <TableCell className="text-sm text-muted-foreground truncate max-w-xs hidden md:table-cell"> {pos.description || "No description"} </TableCell>
                     <TableCell className="text-right">
-                      <Button variant="ghost" size="icon" className="mr-1 h-8 w-8" onClick={() => handleOpenEditModal(pos)}> <Edit className="h-4 w-4" /> <span className="sr-only">Edit</span> </Button>
+                      <Button variant="ghost" size="icon" className="mr-1 h-8 w-8" onClick={() => handleOpenEditModal(pos)} disabled={!canManagePositions}> <Edit className="h-4 w-4" /> <span className="sr-only">Edit</span> </Button>
                        <AlertDialog>
                         <AlertDialogTrigger asChild>
-                           <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive h-8 w-8" onClick={() => confirmDeletePosition(pos)}> <Trash2 className="h-4 w-4" /> <span className="sr-only">Delete</span> </Button>
+                           <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive h-8 w-8" onClick={() => confirmDeletePosition(pos)} disabled={!canManagePositions}> <Trash2 className="h-4 w-4" /> <span className="sr-only">Delete</span> </Button>
                         </AlertDialogTrigger>
                         {positionToDelete && positionToDelete.id === pos.id && ( <AlertDialogContent> <AlertDialogHeader> <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle> <AlertDialogDescription> This action cannot be undone. This will permanently delete the position <strong>{positionToDelete.title}</strong>. If there are candidates associated with this position, deletion might be blocked. </AlertDialogDescription> </AlertDialogHeader> <AlertDialogFooter> <AlertDialogCancel onClick={() => setPositionToDelete(null)}>Cancel</AlertDialogCancel> <AlertDialogAction onClick={handleDeletePosition} className={buttonVariants({ variant: "destructive" })}> Delete Position </AlertDialogAction> </AlertDialogFooter> </AlertDialogContent> )}
                       </AlertDialog>
@@ -407,9 +430,9 @@ export default function PositionsPage() {
           )}
         </CardContent>
       </Card>
-      <AddPositionModal isOpen={isAddModalOpen} onOpenChange={setIsAddModalOpen} onAddPosition={handleAddPositionSubmit} />
-      {selectedPositionForEdit && ( <EditPositionModal isOpen={isEditModalOpen} onOpenChange={(isOpen) => { setIsEditModalOpen(isOpen); if (!isOpen) setSelectedPositionForEdit(null); }} onEditPosition={handleEditPositionSubmit} position={selectedPositionForEdit} /> )}
-      <ImportPositionsModal isOpen={isImportModalOpen} onOpenChange={setIsImportModalOpen} onImportSuccess={fetchPositions} />
+      {canManagePositions && <AddPositionModal isOpen={isAddModalOpen} onOpenChange={setIsAddModalOpen} onAddPosition={handleAddPositionSubmit} />}
+      {canManagePositions && selectedPositionForEdit && ( <EditPositionModal isOpen={isEditModalOpen} onOpenChange={(isOpen) => { setIsEditModalOpen(isOpen); if (!isOpen) setSelectedPositionForEdit(null); }} onEditPosition={handleEditPositionSubmit} position={selectedPositionForEdit} /> )}
+      {canImportPositions && <ImportPositionsModal isOpen={isImportModalOpen} onOpenChange={setIsImportModalOpen} onImportSuccess={fetchPositions} />}
     
       <AlertDialog open={isBulkConfirmOpen} onOpenChange={setIsBulkConfirmOpen}>
         <AlertDialogContent>
