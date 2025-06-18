@@ -25,6 +25,7 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
+  AlertDialogTrigger, // Added missing import
 } from "@/components/ui/alert-dialog";
 import {
   DropdownMenu,
@@ -200,9 +201,9 @@ export default function PositionsPage() {
         ["Marketing Specialist", "Marketing", "Develops and executes marketing campaigns across various channels.", "true", "Entry Level"],
         ["Sales Director", "Sales", "Leads the sales team, develops sales strategies, and manages key client accounts.", "false", "Executive"]
     ];
-    let csvContent = headers.join(',') + '\n';
+    let csvContent = headers.join(',') + '\\n';
     exampleRows.forEach(row => {
-        csvContent += row.map(val => `"${String(val || '').replace(/"/g, '""')}"`).join(',') + '\n';
+        csvContent += row.map(val => `"${String(val || '').replace(/"/g, '""')}"`).join(',') + '\\n';
     });
     downloadFile(csvContent, 'positions_template.csv', 'text/csv;charset=utf-8;');
     toast({ title: "Template Downloaded", description: "A CSV template for positions has been downloaded." });
@@ -320,3 +321,4 @@ export default function PositionsPage() {
     </div>
   );
 }
+
