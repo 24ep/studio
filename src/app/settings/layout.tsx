@@ -4,7 +4,7 @@
 
 import React, { type ReactNode, useState, useEffect } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation'; // Added useRouter import
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
 import {
@@ -137,3 +137,4 @@ export default function SettingsLayout({ children }: { children: ReactNode }) {
     </div>
   );
 }
+
