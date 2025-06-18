@@ -107,7 +107,7 @@ export default function PreferencesSettingsPage() {
     try {
       const response = await fetch('/api/settings/system-settings');
       if (!response.ok) {
-        const errorData = await response.json().catch(()={()=>( { message: 'Failed to load system settings' })})();
+        const errorData = await response.json().catch(() => ({ message: 'Failed to load system settings. Response not valid JSON.' }));
         throw new Error(errorData.message);
       }
       const settings: SystemSetting[] = await response.json();
@@ -476,3 +476,4 @@ export default function PreferencesSettingsPage() {
     
 
     
+      
