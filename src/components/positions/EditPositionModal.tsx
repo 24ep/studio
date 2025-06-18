@@ -19,6 +19,7 @@ import {
   DialogFooter,
   DialogClose,
 } from '@/components/ui/dialog';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'; // Added Card imports
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Edit3, Users, Loader2 } from 'lucide-react';
 import type { Position, Candidate } from '@/lib/types';
@@ -42,7 +43,7 @@ interface EditPositionModalProps {
   position: Position | null;
 }
 
-export function EditPositionModal({ isOpen, onOpenChange, onEditPosition, position }: EditPositionModalProps) {
+export function EditPositionModal({ isOpen, onOpenChange, onEditPosition, position }: EditPositionFormValues) {
   const { toast } = useToast();
   const [associatedCandidates, setAssociatedCandidates] = useState<Candidate[]>([]);
   const [isLoadingCandidates, setIsLoadingCandidates] = useState(false);
@@ -110,8 +111,8 @@ export function EditPositionModal({ isOpen, onOpenChange, onEditPosition, positi
         setAssociatedCandidates([]);
       }
     }}>
-      <DialogContent className="sm:max-w-3xl max-h-[90vh] flex flex-col">
-        <DialogHeader>
+      <DialogContent className="sm:max-w-3xl max-h-[90vh] flex flex-col p-0"> {/* Changed p-0 to allow cards to manage padding */}
+        <DialogHeader className="p-6 pb-4 border-b"> {/* Added padding and border */}
           <DialogTitle className="flex items-center">
             <Edit3 className="mr-2 h-5 w-5 text-primary" /> Edit Position: {position?.title}
           </DialogTitle>
@@ -120,8 +121,9 @@ export function EditPositionModal({ isOpen, onOpenChange, onEditPosition, positi
           </DialogDescription>
         </DialogHeader>
         
-        <div className="grid md:grid-cols-2 gap-6 flex-grow overflow-hidden py-4">
-          <ScrollArea className="md:pr-3 h-full"> {/* Added h-full */}
+        <div className="grid md:grid-cols-2 gap-6 flex-grow overflow-hidden p-6"> {/* Main content area with padding */}
+          {/* Left Column: Form */}
+          <ScrollArea className="h-full"> {/* Ensure ScrollArea takes full height of its container */}
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
               <div>
                 <Label htmlFor="title-edit">Position Title *</Label>
@@ -160,41 +162,49 @@ export function EditPositionModal({ isOpen, onOpenChange, onEditPosition, positi
             </form>
           </ScrollArea>
 
-          <div className="border-l md:pl-3 flex flex-col h-full"> {/* Added h-full */}
-            <h4 className="text-md font-semibold mb-2 flex items-center">
-              <Users className="mr-2 h-5 w-5 text-muted-foreground" /> Associated Candidates ({associatedCandidates.length})
-            </h4>
-            <ScrollArea className="flex-grow border rounded-md p-2 bg-muted/10">
-              {isLoadingCandidates ? (
-                <div className="flex justify-center items-center h-full">
-                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                </div>
-              ) : associatedCandidates.length > 0 ? (
-                <ul className="space-y-2">
-                  {associatedCandidates.map(candidate => (
-                    <li key={candidate.id} className="text-sm p-1.5 rounded hover:bg-muted/30">
-                      <Link href={`/candidates/${candidate.id}`} passHref>
-                        <span className="font-medium text-foreground hover:underline cursor-pointer">{candidate.name}</span>
-                      </Link>
-                      <p className="text-xs text-muted-foreground">{candidate.email} - Fit: {(candidate.fitScore || 0)}%</p>
-                    </li>
-                  ))}
-                </ul>
-              ) : (
-                <p className="text-sm text-muted-foreground text-center py-4">No candidates currently associated with this position.</p>
-              )}
-            </ScrollArea>
+          {/* Right Column: Associated Candidates in a Card */}
+          <div className="flex flex-col h-full"> {/* Container for the card to manage its height */}
+            <Card className="flex-grow flex flex-col overflow-hidden shadow-md">
+              <CardHeader className="p-4">
+                <CardTitle className="text-base flex items-center"> {/* Adjusted text size */}
+                  <Users className="mr-2 h-4 w-4 text-muted-foreground" /> Associated Candidates ({associatedCandidates.length})
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-4 pt-0 flex-grow overflow-hidden">
+                <ScrollArea className="h-full"> {/* ScrollArea takes full height of CardContent */}
+                  {isLoadingCandidates ? (
+                    <div className="flex justify-center items-center h-full">
+                      <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                    </div>
+                  ) : associatedCandidates.length > 0 ? (
+                    <ul className="space-y-2">
+                      {associatedCandidates.map(candidate => (
+                        <li key={candidate.id} className="text-sm p-1.5 rounded hover:bg-muted/30">
+                          <Link href={`/candidates/${candidate.id}`} passHref>
+                            <span className="font-medium text-foreground hover:underline cursor-pointer">{candidate.name}</span>
+                          </Link>
+                          <p className="text-xs text-muted-foreground">{candidate.email} - Fit: {(candidate.fitScore || 0)}%</p>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="text-sm text-muted-foreground text-center py-4">No candidates currently associated with this position.</p>
+                  )}
+                </ScrollArea>
+              </CardContent>
+            </Card>
           </div>
         </div>
         
-        <DialogFooter className="pt-4 border-t mt-auto">
+        <DialogFooter className="p-6 pt-4 border-t mt-auto"> {/* Added padding */}
           <DialogClose asChild>
             <Button type="button" variant="outline">
               Cancel
             </Button>
           </DialogClose>
           <Button type="button" onClick={form.handleSubmit(onSubmit)} disabled={form.formState.isSubmitting}>
-            {form.formState.isSubmitting ? 'Saving Changes...' : 'Save Changes'}
+            {form.formState.isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+            {form.formState.isSubmitting ? 'Saving...' : 'Save Changes'}
           </Button>
         </DialogFooter>
       </DialogContent>
