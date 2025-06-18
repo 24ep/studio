@@ -22,59 +22,76 @@ const createUserSchema = z.object({
   password: z.string().min(6, "Password must be at least 6 characters long"),
   role: userRoleEnum,
   modulePermissions: z.array(z.enum(platformModuleIds)).optional().default([]),
-  groupIds: z.array(z.string().uuid()).optional().default([]), // New: for group assignment
+  groupIds: z.array(z.string().uuid()).optional().default([]),
 });
 
 export async function GET(request: NextRequest) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) {
-    return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+    return NextResponse.json({ message: "Unauthorized: User session required." }, { status: 401 });
   }
   
   const userRole = session.user.role;
   const { searchParams } = new URL(request.url);
-  const filterRole = searchParams.get('role');
+  const filterNameInput = searchParams.get('name');
+  const filterEmailInput = searchParams.get('email');
+  const filterRoleInput = searchParams.get('role');
 
   let query = `
     SELECT 
       u.id, u.name, u.email, u.role, u."avatarUrl", u."dataAiHint", u."modulePermissions", 
       u."createdAt", u."updatedAt",
-      COALESCE(
-        (SELECT json_agg(json_build_object('id', g.id, 'name', g.name))
-         FROM "UserGroup" g
-         JOIN "User_UserGroup" ugg ON g.id = ugg."groupId"
-         WHERE ugg."userId" = u.id), 
-        '[]'::json
-      ) as groups
+      COALESCE(json_agg(DISTINCT json_build_object('id', g.id, 'name', g.name)) FILTER (WHERE g.id IS NOT NULL), '[]'::json) as groups
     FROM "User" u
+    LEFT JOIN "User_UserGroup" ugg ON u.id = ugg."userId"
+    LEFT JOIN "UserGroup" g ON ugg."groupId" = g.id
   `;
   const queryParams = [];
   let paramIndex = 1;
   const conditions = [];
 
-  if (userRole === 'Admin') {
-    if (filterRole) {
+  const canManageUsers = userRole === 'Admin' || (session.user.modulePermissions?.includes('USERS_MANAGE') ?? false);
+
+  if (canManageUsers) {
+    // Admin or user with USERS_MANAGE can filter by any role or see all
+    if (filterRoleInput && filterRoleInput !== "ALL_ROLES") {
       conditions.push(`u.role = $${paramIndex++}`);
-      queryParams.push(filterRole);
+      queryParams.push(filterRoleInput);
     }
   } else if (userRole === 'Recruiter') {
-    // Recruiters can only fetch other Recruiters (for assignment dropdowns)
-    conditions.push(`u.role = $${paramIndex++}`);
-    queryParams.push('Recruiter');
-  } else if (userRole !== 'Admin' && !session.user.modulePermissions?.includes('USERS_MANAGE')) {
-    // Hiring Managers or other roles cannot list users by default unless they have USERS_MANAGE permission
-    // For now, this also covers the case where no specific role filter means they can't list users.
-     await logAudit('WARN', `Forbidden attempt to list users by ${session.user.name} (Role: ${userRole}).`, 'API:Users:Get', session.user.id);
-    return NextResponse.json({ message: "Forbidden: Insufficient permissions" }, { status: 403 });
+    // Recruiters without USERS_MANAGE can only see other Recruiters
+    conditions.push(`u.role = 'Recruiter'`);
+    // If filterRoleInput is present and not 'Recruiter' or 'ALL_ROLES', it will effectively result in no users if combined with u.role = 'Recruiter'
+    // This is acceptable, as they are restricted to seeing 'Recruiter' roles only.
+    if (filterRoleInput && filterRoleInput !== "ALL_ROLES" && filterRoleInput !== "Recruiter") {
+        // Add a condition that will always be false to return no results if a Recruiter tries to filter for non-Recruiter roles
+        conditions.push(`1=0`); 
+    }
+  } else {
+    // Any other role without USERS_MANAGE permission cannot list users
+    const userNameForLog = session?.user?.name || session?.user?.email || 'Unknown User';
+    await logAudit('WARN', `Forbidden attempt to list users by ${userNameForLog} (Role: ${userRole}). Lacks USERS_MANAGE.`, 'API:Users:Get', session.user.id);
+    return NextResponse.json({ message: "Forbidden: Insufficient permissions to list users." }, { status: 403 });
   }
-  // If userRole is Admin and no filterRole, or userRole has USERS_MANAGE, they see all users (respecting other filters if any)
 
-
+  // Add name and email filters (these are always allowed if the user can list some users based on above role checks)
+  if (filterNameInput) {
+    conditions.push(`u.name ILIKE $${paramIndex++}`);
+    queryParams.push(`%${filterNameInput}%`);
+  }
+  if (filterEmailInput) {
+    conditions.push(`u.email ILIKE $${paramIndex++}`);
+    queryParams.push(`%${filterEmailInput}%`);
+  }
+  
   if (conditions.length > 0) {
     query += ' WHERE ' + conditions.join(' AND ');
   }
   
-  query += ' ORDER BY u."createdAt" DESC';
+  query += `
+    GROUP BY u.id, u.name, u.email, u.role, u."avatarUrl", u."dataAiHint", u."modulePermissions", u."createdAt", u."updatedAt"
+    ORDER BY u.name ASC
+  `;
 
   try {
     const result = await pool.query(query, queryParams);
@@ -84,9 +101,14 @@ export async function GET(request: NextRequest) {
       groups: user.groups || [],
     })), { status: 200 });
   } catch (error) {
-    console.error("Failed to fetch users:", error);
-    await logAudit('ERROR', `Failed to fetch users by ${session.user.name}. Error: ${(error as Error).message}`, 'API:Users:Get', session.user.id);
-    return NextResponse.json({ message: "Error fetching users", error: (error as Error).message }, { status: 500 });
+    console.error("Failed to fetch users (SQL Error):", error);
+    const userNameForLog = session?.user?.name || session?.user?.email || 'Unknown User';
+    await logAudit('ERROR', `Failed to fetch users by ${userNameForLog}. SQL Error: ${(error as Error).message}`, 'API:Users:Get', session.user.id, { sqlState: (error as any).code, constraint: (error as any).constraint });
+    return NextResponse.json({ 
+        message: "Error fetching users due to a server-side database error.", 
+        error: (error as Error).message, 
+        code: (error as any).code // Include SQL error code if available
+    }, { status: 500 });
   }
 }
 
@@ -154,19 +176,16 @@ export async function POST(request: NextRequest) {
       await Promise.all(insertGroupPromises);
     }
 
-    // Fetch the user again with group data
-     const finalUserQuery = `
+    const finalUserQuery = `
       SELECT 
-        u.*,
-        COALESCE(
-          (SELECT json_agg(json_build_object('id', g.id, 'name', g.name))
-          FROM "UserGroup" g
-          JOIN "User_UserGroup" ugg ON g.id = ugg."groupId"
-          WHERE ugg."userId" = u.id), 
-          '[]'::json
-        ) as groups
+        u.id, u.name, u.email, u.role, u."avatarUrl", u."dataAiHint", u."modulePermissions", 
+        u."createdAt", u."updatedAt",
+        COALESCE(json_agg(DISTINCT json_build_object('id', g.id, 'name', g.name)) FILTER (WHERE g.id IS NOT NULL), '[]'::json) as groups
       FROM "User" u
+      LEFT JOIN "User_UserGroup" ugg ON u.id = ugg."userId"
+      LEFT JOIN "UserGroup" g ON ugg."groupId" = g.id
       WHERE u.id = $1
+      GROUP BY u.id, u.name, u.email, u.role, u."avatarUrl", u."dataAiHint", u."modulePermissions", u."createdAt", u."updatedAt";
     `;
     const finalUserResult = await client.query(finalUserQuery, [newUserId]);
     newUser = { ...finalUserResult.rows[0], modulePermissions: finalUserResult.rows[0].modulePermissions || [], groups: finalUserResult.rows[0].groups || [] };
@@ -180,11 +199,12 @@ export async function POST(request: NextRequest) {
   } catch (error: any) {
     await client.query('ROLLBACK');
     console.error("Failed to create user:", error);
-    await logAudit('ERROR', `Failed to create user ${email} by ${session.user.name}. Error: ${error.message}`, 'API:Users:Create', session.user.id);
+    const userNameForLog = session?.user?.name || session?.user?.email || 'Unknown User';
+    await logAudit('ERROR', `Failed to create user ${email} by ${userNameForLog}. Error: ${error.message}. SQL State: ${error.code}, Constraint: ${error.constraint}`, 'API:Users:Create', session.user.id, {sqlState: error.code, constraint: error.constraint});
     if (error.code === '23505' && error.constraint === 'User_email_key') {
       return NextResponse.json({ message: "User with this email already exists." }, { status: 409 });
     }
-    return NextResponse.json({ message: "Error creating user", error: error.message }, { status: 500 });
+    return NextResponse.json({ message: "Error creating user", error: error.message, code: error.code }, { status: 500 });
   } finally {
     client.release();
   }
