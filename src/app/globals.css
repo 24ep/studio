@@ -14,8 +14,8 @@ body {
     --body-background-mid-l: 240 100% 99.4%;   /* #FCFCFF (approx rgba(252, 252, 255, 1)) */
     --body-background-end-l: 240 100% 98%;     /* #F5F5FF (approx rgba(245, 245, 255, 1)) */
     
-    /* Solid background color for components */
-    --background: var(--body-background-start-l); /* Use start of body gradient as solid bg for components */
+    /* Solid background color for components - Use a solid color, not a gradient for --background */
+    --background: hsl(var(--body-background-start-l)); /* Solid white for light theme component backgrounds */
     
     --foreground: 220 25% 25%; /* Darker Grey for text, increased contrast */
 
@@ -88,8 +88,8 @@ body {
     --body-background-mid-d: 220 15% 10%;
     --body-background-end-d: 220 15% 11%;
 
-    /* Solid background color for components */
-    --background: var(--body-background-start-d); /* Use start of body gradient as solid bg for components */
+    /* Solid background color for components - CORRECTED for dark theme */
+    --background: hsl(var(--body-background-start-d)); /* Use dark start color for dark theme component backgrounds */
     
     --foreground: 210 30% 95%; /* Very light gray, almost white */
 
@@ -157,12 +157,13 @@ body {
     @apply border-border;
   }
   body {
-    @apply text-foreground; /* Apply text color */
-    /* Apply gradient background directly to body for light theme */
+    @apply bg-background text-foreground; /* Use solid --background for body first */
+    /* Apply gradient image ON TOP of solid background for light theme */
     background-image: linear-gradient(90deg, hsl(var(--body-background-start-l)) 0%, hsl(var(--body-background-mid-l)) 55%, hsl(var(--body-background-end-l)) 100%);
   }
   /* Apply gradient background directly to body for dark theme */
   .dark body {
+    @apply bg-background text-foreground; /* Use solid --background for body first */
     background-image: linear-gradient(90deg, hsl(var(--body-background-start-d)) 0%, hsl(var(--body-background-mid-d)) 55%, hsl(var(--body-background-end-d)) 100%);
   }
 }
@@ -287,4 +288,3 @@ body {
     background-image: linear-gradient(to bottom right, hsl(var(--preferences-left-panel-gradient-start)), hsl(var(--preferences-left-panel-gradient-end)));
   }
 }
-
