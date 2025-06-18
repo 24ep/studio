@@ -15,11 +15,17 @@ export async function POST(request: NextRequest) {
   const actingUserId = session?.user?.id || null;
   const actingUserName = session?.user?.name || session?.user?.email || 'System (n8n Upload)';
 
-  const n8nWebhookUrl = await getSystemSetting('n8nGenericPdfWebhookUrl'); // Fetch from DB
+  let n8nWebhookUrl = await getSystemSetting('n8nGenericPdfWebhookUrl'); // Fetch from DB first
   if (!n8nWebhookUrl) {
-    console.error('N8N_GENERIC_PDF_WEBHOOK_URL not configured in SystemSetting table for candidate creation flow.');
-    await logAudit('ERROR', `Attempt to use n8n candidate creation upload by ${actingUserName} (ID: ${actingUserId}) failed: N8N_GENERIC_PDF_WEBHOOK_URL not configured.`, 'API:Candidates:N8NCreate', actingUserId);
-    return NextResponse.json({ message: "n8n integration for candidate creation is not configured on the server." }, { status: 500 });
+    // Fallback to environment variable if not found in DB
+    n8nWebhookUrl = process.env.N8N_GENERIC_PDF_WEBHOOK_URL || null;
+  }
+
+  if (!n8nWebhookUrl) {
+    const errorMessage = "Automated candidate creation is not configured on the server. Please ensure the Generic PDF Webhook URL is set either in Settings > Integrations or as an N8N_GENERIC_PDF_WEBHOOK_URL environment variable.";
+    console.error(errorMessage);
+    await logAudit('ERROR', `Attempt to use n8n candidate creation upload by ${actingUserName} (ID: ${actingUserId}) failed: Generic PDF Webhook URL not configured.`, 'API:Candidates:N8NCreate', actingUserId);
+    return NextResponse.json({ message: errorMessage }, { status: 500 });
   }
 
   try {
