@@ -5,12 +5,13 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { useToast } from '@/hooks/use-toast';
 import { Save, Settings, Mail, Zap, UploadCloud, FileText, XCircle, Loader2, AlertTriangle, ServerCrash, ShieldAlert, Info } from 'lucide-react'; 
 import { signIn, useSession } from 'next-auth/react';
 import { useRouter, usePathname } from 'next/navigation';
 import type { SystemSetting } from '@/lib/types';
+import { Separator } from '@/components/ui/separator';
 
 
 export default function IntegrationsSettingsPage() {
@@ -26,7 +27,7 @@ export default function IntegrationsSettingsPage() {
   const [smtpHost, setSmtpHost] = useState('');
   const [smtpPort, setSmtpPort] = useState('');
   const [smtpUser, setSmtpUser] = useState('');
-  const [smtpPassword, setSmtpPassword] = useState(''); // Remains conceptual
+  const [smtpPassword, setSmtpPassword] = useState(''); 
   const [smtpSecure, setSmtpSecure] = useState(true);
   const [smtpFromEmail, setSmtpFromEmail] = useState('');
 
@@ -62,7 +63,7 @@ export default function IntegrationsSettingsPage() {
     if (sessionStatus === 'unauthenticated') {
       signIn(undefined, { callbackUrl: pathname });
     } else if (sessionStatus === 'authenticated') {
-        if (session.user.role !== 'Admin' && !session.user.modulePermissions?.includes('SYSTEM_SETTINGS_MANAGE')) {
+        if (session.user.role !== 'Admin' && !session.user.modulePermissions?.includes('SYSTEM_SETTINGS_MANAGE')) { // Assuming SYSTEM_SETTINGS_MANAGE covers this
             setFetchError("You do not have permission to manage integration settings.");
             setIsLoading(false);
         } else {
@@ -100,7 +101,7 @@ export default function IntegrationsSettingsPage() {
         title: 'SMTP Settings Saved',
         description: 'Your SMTP configuration has been updated on the server.',
       });
-      fetchSMTPSettings(); // Re-fetch to confirm
+      fetchSMTPSettings(); 
     } catch (error) {
       console.error("Error saving SMTP settings:", error);
       toast({ title: "Error Saving SMTP Settings", description: (error as Error).message, variant: "destructive" });
@@ -130,35 +131,35 @@ export default function IntegrationsSettingsPage() {
 
 
   return (
-    <div className="space-y-8 max-w-xl mx-auto">
-       <Card className="shadow-lg">
+    <div className="space-y-8 max-w-3xl mx-auto">
+      <Card className="shadow-lg">
         <CardHeader>
-          <CardTitle className="flex items-center">
-            <Zap className="mr-2 h-6 w-6 text-orange-500" /> Workflow Automation (Webhooks)
+          <CardTitle className="flex items-center text-xl">
+            <Zap className="mr-3 h-6 w-6 text-primary" /> Workflow Automation (Webhooks)
           </CardTitle>
           <CardDescription>Details about server-configured webhooks for automated processing.</CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-4 pt-6">
             <div>
-              <h4 className="font-medium text-foreground">Resume Processing Webhook (Existing Candidates)</h4>
+              <h4 className="font-medium text-foreground flex items-center"><UploadCloud className="mr-2 h-5 w-5 text-muted-foreground"/>Resume Processing Webhook</h4>
               <p className="text-sm text-muted-foreground mt-1">
                 Used for resumes uploaded to existing candidates. Configured via server environment variable: <code className="font-mono text-xs bg-muted px-1 py-0.5 rounded">N8N_RESUME_WEBHOOK_URL</code>.
               </p>
             </div>
-            <hr/>
+            <Separator />
             <div>
-                <h4 className="font-medium text-foreground">New Candidate PDF Webhook</h4>
+                <h4 className="font-medium text-foreground flex items-center"><FileText className="mr-2 h-5 w-5 text-muted-foreground"/>New Candidate PDF Webhook</h4>
                 <p className="text-sm text-muted-foreground mt-1">
                     Used by "Create via Resume (Automated)" feature. Configured via server environment variable: <code className="font-mono text-xs bg-muted px-1 py-0.5 rounded">N8N_GENERIC_PDF_WEBHOOK_URL</code>.
                 </p>
             </div>
-             <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-700 rounded-md">
+             <div className="mt-6 p-3 bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-700 rounded-md">
                 <div className="flex items-start">
                     <Info className="h-5 w-5 text-blue-600 dark:text-blue-400 mr-2 mt-0.5 shrink-0" />
                     <div>
                         <p className="text-sm font-medium text-blue-700 dark:text-blue-300">Note on Webhook Configuration</p>
                         <p className="text-xs text-blue-600 dark:text-blue-400">
-                            The webhook URLs are set on the server using environment variables for security. This page provides information about their purpose. The actual mapping of data from these webhooks to candidate fields is configured in <Button variant="link" size="sm" className="p-0 h-auto text-xs" onClick={() => router.push('/settings/webhook-mapping')}>Webhook Payload Mapping</Button>.
+                            The webhook URLs are set on the server using environment variables for security. This page provides information about their purpose. The actual mapping of data from these webhooks to candidate fields is configured in <Button variant="link" size="sm" className="p-0 h-auto text-xs text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300" onClick={() => router.push('/settings/webhook-mapping')}>Webhook Payload Mapping</Button>.
                         </p>
                     </div>
                 </div>
@@ -168,12 +169,12 @@ export default function IntegrationsSettingsPage() {
 
       <Card className="shadow-lg">
         <CardHeader>
-          <CardTitle className="flex items-center">
-            <Mail className="mr-2 h-6 w-6 text-blue-500" /> SMTP Configuration
+          <CardTitle className="flex items-center text-xl">
+            <Mail className="mr-3 h-6 w-6 text-primary" /> SMTP Configuration
           </CardTitle>
-          <CardDescription>Set up your SMTP server for sending application emails. Settings are saved on the server.</CardDescription>
+          <CardDescription>Set up your SMTP server for sending application emails. Settings are saved on the server (excluding password).</CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-4 pt-6">
             <div>
               <Label htmlFor="smtp-host">SMTP Host</Label>
               <Input id="smtp-host" type="text" placeholder="smtp.example.com" value={smtpHost} onChange={(e) => setSmtpHost(e.target.value)} className="mt-1" disabled={isSaving}/>
@@ -191,25 +192,24 @@ export default function IntegrationsSettingsPage() {
               <Input id="smtp-user" type="text" placeholder="your-email@example.com" value={smtpUser} onChange={(e) => setSmtpUser(e.target.value)} className="mt-1" disabled={isSaving}/>
             </div>
             <div>
-              <Label htmlFor="smtp-password">SMTP Password (Environment Variable)</Label>
-              <Input id="smtp-password" type="password" placeholder="•••••••• (Set on Server)" value={smtpPassword} onChange={(e) => setSmtpPassword(e.target.value)} className="mt-1" disabled={isSaving}/>
+              <Label htmlFor="smtp-password">SMTP Password</Label>
+              <Input id="smtp-password" type="password" placeholder="••••••••" value={smtpPassword} onChange={(e) => setSmtpPassword(e.target.value)} className="mt-1" disabled={isSaving}/>
               <p className="text-xs text-muted-foreground mt-1">
-                The SMTP password should be set as an environment variable (e.g., <code className="font-mono text-xs bg-muted px-1 rounded">SMTP_PASSWORD</code>) on the server for security. This field is for conceptual display only and is not saved from here.
+                The SMTP password should be set as an environment variable (e.g., <code className="font-mono text-xs bg-muted px-1 rounded">SMTP_PASSWORD</code>) on the server for security. This field is for your reference and conceptual testing; its value is NOT saved to the database from here.
               </p>
             </div>
             <div className="flex items-center space-x-2 pt-1">
                 <Switch id="smtp-secure" checked={smtpSecure} onCheckedChange={setSmtpSecure} disabled={isSaving} className="switch-green"/>
-                <Label htmlFor="smtp-secure">Use TLS/SSL</Label>
+                <Label htmlFor="smtp-secure" className="font-normal">Use TLS/SSL</Label>
             </div>
         </CardContent>
-      </Card>
-      <div className="flex justify-end pt-4">
-          <Button onClick={handleSaveIntegrations} size="lg" disabled={isSaving || isLoading}>
+         <CardFooter className="border-t pt-6">
+          <Button onClick={handleSaveIntegrations} className="w-full sm:w-auto btn-primary-gradient" disabled={isSaving || isLoading}>
             {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
             {isSaving ? 'Saving...' : 'Save SMTP Settings'}
           </Button>
-      </div>
+        </CardFooter>
+      </Card>
     </div>
   );
 }
-

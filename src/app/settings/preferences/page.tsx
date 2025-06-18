@@ -7,11 +7,12 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useToast } from '@/hooks/use-toast';
-import { Save, Palette, ImageUp, Trash2, Loader2, XCircle, PenSquare, ServerCrash, ShieldAlert } from 'lucide-react';
+import { Save, Palette, ImageUp, Trash2, Loader2, XCircle, PenSquare, ServerCrash, ShieldAlert, Settings2 } from 'lucide-react';
 import Image from 'next/image';
 import { signIn, useSession } from 'next-auth/react';
 import { useRouter, usePathname } from 'next/navigation';
 import type { SystemSetting } from '@/lib/types';
+import { Separator } from '@/components/ui/separator';
 
 type ThemePreference = "light" | "dark" | "system";
 const DEFAULT_APP_NAME = "CandiTrack";
@@ -158,12 +159,10 @@ export default function PreferencesSettingsPage() {
         setSavedLogoDataUrl(updatedLogoSetting.value);
         setLogoPreviewUrl(updatedLogoSetting.value); 
       }
-      // Update theme preference state from server response
       const updatedThemeSetting = updatedSettings.find(s => s.key === 'appThemePreference');
       if (updatedThemeSetting) {
         setThemePreference(updatedThemeSetting.value as ThemePreference || 'system');
       }
-      // Update app name state from server response
       const updatedAppNameSetting = updatedSettings.find(s => s.key === 'appName');
        if (updatedAppNameSetting) {
         setAppName(updatedAppNameSetting.value || DEFAULT_APP_NAME);
@@ -201,46 +200,55 @@ export default function PreferencesSettingsPage() {
   }
 
   return (
-    <div className="space-y-8">
-      <Card className="w-full max-w-xl mx-auto shadow-lg">
+    <div className="space-y-6">
+      <Card className="w-full max-w-2xl mx-auto shadow-lg">
         <CardHeader>
-          <CardTitle className="flex items-center">
-            <Palette className="mr-2 h-6 w-6 text-primary" /> Application Preferences
+          <CardTitle className="flex items-center text-xl">
+            <Settings2 className="mr-3 h-6 w-6 text-primary" /> Application Preferences
           </CardTitle>
-          <CardDescription>Manage your application name, theme, and logo. Settings are saved on the server.</CardDescription>
+          <CardDescription>Manage global application settings like name, theme, and logo. These settings are saved on the server.</CardDescription>
         </CardHeader>
-        <CardContent className="space-y-6">
+        <CardContent className="space-y-8 pt-6">
           <section>
-            <h3 className="text-lg font-semibold text-foreground mb-2 flex items-center">
-                <PenSquare className="mr-2 h-5 w-5" /> App Name
-            </h3>
+            <div className="flex items-center mb-3">
+                <PenSquare className="mr-3 h-5 w-5 text-muted-foreground" />
+                <h3 className="text-lg font-semibold text-foreground">App Name</h3>
+            </div>
             <div>
-                <Label htmlFor="app-name-input">Application Name</Label>
+                <Label htmlFor="app-name-input" className="text-sm">Application Name</Label>
                 <Input id="app-name-input" type="text" value={appName} onChange={(e) => setAppName(e.target.value)} className="mt-1" placeholder="e.g., My ATS" />
             </div>
           </section>
 
-          <section>
-            <h3 className="text-lg font-semibold text-foreground mb-2">Theme Preference</h3>
-            <RadioGroup value={themePreference} onValueChange={(value) => setThemePreference(value as ThemePreference)} className="flex flex-col sm:flex-row sm:space-x-4">
-              <div className="flex items-center space-x-2"><RadioGroupItem value="light" id="theme-light" /><Label htmlFor="theme-light">Light</Label></div>
-              <div className="flex items-center space-x-2"><RadioGroupItem value="dark" id="theme-dark" /><Label htmlFor="theme-dark">Dark</Label></div>
-              <div className="flex items-center space-x-2"><RadioGroupItem value="system" id="theme-system" /><Label htmlFor="theme-system">System Default</Label></div>
-            </RadioGroup>
-             <p className="text-xs text-muted-foreground mt-1">Actual theme switching is handled by the header toggle using browser localStorage. This setting is for your preferred theme.</p>
-          </section>
+          <Separator />
 
           <section>
-            <h3 className="text-lg font-semibold text-foreground mb-2 flex items-center">
-              <ImageUp className="mr-2 h-5 w-5" /> App Logo
-            </h3>
+            <div className="flex items-center mb-3">
+                <Palette className="mr-3 h-5 w-5 text-muted-foreground" />
+                <h3 className="text-lg font-semibold text-foreground">Theme Preference</h3>
+            </div>
+            <RadioGroup value={themePreference} onValueChange={(value) => setThemePreference(value as ThemePreference)} className="flex flex-col sm:flex-row sm:space-x-6 space-y-2 sm:space-y-0">
+              <div className="flex items-center space-x-2"><RadioGroupItem value="light" id="theme-light" /><Label htmlFor="theme-light" className="font-normal">Light</Label></div>
+              <div className="flex items-center space-x-2"><RadioGroupItem value="dark" id="theme-dark" /><Label htmlFor="theme-dark" className="font-normal">Dark</Label></div>
+              <div className="flex items-center space-x-2"><RadioGroupItem value="system" id="theme-system" /><Label htmlFor="theme-system" className="font-normal">System Default</Label></div>
+            </RadioGroup>
+             <p className="text-xs text-muted-foreground mt-2">This sets your preferred theme. Actual theme switching is handled by the header toggle using browser settings.</p>
+          </section>
+
+          <Separator />
+
+          <section>
+            <div className="flex items-center mb-3">
+              <ImageUp className="mr-3 h-5 w-5 text-muted-foreground" />
+              <h3 className="text-lg font-semibold text-foreground">App Logo</h3>
+            </div>
             <div>
-              <Label htmlFor="app-logo-upload">Change App Logo (Recommended: square, max 200KB)</Label>
+              <Label htmlFor="app-logo-upload" className="text-sm">Change App Logo <span className="text-xs text-muted-foreground">(Recommended: square, max 200KB)</span></Label>
               <Input id="app-logo-upload" type="file" accept="image/*" onChange={handleLogoFileChange} className="mt-1" />
               {logoPreviewUrl && (
                 <div className="mt-3 p-2 border rounded-md inline-flex items-center gap-3 bg-muted/50">
                   <Image src={logoPreviewUrl} alt="Logo preview" width={48} height={48} className="h-12 w-12 object-contain rounded" data-ai-hint="company logo"/>
-                  {selectedLogoFile && <span className="text-sm text-foreground truncate max-w-xs">{selectedLogoFile.name}</span>}
+                  {selectedLogoFile && <span className="text-sm text-foreground truncate max-w-[150px] sm:max-w-xs">{selectedLogoFile.name}</span>}
                   <Button variant="ghost" size="icon" onClick={() => removeSelectedLogo(false)} className="h-7 w-7"> <XCircle className="h-4 w-4 text-muted-foreground hover:text-destructive"/> </Button>
                 </div>
               )}
@@ -248,10 +256,10 @@ export default function PreferencesSettingsPage() {
             </div>
           </section>
         </CardContent>
-        <CardFooter>
-          <Button onClick={handleSavePreferences} className="btn-primary-gradient" disabled={isSaving}>
+        <CardFooter className="border-t pt-6">
+          <Button onClick={handleSavePreferences} className="w-full sm:w-auto btn-primary-gradient" disabled={isSaving || isLoading}>
             {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-            {isSaving ? 'Saving...' : 'Save Preferences'}
+            {isSaving ? 'Saving...' : 'Save All Preferences'}
           </Button>
         </CardFooter>
       </Card>
