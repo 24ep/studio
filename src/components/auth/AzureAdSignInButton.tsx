@@ -17,7 +17,7 @@ export function AzureAdSignInButton() {
   return (
     <Button
       onClick={() => signIn("azure-ad", { callbackUrl: "/" })} // Redirect to dashboard after sign-in
-      className="w-full bg-[#0078D4] hover:bg-[#005A9E] text-white btn-primary-gradient" // Microsoft Blue
+      className="w-full btn-primary-gradient" // Rely on btn-primary-gradient for background and text color
       size="lg"
     >
       <AzureLogo />
@@ -25,3 +25,4 @@ export function AzureAdSignInButton() {
     </Button>
   );
 }
+
