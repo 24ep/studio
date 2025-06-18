@@ -9,7 +9,12 @@ body {
 
 @layer base {
   :root {
-    --background: 0 0% 98%; /* Soft Off-White for modern light theme */
+    /* Background Gradient Variables - Light Theme */
+    --background-start-l: 0 0% 100%;       /* #FFFFFF */
+    --background-mid-l: 240 100% 99.4%;   /* #FCFCFF (approx rgba(252, 252, 255, 1)) */
+    --background-end-l: 240 100% 98%;     /* #F5F5FF (approx rgba(245, 245, 255, 1)) */
+    --background: linear-gradient(90deg, hsl(var(--background-start-l)) 0%, hsl(var(--background-mid-l)) 55%, hsl(var(--background-end-l)) 100%);
+    
     --foreground: 220 25% 25%; /* Darker Grey for text, increased contrast */
 
     --card: 0 0% 100%; /* White for cards to stand out slightly */
@@ -77,7 +82,12 @@ body {
 
   .dark {
     /* Modern Dark Theme 2025 */
-    --background: 220 15% 10%; /* Deep dark blue/charcoal */
+    /* Background Gradient Variables - Dark Theme */
+    --background-start-d: 220 15% 9%;
+    --background-mid-d: 220 15% 10%;
+    --background-end-d: 220 15% 11%;
+    --background: linear-gradient(90deg, hsl(var(--background-start-d)) 0%, hsl(var(--background-mid-d)) 55%, hsl(var(--background-end-d)) 100%);
+    
     --foreground: 210 30% 95%; /* Very light gray, almost white */
 
     --card: 220 15% 13%; /* Slightly lighter than background */
@@ -268,3 +278,4 @@ body {
     background-image: linear-gradient(to bottom right, hsl(var(--preferences-left-panel-gradient-start)), hsl(var(--preferences-left-panel-gradient-end)));
   }
 }
+
