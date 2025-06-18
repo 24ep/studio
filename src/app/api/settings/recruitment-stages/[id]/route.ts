@@ -164,6 +164,7 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
     await client.query('COMMIT');
 
     if (deleteResult.rowCount === 0) {
+        // This case should ideally not be reached if the FOR UPDATE lock worked and stage wasn't deleted by another transaction
         return NextResponse.json({ message: "Recruitment stage not found or already deleted during transaction" }, { status: 404 });
     }
     await logAudit('AUDIT', `Recruitment stage '${stageToDelete.name}' (ID: ${params.id}) deleted by ${session.user.name}.`, 'API:RecruitmentStages:Delete', session.user.id, { targetStageId: params.id, deletedStageName: stageToDelete.name });
@@ -178,3 +179,5 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
     client.release();
   }
 }
+
+    

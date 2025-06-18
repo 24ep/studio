@@ -166,6 +166,7 @@ export default function RecruitmentStagesPage() {
       if (!response.ok) {
         if (response.status === 409 && result.needsReplacement) {
             setStageToDelete(stage); // Keep stageToDelete for the replacement modal
+            setReplacementStageName(''); // Reset replacement name for new dialog
             setIsReplacementModalOpen(true); // Open replacement modal
             return; // Don't show generic error toast yet
         }
@@ -176,11 +177,14 @@ export default function RecruitmentStagesPage() {
     } catch (error) {
       toast({ title: "Error Deleting Stage", description: (error as Error).message, variant: "destructive" });
     } finally {
-      if (!replacement) setStageToDelete(null); // Clear only if not waiting for replacement
+      // Clear stageToDelete only if not opening the replacement modal or if action completed
+      if (!isReplacementModalOpen) { // If replacement modal isn't being opened, clear the stage
+          setStageToDelete(null);
+      }
     }
   };
 
-  const handleConfirmDelete = () => {
+  const handleConfirmDelete = () => { // This is for fallback, direct delete
     if (stageToDelete) {
       attemptDeleteStage(stageToDelete);
     }
@@ -188,9 +192,9 @@ export default function RecruitmentStagesPage() {
 
   const handleConfirmDeleteWithReplacement = async () => {
     if (stageToDelete && replacementStageName) {
-      setIsReplacementModalOpen(false);
+      setIsReplacementModalOpen(false); // Close modal before attempting delete
       await attemptDeleteStage(stageToDelete, replacementStageName);
-      setStageToDelete(null);
+      setStageToDelete(null); // Clear after attempt
       setReplacementStageName('');
     } else {
       toast({ title: "Invalid Selection", description: "Please select a replacement stage.", variant: "destructive" });
@@ -223,6 +227,7 @@ export default function RecruitmentStagesPage() {
       </div>
        <CardDescription>
         Manage the stages in your recruitment pipeline. System stages cannot be deleted or renamed. Custom stages can be reordered.
+        If a custom stage is in use, you will be prompted to migrate candidates to another stage upon deletion.
       </CardDescription>
 
       <Card>
@@ -261,7 +266,13 @@ export default function RecruitmentStagesPage() {
         </DialogContent>
       </Dialog>
 
-      <AlertDialog open={isReplacementModalOpen} onOpenChange={setIsReplacementModalOpen}>
+      <AlertDialog open={isReplacementModalOpen} onOpenChange={(open) => {
+        setIsReplacementModalOpen(open);
+        if (!open) {
+          setStageToDelete(null); // Clear stage to delete if modal is closed without action
+          setReplacementStageName('');
+        }
+      }}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center"><AlertCircle className="mr-2 h-5 w-5 text-amber-500"/>Stage In Use</AlertDialogTitle>
@@ -277,14 +288,14 @@ export default function RecruitmentStagesPage() {
                 <SelectValue placeholder="Choose a new stage..." />
               </SelectTrigger>
               <SelectContent>
-                {stages.filter(s => s.id !== stageToDelete?.id && !s.is_system).map(s => ( // Filter out the stage being deleted and system stages
+                {stages.filter(s => s.id !== stageToDelete?.id && !s.is_system).map(s => (
                   <SelectItem key={s.id} value={s.name}>{s.name}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
           <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => { setIsReplacementModalOpen(false); setStageToDelete(null); }}>Cancel</AlertDialogCancel>
+            <AlertDialogCancel onClick={() => { setIsReplacementModalOpen(false); setStageToDelete(null); setReplacementStageName(''); }}>Cancel</AlertDialogCancel>
             <AlertDialogAction onClick={handleConfirmDeleteWithReplacement} disabled={!replacementStageName}>
               Migrate and Delete Stage
             </AlertDialogAction>
@@ -292,7 +303,7 @@ export default function RecruitmentStagesPage() {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Fallback simple delete confirmation if no replacement is needed */}
+      {/* Fallback simple delete confirmation (only if not caught by needsReplacement flow initially) */}
       {stageToDelete && !isReplacementModalOpen && (
         <AlertDialog open={!!stageToDelete && !isReplacementModalOpen} onOpenChange={(open) => { if(!open) setStageToDelete(null);}}>
           <AlertDialogContent>
@@ -304,3 +315,5 @@ export default function RecruitmentStagesPage() {
     </div>
   );
 }
+
+    
