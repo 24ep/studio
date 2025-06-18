@@ -16,12 +16,12 @@ export const PLATFORM_MODULES = [
   { id: 'POSITIONS_EXPORT', label: 'Export Positions' },
   { id: 'USERS_MANAGE', label: 'Manage Users & Permissions' },
   { id: 'USER_GROUPS_MANAGE', label: 'Manage User Groups' },
-  { id: 'SYSTEM_SETTINGS_MANAGE', label: 'Manage System-Wide Settings (Name, Logo, Theme)' },
+  { id: 'SYSTEM_SETTINGS_MANAGE', label: 'Manage System-Wide Settings (Name, Logo, Theme, SMTP)' },
   { id: 'USER_PREFERENCES_MANAGE', label: 'Manage Own UI Preferences' },
   { id: 'RECRUITMENT_STAGES_MANAGE', label: 'Manage Recruitment Stages' },
   { id: 'CUSTOM_FIELDS_MANAGE', label: 'Manage Custom Field Definitions' },
   { id: 'WEBHOOK_MAPPING_MANAGE', label: 'Manage Webhook Mappings' },
-  { id: 'NOTIFICATION_SETTINGS_MANAGE', label: 'Manage Notification Settings' }, // New Permission
+  { id: 'NOTIFICATION_SETTINGS_MANAGE', label: 'Manage Notification Settings' },
   { id: 'LOGS_VIEW', label: 'View Application Logs' },
 ] as const;
 
@@ -347,8 +347,8 @@ export interface CustomFieldDefinition {
 
 // System-wide settings
 export interface SystemSetting {
-    key: 'appName' | 'appLogoDataUrl' | 'appThemePreference'; // Add more keys as needed
-    value: string | null; // Store theme preference as string e.g. "dark", "light", "system"
+    key: 'appName' | 'appLogoDataUrl' | 'appThemePreference' | 'smtpHost' | 'smtpPort' | 'smtpUser' | 'smtpSecure' | 'smtpFromEmail';
+    value: string | null; 
     updatedAt?: string;
 }
 
