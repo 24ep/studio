@@ -235,13 +235,9 @@ export function CandidatesPageClient({
   }, []);
 
   const refreshCandidateInList = useCallback(async (candidateId: string) => {
-    // If AI search is active, re-fetch all candidates and then re-apply AI filter to ensure consistency
-    // Or, for simplicity now, just re-fetch based on standard filters if AI search was a one-off.
-    // Let's keep it simple: If AI search was active, clearing it and re-fetching via standard filters might be easiest.
-    // For a more seamless experience, one might re-run the AI query or smartly update the existing list.
     if (aiMatchedCandidateIds !== null) {
         toast({title: "AI Search Active", description: "Please clear AI search or re-run it to see specific updates.", variant: "default" });
-        fetchFilteredCandidatesOnClient(filters); // Re-fetch based on current standard filters if AI was active
+        fetchFilteredCandidatesOnClient(filters); 
         return;
     }
 
@@ -382,7 +378,7 @@ export function CandidatesPageClient({
     exampleRows.forEach(row => {
         csvContent += row.map(val => `"${String(val || '').replace(/"/g, '""')}"`).join(',') + '\\n';
     });
-    csvContent += "\nNOTE: For array fields, provide a valid JSON string representation of the array of objects, or leave blank (e.g., []).";
+    csvContent += "\\nNOTE: For array fields, provide a valid JSON string representation of the array of objects, or leave blank (e.g., []).";
 
     downloadFile(csvContent, 'candidates_template.csv', 'text/csv;charset=utf-8;');
     toast({ title: "Template Guide Downloaded", description: "A CSV template for candidates has been downloaded." });
@@ -471,32 +467,39 @@ export function CandidatesPageClient({
         </div>
       </div>
 
-      <CandidateFilters
-        initialFilters={filters}
-        onFilterChange={handleFilterChange}
-        onAiSearch={handleAiSearch}
-        availablePositions={availablePositions}
-        availableStages={availableStages}
-        availableRecruiters={availableRecruiters}
-        isLoading={isLoading}
-        isAiSearching={isAiSearching}
-      />
+      <div className="flex flex-col md:flex-row gap-6">
+        <div className="md:w-80 lg:w-96 flex-shrink-0"> {/* Filters Panel */}
+          <CandidateFilters
+            initialFilters={filters}
+            onFilterChange={handleFilterChange}
+            onAiSearch={handleAiSearch}
+            availablePositions={availablePositions}
+            availableStages={availableStages}
+            availableRecruiters={availableRecruiters}
+            isLoading={isLoading || isAiSearching}
+            isAiSearching={isAiSearching}
+          />
+        </div>
 
-      {aiSearchReasoning && (
-        <Alert variant="default" className="bg-blue-50 border-blue-300 dark:bg-blue-900/30 dark:border-blue-700">
-          <Brain className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-          <AlertTitle className="font-semibold text-blue-700 dark:text-blue-300">AI Search Results</AlertTitle>
-          <AlertDescription className="text-blue-700 dark:text-blue-300">
-            {aiSearchReasoning}
-            {aiMatchedCandidateIds && aiMatchedCandidateIds.length === 0 && " No strong matches found."}
-          </AlertDescription>
-        </Alert>
-      )}
+        <div className="flex-1 space-y-4 min-w-0"> {/* Content Panel, min-w-0 for flexbox to shrink */}
+          {aiSearchReasoning && (
+            <Alert variant="default" className="bg-blue-50 border-blue-300 dark:bg-blue-900/30 dark:border-blue-700">
+              <Brain className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+              <AlertTitle className="font-semibold text-blue-700 dark:text-blue-300">AI Search Results</AlertTitle>
+              <AlertDescription className="text-blue-700 dark:text-blue-300">
+                {aiSearchReasoning}
+                {aiMatchedCandidateIds && aiMatchedCandidateIds.length === 0 && " No strong matches found."}
+              </AlertDescription>
+            </Alert>
+          )}
 
-      {(isLoading || isAiSearching) && displayedCandidates.length === 0 && !fetchError ? ( <div className="flex flex-col items-center justify-center h-64 border rounded-lg bg-card shadow"> <Users className="w-16 h-16 text-muted-foreground animate-pulse mb-4" /> <h3 className="text-xl font-semibold text-foreground"> {isAiSearching ? "AI Searching Candidates..." : "Loading Candidates..."}</h3> <p className="text-muted-foreground">Please wait while we fetch the data.</p> </div>
-      ) : (
-        <CandidateTable candidates={displayedCandidates} availablePositions={availablePositions} availableStages={availableStages} onUpdateCandidate={handleUpdateCandidateAPI} onDeleteCandidate={handleDeleteCandidate} onOpenUploadModal={handleOpenUploadModal} onEditPosition={handleOpenEditPositionModal} isLoading={(isLoading || isAiSearching) && displayedCandidates.length > 0 && !fetchError} onRefreshCandidateData={refreshCandidateInList} />
-      )}
+          {(isLoading || isAiSearching) && displayedCandidates.length === 0 && !fetchError ? ( <div className="flex flex-col items-center justify-center h-64 border rounded-lg bg-card shadow"> <Users className="w-16 h-16 text-muted-foreground animate-pulse mb-4" /> <h3 className="text-xl font-semibold text-foreground"> {isAiSearching ? "AI Searching Candidates..." : "Loading Candidates..."}</h3> <p className="text-muted-foreground">Please wait while we fetch the data.</p> </div>
+          ) : (
+            <CandidateTable candidates={displayedCandidates} availablePositions={availablePositions} availableStages={availableStages} onUpdateCandidate={handleUpdateCandidateAPI} onDeleteCandidate={handleDeleteCandidate} onOpenUploadModal={handleOpenUploadModal} onEditPosition={handleOpenEditPositionModal} isLoading={(isLoading || isAiSearching) && displayedCandidates.length > 0 && !fetchError} onRefreshCandidateData={refreshCandidateInList} />
+          )}
+        </div>
+      </div>
+
 
       <AddCandidateModal isOpen={isAddModalOpen} onOpenChange={setIsAddModalOpen} onAddCandidate={handleAddCandidateSubmit} availablePositions={availablePositions} availableStages={availableStages} />
       <UploadResumeModal isOpen={isUploadModalOpen} onOpenChange={setIsUploadModalOpen} candidate={selectedCandidateForUpload} onUploadSuccess={handleUploadSuccess} />
@@ -506,3 +509,4 @@ export function CandidatesPageClient({
     </div>
   );
 }
+
