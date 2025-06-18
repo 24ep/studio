@@ -378,7 +378,7 @@ export function CandidatesPageClient({
         <div className="w-full flex flex-col sm:flex-row gap-2 items-center sm:justify-end">
           <Button onClick={() => setIsCreateViaN8nModalOpen(true)} className="w-full sm:w-auto btn-primary-gradient"> <Zap className="mr-2 h-4 w-4" /> Create via Resume (Automated) </Button>
           <DropdownMenu>
-            <DropdownMenuTrigger asChild> <Button variant="outline" className="w-full sm:w-auto"> More Actions <ChevronDown className="ml-2 h-4 w-4" /> </Button> </DropdownMenuTrigger>
+            <DropdownMenuTrigger asChild><Button variant="outline" className="w-full sm:w-auto"> More Actions <ChevronDown className="ml-2 h-4 w-4" /> </Button></DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuItem onClick={() => setIsAddModalOpen(true)}> <PlusCircle className="mr-2 h-4 w-4" /> Add Candidate Manually </DropdownMenuItem>
               {canImportCandidates && (<DropdownMenuItem onClick={() => setIsImportModalOpen(true)}> <FileUp className="mr-2 h-4 w-4" /> Import Candidates (CSV) </DropdownMenuItem>)}
