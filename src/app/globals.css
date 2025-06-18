@@ -25,59 +25,59 @@ body {
     --popover: 0 0% 100%;
     --popover-foreground: 220 25% 20%;
 
-    /* Primary Gradient Definition for Light Theme - UPDATED */
-    --primary-gradient-start-l: 206 97% 73%; /* Light Blue from image: #77C3FD */
-    --primary-gradient-end-l: 244 95% 83%;   /* Light Purple from image: #B3AAFC */
-    --primary: hsl(var(--primary-gradient-start-l)); /* Base primary color derived from start of gradient */
-    --primary-foreground: 0 0% 100%; /* White text on primary */
+    /* Primary Gradient Definition for Light Theme */
+    --primary-gradient-start-l: 206 97% 73%; /* Light Blue: #77C3FD */
+    --primary-gradient-end-l: 244 95% 83%;   /* Light Purple: #B3AAFC */
+    --primary: hsl(var(--primary-gradient-start-l)); 
+    --primary-foreground: 0 0% 100%;
 
 
-    --secondary: 220 20% 94%; /* Lighter grey for secondary elements */
-    --secondary-foreground: 220 25% 30%; /* Dark text for secondary */
+    --secondary: 220 20% 94%; 
+    --secondary-foreground: 220 25% 30%; 
 
-    --muted: 220 20% 96%; /* Muted grey, slightly lighter */
-    --muted-foreground: 220 15% 50%; /* Muted text */
+    --muted: 220 20% 96%; 
+    --muted-foreground: 220 15% 50%; 
 
     --accent: 187 100% 42%; /* #00BCD4 Cyan */
-    --accent-foreground: 0 0% 100%; /* White text on Cyan */
+    --accent-foreground: 0 0% 100%; 
 
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 0 0% 98%;
 
-    --border: 220 15% 88%; /* Light grey Border color, slightly softer */
-    --input: 220 15% 88%; /* Light grey Input border */
-    --ring: hsl(var(--primary-gradient-start-l)); /* Ring matches primary */
+    --border: 220 15% 88%; 
+    --input: 220 15% 88%; 
+    --ring: hsl(var(--primary-gradient-start-l)); 
 
     --radius: 0.5rem;
 
-    /* Chart colors - can be customized further if specific chart palette is needed */
+    /* Chart colors */
     --chart-1: hsl(var(--primary-gradient-start-l));
     --chart-2: hsl(var(--accent));
-    --chart-3: 235 61% 65%; /* Lighter shade of end gradient for charts */
-    --chart-4: 195 100% 65%; /* Lighter shade of start gradient for charts */
+    --chart-3: 235 61% 65%; 
+    --chart-4: 195 100% 65%; 
     --chart-5: 220 14% 60%;
 
-    /* Sidebar specific theme variables - Light Theme Updated for "Modern Trend" */
-    --sidebar-background-l: linear-gradient(to bottom, hsl(220 25% 97%), hsl(220 20% 94%)); /* Light gray gradient */
-    --sidebar-foreground-l: 220 25% 30%; /* Dark grey text for readability */
-
-    /* Active item in light theme: primary gradient background, white text */
-    --sidebar-active-background-l: linear-gradient(to right, hsl(var(--primary-gradient-start-l)), hsl(var(--primary-gradient-end-l)));
-    --sidebar-active-foreground-l: hsl(var(--primary-foreground)); /* This is white */
-
-    --sidebar-accent-l: 220 10% 92%;       /* Subtle darker grey for hover background on non-active items */
-    --sidebar-accent-foreground-l: 220 25% 25%; /* Darker text for hover */
-    --sidebar-border-l: 220 15% 85%;     /* Slightly more defined, but still light border */
+    /* Sidebar Light Theme Variables (configurable) */
+    --sidebar-bg-start-l: 220 25% 97%; /* Default: Light Gray Gradient Start */
+    --sidebar-bg-end-l: 220 20% 94%;   /* Default: Light Gray Gradient End */
+    --sidebar-text-l: 220 25% 30%;    /* Default: Dark Grey Text */
+    --sidebar-active-bg-start-l: hsl(var(--primary-gradient-start-l)); /* Default: Primary Gradient Start */
+    --sidebar-active-bg-end-l: hsl(var(--primary-gradient-end-l));     /* Default: Primary Gradient End */
+    --sidebar-active-text-l: hsl(var(--primary-foreground));           /* Default: White Text */
+    --sidebar-hover-bg-l: 220 10% 92%;      /* Default: Subtle Darker Grey */
+    --sidebar-hover-text-l: 220 25% 25%;   /* Default: Darker Text */
+    --sidebar-border-l: 220 15% 85%;     /* Default: Light Border */
     --sidebar-ring-l: hsl(var(--ring));
+
 
     /* Green color for specific checked states */
     --custom-green-checked: 142 76% 36%;
-    --custom-green-checked-foreground: 0 0% 100%; /* Text on green bg (e.g., Switch) */
-    --custom-green-checked-icon: 142 76% 36%; /* Color for the check icon itself */
+    --custom-green-checked-foreground: 0 0% 100%; 
+    --custom-green-checked-icon: 142 76% 36%; 
 
     /* Preferences Page Specific Gradient */
-    --preferences-left-panel-gradient-start: 220 60% 25%; /* Darker Blue */
-    --preferences-left-panel-gradient-end: 230 50% 45%; /* Slightly Lighter/Varied Dark Blue */
+    --preferences-left-panel-gradient-start: 220 60% 25%; 
+    --preferences-left-panel-gradient-end: 230 50% 45%; 
 
 
   }
@@ -88,37 +88,37 @@ body {
     --body-background-mid-d: 220 15% 10%;
     --body-background-end-d: 220 15% 11%;
 
-    /* Solid background color for components - CORRECTED for dark theme */
-    --background: hsl(var(--body-background-start-d)); /* Use dark start color for dark theme component backgrounds */
+    /* Solid background color for components */
+    --background: hsl(var(--body-background-start-d)); 
     
-    --foreground: 210 30% 95%; /* Very light gray, almost white */
+    --foreground: 210 30% 95%; 
 
-    --card: 220 15% 13%; /* Slightly lighter than background */
+    --card: 220 15% 13%; 
     --card-foreground: 210 30% 95%;
 
-    --popover: 220 15% 16%; /* Popover a bit lighter */
+    --popover: 220 15% 16%; 
     --popover-foreground: 210 30% 95%;
 
-    /* Primary Gradient Definition for Dark Theme - UPDATED */
-    --primary-gradient-start-d: 206 97% 73%; /* Light Blue from image: #77C3FD */
-    --primary-gradient-end-d: 244 95% 83%;   /* Light Purple from image: #B3AAFC */
-    --primary: hsl(var(--primary-gradient-start-d)); /* Base primary color derived from start of gradient */
-    --primary-foreground: hsl(0 0% 100%); /* Explicitly white for primary actions text in dark mode */
+    /* Primary Gradient Definition for Dark Theme */
+    --primary-gradient-start-d: 206 97% 73%; /* Light Blue: #77C3FD */
+    --primary-gradient-end-d: 244 95% 83%;   /* Light Purple: #B3AAFC */
+    --primary: hsl(var(--primary-gradient-start-d)); 
+    --primary-foreground: hsl(0 0% 100%); 
 
-    --secondary: 220 15% 25%; /* Darker secondary elements */
+    --secondary: 220 15% 25%; 
     --secondary-foreground: 210 30% 85%;
 
     --muted: 220 15% 20%;
     --muted-foreground: 210 25% 70%;
 
-    --accent: 200 100% 55%; /* A complementary vibrant accent, e.g., a lighter blue or teal */
-    --accent-foreground: 220 15% 10%; /* Dark text on accent */
+    --accent: 200 100% 55%; 
+    --accent-foreground: 220 15% 10%; 
 
-    --destructive: 0 70% 55%; /* Slightly adjusted destructive */
+    --destructive: 0 70% 55%; 
     --destructive-foreground: 0 0% 98%;
 
-    --border: 220 15% 22%; /* Subtle borders */
-    --input: 220 15% 18%; /* Input slightly different from card */
+    --border: 220 15% 22%; 
+    --input: 220 15% 18%; 
     --ring: hsl(var(--primary-gradient-start-d));
 
      /* Chart colors */
@@ -128,27 +128,27 @@ body {
     --chart-4: 195 100% 65%;
     --chart-5: 220 15% 50%;
 
-    /* Sidebar dark theme variables - Modernized */
-    --sidebar-background-d: linear-gradient(to bottom, hsl(220 15% 12%), hsl(220 15% 9%)); /* Retain dark gradient */
-    --sidebar-foreground-d: 210 30% 85%;
-
-    /* Active item in dark theme: primary gradient background, white text */
-    --sidebar-active-background-d: linear-gradient(to right, hsl(var(--primary-gradient-start-d)), hsl(var(--primary-gradient-end-d)));
-    --sidebar-active-foreground-d: hsl(0 0% 100%); /* Explicitly white for selected menu text in dark mode */
-
-    --sidebar-accent-d: 220 15% 20%; /* Hover for non-active */
-    --sidebar-accent-foreground-d: 210 30% 90%; /* Text for hover non-active */
-    --sidebar-border-d: 220 15% 18%;
+    /* Sidebar Dark Theme Variables (configurable) */
+    --sidebar-bg-start-d: 220 15% 12%;  /* Default: Dark Gradient Start */
+    --sidebar-bg-end-d: 220 15% 9%;    /* Default: Dark Gradient End */
+    --sidebar-text-d: 210 30% 85%;     /* Default: Light Grey Text */
+    --sidebar-active-bg-start-d: hsl(var(--primary-gradient-start-d)); /* Default: Primary Gradient Start */
+    --sidebar-active-bg-end-d: hsl(var(--primary-gradient-end-d));   /* Default: Primary Gradient End */
+    --sidebar-active-text-d: hsl(0 0% 100%);                         /* Default: White Text */
+    --sidebar-hover-bg-d: 220 15% 20%;    /* Default: Darker Accent Hover */
+    --sidebar-hover-text-d: 210 30% 90%; /* Default: Lighter Text on Hover */
+    --sidebar-border-d: 220 15% 18%;   /* Default: Dark Border */
     --sidebar-ring-d: hsl(var(--primary-gradient-start-d));
+
 
      /* Green color for specific checked states */
     --custom-green-checked: 147 80% 40%;
-    --custom-green-checked-foreground: 0 0% 100%; /* Text on green bg (e.g., Switch) */
-    --custom-green-checked-icon: 147 80% 40%; /* Color for the check icon itself */
+    --custom-green-checked-foreground: 0 0% 100%; 
+    --custom-green-checked-icon: 147 80% 40%; 
 
     /* Preferences Page Specific Gradient - Dark Mode */
-    --preferences-left-panel-gradient-start: 220 70% 30%; /* Darker, saturated Blue */
-    --preferences-left-panel-gradient-end: 230 60% 50%;   /* Slightly Lighter/Varied Dark Blue */
+    --preferences-left-panel-gradient-start: 220 70% 30%; 
+    --preferences-left-panel-gradient-end: 230 60% 50%;   
   }
 }
 
@@ -157,62 +157,60 @@ body {
     @apply border-border;
   }
   body {
-    @apply bg-background text-foreground; /* Use solid --background for body first */
-    /* Apply gradient image ON TOP of solid background for light theme */
+    @apply bg-background text-foreground; 
     background-image: linear-gradient(90deg, hsl(var(--body-background-start-l)) 0%, hsl(var(--body-background-mid-l)) 55%, hsl(var(--body-background-end-l)) 100%);
   }
-  /* Apply gradient background directly to body for dark theme */
   .dark body {
-    @apply bg-background text-foreground; /* Use solid --background for body first */
+    @apply bg-background text-foreground; 
     background-image: linear-gradient(90deg, hsl(var(--body-background-start-d)) 0%, hsl(var(--body-background-mid-d)) 55%, hsl(var(--body-background-end-d)) 100%);
   }
 }
 
 /* Updated styles for sidebar and active menu item */
 @layer components {
-  /* Sidebar base style for light theme - Light Gray Gradient */
+  /* Sidebar base style for light theme */
   :root:not(.dark) [data-sidebar="sidebar"] {
-    background-image: var(--sidebar-background-l);
-    color: hsl(var(--sidebar-foreground-l));
+    background-image: linear-gradient(to bottom, hsl(var(--sidebar-bg-start-l)), hsl(var(--sidebar-bg-end-l)));
+    color: hsl(var(--sidebar-text-l));
     border-right: 1px solid hsl(var(--sidebar-border-l));
   }
   /* Light theme: Hover on non-active items */
   :root:not(.dark) [data-sidebar="menu-button"]:not([data-active="true"]):hover {
-    background-color: hsl(var(--sidebar-accent-l));
-    color: hsl(var(--sidebar-accent-foreground-l));
+    background-color: hsl(var(--sidebar-hover-bg-l));
+    color: hsl(var(--sidebar-hover-text-l));
   }
-  /* Light theme: Active menu item style - Primary Gradient Background */
+  /* Light theme: Active menu item style */
  :root:not(.dark) [data-sidebar="menu-button"][data-active="true"],
  :root:not(.dark) [data-sidebar="menu-button"][data-active="true"] span {
-    background-image: var(--sidebar-active-background-l);
-    color: var(--sidebar-active-foreground-l) !important; /* Ensure white text */
-    box-shadow: 0 2px 8px -2px hsla(var(--primary-gradient-start-l), 0.3); /* Softer shadow */
+    background-image: linear-gradient(to right, hsl(var(--sidebar-active-bg-start-l)), hsl(var(--sidebar-active-bg-end-l)));
+    color: hsl(var(--sidebar-active-text-l)) !important;
+    box-shadow: 0 2px 8px -2px hsla(var(--primary-gradient-start-l), 0.3);
   }
-   /* Light theme: Hover on active menu item - slightly adjust brightness */
+   /* Light theme: Hover on active menu item */
   :root:not(.dark) [data-sidebar="menu-button"][data-active="true"]:hover {
     filter: brightness(1.05);
   }
 
 
-  /* Sidebar base style for dark theme - Modernized */
+  /* Sidebar base style for dark theme */
   .dark [data-sidebar="sidebar"] {
-    background-image: var(--sidebar-background-d); /* Retain dark gradient */
-    color: hsl(var(--sidebar-foreground-d));
+    background-image: linear-gradient(to bottom, hsl(var(--sidebar-bg-start-d)), hsl(var(--sidebar-bg-end-d)));
+    color: hsl(var(--sidebar-text-d));
     border-right: 1px solid hsl(var(--sidebar-border-d));
   }
   /* Dark theme: Hover on non-active items */
   .dark [data-sidebar="menu-button"]:not([data-active="true"]):hover {
-    background-color: hsl(var(--sidebar-accent-d));
-    color: hsl(var(--sidebar-accent-foreground-d));
+    background-color: hsl(var(--sidebar-hover-bg-d));
+    color: hsl(var(--sidebar-hover-text-d));
   }
-  /* Dark theme: Active menu item style - Primary Dark Gradient */
+  /* Dark theme: Active menu item style */
   .dark [data-sidebar="menu-button"][data-active="true"],
   .dark [data-sidebar="menu-button"][data-active="true"] span {
-    background-image: var(--sidebar-active-background-d);
-    color: white !important; /* DIRECTLY SET TO WHITE WITH !IMPORTANT */
+    background-image: linear-gradient(to right, hsl(var(--sidebar-active-bg-start-d)), hsl(var(--sidebar-active-bg-end-d)));
+    color: hsl(var(--sidebar-active-text-d)) !important;
     box-shadow: 0 2px 10px -3px hsla(var(--primary-gradient-start-d), 0.4);
   }
-  /* Dark theme: Hover on active menu item - slightly adjust brightness */
+  /* Dark theme: Hover on active menu item */
   .dark [data-sidebar="menu-button"][data-active="true"]:hover {
     filter: brightness(1.1);
   }
@@ -235,21 +233,21 @@ body {
   }
   .btn-primary-gradient:hover {
     filter: brightness(1.1);
-    box-shadow: 0 2px 10px -3px hsla(var(--primary), 0.4); /* Uses updated --primary which is derived from start of gradient */
+    box-shadow: 0 2px 10px -3px hsla(var(--primary), 0.4); 
   }
 
   /* Blue gradient hover for secondary and outline button types */
   .btn-hover-primary-gradient:hover {
     background-image: linear-gradient(to right, hsl(var(--primary-gradient-start-l)), hsl(var(--primary-gradient-end-l)));
     color: hsl(var(--primary-foreground)) !important;
-    border-color: transparent !important; /* For outline buttons, ensure border goes away */
-    background-color: transparent !important; /* Reset base background to ensure gradient shows */
-    filter: none !important; /* Remove any inherited filters like brightness */
+    border-color: transparent !important; 
+    background-color: transparent !important; 
+    filter: none !important; 
     box-shadow: 0 2px 10px -3px hsla(var(--primary-gradient-start-l), 0.4);
   }
   .dark .btn-hover-primary-gradient:hover {
     background-image: linear-gradient(to right, hsl(var(--primary-gradient-start-d)), hsl(var(--primary-gradient-end-d)));
-    color: hsl(var(--primary-foreground)) !important; /* Ensure light text */
+    color: hsl(var(--primary-foreground)) !important; 
     border-color: transparent !important;
     background-color: transparent !important;
     filter: none !important;
@@ -264,9 +262,9 @@ body {
 
   /* Green variant checkbox: green border, green check icon, transparent background */
   .checkbox-green[data-state="checked"] {
-    background-color: transparent !important; /* Ensure background is transparent */
-    border-color: hsl(var(--custom-green-checked-icon)) !important; /* Green border */
-    color: hsl(var(--custom-green-checked-icon)) !important; /* Green check icon color */
+    background-color: transparent !important; 
+    border-color: hsl(var(--custom-green-checked-icon)) !important; 
+    color: hsl(var(--custom-green-checked-icon)) !important; 
   }
   .dark .checkbox-green[data-state="checked"] {
     background-color: transparent !important;
@@ -288,4 +286,6 @@ body {
     background-image: linear-gradient(to bottom right, hsl(var(--preferences-left-panel-gradient-start)), hsl(var(--preferences-left-panel-gradient-end)));
   }
 }
+    
+
     

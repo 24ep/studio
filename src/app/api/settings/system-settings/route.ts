@@ -13,7 +13,15 @@ const systemSettingKeyEnum = z.enum([
     'smtpHost', 'smtpPort', 'smtpUser', 'smtpSecure', 'smtpFromEmail',
     'n8nResumeWebhookUrl', 'n8nGenericPdfWebhookUrl', 'geminiApiKey',
     'loginPageBackgroundType', 'loginPageBackgroundImageUrl', 
-    'loginPageBackgroundColor1', 'loginPageBackgroundColor2'
+    'loginPageBackgroundColor1', 'loginPageBackgroundColor2',
+    // Sidebar Light Theme
+    'sidebarBgStartL', 'sidebarBgEndL', 'sidebarTextL',
+    'sidebarActiveBgStartL', 'sidebarActiveBgEndL', 'sidebarActiveTextL',
+    'sidebarHoverBgL', 'sidebarHoverTextL', 'sidebarBorderL',
+    // Sidebar Dark Theme
+    'sidebarBgStartD', 'sidebarBgEndD', 'sidebarTextD',
+    'sidebarActiveBgStartD', 'sidebarActiveBgEndD', 'sidebarActiveTextD',
+    'sidebarHoverBgD', 'sidebarHoverTextD', 'sidebarBorderD'
 ]);
 
 
@@ -93,4 +101,6 @@ export async function POST(request: NextRequest) {
     client.release();
   }
 }
+    
+
     

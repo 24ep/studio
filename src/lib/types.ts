@@ -376,7 +376,28 @@ export type SystemSettingKey =
   | 'loginPageBackgroundType'
   | 'loginPageBackgroundImageUrl'
   | 'loginPageBackgroundColor1'
-  | 'loginPageBackgroundColor2';
+  | 'loginPageBackgroundColor2'
+  // Sidebar Light Theme
+  | 'sidebarBgStartL'
+  | 'sidebarBgEndL'
+  | 'sidebarTextL'
+  | 'sidebarActiveBgStartL'
+  | 'sidebarActiveBgEndL'
+  | 'sidebarActiveTextL'
+  | 'sidebarHoverBgL'
+  | 'sidebarHoverTextL'
+  | 'sidebarBorderL'
+  // Sidebar Dark Theme
+  | 'sidebarBgStartD'
+  | 'sidebarBgEndD'
+  | 'sidebarTextD'
+  | 'sidebarActiveBgStartD'
+  | 'sidebarActiveBgEndD'
+  | 'sidebarActiveTextD'
+  | 'sidebarHoverBgD'
+  | 'sidebarHoverTextD'
+  | 'sidebarBorderD';
+
 
 export interface SystemSetting {
     key: SystemSettingKey;
@@ -441,6 +462,8 @@ export interface FilterableAttribute {
   label: string; // e.g., "Candidate Name", "Location (Resume)"
   type: 'string' | 'number' | 'date' | 'boolean' | 'array_string'; // To guide potential future UI or backend logic
 }
+    
+
     
 
     
