@@ -374,11 +374,11 @@ export function CandidatesPageClient({
        JSON.stringify([{job_title:"Senior Dev",fit_score:90}])
       ],
     ];
-     let csvContent = headers.join(',') + '\\n';
+     let csvContent = headers.join(',') + '\n';
     exampleRows.forEach(row => {
-        csvContent += row.map(val => `"${String(val || '').replace(/"/g, '""')}"`).join(',') + '\\n';
+        csvContent += row.map(val => `"${String(val || '').replace(/"/g, '""')}"`).join(',') + '\n';
     });
-    csvContent += "\\nNOTE: For array fields, provide a valid JSON string representation of the array of objects, or leave blank (e.g., []).";
+    csvContent += "\nNOTE: For array fields, provide a valid JSON string representation of the array of objects, or leave blank (e.g., []).";
 
     downloadFile(csvContent, 'candidates_template.csv', 'text/csv;charset=utf-8;');
     toast({ title: "Template Guide Downloaded", description: "A CSV template for candidates has been downloaded." });
