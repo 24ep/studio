@@ -63,7 +63,11 @@ export async function GET(request: NextRequest) {
     const limitParam = searchParams.get('limit');
     const offsetParam = searchParams.get('offset');
     const levelFilter = searchParams.get('level');
-    const searchQuery = searchParams.get('search'); // New search parameter
+    const searchQuery = searchParams.get('search');
+    const startDateFilter = searchParams.get('startDate');
+    const endDateFilter = searchParams.get('endDate');
+    const actingUserIdFilter = searchParams.get('actingUserId');
+
 
     let limit = 50; 
     if (limitParam) {
@@ -83,33 +87,60 @@ export async function GET(request: NextRequest) {
     
     const queryParams: any[] = [];
     const conditions = [];
+    let paramIndex = 1;
     
     if (levelFilter && logLevelValues.includes(levelFilter as LogLevel)) {
-        conditions.push(`level = $${queryParams.push(levelFilter)}`);
+        conditions.push(`level = $${paramIndex++}`);
+        queryParams.push(levelFilter);
     }
 
     if (searchQuery) {
-      conditions.push(`(message ILIKE $${queryParams.push(`%${searchQuery}%`)} OR source ILIKE $${queryParams.push(`%${searchQuery}%`)})`);
+      // Search in message or source
+      conditions.push(`(message ILIKE $${paramIndex++} OR source ILIKE $${paramIndex++})`);
+      queryParams.push(`%${searchQuery}%`, `%${searchQuery}%`);
+    }
+
+    if (startDateFilter) {
+        conditions.push(`timestamp >= $${paramIndex++}`);
+        queryParams.push(new Date(startDateFilter).toISOString());
+    }
+    if (endDateFilter) {
+        const endDate = new Date(endDateFilter);
+        endDate.setHours(23, 59, 59, 999); // Include the whole end day
+        conditions.push(`timestamp <= $${paramIndex++}`);
+        queryParams.push(endDate.toISOString());
+    }
+    if (actingUserIdFilter) {
+        conditions.push(`"actingUserId" = $${paramIndex++}`);
+        queryParams.push(actingUserIdFilter);
     }
     
-    let query = `SELECT id, timestamp, level, message, source, "actingUserId", details, "createdAt" FROM "LogEntry"`;
+    let query = `
+      SELECT l.id, l.timestamp, l.level, l.message, l.source, l."actingUserId", u.name as "actingUserName", l.details, l."createdAt" 
+      FROM "LogEntry" l
+      LEFT JOIN "User" u ON l."actingUserId" = u.id
+    `;
     if (conditions.length > 0) {
       query += ' WHERE ' + conditions.join(' AND ');
     }
-    query += ` ORDER BY timestamp DESC LIMIT $${queryParams.push(limit)} OFFSET $${queryParams.push(offset)};`;
+    query += ` ORDER BY l.timestamp DESC LIMIT $${paramIndex++} OFFSET $${paramIndex++};`;
+    queryParams.push(limit, offset);
     
     const result = await pool.query(query, queryParams);
     
     let countQuery = `SELECT COUNT(*) FROM "LogEntry"`;
     if (conditions.length > 0) {
-      // Reuse conditions for count, but not limit/offset params
-      const countConditions = conditions.map((cond, i) => cond.replace(`$${i + 1}`, `$${i + 1}`)); // Adjust param indices for count
-      countQuery += ' WHERE ' + countConditions.join(' AND ');
+      // Adjust paramIndex for count query as limit/offset are not included
+      const countConditionsParams = queryParams.slice(0, paramIndex - 3); // Exclude limit, offset, and the $ for limit
+      const countConditionsSql = conditions.map((cond, i) => cond.replace(/\$(\d+)/g, (match, n) => `$${parseInt(n, 10)}`)).join(' AND ');
+      countQuery += ' WHERE ' + countConditionsSql;
+       const countResult = await pool.query(countQuery, countConditionsParams);
+       return NextResponse.json({ logs: result.rows, total: parseInt(countResult.rows[0].count, 10) }, { status: 200 });
+    } else {
+        const countResult = await pool.query(countQuery);
+        return NextResponse.json({ logs: result.rows, total: parseInt(countResult.rows[0].count, 10) }, { status: 200 });
     }
-    
-    const countResult = await pool.query(countQuery, queryParams.slice(0, queryParams.length - 2)); // Exclude limit & offset for count
 
-    return NextResponse.json({ logs: result.rows, total: parseInt(countResult.rows[0].count, 10) }, { status: 200 });
 
   } catch (error) {
     console.error("Failed to fetch log entries:", error);

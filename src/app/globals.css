@@ -65,7 +65,8 @@ body {
 
     /* Green color for specific checked states */
     --custom-green-checked: 142 76% 36%;
-    --custom-green-checked-foreground: 0 0% 100%;
+    --custom-green-checked-foreground: 0 0% 100%; /* Text on green bg (e.g., Switch) */
+    --custom-green-checked-icon: 142 76% 36%; /* Color for the check icon itself */
 
   }
 
@@ -124,7 +125,8 @@ body {
 
      /* Green color for specific checked states */
     --custom-green-checked: 147 80% 40%;
-    --custom-green-checked-foreground: 0 0% 100%;
+    --custom-green-checked-foreground: 0 0% 100%; /* Text on green bg (e.g., Switch) */
+    --custom-green-checked-icon: 147 80% 40%; /* Color for the check icon itself */
   }
 }
 
@@ -226,13 +228,25 @@ body {
   }
 
   /* Custom green styles for checked states */
+  /* Default checkbox: primary border, primary check icon, transparent background */
+  .checkbox-primary[data-state="checked"] {
+    @apply bg-transparent border-primary text-primary;
+  }
+  
+  /* Green variant checkbox: green border, green check icon, transparent background */
   .checkbox-green[data-state="checked"] {
-    @apply bg-green-600 border-green-600 text-white;
+    background-color: transparent !important; /* Ensure background is transparent */
+    border-color: hsl(var(--custom-green-checked-icon)) !important; /* Green border */
+    color: hsl(var(--custom-green-checked-icon)) !important; /* Green check icon color */
   }
   .dark .checkbox-green[data-state="checked"] {
-    @apply bg-green-500 border-green-500 text-white;
+    background-color: transparent !important;
+    border-color: hsl(var(--custom-green-checked-icon)) !important;
+    color: hsl(var(--custom-green-checked-icon)) !important;
   }
 
+
+  /* Switch component green variant (background color) */
   .switch-green[data-state="checked"] {
     background-color: hsl(var(--custom-green-checked)) !important;
   }
@@ -240,4 +254,3 @@ body {
      background-color: hsl(var(--custom-green-checked)) !important;
   }
 }
-    
