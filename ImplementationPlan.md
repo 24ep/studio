@@ -7,7 +7,7 @@
 ## 1. Introduction
 
 ### 1.1. Purpose
-This document outlines the plan for implementing and deploying the Candidate Matching Applicant Tracking System (ATS) prototype. It covers pre-deployment setup, deployment procedures, post-deployment activities, and considerations for ongoing maintenance.
+This document outlines the plan for implementing and deploying the Candidate Matching Applicant Tracking System (ATS) prototype. It covers pre-deployment setup, deployment procedures, post-deployment activities, and considerations for ongoing maintenance, reflecting the system's current features.
 
 ### 1.2. Scope
 This plan focuses on deploying the application as described in the BRD and SRS documents, utilizing the specified technology stack (Next.js, PostgreSQL, MinIO, Docker).
@@ -69,7 +69,7 @@ This plan focuses on deploying the application as described in the BRD and SRS d
 #### 2.2.2. Deploy Services
 *   **Database:**
     *   Ensure the PostgreSQL server is running and accessible.
-    *   The `pg-init-scripts/init-db.sql` script will be executed by the PostgreSQL container on its first startup if the data volume is empty. This creates tables and the default admin user.
+    *   The `pg-init-scripts/init-db.sql` script will be executed by the PostgreSQL container on its first startup if the data volume is empty. This creates tables (including `SystemSetting`, `ResumeHistory`, `NotificationEvent`, etc.) and the default admin user.
     *   **Verify `init-db.sql` execution:** Check PostgreSQL container logs.
 *   **MinIO:**
     *   Deploy the MinIO service (e.g., via Docker Compose or managed service).
@@ -92,16 +92,17 @@ This plan focuses on deploying the application as described in the BRD and SRS d
 *   Log in as the default admin.
 *   **Immediately change the default admin password.**
 *   Perform basic CRUD operations:
-    *   Create a new user.
-    *   Create a new position.
-    *   Create a new candidate, assign to the position, upload a dummy resume.
-    *   Change candidate status.
-*   Verify settings pages load (Preferences, Recruitment Stages, User Groups, etc.).
+    *   Create a new user, assign roles/permissions/groups.
+    *   Create a new position, add custom fields if defined.
+    *   Create a new candidate, assign to the position, upload a dummy resume and profile image.
+    *   Change candidate status, check transition history.
+*   Verify settings pages load (Preferences, Recruitment Stages, User Groups, Custom Fields, Webhook Mapping, Notification Settings, Data Model Preferences).
+*   Test log viewing, filtering, and search.
 *   Check application logs for any startup errors or warnings.
 
 #### 2.3.2. User Account Setup & Training
 *   Create accounts for initial users (Recruiters, Hiring Managers, other Admins).
-*   Assign appropriate roles and module permissions.
+*   Assign appropriate roles, permissions, and group memberships.
 *   Provide training documentation or sessions to users on how to use the ATS.
 
 #### 2.3.3. Monitoring & Logging
@@ -114,7 +115,7 @@ This plan focuses on deploying the application as described in the BRD and SRS d
     *   Configure regular automated backups for the PostgreSQL database (e.g., daily snapshots).
     *   Test backup restoration periodically.
 *   **MinIO Backups:**
-    *   Configure backups for MinIO data (resumes, files) if critical. Options include MinIO's `mc mirror` or filesystem-level backups of the MinIO data volume.
+    *   Configure backups for MinIO data (resumes, avatars, files) if critical. Options include MinIO's `mc mirror` or filesystem-level backups of the MinIO data volume.
     *   Test restoration.
 
 ### 2.4. Phase 4: Ongoing Maintenance
@@ -135,7 +136,7 @@ This plan focuses on deploying the application as described in the BRD and SRS d
 *   **Week 2:**
     *   Build Docker image.
     *   Deploy database, MinIO, and application.
-    *   Initial system checks and smoke testing.
+    *   Initial system checks and smoke testing (including new features).
 *   **Week 3:**
     *   User account setup for key stakeholders.
     *   Basic user training/documentation.
@@ -163,14 +164,16 @@ This plan focuses on deploying the application as described in the BRD and SRS d
 | Risk                                      | Likelihood | Impact | Mitigation Strategy                                                                                                                                  |
 | :---------------------------------------- | :--------- | :----- | :--------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Incorrect Environment Configuration       | Medium     | High   | Double-check all environment variables. Use a `.env.example` file. Test configuration in a staging-like environment if possible.                     |
-| Database Initialization Failure           | Medium     | High   | Verify `init-db.sql` script syntax. Check PostgreSQL container logs for errors during startup. Ensure Docker volume for data is empty on first run.   |
+| Database Initialization Failure           | Medium     | High   | Verify `init-db.sql` script syntax (including new tables). Check PostgreSQL container logs for errors. Ensure Docker volume for data is empty on first run. |
 | MinIO Bucket Creation/Access Issues       | Medium     | Medium | Verify MinIO credentials and endpoint. Ensure network connectivity. Check MinIO server logs.                                                           |
-| Security Vulnerabilities                  | Medium     | High   | Keep dependencies updated. Follow security best practices for secrets management, HTTPS, and network access. (For prototype, focus on basics).        |
+| Security Vulnerabilities                  | Medium     | High   | Keep dependencies updated. Follow security best practices for secrets management, HTTPS, and network access. Test permission model thoroughly.         |
 | Data Loss (DB or Files)                   | Low        | High   | Implement and test automated backup and recovery procedures for PostgreSQL and MinIO.                                                                    |
-| Application Bugs Post-Deployment          | Medium     | Medium | Thorough smoke testing. Monitor application logs. Have a rollback plan if possible (e.g., previous Docker image).                                    |
-| User Training / Adoption Issues (Future)  | Medium     | Medium | Provide clear documentation and training. Gather user feedback. (Lower risk for prototype with limited users).                                       |
+| Application Bugs Post-Deployment          | Medium     | Medium | Thorough smoke testing of all features, especially new ones. Monitor application logs. Have a rollback plan if possible (e.g., previous Docker image). |
+| User Training / Adoption Issues (Future)  | Medium     | Medium | Provide clear documentation and training for new features. Gather user feedback. (Lower risk for prototype with limited users).                       |
 | Unexpected Costs (Hosting, Services)      | Low        | Medium | Monitor resource usage. Choose appropriate service tiers for expected load (prototype load is low).                                                      |
+| Incomplete Feature Implementation         | Low        | Medium | Clearly document features that are UI-only (e.g., notification triggering) vs. fully functional.                                                     |
 
 ---
 
 This implementation plan provides a general guideline. Specific steps and timelines may vary based on the chosen hosting environment and operational requirements.
+```

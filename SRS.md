@@ -49,22 +49,23 @@
 
 ### 1.1. Purpose
 
-This Software Requirements Specification (SRS) document describes the functional and non-functional requirements for the Candidate Matching Applicant Tracking System (ATS). It serves as a guide for the development, testing, and deployment of the system.
+This Software Requirements Specification (SRS) document describes the functional and non-functional requirements for the Candidate Matching Applicant Tracking System (ATS). It serves as a guide for the development, testing, and deployment of the system, reflecting its current enhanced capabilities.
 
 ### 1.2. Scope
 
 The Candidate Matching ATS is a web-based application designed to manage the recruitment lifecycle. This includes:
 
-| Area                                      | Description                                                     |
-| :---------------------------------------- | :-------------------------------------------------------------- |
-| Candidate Profile Management              | Managing candidate profiles, applications, and resumes.         |
-| Job Position Management                   | Creating and tracking job positions.                            |
-| User Account Management                   | Managing user accounts, roles, and permissions.                 |
-| Dashboard & Metrics                       | Providing a dashboard for key recruitment metrics.              |
-| Logging                                   | Logging system and user activities.                             |
-| API                                       | Offering an API for potential integrations.                     |
+| Area                                      | Description                                                                                      |
+| :---------------------------------------- | :----------------------------------------------------------------------------------------------- |
+| Candidate Profile Management              | Managing candidate profiles, applications, resumes (with history), and profile images.           |
+| Job Position Management                   | Creating and tracking job positions.                                                             |
+| User Account Management                   | Managing user accounts, roles, user groups, and granular permissions.                            |
+| Dashboard & Metrics                       | Providing a dashboard for key recruitment metrics.                                               |
+| Settings & Configuration                  | Managing system preferences, recruitment stages, custom fields, notification settings, etc.      |
+| Logging                                   | Logging system and user activities with search and filter capabilities.                          |
+| API                                       | Offering an API for potential integrations.                                                      |
 
-Features currently out of scope for the prototype include advanced AI matching, direct job board posting, and a public-facing candidate portal.
+Features currently out of scope for the prototype include advanced AI matching, actual sending of notifications, direct job board posting, and a public-facing candidate portal.
 
 ### 1.3. Definitions, Acronyms, and Abbreviations
 
@@ -82,6 +83,7 @@ Features currently out of scope for the prototype include advanced AI matching, 
 *   **Tailwind CSS:** CSS framework
 *   **n8n:** Workflow automation tool
 *   **Genkit:** AI framework (conceptual for this phase)
+*   **CSV:** Comma-Separated Values
 
 ### 1.4. References
 
@@ -99,28 +101,31 @@ This document details the system's capabilities, constraints, and interfaces. Se
 
 ### 2.1. Product Perspective
 
-The Candidate Matching ATS is a self-contained web application. It interacts with a PostgreSQL database for data persistence and a MinIO server for file storage (e.g., resumes). It can optionally integrate with Azure AD for SSO and n8n for workflow automation via webhooks.
+The Candidate Matching ATS is a self-contained web application. It interacts with a PostgreSQL database for data persistence and a MinIO server for file storage (e.g., resumes, candidate avatars). It can optionally integrate with Azure AD for SSO and n8n for workflow automation via webhooks. It features server-side configuration for several aspects of its operation.
 
 ### 2.2. Product Functions
 
-| Function                                                                 |
-| :----------------------------------------------------------------------- |
-| Secure user authentication and authorization.                            |
-| Creation and management of candidate profiles, including resume uploads and status tracking. |
-| Creation and management of job positions.                                |
-| User account management with role and permission assignments.            |
-| A dashboard providing an overview of recruitment activities.             |
-| Logging of important system events and user actions.                     |
-| Configuration options for recruitment stages, custom fields, and webhook mappings. |
-| An API for programmatic access to certain functionalities.               |
+| Function                                                                                                |
+| :------------------------------------------------------------------------------------------------------ |
+| Secure user authentication (credentials, Azure AD SSO) and authorization (roles, permissions, groups).  |
+| User self-service password changes.                                                                     |
+| Creation and management of candidate profiles, including resume uploads (with history) and profile images. |
+| Creation and management of job positions, including custom fields.                                      |
+| User account management with role, group, and granular permission assignments.                          |
+| A dashboard providing an overview of recruitment activities.                                            |
+| Logging of important system events and user actions, with search and filtering.                         |
+| Server-side configuration options for application preferences (name, logo), recruitment stages (including deletion with replacement), custom fields, user UI data model preferences, webhook mappings, and notification settings. |
+| An API for programmatic access to certain functionalities.                                              |
+| Import and export capabilities for candidate and position data (CSV).                                   |
+| Filterable task board for recruiters and admins.                                                        |
 
 ### 2.3. User Characteristics
 
-| User Role               | Description/Responsibilities                                                                                        |
-| :---------------------- | :------------------------------------------------------------------------------------------------------------------ |
-| System Administrator    | Technical user responsible for user management, system configuration, viewing logs, and overall system health.      |
-| Recruiter               | Primary user responsible for managing candidates, positions, tracking applications, and utilizing "My Task Board".    |
-| Hiring Manager          | User involved in reviewing assigned candidates and providing feedback (access typically more restricted).         |
+| User Role               | Description/Responsibilities                                                                                                                     |
+| :---------------------- | :----------------------------------------------------------------------------------------------------------------------------------------------- |
+| System Administrator    | Technical user responsible for user management, system configuration (stages, fields, notifications, groups, permissions), logs, and system health. |
+| Recruiter               | Primary user responsible for managing candidates, positions, tracking applications, utilizing "My Task Board".                                   |
+| Hiring Manager          | User involved in reviewing assigned candidates and providing feedback (access typically more restricted based on permissions).                   |
 
 ### 2.4. Constraints
 
@@ -129,6 +134,8 @@ The Candidate Matching ATS is a self-contained web application. It interacts wit
 *   File storage is handled by a MinIO-compatible object storage service.
 *   Authentication is managed by NextAuth.js.
 *   The application is designed to be deployed using Docker and Docker Compose.
+*   Actual sending of notifications (email/webhook) is not implemented in this phase, only configuration.
+*   Rich UI interactions like drag-and-drop for sorting are not implemented.
 
 ### 2.5. Assumptions and Dependencies
 
@@ -146,7 +153,7 @@ The Candidate Matching ATS is a self-contained web application. It interacts wit
 | ID          | Requirement Description                                                                     |
 | :---------- | :------------------------------------------------------------------------------------------ |
 | FR-AUTH-001 | The system shall allow users to log in using their registered email and password.             |
-| FR-AUTH-002 | The system shall securely hash and store user passwords.                                    |
+| FR-AUTH-002 | The system shall securely hash and store user passwords using bcrypt.                       |
 | FR-AUTH-003 | The system shall support Single Sign-On (SSO) via Azure Active Directory.                     |
 | FR-AUTH-004 | The system shall redirect unauthenticated users to the sign-in page.                          |
 | FR-AUTH-005 | The system shall allow authenticated users to log out.                                        |
@@ -169,20 +176,21 @@ The Candidate Matching ATS is a self-contained web application. It interacts wit
 | :----------- | :--------------------------------------------------------------------------------------------------------------------- |
 | FR-CAND-001  | Authorized users shall be able to create new candidate profiles manually.                                                |
 | FR-CAND-002  | The system shall allow uploading candidate resumes (PDF, DOC, DOCX) to MinIO.                                            |
-| FR-CAND-003  | The system shall provide an option to send uploaded resumes to a configurable n8n webhook for processing.                |
-| FR-CAND-004  | The system shall allow authorized users to view a list of all candidates, with filtering options.                        |
-| FR-CAND-005  | Authorized users shall be able to view detailed information for a specific candidate.                                    |
-| FR-CAND-006  | Authorized users shall be able to edit candidate profile information, including parsed data fields.                      |
-| FR-CAND-007  | Authorized users shall be able to update a candidate's status in the recruitment pipeline.                               |
-| FR-CAND-008  | Each status change shall be logged as a transition record, with the option to add notes.                                 |
-| FR-CAND-009  | Authorized users shall be able to edit notes for existing transition records.                                            |
-| FR-CAND-010  | Authorized users shall be able to delete transition records.                                                             |
-| FR-CAND-011  | Authorized users shall be able to assign a candidate to a specific recruiter.                                            |
-| FR-CAND-012  | Authorized users (Admin) shall be able to delete candidate profiles.                                                     |
-| FR-CAND-013  | The system shall support associating custom-defined fields with candidate profiles.                                      |
-| FR-CAND-014  | The system shall provide an option to import candidates from an Excel/CSV file.                                          |
-| FR-CAND-015  | The system shall provide an option to export candidate data to a CSV file.                                               |
-| FR-CAND-016  | The system shall allow uploading a PDF resume to an n8n webhook for automated new candidate creation.                    |
+| FR-CAND-003  | The system shall maintain a history of uploaded resumes for each candidate.                                              |
+| FR-CAND-004  | The system shall allow uploading and displaying a profile image for each candidate.                                      |
+| FR-CAND-005  | The system shall provide an option to send uploaded resumes to a configurable n8n webhook for processing.                |
+| FR-CAND-006  | The system shall allow authorized users to view a list of all candidates, with enhanced filtering options (name, position, status, education, fit score). |
+| FR-CAND-007  | Authorized users shall be able to view detailed information for a specific candidate.                                    |
+| FR-CAND-008  | Authorized users shall be able to edit candidate profile information, including parsed data fields.                      |
+| FR-CAND-009  | Authorized users shall be able to update a candidate's status in the recruitment pipeline.                               |
+| FR-CAND-010  | Each status change shall be logged as a transition record, with the option to add/edit notes.                            |
+| FR-CAND-011  | Authorized users shall be able to delete transition records.                                                             |
+| FR-CAND-012  | Authorized users shall be able to assign a candidate to a specific recruiter.                                            |
+| FR-CAND-013  | Authorized users (Admin or with permission) shall be able to delete candidate profiles.                                  |
+| FR-CAND-014  | The system shall support associating custom-defined fields with candidate profiles.                                      |
+| FR-CAND-015  | The system shall provide an option to import candidates from a CSV file.                                                 |
+| FR-CAND-016  | The system shall provide an option to export candidate data to a CSV file.                                               |
+| FR-CAND-017  | The system shall allow uploading a PDF resume to an n8n webhook for automated new candidate creation.                    |
 
 #### 3.1.4. Position Management
 
@@ -190,12 +198,12 @@ The Candidate Matching ATS is a self-contained web application. It interacts wit
 | :---------- | :------------------------------------------------------------------------------------------------------------------ |
 | FR-POS-001  | Authorized users shall be able to create new job positions.                                                         |
 | FR-POS-002  | Position details shall include title, department, description, open/closed status, and position level.              |
-| FR-POS-003  | Authorized users shall be able to view a list of all job positions, with filtering options.                         |
+| FR-POS-003  | Authorized users shall be able to view a list of all job positions, with enhanced filtering options (title, department, status, level). |
 | FR-POS-004  | Authorized users shall be able to view detailed information for a specific position.                                |
 | FR-POS-005  | Authorized users shall be able to edit job position details.                                                        |
-| FR-POS-006  | Authorized users (Admin) shall be able to delete job positions (prevented if candidates are associated).            |
+| FR-POS-006  | Authorized users (Admin or with permission) shall be able to delete job positions (prevented if candidates are associated, unless replacement is handled). |
 | FR-POS-007  | The system shall support associating custom-defined fields with position profiles.                                  |
-| FR-POS-008  | The system shall provide an option to import positions from an Excel/CSV file.                                      |
+| FR-POS-008  | The system shall provide an option to import positions from a CSV file.                                             |
 | FR-POS-009  | The system shall provide an option to export position data to a CSV file.                                           |
 
 #### 3.1.5. User Management
@@ -203,12 +211,13 @@ The Candidate Matching ATS is a self-contained web application. It interacts wit
 | ID          | Requirement Description                                                                                             |
 | :---------- | :------------------------------------------------------------------------------------------------------------------ |
 | FR-USER-001 | Administrators shall be able to create new user accounts.                                                             |
-| FR-USER-002 | Administrators shall be able to view a list of all users.                                                             |
+| FR-USER-002 | Administrators shall be able to view a list of all users, with filtering (name, email, role).                       |
 | FR-USER-003 | Administrators shall be able to edit user details, including name, email, role, and reset password.                 |
-| FR-USER-004 | Administrators shall be able to assign/revoke specific module permissions for users.                                  |
+| FR-USER-004 | Administrators shall be able to assign/revoke specific module permissions (e.g., import/export) to users.           |
 | FR-USER-005 | Administrators shall be able to delete user accounts (except their own).                                              |
 | FR-USER-006 | Administrators shall be able to create, view, edit, and delete user groups.                                         |
 | FR-USER-007 | Administrators shall be able to assign users to one or more user groups.                                            |
+| FR-USER-008 | Administrators shall be able to assign module permissions to user groups.                                           |
 
 #### 3.1.6. My Task Board
 
@@ -218,18 +227,19 @@ The Candidate Matching ATS is a self-contained web application. It interacts wit
 | FR-TASK-002 | The task board shall display candidates assigned to the logged-in recruiter.                                        |
 | FR-TASK-003 | Administrators shall be able to filter the task board to view candidates assigned to any recruiter or all candidates. |
 | FR-TASK-004 | The task board shall offer both a list view and a Kanban view.                                                      |
-| FR-TASK-005 | Users shall be able to filter candidates on the task board by status.                                                 |
+| FR-TASK-005 | Users shall be able to filter candidates on the task board using enhanced filters similar to the main candidate list. |
 
 #### 3.1.7. Settings
 
 | ID               | Requirement Description                                                                                                             |
 | :--------------- | :---------------------------------------------------------------------------------------------------------------------------------- |
-| FR-SET-001       | Users shall be able to manage client-side preferences (theme, app name, logo).                                                      |
-| FR-SET-002       | Administrators shall be able to manage system-wide recruitment stages.                                                              |
-| FR-SET-003       | Administrators shall be able to view data model attributes and set local UI display preferences.                                    |
+| FR-SET-001       | Administrators shall be able to manage server-side application preferences (theme preference, app name, app logo).                |
+| FR-SET-002       | Administrators shall be able to manage system-wide recruitment stages, including deletion with candidate migration.                 |
+| FR-SET-003       | Users (with permission) shall be able to view data model attributes and set server-side UI display preferences (per user).        |
 | FR-SET-004       | Administrators shall be able to define custom data fields for Candidate and Position models.                                        |
 | FR-SET-005       | Administrators shall be able to configure mappings for incoming webhook payloads.                                                     |
 | FR-SET-006       | The system shall provide a UI to display information about server-configured webhook URLs and conceptual SMTP settings.             |
+| FR-SET-007       | Administrators shall be able to configure notification settings, enabling/disabling specific events and channels (email, webhook), and setting webhook URLs. |
 
 #### 3.1.8. Logging
 
@@ -238,18 +248,19 @@ The Candidate Matching ATS is a self-contained web application. It interacts wit
 | FR-LOG-001  | The system shall log key actions to a database table ("LogEntry").                                                    |
 | FR-LOG-002  | Authorized users (Admin or specific permission) shall be able to view application logs.                               |
 | FR-LOG-003  | Log entries shall include timestamp, level, message, source, acting user ID, and optional details.                  |
-| FR-LOG-004  | The log viewing page shall support filtering by log level and pagination.                                             |
+| FR-LOG-004  | The log viewing page shall support filtering by log level and searching by message/source, with pagination.           |
 
 #### 3.1.9. API
 
 | ID          | Requirement Description                                                                                             |
 | :---------- | :------------------------------------------------------------------------------------------------------------------ |
-| FR-API-001  | The system shall expose RESTful API endpoints for managing candidates (CRUD, resume upload).                        |
+| FR-API-001  | The system shall expose RESTful API endpoints for managing candidates (CRUD, resume upload, avatar upload).         |
 | FR-API-002  | The system shall expose RESTful API endpoints for managing positions (CRUD).                                        |
 | FR-API-003  | The system shall expose RESTful API endpoints for managing users (CRUD) - Admin restricted.                           |
 | FR-API-004  | The system shall expose an API endpoint for receiving candidate data from external workflows (e.g., n8n).             |
 | FR-API-005  | The system shall expose an API endpoint for logging.                                                                  |
 | FR-API-006  | The system shall provide an API documentation page listing key public/semi-public endpoints.                        |
+| FR-API-007  | The system shall expose API endpoints for managing system settings (preferences, stages, custom fields, webhook mappings, notification settings) - Admin restricted. |
 
 ### 3.2. User Interface (UI) Requirements
 
@@ -262,13 +273,15 @@ The Candidate Matching ATS is a self-contained web application. It interacts wit
 | UI-005 | Tables shall support sorting (where applicable) and display data clearly.                                       |
 | UI-006 | Loading states shall be indicated to the user (e.g., spinners).                                                 |
 | UI-007 | Error messages and success notifications shall be displayed to the user via toasts.                             |
+| UI-008 | Key dropdowns (e.g., for status selection, some filters) shall support type-ahead search functionality.         |
+| UI-009 | Data model preferences page shall use tabs for Candidate and Position models.                                   |
 
 ### 3.3. External Interface Requirements
 
 | ID      | Interface              | Description                                                                                                                    |
 | :------ | :--------------------- | :----------------------------------------------------------------------------------------------------------------------------- |
 | EI-001  | Database (PostgreSQL)  | Interface with PostgreSQL for data persistence.                                                                                |
-| EI-002  | File Storage (MinIO)   | Interface with MinIO (or S3-compatible) for storing resumes and other files.                                                   |
+| EI-002  | File Storage (MinIO)   | Interface with MinIO (or S3-compatible) for storing resumes, candidate avatars, and other files.                               |
 | EI-003  | Azure AD (Optional)    | Interface with Azure Active Directory for SSO if configured.                                                                   |
 | EI-004  | n8n Webhooks (Optional)| Send/receive data to/from n8n workflows for automation.                                                                        |
 | EI-005  | Google AI (Conceptual) | Future interface with Google AI services via Genkit.                                                                           |
@@ -288,7 +301,7 @@ The Candidate Matching ATS is a self-contained web application. It interacts wit
 | ID      | Requirement Description                                                                                        |
 | :------ | :------------------------------------------------------------------------------------------------------------- |
 | NFS-001 | All user passwords stored in the database must be hashed using `bcrypt`.                                       |
-| NFS-002 | Access to API endpoints and UI functionalities must be protected by authentication and RBAC.                   |
+| NFS-002 | Access to API endpoints and UI functionalities must be protected by authentication and RBAC (roles, permissions). |
 | NFS-003 | The system shall use HTTPS for all communication in a production environment.                                  |
 | NFS-004 | Input validation must be performed on both client-side and server-side.                                        |
 | NFS-005 | `NEXTAUTH_SECRET` must be a strong, random string and kept confidential.                                       |
@@ -322,18 +335,25 @@ The Candidate Matching ATS is a self-contained web application. It interacts wit
 
 Key tables include:
 
-| Table Name              | Description                                                                         |
-| :---------------------- | :---------------------------------------------------------------------------------- |
-| User                    | Stores user information (id, name, email, password, role, permissions, etc.).         |
-| UserGroup               | Stores user group information (id, name, description).                              |
-| User_UserGroup          | Join table for User and UserGroup many-to-many relationship.                        |
-| Position                | Stores job position details (id, title, department, description, status, etc.).     |
-| Candidate               | Stores candidate information (id, name, email, resume, status, assigned position, etc.).|
-| TransitionRecord        | Logs candidate status changes.                                                      |
-| RecruitmentStage        | Defines stages in the recruitment pipeline.                                         |
-| LogEntry                | Stores application and audit logs.                                                  |
-| CustomFieldDefinition   | Defines custom fields for Candidate and Position models.                            |
-| WebhookFieldMapping     | Stores mappings for incoming webhook payloads.                                      |
+| Table Name                  | Description                                                                                                |
+| :-------------------------- | :--------------------------------------------------------------------------------------------------------- |
+| User                        | Stores user information (id, name, email, password, role, modulePermissions, avatarUrl, etc.).              |
+| UserGroup                   | Stores user group information (id, name, description).                                                     |
+| User_UserGroup              | Join table for User and UserGroup many-to-many relationship.                                               |
+| UserGroup_PlatformModule    | Join table for UserGroup and PlatformModule (permissions) many-to-many relationship.                     |
+| Position                    | Stores job position details (id, title, department, description, status, custom_attributes, etc.).         |
+| Candidate                   | Stores candidate information (id, name, email, resumePath, avatarUrl, status, parsedData, custom_attributes, etc.). |
+| ResumeHistory               | Stores history of resume uploads for candidates.                                                           |
+| TransitionRecord            | Logs candidate status changes.                                                                             |
+| RecruitmentStage            | Defines stages in the recruitment pipeline (system and custom).                                            |
+| LogEntry                    | Stores application and audit logs.                                                                         |
+| CustomFieldDefinition       | Defines custom fields for Candidate and Position models.                                                   |
+| WebhookFieldMapping         | Stores mappings for incoming webhook payloads.                                                             |
+| SystemSetting               | Stores system-wide preferences (e.g., appName, appLogoDataUrl).                                            |
+| UserUIDisplayPreference     | Stores user-specific UI display preferences for data model attributes.                                     |
+| NotificationEvent           | Defines system events that can trigger notifications.                                                      |
+| NotificationChannel         | Defines notification channels (e.g., email, webhook).                                                      |
+| NotificationSetting         | Links events to channels and stores their configuration (e.g., enabled, webhook URL).                      |
 
 (Note: Detailed schema is in `pg-init-scripts/init-db.sql`)
 
@@ -348,13 +368,15 @@ Key tables include:
 
 ## 6. Future Considerations
 
-| Consideration                                    |
-| :----------------------------------------------- |
-| AI Integration (Genkit)                          |
-| Real-time Features (Redis)                       |
-| Advanced Reporting & Analytics                   |
-| Third-Party Integrations (Job boards, HRIS)      |
-| Candidate Portal                                 |
-| Automated Email Workflows                        |
-| Full User Group Permission Model                 |
+| Consideration                                            |
+| :------------------------------------------------------- |
+| AI Integration (Genkit) for advanced matching and parsing. |
+| Real-time Features (Redis) for notifications and collaboration. |
+| **Implementation of actual notification sending logic.** |
+| Advanced Reporting & Analytics.                          |
+| Third-Party Integrations (Job boards, HRIS).             |
+| Candidate Portal.                                        |
+| Automated Email Workflows.                               |
+| Full User Group Permission Inheritance enforcement.      |
+| Rich UI for drag-and-drop sorting.                       |
 ```

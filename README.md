@@ -9,36 +9,45 @@ This is a Next.js application prototype for an Applicant Tracking System, built 
 *   **Candidate Management:**
     *   View, Add, Edit (detailed profile and status updates), Delete candidates.
     *   Resume Uploads: Direct upload to MinIO, with optional n8n webhook trigger for processing.
+    *   **Resume History:** Tracks all uploaded resume versions for a candidate (API support; UI display for history is a future enhancement).
+    *   **Profile Image Upload:** Upload and display candidate profile images.
     *   Transition History: Track candidate stage changes with notes; ability to edit notes and delete records.
     *   Recruiter Assignment: Assign candidates to specific recruiters.
     *   Custom Fields: Support for defining and using custom data fields for candidates.
+    *   Comprehensive Filtering: Filter by name, position, status, education, fit score.
+    *   Import/Export: Bulk import and export of candidate data (CSV format).
 *   **Position Management:**
     *   View, Add, Edit, Delete job positions.
     *   Attributes: Includes title, department, description, open status, and `position_level`.
     *   Custom Fields: Support for defining and using custom data fields for positions.
+    *   Comprehensive Filtering: Filter by title, department, status, position level.
+    *   Import/Export: Bulk import and export of position data (CSV format).
 *   **User Management:**
     *   View, Add, Edit, Delete users.
     *   Role-Based Access Control (RBAC): Admin, Recruiter, Hiring Manager roles.
-    *   Module Permissions: Granular control over feature access.
-    *   Password Management: Securely hashed passwords using `bcrypt`.
-    *   User Group Management: Create and manage user groups (for future bulk permission assignment).
-*   **My Task Board:** Kanban and list view for Recruiters/Admins to manage their assigned candidates.
+    *   Module Permissions: Granular control over feature access (e.g., import/export, managing specific settings).
+    *   Password Management: Securely hashed passwords using `bcrypt`. Admins can reset user passwords. Users can change their own passwords.
+    *   User Group Management: Create and manage user groups, assign permissions to groups.
+    *   Attribute Filtering: Filter users by name, email, role.
+*   **My Task Board:** Kanban and list view for Recruiters/Admins to manage their assigned candidates with enhanced filtering.
 *   **Settings & Configuration:**
-    *   Preferences: Theme selection, App Name, App Logo (client-side, stored in localStorage).
+    *   **Server-Side Preferences:** App Name, App Logo (actual theme application is client-side, preference stored server-side).
     *   Integrations (Conceptual SMTP, Server-Side Webhooks):
         *   Server-configured n8n webhook for processing resumes of existing candidates.
         *   Server-configured n8n webhook for creating new candidates from generic PDF uploads.
-    *   Recruitment Stages: Manage custom stages in the hiring pipeline.
-    *   Data Models: View and set local UI preferences for Candidate and Position attributes.
+    *   Recruitment Stages: Manage custom stages in the hiring pipeline. **Stages can be deleted with a replacement strategy if in use.**
+    *   **Server-Side Data Model UI Preferences:** View and set local UI display preferences for Candidate and Position attributes per user.
     *   Custom Field Definitions: Define custom data fields for Candidates and Positions.
     *   Webhook Payload Mapping: Configure how incoming JSON from n8n maps to candidate attributes.
+    *   **User Groups:** Create groups, assign users, and configure module permissions for groups.
+    *   **Notification Settings:** Configure which system events trigger notifications and via which channels (e.g., email, webhook). (UI for configuration; actual notification triggering is future work).
 *   **API Documentation:** Page detailing available API endpoints.
-*   **Application Logs:** View system and audit logs stored in the database.
+*   **Application Logs:** View system and audit logs stored in the database, with filtering and search capabilities.
 *   **Authentication:**
     *   Azure AD SSO (via NextAuth.js).
     *   Credentials (Email/Password): Backend by PostgreSQL, passwords hashed using `bcrypt`.
 *   **Styling:** ShadCN UI components and Tailwind CSS.
-*   **File Storage:** Uses MinIO for resume and other file storage.
+*   **File Storage:** Uses MinIO for resume and other file storage (e.g., candidate avatars).
 
 ## Tech Stack
 
@@ -185,7 +194,8 @@ This method runs the Next.js app, PostgreSQL, and MinIO in Docker containers.
 *   **Real-time Features:** Implement WebSocket connections and leverage Redis for real-time updates (e.g., notifications).
 *   **Security Hardening:** Implement rate limiting, Content Security Policy (CSP), advanced security headers.
 *   **Scalability:** Design for scalability if high load is anticipated.
-*   **User Group Permissions:** Fully implement permission assignment based on user groups.
+*   **User Group Permission Inheritance:** Fully implement logic for users to inherit permissions from their assigned groups.
+*   **Notification Triggering:** Implement backend logic to send notifications based on configured settings.
 
 ## Connectivity Checks (Application Logs)
 
