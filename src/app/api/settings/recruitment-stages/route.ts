@@ -12,7 +12,7 @@ import { logAudit } from '@/lib/auditLog';
 const createRecruitmentStageSchema = z.object({
   name: z.string().min(1, { message: "Stage name is required" }).max(100),
   description: z.string().optional().nullable(),
-  sort_order: z.number().int().optional().default(0),
+  sort_order: z.coerce.number().int().optional(), // Made optional, will be auto-assigned if not provided
 });
 
 export async function GET(request: NextRequest) {
@@ -48,22 +48,38 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const { name, description, sort_order } = validationResult.data;
+  const { name, description } = validationResult.data;
+  let { sort_order } = validationResult.data; // sort_order can be undefined here
 
+  const client = await pool.connect();
   try {
+    await client.query('BEGIN');
     const newStageId = uuidv4();
+
+    if (sort_order === undefined) {
+      // If sort_order is not provided, calculate the next available one (e.g., max + 10)
+      const maxSortOrderResult = await client.query('SELECT COALESCE(MAX(sort_order), -10) as max_order FROM "RecruitmentStage"');
+      sort_order = (maxSortOrderResult.rows[0].max_order || 0) + 10;
+    } else {
+      // If sort_order IS provided, check if it's unique. If not, this could be an issue
+      // or we might need logic to shift other stages. For now, we'll assume client handles providing a reasonable initial order.
+      // A more robust system might auto-increment subsequent orders if a duplicate is provided.
+    }
+    
     // Custom stages are not system stages by default
     const insertQuery = `
       INSERT INTO "RecruitmentStage" (id, name, description, is_system, sort_order, "createdAt", "updatedAt")
       VALUES ($1, $2, $3, FALSE, $4, NOW(), NOW())
       RETURNING *;
     `;
-    const result = await pool.query(insertQuery, [newStageId, name, description, sort_order]);
+    const result = await client.query(insertQuery, [newStageId, name, description, sort_order]);
     const newStage = result.rows[0];
+    await client.query('COMMIT');
 
-    await logAudit('AUDIT', `Recruitment stage '${newStage.name}' (ID: ${newStage.id}) created by ${session.user.name}.`, 'API:RecruitmentStages:Create', session.user.id, { stageId: newStage.id, stageName: newStage.name });
+    await logAudit('AUDIT', `Recruitment stage '${newStage.name}' (ID: ${newStage.id}) created by ${session.user.name}. Sort order: ${sort_order}.`, 'API:RecruitmentStages:Create', session.user.id, { stageId: newStage.id, stageName: newStage.name, sortOrder: sort_order });
     return NextResponse.json(newStage, { status: 201 });
   } catch (error: any) {
+    await client.query('ROLLBACK');
     console.error("Failed to create recruitment stage:", error);
     if (error.code === '23505' && error.constraint === 'RecruitmentStage_name_key') {
       await logAudit('WARN', `Attempt to create recruitment stage with duplicate name '${name}' by ${session.user.name}.`, 'API:RecruitmentStages:Create', session.user.id, { stageName: name });
@@ -71,6 +87,8 @@ export async function POST(request: NextRequest) {
     }
     await logAudit('ERROR', `Failed to create recruitment stage '${name}' by ${session.user.name}. Error: ${error.message}`, 'API:RecruitmentStages:Create', session.user.id, { stageName: name });
     return NextResponse.json({ message: "Error creating recruitment stage", error: error.message }, { status: 500 });
+  } finally {
+    client.release();
   }
 }
     

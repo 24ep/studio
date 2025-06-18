@@ -40,7 +40,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useSession, signIn } from 'next-auth/react';
 import { useRouter, usePathname } from 'next/navigation';
 import type { RecruitmentStage } from '@/lib/types';
-import { PlusCircle, Edit3, Trash2, KanbanSquare, Save, Loader2, ServerCrash, ShieldAlert, AlertCircle } from 'lucide-react';
+import { PlusCircle, Edit3, Trash2, KanbanSquare, Save, Loader2, ServerCrash, ShieldAlert, AlertCircle, ChevronUp, ChevronDown } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -68,6 +68,7 @@ export default function RecruitmentStagesPage() {
 
   const [stages, setStages] = useState<RecruitmentStage[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isMoving, setIsMoving] = useState<string | null>(null); // Store ID of stage being moved
   const [fetchError, setFetchError] = useState<string | null>(null);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -104,7 +105,7 @@ export default function RecruitmentStagesPage() {
         throw new Error(messageFromServer);
       }
       const data: RecruitmentStage[] = await response.json();
-      setStages(data.sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0) || a.name.localeCompare(b.name)));
+      setStages(data.sort((a, b) => (a.sort_order ?? Infinity) - (b.sort_order ?? Infinity) || a.name.localeCompare(b.name)));
     } catch (error) {
       setFetchError((error as Error).message);
     } finally {
@@ -161,14 +162,14 @@ export default function RecruitmentStagesPage() {
     try {
       const deleteUrl = `/api/settings/recruitment-stages/${stage.id}${replacement ? `?replacementStageName=${encodeURIComponent(replacement)}` : ''}`;
       const response = await fetch(deleteUrl, { method: 'DELETE' });
-      const result = await response.json().catch(() => ({})); // Catch if response is not JSON
+      const result = await response.json().catch(() => ({})); 
 
       if (!response.ok) {
         if (response.status === 409 && result.needsReplacement) {
-            setStageToDelete(stage); // Keep stageToDelete for the replacement modal
-            setReplacementStageName(''); // Reset replacement name for new dialog
-            setIsReplacementModalOpen(true); // Open replacement modal
-            return; // Don't show generic error toast yet
+            setStageToDelete(stage); 
+            setReplacementStageName(''); 
+            setIsReplacementModalOpen(true); 
+            return; 
         }
         throw new Error(result.message || `Failed to delete stage. Status: ${response.status}`);
       }
@@ -177,8 +178,7 @@ export default function RecruitmentStagesPage() {
     } catch (error) {
       toast({ title: "Error Deleting Stage", description: (error as Error).message, variant: "destructive" });
     } finally {
-      // Clear stageToDelete only if not opening the replacement modal or if action completed
-      if (!isReplacementModalOpen) { // If replacement modal isn't being opened, clear the stage
+      if (!isReplacementModalOpen) { 
           setStageToDelete(null);
       }
     }
@@ -186,14 +186,36 @@ export default function RecruitmentStagesPage() {
 
   const handleConfirmDeleteWithReplacement = async () => {
     if (stageToDelete && replacementStageName) {
-      setIsReplacementModalOpen(false); // Close modal before attempting delete
+      setIsReplacementModalOpen(false); 
       await attemptDeleteStage(stageToDelete, replacementStageName);
-      setStageToDelete(null); // Clear after attempt
+      setStageToDelete(null); 
       setReplacementStageName('');
     } else {
       toast({ title: "Invalid Selection", description: "Please select a replacement stage.", variant: "destructive" });
     }
   };
+
+  const handleMoveStage = async (stageId: string, direction: 'up' | 'down') => {
+    setIsMoving(stageId);
+    try {
+      const response = await fetch(`/api/settings/recruitment-stages/${stageId}/move`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ direction }),
+      });
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || 'Failed to move stage');
+      }
+      toast({ title: 'Stage Moved', description: 'Recruitment stage order updated.' });
+      fetchStages(); // Refresh the list to show new order
+    } catch (error) {
+      toast({ title: 'Error Moving Stage', description: (error as Error).message, variant: 'destructive' });
+    } finally {
+      setIsMoving(null);
+    }
+  };
+
 
   if (sessionStatus === 'loading' || (isLoading && !fetchError && stages.length === 0)) {
     return ( <div className="flex h-screen w-screen items-center justify-center bg-background fixed inset-0 z-50"><Loader2 className="h-16 w-16 animate-spin text-primary" /></div> );
@@ -219,7 +241,7 @@ export default function RecruitmentStagesPage() {
             <CardTitle className="flex items-center text-2xl"><KanbanSquare className="mr-3 h-6 w-6 text-primary"/>Recruitment Stages</CardTitle>
             <CardDescription>
               Manage the stages in your recruitment pipeline. System stages cannot be deleted or renamed.
-              Drag-and-drop reordering is not available; use the 'Sort Order' field to manage stage sequence.
+              Use the arrow buttons to reorder stages, or the 'Sort Order' field for specific placement.
               If a custom stage is in use, you will be prompted to migrate candidates to another stage upon deletion.
             </CardDescription>
           </div>
@@ -238,10 +260,32 @@ export default function RecruitmentStagesPage() {
           ) : (
             <div className="border rounded-lg overflow-hidden">
               <Table>
-                <TableHeader><TableRow><TableHead>Name</TableHead><TableHead className="hidden sm:table-cell">Description</TableHead><TableHead className="w-[100px]">Type</TableHead><TableHead className="w-[100px]">Order</TableHead><TableHead className="text-right w-[120px]">Actions</TableHead></TableRow></TableHeader>
+                <TableHeader><TableRow><TableHead className="w-[60px]"></TableHead><TableHead>Name</TableHead><TableHead className="hidden sm:table-cell">Description</TableHead><TableHead className="w-[100px]">Type</TableHead><TableHead className="w-[100px]">Order</TableHead><TableHead className="text-right w-[120px]">Actions</TableHead></TableRow></TableHeader>
                 <TableBody>
-                  {stages.map((stage) => (
+                  {stages.map((stage, index) => (
                     <TableRow key={stage.id}>
+                      <TableCell className="py-1 px-2">
+                        <div className="flex flex-col items-center justify-center h-full">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-6 w-6 p-0"
+                            onClick={() => handleMoveStage(stage.id, 'up')}
+                            disabled={index === 0 || isMoving === stage.id}
+                          >
+                            <ChevronUp className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-6 w-6 p-0"
+                            onClick={() => handleMoveStage(stage.id, 'down')}
+                            disabled={index === stages.length - 1 || isMoving === stage.id}
+                          >
+                            <ChevronDown className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
                       <TableCell className="font-medium">{stage.name}</TableCell>
                       <TableCell className="text-sm text-muted-foreground max-w-xs sm:max-w-md truncate hidden sm:table-cell">{stage.description || 'N/A'}</TableCell>
                       <TableCell><Badge variant={stage.is_system ? "secondary" : "outline"}>{stage.is_system ? "System" : "Custom"}</Badge></TableCell>
@@ -310,3 +354,4 @@ export default function RecruitmentStagesPage() {
     </div>
   );
 }
+
