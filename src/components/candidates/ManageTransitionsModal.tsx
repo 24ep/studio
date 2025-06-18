@@ -24,16 +24,18 @@ import {
 import { Button, buttonVariants } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'; // For searchable select
+import { Input } from '@/components/ui/input'; // For search input in Popover
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import type { Candidate, TransitionRecord, CandidateStatus, RecruitmentStage } from '@/lib/types';
-import { PlusCircle, CalendarDays, Edit3, Trash2, Save, X, User } from 'lucide-react';
+import { PlusCircle, CalendarDays, Edit3, Trash2, Save, X, User, ChevronsUpDown, Check } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { useToast } from "@/hooks/use-toast";
+import { cn } from "@/lib/utils";
 
 const transitionFormSchema = z.object({
   newStatus: z.string().min(1, "New status is required"),
@@ -48,7 +50,7 @@ interface ManageTransitionsModalProps {
   onOpenChange: (isOpen: boolean) => void;
   onUpdateCandidate: (candidateId: string, status: CandidateStatus, newTransitionHistory?: TransitionRecord[]) => Promise<void>;
   onRefreshCandidateData: (candidateId: string) => Promise<void>;
-  availableStages: RecruitmentStage[]; // New prop
+  availableStages: RecruitmentStage[];
 }
 
 export function ManageTransitionsModal({
@@ -63,6 +65,8 @@ export function ManageTransitionsModal({
   const [editingTransitionId, setEditingTransitionId] = useState<string | null>(null);
   const [editingNotes, setEditingNotes] = useState<string>('');
   const [transitionToDelete, setTransitionToDelete] = useState<TransitionRecord | null>(null);
+  const [statusSearchOpen, setStatusSearchOpen] = useState(false);
+  const [statusSearchQuery, setStatusSearchQuery] = useState('');
 
   const form = useForm<TransitionFormValues>({
     resolver: zodResolver(transitionFormSchema),
@@ -89,11 +93,14 @@ export function ManageTransitionsModal({
         toast({ title: "No Change", description: "Please select a new status or add notes to create a transition.", variant: "default" });
         return;
     }
+    // console.log("ManageTransitionsModal: Submitting form data:", data); // Added for debugging auto-save
     try {
-        await onUpdateCandidate(candidate.id, data.newStatus);
+        await onUpdateCandidate(candidate.id, data.newStatus, undefined); // Pass undefined for newTransitionHistory to let API handle it
         form.reset({ newStatus: data.newStatus, notes: '' });
+        setStatusSearchQuery(''); // Reset search
     } catch (error) {
-        // Error handled by parent
+        // Error already handled by parent through toast in onUpdateCandidate
+        console.error("Error during onUpdateCandidate in ManageTransitionsModal:", error);
     }
   };
 
@@ -144,12 +151,19 @@ export function ManageTransitionsModal({
     }
   };
 
+  const filteredStages = statusSearchQuery
+    ? availableStages.filter(stage => stage.name.toLowerCase().includes(statusSearchQuery.toLowerCase()))
+    : availableStages;
 
   return (
     <>
       <Dialog open={isOpen} onOpenChange={(open) => {
+        // console.log("ManageTransitionsModal: Dialog onOpenChange called with:", open); // Added for debugging auto-save
         onOpenChange(open);
-        if (!open) setEditingTransitionId(null);
+        if (!open) {
+          setEditingTransitionId(null);
+          setStatusSearchQuery('');
+        }
       }}>
         <DialogContent className="sm:max-w-3xl">
           <DialogHeader>
@@ -172,18 +186,59 @@ export function ManageTransitionsModal({
                     name="newStatus"
                     control={form.control}
                     render={({ field }) => (
-                      <Select onValueChange={field.onChange} value={field.value}>
-                        <SelectTrigger id="newStatus" className="mt-1">
-                          <SelectValue placeholder="Select new stage" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {availableStages.map((stage) => (
-                            <SelectItem key={stage.id} value={stage.name}>
-                              {stage.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      <Popover open={statusSearchOpen} onOpenChange={setStatusSearchOpen}>
+                        <PopoverTrigger asChild>
+                          <Button
+                            variant="outline"
+                            role="combobox"
+                            aria-expanded={statusSearchOpen}
+                            className="w-full justify-between mt-1"
+                          >
+                            {field.value
+                              ? availableStages.find((stage) => stage.name === field.value)?.name
+                              : "Select new stage"}
+                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-[--trigger-width] p-0 dropdown-content-height">
+                          <div className="p-2">
+                            <Input
+                              placeholder="Search stage..."
+                              value={statusSearchQuery}
+                              onChange={(e) => setStatusSearchQuery(e.target.value)}
+                              className="h-9"
+                            />
+                          </div>
+                          <ScrollArea className="max-h-60">
+                            {filteredStages.length === 0 && statusSearchQuery && (
+                              <p className="p-2 text-sm text-muted-foreground text-center">No stage found.</p>
+                            )}
+                            {filteredStages.map((stage) => (
+                              <Button
+                                key={stage.id}
+                                variant="ghost"
+                                className={cn(
+                                  "w-full justify-start px-2 py-1.5 text-sm font-normal h-auto",
+                                  field.value === stage.name && "bg-accent text-accent-foreground"
+                                )}
+                                onClick={() => {
+                                  field.onChange(stage.name);
+                                  setStatusSearchOpen(false);
+                                  setStatusSearchQuery('');
+                                }}
+                              >
+                                <Check
+                                  className={cn(
+                                    "mr-2 h-4 w-4",
+                                    field.value === stage.name ? "opacity-100" : "opacity-0"
+                                  )}
+                                />
+                                {stage.name}
+                              </Button>
+                            ))}
+                          </ScrollArea>
+                        </PopoverContent>
+                      </Popover>
                     )}
                   />
                   {form.formState.errors.newStatus && (

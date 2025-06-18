@@ -6,7 +6,6 @@ import { useState, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import {
   Select,
   SelectContent,
@@ -21,20 +20,17 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/
 import { useToast } from '@/hooks/use-toast';
 import { signIn, useSession } from 'next-auth/react';
 import { useRouter, usePathname } from 'next/navigation';
-import { Save, DatabaseZap, HelpCircle, Eye, EyeOff, Star, ServerCrash, ShieldAlert, Loader2 } from 'lucide-react';
-import type { DataModelPreferences, AttributePreference, UIDisplayPreference, ModelAttributeDefinition } from '@/lib/types';
-
-const CANDIDATE_MODEL_PREFERENCES_KEY = 'candidateModelPreferences';
-const POSITION_MODEL_PREFERENCES_KEY = 'positionModelPreferences';
+import { Save, DatabaseZap, HelpCircle, Eye, EyeOff, Star, ServerCrash, ShieldAlert, Loader2, RefreshCw } from 'lucide-react';
+import type { UserDataModelPreference, UIDisplayPreference, ModelAttributeDefinition } from '@/lib/types';
 
 const UI_DISPLAY_PREFERENCES: UIDisplayPreference[] = ["Standard", "Emphasized", "Hidden"];
 
-// Define the structure of your models for display
 const CANDIDATE_ATTRIBUTES: ModelAttributeDefinition[] = [
   { key: 'id', label: 'ID', type: 'string (UUID)', description: 'Unique identifier for the candidate.' },
   { key: 'name', label: 'Full Name', type: 'string', description: 'Full name of the candidate.' },
   { key: 'email', label: 'Email', type: 'string', description: 'Primary email address.' },
   { key: 'phone', label: 'Phone', type: 'string', description: 'Contact phone number.' },
+  { key: 'avatarUrl', label: 'Avatar URL', type: 'string', description: 'URL to the candidate\'s profile picture.' },
   { key: 'resumePath', label: 'Resume File Path', type: 'string', description: 'Path to the stored resume file in MinIO.' },
   { key: 'positionId', label: 'Applied Position ID', type: 'string (UUID)', description: 'ID of the position the candidate applied for.' },
   { key: 'fitScore', label: 'Fit Score', type: 'number', description: 'Calculated score indicating suitability for the applied position (0-100).' },
@@ -50,7 +46,7 @@ const CANDIDATE_ATTRIBUTES: ModelAttributeDefinition[] = [
       { key: 'parsedData.personal_info.nickname', label: 'Nickname', type: 'string'},
       { key: 'parsedData.personal_info.location', label: 'Location', type: 'string'},
       { key: 'parsedData.personal_info.introduction_aboutme', label: 'About Me', type: 'string (multiline)'},
-      { key: 'parsedData.personal_info.avatar_url', label: 'Avatar URL', type: 'string (url)'},
+      { key: 'parsedData.personal_info.avatar_url', label: 'Avatar URL (from CV)', type: 'string (url)'},
     ]},
     { key: 'parsedData.contact_info', label: 'Contact Info (from CV)', type: 'object', subAttributes: [
       { key: 'parsedData.contact_info.email', label: 'Email (from CV)', type: 'string'},
@@ -64,6 +60,7 @@ const CANDIDATE_ATTRIBUTES: ModelAttributeDefinition[] = [
     { key: 'parsedData.job_matches', label: 'All Suggested Job Matches', type: 'array', arrayItemType: 'N8NJobMatch object', description: 'Full list of job suggestions from automated processing.'},
   ]},
   { key: 'transitionHistory', label: 'Transition History', type: 'array', arrayItemType: 'TransitionRecord object', description: 'Log of status changes.' },
+  { key: 'custom_attributes', label: 'Custom Attributes', type: 'object', description: 'User-defined custom fields and their values.'},
   { key: 'createdAt', label: 'Created At', type: 'date', description: 'Timestamp of creation.' },
   { key: 'updatedAt', label: 'Last Updated At', type: 'date', description: 'Timestamp of last update.' },
 ];
@@ -75,6 +72,7 @@ const POSITION_ATTRIBUTES: ModelAttributeDefinition[] = [
   { key: 'description', label: 'Description', type: 'string (multiline)', description: 'Detailed job description.' },
   { key: 'isOpen', label: 'Is Open', type: 'boolean', description: 'Whether the position is currently open for applications.' },
   { key: 'position_level', label: 'Position Level', type: 'string', description: 'Seniority level (e.g., Senior, Mid-Level).' },
+  { key: 'custom_attributes', label: 'Custom Attributes', type: 'object', description: 'User-defined custom fields and their values.'},
   { key: 'createdAt', label: 'Created At', type: 'date', description: 'Timestamp of creation.' },
   { key: 'updatedAt', label: 'Last Updated At', type: 'date', description: 'Timestamp of last update.' },
 ];
@@ -82,7 +80,7 @@ const POSITION_ATTRIBUTES: ModelAttributeDefinition[] = [
 
 const AttributeEditor: React.FC<{
   attr: ModelAttributeDefinition;
-  preferences: Record<string, Partial<Pick<AttributePreference, 'uiPreference' | 'customNote'>>>;
+  preferences: Record<string, Partial<Pick<UserDataModelPreference, 'uiPreference' | 'customNote'>>>;
   onPreferenceChange: (attrKey: string, prefType: 'uiPreference' | 'customNote', value: string) => void;
   level?: number;
 }> = ({ attr, preferences, onPreferenceChange, level = 0 }) => {
@@ -150,44 +148,75 @@ export default function DataModelsPage() {
   const router = useRouter();
   const pathname = usePathname();
   const { toast } = useToast();
+  
   const [isClient, setIsClient] = useState(false);
-  const [isLoading, setIsLoading] = useState(true); // For initial localStorage load
+  const [isLoadingData, setIsLoadingData] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
   const [fetchError, setFetchError] = useState<string | null>(null);
 
-  const [candidatePrefs, setCandidatePrefs] = useState<DataModelPreferences['candidateAttributes']>({});
-  const [positionPrefs, setPositionPrefs] = useState<DataModelPreferences['positionAttributes']>({});
+  const [candidatePrefs, setCandidatePrefs] = useState<Record<string, Partial<Pick<UserDataModelPreference, 'uiPreference' | 'customNote'>>>>({});
+  const [positionPrefs, setPositionPrefs] = useState<Record<string, Partial<Pick<UserDataModelPreference, 'uiPreference' | 'customNote'>>>>({});
+
+  const loadPreferencesFromServer = useCallback(async () => {
+    if (!session?.user?.id) return;
+    setIsLoadingData(true);
+    setFetchError(null);
+    try {
+      const response = await fetch(`/api/settings/user-preferences`);
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ message: 'Failed to load preferences' }));
+        throw new Error(errorData.message);
+      }
+      const serverPrefs: UserDataModelPreference[] = await response.json();
+      
+      const newCandidatePrefs: typeof candidatePrefs = {};
+      const newPositionPrefs: typeof positionPrefs = {};
+
+      serverPrefs.forEach(pref => {
+        if (pref.modelType === 'Candidate') {
+          newCandidatePrefs[pref.attributeKey] = { uiPreference: pref.uiPreference, customNote: pref.customNote || '' };
+        } else if (pref.modelType === 'Position') {
+          newPositionPrefs[pref.attributeKey] = { uiPreference: pref.uiPreference, customNote: pref.customNote || '' };
+        }
+      });
+      setCandidatePrefs(newCandidatePrefs);
+      setPositionPrefs(newPositionPrefs);
+
+    } catch (error) {
+      console.error("Error loading preferences from server:", error);
+      setFetchError((error as Error).message);
+      // Keep existing client-side state or initialize empty if first load failed
+      if (Object.keys(candidatePrefs).length === 0 && Object.keys(positionPrefs).length === 0) {
+        setCandidatePrefs({});
+        setPositionPrefs({});
+      }
+    } finally {
+      setIsLoadingData(false);
+    }
+  }, [session?.user?.id, candidatePrefs, positionPrefs]); // Added deps
 
   useEffect(() => {
     setIsClient(true);
     if (sessionStatus === 'unauthenticated') {
       signIn(undefined, { callbackUrl: pathname });
     } else if (sessionStatus === 'authenticated') {
-      if (session.user.role !== 'Admin' && !session.user.modulePermissions?.includes('DATA_MODELS_MANAGE')) {
+      if (session.user.role !== 'Admin' && !session.user.modulePermissions?.includes('USER_PREFERENCES_MANAGE')) {
         setFetchError("You do not have permission to manage data model preferences.");
-        setIsLoading(false);
-        return;
+        setIsLoadingData(false); // Corrected from setIsLoading to setIsLoadingData
+      } else {
+        loadPreferencesFromServer();
       }
-      try {
-        const storedCandidatePrefs = localStorage.getItem(CANDIDATE_MODEL_PREFERENCES_KEY);
-        if (storedCandidatePrefs) setCandidatePrefs(JSON.parse(storedCandidatePrefs));
-
-        const storedPositionPrefs = localStorage.getItem(POSITION_MODEL_PREFERENCES_KEY);
-        if (storedPositionPrefs) setPositionPrefs(JSON.parse(storedPositionPrefs));
-      } catch (error) {
-        console.error("Error loading preferences from localStorage:", error);
-        toast({title: "Error", description: "Could not load saved preferences.", variant: "destructive"});
-      }
-      setIsLoading(false);
     }
-  }, [sessionStatus, session, pathname, signIn, toast]);
+  }, [sessionStatus, session, pathname, signIn, loadPreferencesFromServer]);
+
 
   const handlePreferenceChange = (
-    model: 'candidate' | 'position',
+    model: 'Candidate' | 'Position',
     attrKey: string,
     prefType: 'uiPreference' | 'customNote',
     value: string
   ) => {
-    const setter = model === 'candidate' ? setCandidatePrefs : setPositionPrefs;
+    const setter = model === 'Candidate' ? setCandidatePrefs : setPositionPrefs;
     setter(prev => ({
       ...prev,
       [attrKey]: {
@@ -197,19 +226,51 @@ export default function DataModelsPage() {
     }));
   };
 
-  const handleSavePreferences = () => {
-    if (!isClient) return;
+  const handleSavePreferences = async () => {
+    if (!isClient || !session?.user?.id) return;
+    setIsSaving(true);
+    const prefsToSave: Omit<UserDataModelPreference, 'id' | 'createdAt' | 'updatedAt'>[] = [];
+
+    Object.entries(candidatePrefs).forEach(([key, pref]) => {
+      prefsToSave.push({
+        userId: session.user.id, // This should be the current user's ID
+        modelType: 'Candidate',
+        attributeKey: key,
+        uiPreference: pref.uiPreference || 'Standard',
+        customNote: pref.customNote || null,
+      });
+    });
+    Object.entries(positionPrefs).forEach(([key, pref]) => {
+      prefsToSave.push({
+        userId: session.user.id,
+        modelType: 'Position',
+        attributeKey: key,
+        uiPreference: pref.uiPreference || 'Standard',
+        customNote: pref.customNote || null,
+      });
+    });
+
     try {
-      localStorage.setItem(CANDIDATE_MODEL_PREFERENCES_KEY, JSON.stringify(candidatePrefs));
-      localStorage.setItem(POSITION_MODEL_PREFERENCES_KEY, JSON.stringify(positionPrefs));
-      toast({ title: 'Preferences Saved', description: 'Your data model display preferences have been saved locally.' });
+      const response = await fetch(`/api/settings/user-preferences`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(prefsToSave),
+      });
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ message: 'Failed to save preferences to server' }));
+        throw new Error(errorData.message);
+      }
+      toast({ title: 'Preferences Saved', description: 'Your data model display preferences have been saved to the server.' });
+      loadPreferencesFromServer(); // Refresh from server
     } catch (error) {
-      console.error("Error saving preferences to localStorage:", error);
-      toast({title: "Error Saving", description: "Could not save preferences.", variant: "destructive"});
+      console.error("Error saving preferences to server:", error);
+      toast({title: "Error Saving", description: (error as Error).message, variant: "destructive"});
+    } finally {
+      setIsSaving(false);
     }
   };
   
-  if (sessionStatus === 'loading' || (isLoading && !fetchError)) {
+  if (sessionStatus === 'loading' || (isLoadingData && !fetchError && !isClient)) {
     return (
         <div className="flex h-screen w-screen items-center justify-center bg-background fixed inset-0 z-50">
             <Loader2 className="h-16 w-16 animate-spin text-primary" />
@@ -217,17 +278,19 @@ export default function DataModelsPage() {
     );
   }
 
-  if (fetchError) {
+  if (fetchError && !isLoadingData) { // Ensure we don't show error if still initially loading
     return (
       <div className="flex flex-col items-center justify-center h-[calc(100vh-10rem)] text-center p-4">
         <ShieldAlert className="w-16 h-16 text-destructive mb-4" />
-        <h2 className="text-2xl font-semibold text-foreground mb-2">Access Denied</h2>
+        <h2 className="text-2xl font-semibold text-foreground mb-2">Access Denied or Error</h2>
         <p className="text-muted-foreground mb-4 max-w-md">{fetchError}</p>
-        <Button onClick={() => router.push('/')} className="btn-hover-primary-gradient">Go to Dashboard</Button>
+        <Button onClick={() => router.push('/')} className="btn-hover-primary-gradient mr-2">Go to Dashboard</Button>
+         {fetchError !== "You do not have permission to manage data model preferences." && 
+            <Button onClick={loadPreferencesFromServer} variant="outline"><RefreshCw className="mr-2 h-4 w-4"/>Try Again</Button>
+        }
       </div>
     );
   }
-
 
   return (
     <div className="space-y-6">
@@ -235,8 +298,8 @@ export default function DataModelsPage() {
         <CardHeader>
           <CardTitle className="flex items-center"><DatabaseZap className="mr-2 h-6 w-6 text-primary"/>Data Model Preferences</CardTitle>
           <CardDescription>
-            View attributes of your core data models (Candidate, Position) and set local UI display preferences or custom notes.
-            These settings are stored in your browser and do not change the backend database schema or validation.
+            View attributes of your core data models (Candidate, Position) and set your UI display preferences or custom notes.
+            These settings are now saved on the server for your user account.
           </CardDescription>
         </CardHeader>
       </Card>
@@ -257,7 +320,7 @@ export default function DataModelsPage() {
                     key={attr.key}
                     attr={attr}
                     preferences={candidatePrefs}
-                    onPreferenceChange={(key, type, val) => handlePreferenceChange('candidate', key, type, val)}
+                    onPreferenceChange={(key, type, val) => handlePreferenceChange('Candidate', key, type, val)}
                   />
                 ))}
               </CardContent>
@@ -280,7 +343,7 @@ export default function DataModelsPage() {
                     key={attr.key}
                     attr={attr}
                     preferences={positionPrefs}
-                    onPreferenceChange={(key, type, val) => handlePreferenceChange('position', key, type, val)}
+                    onPreferenceChange={(key, type, val) => handlePreferenceChange('Position', key, type, val)}
                   />
                 ))}
               </CardContent>
@@ -290,8 +353,9 @@ export default function DataModelsPage() {
       </Accordion>
       
       <div className="flex justify-end mt-6">
-        <Button onClick={handleSavePreferences} size="lg" className="btn-primary-gradient">
-          <Save className="mr-2 h-4 w-4" /> Save All Preferences
+        <Button onClick={handleSavePreferences} size="lg" className="btn-primary-gradient" disabled={isSaving || isLoadingData}>
+          {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+          {isSaving ? 'Saving...' : 'Save My Preferences'}
         </Button>
       </div>
     </div>

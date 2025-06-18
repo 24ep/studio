@@ -1,3 +1,4 @@
+
 // src/app/api/candidates/route.ts
 import { NextResponse, type NextRequest } from 'next/server';
 import pool from '../../../lib/db';
@@ -8,7 +9,6 @@ import { v4 as uuidv4 } from 'uuid';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 
-// Core statuses for fallback or specific logic, full list comes from DB
 const coreCandidateStatusValues: [CandidateStatus, ...CandidateStatus[]] = ['Applied', 'Screening', 'Shortlisted', 'Interview Scheduled', 'Interviewing', 'Offer Extended', 'Offer Accepted', 'Hired', 'Rejected', 'On Hold'];
 
 const personalInfoSchema = z.object({
@@ -43,7 +43,7 @@ const experienceEntrySchema = z.object({
   period: z.string().optional().default(''),
   duration: z.string().optional().default(''),
   is_current_position: z.boolean().optional().default(false),
-  postition_level: z.string().optional(),
+  postition_level: z.string().optional().nullable(),
 });
 
 const skillEntrySchema = z.object({
@@ -83,35 +83,46 @@ const candidateDetailsSchema = z.object({
 });
 
 const createCandidateSchema = z.object({
-  name: z.string().min(1, { message: "Name is required" }).optional(), // Will be derived if not provided
-  email: z.string().email({ message: "Invalid email address" }).optional(), // Will be derived if not provided
+  name: z.string().min(1, { message: "Name is required" }).optional(),
+  email: z.string().email({ message: "Invalid email address" }).optional(),
   phone: z.string().optional().nullable(),
   positionId: z.string().uuid({ message: "Valid Position ID (UUID) is required" }).nullable().optional(),
   recruiterId: z.string().uuid().nullable().optional(),
   fitScore: z.number().min(0).max(100).optional().default(0),
-  status: z.string().min(1).default('Applied'), // Changed from z.enum to z.string
+  status: z.string().min(1).default('Applied'),
   applicationDate: z.string().datetime({ message: "Invalid datetime string. Must be UTC ISO8601" }).optional(),
   parsedData: candidateDetailsSchema.optional(),
   custom_attributes: z.record(z.any()).optional().nullable(),
   resumePath: z.string().optional().nullable(),
+  // avatarUrl and dataAiHint will be handled by candidate avatar upload endpoint
 });
 
 export async function GET(request: NextRequest) {
   const session = await getServerSession(authOptions);
   const userRole = session?.user?.role;
+  const userId = session?.user?.id;
+
+  if (!userId) {
+    return NextResponse.json({ message: "Unauthorized: User session required." }, { status: 401 });
+  }
+  // Admins can see all, Recruiters can see all if they have CANDIDATES_VIEW, otherwise only their own.
+  // Hiring Managers need CANDIDATES_VIEW to see any.
+  const canViewAll = userRole === 'Admin' || (session.user.modulePermissions?.includes('CANDIDATES_VIEW'));
+
 
   try {
     const { searchParams } = new URL(request.url);
     const nameFilter = searchParams.get('name');
     const positionIdFilter = searchParams.get('positionId');
-    const educationFilter = searchParams.get('education'); // This uses ILIKE on text cast of JSONB.
+    const statusFilter = searchParams.get('status'); // New
+    const educationFilter = searchParams.get('education');
     const minFitScoreParam = searchParams.get('minFitScore');
     const maxFitScoreParam = searchParams.get('maxFitScore');
     const assignedRecruiterIdParam = searchParams.get('assignedRecruiterId');
 
     let query = `
       SELECT
-        c.id, c.name, c.email, c.phone, c."resumePath", c."parsedData", c.custom_attributes,
+        c.id, c.name, c.email, c.phone, c."avatarUrl", c."dataAiHint", c."resumePath", c."parsedData", c.custom_attributes,
         c."positionId", c."fitScore", c.status, c."applicationDate",
         c."recruiterId", 
         c."createdAt", c."updatedAt",
@@ -148,6 +159,10 @@ export async function GET(request: NextRequest) {
       conditions.push(`c."positionId" = $${paramIndex++}`);
       queryParams.push(positionIdFilter);
     }
+    if (statusFilter) { // New
+      conditions.push(`c.status = $${paramIndex++}`);
+      queryParams.push(statusFilter);
+    }
     if (educationFilter) {
       conditions.push(`c."parsedData"::text ILIKE $${paramIndex++}`);
       queryParams.push(`%${educationFilter}%`);
@@ -169,14 +184,11 @@ export async function GET(request: NextRequest) {
 
     if (assignedRecruiterIdParam) {
       if (assignedRecruiterIdParam === 'me') {
-        if (!session?.user?.id) {
-          return NextResponse.json({ message: "Unauthorized: User session required for 'me' filter." }, { status: 401 });
-        }
         conditions.push(`c."recruiterId" = $${paramIndex++}`);
-        queryParams.push(session.user.id);
+        queryParams.push(userId);
       } else if (z.string().uuid().safeParse(assignedRecruiterIdParam).success) {
-        if (userRole !== 'Admin') {
-          return NextResponse.json({ message: "Forbidden: Only Admins can filter by specific recruiter ID." }, { status: 403 });
+        if (!canViewAll && userRole !== 'Admin') { // Non-Admins cannot filter by other specific recruiters unless they have broad view perm
+          return NextResponse.json({ message: "Forbidden: Insufficient permissions to filter by specific recruiter." }, { status: 403 });
         }
         conditions.push(`c."recruiterId" = $${paramIndex++}`);
         queryParams.push(assignedRecruiterIdParam);
@@ -184,14 +196,16 @@ export async function GET(request: NextRequest) {
         if (userRole !== 'Admin') {
           return NextResponse.json({ message: "Forbidden: Only Admins can view all candidates without recruiter filter." }, { status: 403 });
         }
+        // No recruiterId condition added for this case
       }
     } else {
-      if (userRole === 'Recruiter') {
-         if (!session?.user?.id) {
-            return NextResponse.json({ message: "Unauthorized: User session required for Recruiter view." }, { status: 401 });
-        }
+      // Default behavior: If not Admin and no explicit "all candidates" admin filter, and no CANDIDATES_VIEW permission, filter by own ID for Recruiters.
+      if (userRole === 'Recruiter' && !canViewAll) {
         conditions.push(`c."recruiterId" = $${paramIndex++}`);
-        queryParams.push(session.user.id);
+        queryParams.push(userId);
+      } else if (userRole !== 'Admin' && !canViewAll) {
+        // If not admin, not recruiter, and no CANDIDATES_VIEW, they shouldn't see any candidates.
+        return NextResponse.json({ message: "Forbidden: Insufficient permissions to view candidates." }, { status: 403 });
       }
     }
 
@@ -223,13 +237,11 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(candidates, {
       status: 200,
-      headers: {
-        'Cache-Control': 'private, no-cache, must-revalidate',
-      },
+      headers: { 'Cache-Control': 'private, no-cache, must-revalidate' },
     });
   } catch (error) {
     console.error("Failed to fetch candidates:", error);
-    await logAudit('ERROR', `Failed to fetch candidates. Error: ${(error as Error).message}`, 'API:Candidates:GetAll', session?.user?.id);
+    await logAudit('ERROR', `Failed to fetch candidates. Error: ${(error as Error).message}`, 'API:Candidates:GetAll', userId);
     return NextResponse.json({ message: "Error fetching candidates", error: (error as Error).message }, { status: 500 });
   }
 }
@@ -237,9 +249,12 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   const session = await getServerSession(authOptions);
   const userRole = session?.user?.role;
+  const actingUserId = session?.user?.id || null;
+  const actingUserName = session?.user?.name || session?.user?.email || 'System (API Create)';
 
-  if (!userRole || !['Admin', 'Recruiter'].includes(userRole)) {
-    await logAudit('WARN', `Forbidden attempt to create candidate by user ${session?.user?.email || 'Unknown'} (ID: ${session?.user?.id || 'N/A'}). Required roles: Admin, Recruiter.`, 'API:Candidates:Create', session?.user?.id);
+
+  if (!session?.user?.id || (userRole !== 'Admin' && !session.user.modulePermissions?.includes('CANDIDATES_MANAGE'))) {
+    await logAudit('WARN', `Forbidden attempt to create candidate by ${actingUserName}.`, 'API:Candidates:Create', actingUserId);
     return NextResponse.json({ message: "Forbidden: Insufficient permissions" }, { status: 403 });
   }
 
@@ -370,8 +385,8 @@ export async function POST(request: NextRequest) {
       uuidv4(),
       newCandidate.id,
       rawData.status,
-      `Application received by ${session?.user?.name || session?.user?.email || 'System'}.`, 
-      session?.user?.id || null, 
+      `Application received by ${actingUserName}.`, 
+      actingUserId, 
     ];
     await client.query(insertTransitionQuery, transitionValues);
 
@@ -379,7 +394,7 @@ export async function POST(request: NextRequest) {
 
     const finalQuery = `
         SELECT
-            c.id, c.name, c.email, c.phone, c."resumePath", c."parsedData", c.custom_attributes,
+            c.id, c.name, c.email, c.phone, c."avatarUrl", c."dataAiHint", c."resumePath", c."parsedData", c.custom_attributes,
             c."positionId", c."fitScore", c.status, c."applicationDate",
             c."recruiterId", c."createdAt", c."updatedAt",
             p.title as "positionTitle",
@@ -423,14 +438,12 @@ export async function POST(request: NextRequest) {
         transitionHistory: finalResult.rows[0].transitionHistory || [],
     };
     
-    const actingUserName = session?.user?.name || session?.user?.email || 'System';
-    await logAudit('AUDIT', `Candidate '${newCandidate.name}' (ID: ${newCandidate.id}) created by ${actingUserName}.`, 'API:Candidates:Create', session?.user?.id, { targetCandidateId: newCandidate.id, name: newCandidate.name, email: newCandidate.email });
+    await logAudit('AUDIT', `Candidate '${newCandidate.name}' (ID: ${newCandidate.id}) created by ${actingUserName}.`, 'API:Candidates:Create', actingUserId, { targetCandidateId: newCandidate.id, name: newCandidate.name, email: newCandidate.email });
     return NextResponse.json(createdCandidateWithDetails, { status: 201 });
   } catch (error: any) {
     await client.query('ROLLBACK');
     console.error("Failed to create candidate:", error);
-    const actingUserName = session?.user?.name || session?.user?.email || 'System';
-    await logAudit('ERROR', `Failed to create candidate '${candidateName}' by ${actingUserName}. Error: ${error.message}`, 'API:Candidates:Create', session?.user?.id, { name: candidateName, email: candidateEmail });
+    await logAudit('ERROR', `Failed to create candidate '${candidateName}' by ${actingUserName}. Error: ${error.message}`, 'API:Candidates:Create', actingUserId, { name: candidateName, email: candidateEmail });
     if (error.code === '23505' && error.constraint === 'Candidate_email_key') {
       return NextResponse.json({ message: "A candidate with this email already exists." }, { status: 409 });
     }

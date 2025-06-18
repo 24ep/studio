@@ -5,12 +5,16 @@ import pool from '../../../../../lib/db';
 import { z } from 'zod';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/app/api/auth/[...nextauth]/route';
-import type { UserGroup } from '@/lib/types';
+import type { UserGroup, PlatformModuleId } from '@/lib/types';
+import { PLATFORM_MODULES } from '@/lib/types';
 import { logAudit } from '@/lib/auditLog';
+
+const platformModuleIds = PLATFORM_MODULES.map(m => m.id) as [PlatformModuleId, ...PlatformModuleId[]];
 
 const updateGroupFormSchema = z.object({
   name: z.string().min(1, "Group name is required").max(100),
   description: z.string().optional().nullable(),
+  permissions: z.array(z.enum(platformModuleIds)).optional(), // New field for permissions
 });
 
 export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
@@ -21,11 +25,18 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
   }
 
   try {
-    const result = await pool.query('SELECT id, name, description, "createdAt", "updatedAt" FROM "UserGroup" WHERE id = $1', [params.id]);
-    if (result.rows.length === 0) {
+    // Fetch group details
+    const groupResult = await pool.query('SELECT id, name, description, "createdAt", "updatedAt" FROM "UserGroup" WHERE id = $1', [params.id]);
+    if (groupResult.rows.length === 0) {
       return NextResponse.json({ message: "User group not found" }, { status: 404 });
     }
-    return NextResponse.json(result.rows[0], { status: 200 });
+    const group: UserGroup = groupResult.rows[0];
+
+    // Fetch associated permissions
+    const permissionsResult = await pool.query('SELECT permission_id FROM "UserGroup_PlatformModule" WHERE group_id = $1', [params.id]);
+    group.permissions = permissionsResult.rows.map(row => row.permission_id as PlatformModuleId);
+
+    return NextResponse.json(group, { status: 200 });
   } catch (error) {
     console.error(`Failed to fetch user group ${params.id}:`, error);
     await logAudit('ERROR', `Failed to fetch user group (ID: ${params.id}) by ${session?.user?.name}. Error: ${(error as Error).message}`, 'API:UserGroups:GetById', session?.user?.id, { targetGroupId: params.id });
@@ -56,7 +67,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
     );
   }
   
-  const { name, description } = validationResult.data;
+  const { name, description, permissions } = validationResult.data;
   const client = await pool.connect();
 
   try {
@@ -81,12 +92,31 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
       WHERE id = $3 
       RETURNING *;
     `;
-    const result = await client.query(updateQuery, [name, description, params.id]);
-    const updatedGroup = result.rows[0];
+    const groupUpdateResult = await client.query(updateQuery, [name, description, params.id]);
+    const updatedGroup = groupUpdateResult.rows[0];
+
+    // Update group permissions
+    if (permissions !== undefined) {
+        await client.query('DELETE FROM "UserGroup_PlatformModule" WHERE group_id = $1', [params.id]);
+        if (permissions.length > 0) {
+            const permissionInsertPromises = permissions.map(permissionId =>
+                client.query('INSERT INTO "UserGroup_PlatformModule" (group_id, permission_id) VALUES ($1, $2)', [params.id, permissionId])
+            );
+            await Promise.all(permissionInsertPromises);
+        }
+    }
+
 
     await client.query('COMMIT');
-    await logAudit('AUDIT', `User group '${updatedGroup.name}' (ID: ${updatedGroup.id}) updated by ${session.user.name}.`, 'API:UserGroups:Update', session.user.id, { targetGroupId: updatedGroup.id, changes: Object.keys(validationResult.data) });
-    return NextResponse.json(updatedGroup, { status: 200 });
+
+    // Fetch the final group with updated permissions for the response
+    const finalGroupResult = await pool.query('SELECT id, name, description, "createdAt", "updatedAt" FROM "UserGroup" WHERE id = $1', [params.id]);
+    const finalGroup: UserGroup = finalGroupResult.rows[0];
+    const finalPermissionsResult = await pool.query('SELECT permission_id FROM "UserGroup_PlatformModule" WHERE group_id = $1', [params.id]);
+    finalGroup.permissions = finalPermissionsResult.rows.map(row => row.permission_id as PlatformModuleId);
+    
+    await logAudit('AUDIT', `User group '${finalGroup.name}' (ID: ${finalGroup.id}) updated by ${session.user.name}.`, 'API:UserGroups:Update', session.user.id, { targetGroupId: finalGroup.id, changes: Object.keys(validationResult.data) });
+    return NextResponse.json(finalGroup, { status: 200 });
 
   } catch (error: any) {
     await client.query('ROLLBACK');
@@ -121,11 +151,13 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
 
     // Remove associations in User_UserGroup table first
     await client.query('DELETE FROM "User_UserGroup" WHERE "groupId" = $1', [params.id]);
+    // Remove associations in UserGroup_PlatformModule table
+    await client.query('DELETE FROM "UserGroup_PlatformModule" WHERE group_id = $1', [params.id]);
+
 
     const deleteResult = await client.query('DELETE FROM "UserGroup" WHERE id = $1', [params.id]);
     
     if (deleteResult.rowCount === 0) {
-        // Should not happen if the initial check passed and it was locked.
         await client.query('ROLLBACK');
         return NextResponse.json({ message: "User group not found or already deleted during transaction" }, { status: 404 });
     }
@@ -138,9 +170,6 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
     await client.query('ROLLBACK');
     console.error(`Failed to delete user group ${params.id}:`, error);
     await logAudit('ERROR', `Failed to delete user group (ID: ${params.id}) by ${session.user.name}. Error: ${error.message}`, 'API:UserGroups:Delete', session.user.id, { targetGroupId: params.id });
-    // Note: If "UserGroup" was a foreign key in other tables (not just the join table),
-    // you might get FK violation errors (e.g., error.code === '23503').
-    // For now, we only explicitly handle the User_UserGroup join table.
     return NextResponse.json({ message: "Error deleting user group", error: error.message }, { status: 500 });
   } finally {
     client.release();

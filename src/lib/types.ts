@@ -11,10 +11,11 @@ export const PLATFORM_MODULES = [
   { id: 'POSITIONS_VIEW', label: 'View Positions' },
   { id: 'POSITIONS_MANAGE', label: 'Manage Positions (Add, Edit, Delete)' },
   { id: 'USERS_MANAGE', label: 'Manage Users & Permissions' }, // This permission is for accessing the user management page
-  { id: 'USER_GROUPS_MANAGE', label: 'Manage User Groups' }, // New Permission
-  { id: 'SETTINGS_ACCESS', label: 'Access System Settings' },
+  { id: 'USER_GROUPS_MANAGE', label: 'Manage User Groups' },
+  { id: 'SYSTEM_SETTINGS_MANAGE', label: 'Manage System-Wide Settings (Name, Logo, Theme)' }, // For server-side app name/logo
+  { id: 'USER_PREFERENCES_MANAGE', label: 'Manage Own UI Preferences (Server-Side)' }, // For server-side data model prefs
   { id: 'RECRUITMENT_STAGES_MANAGE', label: 'Manage Recruitment Stages' },
-  { id: 'DATA_MODELS_MANAGE', label: 'Manage Data Model Preferences (Client)' },
+  { id: 'DATA_MODELS_MANAGE', label: 'Manage Data Model Preferences (Client)' }, // This might become deprecated if fully server-side
   { id: 'CUSTOM_FIELDS_MANAGE', label: 'Manage Custom Field Definitions (Server)' },
   { id: 'WEBHOOK_MAPPING_MANAGE', label: 'Manage Webhook Mappings' },
   { id: 'LOGS_VIEW', label: 'View Application Logs' },
@@ -128,7 +129,7 @@ export interface ExperienceEntry {
   period?: string;
   duration?: string;
   is_current_position?: boolean | string; // Allow string for n8n, preprocess in Zod
-  postition_level?: string | null | undefined; // Changed to allow null
+  postition_level?: string | null | undefined;
 }
 
 export interface SkillEntry {
@@ -145,7 +146,7 @@ export interface JobSuitableEntry {
 
 export interface N8NJobMatch {
   job_id?: string;
-  job_title?: string | null; // Changed to optional and nullable
+  job_title?: string | null;
   fit_score: number;
   match_reasons?: string[];
 }
@@ -158,13 +159,13 @@ export interface CandidateDetails {
   experience?: ExperienceEntry[];
   skills?: SkillEntry[];
   job_suitable?: JobSuitableEntry[];
-  associatedMatchDetails?: { // Details of the primary n8n match
+  associatedMatchDetails?: { 
     jobTitle: string;
     fitScore: number;
     reasons: string[];
     n8nJobId?: string;
   };
-  job_matches?: N8NJobMatch[]; // All job matches from n8n
+  job_matches?: N8NJobMatch[]; 
 }
 
 export interface N8NCandidateWebhookEntry {
@@ -184,7 +185,6 @@ export interface N8NCandidateWebhookEntry {
 
 export type N8NWebhookPayload = N8NCandidateWebhookEntry;
 
-// Kept for potential backward compatibility if some candidates have old data structure
 export interface OldParsedResumeData {
   name?: string;
   email?: string;
@@ -194,7 +194,6 @@ export interface OldParsedResumeData {
   experienceYears?: number;
   summary?: string;
 }
-
 
 export interface Position {
   id: string;
@@ -206,13 +205,14 @@ export interface Position {
   custom_attributes?: Record<string, any> | null;
   createdAt?: string;
   updatedAt?: string;
-  candidates?: Candidate[]; // Relation for dashboard chart
+  candidates?: Candidate[];
 }
 
 export interface UserGroup {
   id: string;
   name: string;
   description?: string | null;
+  permissions?: PlatformModuleId[]; // Added to hold permissions for a group
   createdAt?: string;
   updatedAt?: string;
 }
@@ -222,12 +222,14 @@ export interface Candidate {
   name: string;
   email: string;
   phone?: string | null;
-  resumePath?: string | null;
+  avatarUrl?: string | null; // For candidate profile image
+  dataAiHint?: string | null; // For candidate profile image
+  resumePath?: string | null; // Current/primary resume
   parsedData: CandidateDetails | OldParsedResumeData | null;
   positionId: string | null;
-  position?: Position | null; // For display, if joined
+  position?: Position | null;
   fitScore: number;
-  status: CandidateStatus; // Now a string to accommodate custom stages
+  status: CandidateStatus;
   applicationDate: string;
   recruiterId?: string | null;
   recruiter?: Pick<UserProfile, 'id' | 'name' | 'email'> | null;
@@ -235,6 +237,16 @@ export interface Candidate {
   createdAt?: string;
   updatedAt?: string;
   transitionHistory: TransitionRecord[];
+}
+
+export interface ResumeHistoryEntry {
+  id: string;
+  candidateId: string;
+  filePath: string;
+  originalFileName: string;
+  uploadedAt: string;
+  uploadedByUserId?: string | null;
+  uploadedByUserName?: string | null; // For display
 }
 
 
@@ -245,9 +257,9 @@ export interface UserProfile {
   avatarUrl?: string;
   dataAiHint?: string;
   role: 'Admin' | 'Recruiter' | 'Hiring Manager';
-  password?: string; // Only used for creation/validation, not sent to client
+  password?: string;
   modulePermissions?: PlatformModuleId[];
-  groups?: UserGroup[]; // New: Assigned groups
+  groups?: UserGroup[];
   createdAt?: string;
   updatedAt?: string;
 }
@@ -261,52 +273,54 @@ export interface LogEntry {
   message: string;
   source?: string;
   actingUserId?: string | null;
-  actingUserName?: string | null; // Added for potential display
+  actingUserName?: string | null;
   details?: Record<string, any> | null;
   createdAt?: string;
 }
 
-// Data Model Attribute Preferences
 export type UIDisplayPreference = "Standard" | "Emphasized" | "Hidden";
 
 export interface AttributePreference {
-  path: string; // e.g., "Candidate.name", "Position.description"
+  path: string;
   uiPreference: UIDisplayPreference;
   customNote: string;
 }
 
-export interface DataModelPreferences {
-  candidateAttributes: Record<string, Partial<Pick<AttributePreference, 'uiPreference' | 'customNote'>>>;
-  positionAttributes: Record<string, Partial<Pick<AttributePreference, 'uiPreference' | 'customNote'>>>;
+export interface UserDataModelPreference {
+  id?: string; // DB id
+  userId: string;
+  modelType: 'Candidate' | 'Position'; // Which model this preference is for
+  attributeKey: string; // e.g., 'name', 'parsedData.personal_info.location'
+  uiPreference: UIDisplayPreference;
+  customNote?: string | null;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
-// Webhook Mapping Types
+export interface DataModelPreferences { // Used on client-side, potentially loaded from server
+  candidateAttributes: Record<string, Partial<Pick<UserDataModelPreference, 'uiPreference' | 'customNote'>>>;
+  positionAttributes: Record<string, Partial<Pick<UserDataModelPreference, 'uiPreference' | 'customNote'>>>;
+}
+
+
 export interface WebhookFieldMapping {
-  id?: string; // Optional: only present when fetched from DB
-  targetPath: string; // e.g., "candidate_info.personal_info.firstname"
-  sourcePath: string | null; // e.g., "data.profile.firstName" from n8n JSON - allow null
+  id?: string;
+  targetPath: string;
+  sourcePath: string | null;
   notes?: string | null;
-  createdAt?: string; // from DB
-  updatedAt?: string; // from DB
+  createdAt?: string;
+  updatedAt?: string;
 }
 
-export interface WebhookMappingConfiguration { // This type might be less used if mappings are stored individually
-  webhookUrlName: string;
-  mappings: WebhookFieldMapping[];
-}
-
-
-// Definitions for Data Model Viewer
 export interface ModelAttributeDefinition {
-  key: string; // The actual key in the data object, e.g., 'name', 'personal_info.firstname'
-  label: string; // User-friendly label, e.g., 'Full Name', 'First Name'
-  type: string; // e.g., 'string', 'number', 'boolean', 'date', 'object', 'array'
+  key: string;
+  label: string;
+  type: string;
   description?: string;
-  subAttributes?: ModelAttributeDefinition[]; // For nested objects
-  arrayItemType?: string; // For arrays of simple types or objects
+  subAttributes?: ModelAttributeDefinition[];
+  arrayItemType?: string;
 }
 
-// Custom Field Definitions
 export type CustomFieldType = 'text' | 'textarea' | 'number' | 'boolean' | 'date' | 'select_single' | 'select_multiple';
 export const CUSTOM_FIELD_TYPES: CustomFieldType[] = ['text', 'textarea', 'number', 'boolean', 'date', 'select_single', 'select_multiple'];
 
@@ -320,9 +334,16 @@ export interface CustomFieldDefinition {
   field_key: string;
   label: string;
   field_type: CustomFieldType;
-  options?: CustomFieldOption[] | null; // For select types
+  options?: CustomFieldOption[] | null;
   is_required?: boolean;
   sort_order?: number;
   createdAt?: string;
   updatedAt?: string;
+}
+
+// System-wide settings
+export interface SystemSetting {
+    key: 'appName' | 'appLogoDataUrl' | 'appThemePreference'; // Add more keys as needed
+    value: string | null; // Store theme preference as string e.g. "dark", "light", "system"
+    updatedAt?: string;
 }

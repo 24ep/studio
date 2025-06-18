@@ -27,6 +27,19 @@ interface CandidatesPageClientProps {
   permissionError?: boolean;
 }
 
+function downloadFile(content: string, filename: string, contentType: string) {
+  const blob = new Blob([content], { type: contentType });
+  const link = document.createElement("a");
+  const url = URL.createObjectURL(blob);
+  link.setAttribute("href", url);
+  link.setAttribute("download", filename);
+  link.style.visibility = 'hidden';
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+}
+
 export function CandidatesPageClient({
   initialCandidates,
   initialAvailablePositions,
@@ -34,13 +47,13 @@ export function CandidatesPageClient({
   authError: serverAuthError = false,
   permissionError: serverPermissionError = false,
 }: CandidatesPageClientProps) {
-  const [filters, setFilters] = useState<CandidateFilterValues>({ minFitScore: 0, maxFitScore: 100, positionId: "__ALL_POSITIONS__" });
+  const [filters, setFilters] = useState<CandidateFilterValues>({ minFitScore: 0, maxFitScore: 100, positionId: "__ALL_POSITIONS__", status: "all" });
   
   const [allCandidates, setAllCandidates] = useState<Candidate[]>(initialCandidates || []);
   const [availablePositions, setAvailablePositions] = useState<Position[]>(initialAvailablePositions || []);
   const [availableStages, setAvailableStages] = useState<RecruitmentStage[]>(initialAvailableStages || []);
   
-  const [isLoading, setIsLoading] = useState(false); // For client-side fetches
+  const [isLoading, setIsLoading] = useState(false);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
   const [isCreateViaN8nModalOpen, setIsCreateViaN8nModalOpen] = useState(false);
@@ -71,6 +84,7 @@ export function CandidatesPageClient({
       const query = new URLSearchParams();
       if (currentFilters.name) query.append('name', currentFilters.name);
       if (currentFilters.positionId && currentFilters.positionId !== "__ALL_POSITIONS__") query.append('positionId', currentFilters.positionId);
+      if (currentFilters.status && currentFilters.status !== "all") query.append('status', currentFilters.status);
       if (currentFilters.education) query.append('education', currentFilters.education);
       if (currentFilters.minFitScore !== undefined) query.append('minFitScore', String(currentFilters.minFitScore));
       if (currentFilters.maxFitScore !== undefined) query.append('maxFitScore', String(currentFilters.maxFitScore));
@@ -86,7 +100,7 @@ export function CandidatesPageClient({
         }
         if (response.status === 403) {
             setPermissionError(true);
-            setFetchError(errorMessage); // Show specific permission error
+            setFetchError(errorMessage);
             setAllCandidates([]);
             return;
         }
@@ -97,7 +111,6 @@ export function CandidatesPageClient({
       const data: Candidate[] = await response.json();
       setAllCandidates(data);
     } catch (error) {
-      console.error("Error fetching candidates (client-side):", error);
       const errorMessage = (error as Error).message || "Could not load candidate data.";
        if (!(errorMessage.toLowerCase().includes("unauthorized") || errorMessage.toLowerCase().includes("forbidden"))) {
         setFetchError(errorMessage);
@@ -108,21 +121,18 @@ export function CandidatesPageClient({
     }
   }, [sessionStatus, pathname, signIn]);
 
-  // Effect for handling filter changes
   useEffect(() => {
     if (sessionStatus === 'authenticated' && !serverAuthError && !serverPermissionError) {
       fetchFilteredCandidatesOnClient(filters);
     }
   }, [filters, sessionStatus, serverAuthError, serverPermissionError, fetchFilteredCandidatesOnClient]);
 
-  // Effect for handling authentication state changes (e.g., session expiring)
    useEffect(() => {
     if (sessionStatus === 'unauthenticated' && !serverAuthError && !serverPermissionError) {
         signIn(undefined, { callbackUrl: pathname });
     }
   }, [sessionStatus, pathname, serverAuthError, serverPermissionError, signIn]);
 
-  // Update state if initial props change (e.g. after server-side revalidation if using that pattern)
   useEffect(() => { setAllCandidates(initialCandidates || []); }, [initialCandidates]);
   useEffect(() => { setAvailablePositions(initialAvailablePositions || []); }, [initialAvailablePositions]);
   useEffect(() => { setAvailableStages(initialAvailableStages || []); }, [initialAvailableStages]);
@@ -157,12 +167,16 @@ export function CandidatesPageClient({
     }
   }, [fetchCandidateById, toast, fetchFilteredCandidatesOnClient, filters]);
 
-  const handleUpdateCandidateAPI = async (candidateId: string, status: CandidateStatus) => {
+  const handleUpdateCandidateAPI = async (candidateId: string, status: CandidateStatus, transitionNotes?: string) => {
     try {
+      const payload: { status: CandidateStatus, transitionNotes?: string } = { status };
+      if (transitionNotes) {
+        payload.transitionNotes = transitionNotes;
+      }
       const response = await fetch(`/api/candidates/${candidateId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status }),
+        body: JSON.stringify(payload),
       });
 
       if (!response.ok) {
@@ -255,31 +269,49 @@ export function CandidatesPageClient({
     setTimeout(() => { fetchFilteredCandidatesOnClient(filters); }, 15000);
   };
   
-  const handleDownloadExcelTemplate = () => {
-    const columns = [
-      "name (Optional, or derive from personal_info.firstname/lastname)",
-      "email (Optional, or derive from contact_info.email)",
-      "phone (Optional)",
-      "positionId (UUID, Optional)",
-      "fitScore (Number 0-100, Optional, Default: 0)",
-      "status (Default: Applied, e.g., Applied, Screening - use a valid stage name from Settings > Recruitment Stages)",
-      "applicationDate (ISO8601 datetime string, Optional, Default: now)",
-      "parsedData.cv_language (String, Optional)",
-      "parsedData.personal_info.firstname (String, Required if name not provided)",
-      "parsedData.personal_info.lastname (String, Required if name not provided)",
-      // ... other fields
+  const handleDownloadExcelTemplateGuide = () => {
+    const headers = [
+      "name", "email", "phone", "positionId", "fitScore", "status", "applicationDate",
+      "parsedData.cv_language",
+      "parsedData.personal_info.firstname", "parsedData.personal_info.lastname", 
+      "parsedData.personal_info.title_honorific", "parsedData.personal_info.nickname",
+      "parsedData.personal_info.location", "parsedData.personal_info.introduction_aboutme",
+      "parsedData.contact_info.email (if different from main email)", "parsedData.contact_info.phone (if different from main phone)",
+      // For array fields like education, experience, skills, job_suitable, job_matches:
+      // These would ideally be JSON strings in their respective cells or handled by a more complex parser.
+      // For a simple CSV template, it's harder to represent. We'll provide a note.
+      "parsedData.education (JSON string or leave blank)",
+      "parsedData.experience (JSON string or leave blank)",
+      "parsedData.skills (JSON string or leave blank)",
+      "parsedData.job_suitable (JSON string or leave blank)",
+      "parsedData.job_matches (JSON string or leave blank)"
     ];
+    const exampleRows = [
+      ["John Doe", "john.doe@example.com", "555-1212", "position-uuid-123", "85", "Applied", new Date().toISOString(),
+       "EN", "John", "Doe", "Mr.", "Johnny", "New York, USA", "Experienced software engineer.",
+       "john.cv@example.com", "555-0000",
+       `[{"university":"Tech U","major":"CS"}]`, // Example JSON string for education
+       `[{"company":"Big Tech Inc.","position":"Dev"}]`, // Example JSON string for experience
+       `[{"segment_skill":"Languages","skill":["Python","JS"]}]`,
+       `[{"suitable_career":"Software Development"}]`,
+       `[{"job_title":"Senior Dev","fit_score":90}]`
+      ],
+      ["Jane Smith", "jane.smith@example.com", "555-0011", "", "70", "Screening", new Date().toISOString(),
+       "EN", "Jane", "Smith", "Ms.", "", "London, UK", "Product enthusiast.",
+       "", "",
+       "[]", "[]", "[]", "[]", "[]"
+      ]
+    ];
+     let csvContent = headers.join(',') + '\n';
+    exampleRows.forEach(row => {
+        csvContent += row.map(val => `"${String(val || '').replace(/"/g, '""')}"`).join(',') + '\n';
+    });
+    csvContent += "\nNOTE: For array fields (education, experience, skills, job_suitable, job_matches), provide a valid JSON string representation of the array of objects, or leave blank. Example for education: \"[{\\\"university\\\":\\\"Tech U\\\",\\\"major\\\":\\\"CS\\\"}]\"";
+
+    downloadFile(csvContent, 'candidates_template_guide.csv', 'text/csv;charset=utf-8;');
     toast({
-        title: "Excel Import Template Columns",
-        description: (
-            <div className="max-h-60 overflow-y-auto">
-              <p className="mb-2">Your Excel file should have a header row with columns like these. See API docs for `parsedData` JSON string examples.</p>
-              <ul className="list-disc list-inside text-xs">
-                {columns.map(col => <li key={col}>{col}</li>)}
-              </ul>
-            </div>
-        ),
-        duration: 15000,
+      title: "Template Guide Downloaded",
+      description: "A CSV template guide for candidates has been downloaded.",
     });
   };
 
@@ -289,6 +321,8 @@ export function CandidatesPageClient({
       const query = new URLSearchParams();
       if (filters.name) query.append('name', filters.name);
       if (filters.positionId && filters.positionId !== "__ALL_POSITIONS__") query.append('positionId', filters.positionId);
+      if (filters.status && filters.status !== "all") query.append('status', filters.status);
+
 
       const response = await fetch(`/api/candidates/export?${query.toString()}`);
       if (!response.ok) { throw new Error("Export failed"); }
@@ -382,13 +416,13 @@ export function CandidatesPageClient({
                 <PlusCircle className="mr-2 h-4 w-4" /> Add Candidate Manually
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => setIsImportModalOpen(true)}>
-                <FileUp className="mr-2 h-4 w-4" /> Import Candidates (Excel)
+                <FileUp className="mr-2 h-4 w-4" /> Import Candidates (Excel/CSV)
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={handleDownloadExcelTemplate}>
-                <FileDown className="mr-2 h-4 w-4" /> Download Excel Template Guide
+              <DropdownMenuItem onClick={handleDownloadExcelTemplateGuide}>
+                <FileDown className="mr-2 h-4 w-4" /> Download CSV Template Guide
               </DropdownMenuItem>
               <DropdownMenuItem onClick={handleExportToExcel} disabled={isLoading}>
-                <FileSpreadsheet className="mr-2 h-4 w-4" /> Export Candidates (Excel/CSV)
+                <FileSpreadsheet className="mr-2 h-4 w-4" /> Export Candidates (CSV)
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -399,6 +433,7 @@ export function CandidatesPageClient({
         initialFilters={filters}
         onFilterChange={handleFilterChange}
         availablePositions={availablePositions}
+        availableStages={availableStages}
         isLoading={isLoading && allCandidates.length > 0}
       />
 
@@ -444,7 +479,7 @@ export function CandidatesPageClient({
       <ImportCandidatesModal
         isOpen={isImportModalOpen}
         onOpenChange={setIsImportModalOpen}
-        onImportSuccess={() => fetchFilteredCandidatesOnClient(filters)} // Refresh after import
+        onImportSuccess={() => fetchFilteredCandidatesOnClient(filters)}
       />
       {selectedPositionForEdit && (
         <EditPositionModal

@@ -3,12 +3,13 @@ import { NextResponse, type NextRequest } from 'next/server';
 import pool from '../../../lib/db';
 import { z } from 'zod';
 import { logAudit } from '@/lib/auditLog';
-// import { getServerSession } from 'next-auth/next'; // No longer needed for public API
-// import { authOptions } from '@/app/api/auth/[...nextauth]/route'; // No longer needed for public API
+import { getServerSession } from 'next-auth/next';
+import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 import { v4 as uuidv4 } from 'uuid';
 
 export async function GET(request: NextRequest) {
-  // const session = await getServerSession(authOptions);
+  const session = await getServerSession(authOptions);
+  // Publicly viewable, but actions (POST, PUT, DELETE) might be restricted
   // if (!session?.user) {
   //   return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
   // }
@@ -17,7 +18,7 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const titleFilter = searchParams.get('title');
     const departmentFilter = searchParams.get('department');
-    const isOpenFilter = searchParams.get('isOpen'); // "true", "false", or null
+    const isOpenFilter = searchParams.get('isOpen');
     const positionLevelFilter = searchParams.get('position_level');
 
 
@@ -58,7 +59,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(positions, { status: 200 });
   } catch (error) {
     console.error("Failed to fetch positions:", error);
-    await logAudit('ERROR', `Failed to fetch positions. Error: ${(error as Error).message}`, 'API:Positions:GetAll', null);
+    await logAudit('ERROR', `Failed to fetch positions. Error: ${(error as Error).message}`, 'API:Positions:GetAll', session?.user?.id);
     return NextResponse.json({ message: "Error fetching positions", error: (error as Error).message }, { status: 500 });
   }
 }
@@ -69,20 +70,18 @@ const createPositionSchema = z.object({
   description: z.string().optional().nullable(),
   isOpen: z.boolean({ required_error: "isOpen status is required" }),
   position_level: z.string().optional().nullable(),
-  custom_attributes: z.record(z.any()).optional().nullable(), // New
+  custom_attributes: z.record(z.any()).optional().nullable(),
 });
 
 export async function POST(request: NextRequest) {
-  // const session = await getServerSession(authOptions);
-  // const userRole = session?.user?.role;
+  const session = await getServerSession(authOptions);
+  const actingUserId = session?.user?.id || null;
+  const actingUserName = session?.user?.name || session?.user?.email || 'System (API Create)';
 
-  // if (!session?.user || (userRole !== 'Admin' && userRole !== 'Recruiter')) {
-  //   await logAudit('WARN', `Forbidden attempt to create position by user ${session?.user?.email || 'Unknown'} (ID: ${session?.user?.id || 'N/A'}). Required roles: Admin, Recruiter.`, 'API:Positions:Create', session?.user?.id);
-  //   return NextResponse.json({ message: "Forbidden: Insufficient permissions" }, { status: 403 });
-  // }
-  const actingUserId = null; // Public API
-  const actingUserName = 'System (Public API)';
-
+  if (!session?.user || (session.user.role !== 'Admin' && !session.user.modulePermissions?.includes('POSITIONS_MANAGE'))) {
+    await logAudit('WARN', `Forbidden attempt to create position by ${actingUserName}.`, 'API:Positions:Create', actingUserId);
+    return NextResponse.json({ message: "Forbidden: Insufficient permissions" }, { status: 403 });
+  }
 
   let body;
   try {
@@ -116,7 +115,7 @@ export async function POST(request: NextRequest) {
       validatedData.description || null,
       validatedData.isOpen,
       validatedData.position_level || null,
-      validatedData.custom_attributes || {}, // New
+      validatedData.custom_attributes || {},
     ];
     const result = await pool.query(insertQuery, values);
     const newPosition = {

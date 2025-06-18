@@ -6,44 +6,33 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from '@/components/ui/input';
 import { format, parseISO } from 'date-fns';
-import { ListOrdered, ServerCrash, ShieldAlert, Info, RefreshCw, ChevronsLeft, ChevronLeft, ChevronRight, ChevronsRight, AlertTriangle, Loader2 } from "lucide-react";
+import { ListOrdered, ServerCrash, ShieldAlert, Info, RefreshCw, ChevronsLeft, ChevronLeft, ChevronRight, ChevronsRight, AlertTriangle, Loader2, Search } from "lucide-react";
 import type { LogEntry, LogLevel } from '@/lib/types';
 import { useToast } from "@/hooks/use-toast";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { signIn, useSession } from "next-auth/react";
-import { useRouter, usePathname } from 'next/navigation'; // Added usePathname
+import { useRouter, usePathname } from 'next/navigation';
 
 const getLogLevelBadgeVariant = (level: LogLevel): "default" | "secondary" | "destructive" | "outline" => {
   switch (level) {
-    case 'ERROR':
-      return 'destructive';
-    case 'WARN':
-    case 'AUDIT': 
-      return 'secondary'; 
-    case 'INFO':
-      return 'default'; 
-    case 'DEBUG':
-      return 'outline';
-    default:
-      return 'outline';
+    case 'ERROR': return 'destructive';
+    case 'WARN': case 'AUDIT': return 'secondary'; 
+    case 'INFO': return 'default'; 
+    case 'DEBUG': return 'outline';
+    default: return 'outline';
   }
 };
 
 const getLogLevelIcon = (level: LogLevel) => {
   switch (level) {
-    case 'ERROR':
-      return <ServerCrash className="h-4 w-4 mr-1.5" />;
-    case 'WARN':
-      return <AlertTriangle className="h-4 w-4 mr-1.5" />; 
-    case 'AUDIT':
-      return <ShieldAlert className="h-4 w-4 mr-1.5" />;
-    case 'INFO':
-      return <Info className="h-4 w-4 mr-1.5" />;
-    case 'DEBUG':
-      return <ListOrdered className="h-4 w-4 mr-1.5" />; 
-    default:
-      return <Info className="h-4 w-4 mr-1.5" />;
+    case 'ERROR': return <ServerCrash className="h-4 w-4 mr-1.5" />;
+    case 'WARN': return <AlertTriangle className="h-4 w-4 mr-1.5" />; 
+    case 'AUDIT': return <ShieldAlert className="h-4 w-4 mr-1.5" />;
+    case 'INFO': return <Info className="h-4 w-4 mr-1.5" />;
+    case 'DEBUG': return <ListOrdered className="h-4 w-4 mr-1.5" />; 
+    default: return <Info className="h-4 w-4 mr-1.5" />;
   }
 };
 
@@ -59,6 +48,9 @@ export default function LogsPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalLogs, setTotalLogs] = useState(0);
   const [levelFilter, setLevelFilter] = useState<LogLevel | "ALL">("ALL");
+  const [searchQuery, setSearchQuery] = useState<string>("");
+  const [appliedSearchQuery, setAppliedSearchQuery] = useState<string>("");
+
 
   const { data: session, status: sessionStatus } = useSession();
   const router = useRouter();
@@ -66,7 +58,7 @@ export default function LogsPage() {
 
   const totalPages = Math.ceil(totalLogs / ITEMS_PER_PAGE);
 
-  const fetchLogs = useCallback(async (page: number, filterLevel: LogLevel | "ALL") => {
+  const fetchLogs = useCallback(async (page: number, filterLevel: LogLevel | "ALL", currentSearch: string) => {
     if (sessionStatus !== 'authenticated') {
         setIsLoading(false);
         return;
@@ -79,6 +71,9 @@ export default function LogsPage() {
       let url = `/api/logs?limit=${ITEMS_PER_PAGE}&offset=${offset}`;
       if (filterLevel !== "ALL") {
         url += `&level=${filterLevel}`;
+      }
+      if (currentSearch.trim()) {
+        url += `&search=${encodeURIComponent(currentSearch.trim())}`;
       }
       const response = await fetch(url);
       
@@ -121,32 +116,42 @@ export default function LogsPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [sessionStatus, toast, pathname, signIn]); 
+  }, [sessionStatus, toast, pathname]); 
 
   useEffect(() => {
     setIsClient(true);
     if (sessionStatus === 'unauthenticated') {
       signIn(undefined, { callbackUrl: pathname });
     } else if (sessionStatus === 'authenticated') {
-      fetchLogs(currentPage, levelFilter);
+      if (session.user.role !== 'Admin' && !session.user.modulePermissions?.includes('LOGS_VIEW')) {
+        setFetchError("You do not have permission to view logs.");
+        setIsLoading(false);
+      } else {
+        fetchLogs(currentPage, levelFilter, appliedSearchQuery);
+      }
     }
-  }, [sessionStatus, fetchLogs, currentPage, levelFilter, pathname, signIn]);
+  }, [sessionStatus, session, fetchLogs, currentPage, levelFilter, appliedSearchQuery, pathname, signIn]);
 
 
   const handleRefresh = () => {
-    if (currentPage !== 1) {
-      setCurrentPage(1); 
-    } else {
-      fetchLogs(1, levelFilter); 
-    }
+    if (currentPage !== 1) setCurrentPage(1);
+    setAppliedSearchQuery(searchQuery); // Apply current input search query
+    fetchLogs(1, levelFilter, searchQuery);
   };
   
   const handleLevelFilterChange = (value: string) => {
     setLevelFilter(value as LogLevel | "ALL");
     setCurrentPage(1); 
+    // fetchLogs will be called by useEffect
   };
 
-  if (sessionStatus === 'loading' || (sessionStatus === 'unauthenticated' && !pathname.startsWith('/auth/signin')) || (isLoading && !fetchError && !isClient)) { 
+  const handleSearch = () => {
+    setCurrentPage(1);
+    setAppliedSearchQuery(searchQuery);
+     // fetchLogs will be called by useEffect due to appliedSearchQuery change
+  };
+
+  if (sessionStatus === 'loading' || (sessionStatus === 'unauthenticated' && !pathname.startsWith('/auth/signin')) || (isLoading && !fetchError && !isClient && logs.length === 0)) { 
     return (
       <div className="flex h-screen w-screen items-center justify-center bg-background fixed inset-0 z-50">
         <Loader2 className="h-16 w-16 animate-spin text-primary" />
@@ -154,22 +159,46 @@ export default function LogsPage() {
     );
   }
 
+  if (fetchError && !isLoading) {
+     return (
+      <div className="flex flex-col items-center justify-center h-[calc(100vh-10rem)] text-center p-4">
+        <ServerCrash className="w-16 h-16 text-destructive mb-4" />
+        <h2 className="text-2xl font-semibold text-foreground mb-2">Error Loading Logs</h2>
+        <p className="text-muted-foreground mb-4 max-w-md">{fetchError}</p>
+        {fetchError === "You do not have permission to view logs." ? (
+             <Button onClick={() => router.push('/')} className="btn-hover-primary-gradient">Go to Dashboard</Button>
+        ) : (
+             <Button onClick={handleRefresh} className="btn-hover-primary-gradient">Try Again</Button>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
       <Card className="shadow-lg">
-        <CardHeader className="flex flex-row items-center justify-between">
+        <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div>
             <CardTitle className="flex items-center">
               <ListOrdered className="mr-2 h-6 w-6 text-primary" /> Application Logs
             </CardTitle>
             <CardDescription>
-              View system and application logs.
+              View system and application logs. Filter by level or search message/source.
             </CardDescription>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto">
+             <div className="flex-grow sm:flex-grow-0">
+                <Input
+                    type="search"
+                    placeholder="Search message or source..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+                    className="w-full sm:w-[250px]"
+                />
+             </div>
             <Select value={levelFilter} onValueChange={handleLevelFilterChange}>
-                <SelectTrigger className="w-[180px]">
+                <SelectTrigger className="w-full sm:w-[180px]">
                     <SelectValue placeholder="Filter by level" />
                 </SelectTrigger>
                 <SelectContent>
@@ -181,7 +210,10 @@ export default function LogsPage() {
                     <SelectItem value="AUDIT">Audit</SelectItem>
                 </SelectContent>
             </Select>
-            <Button variant="outline" size="icon" onClick={handleRefresh} disabled={isLoading}>
+             <Button variant="outline" size="default" onClick={handleSearch} disabled={isLoading} className="w-full sm:w-auto">
+              <Search className={`mr-2 h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} /> Search
+            </Button>
+            <Button variant="outline" size="icon" onClick={handleRefresh} disabled={isLoading} className="w-full sm:w-auto sm:ml-auto">
               <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
               <span className="sr-only">Refresh Logs</span>
             </Button>
@@ -197,7 +229,7 @@ export default function LogsPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {[...Array(5)].map((_, i) => (
+                  {[...Array(ITEMS_PER_PAGE / 2)].map((_, i) => (
                     <TableRow key={i} className="animate-pulse">
                       <TableCell className="h-[60px]"><div className="h-4 bg-muted rounded"></div></TableCell>
                       <TableCell><div className="h-6 bg-muted rounded w-20"></div></TableCell>
@@ -208,17 +240,10 @@ export default function LogsPage() {
                 </TableBody>
               </Table>
             </div>
-          ) : fetchError ? (
-             <div className="text-center py-10">
-              <ServerCrash className="mx-auto h-12 w-12 text-destructive" />
-              <p className="mt-4 text-destructive font-semibold">Error loading logs</p>
-              <p className="mt-2 text-muted-foreground">{fetchError}</p>
-              <Button onClick={handleRefresh} className="mt-4">Try Again</Button>
-            </div>
           ) : logs.length === 0 ? (
             <div className="text-center py-10">
               <ListOrdered className="mx-auto h-12 w-12 text-muted-foreground" />
-              <p className="mt-4 text-muted-foreground">No log entries found for the selected filter.</p>
+              <p className="mt-4 text-muted-foreground">No log entries found for the selected filter or search query.</p>
             </div>
           ) : (
             <>

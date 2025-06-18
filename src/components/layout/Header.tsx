@@ -15,25 +15,44 @@ import { Sun, Moon, LogOut, UserCircle, LogIn } from "lucide-react";
 import { useSession, signIn, signOut } from "next-auth/react";
 import { useEffect, useState } from "react";
 
-export function Header({ pageTitle }: { pageTitle: string }) {
+// Key for app name stored in localStorage by Preferences page
+const APP_CONFIG_APP_NAME_KEY = 'appConfigAppName';
+const DEFAULT_APP_NAME = "CandiTrack"; // Fallback default
+
+export function Header({ pageTitle: initialPageTitle }: { pageTitle: string }) {
   const { isMobile } = useSidebar();
   const { data: session, status } = useSession();
   const [mounted, setMounted] = useState(false);
-  const [effectivePageTitle, setEffectivePageTitle] = useState(pageTitle);
+  const [currentAppName, setCurrentAppName] = useState<string>(DEFAULT_APP_NAME);
+  const [effectivePageTitle, setEffectivePageTitle] = useState(initialPageTitle);
+
 
   useEffect(() => setMounted(true), []);
 
   useEffect(() => {
-    setEffectivePageTitle(pageTitle); // Update title if prop changes
-  }, [pageTitle]);
+    // Update app name from localStorage if on client
+    if (typeof window !== 'undefined') {
+      const storedAppName = localStorage.getItem(APP_CONFIG_APP_NAME_KEY);
+      setCurrentAppName(storedAppName || DEFAULT_APP_NAME);
+    }
+  }, []);
 
+  useEffect(() => {
+    // Update effective page title when initialPageTitle or currentAppName changes
+    // This ensures the title is correct even if appName is loaded after initial render
+    if (initialPageTitle === DEFAULT_APP_NAME && currentAppName !== DEFAULT_APP_NAME) {
+      setEffectivePageTitle(currentAppName);
+    } else {
+      setEffectivePageTitle(initialPageTitle);
+    }
+  }, [initialPageTitle, currentAppName]);
 
-  // Basic theme toggle example, can be expanded with context
   const toggleTheme = () => {
     document.documentElement.classList.toggle('dark');
+    // Optionally, save theme preference to localStorage here if desired
+    // localStorage.setItem('appTheme', document.documentElement.classList.contains('dark') ? 'dark' : 'light');
   };
 
-  // Show skeleton while loading session or not mounted to prevent layout shifts/flicker
   if (!mounted || status === "loading") { 
     return (
       <header className="flex h-16 items-center justify-between border-b bg-card px-4 md:px-6 sticky top-0 z-30">
@@ -42,8 +61,8 @@ export function Header({ pageTitle }: { pageTitle: string }) {
           <div className="h-6 w-32 rounded bg-muted animate-pulse" />
         </div>
         <div className="flex items-center gap-3">
-          <div className="h-8 w-8 rounded-full bg-muted animate-pulse" /> {/* Theme toggle placeholder */}
-          <div className="h-10 w-10 rounded-full bg-muted animate-pulse" /> {/* Avatar placeholder */}
+          <div className="h-8 w-8 rounded-full bg-muted animate-pulse" />
+          <div className="h-10 w-10 rounded-full bg-muted animate-pulse" />
         </div>
       </header>
     );
@@ -84,9 +103,6 @@ export function Header({ pageTitle }: { pageTitle: string }) {
                 </div>
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
-              {/* Profile item removed */}
-              {/* Add more items like Settings, etc. */}
-              {/* <DropdownMenuSeparator /> */} {/* Removed separator if profile was the only item before logout */}
               <DropdownMenuItem onClick={() => signOut()}>
                 <LogOut className="mr-2 h-4 w-4" />
                 Log out

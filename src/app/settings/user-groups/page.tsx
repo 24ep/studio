@@ -34,19 +34,27 @@ import {
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
+import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { useToast } from '@/hooks/use-toast';
 import { useSession, signIn } from 'next-auth/react';
 import { useRouter, usePathname } from 'next/navigation';
-import type { UserGroup } from '@/lib/types';
-import { PlusCircle, Edit3, Trash2, Save, Loader2, ServerCrash, ShieldAlert, Users } from 'lucide-react';
-import { useForm } from 'react-hook-form';
+import type { UserGroup, PlatformModuleId } from '@/lib/types';
+import { PLATFORM_MODULES } from '@/lib/types';
+import { PlusCircle, Edit3, Trash2, Save, Loader2, ServerCrash, ShieldAlert, Users, ShieldCheck } from 'lucide-react';
+import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+
+
+const platformModuleIds = PLATFORM_MODULES.map(m => m.id) as [PlatformModuleId, ...PlatformModuleId[]];
 
 const groupFormSchema = z.object({
   name: z.string().min(1, "Group name is required").max(100),
   description: z.string().optional().nullable(),
+  permissions: z.array(z.enum(platformModuleIds)).optional().default([]),
 });
 type GroupFormValues = z.infer<typeof groupFormSchema>;
 
@@ -66,7 +74,7 @@ export default function UserGroupsPage() {
 
   const form = useForm<GroupFormValues>({
     resolver: zodResolver(groupFormSchema),
-    defaultValues: { name: '', description: '' },
+    defaultValues: { name: '', description: '', permissions: [] },
   });
 
   const fetchGroups = useCallback(async () => {
@@ -107,7 +115,7 @@ export default function UserGroupsPage() {
 
   const handleOpenModal = (group: UserGroup | null = null) => {
     setEditingGroup(group);
-    form.reset(group ? { name: group.name, description: group.description || '' } : { name: '', description: '' });
+    form.reset(group ? { name: group.name, description: group.description || '', permissions: group.permissions || [] } : { name: '', description: '', permissions: [] });
     setIsModalOpen(true);
   };
 
@@ -186,7 +194,7 @@ export default function UserGroupsPage() {
         </Button>
       </div>
       <CardDescription>
-        Manage user groups to organize users and bulk-assign permissions (permission assignment via groups is a future enhancement).
+        Manage user groups to organize users. Permissions can be assigned to groups, and users in those groups will inherit these permissions (actual inheritance logic is a future enhancement).
       </CardDescription>
 
       <Card>
@@ -199,6 +207,7 @@ export default function UserGroupsPage() {
                 <TableRow>
                   <TableHead>Name</TableHead>
                   <TableHead>Description</TableHead>
+                  <TableHead>Permissions Assigned</TableHead>
                   <TableHead className="text-right w-[120px]">Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -207,6 +216,11 @@ export default function UserGroupsPage() {
                   <TableRow key={group.id}>
                     <TableCell className="font-medium">{group.name}</TableCell>
                     <TableCell className="text-sm text-muted-foreground max-w-md truncate">{group.description || 'N/A'}</TableCell>
+                    <TableCell className="text-xs">
+                      {group.permissions && group.permissions.length > 0 
+                        ? group.permissions.map(p => PLATFORM_MODULES.find(pm => pm.id === p)?.label || p).join(', ') 
+                        : 'None'}
+                    </TableCell>
                     <TableCell className="text-right">
                       <Button variant="ghost" size="icon" onClick={() => handleOpenModal(group)} className="mr-1 h-8 w-8">
                         <Edit3 className="h-4 w-4" />
@@ -224,31 +238,86 @@ export default function UserGroupsPage() {
       </Card>
 
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-        <DialogContent>
+        <DialogContent className="sm:max-w-lg max-h-[90vh] flex flex-col">
           <DialogHeader>
             <DialogTitle>{editingGroup ? 'Edit' : 'Add New'} User Group</DialogTitle>
             <DialogDescription>
-              {editingGroup ? 'Update the details of this group.' : 'Define a new group for users.'}
+              {editingGroup ? 'Update the details and permissions of this group.' : 'Define a new group for users and assign permissions.'}
             </DialogDescription>
           </DialogHeader>
-          <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-4 py-2">
-            <div>
-              <Label htmlFor="name">Name *</Label>
-              <Input id="name" {...form.register('name')} />
-              {form.formState.errors.name && <p className="text-sm text-destructive mt-1">{form.formState.errors.name.message}</p>}
-            </div>
-            <div>
-              <Label htmlFor="description">Description</Label>
-              <Textarea id="description" {...form.register('description')} />
-            </div>
-            <DialogFooter className="pt-4">
-              <DialogClose asChild><Button type="button" variant="outline">Cancel</Button></DialogClose>
-              <Button type="submit" disabled={form.formState.isSubmitting} className="btn-primary-gradient">
-                {form.formState.isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Save className="mr-2 h-4 w-4"/>}
-                {editingGroup ? 'Save Changes' : 'Create Group'}
-              </Button>
-            </DialogFooter>
-          </form>
+          <ScrollArea className="flex-grow pr-2">
+            <Form {...form}>
+              <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-4 py-2 pl-1">
+                <FormField
+                    control={form.control}
+                    name="name"
+                    render={({ field }) => (
+                    <FormItem>
+                        <FormLabel htmlFor="name">Name *</FormLabel>
+                        <FormControl><Input id="name" {...field} /></FormControl>
+                        <FormMessage />
+                    </FormItem>
+                    )}
+                />
+                <FormField
+                    control={form.control}
+                    name="description"
+                    render={({ field }) => (
+                    <FormItem>
+                        <FormLabel htmlFor="description">Description</FormLabel>
+                        <FormControl><Textarea id="description" {...field} value={field.value ?? ''} /></FormControl>
+                        <FormMessage />
+                    </FormItem>
+                    )}
+                />
+                <div className="space-y-2">
+                    <FormLabel className="flex items-center"><ShieldCheck className="mr-2 h-5 w-5 text-primary" /> Assign Permissions to Group</FormLabel>
+                    <div className="space-y-2 rounded-md border p-4 max-h-48 overflow-y-auto">
+                    {PLATFORM_MODULES.map((module) => (
+                        <FormField
+                        key={module.id}
+                        control={form.control}
+                        name="permissions"
+                        render={({ field }) => {
+                            return (
+                            <FormItem className="flex flex-row items-center space-x-3 space-y-0">
+                                <FormControl>
+                                <Checkbox
+                                    className="checkbox-green"
+                                    checked={field.value?.includes(module.id)}
+                                    onCheckedChange={(checked) => {
+                                    return checked
+                                        ? field.onChange([...(field.value || []), module.id])
+                                        : field.onChange(
+                                            (field.value || []).filter(
+                                            (value) => value !== module.id
+                                            )
+                                        );
+                                    }}
+                                />
+                                </FormControl>
+                                <FormLabel className="text-sm font-normal">
+                                {module.label}
+                                </FormLabel>
+                            </FormItem>
+                            );
+                        }}
+                        />
+                    ))}
+                    </div>
+                    <FormMessage /> 
+                </div>
+
+                <DialogFooter className="pt-4 sticky bottom-0 bg-background pb-1">
+                  <DialogClose asChild><Button type="button" variant="outline">Cancel</Button></DialogClose>
+                  <Button type="submit" disabled={form.formState.isSubmitting} className="btn-primary-gradient">
+                    {form.formState.isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Save className="mr-2 h-4 w-4"/>}
+                    {editingGroup ? 'Save Changes' : 'Create Group'}
+                  </Button>
+                </DialogFooter>
+              </form>
+            </Form>
+          </ScrollArea>
         </DialogContent>
       </Dialog>
 
@@ -259,7 +328,7 @@ export default function UserGroupsPage() {
               <AlertDialogTitle>Are you sure?</AlertDialogTitle>
               <AlertDialogDescription>
                 This will delete the user group "<strong>{groupToDelete.name}</strong>". This action cannot be undone.
-                Deleting a group does not delete its users, but removes them from this group.
+                Deleting a group also removes its assigned permissions and unassigns users from this group.
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>

@@ -2,10 +2,11 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { minioClient, MINIO_BUCKET_NAME } from '../../../../lib/minio';
 import pool from '../../../../lib/db';
-import type { Candidate } from '@/lib/types';
+import type { Candidate, ResumeHistoryEntry } from '@/lib/types';
 import { logAudit } from '@/lib/auditLog';
-// import { getServerSession } from 'next-auth/next'; // Removed for public API
-// import { authOptions } from '@/app/api/auth/[...nextauth]/route'; // Removed for public API
+import { getServerSession } from 'next-auth/next';
+import { authOptions } from '@/app/api/auth/[...nextauth]/route';
+import { v4 as uuidv4 } from 'uuid';
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 const ACCEPTED_FILE_TYPES = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
@@ -60,15 +61,16 @@ async function sendToN8N(candidateId: string, candidateName: string, fileNameInM
 }
 
 export async function POST(request: NextRequest) {
+  const session = await getServerSession(authOptions);
+  const actingUserId = session?.user?.id || null; 
+  const actingUserName = session?.user?.name || session?.user?.email || 'System (API Resume Upload)';
+
   const candidateId = request.nextUrl.searchParams.get('candidateId');
   if (!candidateId) {
     return NextResponse.json({ message: 'Candidate ID is required as a query parameter' }, { status: 400 });
   }
-  // Public API - session and actingUser for logging might be null
-  const actingUserId = null; 
-  const actingUserName = 'System (Public API)';
-
-  let candidateDBRecord: Pick<Candidate, 'id' | 'name'> | null = null; // Only fetch id and name
+  
+  let candidateDBRecord: Pick<Candidate, 'id' | 'name'> | null = null;
   try {
     const candidateQuery = 'SELECT id, name FROM "Candidate" WHERE id = $1'; 
     const candidateResult = await pool.query(candidateQuery, [candidateId]);
@@ -107,8 +109,33 @@ export async function POST(request: NextRequest) {
       'Content-Type': file.type,
     });
 
-    const updateQuery = 'UPDATE "Candidate" SET "resumePath" = $1, "updatedAt" = NOW() WHERE id = $2 RETURNING *;';
-    await pool.query(updateQuery, [fileNameInMinio, candidateId]);
+    const client = await pool.connect();
+    try {
+        await client.query('BEGIN');
+        // Update Candidate.resumePath to the new file
+        const updateCandidateQuery = 'UPDATE "Candidate" SET "resumePath" = $1, "updatedAt" = NOW() WHERE id = $2 RETURNING *;';
+        await client.query(updateCandidateQuery, [fileNameInMinio, candidateId]);
+
+        // Add entry to ResumeHistory
+        const insertHistoryQuery = `
+            INSERT INTO "ResumeHistory" ("id", "candidateId", "filePath", "originalFileName", "uploadedAt", "uploadedByUserId")
+            VALUES ($1, $2, $3, $4, NOW(), $5);
+        `;
+        await client.query(insertHistoryQuery, [
+            uuidv4(),
+            candidateId,
+            fileNameInMinio,
+            file.name,
+            actingUserId
+        ]);
+        await client.query('COMMIT');
+    } catch (error) {
+        await client.query('ROLLBACK');
+        throw error; // Re-throw to be caught by outer catch
+    } finally {
+        client.release();
+    }
+
 
     await logAudit('AUDIT', `Resume '${fileNameInMinio}' uploaded for candidate '${candidateDBRecord.name}' (ID: ${candidateId}) by ${actingUserName}.`, 'API:Resumes', actingUserId, { targetCandidateId: candidateId, filePath: fileNameInMinio, originalFileName: file.name });
 
@@ -116,12 +143,8 @@ export async function POST(request: NextRequest) {
 
     const finalQuery = `
         SELECT
-            c.id, c.name, c.email, c.phone, c."resumePath", c."parsedData",
-            c."positionId", c."fitScore", c.status, c."applicationDate",
-            c."recruiterId", c."createdAt", c."updatedAt",
-            p.title as "positionTitle",
-            p.department as "positionDepartment",
-            p.position_level as "positionLevel",
+            c.*,
+            p.title as "positionTitle", p.department as "positionDepartment", p.position_level as "positionLevel",
             rec.name as "recruiterName",
             COALESCE(
               (SELECT json_agg(
@@ -172,4 +195,3 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ message: error.message || 'Error processing file upload', error: error.message || 'An unknown error occurred' }, { status: 500 });
   }
 }
-

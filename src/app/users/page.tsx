@@ -3,15 +3,17 @@
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button, buttonVariants } from "@/components/ui/button"; 
-import { PlusCircle, UsersRound, ShieldAlert, Edit3, Trash2, ServerCrash, Loader2, MoreHorizontal, KeyRound } from "lucide-react"; // Added KeyRound
-import type { UserProfile, UserGroup } from "@/lib/types";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { PlusCircle, UsersRound, ShieldAlert, Edit3, Trash2, ServerCrash, Loader2, MoreHorizontal, KeyRound, Filter, Search, XCircle } from "lucide-react";
+import type { UserProfile, UserGroup } from '@/lib/types';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { useState, useEffect, useCallback } from 'react';
 import { useToast } from "@/hooks/use-toast";
-import { AddUserModal, type AddUserFormValues } from "@/components/users/AddUserModal";
-import { EditUserModal, type EditUserFormValues } from "@/components/users/EditUserModal";
+import { AddUserModal, type AddUserFormValues } from '@/components/users/AddUserModal';
+import { EditUserModal, type EditUserFormValues } from '@/components/users/EditUserModal';
 import { useRouter, usePathname } from 'next/navigation'; 
 import {
   AlertDialog,
@@ -32,6 +34,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { signIn, useSession } from "next-auth/react";
 
+const userRoleOptionsFilter: (UserProfile['role'] | "ALL_ROLES")[] = ['ALL_ROLES', 'Admin', 'Recruiter', 'Hiring Manager'];
+
 
 export default function ManageUsersPage() {
   const [users, setUsers] = useState<UserProfile[]>([]);
@@ -42,20 +46,29 @@ export default function ManageUsersPage() {
   const pathname = usePathname(); 
   const [fetchError, setFetchError] = useState<string | null>(null);
 
+  const [nameFilter, setNameFilter] = useState('');
+  const [emailFilter, setEmailFilter] = useState('');
+  const [roleFilter, setRoleFilter] = useState<UserProfile['role'] | "ALL_ROLES">("ALL_ROLES");
+
+
   const [isAddUserModalOpen, setIsAddUserModalOpen] = useState(false);
   const [isEditUserModalOpen, setIsEditUserModalOpen] = useState(false);
   const [selectedUserForEdit, setSelectedUserForEdit] = useState<UserProfile | null>(null);
   const [userToDelete, setUserToDelete] = useState<UserProfile | null>(null);
 
 
-  const fetchUsers = useCallback(async () => {
-    if (sessionStatus !== 'authenticated') {
-        return;
-    }
+  const fetchUsers = useCallback(async (currentFilters: {name?: string, email?: string, role?: UserProfile['role'] | "ALL_ROLES"} = {}) => {
+    if (sessionStatus !== 'authenticated') return;
     setIsLoading(true);
     setFetchError(null);
+    
+    const queryParams = new URLSearchParams();
+    if (currentFilters.name) queryParams.append('name', currentFilters.name);
+    if (currentFilters.email) queryParams.append('email', currentFilters.email);
+    if (currentFilters.role && currentFilters.role !== "ALL_ROLES") queryParams.append('role', currentFilters.role);
+
     try {
-      const response = await fetch('/api/users');
+      const response = await fetch(`/api/users?${queryParams.toString()}`);
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({ message: response.statusText || `Status: ${response.status}` }));
         if (response.status === 401 || response.status === 403) {
@@ -69,7 +82,6 @@ export default function ManageUsersPage() {
       const data: UserProfile[] = await response.json();
       setUsers(data);
     } catch (error) {
-      console.error("Error fetching users:", error);
       const errorMessage = (error as Error).message || "An unexpected error occurred.";
       if (!(errorMessage.toLowerCase().includes("unauthorized") || errorMessage.toLowerCase().includes("forbidden"))) {
         setFetchError(errorMessage);
@@ -88,10 +100,22 @@ export default function ManageUsersPage() {
             setFetchError("You do not have permission to view this page.");
             setIsLoading(false);
         } else {
-            fetchUsers();
+            fetchUsers({name: nameFilter, email: emailFilter, role: roleFilter});
         }
     }
-  }, [sessionStatus, session, fetchUsers, pathname, signIn]); 
+  }, [sessionStatus, session, fetchUsers, pathname, signIn, nameFilter, emailFilter, roleFilter]); 
+
+  const handleApplyFilters = () => {
+    fetchUsers({name: nameFilter, email: emailFilter, role: roleFilter});
+  };
+
+  const handleResetFilters = () => {
+    setNameFilter('');
+    setEmailFilter('');
+    setRoleFilter("ALL_ROLES");
+    fetchUsers({ role: "ALL_ROLES" });
+  };
+
 
   const handleAddUser = async (data: AddUserFormValues) => {
     try {
@@ -108,11 +132,10 @@ export default function ManageUsersPage() {
         }
         throw new Error(result.message || 'Failed to add user');
       }
-      setUsers(prev => [result, ...prev].sort((a,b) => new Date(b.createdAt!).getTime() - new Date(a.createdAt!).getTime()));
+      fetchUsers({name: nameFilter, email: emailFilter, role: roleFilter}); // Refetch to get sorted list
       toast({ title: "Success", description: `User ${result.name} added successfully.` });
       setIsAddUserModalOpen(false);
     } catch (error) {
-      console.error("Error adding user:", error);
       toast({ title: "Error Adding User", description: (error as Error).message, variant: "destructive" });
     }
   };
@@ -132,12 +155,11 @@ export default function ManageUsersPage() {
         }
         throw new Error(result.message || 'Failed to update user');
       }
-      setUsers(prev => prev.map(u => (u.id === result.id ? result : u)));
+      fetchUsers({name: nameFilter, email: emailFilter, role: roleFilter}); // Refetch to get updated list
       toast({ title: "Success", description: `User ${result.name} updated successfully.` });
       setIsEditUserModalOpen(false);
       setSelectedUserForEdit(null);
     } catch (error) {
-      console.error("Error updating user:", error);
       toast({ title: "Error Updating User", description: (error as Error).message, variant: "destructive" });
     }
   };
@@ -163,10 +185,9 @@ export default function ManageUsersPage() {
         }
         throw new Error(errorData.message || 'Failed to delete user');
       }
-      setUsers(prev => prev.filter(u => u.id !== userToDelete.id));
+      fetchUsers({name: nameFilter, email: emailFilter, role: roleFilter}); // Refetch
       toast({ title: "Success", description: `User ${userToDelete.name} deleted.` });
     } catch (error) {
-      console.error("Error deleting user:", error);
       toast({ title: "Error Deleting User", description: (error as Error).message, variant: "destructive" });
     } finally {
       setUserToDelete(null); 
@@ -190,7 +211,7 @@ export default function ManageUsersPage() {
         {fetchError === "You do not have permission to view this page." ? (
             <Button onClick={() => router.push('/')} className="btn-hover-primary-gradient">Go to Dashboard</Button>
         ) : (
-            <Button onClick={fetchUsers} className="btn-hover-primary-gradient">Try Again</Button>
+            <Button onClick={() => fetchUsers({name: nameFilter, email: emailFilter, role: roleFilter})} className="btn-hover-primary-gradient">Try Again</Button>
         )}
       </div>
     );
@@ -198,8 +219,15 @@ export default function ManageUsersPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row justify-between items-center gap-2">
-        <div></div> 
+       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div>
+          <h1 className="text-2xl font-semibold text-foreground flex items-center">
+            <UsersRound className="mr-3 h-6 w-6 text-primary" /> Manage Users
+          </h1>
+          <CardDescription className="mt-1">
+             View, add, edit, and delete application users. Assign roles, permissions, and groups.
+          </CardDescription>
+        </div>
         {session?.user?.role === 'Admin' && (
             <Button className="w-full sm:w-auto btn-primary-gradient" onClick={() => setIsAddUserModalOpen(true)}> 
             <PlusCircle className="mr-2 h-4 w-4" /> Add New User
@@ -207,16 +235,36 @@ export default function ManageUsersPage() {
         )}
       </div>
 
+      {/* Filters Section */}
+      <Card className="p-4 shadow-sm">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
+          <div className="space-y-1">
+            <Label htmlFor="name-filter">Name</Label>
+            <Input id="name-filter" placeholder="Filter by name..." value={nameFilter} onChange={(e) => setNameFilter(e.target.value)} disabled={isLoading}/>
+          </div>
+          <div className="space-y-1">
+            <Label htmlFor="email-filter">Email</Label>
+            <Input id="email-filter" placeholder="Filter by email..." value={emailFilter} onChange={(e) => setEmailFilter(e.target.value)} disabled={isLoading}/>
+          </div>
+          <div className="space-y-1">
+            <Label htmlFor="role-filter">Role</Label>
+            <Select value={roleFilter} onValueChange={(value) => setRoleFilter(value as UserProfile['role'] | "ALL_ROLES")} disabled={isLoading}>
+              <SelectTrigger id="role-filter"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {userRoleOptionsFilter.map(opt => <SelectItem key={opt} value={opt}>{opt === "ALL_ROLES" ? "All Roles" : opt}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="flex gap-2">
+            <Button onClick={handleApplyFilters} disabled={isLoading} className="w-full sm:w-auto"><Search className="mr-2 h-4 w-4"/>Apply</Button>
+            <Button variant="outline" onClick={handleResetFilters} disabled={isLoading} className="w-full sm:w-auto"><XCircle className="mr-2 h-4 w-4"/>Reset</Button>
+          </div>
+        </div>
+      </Card>
+
+
       <Card className="shadow-sm">
-        <CardHeader>
-          <CardTitle className="flex items-center">
-             <UsersRound className="mr-2 h-5 w-5 text-primary" /> App Users
-          </CardTitle>
-          <CardDescription>
-            Manage application users, their roles, and module permissions.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
+        <CardContent className="pt-6">
           {isLoading && users.length === 0 && !fetchError ? (
              <div className="text-center py-10">
               <UsersRound className="mx-auto h-12 w-12 text-muted-foreground animate-pulse" />
@@ -225,7 +273,7 @@ export default function ManageUsersPage() {
           ) : users.length === 0 && !fetchError ? ( 
             <div className="text-center py-10">
               <UsersRound className="mx-auto h-12 w-12 text-muted-foreground" />
-              <p className="mt-4 text-muted-foreground">No users found in the database.</p>
+              <p className="mt-4 text-muted-foreground">No users found matching your criteria.</p>
                 {session?.user?.role === 'Admin' && (
                  <Button className="mt-4 btn-primary-gradient" onClick={() => setIsAddUserModalOpen(true)}> 
                     <PlusCircle className="mr-2 h-4 w-4" /> Add First User

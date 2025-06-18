@@ -1,17 +1,19 @@
 
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Search, FilterX } from 'lucide-react';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Search, FilterX, Check, ChevronsUpDown, Loader2 } from 'lucide-react';
+import { cn } from "@/lib/utils";
 
 export interface PositionFilterValues {
   title?: string;
   department?: string;
-  isOpen?: "all" | "true" | "false"; // "all" will mean no filter on status
+  isOpen?: "all" | "true" | "false";
   positionLevel?: string;
 }
 
@@ -21,11 +23,27 @@ interface PositionFiltersProps {
   isLoading?: boolean;
 }
 
+const statusOptions = [
+  { value: "all", label: "All Statuses" },
+  { value: "true", label: "Open" },
+  { value: "false", label: "Closed" },
+];
+
 export function PositionFilters({ initialFilters = { isOpen: "all" }, onFilterChange, isLoading }: PositionFiltersProps) {
   const [title, setTitle] = useState(initialFilters.title || '');
   const [department, setDepartment] = useState(initialFilters.department || '');
   const [isOpen, setIsOpen] = useState<PositionFilterValues['isOpen']>(initialFilters.isOpen || "all");
   const [positionLevel, setPositionLevel] = useState(initialFilters.positionLevel || '');
+  
+  const [statusSearchOpen, setStatusSearchOpen] = useState(false);
+
+  useEffect(() => {
+    setTitle(initialFilters.title || '');
+    setDepartment(initialFilters.department || '');
+    setIsOpen(initialFilters.isOpen || "all");
+    setPositionLevel(initialFilters.positionLevel || '');
+  }, [initialFilters]);
+
 
   const handleApplyFilters = () => {
     onFilterChange({
@@ -41,7 +59,7 @@ export function PositionFilters({ initialFilters = { isOpen: "all" }, onFilterCh
     setDepartment('');
     setIsOpen("all");
     setPositionLevel('');
-    onFilterChange({ isOpen: "all" }); // Reset to show all statuses by default
+    onFilterChange({ isOpen: "all" }); 
   };
 
   return (
@@ -70,21 +88,41 @@ export function PositionFilters({ initialFilters = { isOpen: "all" }, onFilterCh
           />
         </div>
         <div>
-          <Label htmlFor="status-select">Status</Label>
-          <Select
-            value={isOpen}
-            onValueChange={(value) => setIsOpen(value as PositionFilterValues['isOpen'])}
-            disabled={isLoading}
-          >
-            <SelectTrigger id="status-select" className="w-full mt-1">
-              <SelectValue placeholder="Filter by status" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Statuses</SelectItem>
-              <SelectItem value="true">Open</SelectItem>
-              <SelectItem value="false">Closed</SelectItem>
-            </SelectContent>
-          </Select>
+          <Label htmlFor="status-combobox">Status</Label>
+           <Popover open={statusSearchOpen} onOpenChange={setStatusSearchOpen}>
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                role="combobox"
+                aria-expanded={statusSearchOpen}
+                className="w-full justify-between mt-1"
+                disabled={isLoading}
+              >
+                <span className="truncate">
+                  {statusOptions.find(opt => opt.value === isOpen)?.label || "All Statuses"}
+                </span>
+                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-[--trigger-width] p-0 dropdown-content-height">
+              <ScrollArea className="max-h-60">
+                {statusOptions.map((opt) => (
+                  <Button
+                    key={opt.value}
+                    variant="ghost"
+                    className={cn("w-full justify-start px-2 py-1.5 text-sm font-normal h-auto", isOpen === opt.value && "bg-accent text-accent-foreground")}
+                    onClick={() => {
+                      setIsOpen(opt.value as PositionFilterValues['isOpen']);
+                      setStatusSearchOpen(false);
+                    }}
+                  >
+                    <Check className={cn("mr-2 h-4 w-4", isOpen === opt.value ? "opacity-100" : "opacity-0")}/>
+                    {opt.label}
+                  </Button>
+                ))}
+              </ScrollArea>
+            </PopoverContent>
+          </Popover>
         </div>
         <div>
           <Label htmlFor="level-search">Position Level</Label>
@@ -103,7 +141,8 @@ export function PositionFilters({ initialFilters = { isOpen: "all" }, onFilterCh
           <FilterX className="mr-2 h-4 w-4" /> Reset Filters
         </Button>
         <Button onClick={handleApplyFilters} disabled={isLoading}>
-          <Search className="mr-2 h-4 w-4" /> Apply Filters
+          {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Search className="mr-2 h-4 w-4" />}
+          Apply Filters
         </Button>
       </div>
     </div>

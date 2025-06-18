@@ -14,6 +14,7 @@ import { Button } from '@/components/ui/button';
 import { ResumeUploadForm } from '@/components/upload/ResumeUploadForm';
 import type { Candidate } from '@/lib/types';
 import { UploadCloud } from 'lucide-react';
+import { useEffect } from 'react'; // Added useEffect
 
 interface UploadResumeModalProps {
   isOpen: boolean;
@@ -23,15 +24,27 @@ interface UploadResumeModalProps {
 }
 
 export function UploadResumeModal({ isOpen, onOpenChange, candidate, onUploadSuccess }: UploadResumeModalProps) {
+  
+  // Added for debugging auto-save
+  useEffect(() => {
+    if (isOpen) {
+      // console.log("UploadResumeModal: Modal opened for candidate:", candidate?.name);
+    }
+  }, [isOpen, candidate]);
+
+
   if (!candidate) return null;
 
   const handleInternalUploadSuccess = (updatedCandidate: Candidate) => {
     onUploadSuccess(updatedCandidate);
-    onOpenChange(false); // Close modal on success
+    onOpenChange(false);
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={onOpenChange}>
+    <Dialog open={isOpen} onOpenChange={(open) => {
+        // console.log("UploadResumeModal: Dialog onOpenChange called with:", open); // Added for debugging auto-save
+        onOpenChange(open);
+    }}>
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle className="flex items-center">
@@ -49,7 +62,7 @@ export function UploadResumeModal({ isOpen, onOpenChange, candidate, onUploadSuc
             candidateId={candidate.id} 
             onUploadSuccess={handleInternalUploadSuccess}
             currentResumePath={candidate.resumePath}
-            cardMode={false} // Use simplified form layout inside modal
+            cardMode={false}
           />
         </div>
         
@@ -59,7 +72,6 @@ export function UploadResumeModal({ isOpen, onOpenChange, candidate, onUploadSuc
               Cancel
             </Button>
           </DialogClose>
-          {/* Submit button is now part of ResumeUploadForm */}
         </DialogFooter>
       </DialogContent>
     </Dialog>

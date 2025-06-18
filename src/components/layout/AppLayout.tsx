@@ -18,15 +18,12 @@ import { Package2 } from "lucide-react";
 import { usePathname } from "next/navigation";
 import Image from 'next/image';
 import { SetupFlowHandler } from './SetupFlowHandler';
+import type { SystemSetting } from '@/lib/types';
 
-
-const APP_LOGO_DATA_URL_KEY = 'appLogoDataUrl';
-const APP_CONFIG_APP_NAME_KEY = 'appConfigAppName';
 const DEFAULT_APP_NAME = "CandiTrack";
 const DEFAULT_LOGO_ICON = <Package2 className="h-6 w-6" />;
 
-
-function getPageTitle(pathname: string): string {
+function getPageTitle(pathname: string, currentAppName: string): string {
   if (pathname === "/") return "Dashboard";
   if (pathname.startsWith("/candidates")) { 
     if (pathname.split('/').length === 3 && pathname.split('/')[2] !== '' && !pathname.includes('create-via-n8n')) {
@@ -48,48 +45,61 @@ function getPageTitle(pathname: string): string {
   if (pathname.startsWith("/settings/data-models")) return "Data Model Preferences";
   if (pathname.startsWith("/settings/custom-fields")) return "Custom Field Definitions";
   if (pathname.startsWith("/settings/webhook-mapping")) return "Webhook Payload Mapping";
-  if (pathname.startsWith("/settings/user-groups")) return "User Groups"; // New
+  if (pathname.startsWith("/settings/user-groups")) return "User Groups";
   if (pathname.startsWith("/api-docs")) return "API Documentation";
   if (pathname.startsWith("/logs")) return "Application Logs";
   if (pathname.startsWith("/auth/signin")) return "Sign In";
-  return DEFAULT_APP_NAME; // Use dynamic app name as fallback for unknown paths
+  return currentAppName; // Use dynamic app name as fallback
 }
-
 
 export function AppLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const [currentAppName, setCurrentAppName] = useState<string>(DEFAULT_APP_NAME);
-  const pageTitle = pathname === "/auth/signin" ? "Sign In" : getPageTitle(pathname) || currentAppName; // Use currentAppName in title if needed
-  
   const [appLogoUrl, setAppLogoUrl] = useState<string | null>(null);
   const [isClient, setIsClient] = useState(false);
 
+  const pageTitle = pathname === "/auth/signin" ? "Sign In" : getPageTitle(pathname, currentAppName);
+
   useEffect(() => {
     setIsClient(true);
-    const updateAppConfig = () => {
-      if (typeof window !== 'undefined') {
-        const storedLogo = localStorage.getItem(APP_LOGO_DATA_URL_KEY);
-        setAppLogoUrl(storedLogo);
-        const storedAppName = localStorage.getItem(APP_CONFIG_APP_NAME_KEY);
+    const updateAppConfigFromServer = async () => {
+      try {
+        const response = await fetch('/api/settings/system-settings');
+        if (response.ok) {
+          const settings: SystemSetting[] = await response.json();
+          const appNameSetting = settings.find(s => s.key === 'appName');
+          const logoSetting = settings.find(s => s.key === 'appLogoDataUrl');
+          
+          setCurrentAppName(appNameSetting?.value || DEFAULT_APP_NAME);
+          setAppLogoUrl(logoSetting?.value || null);
+        } else {
+          console.warn("Failed to fetch server-side system settings, using defaults/localStorage.");
+          // Fallback to localStorage if server fetch fails or for offline, but server is primary
+          const storedAppName = localStorage.getItem('appConfigAppName');
+          setCurrentAppName(storedAppName || DEFAULT_APP_NAME);
+          const storedLogo = localStorage.getItem('appLogoDataUrl');
+          setAppLogoUrl(storedLogo);
+        }
+      } catch (error) {
+        console.error("Error fetching server-side system settings:", error);
+        // Fallback to localStorage
+        const storedAppName = localStorage.getItem('appConfigAppName');
         setCurrentAppName(storedAppName || DEFAULT_APP_NAME);
+        const storedLogo = localStorage.getItem('appLogoDataUrl');
+        setAppLogoUrl(storedLogo);
       }
     };
-
-    updateAppConfig(); // Initial load
+    
+    updateAppConfigFromServer(); // Initial load
 
     const handleAppConfigChange = (event: Event) => {
         const customEvent = event as CustomEvent<{ appName?: string; logoUrl?: string | null }>;
         if (customEvent.detail) {
-            if (customEvent.detail.appName) {
-                setCurrentAppName(customEvent.detail.appName);
-            }
-            // Check for logoUrl specifically, could be null if reset
-            if (customEvent.detail.logoUrl !== undefined) { 
-                 setAppLogoUrl(customEvent.detail.logoUrl);
-            }
+            if (customEvent.detail.appName) setCurrentAppName(customEvent.detail.appName);
+            if (customEvent.detail.logoUrl !== undefined) setAppLogoUrl(customEvent.detail.logoUrl);
         } else {
-            // Fallback if event detail is not as expected
-            updateAppConfig();
+            // Fallback if event detail is not as expected, re-fetch from server or localStorage
+            updateAppConfigFromServer();
         }
     };
     

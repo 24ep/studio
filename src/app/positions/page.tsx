@@ -25,7 +25,6 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import {
   DropdownMenu,
@@ -208,14 +207,22 @@ export default function PositionsPage() {
     }
   };
 
-  const handleDownloadCsvTemplate = () => {
+  const handleDownloadCsvTemplateGuide = () => {
     const headers = ["title", "department", "description", "isOpen", "position_level"];
-    const exampleRow = ["Example Software Engineer", "Technology", "Develop amazing software", "true", "Senior"];
-    const csvContent = [headers.join(','), exampleRow.join(',')].join('\n');
-    downloadFile(csvContent, 'positions_template.csv', 'text/csv');
+    const exampleRows = [
+        ["Software Engineer", "Technology", "Develop amazing software solutions.", "true", "Senior"],
+        ["Product Designer", "Design", "Create user-friendly product interfaces.", "true", "Mid-Level"],
+        ["Marketing Intern", "Marketing", "Assist with marketing campaigns.", "true", "Entry Level"],
+        ["Sales Director", "Sales", "Lead the sales team and strategy.", "false", "Executive"]
+    ];
+    let csvContent = headers.join(',') + '\n';
+    exampleRows.forEach(row => {
+        csvContent += row.map(val => `"${val.replace(/"/g, '""')}"`).join(',') + '\n';
+    });
+    downloadFile(csvContent, 'positions_template_guide.csv', 'text/csv;charset=utf-8;');
     toast({
-      title: "Template Downloaded",
-      description: "A CSV template for positions has been downloaded.",
+      title: "Template Guide Downloaded",
+      description: "A CSV template guide for positions has been downloaded.",
     });
   };
 
@@ -301,8 +308,8 @@ export default function PositionsPage() {
               <DropdownMenuItem onClick={() => setIsImportModalOpen(true)}>
                   <FileUp className="mr-2 h-4 w-4" /> Import Positions (Excel/CSV)
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={handleDownloadCsvTemplate}>
-                  <FileDown className="mr-2 h-4 w-4" /> Download CSV Template
+              <DropdownMenuItem onClick={handleDownloadCsvTemplateGuide}>
+                  <FileDown className="mr-2 h-4 w-4" /> Download CSV Template Guide
               </DropdownMenuItem>
               <DropdownMenuItem onClick={handleExportToCsv} disabled={isLoading}>
                   <FileSpreadsheet className="mr-2 h-4 w-4" /> Export Positions (CSV)

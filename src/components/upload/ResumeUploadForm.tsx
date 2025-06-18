@@ -47,16 +47,17 @@ export function ResumeUploadForm({ candidateId, onUploadSuccess, currentResumePa
   });
 
   useEffect(() => {
-    // Reset file input if modal is closed or candidateId changes
     setSelectedFile(null);
     form.reset({ resume: undefined });
-  }, [form, candidateId]); // Depend on candidateId if the modal can be reused for different candidates
+  }, [form, candidateId]);
 
   const onSubmit = async (data: ResumeUploadFormValues) => {
     if (!candidateId || !data.resume?.[0]) {
       toast({ title: "Error", description: "Candidate ID and resume file are required.", variant: "destructive" });
       return;
     }
+    // console.log("ResumeUploadForm: Submitting form data:", data); // Added for debugging auto-save
+
 
     setIsSubmitting(true);
     const formData = new FormData();
@@ -112,9 +113,9 @@ export function ResumeUploadForm({ candidateId, onUploadSuccess, currentResumePa
     const file = event.target.files?.[0];
     if (file) {
       setSelectedFile(file);
-      const dataTransfer = new DataTransfer(); // Create a new DataTransfer object
-      dataTransfer.items.add(file); // Add the file to the DT object
-      form.setValue('resume', dataTransfer.files, { shouldValidate: true }); // Set the DT files to the form
+      const dataTransfer = new DataTransfer();
+      dataTransfer.items.add(file);
+      form.setValue('resume', dataTransfer.files, { shouldValidate: true });
     } else {
       setSelectedFile(null);
       form.setValue('resume', undefined, { shouldValidate: true });
@@ -155,7 +156,7 @@ export function ResumeUploadForm({ candidateId, onUploadSuccess, currentResumePa
                               type="file" 
                               className="sr-only" 
                               accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-                              onChange={handleFileChange} // Use custom handler
+                              onChange={handleFileChange}
                             />
                           </Label>
                           <p className="pl-1">or drag and drop</p>
