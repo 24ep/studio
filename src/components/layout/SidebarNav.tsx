@@ -152,7 +152,7 @@ export function SidebarNav() {
           </SidebarMenuItem>
         )}
 
-        <SidebarMenuItem className="mt-auto">
+        <SidebarMenuItem> {/* Removed className="mt-auto" */}
           <Accordion type="single" collapsible className="w-full" value={accordionValue} onValueChange={setAccordionValue} >
             <AccordionItem value="settings-group" className="border-b-0">
               <Tooltip>
