@@ -3,7 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Users, Briefcase, Settings, UsersRound, Code2, ListOrdered, Palette, Zap, ListTodo, DatabaseZap, SlidersHorizontal, KanbanSquare, Settings2, UserCog, FileUp, FileDown, BellRing } from "lucide-react"; // Added BellRing
+import { LayoutDashboard, Users, Briefcase, Settings, UsersRound, Code2, ListOrdered, Palette, Zap, ListTodo, DatabaseZap, SlidersHorizontal, KanbanSquare, Settings2, UserCog, FileUp, FileDown, BellRing, ShieldCheck } from "lucide-react"; // Added ShieldCheck
 import { cn } from "@/lib/utils";
 import {
   SidebarMenu,
@@ -41,9 +41,9 @@ const baseSettingsSubItems = [
   { href: "/settings/data-models", label: "Data Model Preferences", icon: DatabaseZap, permissionId: 'USER_PREFERENCES_MANAGE' as PlatformModuleId },
   { href: "/settings/custom-fields", label: "Custom Field Definitions", icon: Settings2, permissionId: 'CUSTOM_FIELDS_MANAGE' as PlatformModuleId },
   { href: "/settings/webhook-mapping", label: "Webhook Payload Mapping", icon: SlidersHorizontal, permissionId: 'WEBHOOK_MAPPING_MANAGE' as PlatformModuleId },
-  { href: "/settings/notifications", label: "Notification Settings", icon: BellRing, permissionId: 'NOTIFICATION_SETTINGS_MANAGE' as PlatformModuleId }, // New Item
+  { href: "/settings/notifications", label: "Notification Settings", icon: BellRing, permissionId: 'NOTIFICATION_SETTINGS_MANAGE' as PlatformModuleId },
   { href: "/users", label: "Manage Users", icon: UsersRound, adminOnly: true },
-  { href: "/settings/user-groups", label: "Manage User Groups", icon: UserCog, permissionId: 'USER_GROUPS_MANAGE' as PlatformModuleId, adminOnlyOrPermission: true },
+  { href: "/settings/user-groups", label: "Roles & Permissions", icon: ShieldCheck, permissionId: 'USER_GROUPS_MANAGE' as PlatformModuleId, adminOnlyOrPermission: true }, // Updated label and icon
   { href: "/api-docs", label: "API Docs", icon: Code2 },
   { href: "/logs", label: "Logs", icon: ListOrdered, adminOnly: true },
 ];
@@ -152,7 +152,7 @@ export function SidebarNav() {
           </SidebarMenuItem>
         )}
 
-        <SidebarMenuItem> {/* Removed className="mt-auto" */}
+        <SidebarMenuItem> {}
           <Accordion type="single" collapsible className="w-full" value={accordionValue} onValueChange={setAccordionValue} >
             <AccordionItem value="settings-group" className="border-b-0">
               <Tooltip>
