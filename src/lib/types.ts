@@ -462,8 +462,22 @@ export interface FilterableAttribute {
   label: string; // e.g., "Candidate Name", "Location (Resume)"
   type: 'string' | 'number' | 'date' | 'boolean' | 'array_string'; // To guide potential future UI or backend logic
 }
-    
 
-    
+// For Bulk Actions
+export type CandidateBulkAction = 'delete' | 'change_status' | 'assign_recruiter';
+export type PositionBulkAction = 'delete' | 'change_status';
+
+export interface CandidateBulkActionPayload {
+  action: CandidateBulkAction;
+  candidateIds: string[];
+  newStatus?: CandidateStatus; // For 'change_status'
+  newRecruiterId?: string | null; // For 'assign_recruiter'
+}
+
+export interface PositionBulkActionPayload {
+  action: PositionBulkAction;
+  positionIds: string[];
+  newIsOpenStatus?: boolean; // For 'change_status'
+}
 
     

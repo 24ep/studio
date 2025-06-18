@@ -93,13 +93,11 @@ export function ManageTransitionsModal({
         toast({ title: "No Change", description: "Please select a new status or add notes to create a transition.", variant: "default" });
         return;
     }
-    // console.log("ManageTransitionsModal: Submitting form data:", data); // Added for debugging auto-save
     try {
-        await onUpdateCandidate(candidate.id, data.newStatus, undefined); // Pass undefined for newTransitionHistory to let API handle it
+        await onUpdateCandidate(candidate.id, data.newStatus, undefined); 
         form.reset({ newStatus: data.newStatus, notes: '' });
-        setStatusSearchQuery(''); // Reset search
+        setStatusSearchQuery(''); 
     } catch (error) {
-        // Error already handled by parent through toast in onUpdateCandidate
         console.error("Error during onUpdateCandidate in ManageTransitionsModal:", error);
     }
   };
@@ -158,7 +156,6 @@ export function ManageTransitionsModal({
   return (
     <>
       <Dialog open={isOpen} onOpenChange={(open) => {
-        // console.log("ManageTransitionsModal: Dialog onOpenChange called with:", open); // Added for debugging auto-save
         onOpenChange(open);
         if (!open) {
           setEditingTransitionId(null);
@@ -327,24 +324,22 @@ export function ManageTransitionsModal({
         </DialogContent>
       </Dialog>
 
-      {transitionToDelete && (
-        <AlertDialog open={!!transitionToDelete} onOpenChange={(open) => { if(!open) setTransitionToDelete(null);}}>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>Are you sure you want to delete this transition record?</AlertDialogTitle>
-              <AlertDialogDescription>
-                This action cannot be undone. Deleting this transition for stage "<strong>{transitionToDelete.stage}</strong>" (dated {format(parseISO(transitionToDelete.date), "MMM d, yyyy")}) will permanently remove it.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel onClick={() => setTransitionToDelete(null)}>Cancel</AlertDialogCancel>
-              <AlertDialogAction onClick={handleDeleteTransition} className={buttonVariants({ variant: "destructive" })}>
-                Delete Transition
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
-      )}
+      <AlertDialog open={!!transitionToDelete} onOpenChange={(open) => { if(!open) setTransitionToDelete(null);}}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. Deleting this transition for stage "<strong>{transitionToDelete?.stage}</strong>" (dated {transitionToDelete ? format(parseISO(transitionToDelete.date), "MMM d, yyyy") : 'N/A'}) will permanently remove it.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setTransitionToDelete(null)}>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteTransition} className={buttonVariants({ variant: "destructive" })}>
+              Delete Transition
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }

@@ -1,10 +1,11 @@
 
 "use client";
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button, buttonVariants } from '@/components/ui/button'; 
-import { PlusCircle, Briefcase, Edit, Trash2, ServerCrash, Loader2, FileDown, FileUp, ChevronDown, FileSpreadsheet } from "lucide-react";
+import { Checkbox } from '@/components/ui/checkbox';
+import { PlusCircle, Briefcase, Edit, Trash2, ServerCrash, Loader2, FileDown, FileUp, ChevronDown, FileSpreadsheet, ShieldAlert, MoreHorizontal, Trash2 as BulkTrashIcon, Edit as BulkEditIcon } from "lucide-react";
 import type { Position } from "@/lib/types";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -25,7 +26,6 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import {
   DropdownMenu,
@@ -58,7 +58,6 @@ export default function PositionsPage() {
   const [authError, setAuthError] = useState(false);
   const [availableDepartments, setAvailableDepartments] = useState<string[]>([]);
 
-
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
@@ -66,8 +65,15 @@ export default function PositionsPage() {
   const [positionToDelete, setPositionToDelete] = useState<Position | null>(null);
   const { data: session, status: sessionStatus } = useSession();
 
+  const [selectedPositionIds, setSelectedPositionIds] = useState<Set<string>>(new Set());
+  const [isBulkConfirmOpen, setIsBulkConfirmOpen] = useState(false);
+  const [bulkActionType, setBulkActionType] = useState<'delete' | 'change_status' | null>(null);
+  const [bulkNewIsOpenStatus, setBulkNewIsOpenStatus] = useState<boolean>(true);
+
   const canImportPositions = session?.user?.role === 'Admin' || session?.user?.modulePermissions?.includes('POSITIONS_IMPORT');
   const canExportPositions = session?.user?.role === 'Admin' || session?.user?.modulePermissions?.includes('POSITIONS_EXPORT');
+  const canManagePositions = session?.user?.role === 'Admin' || session?.user?.modulePermissions?.includes('POSITIONS_MANAGE');
+
 
   const fetchPositions = useCallback(async () => {
     if (sessionStatus !== 'authenticated') {
@@ -101,7 +107,6 @@ export default function PositionsPage() {
       const data: Position[] = await response.json();
       setPositions(data);
       
-      // Extract unique departments for the filter dropdown
       const uniqueDepts = Array.from(new Set(data.map(p => p.department).filter(Boolean)));
       setAvailableDepartments(uniqueDepts.sort());
 
@@ -142,8 +147,7 @@ export default function PositionsPage() {
             throw new Error(errorData.message || `Failed to add position: ${response.statusText || `Status: ${response.status}`}`);
         }
         const newPosition: Position = await response.json();
-        // setPositions(prev => [newPosition, ...prev].sort((a,b) => new Date(b.createdAt!).getTime() - new Date(a.createdAt!).getTime()));
-        fetchPositions(); // Refetch to update list and department filter
+        fetchPositions(); 
         setIsAddModalOpen(false);
         toast({ title: "Position Added", description: `${newPosition.title} has been successfully added.` });
     } catch (error) {
@@ -169,8 +173,7 @@ export default function PositionsPage() {
         throw new Error(errorData.message || `Failed to update position: ${response.statusText || `Status: ${response.status}`}`);
       }
       const updatedPosition: Position = await response.json();
-      // setPositions(prevPositions => prevPositions.map(p => p.id === updatedPosition.id ? updatedPosition : p));
-      fetchPositions(); // Refetch to update list and department filter
+      fetchPositions(); 
       setIsEditModalOpen(false);
       setSelectedPositionForEdit(null);
       toast({ title: "Position Updated", description: `Position "${updatedPosition.title}" has been updated.` });
@@ -192,8 +195,7 @@ export default function PositionsPage() {
         const errorData = await response.json().catch(() => ({message: "Failed to delete position."}));
         throw new Error(errorData.message || `Failed to delete position: ${response.statusText}`);
       }
-      // setPositions(prevPositions => prevPositions.filter(p => p.id !== positionToDelete!.id));
-      fetchPositions(); // Refetch to update list and department filter
+      fetchPositions(); 
       toast({ title: "Position Deleted", description: `Position "${positionToDelete.title}" has been deleted.` });
     } catch (error) {
       console.error("Error deleting position:", error);
@@ -248,6 +250,54 @@ export default function PositionsPage() {
     }
   };
 
+  const handleToggleSelectPosition = (positionId: string) => {
+    setSelectedPositionIds(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(positionId)) newSet.delete(positionId);
+      else newSet.add(positionId);
+      return newSet;
+    });
+  };
+
+  const handleToggleSelectAllPositions = () => {
+    if (selectedPositionIds.size === positions.length) {
+      setSelectedPositionIds(new Set());
+    } else {
+      setSelectedPositionIds(new Set(positions.map(p => p.id)));
+    }
+  };
+
+  const isAllPositionsSelected = useMemo(() => {
+    if (positions.length === 0) return false;
+    return selectedPositionIds.size === positions.length;
+  }, [selectedPositionIds, positions]);
+
+  const handleBulkPositionAction = (action: 'delete' | 'change_status') => {
+    setBulkActionType(action);
+    if (action === 'change_status') {
+      setBulkNewIsOpenStatus(true); // Default to "Open" for change status
+    }
+    setIsBulkConfirmOpen(true);
+  };
+
+  const executeBulkPositionAction = async () => {
+    // This is a placeholder for now. Full backend logic would be added here.
+    if (!bulkActionType || selectedPositionIds.size === 0) return;
+    setIsLoading(true);
+    toast({ title: "Bulk Action (Positions)", description: `Action '${bulkActionType}' on ${selectedPositionIds.size} positions would be executed here. Backend not yet implemented.`, variant: "default"});
+    console.log(`Bulk action ${bulkActionType} on positions:`, Array.from(selectedPositionIds));
+    if (bulkActionType === 'change_status') console.log(`New isOpen status: ${bulkNewIsOpenStatus}`);
+    
+    // Simulate API call
+    setTimeout(() => {
+      setIsLoading(false);
+      setIsBulkConfirmOpen(false);
+      setBulkActionType(null);
+      setSelectedPositionIds(new Set());
+      // fetchPositions(); // Uncomment when API is ready
+    }, 1500);
+  };
+
 
   if (sessionStatus === 'loading' || (sessionStatus === 'unauthenticated' && !pathname.startsWith('/auth/signin')) || (isLoading && !fetchError && positions.length === 0)) {
     return ( <div className="flex h-screen w-screen items-center justify-center bg-background fixed inset-0 z-50"> <Loader2 className="h-16 w-16 animate-spin text-primary" /> </div> );
@@ -274,6 +324,23 @@ export default function PositionsPage() {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-center gap-2">
          <div className="w-full flex flex-col sm:flex-row gap-2 items-center sm:justify-start">
+           {selectedPositionIds.size > 0 && canManagePositions && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" className="w-full sm:w-auto">
+                    Bulk Actions ({selectedPositionIds.size}) <ChevronDown className="ml-2 h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start">
+                  <DropdownMenuItem onClick={() => handleBulkPositionAction('delete')}>
+                    <BulkTrashIcon className="mr-2 h-4 w-4" /> Delete Selected
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleBulkPositionAction('change_status')}>
+                    <BulkEditIcon className="mr-2 h-4 w-4" /> Change Status (Open/Closed)
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+           )}
            <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="outline" className="w-full sm:w-auto"> Import/Export <ChevronDown className="ml-2 h-4 w-4" /> </Button>
@@ -299,10 +366,25 @@ export default function PositionsPage() {
           ) : (
             <div className="border rounded-lg overflow-hidden">
             <Table>
-              <TableHeader> <TableRow> <TableHead>Title</TableHead> <TableHead>Department</TableHead> <TableHead>Level</TableHead> <TableHead>Status</TableHead> <TableHead className="hidden md:table-cell">Description</TableHead> <TableHead className="text-right">Actions</TableHead> </TableRow> </TableHeader>
+              <TableHeader> <TableRow> 
+                <TableHead className="w-12">
+                  <Checkbox
+                    checked={isAllPositionsSelected}
+                    onCheckedChange={handleToggleSelectAllPositions}
+                    aria-label="Select all positions"
+                  />
+                </TableHead>
+                <TableHead>Title</TableHead> <TableHead>Department</TableHead> <TableHead>Level</TableHead> <TableHead>Status</TableHead> <TableHead className="hidden md:table-cell">Description</TableHead> <TableHead className="text-right">Actions</TableHead> </TableRow> </TableHeader>
               <TableBody>
                 {positions.map((pos) => (
-                  <TableRow key={pos.id} className="hover:bg-muted/50 transition-colors">
+                  <TableRow key={pos.id} className="hover:bg-muted/50 transition-colors" data-state={selectedPositionIds.has(pos.id) ? "selected" : ""}>
+                    <TableCell>
+                      <Checkbox
+                        checked={selectedPositionIds.has(pos.id)}
+                        onCheckedChange={() => handleToggleSelectPosition(pos.id)}
+                        aria-label={`Select position ${pos.title}`}
+                      />
+                    </TableCell>
                     <TableCell className="font-medium"> <Link href={`/positions/${pos.id}`} passHref> <span className="hover:underline text-primary cursor-pointer">{pos.title}</span> </Link> </TableCell>
                     <TableCell>{pos.department}</TableCell>
                     <TableCell>{pos.position_level || 'N/A'}</TableCell>
@@ -314,7 +396,7 @@ export default function PositionsPage() {
                         <AlertDialogTrigger asChild>
                            <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive h-8 w-8" onClick={() => confirmDeletePosition(pos)}> <Trash2 className="h-4 w-4" /> <span className="sr-only">Delete</span> </Button>
                         </AlertDialogTrigger>
-                        {positionToDelete && positionToDelete.id === pos.id && ( <AlertDialogContent> <AlertDialogHeader> <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle> <AlertDialogDescription> This action cannot be undone. This will permanently delete the position <strong>{positionToDelete.title}</strong>. If there are candidates associated with this position, deletion might be blocked by the database. </AlertDialogDescription> </AlertDialogHeader> <AlertDialogFooter> <AlertDialogCancel onClick={() => setPositionToDelete(null)}>Cancel</AlertDialogCancel> <AlertDialogAction onClick={handleDeletePosition} className={buttonVariants({ variant: "destructive" })}> Delete Position </AlertDialogAction> </AlertDialogFooter> </AlertDialogContent> )}
+                        {positionToDelete && positionToDelete.id === pos.id && ( <AlertDialogContent> <AlertDialogHeader> <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle> <AlertDialogDescription> This action cannot be undone. This will permanently delete the position <strong>{positionToDelete.title}</strong>. If there are candidates associated with this position, deletion might be blocked. </AlertDialogDescription> </AlertDialogHeader> <AlertDialogFooter> <AlertDialogCancel onClick={() => setPositionToDelete(null)}>Cancel</AlertDialogCancel> <AlertDialogAction onClick={handleDeletePosition} className={buttonVariants({ variant: "destructive" })}> Delete Position </AlertDialogAction> </AlertDialogFooter> </AlertDialogContent> )}
                       </AlertDialog>
                     </TableCell>
                   </TableRow>
@@ -325,9 +407,39 @@ export default function PositionsPage() {
           )}
         </CardContent>
       </Card>
-       <AddPositionModal isOpen={isAddModalOpen} onOpenChange={setIsAddModalOpen} onAddPosition={handleAddPositionSubmit} />
+      <AddPositionModal isOpen={isAddModalOpen} onOpenChange={setIsAddModalOpen} onAddPosition={handleAddPositionSubmit} />
       {selectedPositionForEdit && ( <EditPositionModal isOpen={isEditModalOpen} onOpenChange={(isOpen) => { setIsEditModalOpen(isOpen); if (!isOpen) setSelectedPositionForEdit(null); }} onEditPosition={handleEditPositionSubmit} position={selectedPositionForEdit} /> )}
       <ImportPositionsModal isOpen={isImportModalOpen} onOpenChange={setIsImportModalOpen} onImportSuccess={fetchPositions} />
+    
+      <AlertDialog open={isBulkConfirmOpen} onOpenChange={setIsBulkConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirm Bulk Position Action</AlertDialogTitle>
+            <AlertDialogDescription>
+              You are about to perform <strong>{bulkActionType?.replace('_', ' ')}</strong> on <strong>{selectedPositionIds.size}</strong> selected position(s).
+              {bulkActionType === 'delete' && " This action cannot be undone and might fail if positions have associated candidates."}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          {bulkActionType === 'change_status' && (
+            <div className="my-4 space-y-2">
+              <Label htmlFor="bulk-position-status">New Status</Label>
+              <Select value={String(bulkNewIsOpenStatus)} onValueChange={(value) => setBulkNewIsOpenStatus(value === 'true')}>
+                <SelectTrigger id="bulk-position-status"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                    <SelectItem value="true">Open</SelectItem>
+                    <SelectItem value="false">Closed</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => {setIsBulkConfirmOpen(false); setBulkActionType(null);}}>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={executeBulkPositionAction} disabled={isLoading}>
+              {isLoading ? <Loader2 className="animate-spin mr-2" /> : null} Confirm
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

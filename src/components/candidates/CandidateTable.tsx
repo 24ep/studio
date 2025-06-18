@@ -12,6 +12,7 @@ import {
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Progress } from '@/components/ui/progress';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
@@ -20,17 +21,32 @@ import type { Candidate, CandidateStatus, Position, RecruitmentStage } from '@/l
 import { ManageTransitionsModal } from './ManageTransitionsModal';
 import { format, parseISO } from 'date-fns';
 import Link from 'next/link';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface CandidateTableProps {
   candidates: Candidate[];
   availablePositions: Position[];
-  availableStages: RecruitmentStage[]; // New prop
+  availableStages: RecruitmentStage[];
   onUpdateCandidate: (candidateId: string, status: CandidateStatus) => Promise<void>;
   onDeleteCandidate: (candidateId: string) => Promise<void>;
   onOpenUploadModal: (candidate: Candidate) => void;
   onEditPosition: (position: Position) => void;
   isLoading?: boolean;
   onRefreshCandidateData: (candidateId: string) => Promise<void>;
+  // For bulk actions
+  selectedCandidateIds: Set<string>;
+  onToggleSelectCandidate: (candidateId: string) => void;
+  onToggleSelectAllCandidates: () => void;
+  isAllCandidatesSelected: boolean;
 }
 
 const getStatusBadgeVariant = (status: CandidateStatus): "default" | "secondary" | "destructive" | "outline" => {
@@ -63,10 +79,16 @@ export function CandidateTable({
   onOpenUploadModal,
   onEditPosition,
   isLoading,
-  onRefreshCandidateData
+  onRefreshCandidateData,
+  selectedCandidateIds,
+  onToggleSelectCandidate,
+  onToggleSelectAllCandidates,
+  isAllCandidatesSelected,
 }: CandidateTableProps) {
   const [selectedCandidateForModal, setSelectedCandidateForModal] = useState<Candidate | null>(null);
   const [isTransitionsModalOpen, setIsTransitionsModalOpen] = useState(false);
+  const [candidateToDelete, setCandidateToDelete] = useState<Candidate | null>(null);
+
 
   const handleManageTransitionsClick = (candidate: Candidate) => {
     setSelectedCandidateForModal(candidate);
@@ -80,6 +102,18 @@ export function CandidateTable({
       onEditPosition(positionToEdit);
     }
   };
+
+  const confirmDelete = (candidate: Candidate) => {
+    setCandidateToDelete(candidate);
+  };
+
+  const executeDelete = () => {
+    if (candidateToDelete) {
+      onDeleteCandidate(candidateToDelete.id);
+      setCandidateToDelete(null);
+    }
+  };
+
 
   if (isLoading) {
      return (
@@ -108,6 +142,13 @@ export function CandidateTable({
         <Table>
           <TableHeader>
             <TableRow>
+              <TableHead className="w-12">
+                <Checkbox
+                  checked={isAllCandidatesSelected}
+                  onCheckedChange={onToggleSelectAllCandidates}
+                  aria-label="Select all candidates"
+                />
+              </TableHead>
               <TableHead className="w-[250px]">Candidate</TableHead>
               <TableHead>Applied Job</TableHead>
               <TableHead className="w-[100px]">Fit Score</TableHead>
@@ -129,7 +170,6 @@ export function CandidateTable({
                   displayDate = 'Invalid Date';
                 }
               } else if (dateValue) {
-                // Fallback for non-string (e.g. Date object or number timestamp, though type says string)
                 try {
                   displayDate = format(new Date(dateValue as any), "MMM d, yyyy");
                 } catch (e) {
@@ -139,7 +179,14 @@ export function CandidateTable({
               }
 
               return (
-                <TableRow key={candidate.id} className="hover:bg-muted/50 transition-colors">
+                <TableRow key={candidate.id} className="hover:bg-muted/50 transition-colors" data-state={selectedCandidateIds.has(candidate.id) ? 'selected' : ''}>
+                  <TableCell>
+                    <Checkbox
+                      checked={selectedCandidateIds.has(candidate.id)}
+                      onCheckedChange={() => onToggleSelectCandidate(candidate.id)}
+                      aria-label={`Select candidate ${candidate.name}`}
+                    />
+                  </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-3">
                       <Avatar className="h-10 w-10">
@@ -214,7 +261,7 @@ export function CandidateTable({
                           </DropdownMenuItem>
                         )}
                         <DropdownMenuSeparator />
-                        <DropdownMenuItem onClick={() => onDeleteCandidate(candidate.id)} className="text-destructive hover:!bg-destructive/10 focus:!bg-destructive/10 focus:!text-destructive">
+                        <DropdownMenuItem onClick={() => confirmDelete(candidate)} className="text-destructive hover:!bg-destructive/10 focus:!bg-destructive/10 focus:!text-destructive">
                           <Trash2 className="mr-2 h-4 w-4" /> Delete
                         </DropdownMenuItem>
                       </DropdownMenuContent>
@@ -239,6 +286,20 @@ export function CandidateTable({
           availableStages={availableStages}
         />
       )}
+      <AlertDialog open={!!candidateToDelete} onOpenChange={(open) => { if(!open) setCandidateToDelete(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete the candidate <strong>{candidateToDelete?.name}</strong> and all associated records (resume history, transition history).
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setCandidateToDelete(null)}>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={executeDelete}>Delete Candidate</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }

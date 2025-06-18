@@ -2,24 +2,27 @@
 // src/components/candidates/CandidatesPageClient.tsx
 "use client";
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { CandidateFilters, type CandidateFilterValues } from '@/components/candidates/CandidateFilters';
 import { CandidateTable } from '@/components/candidates/CandidateTable';
 import type { Candidate, CandidateStatus, Position, RecruitmentStage, UserProfile } from '@/lib/types';
 import { Button } from '@/components/ui/button';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { PlusCircle, Users, ServerCrash, Zap, Loader2, FileDown, FileUp, ChevronDown, FileSpreadsheet, ShieldAlert, Brain } from 'lucide-react';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuLabel, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
+import { PlusCircle, Users, ServerCrash, Zap, Loader2, FileDown, FileUp, ChevronDown, FileSpreadsheet, ShieldAlert, Brain, Trash2 as BulkTrashIcon, Edit as BulkEditIcon } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
 import { AddCandidateModal, type AddCandidateFormValues } from '@/components/candidates/AddCandidateModal';
 import { UploadResumeModal } from '@/components/candidates/UploadResumeModal';
 import { CreateCandidateViaN8nModal } from '@/components/candidates/CreateCandidateViaN8nModal';
 import { ImportCandidatesModal } from '@/components/candidates/ImportCandidatesModal';
 import { EditPositionModal } from '@/components/positions/EditPositionModal';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
 import { useSession, signIn } from 'next-auth/react';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'; // For bulk status change
+import { Textarea } from '@/components/ui/textarea'; // For bulk status change notes
 
 
 interface CandidatesPageClientProps {
@@ -62,7 +65,6 @@ export function CandidatesPageClient({
   const [aiSearchReasoning, setAiSearchReasoning] = useState<string | null>(null);
   const [aiMatchedCandidateIds, setAiMatchedCandidateIds] = useState<string[] | null>(null);
 
-
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
   const [isCreateViaN8nModalOpen, setIsCreateViaN8nModalOpen] = useState(false);
@@ -79,22 +81,32 @@ export function CandidatesPageClient({
   const [selectedPositionForEdit, setSelectedPositionForEdit] = useState<Position | null>(null);
   const { data: session, status: sessionStatus } = useSession();
 
+  const [selectedCandidateIds, setSelectedCandidateIds] = useState<Set<string>>(new Set());
+  const [isBulkActionConfirmOpen, setIsBulkActionConfirmOpen] = useState(false);
+  const [bulkActionType, setBulkActionType] = useState<'delete' | 'change_status' | 'assign_recruiter' | null>(null);
+  const [bulkNewStatus, setBulkNewStatus] = useState<string>('');
+  const [bulkNewRecruiterId, setBulkNewRecruiterId] = useState<string | null>(null);
+  const [bulkTransitionNotes, setBulkTransitionNotes] = useState<string>('');
+
+
   const canImportCandidates = session?.user?.role === 'Admin' || session?.user?.modulePermissions?.includes('CANDIDATES_IMPORT');
   const canExportCandidates = session?.user?.role === 'Admin' || session?.user?.modulePermissions?.includes('CANDIDATES_EXPORT');
+  const canManageCandidates = session?.user?.role === 'Admin' || session?.user?.modulePermissions?.includes('CANDIDATES_MANAGE');
+
 
   const fetchRecruiters = useCallback(async () => {
     if (sessionStatus !== 'authenticated') return;
     try {
       const response = await fetch('/api/users?role=Recruiter');
       if (!response.ok) {
-          const errorData = await response.json().catch(() => ({}));
+          const errorData = await response.json().catch(() => ({ message: 'Failed to fetch recruiters' }));
           throw new Error(errorData.message || 'Failed to fetch recruiters');
       }
       const recruitersData: UserProfile[] = await response.json();
       setAvailableRecruiters(recruitersData.map(r => ({ id: r.id, name: r.name })));
     } catch (error) {
       console.error("Error fetching recruiters:", error);
-      toast({ title: "Error", description: "Could not load recruiters for filtering.", variant: "destructive" });
+      toast({ title: "Error", description: `Could not load recruiters: ${(error as Error).message}`, variant: "destructive" });
     }
   }, [sessionStatus, toast]);
 
@@ -124,6 +136,11 @@ export function CandidatesPageClient({
       if (currentFilters.applicationDateStart) query.append('applicationDateStart', currentFilters.applicationDateStart.toISOString());
       if (currentFilters.applicationDateEnd) query.append('applicationDateEnd', currentFilters.applicationDateEnd.toISOString());
       if (currentFilters.recruiterId && currentFilters.recruiterId !== "__ALL_RECRUITERS__") query.append('recruiterId', currentFilters.recruiterId);
+      if (currentFilters.attributePath && currentFilters.attributeValue) {
+        query.append('attributePath', currentFilters.attributePath);
+        query.append('attributeValue', currentFilters.attributeValue);
+      }
+
 
       const response = await fetch(`/api/candidates?${query.toString()}`);
       if (!response.ok) {
@@ -198,8 +215,7 @@ export function CandidatesPageClient({
       fetchFilteredCandidatesOnClient(filters);
       fetchRecruiters();
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filters, sessionStatus, serverAuthError, serverPermissionError]); 
+  }, [filters, sessionStatus, serverAuthError, serverPermissionError, fetchFilteredCandidatesOnClient, fetchRecruiters]); 
 
    useEffect(() => {
     if (sessionStatus === 'unauthenticated' && !serverAuthError && !serverPermissionError) {
@@ -426,6 +442,78 @@ export function CandidatesPageClient({
     }
   };
 
+  const handleToggleSelectCandidate = (candidateId: string) => {
+    setSelectedCandidateIds(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(candidateId)) {
+        newSet.delete(candidateId);
+      } else {
+        newSet.add(candidateId);
+      }
+      return newSet;
+    });
+  };
+
+  const handleToggleSelectAllCandidates = () => {
+    if (selectedCandidateIds.size === displayedCandidates.length) {
+      setSelectedCandidateIds(new Set());
+    } else {
+      setSelectedCandidateIds(new Set(displayedCandidates.map(c => c.id)));
+    }
+  };
+
+  const isAllCandidatesSelected = useMemo(() => {
+    if (displayedCandidates.length === 0) return false;
+    return selectedCandidateIds.size === displayedCandidates.length;
+  }, [selectedCandidateIds, displayedCandidates]);
+
+  const handleBulkAction = (action: 'delete' | 'change_status' | 'assign_recruiter') => {
+    setBulkActionType(action);
+    if (action === 'change_status') {
+      setBulkNewStatus(availableStages.find(s => s.name === 'Applied')?.name || availableStages[0]?.name || '');
+    } else if (action === 'assign_recruiter') {
+      setBulkNewRecruiterId(availableRecruiters[0]?.id || null);
+    }
+    setBulkTransitionNotes('');
+    setIsBulkActionConfirmOpen(true);
+  };
+
+  const executeBulkAction = async () => {
+    if (!bulkActionType || selectedCandidateIds.size === 0) return;
+    setIsLoading(true);
+    try {
+      const payload: any = {
+        action: bulkActionType,
+        candidateIds: Array.from(selectedCandidateIds),
+      };
+      if (bulkActionType === 'change_status') {
+        payload.newStatus = bulkNewStatus;
+        payload.notes = bulkTransitionNotes;
+      } else if (bulkActionType === 'assign_recruiter') {
+        payload.newRecruiterId = bulkNewRecruiterId;
+      }
+
+      const response = await fetch('/api/candidates/bulk-action', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.message || 'Bulk action failed');
+      
+      toast({ title: "Bulk Action Successful", description: `${result.successCount} candidate(s) affected. ${result.failCount > 0 ? `${result.failCount} failed.` : ''}`});
+      setSelectedCandidateIds(new Set());
+      fetchFilteredCandidatesOnClient(filters);
+    } catch (error) {
+      toast({ title: "Bulk Action Error", description: (error as Error).message, variant: "destructive" });
+    } finally {
+      setIsLoading(false);
+      setIsBulkActionConfirmOpen(false);
+      setBulkActionType(null);
+    }
+  };
+
+
   if (authError) {
     return ( <div className="flex flex-col items-center justify-center h-[calc(100vh-10rem)] text-center p-4"> <ShieldAlert className="w-16 h-16 text-destructive mb-4" /> <h2 className="text-2xl font-semibold text-foreground mb-2">Access Denied</h2> <p className="text-muted-foreground mb-4 max-w-md">You need to be signed in to view this page.</p> <Button onClick={() => signIn(undefined, { callbackUrl: pathname })} className="btn-hover-primary-gradient">Sign In</Button> </div> );
   }
@@ -457,7 +545,6 @@ export function CandidatesPageClient({
         <ScrollArea className="h-full md:max-h-[calc(100vh-var(--header-height,4rem)-2rem)] md:pr-2"> {/* Adjust var(--header-height) if your header height is different */}
           <div className="flex justify-between items-center mb-3 md:hidden">
             <h1 className="text-xl font-semibold">Filters</h1>
-            {/* Potentially add a button to toggle filter visibility on mobile if needed */}
           </div>
           <CandidateFilters
             initialFilters={filters}
@@ -477,6 +564,26 @@ export function CandidatesPageClient({
         <div className="flex flex-col sm:flex-row justify-between items-center gap-2">
           <h1 className="text-2xl font-semibold text-foreground hidden md:block"> Candidate Management </h1>
           <div className="w-full md:w-auto flex flex-col sm:flex-row gap-2 items-center sm:justify-end">
+            {selectedCandidateIds.size > 0 && canManageCandidates && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" className="w-full sm:w-auto">
+                    Bulk Actions ({selectedCandidateIds.size}) <ChevronDown className="ml-2 h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={() => handleBulkAction('delete')}>
+                    <BulkTrashIcon className="mr-2 h-4 w-4" /> Delete Selected
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleBulkAction('change_status')}>
+                    <BulkEditIcon className="mr-2 h-4 w-4" /> Change Status
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleBulkAction('assign_recruiter')}>
+                     <Users className="mr-2 h-4 w-4" /> Assign Recruiter
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
             <Button onClick={() => setIsCreateViaN8nModalOpen(true)} className="w-full sm:w-auto btn-primary-gradient"> <Zap className="mr-2 h-4 w-4" /> Create via Resume </Button>
             <DropdownMenu>
                <DropdownMenuTrigger asChild><Button variant="outline" className="w-full sm:w-auto"> More Actions <ChevronDown className="ml-2 h-4 w-4" /> </Button></DropdownMenuTrigger>
@@ -503,7 +610,21 @@ export function CandidatesPageClient({
 
         {(isLoading || isAiSearching) && displayedCandidates.length === 0 && !fetchError ? ( <div className="flex flex-col items-center justify-center h-64 border rounded-lg bg-card shadow"> <Users className="w-16 h-16 text-muted-foreground animate-pulse mb-4" /> <h3 className="text-xl font-semibold text-foreground"> {isAiSearching ? "AI Searching Candidates..." : "Loading Candidates..."}</h3> <p className="text-muted-foreground">Please wait while we fetch the data.</p> </div>
         ) : (
-          <CandidateTable candidates={displayedCandidates} availablePositions={availablePositions} availableStages={availableStages} onUpdateCandidate={handleUpdateCandidateAPI} onDeleteCandidate={handleDeleteCandidate} onOpenUploadModal={handleOpenUploadModal} onEditPosition={handleOpenEditPositionModal} isLoading={(isLoading || isAiSearching) && displayedCandidates.length > 0 && !fetchError} onRefreshCandidateData={refreshCandidateInList} />
+          <CandidateTable 
+            candidates={displayedCandidates} 
+            availablePositions={availablePositions} 
+            availableStages={availableStages} 
+            onUpdateCandidate={handleUpdateCandidateAPI} 
+            onDeleteCandidate={handleDeleteCandidate} 
+            onOpenUploadModal={handleOpenUploadModal} 
+            onEditPosition={handleOpenEditPositionModal} 
+            isLoading={(isLoading || isAiSearching) && displayedCandidates.length > 0 && !fetchError} 
+            onRefreshCandidateData={refreshCandidateInList}
+            selectedCandidateIds={selectedCandidateIds}
+            onToggleSelectCandidate={handleToggleSelectCandidate}
+            onToggleSelectAllCandidates={handleToggleSelectAllCandidates}
+            isAllCandidatesSelected={isAllCandidatesSelected}
+          />
         )}
       </div>
 
@@ -512,8 +633,47 @@ export function CandidatesPageClient({
       <CreateCandidateViaN8nModal isOpen={isCreateViaN8nModalOpen} onOpenChange={setIsCreateViaN8nModalOpen} onProcessingStart={handleAutomatedProcessingStart} />
       <ImportCandidatesModal isOpen={isImportModalOpen} onOpenChange={setIsImportModalOpen} onImportSuccess={() => fetchFilteredCandidatesOnClient(filters)} />
       {selectedPositionForEdit && ( <EditPositionModal isOpen={isEditPositionModalOpen} onOpenChange={(isOpen) => { setIsEditPositionModalOpen(isOpen); if (!isOpen) setSelectedPositionForEdit(null); }} position={selectedPositionForEdit} onEditPosition={handlePositionEdited} /> )}
+    
+      <AlertDialog open={isBulkActionConfirmOpen} onOpenChange={setIsBulkActionConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirm Bulk Action</AlertDialogTitle>
+            <AlertDialogDescription>
+              You are about to perform <strong>{bulkActionType?.replace('_', ' ')}</strong> on <strong>{selectedCandidateIds.size}</strong> selected candidate(s).
+              {bulkActionType === 'delete' && " This action cannot be undone."}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          {bulkActionType === 'change_status' && (
+            <div className="my-4 space-y-2">
+              <Label htmlFor="bulk-new-status">New Status</Label>
+              <Select value={bulkNewStatus} onValueChange={setBulkNewStatus}>
+                <SelectTrigger id="bulk-new-status"><SelectValue /></SelectTrigger>
+                <SelectContent>{availableStages.map(s => <SelectItem key={s.id} value={s.name}>{s.name}</SelectItem>)}</SelectContent>
+              </Select>
+              <Label htmlFor="bulk-transition-notes">Notes (Optional)</Label>
+              <Textarea id="bulk-transition-notes" value={bulkTransitionNotes} onChange={(e) => setBulkTransitionNotes(e.target.value)} placeholder="Optional notes for this bulk status change."/>
+            </div>
+          )}
+          {bulkActionType === 'assign_recruiter' && (
+             <div className="my-4 space-y-2">
+              <Label htmlFor="bulk-new-recruiter">Assign to Recruiter</Label>
+              <Select value={bulkNewRecruiterId || ''} onValueChange={(value) => setBulkNewRecruiterId(value === '___UNASSIGN___' ? null : value)}>
+                <SelectTrigger id="bulk-new-recruiter"><SelectValue placeholder="Select recruiter..." /></SelectTrigger>
+                <SelectContent>
+                    <SelectItem value="___UNASSIGN___">Unassign</SelectItem>
+                    {availableRecruiters.map(r => <SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => {setIsBulkActionConfirmOpen(false); setBulkActionType(null);}}>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={executeBulkAction} disabled={isLoading}>
+              {isLoading ? <Loader2 className="animate-spin mr-2" /> : null} Confirm
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
-
-    
