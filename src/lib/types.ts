@@ -1,4 +1,3 @@
-
 // This declares the shape of the user object returned by the session callback
 // and available in useSession() or getServerSession()
 // It needs to be augmented if you add custom properties to the session token
@@ -361,9 +360,9 @@ export interface CustomFieldDefinition {
 
 // System-wide settings
 export interface SystemSetting {
-    key: 'appName' | 'appLogoDataUrl' | 'appThemePreference' | 
+    key: 'appName' | 'appLogoDataUrl' | 'appThemePreference' |
          'smtpHost' | 'smtpPort' | 'smtpUser' | 'smtpSecure' | 'smtpFromEmail' |
-         'n8nResumeWebhookUrl' | 'n8nGenericPdfWebhookUrl'; // Added webhook URL keys
+         'n8nResumeWebhookUrl' | 'n8nGenericPdfWebhookUrl' | 'geminiApiKey'; // Added geminiApiKey
     value: string | null;
     updatedAt?: string;
 }

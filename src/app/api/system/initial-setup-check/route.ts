@@ -6,7 +6,13 @@ export async function GET() {
   const client = await pool.connect();
   try {
     // List of essential tables to check
-    const essentialTables = ['User', 'Position', 'Candidate', 'LogEntry', 'RecruitmentStage', 'TransitionRecord'];
+    const essentialTables = [
+        'User', 'Position', 'Candidate', 'LogEntry', 'RecruitmentStage', 'TransitionRecord',
+        'UserGroup', 'User_UserGroup', 'UserGroup_PlatformModule', 
+        'CustomFieldDefinition', 'SystemSetting', 'UserUIDisplayPreference',
+        'WebhookFieldMapping', 'NotificationEvent', 'NotificationChannel', 'NotificationSetting',
+        'ResumeHistory'
+    ];
     let allTablesExist = true;
     const missingTables: string[] = [];
 

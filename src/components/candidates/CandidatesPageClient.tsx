@@ -8,7 +8,7 @@ import { CandidateTable } from '@/components/candidates/CandidateTable';
 import type { Candidate, CandidateStatus, Position, RecruitmentStage, UserProfile } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { PlusCircle, Users, ServerCrash, Zap, Loader2, FileDown, FileUp, ChevronDown, FileSpreadsheet, ShieldAlert } from 'lucide-react';
+import { PlusCircle, Users, ServerCrash, Zap, Loader2, FileDown, FileUp, ChevronDown, FileSpreadsheet, ShieldAlert, Brain } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
 import { AddCandidateModal, type AddCandidateFormValues } from '@/components/candidates/AddCandidateModal';
 import { UploadResumeModal } from '@/components/candidates/UploadResumeModal';
@@ -18,6 +18,8 @@ import { EditPositionModal } from '@/components/positions/EditPositionModal';
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
 import { useSession, signIn } from 'next-auth/react';
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+
 
 interface CandidatesPageClientProps {
   initialCandidates: Candidate[];
@@ -48,13 +50,18 @@ export function CandidatesPageClient({
   permissionError: serverPermissionError = false,
 }: CandidatesPageClientProps) {
   const [filters, setFilters] = useState<CandidateFilterValues>({ minFitScore: 0, maxFitScore: 100, positionId: "__ALL_POSITIONS__", status: "all" });
-  
+
   const [allCandidates, setAllCandidates] = useState<Candidate[]>(initialCandidates || []);
   const [availablePositions, setAvailablePositions] = useState<Position[]>(initialAvailablePositions || []);
   const [availableStages, setAvailableStages] = useState<RecruitmentStage[]>(initialAvailableStages || []);
   const [availableRecruiters, setAvailableRecruiters] = useState<Pick<UserProfile, 'id' | 'name'>[]>([]);
-  
-  const [isLoading, setIsLoading] = useState(false);
+
+  const [isLoading, setIsLoading] = useState(false); // General loading for standard filters
+  const [isAiSearching, setIsAiSearching] = useState(false); // Specific loading for AI search
+  const [aiSearchReasoning, setAiSearchReasoning] = useState<string | null>(null);
+  const [aiMatchedCandidateIds, setAiMatchedCandidateIds] = useState<string[] | null>(null);
+
+
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
   const [isCreateViaN8nModalOpen, setIsCreateViaN8nModalOpen] = useState(false);
@@ -77,7 +84,7 @@ export function CandidatesPageClient({
   const fetchRecruiters = useCallback(async () => {
     if (sessionStatus !== 'authenticated') return;
     try {
-      const response = await fetch('/api/users?role=Recruiter'); // Fetch users with 'Recruiter' role
+      const response = await fetch('/api/users?role=Recruiter');
       if (!response.ok) {
           const errorData = await response.json().catch(() => ({}));
           throw new Error(errorData.message || 'Failed to fetch recruiters');
@@ -100,6 +107,8 @@ export function CandidatesPageClient({
     setFetchError(null);
     setAuthError(false);
     setPermissionError(false);
+    setAiMatchedCandidateIds(null); // Clear AI results when standard filters are applied
+    setAiSearchReasoning(null);
 
     try {
       const query = new URLSearchParams();
@@ -114,6 +123,7 @@ export function CandidatesPageClient({
       if (currentFilters.applicationDateStart) query.append('applicationDateStart', currentFilters.applicationDateStart.toISOString());
       if (currentFilters.applicationDateEnd) query.append('applicationDateEnd', currentFilters.applicationDateEnd.toISOString());
       if (currentFilters.recruiterId && currentFilters.recruiterId !== "__ALL_RECRUITERS__") query.append('recruiterId', currentFilters.recruiterId);
+      if (currentFilters.keywords) query.append('keywords', currentFilters.keywords);
 
 
       const response = await fetch(`/api/candidates?${query.toString()}`);
@@ -148,12 +158,49 @@ export function CandidatesPageClient({
     }
   }, [sessionStatus, pathname, signIn]);
 
+  const handleAiSearch = async (aiQuery: string) => {
+    if (!aiQuery.trim()) {
+      toast({ title: "Empty Query", description: "Please enter a search query for AI search.", variant: "default" });
+      return;
+    }
+    setIsAiSearching(true);
+    setFetchError(null);
+    setAiSearchReasoning(null);
+    setAiMatchedCandidateIds(null);
+    try {
+      const response = await fetch('/api/ai/search-candidates', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query: aiQuery }),
+      });
+      const result = await response.json();
+      if (!response.ok) {
+        throw new Error(result.message || `AI search failed with status: ${response.status}`);
+      }
+      setAiMatchedCandidateIds(result.matchedCandidateIds || []);
+      setAiSearchReasoning(result.aiReasoning || "AI search complete.");
+      if (result.matchedCandidateIds?.length > 0) {
+        toast({ title: "AI Search Complete", description: `Found ${result.matchedCandidateIds.length} potential match(es). ${result.aiReasoning || ''}` });
+      } else {
+        toast({ title: "AI Search Complete", description: result.aiReasoning || "No strong matches found by AI for your query.", variant: "default" });
+      }
+    } catch (error) {
+      console.error("AI Search Error:", error);
+      toast({ title: "AI Search Error", description: (error as Error).message, variant: "destructive" });
+      setAiMatchedCandidateIds([]); // Show no results on error
+    } finally {
+      setIsAiSearching(false);
+    }
+  };
+
+
   useEffect(() => {
     if (sessionStatus === 'authenticated' && !serverAuthError && !serverPermissionError) {
       fetchFilteredCandidatesOnClient(filters);
-      fetchRecruiters(); // Fetch recruiters when authenticated
+      fetchRecruiters();
     }
-  }, [filters, sessionStatus, serverAuthError, serverPermissionError, fetchFilteredCandidatesOnClient, fetchRecruiters]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filters, sessionStatus, serverAuthError, serverPermissionError]); // fetchFilteredCandidatesOnClient and fetchRecruiters are memoized by useCallback
 
    useEffect(() => {
     if (sessionStatus === 'unauthenticated' && !serverAuthError && !serverPermissionError) {
@@ -167,7 +214,9 @@ export function CandidatesPageClient({
 
 
   const handleFilterChange = (newFilters: CandidateFilterValues) => {
-    setFilters(prevFilters => ({ ...prevFilters, ...newFilters}));
+    setFilters(prevFilters => ({ ...prevFilters, ...newFilters, aiSearchQuery: undefined })); // Clear AI search on standard filter change
+    setAiMatchedCandidateIds(null);
+    setAiSearchReasoning(null);
   };
 
   const fetchCandidateById = useCallback(async (candidateId: string): Promise<Candidate | null> => {
@@ -186,6 +235,16 @@ export function CandidatesPageClient({
   }, []);
 
   const refreshCandidateInList = useCallback(async (candidateId: string) => {
+    // If AI search is active, re-fetch all candidates and then re-apply AI filter to ensure consistency
+    // Or, for simplicity now, just re-fetch based on standard filters if AI search was a one-off.
+    // Let's keep it simple: If AI search was active, clearing it and re-fetching via standard filters might be easiest.
+    // For a more seamless experience, one might re-run the AI query or smartly update the existing list.
+    if (aiMatchedCandidateIds !== null) {
+        toast({title: "AI Search Active", description: "Please clear AI search or re-run it to see specific updates.", variant: "default" });
+        fetchFilteredCandidatesOnClient(filters); // Re-fetch based on current standard filters if AI was active
+        return;
+    }
+
     const updatedCandidate = await fetchCandidateById(candidateId);
     if (updatedCandidate) {
       setAllCandidates(prev => prev.map(c => c.id === candidateId ? updatedCandidate : c));
@@ -193,7 +252,7 @@ export function CandidatesPageClient({
       toast({ title: "Refresh Error", description: `Could not refresh data for candidate ${candidateId}. Attempting full list refresh.`, variant: "destructive"});
       fetchFilteredCandidatesOnClient(filters);
     }
-  }, [fetchCandidateById, toast, fetchFilteredCandidatesOnClient, filters]);
+  }, [fetchCandidateById, toast, fetchFilteredCandidatesOnClient, filters, aiMatchedCandidateIds]);
 
   const handleUpdateCandidateAPI = async (candidateId: string, status: CandidateStatus, transitionNotes?: string) => {
     try {
@@ -240,7 +299,7 @@ export function CandidatesPageClient({
   const handleAddCandidateSubmit = async (formData: AddCandidateFormValues) => {
     setIsLoading(true);
     try {
-      const apiPayload = { 
+      const apiPayload = {
         name: `${formData.personal_info.firstname} ${formData.personal_info.lastname}`.trim(),
         email: formData.contact_info.email,
         phone: formData.contact_info.phone || null,
@@ -268,7 +327,7 @@ export function CandidatesPageClient({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(apiPayload),
       });
-      if (!response.ok) { 
+      if (!response.ok) {
         const errorData = await response.json().catch(() => ({ message: "An unknown error occurred" }));
         throw new Error(errorData.message || `Failed to add candidate: ${response.statusText || `Status: ${response.status}`}`);
       }
@@ -276,7 +335,7 @@ export function CandidatesPageClient({
       setAllCandidates(prev => [newCandidate, ...prev].sort((a,b) => new Date(b.createdAt!).getTime() - new Date(a.createdAt!).getTime()));
       setIsAddModalOpen(false);
       toast({ title: "Candidate Added", description: `${newCandidate.name} has been successfully added.` });
-    } catch (error) { 
+    } catch (error) {
         console.error("Error adding candidate:", error);
         toast({ title: "Error Adding Candidate", description: (error as Error).message, variant: "destructive" });
     } finally { setIsLoading(false); }
@@ -288,7 +347,7 @@ export function CandidatesPageClient({
   };
 
   const handleUploadSuccess = (updatedCandidate: Candidate) => {
-    refreshCandidateInList(updatedCandidate.id); 
+    refreshCandidateInList(updatedCandidate.id);
     toast({ title: "Resume Uploaded", description: `Resume for ${updatedCandidate.name} successfully updated.`});
   };
 
@@ -296,7 +355,7 @@ export function CandidatesPageClient({
     toast({ title: "Processing Started", description: "Resume sent for automated processing. Candidate list will refresh if successful." });
     setTimeout(() => { fetchFilteredCandidatesOnClient(filters); }, 15000);
   };
-  
+
   const handleDownloadCsvTemplateGuide = () => {
     const headers = [
       "name", "email", "phone", "positionId", "fitScore", "status", "applicationDate",
@@ -304,12 +363,9 @@ export function CandidatesPageClient({
       "parsedData.personal_info.firstname", "parsedData.personal_info.lastname",
       "parsedData.personal_info.title_honorific", "parsedData.personal_info.nickname",
       "parsedData.personal_info.location", "parsedData.personal_info.introduction_aboutme",
-      "parsedData.contact_info.email", "parsedData.contact_info.phone", // These might be redundant if same as main email/phone
-      "parsedData.education", // Expect JSON string
-      "parsedData.experience", // Expect JSON string
-      "parsedData.skills", // Expect JSON string
-      "parsedData.job_suitable", // Expect JSON string
-      "parsedData.job_matches" // Expect JSON string
+      "parsedData.contact_info.email", "parsedData.contact_info.phone",
+      "parsedData.education", "parsedData.experience", "parsedData.skills",
+      "parsedData.job_suitable", "parsedData.job_matches"
     ];
     const exampleRows = [
       ["John Doe", "john.doe@example.com", "555-1212", "your-position-uuid-here", "85", "Applied", new Date().toISOString(),
@@ -321,38 +377,30 @@ export function CandidatesPageClient({
        JSON.stringify([{suitable_career:"Software Development"}]),
        JSON.stringify([{job_title:"Senior Dev",fit_score:90}])
       ],
-      ["Jane Smith", "jane.smith@example.com", "555-0011", "", "70", "Screening", new Date().toISOString(),
-       "EN", "Jane", "Smith", "Ms.", "", "London, UK", "Product enthusiast.",
-       "jane.smith@example.com", "555-0011",
-       "[]", "[]", "[]", "[]", "[]"
-      ]
     ];
      let csvContent = headers.join(',') + '\\n';
     exampleRows.forEach(row => {
         csvContent += row.map(val => `"${String(val || '').replace(/"/g, '""')}"`).join(',') + '\\n';
     });
-    csvContent += "\nNOTE: For array fields (education, experience, skills, job_suitable, job_matches), provide a valid JSON string representation of the array of objects, or leave blank (e.g., []).";
+    csvContent += "\nNOTE: For array fields, provide a valid JSON string representation of the array of objects, or leave blank (e.g., []).";
 
     downloadFile(csvContent, 'candidates_template.csv', 'text/csv;charset=utf-8;');
-    toast({
-      title: "Template Guide Downloaded",
-      description: "A CSV template for candidates has been downloaded.",
-    });
+    toast({ title: "Template Guide Downloaded", description: "A CSV template for candidates has been downloaded." });
   };
 
-  const handleExportToCsv = async () => { 
+  const handleExportToCsv = async () => {
     setIsLoading(true);
     try {
       const query = new URLSearchParams();
       if (filters.name) query.append('name', filters.name);
       if (filters.positionId && filters.positionId !== "__ALL_POSITIONS__") query.append('positionId', filters.positionId);
       if (filters.status && filters.status !== "all") query.append('status', filters.status);
-      // Add new filters to export query if needed
       if (filters.email) query.append('email', filters.email);
       if (filters.phone) query.append('phone', filters.phone);
       if (filters.applicationDateStart) query.append('applicationDateStart', filters.applicationDateStart.toISOString());
       if (filters.applicationDateEnd) query.append('applicationDateEnd', filters.applicationDateEnd.toISOString());
       if (filters.recruiterId && filters.recruiterId !== "__ALL_RECRUITERS__") query.append('recruiterId', filters.recruiterId);
+      if (filters.keywords) query.append('keywords', filters.keywords);
 
 
       const response = await fetch(`/api/candidates/export?${query.toString()}`);
@@ -401,6 +449,10 @@ export function CandidatesPageClient({
     );
   }
 
+  const displayedCandidates = aiMatchedCandidateIds !== null
+    ? allCandidates.filter(c => aiMatchedCandidateIds.includes(c.id))
+    : allCandidates;
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-center gap-2">
@@ -419,18 +471,31 @@ export function CandidatesPageClient({
         </div>
       </div>
 
-      <CandidateFilters 
-        initialFilters={filters} 
-        onFilterChange={handleFilterChange} 
-        availablePositions={availablePositions} 
-        availableStages={availableStages} 
+      <CandidateFilters
+        initialFilters={filters}
+        onFilterChange={handleFilterChange}
+        onAiSearch={handleAiSearch}
+        availablePositions={availablePositions}
+        availableStages={availableStages}
         availableRecruiters={availableRecruiters}
-        isLoading={isLoading && allCandidates.length > 0} 
+        isLoading={isLoading}
+        isAiSearching={isAiSearching}
       />
 
-      {isLoading && allCandidates.length === 0 && !fetchError ? ( <div className="flex flex-col items-center justify-center h-64 border rounded-lg bg-card shadow"> <Users className="w-16 h-16 text-muted-foreground animate-pulse mb-4" /> <h3 className="text-xl font-semibold text-foreground">Loading Candidates...</h3> <p className="text-muted-foreground">Please wait while we fetch the data.</p> </div>
+      {aiSearchReasoning && (
+        <Alert variant="default" className="bg-blue-50 border-blue-300 dark:bg-blue-900/30 dark:border-blue-700">
+          <Brain className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+          <AlertTitle className="font-semibold text-blue-700 dark:text-blue-300">AI Search Results</AlertTitle>
+          <AlertDescription className="text-blue-700 dark:text-blue-300">
+            {aiSearchReasoning}
+            {aiMatchedCandidateIds && aiMatchedCandidateIds.length === 0 && " No strong matches found."}
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {(isLoading || isAiSearching) && displayedCandidates.length === 0 && !fetchError ? ( <div className="flex flex-col items-center justify-center h-64 border rounded-lg bg-card shadow"> <Users className="w-16 h-16 text-muted-foreground animate-pulse mb-4" /> <h3 className="text-xl font-semibold text-foreground"> {isAiSearching ? "AI Searching Candidates..." : "Loading Candidates..."}</h3> <p className="text-muted-foreground">Please wait while we fetch the data.</p> </div>
       ) : (
-        <CandidateTable candidates={allCandidates} availablePositions={availablePositions} availableStages={availableStages} onUpdateCandidate={handleUpdateCandidateAPI} onDeleteCandidate={handleDeleteCandidate} onOpenUploadModal={handleOpenUploadModal} onEditPosition={handleOpenEditPositionModal} isLoading={isLoading && allCandidates.length > 0 && !fetchError} onRefreshCandidateData={refreshCandidateInList} />
+        <CandidateTable candidates={displayedCandidates} availablePositions={availablePositions} availableStages={availableStages} onUpdateCandidate={handleUpdateCandidateAPI} onDeleteCandidate={handleDeleteCandidate} onOpenUploadModal={handleOpenUploadModal} onEditPosition={handleOpenEditPositionModal} isLoading={(isLoading || isAiSearching) && displayedCandidates.length > 0 && !fetchError} onRefreshCandidateData={refreshCandidateInList} />
       )}
 
       <AddCandidateModal isOpen={isAddModalOpen} onOpenChange={setIsAddModalOpen} onAddCandidate={handleAddCandidateSubmit} availablePositions={availablePositions} availableStages={availableStages} />
@@ -441,5 +506,3 @@ export function CandidatesPageClient({
     </div>
   );
 }
-
-    

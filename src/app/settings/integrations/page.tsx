@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { useToast } from '@/hooks/use-toast';
-import { Save, Settings, Mail, Zap, UploadCloud, FileText, XCircle, Loader2, AlertTriangle, ServerCrash, ShieldAlert, Info } from 'lucide-react'; 
+import { Save, Settings, Mail, Zap, UploadCloud, FileText, XCircle, Loader2, AlertTriangle, ServerCrash, ShieldAlert, Info, BrainCircuit } from 'lucide-react';
 import { signIn, useSession } from 'next-auth/react';
 import { useRouter, usePathname } from 'next/navigation';
 import type { SystemSetting } from '@/lib/types';
@@ -23,15 +23,16 @@ export default function IntegrationsSettingsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [fetchError, setFetchError] = useState<string | null>(null);
-  
+
   const [smtpHost, setSmtpHost] = useState('');
   const [smtpPort, setSmtpPort] = useState('');
   const [smtpUser, setSmtpUser] = useState('');
-  const [smtpPassword, setSmtpPassword] = useState(''); 
+  const [smtpPassword, setSmtpPassword] = useState('');
   const [smtpSecure, setSmtpSecure] = useState(true);
   const [smtpFromEmail, setSmtpFromEmail] = useState('');
   const [n8nResumeWebhookUrl, setN8nResumeWebhookUrl] = useState('');
   const [n8nGenericPdfWebhookUrl, setN8nGenericPdfWebhookUrl] = useState('');
+  const [geminiApiKey, setGeminiApiKey] = useState('');
 
 
   const fetchSystemSettings = useCallback(async () => {
@@ -44,7 +45,7 @@ export default function IntegrationsSettingsPage() {
         throw new Error(errorData.message);
       }
       const settings: SystemSetting[] = await response.json();
-      
+
       setSmtpHost(settings.find(s => s.key === 'smtpHost')?.value || '');
       setSmtpPort(settings.find(s => s.key === 'smtpPort')?.value || '');
       setSmtpUser(settings.find(s => s.key === 'smtpUser')?.value || '');
@@ -52,6 +53,7 @@ export default function IntegrationsSettingsPage() {
       setSmtpFromEmail(settings.find(s => s.key === 'smtpFromEmail')?.value || '');
       setN8nResumeWebhookUrl(settings.find(s => s.key === 'n8nResumeWebhookUrl')?.value || '');
       setN8nGenericPdfWebhookUrl(settings.find(s => s.key === 'n8nGenericPdfWebhookUrl')?.value || '');
+      setGeminiApiKey(settings.find(s => s.key === 'geminiApiKey')?.value || '');
 
     } catch (error) {
       console.error("Error fetching system settings:", error);
@@ -67,7 +69,7 @@ export default function IntegrationsSettingsPage() {
     if (sessionStatus === 'unauthenticated') {
       signIn(undefined, { callbackUrl: pathname });
     } else if (sessionStatus === 'authenticated') {
-        if (session.user.role !== 'Admin' && !session.user.modulePermissions?.includes('SYSTEM_SETTINGS_MANAGE')) { 
+        if (session.user.role !== 'Admin' && !session.user.modulePermissions?.includes('SYSTEM_SETTINGS_MANAGE')) {
             setFetchError("You do not have permission to manage integration settings.");
             setIsLoading(false);
         } else {
@@ -80,7 +82,7 @@ export default function IntegrationsSettingsPage() {
   const handleSaveSettings = async () => {
     if (!isClient) return;
     setIsSaving(true);
-    
+
     const settingsToUpdate: SystemSetting[] = [
       { key: 'smtpHost', value: smtpHost },
       { key: 'smtpPort', value: smtpPort },
@@ -89,7 +91,11 @@ export default function IntegrationsSettingsPage() {
       { key: 'smtpFromEmail', value: smtpFromEmail },
       { key: 'n8nResumeWebhookUrl', value: n8nResumeWebhookUrl },
       { key: 'n8nGenericPdfWebhookUrl', value: n8nGenericPdfWebhookUrl },
+      { key: 'geminiApiKey', value: geminiApiKey },
     ];
+
+    // Note: smtpPassword is not saved to the DB via this UI.
+    // It must be set as an environment variable on the server.
 
     try {
       const response = await fetch('/api/settings/system-settings', {
@@ -102,12 +108,12 @@ export default function IntegrationsSettingsPage() {
         const errorData = await response.json().catch(() => ({ message: 'Failed to save settings' }));
         throw new Error(errorData.message);
       }
-      
+
       toast({
         title: 'Settings Saved',
         description: 'Your integration settings have been updated on the server.',
       });
-      fetchSystemSettings(); 
+      fetchSystemSettings();
     } catch (error) {
       console.error("Error saving settings:", error);
       toast({ title: "Error Saving Settings", description: (error as Error).message, variant: "destructive" });
@@ -123,7 +129,7 @@ export default function IntegrationsSettingsPage() {
         </div>
     );
   }
-  
+
   if (fetchError && !isLoading) {
      return (
       <div className="flex flex-col items-center justify-center h-full text-center p-4">
@@ -141,6 +147,28 @@ export default function IntegrationsSettingsPage() {
       <Card className="shadow-lg">
         <CardHeader>
           <CardTitle className="flex items-center text-2xl">
+            <BrainCircuit className="mr-3 h-6 w-6 text-primary" /> AI Configuration (Gemini)
+          </CardTitle>
+          <CardDescription>Configure your Google AI Gemini API Key for AI-powered features like advanced candidate search.</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4 pt-6">
+            <div>
+              <Label htmlFor="gemini-api-key">Gemini API Key</Label>
+              <Input id="gemini-api-key" type="password" placeholder="Enter your Gemini API Key" value={geminiApiKey} onChange={(e) => setGeminiApiKey(e.target.value)} className="mt-1" disabled={isSaving}/>
+              <p className="text-xs text-muted-foreground mt-1">This key is stored securely on the server. For Genkit to use this, ensure it's also available as the GOOGLE_API_KEY environment variable where your Next.js server runs, or ensure your Genkit flows dynamically fetch it.</p>
+            </div>
+        </CardContent>
+         <CardFooter className="border-t pt-6">
+          <Button onClick={handleSaveSettings} className="btn-primary-gradient" disabled={isSaving || isLoading}>
+            {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+            {isSaving ? 'Saving AI Config...' : 'Save AI Configuration'}
+          </Button>
+        </CardFooter>
+      </Card>
+
+      <Card className="shadow-lg">
+        <CardHeader>
+          <CardTitle className="flex items-center text-2xl">
             <Zap className="mr-3 h-6 w-6 text-primary" /> Workflow Automation (Webhooks)
           </CardTitle>
           <CardDescription>Configure server-side webhook URLs for automated processing tasks via n8n or similar tools.</CardDescription>
@@ -155,7 +183,7 @@ export default function IntegrationsSettingsPage() {
             <div>
                 <Label htmlFor="n8n-generic-pdf-webhook">New Candidate PDF Webhook URL</Label>
                 <Input id="n8n-generic-pdf-webhook" type="url" placeholder="https://your-n8n-instance/webhook/new-candidate-pdf" value={n8nGenericPdfWebhookUrl} onChange={(e) => setN8nGenericPdfWebhookUrl(e.target.value)} className="mt-1" disabled={isSaving}/>
-                 <p className="text-xs text-muted-foreground mt-1">Used by "Create via Resume (Automated)" feature. The application sends the PDF file (as FormData) and optional target position info to this endpoint.</p>
+                 <p className="text-xs text-muted-foreground mt-1">Used by "Create via Resume (Automated)" feature. The application sends the PDF file (as FormData) and optional target position info to this endpoint. This webhook should then call back to `/api/n8n/create-candidate-with-matches`.</p>
             </div>
         </CardContent>
          <CardFooter className="border-t pt-6">
