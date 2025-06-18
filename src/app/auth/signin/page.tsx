@@ -18,9 +18,9 @@ const DEFAULT_APP_NAME = "CandiTrack";
 const DEFAULT_LOGIN_BG_GRADIENT = "linear-gradient(90deg, rgba(255, 255, 255, 1) 0%, rgba(245, 245, 255, 1) 100%, rgba(252, 252, 255, 1) 55%)";
 const DEFAULT_LOGIN_BG_GRADIENT_DARK = "linear-gradient(90deg, hsl(220, 15%, 9%) 0%, hsl(220, 15%, 11%) 100%, hsl(220, 15%, 10%) 55%)";
 
-// Default HSL strings for primary gradient (cyan-to-blue), matching globals.css and preferences page
-const DEFAULT_PRIMARY_GRADIENT_START_SIGNIN = "192 95% 50%";
-const DEFAULT_PRIMARY_GRADIENT_END_SIGNIN = "225 89% 47%";
+// Default HSL strings for primary gradient, matching globals.css and preferences page
+const DEFAULT_PRIMARY_GRADIENT_START_SIGNIN = "179 67% 66%";
+const DEFAULT_PRIMARY_GRADIENT_END_SIGNIN = "238 74% 61%";
 
 
 export default function SignInPage() {

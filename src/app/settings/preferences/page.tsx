@@ -22,9 +22,9 @@ const DEFAULT_LOGIN_BG_TYPE: LoginPageBackgroundType = "default";
 const DEFAULT_LOGIN_BG_COLOR1 = "#F0F4F7";
 const DEFAULT_LOGIN_BG_COLOR2 = "#3F51B5";
 
-// Updated Default HSL strings for primary gradient (cyan-to-blue)
-const DEFAULT_PRIMARY_GRADIENT_START = "192 95% 50%";
-const DEFAULT_PRIMARY_GRADIENT_END = "225 89% 47%";
+// Updated Default HSL strings for primary gradient
+const DEFAULT_PRIMARY_GRADIENT_START = "179 67% 66%";
+const DEFAULT_PRIMARY_GRADIENT_END = "238 74% 61%";
 
 // Sidebar default colors (HSL strings)
 const DEFAULT_SIDEBAR_BG_START_L = "220 25% 97%";
@@ -328,16 +328,16 @@ export default function PreferencesSettingsPage() {
         sidebarActiveBgEndL: updatedSettingsMap.get('sidebarActiveBgEndL') || DEFAULT_SIDEBAR_ACTIVE_BG_END_L,
         sidebarActiveTextL: updatedSettingsMap.get('sidebarActiveTextL') || DEFAULT_SIDEBAR_ACTIVE_TEXT_L,
         sidebarHoverBgL: updatedSettingsMap.get('sidebarHoverBgL') || DEFAULT_SIDEBAR_HOVER_BG_L,
-        sidebarHoverTextL: updatedSettingsMap.get('sidebarHoverTextL') || DEFAULT_SIDEBAR_HOVER_TEXT_L,
+        sidebarHoverTextL: settingsMap.get('sidebarHoverTextL') || DEFAULT_SIDEBAR_HOVER_TEXT_L,
         sidebarBorderL: settingsMap.get('sidebarBorderL') || DEFAULT_SIDEBAR_BORDER_L,
         sidebarBgStartD: updatedSettingsMap.get('sidebarBgStartD') || DEFAULT_SIDEBAR_BG_START_D,
         sidebarBgEndD: updatedSettingsMap.get('sidebarBgEndD') || DEFAULT_SIDEBAR_BG_END_D,
         sidebarTextD: settingsMap.get('sidebarTextD') || DEFAULT_SIDEBAR_TEXT_D,
         sidebarActiveBgStartD: updatedSettingsMap.get('sidebarActiveBgStartD') || DEFAULT_SIDEBAR_ACTIVE_BG_START_D,
         sidebarActiveBgEndD: updatedSettingsMap.get('sidebarActiveBgEndD') || DEFAULT_SIDEBAR_ACTIVE_BG_END_D,
-        sidebarActiveTextD: settingsMap.get('sidebarActiveTextD') || DEFAULT_SIDEBAR_ACTIVE_TEXT_D,
+        sidebarActiveTextD: updatedSettingsMap.get('sidebarActiveTextD') || DEFAULT_SIDEBAR_ACTIVE_TEXT_D,
         sidebarHoverBgD: updatedSettingsMap.get('sidebarHoverBgD') || DEFAULT_SIDEBAR_HOVER_BG_D,
-        sidebarHoverTextD: updatedSettingsMap.get('sidebarHoverTextD') || DEFAULT_SIDEBAR_HOVER_TEXT_D,
+        sidebarHoverTextD: settingsMap.get('sidebarHoverTextD') || DEFAULT_SIDEBAR_HOVER_TEXT_D,
         sidebarBorderD: settingsMap.get('sidebarBorderD') || DEFAULT_SIDEBAR_BORDER_D,
       });
 
@@ -455,7 +455,7 @@ export default function PreferencesSettingsPage() {
               <div>
                 <Label htmlFor="app-logo-upload" className="text-sm">Change App Logo <span className="text-xs text-muted-foreground">(Recommended: square, max 200KB)</span></Label>
                 <Input id="app-logo-upload" type="file" accept="image/*" onChange={(e) => handleLogoFileChange(e, 'appLogo')} className="mt-1" />
-                {logoPreviewUrl && (<div className="mt-3 p-2 border rounded-md inline-flex items-center gap-3 bg-muted/50"><Image src={logoPreviewUrl} alt="Logo preview" width={48} height={48} className="h-12 w-12 object-contain rounded" data-ai-hint="company logo"/>{selectedLogoFile && <span className="text-sm text-foreground truncate max-w-[150px] sm:max-w-xs">{selectedLogoFile.name}</span>}<Button variant="ghost" size="icon" onClick={() => removeSelectedImage('appLogo', false)} className="h-7 w-7"> <XCircle className="h-4 w-4 text-muted-foreground hover:text-destructive"/> </Button></div>)}
+                {logoPreviewUrl && (<div className="mt-3 p-2 border rounded-md inline-flex items-center gap-3 bg-muted/50"><Image src={logoPreviewUrl} alt="Logo preview" width={48} height={48} className="h-12 w-12 object-contain rounded" data-ai-hint="company logo"/><Button variant="ghost" size="icon" onClick={() => removeSelectedImage('appLogo', false)} className="h-7 w-7"> <XCircle className="h-4 w-4 text-muted-foreground hover:text-destructive"/> </Button></div>)}
                 {savedLogoDataUrl && ( <div className="mt-2"> <Button variant="outline" size="sm" onClick={() => removeSelectedImage('appLogo', true)} disabled={isSaving}> {isSaving && savedLogoDataUrl === null ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Trash2 className="mr-2 h-4 w-4"/>} Reset to Default Logo </Button> </div> )}
               </div>
             </section>
@@ -467,14 +467,14 @@ export default function PreferencesSettingsPage() {
                 <div>
                   <Label htmlFor="primary-gradient-start" className="text-sm">Gradient Start Color</Label>
                   <div className="flex items-center gap-2 mt-1">
-                    <Input id="primary-gradient-start" type="text" value={primaryGradientStart} onChange={(e) => setPrimaryGradientStart(e.target.value)} placeholder="e.g., 191 75% 60% or #4DC9E6" className="flex-grow"/>
+                    <Input id="primary-gradient-start" type="text" value={primaryGradientStart} onChange={(e) => setPrimaryGradientStart(e.target.value)} placeholder="e.g., 179 67% 66% or #6FE3E1" className="flex-grow"/>
                     <Input type="color" value={primaryGradientStart.startsWith('#') ? primaryGradientStart : `#${primaryGradientStart.replace(/[^0-9a-fA-F]/g, '')}`} onChange={(e) => setPrimaryGradientStart(e.target.value)} className="w-10 h-10 p-1 flex-shrink-0" title="Pick color"/>
                   </div>
                 </div>
                 <div>
                   <Label htmlFor="primary-gradient-end" className="text-sm">Gradient End Color</Label>
                    <div className="flex items-center gap-2 mt-1">
-                    <Input id="primary-gradient-end" type="text" value={primaryGradientEnd} onChange={(e) => setPrimaryGradientEnd(e.target.value)} placeholder="e.g., 248 87% 36% or #210CAE" className="flex-grow"/>
+                    <Input id="primary-gradient-end" type="text" value={primaryGradientEnd} onChange={(e) => setPrimaryGradientEnd(e.target.value)} placeholder="e.g., 238 74% 61% or #5257E5" className="flex-grow"/>
                     <Input type="color" value={primaryGradientEnd.startsWith('#') ? primaryGradientEnd : `#${primaryGradientEnd.replace(/[^0-9a-fA-F]/g, '')}`} onChange={(e) => setPrimaryGradientEnd(e.target.value)} className="w-10 h-10 p-1 flex-shrink-0" title="Pick color"/>
                   </div>
                 </div>

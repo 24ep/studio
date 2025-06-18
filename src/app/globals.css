@@ -26,8 +26,8 @@ body {
     --popover-foreground: 220 25% 20%;
 
     /* Primary Color Definition for Light Theme - NEW DEFAULT GRADIENT */
-    --primary-gradient-start-l: 191 75% 60%; /* hsla(191, 75%, 60%, 1) */
-    --primary-gradient-end-l: 248 87% 36%;   /* hsla(248, 87%, 36%, 1) */
+    --primary-gradient-start-l: 179 67% 66%; /* hsla(179, 67%, 66%, 1) */
+    --primary-gradient-end-l: 238 74% 61%;   /* hsla(238, 74%, 61%, 1) */
     --primary: hsl(var(--primary-gradient-start-l)); 
     --primary-foreground: 0 0% 100%;
 
@@ -100,8 +100,8 @@ body {
     --popover-foreground: 210 30% 95%;
 
     /* Primary Color Definition for Dark Theme - NEW DEFAULT GRADIENT */
-    --primary-gradient-start-d: 191 75% 60%; /* hsla(191, 75%, 60%, 1) */
-    --primary-gradient-end-d: 248 87% 36%;   /* hsla(248, 87%, 36%, 1) */
+    --primary-gradient-start-d: 179 67% 66%; /* hsla(179, 67%, 66%, 1) */
+    --primary-gradient-end-d: 238 74% 61%;   /* hsla(238, 74%, 61%, 1) */
     --primary: hsl(var(--primary-gradient-start-d)); 
     --primary-foreground: hsl(0 0% 100%); 
 
@@ -229,7 +229,7 @@ body {
     background-image: -ms-linear-gradient(90deg, hsl(var(--primary-gradient-start-l)) 0%, hsl(var(--primary-gradient-end-l)) 100%);
     color: hsl(var(--primary-foreground));
     border: none;
-    filter: progid: DXImageTransform.Microsoft.gradient( startColorstr="#4DC9E6", endColorstr="#210CAE", GradientType=1 );
+    filter: progid: DXImageTransform.Microsoft.gradient( startColorstr="#6FE3E1", endColorstr="#5257E5", GradientType=1 );
   }
 
   .dark .btn-primary-gradient {
@@ -240,15 +240,15 @@ body {
     background-image: -ms-linear-gradient(90deg, hsl(var(--primary-gradient-start-d)) 0%, hsl(var(--primary-gradient-end-d)) 100%);
     color: hsl(var(--primary-foreground));
     border: none;
-    filter: progid: DXImageTransform.Microsoft.gradient( startColorstr="#4DC9E6", endColorstr="#210CAE", GradientType=1 );
+    filter: progid: DXImageTransform.Microsoft.gradient( startColorstr="#6FE3E1", endColorstr="#5257E5", GradientType=1 );
   }
 
   .btn-primary-gradient:hover {
-    filter: brightness(1.1) progid:DXImageTransform.Microsoft.gradient( startColorstr="#4DC9E6", endColorstr="#210CAE", GradientType=1 ); 
+    filter: brightness(1.1) progid:DXImageTransform.Microsoft.gradient( startColorstr="#6FE3E1", endColorstr="#5257E5", GradientType=1 ); 
     box-shadow: 0 2px 10px -3px hsla(var(--primary-gradient-start-l), 0.4); 
   }
    .dark .btn-primary-gradient:hover {
-    filter: brightness(1.1) progid:DXImageTransform.Microsoft.gradient( startColorstr="#4DC9E6", endColorstr="#210CAE", GradientType=1 );
+    filter: brightness(1.1) progid:DXImageTransform.Microsoft.gradient( startColorstr="#6FE3E1", endColorstr="#5257E5", GradientType=1 );
     box-shadow: 0 2px 10px -3px hsla(var(--primary-gradient-start-d), 0.4);
   }
 
@@ -312,3 +312,4 @@ body {
 
 
     
+
