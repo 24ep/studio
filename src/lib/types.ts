@@ -21,6 +21,7 @@ export const PLATFORM_MODULES = [
   { id: 'RECRUITMENT_STAGES_MANAGE', label: 'Manage Recruitment Stages' },
   { id: 'CUSTOM_FIELDS_MANAGE', label: 'Manage Custom Field Definitions' },
   { id: 'WEBHOOK_MAPPING_MANAGE', label: 'Manage Webhook Mappings' },
+  { id: 'NOTIFICATION_SETTINGS_MANAGE', label: 'Manage Notification Settings' }, // New Permission
   { id: 'LOGS_VIEW', label: 'View Application Logs' },
 ] as const;
 
@@ -350,3 +351,43 @@ export interface SystemSetting {
     value: string | null; // Store theme preference as string e.g. "dark", "light", "system"
     updatedAt?: string;
 }
+
+// Notification System Types
+export interface NotificationEvent {
+  id: string;
+  event_key: string;
+  label: string;
+  description?: string | null;
+  createdAt?: string;
+}
+
+export interface NotificationChannel {
+  id: string;
+  channel_key: 'email' | 'webhook';
+  label: string;
+  createdAt?: string;
+}
+
+export interface NotificationSetting {
+  id?: string; // DB id
+  eventId: string; // FK to NotificationEvent.id
+  channelId: string; // FK to NotificationChannel.id
+  isEnabled: boolean;
+  configuration?: { webhookUrl?: string } | null; // For webhook URL, etc.
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+// For GET /api/settings/notifications to combine data
+export interface NotificationEventWithSettings extends NotificationEvent {
+  channels: Array<{
+    channelId: string;
+    channelKey: 'email' | 'webhook';
+    channelLabel: string;
+    isEnabled: boolean;
+    configuration?: { webhookUrl?: string } | null;
+    settingId?: string; // ID of the NotificationSetting record, if exists
+  }>;
+}
+
+    

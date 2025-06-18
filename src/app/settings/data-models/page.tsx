@@ -9,18 +9,16 @@ import { Label } from '@/components/ui/label';
 import {
   Select,
   SelectContent,
-  SelectGroup,
   SelectItem,
-  SelectLabel,
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'; // Changed from Accordion
 import { useToast } from '@/hooks/use-toast';
 import { signIn, useSession } from 'next-auth/react';
 import { useRouter, usePathname } from 'next/navigation';
-import { Save, DatabaseZap, HelpCircle, Eye, EyeOff, Star, ServerCrash, ShieldAlert, Loader2, RefreshCw } from 'lucide-react';
+import { Save, DatabaseZap, Info, ServerCrash, ShieldAlert, Loader2, RefreshCw } from 'lucide-react';
 import type { UserDataModelPreference, UIDisplayPreference, ModelAttributeDefinition } from '@/lib/types';
 
 const UI_DISPLAY_PREFERENCES: UIDisplayPreference[] = ["Standard", "Emphasized", "Hidden"];
@@ -192,7 +190,7 @@ export default function DataModelsPage() {
     } finally {
       setIsLoadingData(false);
     }
-  }, [session?.user?.id, candidatePrefs, positionPrefs]);
+  }, [session?.user?.id, candidatePrefs, positionPrefs]); // Removed loadPreferencesFromServer from deps
 
   useEffect(() => {
     setIsClient(true);
@@ -206,7 +204,8 @@ export default function DataModelsPage() {
         loadPreferencesFromServer();
       }
     }
-  }, [sessionStatus, session, pathname, signIn, loadPreferencesFromServer]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sessionStatus, session, pathname, signIn]); // Removed loadPreferencesFromServer from deps here too
 
 
   const handlePreferenceChange = (
@@ -293,58 +292,53 @@ export default function DataModelsPage() {
         <CardHeader>
           <CardTitle className="flex items-center"><DatabaseZap className="mr-2 h-6 w-6 text-primary"/>Data Model Preferences</CardTitle>
           <CardDescription>
-            View attributes of your core data models (Candidate, Position) and set your UI display preferences or custom notes. These settings are saved for your user account.
+            View attributes of your core data models (Candidate, Position) and set your UI display preferences or custom notes. These settings are saved server-side for your user account.
           </CardDescription>
         </CardHeader>
       </Card>
 
-      <Accordion type="multiple" defaultValue={['candidate-model', 'position-model']} className="w-full space-y-4">
-        <AccordionItem value="candidate-model">
+      <Tabs defaultValue="candidate-model" className="w-full">
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="candidate-model">Candidate Model</TabsTrigger>
+          <TabsTrigger value="position-model">Position Model</TabsTrigger>
+        </TabsList>
+        <TabsContent value="candidate-model">
           <Card>
-            <AccordionTrigger className="p-6 hover:no-underline">
-              <CardHeader className="p-0 text-left">
-                <CardTitle>Candidate Model Attributes</CardTitle>
-                <CardDescription>Set preferences for candidate data fields.</CardDescription>
-              </CardHeader>
-            </AccordionTrigger>
-            <AccordionContent>
-              <CardContent className="pt-0">
-                {CANDIDATE_ATTRIBUTES.map(attr => (
-                  <AttributeEditor
-                    key={attr.key}
-                    attr={attr}
-                    preferences={candidatePrefs}
-                    onPreferenceChange={(key, type, val) => handlePreferenceChange('Candidate', key, type, val)}
-                  />
-                ))}
-              </CardContent>
-            </AccordionContent>
+            <CardHeader>
+              <CardTitle>Candidate Model Attributes</CardTitle>
+              <CardDescription>Set preferences for candidate data fields.</CardDescription>
+            </CardHeader>
+            <CardContent className="pt-0">
+              {CANDIDATE_ATTRIBUTES.map(attr => (
+                <AttributeEditor
+                  key={attr.key}
+                  attr={attr}
+                  preferences={candidatePrefs}
+                  onPreferenceChange={(key, type, val) => handlePreferenceChange('Candidate', key, type, val)}
+                />
+              ))}
+            </CardContent>
           </Card>
-        </AccordionItem>
-
-        <AccordionItem value="position-model">
-           <Card>
-            <AccordionTrigger className="p-6 hover:no-underline">
-              <CardHeader className="p-0 text-left">
-                <CardTitle>Position Model Attributes</CardTitle>
-                <CardDescription>Set preferences for job position data fields.</CardDescription>
-              </CardHeader>
-            </AccordionTrigger>
-            <AccordionContent>
-              <CardContent className="pt-0">
-                {POSITION_ATTRIBUTES.map(attr => (
-                  <AttributeEditor
-                    key={attr.key}
-                    attr={attr}
-                    preferences={positionPrefs}
-                    onPreferenceChange={(key, type, val) => handlePreferenceChange('Position', key, type, val)}
-                  />
-                ))}
-              </CardContent>
-            </AccordionContent>
+        </TabsContent>
+        <TabsContent value="position-model">
+          <Card>
+            <CardHeader>
+              <CardTitle>Position Model Attributes</CardTitle>
+              <CardDescription>Set preferences for job position data fields.</CardDescription>
+            </CardHeader>
+            <CardContent className="pt-0">
+              {POSITION_ATTRIBUTES.map(attr => (
+                <AttributeEditor
+                  key={attr.key}
+                  attr={attr}
+                  preferences={positionPrefs}
+                  onPreferenceChange={(key, type, val) => handlePreferenceChange('Position', key, type, val)}
+                />
+              ))}
+            </CardContent>
           </Card>
-        </AccordionItem>
-      </Accordion>
+        </TabsContent>
+      </Tabs>
       
       <div className="flex justify-end mt-6">
         <Button onClick={handleSavePreferences} size="lg" className="btn-primary-gradient" disabled={isSaving || isLoadingData}>
@@ -355,3 +349,5 @@ export default function DataModelsPage() {
     </div>
   );
 }
+
+    
