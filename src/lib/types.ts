@@ -365,6 +365,8 @@ export type SystemSettingKey =
   | 'appName'
   | 'appLogoDataUrl'
   | 'appThemePreference'
+  | 'primaryGradientStart' // New for customizable primary color
+  | 'primaryGradientEnd'   // New for customizable primary color
   | 'smtpHost'
   | 'smtpPort'
   | 'smtpUser'
@@ -481,3 +483,4 @@ export interface PositionBulkActionPayload {
 }
 
     
+

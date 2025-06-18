@@ -1,3 +1,4 @@
+
 "use client";
 import React, { type ReactNode, useState, useEffect } from "react";
 import {
@@ -17,11 +18,15 @@ import { Package2 } from "lucide-react";
 import { usePathname } from "next/navigation";
 import Image from 'next/image';
 import { SetupFlowHandler } from './SetupFlowHandler';
-import type { SystemSetting } from '@/lib/types';
+import type { SystemSetting, SystemSettingKey } from '@/lib/types';
 import SettingsLayout from '@/app/settings/layout'; // Import the new settings layout
 
 const DEFAULT_APP_NAME = "CandiTrack";
 const DEFAULT_LOGO_ICON = <Package2 className="h-6 w-6" />;
+
+// Default primary gradient HSL strings
+const DEFAULT_PRIMARY_GRADIENT_START = "191 75% 60%";
+const DEFAULT_PRIMARY_GRADIENT_END = "248 87% 36%";
 
 function getPageTitle(pathname: string, currentAppName: string): string {
   if (pathname === "/") return "Dashboard";
@@ -59,35 +64,63 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
         const response = await fetch('/api/settings/system-settings');
         if (response.ok) {
           const settings: SystemSetting[] = await response.json();
-          const appNameSetting = settings.find(s => s.key === 'appName');
-          const logoSetting = settings.find(s => s.key === 'appLogoDataUrl');
+          const settingsMap = new Map(settings.map(s => [s.key, s.value]));
           
-          setCurrentAppName(appNameSetting?.value || DEFAULT_APP_NAME);
-          setAppLogoUrl(logoSetting?.value || null);
+          const appNameSetting = settingsMap.get('appName');
+          const logoSetting = settingsMap.get('appLogoDataUrl');
+          const primaryGradientStartSetting = settingsMap.get('primaryGradientStart');
+          const primaryGradientEndSetting = settingsMap.get('primaryGradientEnd');
+          
+          setCurrentAppName(appNameSetting || DEFAULT_APP_NAME);
+          setAppLogoUrl(logoSetting || null);
+
+          // Apply primary colors dynamically
+          const startColor = primaryGradientStartSetting || DEFAULT_PRIMARY_GRADIENT_START;
+          const endColor = primaryGradientEndSetting || DEFAULT_PRIMARY_GRADIENT_END;
+
+          document.documentElement.style.setProperty('--primary-gradient-start-l', startColor);
+          document.documentElement.style.setProperty('--primary-gradient-end-l', endColor);
+          document.documentElement.style.setProperty('--primary-gradient-start-d', startColor); // Using same for dark for now
+          document.documentElement.style.setProperty('--primary-gradient-end-d', endColor);   // Using same for dark for now
+          document.documentElement.style.setProperty('--primary', `hsl(${startColor})`); // Update base primary too
+
+
         } else {
-          console.warn("Failed to fetch server-side system settings, using defaults/localStorage.");
-          const storedAppName = localStorage.getItem('appConfigAppName');
-          setCurrentAppName(storedAppName || DEFAULT_APP_NAME);
-          const storedLogo = localStorage.getItem('appLogoDataUrl');
-          setAppLogoUrl(storedLogo);
+          console.warn("Failed to fetch server-side system settings, using defaults.");
+          // Apply defaults if fetch fails
+          document.documentElement.style.setProperty('--primary-gradient-start-l', DEFAULT_PRIMARY_GRADIENT_START);
+          document.documentElement.style.setProperty('--primary-gradient-end-l', DEFAULT_PRIMARY_GRADIENT_END);
+          document.documentElement.style.setProperty('--primary-gradient-start-d', DEFAULT_PRIMARY_GRADIENT_START);
+          document.documentElement.style.setProperty('--primary-gradient-end-d', DEFAULT_PRIMARY_GRADIENT_END);
+          document.documentElement.style.setProperty('--primary', `hsl(${DEFAULT_PRIMARY_GRADIENT_START})`);
         }
       } catch (error) {
         console.error("Error fetching server-side system settings:", error);
-        const storedAppName = localStorage.getItem('appConfigAppName');
-        setCurrentAppName(storedAppName || DEFAULT_APP_NAME);
-        const storedLogo = localStorage.getItem('appLogoDataUrl');
-        setAppLogoUrl(storedLogo);
+        // Apply defaults on error
+        document.documentElement.style.setProperty('--primary-gradient-start-l', DEFAULT_PRIMARY_GRADIENT_START);
+        document.documentElement.style.setProperty('--primary-gradient-end-l', DEFAULT_PRIMARY_GRADIENT_END);
+        document.documentElement.style.setProperty('--primary-gradient-start-d', DEFAULT_PRIMARY_GRADIENT_START);
+        document.documentElement.style.setProperty('--primary-gradient-end-d', DEFAULT_PRIMARY_GRADIENT_END);
+        document.documentElement.style.setProperty('--primary', `hsl(${DEFAULT_PRIMARY_GRADIENT_START})`);
       }
     };
     
     updateAppConfigFromServer(); 
 
     const handleAppConfigChange = (event: Event) => {
-        const customEvent = event as CustomEvent<{ appName?: string; logoUrl?: string | null }>;
+        const customEvent = event as CustomEvent<{ appName?: string; logoUrl?: string | null; primaryGradientStart?: string; primaryGradientEnd?: string }>;
         if (customEvent.detail) {
             if (customEvent.detail.appName) setCurrentAppName(customEvent.detail.appName);
             if (customEvent.detail.logoUrl !== undefined) setAppLogoUrl(customEvent.detail.logoUrl);
+            if (customEvent.detail.primaryGradientStart && customEvent.detail.primaryGradientEnd) {
+                document.documentElement.style.setProperty('--primary-gradient-start-l', customEvent.detail.primaryGradientStart);
+                document.documentElement.style.setProperty('--primary-gradient-end-l', customEvent.detail.primaryGradientEnd);
+                document.documentElement.style.setProperty('--primary-gradient-start-d', customEvent.detail.primaryGradientStart);
+                document.documentElement.style.setProperty('--primary-gradient-end-d', customEvent.detail.primaryGradientEnd);
+                document.documentElement.style.setProperty('--primary', `hsl(${customEvent.detail.primaryGradientStart})`);
+            }
         } else {
+            // Full refetch if no specific detail
             updateAppConfigFromServer();
         }
     };

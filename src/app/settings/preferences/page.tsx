@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useToast } from '@/hooks/use-toast';
-import { Save, Palette, ImageUp, Trash2, Loader2, XCircle, PenSquare, ServerCrash, ShieldAlert, Settings2, Wallpaper, Droplets, Type, Sidebar as SidebarIcon } from 'lucide-react';
+import { Save, Palette, ImageUp, Trash2, Loader2, XCircle, PenSquare, ServerCrash, ShieldAlert, Settings2, Wallpaper, Droplets, Type, Sidebar as SidebarIcon, PaintBucket } from 'lucide-react';
 import Image from 'next/image';
 import { signIn, useSession } from 'next-auth/react';
 import { useRouter, usePathname } from 'next/navigation';
@@ -22,13 +22,17 @@ const DEFAULT_LOGIN_BG_TYPE: LoginPageBackgroundType = "default";
 const DEFAULT_LOGIN_BG_COLOR1 = "#F0F4F7";
 const DEFAULT_LOGIN_BG_COLOR2 = "#3F51B5";
 
+// Default HSL strings for primary gradient
+const DEFAULT_PRIMARY_GRADIENT_START = "191 75% 60%"; // Cyanish blue
+const DEFAULT_PRIMARY_GRADIENT_END = "248 87% 36%"; // Indigo/deep blue
+
 // Sidebar default colors (HSL strings)
 const DEFAULT_SIDEBAR_BG_START_L = "220 25% 97%";
 const DEFAULT_SIDEBAR_BG_END_L = "220 20% 94%";
 const DEFAULT_SIDEBAR_TEXT_L = "220 25% 30%";
-const DEFAULT_SIDEBAR_ACTIVE_BG_START_L = "206 97% 73%"; // From primary-gradient-start-l
-const DEFAULT_SIDEBAR_ACTIVE_BG_END_L = "244 95% 83%";   // From primary-gradient-end-l
-const DEFAULT_SIDEBAR_ACTIVE_TEXT_L = "0 0% 100%";      // From primary-foreground
+const DEFAULT_SIDEBAR_ACTIVE_BG_START_L = "191 75% 60%"; // Default primary start
+const DEFAULT_SIDEBAR_ACTIVE_BG_END_L = "248 87% 36%";   // Default primary end
+const DEFAULT_SIDEBAR_ACTIVE_TEXT_L = "0 0% 100%";      // Default primary foreground
 const DEFAULT_SIDEBAR_HOVER_BG_L = "220 10% 92%";
 const DEFAULT_SIDEBAR_HOVER_TEXT_L = "220 25% 25%";
 const DEFAULT_SIDEBAR_BORDER_L = "220 15% 85%";
@@ -36,9 +40,9 @@ const DEFAULT_SIDEBAR_BORDER_L = "220 15% 85%";
 const DEFAULT_SIDEBAR_BG_START_D = "220 15% 12%";
 const DEFAULT_SIDEBAR_BG_END_D = "220 15% 9%";
 const DEFAULT_SIDEBAR_TEXT_D = "210 30% 85%";
-const DEFAULT_SIDEBAR_ACTIVE_BG_START_D = "206 97% 73%"; // From primary-gradient-start-d
-const DEFAULT_SIDEBAR_ACTIVE_BG_END_D = "244 95% 83%";   // From primary-gradient-end-d
-const DEFAULT_SIDEBAR_ACTIVE_TEXT_D = "0 0% 100%";      // From primary-foreground (dark)
+const DEFAULT_SIDEBAR_ACTIVE_BG_START_D = "191 75% 60%"; // Default primary start
+const DEFAULT_SIDEBAR_ACTIVE_BG_END_D = "248 87% 36%";   // Default primary end
+const DEFAULT_SIDEBAR_ACTIVE_TEXT_D = "0 0% 100%";      // Default primary foreground (dark)
 const DEFAULT_SIDEBAR_HOVER_BG_D = "220 15% 20%";
 const DEFAULT_SIDEBAR_HOVER_TEXT_D = "210 30% 90%";
 const DEFAULT_SIDEBAR_BORDER_D = "220 15% 18%";
@@ -49,6 +53,7 @@ const PREFERENCE_SECTIONS = [
   { id: 'appName', label: 'App Name', icon: PenSquare },
   { id: 'theme', label: 'Theme', icon: Palette },
   { id: 'logo', label: 'Logo', icon: ImageUp },
+  { id: 'primaryColors', label: 'Primary Colors', icon: PaintBucket },
   { id: 'loginAppearance', label: 'Login Page', icon: Wallpaper },
   { id: 'sidebarAppearance', label: 'Sidebar Colors', icon: SidebarIcon },
 ];
@@ -78,6 +83,11 @@ export default function PreferencesSettingsPage() {
   const [selectedLogoFile, setSelectedLogoFile] = useState<File | null>(null);
   const [logoPreviewUrl, setLogoPreviewUrl] = useState<string | null>(null);
   const [savedLogoDataUrl, setSavedLogoDataUrl] = useState<string | null>(null);
+
+  // Primary color preferences
+  const [primaryGradientStart, setPrimaryGradientStart] = useState<string>(DEFAULT_PRIMARY_GRADIENT_START);
+  const [primaryGradientEnd, setPrimaryGradientEnd] = useState<string>(DEFAULT_PRIMARY_GRADIENT_END);
+
 
   // Login page appearance preferences
   const [loginBgType, setLoginBgType] = useState<LoginPageBackgroundType>(DEFAULT_LOGIN_BG_TYPE);
@@ -119,6 +129,9 @@ export default function PreferencesSettingsPage() {
       const logoUrl = settingsMap.get('appLogoDataUrl') || null;
       setSavedLogoDataUrl(logoUrl);
       setLogoPreviewUrl(logoUrl);
+
+      setPrimaryGradientStart(settingsMap.get('primaryGradientStart') || DEFAULT_PRIMARY_GRADIENT_START);
+      setPrimaryGradientEnd(settingsMap.get('primaryGradientEnd') || DEFAULT_PRIMARY_GRADIENT_END);
 
       setLoginBgType((settingsMap.get('loginPageBackgroundType') as LoginPageBackgroundType) || DEFAULT_LOGIN_BG_TYPE);
       const loginImgUrl = settingsMap.get('loginPageBackgroundImageUrl') || null;
@@ -251,6 +264,8 @@ export default function PreferencesSettingsPage() {
     const settingsToUpdate: SystemSetting[] = [
       { key: 'appName', value: appName || DEFAULT_APP_NAME },
       { key: 'appThemePreference', value: themePreference },
+      { key: 'primaryGradientStart', value: primaryGradientStart },
+      { key: 'primaryGradientEnd', value: primaryGradientEnd },
       { key: 'loginPageBackgroundType', value: loginBgType },
       { key: 'loginPageBackgroundColor1', value: loginBgColor1 },
       { key: 'loginPageBackgroundColor2', value: loginBgColor2 },
@@ -293,6 +308,9 @@ export default function PreferencesSettingsPage() {
       setThemePreference((updatedSettingsMap.get('appThemePreference') as ThemePreference) || 'system');
       setAppName(updatedSettingsMap.get('appName') || DEFAULT_APP_NAME);
 
+      setPrimaryGradientStart(updatedSettingsMap.get('primaryGradientStart') || DEFAULT_PRIMARY_GRADIENT_START);
+      setPrimaryGradientEnd(updatedSettingsMap.get('primaryGradientEnd') || DEFAULT_PRIMARY_GRADIENT_END);
+
       const updatedLoginBgTypeVal = (updatedSettingsMap.get('loginPageBackgroundType') as LoginPageBackgroundType) || DEFAULT_LOGIN_BG_TYPE;
       const updatedLoginBgImageVal = updatedSettingsMap.get('loginPageBackgroundImageUrl') || null;
       setLoginBgType(updatedLoginBgTypeVal);
@@ -311,16 +329,16 @@ export default function PreferencesSettingsPage() {
         sidebarActiveTextL: updatedSettingsMap.get('sidebarActiveTextL') || DEFAULT_SIDEBAR_ACTIVE_TEXT_L,
         sidebarHoverBgL: updatedSettingsMap.get('sidebarHoverBgL') || DEFAULT_SIDEBAR_HOVER_BG_L,
         sidebarHoverTextL: updatedSettingsMap.get('sidebarHoverTextL') || DEFAULT_SIDEBAR_HOVER_TEXT_L,
-        sidebarBorderL: updatedSettingsMap.get('sidebarBorderL') || DEFAULT_SIDEBAR_BORDER_L,
+        sidebarBorderL: settingsMap.get('sidebarBorderL') || DEFAULT_SIDEBAR_BORDER_L,
         sidebarBgStartD: updatedSettingsMap.get('sidebarBgStartD') || DEFAULT_SIDEBAR_BG_START_D,
         sidebarBgEndD: updatedSettingsMap.get('sidebarBgEndD') || DEFAULT_SIDEBAR_BG_END_D,
-        sidebarTextD: updatedSettingsMap.get('sidebarTextD') || DEFAULT_SIDEBAR_TEXT_D,
+        sidebarTextD: settingsMap.get('sidebarTextD') || DEFAULT_SIDEBAR_TEXT_D,
         sidebarActiveBgStartD: updatedSettingsMap.get('sidebarActiveBgStartD') || DEFAULT_SIDEBAR_ACTIVE_BG_START_D,
         sidebarActiveBgEndD: updatedSettingsMap.get('sidebarActiveBgEndD') || DEFAULT_SIDEBAR_ACTIVE_BG_END_D,
         sidebarActiveTextD: updatedSettingsMap.get('sidebarActiveTextD') || DEFAULT_SIDEBAR_ACTIVE_TEXT_D,
         sidebarHoverBgD: updatedSettingsMap.get('sidebarHoverBgD') || DEFAULT_SIDEBAR_HOVER_BG_D,
         sidebarHoverTextD: updatedSettingsMap.get('sidebarHoverTextD') || DEFAULT_SIDEBAR_HOVER_TEXT_D,
-        sidebarBorderD: updatedSettingsMap.get('sidebarBorderD') || DEFAULT_SIDEBAR_BORDER_D,
+        sidebarBorderD: settingsMap.get('sidebarBorderD') || DEFAULT_SIDEBAR_BORDER_D,
       });
 
       toast({ title: 'Preferences Saved', description: 'Your application preferences have been saved to the server.' });
@@ -328,6 +346,10 @@ export default function PreferencesSettingsPage() {
         detail: { 
           appName: updatedSettingsMap.get('appName') || appName || DEFAULT_APP_NAME,
           logoUrl: updatedLogoUrl,
+          primaryGradientStart: updatedSettingsMap.get('primaryGradientStart') || primaryGradientStart,
+          primaryGradientEnd: updatedSettingsMap.get('primaryGradientEnd') || primaryGradientEnd,
+          // Include sidebar colors if AppLayout needs to react to them specifically
+          // ...sidebarColors // if sending the whole object is useful
         } 
       }));
     } catch (error) {
@@ -362,13 +384,10 @@ export default function PreferencesSettingsPage() {
       `sidebarActiveBgStart${suffix}`, `sidebarActiveBgEnd${suffix}`, `sidebarActiveText${suffix}`,
       `sidebarHoverBg${suffix}`, `sidebarHoverText${suffix}`, `sidebarBorder${suffix}`
     ];
-    const labels: Record<keyof SidebarColors, string> = {
-      sidebarBgStartL: "Background Start", sidebarBgEndL: "Background End", sidebarTextL: "Text Color",
-      sidebarActiveBgStartL: "Active BG Start", sidebarActiveBgEndL: "Active BG End", sidebarActiveTextL: "Active Text",
-      sidebarHoverBgL: "Hover Background", sidebarHoverTextL: "Hover Text", sidebarBorderL: "Border Color",
-      sidebarBgStartD: "Background Start", sidebarBgEndD: "Background End", sidebarTextD: "Text Color",
-      sidebarActiveBgStartD: "Active BG Start", sidebarActiveBgEndD: "Active BG End", sidebarActiveTextD: "Active Text",
-      sidebarHoverBgD: "Hover Background", sidebarHoverTextD: "Hover Text", sidebarBorderD: "Border Color",
+    const labels: Record<string, string> = { // Using string key for dynamic access
+      [`sidebarBgStart${suffix}`]: "Background Start", [`sidebarBgEnd${suffix}`]: "Background End", [`sidebarText${suffix}`]: "Text Color",
+      [`sidebarActiveBgStart${suffix}`]: "Active BG Start", [`sidebarActiveBgEnd${suffix}`]: "Active BG End", [`sidebarActiveText${suffix}`]: "Active Text",
+      [`sidebarHoverBg${suffix}`]: "Hover Background", [`sidebarHoverText${suffix}`]: "Hover Text", [`sidebarBorder${suffix}`]: "Border Color",
     };
 
     return (
@@ -377,9 +396,17 @@ export default function PreferencesSettingsPage() {
           <div key={key}>
             <Label htmlFor={key} className="text-xs">{labels[key]}</Label>
             <div className="flex items-center gap-2 mt-1">
-              <Input id={key} type="color" value={`#${sidebarColors[key].replace(/[^0-9a-fA-F]/g, '')}`} onChange={(e) => handleSidebarColorChange(key, e.target.value.startsWith('#') ? e.target.value.substring(1) : e.target.value)} className="w-16 h-9 p-1" />
-              <Input type="text" value={sidebarColors[key]} onChange={(e) => handleSidebarColorChange(key, e.target.value)} placeholder="e.g., 220 25% 97% or #RRGGBB" className="h-9 text-xs" />
+              {/* Assuming HSL for input type="text", color picker for hex */}
+              <Input id={key} type="text" value={sidebarColors[key]} onChange={(e) => handleSidebarColorChange(key, e.target.value)} placeholder="e.g., 220 25% 97%" className="h-9 text-xs flex-grow" />
+              <Input type="color" value={`hsl(${sidebarColors[key].replace(/%/g,'').replace(/\s+/g,',')})`} onChange={(e) => {
+                  // Rough conversion from hex to HSL string for consistency if needed, or just store hex
+                  // For simplicity, we'll store the text input, color picker is for convenience.
+                  // User should ensure the text input is valid HSL or hex for CSS.
+                  // Or, implement a hex to HSL converter.
+                }} className="w-10 h-9 p-1" title="Pick color (input stores text value)"
+              />
             </div>
+            <p className="text-xs text-muted-foreground mt-0.5">Enter HSL (e.g., "220 25% 97%") or Hex (e.g., "#RRGGBB")</p>
           </div>
         ))}
       </div>
@@ -433,6 +460,27 @@ export default function PreferencesSettingsPage() {
               </div>
             </section>
             <Separator />
+             <section id="section-primaryColors">
+              <div className="flex items-center mb-3"><PaintBucket className="mr-3 h-5 w-5 text-muted-foreground" /><h3 className="text-lg font-semibold text-foreground">Primary Color Theme</h3></div>
+              <p className="text-sm text-muted-foreground mb-3">Define the primary gradient colors used for buttons and active elements. Enter HSL strings (e.g., "191 75% 60%") or Hex codes (e.g., "#4DC9E6").</p>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="primary-gradient-start" className="text-sm">Gradient Start Color</Label>
+                  <div className="flex items-center gap-2 mt-1">
+                    <Input id="primary-gradient-start" type="text" value={primaryGradientStart} onChange={(e) => setPrimaryGradientStart(e.target.value)} placeholder="e.g., 191 75% 60% or #4DC9E6" className="flex-grow"/>
+                    <Input type="color" value={primaryGradientStart.startsWith('#') ? primaryGradientStart : `#${primaryGradientStart.replace(/[^0-9a-fA-F]/g, '')}`} onChange={(e) => setPrimaryGradientStart(e.target.value)} className="w-10 h-10 p-1 flex-shrink-0" title="Pick color"/>
+                  </div>
+                </div>
+                <div>
+                  <Label htmlFor="primary-gradient-end" className="text-sm">Gradient End Color</Label>
+                   <div className="flex items-center gap-2 mt-1">
+                    <Input id="primary-gradient-end" type="text" value={primaryGradientEnd} onChange={(e) => setPrimaryGradientEnd(e.target.value)} placeholder="e.g., 248 87% 36% or #210CAE" className="flex-grow"/>
+                    <Input type="color" value={primaryGradientEnd.startsWith('#') ? primaryGradientEnd : `#${primaryGradientEnd.replace(/[^0-9a-fA-F]/g, '')}`} onChange={(e) => setPrimaryGradientEnd(e.target.value)} className="w-10 h-10 p-1 flex-shrink-0" title="Pick color"/>
+                  </div>
+                </div>
+              </div>
+            </section>
+            <Separator />
             <section id="section-loginAppearance">
               <div className="flex items-center mb-3"><Wallpaper className="mr-3 h-5 w-5 text-muted-foreground" /><h3 className="text-lg font-semibold text-foreground">Login Page Appearance</h3></div>
               <div className="space-y-4">
@@ -445,7 +493,7 @@ export default function PreferencesSettingsPage() {
             <Separator />
             <section id="section-sidebarAppearance">
                 <div className="flex items-center mb-3"><SidebarIcon className="mr-3 h-5 w-5 text-muted-foreground" /><h3 className="text-lg font-semibold text-foreground">Sidebar Appearance</h3></div>
-                <p className="text-sm text-muted-foreground mb-4">Configure sidebar colors. Use HSL strings (e.g., "220 25% 97%") or hex codes (e.g., "#aabbcc"). Changes may require a page refresh to fully apply if not handled by live theme updates.</p>
+                <p className="text-sm text-muted-foreground mb-3">Configure sidebar colors. Use HSL strings (e.g., "220 25% 97%") or Hex codes (e.g., "#aabbcc"). These colors define the default sidebar styles. Changes apply to the main `globals.css` upon saving and are loaded by `AppLayout` on initialization. Live updates without refresh are not directly part of this configuration but the CSS variables will be set.</p>
                 <Tabs defaultValue="light-sidebar" className="w-full">
                     <TabsList className="grid w-full grid-cols-2 mb-4">
                         <TabsTrigger value="light-sidebar">Light Theme Sidebar</TabsTrigger>

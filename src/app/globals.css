@@ -25,9 +25,9 @@ body {
     --popover: 0 0% 100%;
     --popover-foreground: 220 25% 20%;
 
-    /* Primary Color Definition for Light Theme */
-    --primary-gradient-start-l: 191 75% 60%; /* New Start: hsla(191, 75%, 60%, 1) */
-    --primary-gradient-end-l: 248 87% 36%;   /* New End: hsla(248, 87%, 36%, 1) */
+    /* Primary Color Definition for Light Theme - NEW DEFAULT GRADIENT */
+    --primary-gradient-start-l: 191 75% 60%; /* hsla(191, 75%, 60%, 1) */
+    --primary-gradient-end-l: 248 87% 36%;   /* hsla(248, 87%, 36%, 1) */
     --primary: hsl(var(--primary-gradient-start-l)); 
     --primary-foreground: 0 0% 100%;
 
@@ -99,9 +99,9 @@ body {
     --popover: 220 15% 16%; 
     --popover-foreground: 210 30% 95%;
 
-    /* Primary Color Definition for Dark Theme */
-    --primary-gradient-start-d: 191 75% 60%; /* New Start: hsla(191, 75%, 60%, 1) */
-    --primary-gradient-end-d: 248 87% 36%;   /* New End: hsla(248, 87%, 36%, 1) */
+    /* Primary Color Definition for Dark Theme - NEW DEFAULT GRADIENT */
+    --primary-gradient-start-d: 191 75% 60%; /* hsla(191, 75%, 60%, 1) */
+    --primary-gradient-end-d: 248 87% 36%;   /* hsla(248, 87%, 36%, 1) */
     --primary: hsl(var(--primary-gradient-start-d)); 
     --primary-foreground: hsl(0 0% 100%); 
 

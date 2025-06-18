@@ -1,400 +1,355 @@
 
--- pg-init-scripts/init-db.sql
+-- PostgreSQL Initialization Script
 
--- System Settings Table
-CREATE TABLE IF NOT EXISTS "SystemSetting" (
-  key TEXT PRIMARY KEY,
-  value TEXT,
-  "updatedAt" TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-);
-
--- Initial System Settings (can be managed via UI by Admin later)
-INSERT INTO "SystemSetting" (key, value) VALUES
-  ('appName', 'CandiTrack'),
-  ('appLogoDataUrl', NULL), -- Base64 encoded logo or URL
-  ('appThemePreference', 'system'), -- 'light', 'dark', or 'system'
-  ('smtpHost', NULL),
-  ('smtpPort', NULL), -- e.g., '587'
-  ('smtpUser', NULL),
-  ('smtpSecure', 'true'), -- 'true' or 'false' for TLS/SSL
-  ('smtpFromEmail', NULL), -- Default sender email
-  ('n8nResumeWebhookUrl', NULL), -- URL for n8n to process resumes
-  ('n8nGenericPdfWebhookUrl', NULL), -- URL for n8n to create candidates from generic PDFs
-  ('geminiApiKey', NULL), -- API Key for Google Gemini
-  ('loginPageBackgroundType', 'default'), -- 'default', 'image', 'color', 'gradient'
-  ('loginPageBackgroundImageUrl', NULL),
-  ('loginPageBackgroundColor1', '#F0F4F7'),
-  ('loginPageBackgroundColor2', '#3F51B5'),
-  -- Sidebar Light Theme Defaults (HSL strings or hex)
-  ('sidebarBgStartL', '220 25% 97%'),
-  ('sidebarBgEndL', '220 20% 94%'),
-  ('sidebarTextL', '220 25% 30%'),
-  ('sidebarActiveBgStartL', '206 97% 73%'), -- Corresponds to primary-gradient-start-l
-  ('sidebarActiveBgEndL', '244 95% 83%'),   -- Corresponds to primary-gradient-end-l
-  ('sidebarActiveTextL', '0 0% 100%'),      -- Corresponds to primary-foreground
-  ('sidebarHoverBgL', '220 10% 92%'),
-  ('sidebarHoverTextL', '220 25% 25%'),
-  ('sidebarBorderL', '220 15% 85%'),
-  -- Sidebar Dark Theme Defaults
-  ('sidebarBgStartD', '220 15% 12%'),
-  ('sidebarBgEndD', '220 15% 9%'),
-  ('sidebarTextD', '210 30% 85%'),
-  ('sidebarActiveBgStartD', '206 97% 73%'), -- Corresponds to primary-gradient-start-d
-  ('sidebarActiveBgEndD', '244 95% 83%'),   -- Corresponds to primary-gradient-end-d
-  ('sidebarActiveTextD', '0 0% 100%'),      -- Corresponds to primary-foreground (dark)
-  ('sidebarHoverBgD', '220 15% 20%'),
-  ('sidebarHoverTextD', '210 30% 90%'),
-  ('sidebarBorderD', '220 15% 18%')
-ON CONFLICT (key) DO NOTHING;
-
-
--- User Table (NextAuth compatible for Credentials Provider)
+-- Create User table
 CREATE TABLE IF NOT EXISTS "User" (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  name TEXT,
-  email TEXT UNIQUE NOT NULL,
-  "emailVerified" TIMESTAMP WITH TIME ZONE, -- For NextAuth
-  password TEXT, -- Hashed password
-  role TEXT NOT NULL DEFAULT 'Recruiter', -- e.g., Admin, Recruiter, Hiring Manager
-  "avatarUrl" TEXT, -- URL to user's avatar image
-  "dataAiHint" TEXT, -- For AI image generation hints
-  "modulePermissions" TEXT[] DEFAULT '{}', -- Array of PlatformModuleId strings
-  "createdAt" TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-  "updatedAt" TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    name VARCHAR(255) NOT NULL,
+    email VARCHAR(255) UNIQUE NOT NULL,
+    password VARCHAR(255) NOT NULL, -- Store hashed passwords
+    role VARCHAR(50) NOT NULL CHECK (role IN ('Admin', 'Recruiter', 'Hiring Manager')),
+    "avatarUrl" VARCHAR(1024),
+    "dataAiHint" VARCHAR(255),
+    "modulePermissions" TEXT[] DEFAULT '{}', -- Array of PlatformModuleId strings
+    "createdAt" TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
--- User Groups (effectively Roles)
-CREATE TABLE IF NOT EXISTS "UserGroup" (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  name TEXT UNIQUE NOT NULL,
-  description TEXT,
-  is_default BOOLEAN DEFAULT FALSE,
-  is_system_role BOOLEAN DEFAULT FALSE, -- To protect default Admin/Recruiter/Manager roles
-  "createdAt" TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-  "updatedAt" TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-);
-
--- Junction table for Users and UserGroups (Many-to-Many)
-CREATE TABLE IF NOT EXISTS "User_UserGroup" (
-  "userId" UUID REFERENCES "User"(id) ON DELETE CASCADE,
-  "groupId" UUID REFERENCES "UserGroup"(id) ON DELETE CASCADE,
-  PRIMARY KEY ("userId", "groupId")
-);
-
--- Platform Module Table (Predefined, but stored for potential future dynamic management)
--- For this prototype, permissions are hardcoded in types.ts but this table links them to UserGroups.
-CREATE TABLE IF NOT EXISTS "PlatformModule" (
-  id TEXT PRIMARY KEY, -- e.g., 'CANDIDATES_MANAGE'
-  label TEXT NOT NULL,
-  category TEXT,
-  description TEXT
-);
-
--- Junction table for UserGroups and PlatformModules (Permissions for Groups)
-CREATE TABLE IF NOT EXISTS "UserGroup_PlatformModule" (
-  group_id UUID REFERENCES "UserGroup"(id) ON DELETE CASCADE,
-  permission_id TEXT REFERENCES "PlatformModule"(id) ON DELETE CASCADE, -- Refers to PlatformModule.id
-  PRIMARY KEY (group_id, permission_id)
-);
-
--- Seed PlatformModules (if not already done)
-INSERT INTO "PlatformModule" (id, label, category, description) VALUES
-  ('CANDIDATES_VIEW', 'View Candidates', 'Candidate Management', 'Allows viewing candidate profiles and lists.'),
-  ('CANDIDATES_MANAGE', 'Manage Candidates', 'Candidate Management', 'Allows adding, editing, and deleting candidate profiles.'),
-  ('CANDIDATES_IMPORT', 'Import Candidates', 'Candidate Management', 'Allows bulk importing of candidate data.'),
-  ('CANDIDATES_EXPORT', 'Export Candidates', 'Candidate Management', 'Allows bulk exporting of candidate data.'),
-  ('POSITIONS_VIEW', 'View Positions', 'Position Management', 'Allows viewing job position details and lists.'),
-  ('POSITIONS_MANAGE', 'Manage Positions', 'Position Management', 'Allows adding, editing, and deleting job positions.'),
-  ('POSITIONS_IMPORT', 'Import Positions', 'Position Management', 'Allows bulk importing of position data.'),
-  ('POSITIONS_EXPORT', 'Export Positions', 'Position Management', 'Allows bulk exporting of position data.'),
-  ('USERS_MANAGE', 'Manage Users', 'User Access Control', 'Allows managing user accounts and their direct permissions (typically Admin only).'),
-  ('USER_GROUPS_MANAGE', 'Manage Roles (Groups)', 'User Access Control', 'Allows managing user groups (roles) and their assigned permissions.'),
-  ('SYSTEM_SETTINGS_MANAGE', 'Manage System Preferences', 'System Configuration', 'Allows managing global system settings like App Name, Logo, SMTP.'),
-  ('USER_PREFERENCES_MANAGE', 'Manage Own UI Preferences', 'System Configuration', 'Allows users to manage their own UI display preferences for data models.'),
-  ('RECRUITMENT_STAGES_MANAGE', 'Manage Recruitment Stages', 'System Configuration', 'Allows managing the stages in the recruitment pipeline.'),
-  ('CUSTOM_FIELDS_MANAGE', 'Manage Custom Fields', 'System Configuration', 'Allows defining custom data fields for candidates and positions.'),
-  ('WEBHOOK_MAPPING_MANAGE', 'Manage Webhook Mappings', 'System Configuration', 'Allows configuring mappings for incoming webhook payloads.'),
-  ('NOTIFICATION_SETTINGS_MANAGE', 'Manage Notification Settings', 'System Configuration', 'Allows configuring system notification events and channels.'),
-  ('LOGS_VIEW', 'View Application Logs', 'Logging & Audit', 'Allows viewing system and audit logs.')
-ON CONFLICT (id) DO NOTHING;
-
-
--- Default Admin User (Ensure bcrypt hash is generated for 'nccadmin')
--- Generate with: node -e "console.log(require('bcrypt').hashSync('nccadmin', 10))"
--- Example hash for 'nccadmin': $2b$10$EXAMPLEHASHFORnccadminPLEASECHANGE
-INSERT INTO "User" (name, email, password, role, "modulePermissions") VALUES
-  ('Default Admin', 'admin@ncc.com', '$2b$10$0QI08zau0xK4sU/ii.X2V.J8aJnxrW3ZDbQn8A2q0i9L5/Yl/19o6', 'Admin', '{}') -- Example, use a real hash
-ON CONFLICT (email) DO NOTHING;
-
--- Create default UserGroups (Roles) and assign permissions
-DO $$
-DECLARE
-  admin_group_id UUID;
-  recruiter_group_id UUID;
-  manager_group_id UUID;
-BEGIN
-  -- Admin Role
-  INSERT INTO "UserGroup" (name, description, is_system_role, is_default) VALUES
-    ('Administrator', 'Full system access.', TRUE, FALSE)
-  ON CONFLICT (name) DO UPDATE SET description = EXCLUDED.description RETURNING id INTO admin_group_id;
-  IF admin_group_id IS NULL THEN SELECT id INTO admin_group_id FROM "UserGroup" WHERE name = 'Administrator'; END IF;
-
-  -- Recruiter Role
-  INSERT INTO "UserGroup" (name, description, is_system_role, is_default) VALUES
-    ('Recruiter', 'Manages candidates and positions.', TRUE, TRUE) -- Default role for new users
-  ON CONFLICT (name) DO UPDATE SET description = EXCLUDED.description RETURNING id INTO recruiter_group_id;
-  IF recruiter_group_id IS NULL THEN SELECT id INTO recruiter_group_id FROM "UserGroup" WHERE name = 'Recruiter'; END IF;
-  
-  -- Hiring Manager Role
-  INSERT INTO "UserGroup" (name, description, is_system_role, is_default) VALUES
-    ('Hiring Manager', 'Reviews candidates and provides feedback.', TRUE, FALSE)
-  ON CONFLICT (name) DO UPDATE SET description = EXCLUDED.description RETURNING id INTO manager_group_id;
-  IF manager_group_id IS NULL THEN SELECT id INTO manager_group_id FROM "UserGroup" WHERE name = 'Hiring Manager'; END IF;
-
-  -- Assign ALL permissions to Admin Group
-  INSERT INTO "UserGroup_PlatformModule" (group_id, permission_id)
-  SELECT admin_group_id, pm.id FROM "PlatformModule" pm
-  ON CONFLICT DO NOTHING;
-
-  -- Assign specific permissions to Recruiter Group
-  INSERT INTO "UserGroup_PlatformModule" (group_id, permission_id) VALUES
-    (recruiter_group_id, 'CANDIDATES_VIEW'),
-    (recruiter_group_id, 'CANDIDATES_MANAGE'),
-    (recruiter_group_id, 'CANDIDATES_IMPORT'), -- Can be removed if too permissive
-    (recruiter_group_id, 'CANDIDATES_EXPORT'), -- Can be removed
-    (recruiter_group_id, 'POSITIONS_VIEW'),
-    (recruiter_group_id, 'POSITIONS_MANAGE'),
-    (recruiter_group_id, 'USER_PREFERENCES_MANAGE') -- Recruiters can manage their own UI prefs
-  ON CONFLICT DO NOTHING;
-
-  -- Assign specific permissions to Hiring Manager Group
-  INSERT INTO "UserGroup_PlatformModule" (group_id, permission_id) VALUES
-    (manager_group_id, 'CANDIDATES_VIEW'), -- Typically view only, or specific candidates
-    (manager_group_id, 'POSITIONS_VIEW'),
-    (manager_group_id, 'USER_PREFERENCES_MANAGE')
-  ON CONFLICT DO NOTHING;
-  
-  -- Assign the default admin user to the Administrator group
-  DECLARE admin_user_id UUID;
-  BEGIN
-    SELECT id INTO admin_user_id FROM "User" WHERE email = 'admin@ncc.com';
-    IF admin_user_id IS NOT NULL AND admin_group_id IS NOT NULL THEN
-      INSERT INTO "User_UserGroup" ("userId", "groupId") VALUES (admin_user_id, admin_group_id)
-      ON CONFLICT DO NOTHING;
-    END IF;
-  EXCEPTION WHEN OTHERS THEN
-     RAISE NOTICE 'Could not assign admin@ncc.com to Administrator group. User or group might not exist yet if created in this same script run prior to this block without RETURNING id for groups.';
-  END;
-
-END $$;
-
-
--- Positions Table
+-- Create Position table
 CREATE TABLE IF NOT EXISTS "Position" (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  title TEXT NOT NULL,
-  department TEXT NOT NULL,
-  description TEXT,
-  "isOpen" BOOLEAN DEFAULT TRUE,
-  position_level TEXT, -- e.g., Senior, Mid-Level
-  custom_attributes JSONB,
-  "createdAt" TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-  "updatedAt" TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    title VARCHAR(255) NOT NULL,
+    department VARCHAR(255),
+    description TEXT,
+    "isOpen" BOOLEAN DEFAULT TRUE,
+    position_level VARCHAR(100),
+    custom_attributes JSONB DEFAULT '{}',
+    "createdAt" TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
--- Recruitment Stages Table
-CREATE TABLE IF NOT EXISTS "RecruitmentStage" (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  name TEXT UNIQUE NOT NULL,
-  description TEXT,
-  is_system BOOLEAN DEFAULT FALSE, -- True for predefined, uneditable stages
-  sort_order INTEGER DEFAULT 0,
-  "createdAt" TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-  "updatedAt" TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-);
-
--- Seed default recruitment stages
-INSERT INTO "RecruitmentStage" (name, description, is_system, sort_order) VALUES
-  ('Applied', 'Initial application received.', TRUE, 0),
-  ('Screening', 'Resume and initial screening.', TRUE, 10),
-  ('Shortlisted', 'Candidate shortlisted for interviews.', TRUE, 20),
-  ('Interview Scheduled', 'Interview has been scheduled.', TRUE, 30),
-  ('Interviewing', 'Candidate is in the interview process.', TRUE, 40),
-  ('Offer Extended', 'Job offer has been extended.', TRUE, 50),
-  ('Offer Accepted', 'Candidate accepted the job offer.', TRUE, 60),
-  ('Hired', 'Candidate has been hired.', TRUE, 70),
-  ('Rejected', 'Candidate has been rejected.', TRUE, 80),
-  ('On Hold', 'Candidate application is on hold.', TRUE, 90)
-ON CONFLICT (name) DO NOTHING;
-
-
--- Candidates Table
+-- Create Candidate table
 CREATE TABLE IF NOT EXISTS "Candidate" (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  name TEXT NOT NULL,
-  email TEXT UNIQUE NOT NULL,
-  phone TEXT,
-  "avatarUrl" TEXT,
-  "dataAiHint" TEXT,
-  "resumePath" TEXT, -- Path/key in MinIO
-  "parsedData" JSONB, -- For structured resume data
-  "positionId" UUID REFERENCES "Position"(id) ON DELETE SET NULL,
-  "fitScore" INTEGER DEFAULT 0,
-  status TEXT REFERENCES "RecruitmentStage"(name) ON DELETE RESTRICT DEFAULT 'Applied', -- Candidate's current stage
-  "applicationDate" TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-  "recruiterId" UUID REFERENCES "User"(id) ON DELETE SET NULL,
-  custom_attributes JSONB,
-  "createdAt" TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-  "updatedAt" TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    name VARCHAR(255) NOT NULL,
+    email VARCHAR(255) UNIQUE NOT NULL,
+    phone VARCHAR(50),
+    "avatarUrl" VARCHAR(1024),
+    "dataAiHint" VARCHAR(255),
+    "resumePath" VARCHAR(1024), -- Path to resume file in MinIO
+    "parsedData" JSONB, -- Store structured data from resume
+    "positionId" UUID REFERENCES "Position"(id) ON DELETE SET NULL,
+    "fitScore" INTEGER DEFAULT 0,
+    status VARCHAR(100) NOT NULL DEFAULT 'Applied', -- Default status
+    "applicationDate" TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    "recruiterId" UUID REFERENCES "User"(id) ON DELETE SET NULL,
+    custom_attributes JSONB DEFAULT '{}',
+    "createdAt" TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
--- Resume History Table
+-- Create ResumeHistory table
 CREATE TABLE IF NOT EXISTS "ResumeHistory" (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  "candidateId" UUID NOT NULL REFERENCES "Candidate"(id) ON DELETE CASCADE,
-  "filePath" TEXT NOT NULL, -- Path/key in MinIO for this version
-  "originalFileName" TEXT NOT NULL,
-  "uploadedAt" TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-  "uploadedByUserId" UUID REFERENCES "User"(id) ON DELETE SET NULL
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    "candidateId" UUID NOT NULL REFERENCES "Candidate"(id) ON DELETE CASCADE,
+    "filePath" VARCHAR(1024) NOT NULL,
+    "originalFileName" VARCHAR(255) NOT NULL,
+    "uploadedAt" TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    "uploadedByUserId" UUID REFERENCES "User"(id) ON DELETE SET NULL
 );
 
--- Transition Records Table
+-- Create RecruitmentStage table
+CREATE TABLE IF NOT EXISTS "RecruitmentStage" (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    name VARCHAR(100) UNIQUE NOT NULL,
+    description TEXT,
+    is_system BOOLEAN DEFAULT FALSE, -- True for predefined system stages
+    sort_order INTEGER DEFAULT 0,
+    "createdAt" TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Create TransitionRecord table (for candidate status changes)
 CREATE TABLE IF NOT EXISTS "TransitionRecord" (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  "candidateId" UUID NOT NULL REFERENCES "Candidate"(id) ON DELETE CASCADE,
-  date TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  stage TEXT NOT NULL REFERENCES "RecruitmentStage"(name) ON DELETE RESTRICT,
-  notes TEXT,
-  "actingUserId" UUID REFERENCES "User"(id) ON DELETE SET NULL,
-  "createdAt" TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-  "updatedAt" TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    "candidateId" UUID NOT NULL REFERENCES "Candidate"(id) ON DELETE CASCADE,
+    date TIMESTAMP WITH TIME ZONE NOT NULL,
+    stage VARCHAR(100) NOT NULL, -- Should match a name in RecruitmentStage
+    notes TEXT,
+    "actingUserId" UUID REFERENCES "User"(id) ON DELETE SET NULL, -- User who made the change
+    "createdAt" TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
+ALTER TABLE "TransitionRecord"
+ADD CONSTRAINT fk_transition_stage
+FOREIGN KEY (stage) REFERENCES "RecruitmentStage"(name) ON UPDATE CASCADE ON DELETE RESTRICT;
 
 
--- Audit Log Table
+-- Create LogEntry table
 CREATE TABLE IF NOT EXISTS "LogEntry" (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  timestamp TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-  level TEXT NOT NULL, -- e.g., INFO, WARN, ERROR, AUDIT
-  message TEXT NOT NULL,
-  source TEXT, -- e.g., API:Candidates, Auth
-  "actingUserId" UUID REFERENCES "User"(id) ON DELETE SET NULL,
-  details JSONB, -- For additional structured log data
-  "createdAt" TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    timestamp TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    level VARCHAR(10) NOT NULL CHECK (level IN ('INFO', 'WARN', 'ERROR', 'DEBUG', 'AUDIT')),
+    message TEXT NOT NULL,
+    source VARCHAR(255),
+    "actingUserId" UUID REFERENCES "User"(id) ON DELETE SET NULL,
+    details JSONB, -- For additional structured log data
+    "createdAt" TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP -- Auto-managed by DB
 );
-CREATE INDEX IF NOT EXISTS idx_logentry_timestamp ON "LogEntry" (timestamp);
-CREATE INDEX IF NOT EXISTS idx_logentry_level ON "LogEntry" (level);
-CREATE INDEX IF NOT EXISTS idx_logentry_actingUserId ON "LogEntry" ("actingUserId");
+
+-- Create UserGroup table (for Roles)
+CREATE TABLE IF NOT EXISTS "UserGroup" (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    name VARCHAR(100) UNIQUE NOT NULL,
+    description TEXT,
+    is_default BOOLEAN DEFAULT FALSE, -- Is this a default group for new users?
+    is_system_role BOOLEAN DEFAULT FALSE, -- True for Admin, Recruiter, Hiring Manager (cannot be deleted)
+    "createdAt" TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Create User_UserGroup join table (Many-to-Many for Users and Groups)
+CREATE TABLE IF NOT EXISTS "User_UserGroup" (
+    "userId" UUID NOT NULL REFERENCES "User"(id) ON DELETE CASCADE,
+    "groupId" UUID NOT NULL REFERENCES "UserGroup"(id) ON DELETE CASCADE,
+    PRIMARY KEY ("userId", "groupId")
+);
+
+-- Create UserGroup_PlatformModule join table (Many-to-Many for UserGroups and PlatformModules)
+CREATE TABLE IF NOT EXISTS "UserGroup_PlatformModule" (
+    group_id UUID NOT NULL REFERENCES "UserGroup"(id) ON DELETE CASCADE,
+    permission_id TEXT NOT NULL, -- Corresponds to PlatformModuleId
+    PRIMARY KEY (group_id, permission_id)
+);
 
 
--- User UI Preferences Table
+-- Create SystemSetting table
+CREATE TABLE IF NOT EXISTS "SystemSetting" (
+    key VARCHAR(100) PRIMARY KEY,
+    value TEXT,
+    "updatedAt" TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+
+-- Create UserUIDisplayPreference table
 CREATE TABLE IF NOT EXISTS "UserUIDisplayPreference" (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  "userId" UUID NOT NULL REFERENCES "User"(id) ON DELETE CASCADE,
-  model_type TEXT NOT NULL, -- 'Candidate' or 'Position'
-  attribute_key TEXT NOT NULL, -- e.g., 'name', 'parsedData.personal_info.location'
-  ui_preference TEXT NOT NULL, -- 'Standard', 'Emphasized', 'Hidden'
-  custom_note TEXT,
-  "createdAt" TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-  "updatedAt" TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-  UNIQUE ("userId", model_type, attribute_key)
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    "userId" UUID NOT NULL REFERENCES "User"(id) ON DELETE CASCADE,
+    model_type VARCHAR(50) NOT NULL, -- e.g., 'Candidate', 'Position'
+    attribute_key VARCHAR(255) NOT NULL, -- e.g., 'name', 'parsedData.personal_info.location'
+    ui_preference VARCHAR(50) NOT NULL CHECK (ui_preference IN ('Standard', 'Emphasized', 'Hidden')),
+    custom_note TEXT,
+    "createdAt" TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE ("userId", model_type, attribute_key)
 );
 
-
--- Webhook Field Mapping Table
+-- Create WebhookFieldMapping table
 CREATE TABLE IF NOT EXISTS "WebhookFieldMapping" (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  target_path TEXT UNIQUE NOT NULL, -- CandiTrack attribute path (e.g., 'candidate_info.personal_info.firstname')
-  source_path TEXT,                 -- JSON path from incoming webhook (e.g., 'data.profile.firstName')
-  notes TEXT,
-  "createdAt" TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-  "updatedAt" TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    target_path VARCHAR(255) UNIQUE NOT NULL, -- Path in CandiTrack's candidate model
+    source_path VARCHAR(255), -- Path in the incoming JSON payload
+    notes TEXT,
+    "createdAt" TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
--- Custom Field Definitions Table
+-- Create CustomFieldDefinition table
 CREATE TABLE IF NOT EXISTS "CustomFieldDefinition" (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  model_name TEXT NOT NULL, -- 'Candidate' or 'Position'
-  field_key TEXT NOT NULL,  -- e.g., 'linkedin_url', 'salary_expectation'
-  label TEXT NOT NULL,
-  field_type TEXT NOT NULL, -- 'text', 'textarea', 'number', 'boolean', 'date', 'select_single', 'select_multiple'
-  options JSONB,            -- For select types, array of { value: string, label: string }
-  is_required BOOLEAN DEFAULT FALSE,
-  sort_order INTEGER DEFAULT 0,
-  "createdAt" TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-  "updatedAt" TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-  UNIQUE (model_name, field_key)
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    model_name VARCHAR(50) NOT NULL, -- 'Candidate' or 'Position'
+    field_key VARCHAR(100) NOT NULL, -- e.g., 'linkedin_url', 'expected_salary'
+    label VARCHAR(255) NOT NULL,
+    field_type VARCHAR(50) NOT NULL CHECK (field_type IN ('text', 'textarea', 'number', 'boolean', 'date', 'select_single', 'select_multiple')),
+    options JSONB, -- For select types, array of {value: string, label: string}
+    is_required BOOLEAN DEFAULT FALSE,
+    sort_order INTEGER DEFAULT 0,
+    "createdAt" TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE (model_name, field_key)
 );
 
 -- Notification System Tables
 CREATE TABLE IF NOT EXISTS "NotificationEvent" (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  event_key TEXT UNIQUE NOT NULL, -- e.g., 'candidate.created', 'status.updated'
-  label TEXT NOT NULL,
-  description TEXT,
-  "createdAt" TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    event_key VARCHAR(100) UNIQUE NOT NULL, -- e.g., 'candidate.created', 'status.updated'
+    label VARCHAR(255) NOT NULL,
+    description TEXT,
+    "createdAt" TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE IF NOT EXISTS "NotificationChannel" (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  channel_key TEXT UNIQUE NOT NULL, -- 'email', 'webhook'
-  label TEXT NOT NULL,
-  "createdAt" TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    channel_key VARCHAR(50) UNIQUE NOT NULL, -- 'email', 'webhook'
+    label VARCHAR(100) NOT NULL,
+    "createdAt" TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE IF NOT EXISTS "NotificationSetting" (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  event_id UUID NOT NULL REFERENCES "NotificationEvent"(id) ON DELETE CASCADE,
-  channel_id UUID NOT NULL REFERENCES "NotificationChannel"(id) ON DELETE CASCADE,
-  is_enabled BOOLEAN DEFAULT FALSE,
-  configuration JSONB, -- For channel-specific settings like webhook URL
-  "createdAt" TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-  "updatedAt" TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-  UNIQUE (event_id, channel_id)
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    event_id UUID NOT NULL REFERENCES "NotificationEvent"(id) ON DELETE CASCADE,
+    channel_id UUID NOT NULL REFERENCES "NotificationChannel"(id) ON DELETE CASCADE,
+    is_enabled BOOLEAN DEFAULT FALSE,
+    configuration JSONB, -- e.g., { "webhookUrl": "..." }
+    "createdAt" TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE (event_id, channel_id)
 );
 
--- Seed Notification Events and Channels
+
+-- Insert Default Data
+
+-- Default User Groups (Roles)
+INSERT INTO "UserGroup" (id, name, description, is_system_role, "createdAt", "updatedAt") VALUES
+('00000000-0000-0000-0000-000000000001', 'Admin', 'System Administrators with full access.', TRUE, NOW(), NOW()),
+('00000000-0000-0000-0000-000000000002', 'Recruiter', 'Recruiters managing candidates and positions.', TRUE, NOW(), NOW()),
+('00000000-0000-0000-0000-000000000003', 'Hiring Manager', 'Managers involved in hiring decisions.', TRUE, NOW(), NOW())
+ON CONFLICT (name) DO NOTHING;
+
+-- Default Admin User (ensure bcrypt hash is generated for 'nccadmin')
+-- Use a bcrypt hash generator for 'nccadmin' and replace the hash below.
+-- Example for 'nccadmin': $2b$10$abcdefghijklmnopqrstuv.abcdefghijklmnopqrstuv.abcdefghijkl
+INSERT INTO "User" (id, name, email, password, role, "avatarUrl", "dataAiHint", "modulePermissions", "createdAt", "updatedAt") VALUES
+('a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11', 'Default Admin', 'admin@ncc.com', '$2b$10$K.ObT5k20N2xKP9WjX8hB.5uWkzoiGT5Xy89jPSc0qpQdTtd5nZUu', 'Admin', 'https://placehold.co/100x100.png?text=A', 'profile person', '{}', NOW(), NOW())
+ON CONFLICT (email) DO NOTHING;
+
+-- Assign Default Admin to Admin Group
+INSERT INTO "User_UserGroup" ("userId", "groupId") VALUES
+((SELECT id FROM "User" WHERE email = 'admin@ncc.com'), (SELECT id FROM "UserGroup" WHERE name = 'Admin'))
+ON CONFLICT ("userId", "groupId") DO NOTHING;
+
+-- Default Admin Group Permissions (Grant all permissions)
+-- CANDIDATES_VIEW, CANDIDATES_MANAGE, CANDIDATES_IMPORT, CANDIDATES_EXPORT,
+-- POSITIONS_VIEW, POSITIONS_MANAGE, POSITIONS_IMPORT, POSITIONS_EXPORT,
+-- USERS_MANAGE, USER_GROUPS_MANAGE,
+-- SYSTEM_SETTINGS_MANAGE, USER_PREFERENCES_MANAGE, RECRUITMENT_STAGES_MANAGE,
+-- CUSTOM_FIELDS_MANAGE, WEBHOOK_MAPPING_MANAGE, NOTIFICATION_SETTINGS_MANAGE, LOGS_VIEW
+INSERT INTO "UserGroup_PlatformModule" (group_id, permission_id)
+SELECT (SELECT id FROM "UserGroup" WHERE name = 'Admin'), permission_id FROM
+    (VALUES
+        ('CANDIDATES_VIEW'), ('CANDIDATES_MANAGE'), ('CANDIDATES_IMPORT'), ('CANDIDATES_EXPORT'),
+        ('POSITIONS_VIEW'), ('POSITIONS_MANAGE'), ('POSITIONS_IMPORT'), ('POSITIONS_EXPORT'),
+        ('USERS_MANAGE'), ('USER_GROUPS_MANAGE'),
+        ('SYSTEM_SETTINGS_MANAGE'), ('USER_PREFERENCES_MANAGE'), ('RECRUITMENT_STAGES_MANAGE'),
+        ('CUSTOM_FIELDS_MANAGE'), ('WEBHOOK_MAPPING_MANAGE'), ('NOTIFICATION_SETTINGS_MANAGE'),
+        ('LOGS_VIEW')
+    ) AS perms(permission_id)
+ON CONFLICT (group_id, permission_id) DO NOTHING;
+
+
+-- Default Recruiter Group Permissions
+INSERT INTO "UserGroup_PlatformModule" (group_id, permission_id)
+SELECT (SELECT id FROM "UserGroup" WHERE name = 'Recruiter'), permission_id FROM
+    (VALUES
+        ('CANDIDATES_VIEW'), ('CANDIDATES_MANAGE'), ('CANDIDATES_IMPORT'), ('CANDIDATES_EXPORT'),
+        ('POSITIONS_VIEW'), ('POSITIONS_MANAGE'),
+        ('USER_PREFERENCES_MANAGE')
+    ) AS perms(permission_id)
+ON CONFLICT (group_id, permission_id) DO NOTHING;
+
+-- Default Hiring Manager Group Permissions
+INSERT INTO "UserGroup_PlatformModule" (group_id, permission_id)
+SELECT (SELECT id FROM "UserGroup" WHERE name = 'Hiring Manager'), permission_id FROM
+    (VALUES
+        ('CANDIDATES_VIEW'), -- Typically can view candidates assigned to them or related to their positions
+        ('POSITIONS_VIEW'),
+        ('USER_PREFERENCES_MANAGE')
+    ) AS perms(permission_id)
+ON CONFLICT (group_id, permission_id) DO NOTHING;
+
+
+-- Insert Default System Recruitment Stages
+INSERT INTO "RecruitmentStage" (name, description, is_system, sort_order) VALUES
+('Applied', 'Candidate has applied for the position.', TRUE, 0),
+('Screening', 'Candidate resume is being screened by HR.', TRUE, 10),
+('Shortlisted', 'Candidate has been shortlisted for further consideration.', TRUE, 20),
+('Interview Scheduled', 'Candidate has an interview scheduled.', TRUE, 30),
+('Interviewing', 'Candidate is currently in the interview process.', TRUE, 40),
+('Offer Extended', 'An offer has been extended to the candidate.', TRUE, 50),
+('Offer Accepted', 'Candidate has accepted the job offer.', TRUE, 60),
+('Hired', 'Candidate has been hired.', TRUE, 70),
+('Rejected', 'Candidate has been rejected.', TRUE, 80),
+('On Hold', 'Candidate application is currently on hold.', TRUE, 90)
+ON CONFLICT (name) DO NOTHING;
+
+-- Default System Settings
+INSERT INTO "SystemSetting" (key, value) VALUES
+('appName', 'CandiTrack ATS'),
+('appLogoDataUrl', NULL), -- No default logo initially
+('appThemePreference', 'system'),
+('primaryGradientStart', '191 75% 60%'), -- New default (Cyan part of new gradient)
+('primaryGradientEnd', '248 87% 36%'),   -- New default (Blue part of new gradient)
+('smtpHost', NULL),
+('smtpPort', NULL),
+('smtpUser', NULL),
+('smtpSecure', 'true'),
+('smtpFromEmail', NULL),
+('n8nResumeWebhookUrl', NULL),
+('n8nGenericPdfWebhookUrl', NULL),
+('geminiApiKey', NULL),
+('loginPageBackgroundType', 'default'),
+('loginPageBackgroundImageUrl', NULL),
+('loginPageBackgroundColor1', '#F0F4F7'),
+('loginPageBackgroundColor2', '#3F51B5'),
+('sidebarBgStartL', '220 25% 97%'), ('sidebarBgEndL', '220 20% 94%'), ('sidebarTextL', '220 25% 30%'),
+('sidebarActiveBgStartL', '191 75% 60%'), ('sidebarActiveBgEndL', '248 87% 36%'), ('sidebarActiveTextL', '0 0% 100%'),
+('sidebarHoverBgL', '220 10% 92%'), ('sidebarHoverTextL', '220 25% 25%'), ('sidebarBorderL', '220 15% 85%'),
+('sidebarBgStartD', '220 15% 12%'), ('sidebarBgEndD', '220 15% 9%'), ('sidebarTextD', '210 30% 85%'),
+('sidebarActiveBgStartD', '191 75% 60%'), ('sidebarActiveBgEndD', '248 87% 36%'), ('sidebarActiveTextD', '0 0% 100%'),
+('sidebarHoverBgD', '220 15% 20%'), ('sidebarHoverTextD', '210 30% 90%'), ('sidebarBorderD', '220 15% 18%')
+ON CONFLICT (key) DO NOTHING;
+
+-- Insert Default Notification Events
 INSERT INTO "NotificationEvent" (event_key, label, description) VALUES
-  ('candidate.created', 'Candidate Created', 'Triggered when a new candidate profile is created.'),
-  ('candidate.status_updated', 'Candidate Status Updated', 'Triggered when a candidate''s recruitment stage changes.'),
-  ('candidate.assigned', 'Candidate Assigned', 'Triggered when a candidate is assigned to a recruiter.'),
-  ('position.created', 'Position Created', 'Triggered when a new job position is created.'),
-  ('position.status_changed', 'Position Status Changed', 'Triggered when a job position is opened or closed.')
+('candidate.created', 'Candidate Created', 'Triggered when a new candidate profile is created.'),
+('candidate.status_updated', 'Candidate Status Updated', 'Triggered when a candidate''s recruitment stage changes.'),
+('candidate.assigned', 'Candidate Assigned', 'Triggered when a candidate is assigned to a recruiter.'),
+('position.created', 'Position Created', 'Triggered when a new job position is created.'),
+('position.status_changed', 'Position Status Changed', 'Triggered when a job position is opened or closed.')
 ON CONFLICT (event_key) DO NOTHING;
 
+-- Insert Default Notification Channels
 INSERT INTO "NotificationChannel" (channel_key, label) VALUES
-  ('email', 'Email Notification'),
-  ('webhook', 'Webhook Notification')
+('email', 'Email Notification'),
+('webhook', 'Webhook Notification')
 ON CONFLICT (channel_key) DO NOTHING;
 
 
--- Dummy Data (Optional - for testing)
--- Example: Associate admin user with Administrator group
--- This assumes the admin user and Administrator group have been created above.
--- You might need to query their IDs if they aren't fixed UUIDs.
+-- Default Webhook Field Mappings (examples, admin can customize)
+INSERT INTO "WebhookFieldMapping" (target_path, source_path, notes) VALUES
+('candidate_info.cv_language', 'result_json[0].json.cv_language', 'Language of the CV/resume.'),
+('candidate_info.personal_info.title_honorific', 'result_json[0].json.personal_info.title_honorific', 'E.g., Mr., Ms., Dr.'),
+('candidate_info.personal_info.firstname', 'result_json[0].json.personal_info.firstname', 'Candidate''s first name.'),
+('candidate_info.personal_info.lastname', 'result_json[0].json.personal_info.lastname', 'Candidate''s last name.'),
+('candidate_info.personal_info.nickname', 'result_json[0].json.personal_info.nickname', 'Optional nickname.'),
+('candidate_info.personal_info.location', 'result_json[0].json.personal_info.location', 'City, Country, etc.'),
+('candidate_info.personal_info.introduction_aboutme', 'result_json[0].json.personal_info.introduction_aboutme', 'Brief introduction or summary from resume.'),
+('candidate_info.contact_info.email', 'result_json[0].json.contact_info.email', 'Primary email from resume.'),
+('candidate_info.contact_info.phone', 'result_json[0].json.contact_info.phone', 'Primary phone number from resume.'),
+('candidate_info.education', 'result_json[0].json.education', 'Array of education objects. Ensure source matches expected structure.'),
+('candidate_info.experience', 'result_json[0].json.experience', 'Array of experience objects. Ensure source matches expected structure.'),
+('candidate_info.skills', 'result_json[0].json.skills', 'Array of skill objects/groups. Ensure source matches expected structure.'),
+('candidate_info.job_suitable', 'result_json[0].json.job_suitable', 'Array of job suitability objects from resume.'),
+('jobs', 'result_json[0].json.jobs', 'Array of job match objects (job_id, job_title, fit_score, match_reasons).'),
+('job_applied.job_id', 'result_json[0].json.job_applied.job_id', 'ID of the specific job the candidate applied for (if any).'),
+('job_applied.job_title', 'result_json[0].json.job_applied.job_title', 'Title of the specific job applied for.'),
+('job_applied.fit_score', 'result_json[0].json.job_applied.fit_score', 'Fit score for the specific job applied for.'),
+('job_applied.justification', 'result_json[0].json.job_applied.justification', 'Justification/reasons for the fit score of the applied job (array of strings).'),
+('targetPositionId', 'result_json[0].json.targetPositionId', 'Hint for target position ID, if provided by uploader.'),
+('targetPositionTitle', 'result_json[0].json.targetPositionTitle', 'Hint for target position title, if provided by uploader.'),
+('targetPositionDescription', 'result_json[0].json.targetPositionDescription', 'Hint for target position description, if provided by uploader.'),
+('targetPositionLevel', 'result_json[0].json.targetPositionLevel', 'Hint for target position level, if provided by uploader.')
+ON CONFLICT (target_path) DO NOTHING;
 
--- Function to create a trigger for updating "updatedAt" columns
-CREATE OR REPLACE FUNCTION update_updated_at_column()
-RETURNS TRIGGER AS $$
-BEGIN
-   NEW."updatedAt" = NOW();
-   RETURN NEW;
-END;
-$$ language 'plpgsql';
+-- To add more system settings later:
+-- INSERT INTO "SystemSetting" (key, value) VALUES ('newSettingKey', 'itsValue') ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value;
 
--- Apply trigger to tables with "updatedAt"
-CREATE TRIGGER update_user_updated_at BEFORE UPDATE ON "User" FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-CREATE TRIGGER update_usergroup_updated_at BEFORE UPDATE ON "UserGroup" FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-CREATE TRIGGER update_position_updated_at BEFORE UPDATE ON "Position" FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-CREATE TRIGGER update_candidate_updated_at BEFORE UPDATE ON "Candidate" FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-CREATE TRIGGER update_transitionrecord_updated_at BEFORE UPDATE ON "TransitionRecord" FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-CREATE TRIGGER update_recruitmentstage_updated_at BEFORE UPDATE ON "RecruitmentStage" FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-CREATE TRIGGER update_systemsetting_updated_at BEFORE UPDATE ON "SystemSetting" FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-CREATE TRIGGER update_useruipreference_updated_at BEFORE UPDATE ON "UserUIDisplayPreference" FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-CREATE TRIGGER update_webhookfieldmapping_updated_at BEFORE UPDATE ON "WebhookFieldMapping" FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-CREATE TRIGGER update_customfielddefinition_updated_at BEFORE UPDATE ON "CustomFieldDefinition" FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-CREATE TRIGGER update_notificationsetting_updated_at BEFORE UPDATE ON "NotificationSetting" FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+-- To add more default custom fields (examples):
+-- INSERT INTO "CustomFieldDefinition" (model_name, field_key, label, field_type, options, is_required, sort_order) VALUES
+-- ('Candidate', 'expected_salary', 'Expected Salary', 'number', NULL, FALSE, 10),
+-- ('Candidate', 'availability_date', 'Availability Date', 'date', NULL, FALSE, 20),
+-- ('Position', 'hiring_manager', 'Hiring Manager Contact', 'text', NULL, TRUE, 5)
+-- ON CONFLICT (model_name, field_key) DO NOTHING;
 
-COMMIT;
 
-    
+SELECT 'Database initialization script completed.';

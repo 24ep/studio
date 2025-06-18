@@ -10,6 +10,7 @@ import { logAudit } from '@/lib/auditLog';
 
 const systemSettingKeyEnum = z.enum([
     'appName', 'appLogoDataUrl', 'appThemePreference',
+    'primaryGradientStart', 'primaryGradientEnd', // New for primary color theme
     'smtpHost', 'smtpPort', 'smtpUser', 'smtpSecure', 'smtpFromEmail',
     'n8nResumeWebhookUrl', 'n8nGenericPdfWebhookUrl', 'geminiApiKey',
     'loginPageBackgroundType', 'loginPageBackgroundImageUrl', 
