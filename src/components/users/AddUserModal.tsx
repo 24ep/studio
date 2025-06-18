@@ -27,7 +27,7 @@ import {
 } from '@/components/ui/select';
 import { Checkbox } from "@/components/ui/checkbox";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { UserPlus, ShieldCheck, Users } from 'lucide-react';
+import { UserPlus, ShieldCheck, Users, Loader2 } from 'lucide-react';
 import type { UserProfile, PlatformModuleId, UserGroup } from '@/lib/types';
 import { PLATFORM_MODULES } from '@/lib/types';
 import { ScrollArea } from '../ui/scroll-area';
@@ -189,7 +189,10 @@ export function AddUserModal({ isOpen, onOpenChange, onAddUser }: AddUserModalPr
               
               <DialogFooter className="pt-4 sticky bottom-0 bg-background pb-1">
                 <DialogClose asChild><Button type="button" variant="outline">Cancel</Button></DialogClose>
-                <Button type="submit" disabled={form.formState.isSubmitting}>{form.formState.isSubmitting ? 'Adding User...' : 'Add User'}</Button>
+                <Button type="submit" disabled={form.formState.isSubmitting}>
+                  {form.formState.isSubmitting ? <Loader2 className="animate-spin mr-2"/> : null}
+                  {form.formState.isSubmitting ? 'Adding User...' : 'Add User'}
+                </Button>
               </DialogFooter>
             </form>
           </Form>

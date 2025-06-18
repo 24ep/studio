@@ -1,3 +1,4 @@
+
 // src/app/api/system/initial-setup-check/route.ts
 import { NextResponse } from 'next/server';
 import pool from '@/lib/db';

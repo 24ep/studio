@@ -4,11 +4,17 @@ import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 import pool from '@/lib/db';
 import { CandidatesPageClient } from '@/components/candidates/CandidatesPageClient';
-import type { Candidate, Position, RecruitmentStage } from '@/lib/types';
+import type { Candidate, Position, RecruitmentStage, UserProfile } from '@/lib/types';
 import { fetchAllPositionsDb, fetchAllRecruitmentStagesDb } from '@/lib/apiUtils';
 
 async function getInitialCandidatesData(session: any): Promise<{ candidates: Candidate[], error?: string, authError?: boolean, permissionError?: boolean }> {
   const userRole = session?.user?.role;
+  const userId = session?.user?.id;
+
+  if (!userId) {
+    return { candidates: [], authError: true, error: "User session required." };
+  }
+  
   // If user is not Admin and doesn't have CANDIDATES_VIEW permission, deny access.
   if (userRole !== 'Admin' && !session?.user?.modulePermissions?.includes('CANDIDATES_VIEW')) {
     return { candidates: [], permissionError: true, error: "You do not have permission to view candidates." };
@@ -42,21 +48,19 @@ async function getInitialCandidatesData(session: any): Promise<{ candidates: Can
   let paramIndex = 1;
   const conditions = [];
 
-  // Recruiters by default see only their assigned candidates.
-  // Admins see all unless a specific filter is applied on client (or if we add server-side default admin filter here).
-  if (userRole === 'Recruiter') {
-    if (!session?.user?.id) {
-      return { candidates: [], authError: true, error: "User session required for Recruiter view." };
-    }
+  // Recruiters by default see only their assigned candidates if they don't have general CANDIDATES_VIEW permission.
+  // If they *do* have CANDIDATES_VIEW, they see all, similar to Admin.
+  if (userRole === 'Recruiter' && !session?.user?.modulePermissions?.includes('CANDIDATES_VIEW')) {
     conditions.push(`c."recruiterId" = $${paramIndex++}`);
-    queryParams.push(session.user.id);
+    queryParams.push(userId);
   }
+  // Admins see all by default unless filtered on client.
 
 
   if (conditions.length > 0) {
     initialQuery += ' WHERE ' + conditions.join(' AND ');
   }
-  initialQuery += ' ORDER BY c."createdAt" DESC LIMIT 50;';
+  initialQuery += ' ORDER BY c."createdAt" DESC LIMIT 50;'; // Initial limit
 
   try {
     const result = await pool.query(initialQuery, queryParams);
@@ -88,8 +92,6 @@ export default async function CandidatesPageServer() {
   const session = await getServerSession(authOptions);
 
   if (!session?.user) {
-    // This case should ideally be caught by middleware or AuthProvider,
-    // but as a fallback, pass authError to client.
     return <CandidatesPageClient 
              initialCandidates={[]} 
              initialAvailablePositions={[]} 
@@ -100,33 +102,44 @@ export default async function CandidatesPageServer() {
 
   const { candidates: initialCandidates, error: candidatesError, authError: candidatesAuthError, permissionError: candidatesPermissionError } = await getInitialCandidatesData(session);
   
-  // Fetch these regardless of candidate fetch outcome, as they are needed for filters/modals
-  const initialPositions = await fetchAllPositionsDb();
-  const initialStages = await fetchAllRecruitmentStagesDb();
+  let initialPositions: Position[] = [];
+  let initialStages: RecruitmentStage[] = [];
+  let auxDataError: string | null = null;
+
+  try {
+    initialPositions = await fetchAllPositionsDb();
+  } catch(e) {
+    console.error("Error fetching initial positions:", e);
+    auxDataError = (auxDataError || "") + "Failed to load positions. ";
+  }
+  try {
+    initialStages = await fetchAllRecruitmentStagesDb();
+  } catch (e) {
+    console.error("Error fetching initial stages:", e);
+    auxDataError = (auxDataError || "") + "Failed to load recruitment stages. ";
+  }
+  
+  const combinedError = [candidatesError, auxDataError].filter(Boolean).join(" ");
 
   if (candidatesAuthError || candidatesPermissionError) {
     return (
         <CandidatesPageClient
-            initialCandidates={[]} // Send empty if there was an auth/permission error
+            initialCandidates={[]} 
             initialAvailablePositions={initialPositions}
             initialAvailableStages={initialStages}
             authError={candidatesAuthError}
             permissionError={candidatesPermissionError}
+            initialFetchError={combinedError || undefined}
         />
     );
   }
   
-  // If there's a general error fetching candidates but no auth/permission issue, pass it along
-  if (candidatesError) {
-    console.error("Server-side candidates fetch error passed to client:", candidatesError);
-  }
-
-
   return (
     <CandidatesPageClient
       initialCandidates={initialCandidates}
       initialAvailablePositions={initialPositions}
       initialAvailableStages={initialStages}
+      initialFetchError={combinedError || undefined}
     />
   );
 }

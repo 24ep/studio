@@ -149,7 +149,7 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
       const replacementStageResult = await client.query('SELECT id, name FROM "RecruitmentStage" WHERE name = $1 AND id != $2 AND is_system = FALSE', [replacementStageName, stageToDelete.id]);
       if (replacementStageResult.rows.length === 0) {
         await client.query('ROLLBACK');
-        return NextResponse.json({ message: `Invalid replacement stage: "${replacementStageName}" not found or is the same stage or a system stage.` }, { status: 400 });
+        return NextResponse.json({ message: `Invalid replacement stage: "${replacementStageName}" not found, is the same stage, or is a system stage.` }, { status: 400 });
       }
       const validReplacementStage = replacementStageResult.rows[0];
 
@@ -179,5 +179,3 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
     client.release();
   }
 }
-
-    

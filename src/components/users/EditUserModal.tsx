@@ -26,7 +26,7 @@ import {
 } from '@/components/ui/select';
 import { Checkbox } from "@/components/ui/checkbox";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { Edit3, ShieldCheck, Users, Filter, ChevronsUpDown, Check as CheckIcon } from 'lucide-react';
+import { Edit3, ShieldCheck, Users, Filter, ChevronsUpDown, Check as CheckIcon, Loader2 } from 'lucide-react';
 import type { UserProfile, PlatformModuleId, UserGroup } from '@/lib/types';
 import { PLATFORM_MODULES } from '@/lib/types';
 import { ScrollArea } from '../ui/scroll-area';
@@ -228,7 +228,10 @@ export function EditUserModal({ isOpen, onOpenChange, onEditUser, user, isSelfEd
 
               <DialogFooter className="pt-4 sticky bottom-0 bg-background pb-1">
                 <DialogClose asChild><Button type="button" variant="outline">Cancel</Button></DialogClose>
-                <Button type="submit" disabled={form.formState.isSubmitting}>{form.formState.isSubmitting ? 'Saving Changes...' : 'Save Changes'}</Button>
+                <Button type="submit" disabled={form.formState.isSubmitting}>
+                  {form.formState.isSubmitting ? <Loader2 className="animate-spin mr-2"/> : null}
+                  {form.formState.isSubmitting ? 'Saving Changes...' : 'Save Changes'}
+                  </Button>
               </DialogFooter>
             </form>
           </Form>

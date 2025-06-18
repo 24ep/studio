@@ -46,25 +46,28 @@ export async function POST(request: NextRequest) {
   const client = await pool.connect();
   let successCount = 0;
   let failCount = 0;
+  const failedDetails: { candidateId: string, reason: string }[] = [];
 
   try {
     await client.query('BEGIN');
 
     if (action === 'delete') {
-      // Delete from ResumeHistory first
       await client.query('DELETE FROM "ResumeHistory" WHERE "candidateId" = ANY($1::uuid[])', [candidateIds]);
-      // Delete from TransitionRecord
       await client.query('DELETE FROM "TransitionRecord" WHERE "candidateId" = ANY($1::uuid[])', [candidateIds]);
-      // Delete candidates
-      const deleteResult = await client.query('DELETE FROM "Candidate" WHERE id = ANY($1::uuid[])', [candidateIds]);
+      const deleteResult = await client.query('DELETE FROM "Candidate" WHERE id = ANY($1::uuid[]) RETURNING id', [candidateIds]);
       successCount = deleteResult.rowCount;
+      const deletedIds = deleteResult.rows.map(r => r.id);
       failCount = candidateIds.length - successCount;
+      candidateIds.forEach(id => {
+        if (!deletedIds.includes(id)) {
+          failedDetails.push({ candidateId: id, reason: "Candidate not found or already deleted."});
+        }
+      });
     } else if (action === 'change_status') {
       if (!newStatus) {
         await client.query('ROLLBACK');
         return NextResponse.json({ message: "New status is required for 'change_status' action." }, { status: 400 });
       }
-      // Check if the new status is valid
       const stageCheck = await client.query('SELECT id FROM "RecruitmentStage" WHERE name = $1', [newStatus]);
       if (stageCheck.rows.length === 0) {
         await client.query('ROLLBACK');
@@ -75,17 +78,22 @@ export async function POST(request: NextRequest) {
       const oldStatusesMap = new Map(oldStatusesResult.rows.map(r => [r.id, r.status]));
 
       const updateResult = await client.query(
-        'UPDATE "Candidate" SET status = $1, "updatedAt" = NOW() WHERE id = ANY($2::uuid[]) RETURNING id',
+        'UPDATE "Candidate" SET status = $1, "updatedAt" = NOW() WHERE id = ANY($2::uuid[]) RETURNING id, name',
         [newStatus, candidateIds]
       );
       successCount = updateResult.rowCount;
+      const updatedIds = updateResult.rows.map(r => r.id);
       failCount = candidateIds.length - successCount;
+      candidateIds.forEach(id => {
+        if (!updatedIds.includes(id)) {
+          failedDetails.push({ candidateId: id, reason: "Candidate not found or failed to update."});
+        }
+      });
 
-      // Add transition records for successfully updated candidates
       const transitionNotes = notes || `Bulk status change to ${newStatus} by ${actingUserName}.`;
       for (const updatedRow of updateResult.rows) {
         const oldStatusForCandidate = oldStatusesMap.get(updatedRow.id) || 'Unknown';
-        if (newStatus !== oldStatusForCandidate) { // Only add transition if status actually changed
+        if (newStatus !== oldStatusForCandidate) {
              await client.query(
                 'INSERT INTO "TransitionRecord" (id, "candidateId", date, stage, notes, "actingUserId", "createdAt", "updatedAt") VALUES ($1, $2, NOW(), $3, $4, $5, NOW(), NOW())',
                 [uuidv4(), updatedRow.id, newStatus, transitionNotes, actingUserId]
@@ -101,20 +109,27 @@ export async function POST(request: NextRequest) {
          }
       }
       const updateResult = await client.query(
-        'UPDATE "Candidate" SET "recruiterId" = $1, "updatedAt" = NOW() WHERE id = ANY($2::uuid[])',
+        'UPDATE "Candidate" SET "recruiterId" = $1, "updatedAt" = NOW() WHERE id = ANY($2::uuid[]) RETURNING id',
         [newRecruiterId, candidateIds]
       );
       successCount = updateResult.rowCount;
+      const updatedIds = updateResult.rows.map(r => r.id);
       failCount = candidateIds.length - successCount;
+       candidateIds.forEach(id => {
+        if (!updatedIds.includes(id)) {
+          failedDetails.push({ candidateId: id, reason: "Candidate not found or failed to update."});
+        }
+      });
     }
 
     await client.query('COMMIT');
-    await logAudit('AUDIT', `Bulk candidate action '${action}' performed by ${actingUserName}. Affected: ${successCount}, Failed: ${failCount}. Target IDs: ${candidateIds.join(', ')}.`, 'API:Candidates:BulkAction', actingUserId, { action, successCount, failCount, candidateIds });
+    await logAudit('AUDIT', `Bulk candidate action '${action}' performed by ${actingUserName}. Success: ${successCount}, Fail: ${failCount}. Target IDs: ${candidateIds.join(', ')}.`, 'API:Candidates:BulkAction', actingUserId, { action, successCount, failCount, candidateIds, failedDetails: failCount > 0 ? failedDetails : undefined });
     
     return NextResponse.json({ 
       message: `Bulk action '${action}' processed. Success: ${successCount}, Failed: ${failCount}.`,
       successCount,
-      failCount 
+      failCount,
+      failedDetails: failCount > 0 ? failedDetails : undefined,
     }, { status: 200 });
 
   } catch (error: any) {

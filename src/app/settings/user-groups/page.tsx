@@ -112,7 +112,7 @@ export default function RolesPermissionsPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [sessionStatus, pathname, signIn]); // Removed selectedRole from dependency array
+  }, [sessionStatus, pathname, signIn, selectedRole]); // Added selectedRole to dependency array
 
   useEffect(() => {
     if (sessionStatus === 'unauthenticated') {

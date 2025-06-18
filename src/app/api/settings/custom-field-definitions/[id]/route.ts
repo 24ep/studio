@@ -1,3 +1,4 @@
+
 // src/app/api/settings/custom-field-definitions/[id]/route.ts
 import { NextResponse, type NextRequest } from 'next/server';
 import pool from '../../../../../lib/db';
@@ -127,7 +128,18 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
       return NextResponse.json({ message: "Custom field definition not found" }, { status: 404 });
     }
     const deletedField = deleteResult.rows[0];
-    await logAudit('AUDIT', `Custom field definition '${deletedField.label}' (Key: ${deletedField.field_key}) for model '${deletedField.model_name}' deleted by ${session.user.name}.`, 'API:CustomFields:Delete', session.user.id, { deletedFieldId: params.id, deletedFieldLabel: deletedField.label });
+    await logAudit(
+        'AUDIT', 
+        `Custom field definition '${deletedField.label}' (Key: ${deletedField.field_key}, Model: ${deletedField.model_name}) deleted by ${session.user.name}.`, 
+        'API:CustomFields:Delete', 
+        session.user.id, 
+        { 
+            deletedFieldId: params.id, 
+            deletedFieldLabel: deletedField.label,
+            deletedFieldKey: deletedField.field_key,
+            deletedFieldModel: deletedField.model_name
+        }
+    );
     return NextResponse.json({ message: "Custom field definition deleted successfully" }, { status: 200 });
 
   } catch (error: any) {
