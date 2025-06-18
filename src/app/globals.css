@@ -9,11 +9,13 @@ body {
 
 @layer base {
   :root {
-    /* Background Gradient Variables - Light Theme */
-    --background-start-l: 0 0% 100%;       /* #FFFFFF */
-    --background-mid-l: 240 100% 99.4%;   /* #FCFCFF (approx rgba(252, 252, 255, 1)) */
-    --background-end-l: 240 100% 98%;     /* #F5F5FF (approx rgba(245, 245, 255, 1)) */
-    --background: linear-gradient(90deg, hsl(var(--background-start-l)) 0%, hsl(var(--background-mid-l)) 55%, hsl(var(--background-end-l)) 100%);
+    /* Background Gradient Variables - Light Theme (for body) */
+    --body-background-start-l: 0 0% 100%;       /* #FFFFFF */
+    --body-background-mid-l: 240 100% 99.4%;   /* #FCFCFF (approx rgba(252, 252, 255, 1)) */
+    --body-background-end-l: 240 100% 98%;     /* #F5F5FF (approx rgba(245, 245, 255, 1)) */
+    
+    /* Solid background color for components */
+    --background: var(--body-background-start-l); /* Use start of body gradient as solid bg for components */
     
     --foreground: 220 25% 25%; /* Darker Grey for text, increased contrast */
 
@@ -81,12 +83,13 @@ body {
   }
 
   .dark {
-    /* Modern Dark Theme 2025 */
-    /* Background Gradient Variables - Dark Theme */
-    --background-start-d: 220 15% 9%;
-    --background-mid-d: 220 15% 10%;
-    --background-end-d: 220 15% 11%;
-    --background: linear-gradient(90deg, hsl(var(--background-start-d)) 0%, hsl(var(--background-mid-d)) 55%, hsl(var(--background-end-d)) 100%);
+    /* Background Gradient Variables - Dark Theme (for body) */
+    --body-background-start-d: 220 15% 9%;
+    --body-background-mid-d: 220 15% 10%;
+    --body-background-end-d: 220 15% 11%;
+
+    /* Solid background color for components */
+    --background: var(--body-background-start-d); /* Use start of body gradient as solid bg for components */
     
     --foreground: 210 30% 95%; /* Very light gray, almost white */
 
@@ -154,7 +157,13 @@ body {
     @apply border-border;
   }
   body {
-    @apply bg-background text-foreground;
+    @apply text-foreground; /* Apply text color */
+    /* Apply gradient background directly to body for light theme */
+    background-image: linear-gradient(90deg, hsl(var(--body-background-start-l)) 0%, hsl(var(--body-background-mid-l)) 55%, hsl(var(--body-background-end-l)) 100%);
+  }
+  /* Apply gradient background directly to body for dark theme */
+  .dark body {
+    background-image: linear-gradient(90deg, hsl(var(--body-background-start-d)) 0%, hsl(var(--body-background-mid-d)) 55%, hsl(var(--body-background-end-d)) 100%);
   }
 }
 
