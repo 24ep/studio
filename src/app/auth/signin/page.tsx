@@ -18,6 +18,10 @@ const DEFAULT_APP_NAME = "CandiTrack";
 const DEFAULT_LOGIN_BG_GRADIENT = "linear-gradient(90deg, rgba(255, 255, 255, 1) 0%, rgba(245, 245, 255, 1) 100%, rgba(252, 252, 255, 1) 55%)";
 const DEFAULT_LOGIN_BG_GRADIENT_DARK = "linear-gradient(90deg, hsl(220, 15%, 9%) 0%, hsl(220, 15%, 11%) 100%, hsl(220, 15%, 10%) 55%)";
 
+// Default HSL strings for primary gradient (cyan-to-blue), matching globals.css and preferences page
+const DEFAULT_PRIMARY_GRADIENT_START_SIGNIN = "192 95% 50%";
+const DEFAULT_PRIMARY_GRADIENT_END_SIGNIN = "225 89% 47%";
+
 
 export default function SignInPage() {
   const { data: session, status } = useSession();
@@ -51,6 +55,9 @@ export default function SignInPage() {
       let loginBgImageUrl: string | null = null;
       let loginBgColor1: string | null = null;
       let loginBgColor2: string | null = null;
+      let primaryStart = DEFAULT_PRIMARY_GRADIENT_START_SIGNIN;
+      let primaryEnd = DEFAULT_PRIMARY_GRADIENT_END_SIGNIN;
+
 
       try {
         const response = await fetch('/api/settings/system-settings');
@@ -62,6 +69,10 @@ export default function SignInPage() {
           loginBgImageUrl = settings.find(s => s.key === 'loginPageBackgroundImageUrl')?.value || null;
           loginBgColor1 = settings.find(s => s.key === 'loginPageBackgroundColor1')?.value || null;
           loginBgColor2 = settings.find(s => s.key === 'loginPageBackgroundColor2')?.value || null;
+          
+          primaryStart = settings.find(s => s.key === 'primaryGradientStart')?.value || DEFAULT_PRIMARY_GRADIENT_START_SIGNIN;
+          primaryEnd = settings.find(s => s.key === 'primaryGradientEnd')?.value || DEFAULT_PRIMARY_GRADIENT_END_SIGNIN;
+
         }
       } catch (error) {
         console.warn("Failed to fetch system settings for login page, using defaults/localStorage.", error);
@@ -72,6 +83,17 @@ export default function SignInPage() {
       
       setCurrentAppName(appName);
       setAppLogoUrl(logoUrl);
+
+      // Apply primary colors dynamically for login page
+      if (typeof document !== 'undefined') {
+        document.documentElement.style.setProperty('--primary-gradient-start-l', primaryStart);
+        document.documentElement.style.setProperty('--primary-gradient-end-l', primaryEnd);
+        // For simplicity, assume dark mode uses same primary colors on login page or they are handled by globals.css default
+        document.documentElement.style.setProperty('--primary-gradient-start-d', primaryStart); 
+        document.documentElement.style.setProperty('--primary-gradient-end-d', primaryEnd);
+        document.documentElement.style.setProperty('--primary', `hsl(${primaryStart})`);
+      }
+
 
       // Determine login page style
       const newStyle: React.CSSProperties = {
@@ -224,4 +246,6 @@ export default function SignInPage() {
     </div>
   );
 }
+    
+
     

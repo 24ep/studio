@@ -22,17 +22,17 @@ const DEFAULT_LOGIN_BG_TYPE: LoginPageBackgroundType = "default";
 const DEFAULT_LOGIN_BG_COLOR1 = "#F0F4F7";
 const DEFAULT_LOGIN_BG_COLOR2 = "#3F51B5";
 
-// Default HSL strings for primary gradient
-const DEFAULT_PRIMARY_GRADIENT_START = "191 75% 60%"; // Cyanish blue
-const DEFAULT_PRIMARY_GRADIENT_END = "248 87% 36%"; // Indigo/deep blue
+// Updated Default HSL strings for primary gradient (cyan-to-blue)
+const DEFAULT_PRIMARY_GRADIENT_START = "192 95% 50%";
+const DEFAULT_PRIMARY_GRADIENT_END = "225 89% 47%";
 
 // Sidebar default colors (HSL strings)
 const DEFAULT_SIDEBAR_BG_START_L = "220 25% 97%";
 const DEFAULT_SIDEBAR_BG_END_L = "220 20% 94%";
 const DEFAULT_SIDEBAR_TEXT_L = "220 25% 30%";
-const DEFAULT_SIDEBAR_ACTIVE_BG_START_L = "191 75% 60%"; // Default primary start
-const DEFAULT_SIDEBAR_ACTIVE_BG_END_L = "248 87% 36%";   // Default primary end
-const DEFAULT_SIDEBAR_ACTIVE_TEXT_L = "0 0% 100%";      // Default primary foreground
+const DEFAULT_SIDEBAR_ACTIVE_BG_START_L = DEFAULT_PRIMARY_GRADIENT_START; 
+const DEFAULT_SIDEBAR_ACTIVE_BG_END_L = DEFAULT_PRIMARY_GRADIENT_END;   
+const DEFAULT_SIDEBAR_ACTIVE_TEXT_L = "0 0% 100%";      
 const DEFAULT_SIDEBAR_HOVER_BG_L = "220 10% 92%";
 const DEFAULT_SIDEBAR_HOVER_TEXT_L = "220 25% 25%";
 const DEFAULT_SIDEBAR_BORDER_L = "220 15% 85%";
@@ -40,9 +40,9 @@ const DEFAULT_SIDEBAR_BORDER_L = "220 15% 85%";
 const DEFAULT_SIDEBAR_BG_START_D = "220 15% 12%";
 const DEFAULT_SIDEBAR_BG_END_D = "220 15% 9%";
 const DEFAULT_SIDEBAR_TEXT_D = "210 30% 85%";
-const DEFAULT_SIDEBAR_ACTIVE_BG_START_D = "191 75% 60%"; // Default primary start
-const DEFAULT_SIDEBAR_ACTIVE_BG_END_D = "248 87% 36%";   // Default primary end
-const DEFAULT_SIDEBAR_ACTIVE_TEXT_D = "0 0% 100%";      // Default primary foreground (dark)
+const DEFAULT_SIDEBAR_ACTIVE_BG_START_D = DEFAULT_PRIMARY_GRADIENT_START; 
+const DEFAULT_SIDEBAR_ACTIVE_BG_END_D = DEFAULT_PRIMARY_GRADIENT_END;   
+const DEFAULT_SIDEBAR_ACTIVE_TEXT_D = "0 0% 100%";      
 const DEFAULT_SIDEBAR_HOVER_BG_D = "220 15% 20%";
 const DEFAULT_SIDEBAR_HOVER_TEXT_D = "210 30% 90%";
 const DEFAULT_SIDEBAR_BORDER_D = "220 15% 18%";
@@ -335,7 +335,7 @@ export default function PreferencesSettingsPage() {
         sidebarTextD: settingsMap.get('sidebarTextD') || DEFAULT_SIDEBAR_TEXT_D,
         sidebarActiveBgStartD: updatedSettingsMap.get('sidebarActiveBgStartD') || DEFAULT_SIDEBAR_ACTIVE_BG_START_D,
         sidebarActiveBgEndD: updatedSettingsMap.get('sidebarActiveBgEndD') || DEFAULT_SIDEBAR_ACTIVE_BG_END_D,
-        sidebarActiveTextD: updatedSettingsMap.get('sidebarActiveTextD') || DEFAULT_SIDEBAR_ACTIVE_TEXT_D,
+        sidebarActiveTextD: settingsMap.get('sidebarActiveTextD') || DEFAULT_SIDEBAR_ACTIVE_TEXT_D,
         sidebarHoverBgD: updatedSettingsMap.get('sidebarHoverBgD') || DEFAULT_SIDEBAR_HOVER_BG_D,
         sidebarHoverTextD: updatedSettingsMap.get('sidebarHoverTextD') || DEFAULT_SIDEBAR_HOVER_TEXT_D,
         sidebarBorderD: settingsMap.get('sidebarBorderD') || DEFAULT_SIDEBAR_BORDER_D,
@@ -525,3 +525,5 @@ export default function PreferencesSettingsPage() {
 
     
       
+
+    
