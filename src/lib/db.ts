@@ -46,4 +46,24 @@ pool.on('error', (err, client) => {
   // process.exit(-1); // Optional: exit if a critical error occurs
 });
 
+export async function getSystemSetting(key: string): Promise<string | null> {
+  let client;
+  try {
+    client = await pool.connect();
+    const result = await client.query('SELECT value FROM "SystemSetting" WHERE key = $1', [key]);
+    if (result.rows.length > 0) {
+      return result.rows[0].value;
+    }
+    return null;
+  } catch (error) {
+    console.error(`Error fetching system setting for key "${key}":`, error);
+    return null; // Return null on error to avoid breaking flows, default to env var if calling code handles it
+  } finally {
+    if (client) {
+      client.release();
+    }
+  }
+}
+
+
 export default pool;

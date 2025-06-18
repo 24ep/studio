@@ -5,7 +5,7 @@ import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 import type { UserProfile, Position } from '@/lib/types';
 import { logAudit } from '@/lib/auditLog';
-import pool from '../../../../lib/db'; // For fetching position title
+import pool, { getSystemSetting } from '../../../../lib/db'; // Import getSystemSetting
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 const ACCEPTED_FILE_TYPES = ['application/pdf'];
@@ -15,9 +15,9 @@ export async function POST(request: NextRequest) {
   const actingUserId = session?.user?.id || null;
   const actingUserName = session?.user?.name || session?.user?.email || 'System (n8n Upload)';
 
-  const n8nWebhookUrl = process.env.N8N_GENERIC_PDF_WEBHOOK_URL;
+  const n8nWebhookUrl = await getSystemSetting('n8nGenericPdfWebhookUrl'); // Fetch from DB
   if (!n8nWebhookUrl) {
-    console.error('N8N_GENERIC_PDF_WEBHOOK_URL not configured on the server for candidate creation flow.');
+    console.error('N8N_GENERIC_PDF_WEBHOOK_URL not configured in SystemSetting table for candidate creation flow.');
     await logAudit('ERROR', `Attempt to use n8n candidate creation upload by ${actingUserName} (ID: ${actingUserId}) failed: N8N_GENERIC_PDF_WEBHOOK_URL not configured.`, 'API:Candidates:N8NCreate', actingUserId);
     return NextResponse.json({ message: "n8n integration for candidate creation is not configured on the server." }, { status: 500 });
   }

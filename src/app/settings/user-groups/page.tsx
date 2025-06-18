@@ -83,7 +83,7 @@ export default function RolesPermissionsPage() {
   const fetchRoles = useCallback(async () => {
     if (sessionStatus !== 'authenticated') return;
     setIsLoading(true);
-    setFetchError(null);
+    setFetchError(null); // Clear previous errors
     try {
       const response = await fetch('/api/settings/user-groups'); // API still uses /user-groups
       if (!response.ok) {
@@ -96,19 +96,23 @@ export default function RolesPermissionsPage() {
       }
       const data: UserGroup[] = await response.json();
       setRoles(data);
-      if (data.length > 0 && !selectedRole) {
-        setSelectedRole(data[0]); // Select first role by default
-      } else if (selectedRole) {
-        // Reselect if still exists
+      
+      // Logic to update selectedRole based on fetched data
+      if (selectedRole) {
         const refreshedSelectedRole = data.find(r => r.id === selectedRole.id);
         setSelectedRole(refreshedSelectedRole || (data.length > 0 ? data[0] : null));
+      } else if (data.length > 0) {
+        setSelectedRole(data[0]); // Select first role by default if nothing was selected
+      } else {
+        setSelectedRole(null); // No roles available
       }
+
     } catch (error) {
       setFetchError((error as Error).message);
     } finally {
       setIsLoading(false);
     }
-  }, [sessionStatus, pathname, signIn, selectedRole]);
+  }, [sessionStatus, pathname, signIn]); // Removed selectedRole from dependency array
 
   useEffect(() => {
     if (sessionStatus === 'unauthenticated') {
@@ -144,12 +148,22 @@ export default function RolesPermissionsPage() {
       
       toast({ title: `Role ${editingRole ? 'Updated' : 'Created'}`, description: `Role "${result.name}" was successfully ${editingRole ? 'updated' : 'created'}.` });
       setIsModalOpen(false);
+      const currentlySelectedRoleId = selectedRole?.id;
       await fetchRoles(); // Refresh list
+      
+      // Attempt to re-select the role that was just created or edited
       if (!editingRole && result.id) { // If new role created, select it
-        setSelectedRole(result);
+        const newRole = roles.find(r => r.id === result.id) || result; // Prefer result from fetchRoles if available
+        setSelectedRole(newRole);
       } else if (editingRole && result.id === editingRole.id) {
-        setSelectedRole(result); // Update selected role data
+         const editedRole = roles.find(r => r.id === result.id) || result;
+        setSelectedRole(editedRole);
+      } else if (currentlySelectedRoleId) {
+        const reselected = roles.find(r => r.id === currentlySelectedRoleId);
+        setSelectedRole(reselected || (roles.length > 0 ? roles[0] : null));
       }
+
+
     } catch (error) {
       toast({ title: `Error ${editingRole ? 'Updating' : 'Creating'} Role`, description: (error as Error).message, variant: "destructive" });
     }
@@ -201,9 +215,11 @@ export default function RolesPermissionsPage() {
         throw new Error(errorData.message || 'Failed to delete role');
       }
       toast({ title: "Role Deleted", description: `Role "${roleToDelete.name}" has been deleted.` });
+      const currentSelectedId = selectedRole?.id;
       await fetchRoles(); 
-      if (selectedRole?.id === roleToDelete.id) {
-        setSelectedRole(roles.length > 0 ? roles[0] : null); // Select first role or null
+      if (currentSelectedId === roleToDelete.id) {
+        const newRoles = roles.filter(r => r.id !== roleToDelete.id);
+        setSelectedRole(newRoles.length > 0 ? newRoles[0] : null);
       }
     } catch (error) {
       toast({ title: "Error Deleting Role", description: (error as Error).message, variant: "destructive" });
@@ -212,14 +228,14 @@ export default function RolesPermissionsPage() {
     }
   };
 
-  if (sessionStatus === 'loading' || (isLoading && !fetchError && roles.length === 0)) {
-    return ( <div className="flex h-screen w-screen items-center justify-center bg-background fixed inset-0 z-50"><Loader2 className="h-16 w-16 animate-spin text-primary" /></div> );
+  if (sessionStatus === 'loading' || (isLoading && !fetchError && roles.length === 0 && !selectedRole)) {
+    return ( <div className="flex h-full items-center justify-center"><Loader2 className="h-16 w-16 animate-spin text-primary" /></div> );
   }
 
-  if (fetchError) {
+  if (fetchError && !isLoading) {
     const isPermissionError = fetchError === "You do not have permission to manage roles & permissions.";
      return (
-      <div className="flex flex-col items-center justify-center h-[calc(100vh-10rem)] text-center p-4">
+      <div className="flex flex-col items-center justify-center h-full text-center p-4">
         <ServerCrash className="w-16 h-16 text-destructive mb-4" />
         <h2 className="text-2xl font-semibold text-foreground mb-2">Error Loading Data</h2>
         <p className="text-muted-foreground mb-4 max-w-md">{fetchError}</p>
@@ -231,25 +247,26 @@ export default function RolesPermissionsPage() {
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-semibold flex items-center"><ShieldCheck className="mr-3 h-6 w-6 text-primary"/>Roles & Permissions</h1>
-        <Button onClick={() => handleOpenModal()} className="btn-primary-gradient">
-          <PlusCircle className="mr-2 h-4 w-4" /> Create Role
-        </Button>
+        {/* Title is now handled by SettingsLayout */}
       </div>
-      <CardDescription>
-        Manage user roles (groups) and configure the permissions associated with each role.
-      </CardDescription>
-
+      
       <div className="grid md:grid-cols-3 gap-6">
         {/* Left Panel: Roles List */}
         <Card className="md:col-span-1 shadow-sm">
           <CardHeader className="p-4 border-b">
-            <CardTitle className="text-lg">Roles</CardTitle>
+            <div className="flex justify-between items-center">
+              <CardTitle className="text-lg">Roles</CardTitle>
+               <Button size="sm" onClick={() => handleOpenModal()} className="btn-primary-gradient h-8">
+                <PlusCircle className="mr-1.5 h-4 w-4" /> Create
+              </Button>
+            </div>
             <CardDescription className="text-xs">Select a role to view or edit its permissions.</CardDescription>
           </CardHeader>
           <CardContent className="p-0">
-            <ScrollArea className="h-[calc(100vh-20rem)]"> {/* Adjust height as needed */}
-              {roles.length === 0 && !isLoading ? (
+            <ScrollArea className="h-[calc(100vh-16rem)]"> {/* Adjust height as needed */}
+              {isLoading && roles.length === 0 ? (
+                 <div className="p-4 text-sm text-muted-foreground text-center"><Loader2 className="h-5 w-5 animate-spin inline mr-2" />Loading roles...</div>
+              ) : roles.length === 0 ? (
                 <p className="p-4 text-sm text-muted-foreground text-center">No roles defined.</p>
               ) : (
                 <div className="space-y-0">
@@ -259,8 +276,8 @@ export default function RolesPermissionsPage() {
                       variant="ghost"
                       onClick={() => setSelectedRole(role)}
                       className={cn(
-                        "w-full justify-start rounded-none p-4 text-left h-auto",
-                        selectedRole?.id === role.id && "bg-primary/10 text-primary font-semibold border-l-4 border-primary"
+                        "w-full justify-start rounded-none p-4 text-left h-auto border-b border-border last:border-b-0",
+                        selectedRole?.id === role.id && "bg-primary/10 text-primary font-semibold "
                       )}
                     >
                       <div className="flex-1">
@@ -296,7 +313,7 @@ export default function RolesPermissionsPage() {
                 </div>
               </CardHeader>
               <CardContent className="p-4">
-                <ScrollArea className="h-[calc(100vh-22rem)]"> {/* Adjust height */}
+                <ScrollArea className="h-[calc(100vh-18rem)]"> {/* Adjust height */}
                   {groupedPermissions.map(group => (
                     <div key={group.category} className="mb-6">
                       <h3 className="text-md font-semibold text-primary mb-2 border-b pb-1">{group.category}</h3>

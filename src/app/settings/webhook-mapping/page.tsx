@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { useToast } from '@/hooks/use-toast';
 import { signIn, useSession } from 'next-auth/react';
@@ -146,17 +146,17 @@ export default function WebhookMappingPage() {
     }
   };
   
-  if (sessionStatus === 'loading' || (isLoadingData && !fetchError && !isClient)) {
+  if (sessionStatus === 'loading' || (isLoadingData && !fetchError && !isClient && mappings.length === 0)) {
     return (
-        <div className="flex h-screen w-screen items-center justify-center bg-background fixed inset-0 z-50">
+        <div className="flex h-full items-center justify-center">
             <Loader2 className="h-16 w-16 animate-spin text-primary" />
         </div>
     );
   }
 
-  if (fetchError) {
+  if (fetchError && !isLoadingData) {
     return (
-      <div className="flex flex-col items-center justify-center h-[calc(100vh-10rem)] text-center p-4">
+      <div className="flex flex-col items-center justify-center h-full text-center p-4">
         <ServerCrash className="w-16 h-16 text-destructive mb-4" />
         <h2 className="text-2xl font-semibold text-foreground mb-2">Access Denied or Error</h2>
         <p className="text-muted-foreground mb-4 max-w-md">{fetchError}</p>
@@ -169,89 +169,89 @@ export default function WebhookMappingPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <Card className="shadow-lg">
-        <CardHeader>
-          <CardTitle className="flex items-center text-2xl"><SlidersHorizontal className="mr-3 h-6 w-6 text-primary"/>Webhook Payload Mapping</CardTitle>
-          <CardDescription>
-            Define how incoming JSON fields from your automated workflow (e.g., n8n) map to the CandiTrack candidate attributes for the 
-            <code>/api/n8n/create-candidate-with-matches</code> endpoint. This configuration is saved on the server.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-            <Alert variant="default" className="mb-6 bg-blue-50 border-blue-300 text-blue-800 dark:bg-blue-900/30 dark:border-blue-700 dark:text-blue-300">
-              <Info className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-              <AlertTitle className="font-semibold text-blue-700 dark:text-blue-300">How This Works</AlertTitle>
-              <AlertDescription>
-                The CandiTrack API (<code>/api/n8n/create-candidate-with-matches</code>) will use these server-side mappings to transform the JSON payload it receives from your workflow.
-                Enter the JSON path from your workflow's output (e.g., <code className="font-mono text-xs bg-blue-200 dark:bg-blue-800 px-1 rounded">data.profile.firstName</code>) into the "Source JSON Path" field for each corresponding CandiTrack attribute.
-                If a "Source JSON Path" is left empty, that CandiTrack attribute will not be populated from the webhook for that field.
-              </AlertDescription>
-            </Alert>
-            
-            {isLoadingData && mappings.length === 0 ? (
-                <div className="flex justify-center items-center py-10">
-                    <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                    <p className="ml-2 text-muted-foreground">Loading mapping configuration...</p>
-                </div>
-            ) : mappings.length === 0 && !fetchError ? (
-                 <div className="flex flex-col items-center justify-center py-10 text-center">
-                    <SlidersHorizontal className="h-12 w-12 text-muted-foreground mb-3" />
-                    <p className="text-muted-foreground mb-2">No mapping configuration found or initialized.</p>
-                    <p className="text-xs text-muted-foreground mb-4">Default target attributes will be shown once loaded or after first save.</p>
-                    <Button onClick={fetchMappings} variant="outline"><RefreshCw className="mr-2 h-4 w-4"/>Reload Configuration</Button>
-                </div>
-            ) : (
-              <div className="space-y-4 max-h-[calc(100vh-24rem)] overflow-y-auto pr-2 border rounded-md p-3 bg-muted/20">
-                  {mappings.map((mapping, index) => {
-                      const targetAttrInfo = TARGET_CANDIDATE_ATTRIBUTES_CONFIG.find(attr => attr.path === mapping.targetPath);
-                      return (
-                      <Card key={mapping.targetPath} className="p-3 shadow-sm bg-card">
-                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 items-end">
-                              <div>
-                                  <Label htmlFor={`targetPath-${index}`} className="text-xs font-semibold">Target CandiTrack Attribute</Label>
-                                  <Input 
-                                      id={`targetPath-${index}`} 
-                                      value={targetAttrInfo?.label || mapping.targetPath} 
-                                      disabled 
-                                      className="mt-1 text-xs bg-muted/50"
-                                  />
-                                  <p className="text-xs text-muted-foreground mt-0.5">Path: <code className="text-xs bg-muted/50 px-1 rounded">{mapping.targetPath}</code> (Type: {targetAttrInfo?.type || 'unknown'})</p>
-                              </div>
-                              <div>
-                                  <Label htmlFor={`sourcePath-${index}`} className="text-xs font-semibold">Source JSON Path (from your Workflow)</Label>
-                                  <Input 
-                                      id={`sourcePath-${index}`} 
-                                      value={mapping.sourcePath || ''} 
-                                      onChange={(e) => handleMappingChange(index, 'sourcePath', e.target.value)}
-                                      placeholder={targetAttrInfo?.example || "e.g., data.profile.firstName"}
-                                      className="mt-1 text-xs"
-                                  />
-                              </div>
-                          </div>
-                          <div className="mt-2">
-                              <Label htmlFor={`notes-${index}`} className="text-xs font-semibold">Notes/Details</Label>
-                              <Textarea
-                                  id={`notes-${index}`}
-                                  value={mapping.notes || ''}
-                                  onChange={(e) => handleMappingChange(index, 'notes', e.target.value)}
-                                  placeholder="Optional notes or details about this mapping"
-                                  className="mt-1 text-xs min-h-[40px]"
-                                  rows={2}
-                              />
-                          </div>
-                      </Card>
-                  )})}
+    <Card className="shadow-lg">
+      <CardHeader>
+        <CardTitle className="flex items-center text-2xl"><SlidersHorizontal className="mr-3 h-6 w-6 text-primary"/>Webhook Payload Mapping</CardTitle>
+        <CardDescription>
+          Define how incoming JSON fields from your automated workflow (e.g., n8n) map to the CandiTrack candidate attributes for the 
+          <code>/api/n8n/create-candidate-with-matches</code> endpoint. This configuration is saved on the server.
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+          <Alert variant="default" className="mb-6 bg-blue-50 border-blue-300 text-blue-800 dark:bg-blue-900/30 dark:border-blue-700 dark:text-blue-300">
+            <Info className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+            <AlertTitle className="font-semibold text-blue-700 dark:text-blue-300">How This Works</AlertTitle>
+            <AlertDescription>
+              The CandiTrack API (<code>/api/n8n/create-candidate-with-matches</code>) will use these server-side mappings to transform the JSON payload it receives from your workflow.
+              Enter the JSON path from your workflow's output (e.g., <code className="font-mono text-xs bg-blue-200 dark:bg-blue-800 px-1 rounded">data.profile.firstName</code>) into the "Source JSON Path" field for each corresponding CandiTrack attribute.
+              If a "Source JSON Path" is left empty, that CandiTrack attribute will not be populated from the webhook for that field.
+            </AlertDescription>
+          </Alert>
+          
+          {isLoadingData && mappings.length === 0 ? (
+              <div className="flex justify-center items-center py-10">
+                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                  <p className="ml-2 text-muted-foreground">Loading mapping configuration...</p>
               </div>
-            )}
-        </CardContent>
-        <CardFooter className="border-t pt-6 flex justify-end">
-            <Button onClick={handleSaveConfiguration} size="lg" className="btn-primary-gradient" disabled={isSaving || isLoadingData || !!fetchError}>
-            {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-            {isSaving ? 'Saving...' : 'Save Mapping Configuration'}
-            </Button>
-        </CardFooter>
-      </Card>
-    </div>
+          ) : mappings.length === 0 && !fetchError ? (
+                <div className="flex flex-col items-center justify-center py-10 text-center">
+                  <SlidersHorizontal className="h-12 w-12 text-muted-foreground mb-3" />
+                  <p className="text-muted-foreground mb-2">No mapping configuration found or initialized.</p>
+                  <p className="text-xs text-muted-foreground mb-4">Default target attributes will be shown once loaded or after first save.</p>
+                  <Button onClick={fetchMappings} variant="outline"><RefreshCw className="mr-2 h-4 w-4"/>Reload Configuration</Button>
+              </div>
+          ) : (
+            <div className="space-y-4 max-h-[calc(100vh-28rem)] overflow-y-auto pr-2 border rounded-md p-3 bg-muted/20">
+                {mappings.map((mapping, index) => {
+                    const targetAttrInfo = TARGET_CANDIDATE_ATTRIBUTES_CONFIG.find(attr => attr.path === mapping.targetPath);
+                    return (
+                    <Card key={mapping.targetPath} className="p-3 shadow-sm bg-card">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 items-end">
+                            <div>
+                                <Label htmlFor={`targetPath-${index}`} className="text-xs font-semibold">Target CandiTrack Attribute</Label>
+                                <Input 
+                                    id={`targetPath-${index}`} 
+                                    value={targetAttrInfo?.label || mapping.targetPath} 
+                                    disabled 
+                                    className="mt-1 text-xs bg-muted/50"
+                                />
+                                <p className="text-xs text-muted-foreground mt-0.5">Path: <code className="text-xs bg-muted/50 px-1 rounded">{mapping.targetPath}</code> (Type: {targetAttrInfo?.type || 'unknown'})</p>
+                            </div>
+                            <div>
+                                <Label htmlFor={`sourcePath-${index}`} className="text-xs font-semibold">Source JSON Path (from your Workflow)</Label>
+                                <Input 
+                                    id={`sourcePath-${index}`} 
+                                    value={mapping.sourcePath || ''} 
+                                    onChange={(e) => handleMappingChange(index, 'sourcePath', e.target.value)}
+                                    placeholder={targetAttrInfo?.example || "e.g., data.profile.firstName"}
+                                    className="mt-1 text-xs"
+                                />
+                            </div>
+                        </div>
+                        <div className="mt-2">
+                            <Label htmlFor={`notes-${index}`} className="text-xs font-semibold">Notes/Details</Label>
+                            <Textarea
+                                id={`notes-${index}`}
+                                value={mapping.notes || ''}
+                                onChange={(e) => handleMappingChange(index, 'notes', e.target.value)}
+                                placeholder="Optional notes or details about this mapping"
+                                className="mt-1 text-xs min-h-[40px]"
+                                rows={2}
+                            />
+                        </div>
+                    </Card>
+                )})}
+            </div>
+          )}
+      </CardContent>
+      <CardFooter className="border-t pt-6 flex justify-end">
+          <Button onClick={handleSaveConfiguration} size="lg" className="btn-primary-gradient" disabled={isSaving || isLoadingData || !!fetchError || mappings.length === 0}>
+          {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+          {isSaving ? 'Saving...' : 'Save Mapping Configuration'}
+          </Button>
+      </CardFooter>
+    </Card>
   );
 }
+
+    

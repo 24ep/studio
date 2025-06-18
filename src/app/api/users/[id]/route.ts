@@ -16,10 +16,10 @@ const userRoleEnum = z.enum(['Admin', 'Recruiter', 'Hiring Manager']);
 const updateUserSchema = z.object({
   name: z.string().min(1, "Name is required").optional(),
   email: z.string().email("Invalid email address").optional(),
-  role: userRoleEnum.optional(),
+  role: userRoleEnum.optional(), // Only for Admins
   newPassword: z.string().min(6, "Password must be at least 6 characters").optional().or(z.literal('')),
-  modulePermissions: z.array(z.enum(platformModuleIds)).optional(),
-  groupIds: z.array(z.string().uuid()).optional(), // New: for group assignment
+  modulePermissions: z.array(z.enum(platformModuleIds)).optional(), // Only for Admins
+  groupIds: z.array(z.string().uuid()).optional(), // Only for Admins
 });
 
 export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
@@ -27,7 +27,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
   if (!session?.user?.id) {
     return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
   }
-  // Add further RBAC if needed: e.g., only Admin or the user themselves can fetch
+  
   if (session.user.role !== 'Admin' && session.user.id !== params.id && !session.user.modulePermissions?.includes('USERS_MANAGE')) {
      await logAudit('WARN', `Forbidden attempt to GET user ${params.id} by ${session.user.name}.`, 'API:Users:GetById', session.user.id, { targetUserId: params.id });
      return NextResponse.json({ message: "Forbidden: Insufficient permissions" }, { status: 403 });
@@ -67,11 +67,13 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
 
 export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {
   const session = await getServerSession(authOptions);
-  if (session?.user?.role !== 'Admin') {
-    // For now, only Admins can update any user.
-    // Future: allow users to update their own profiles with more granular checks.
-    await logAudit('WARN', `Forbidden attempt to update user ${params.id} by ${session?.user?.email || 'Unknown'}. Admin role required.`, 'API:Users:Update', session?.user?.id, { targetUserId: params.id });
-    return NextResponse.json({ message: "Forbidden: Admin role required to update users." }, { status: 403 });
+  const isAdmin = session?.user?.role === 'Admin';
+  const isSelfEdit = session?.user?.id === params.id;
+
+  if (!session?.user?.id || (!isAdmin && !isSelfEdit)) {
+    // If not admin and not editing self, deny
+    await logAudit('WARN', `Forbidden attempt to update user ${params.id} by ${session?.user?.email || 'Unknown'}.`, 'API:Users:Update', session?.user?.id, { targetUserId: params.id });
+    return NextResponse.json({ message: "Forbidden: Insufficient permissions." }, { status: 403 });
   }
 
   let body;
@@ -91,6 +93,14 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
   }
 
   const updates = validationResult.data;
+  // If self-editing and not admin, ensure restricted fields are not in the payload
+  if (isSelfEdit && !isAdmin) {
+    if (updates.role !== undefined || updates.modulePermissions !== undefined || updates.groupIds !== undefined) {
+      await logAudit('WARN', `User ${session.user.email} attempted to modify restricted fields during self-edit.`, 'API:Users:Update', session.user.id, { targetUserId: params.id });
+      return NextResponse.json({ message: "Forbidden: You cannot modify role, permissions, or group assignments for your own account." }, { status: 403 });
+    }
+  }
+
 
   const client = await pool.connect();
   try {
@@ -119,23 +129,30 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
     const auditChanges: string[] = [];
 
     for (const [key, value] of Object.entries(updates)) {
-      if (value !== undefined && key !== 'groupIds') { // groupIds handled separately
-        auditChanges.push(key);
-        if (key === 'newPassword') {
+      if (value !== undefined) {
+        // Admin-only fields or self-edit allowed fields
+        if (key === 'name' || key === 'email') {
+          auditChanges.push(key);
+          updateFields.push(`"${key}" = $${paramIndex++}`);
+          updateValues.push(value);
+        } else if (key === 'newPassword') {
           if (value && typeof value === 'string' && value.length > 0) {
             const hashedPassword = await bcrypt.hash(value, 10);
             updateFields.push(`"password" = $${paramIndex++}`);
             updateValues.push(hashedPassword);
             auditChanges.push('password (hashed)');
           }
-          const newPasswordIndex = auditChanges.indexOf('newPassword');
-          if (newPasswordIndex > -1) auditChanges.splice(newPasswordIndex, 1);
-        } else if (key === 'modulePermissions') {
+        } else if (isAdmin) { // These fields can only be changed by an Admin
+          auditChanges.push(key);
+          if (key === 'modulePermissions') {
+              updateFields.push(`"${key}" = $${paramIndex++}`);
+              updateValues.push(value || []);
+          } else if (key === 'groupIds') {
+             // groupIds are handled separately after user update
+          } else {
             updateFields.push(`"${key}" = $${paramIndex++}`);
-            updateValues.push(value || []);
-        } else {
-          updateFields.push(`"${key}" = $${paramIndex++}`);
-          updateValues.push(value);
+            updateValues.push(value);
+          }
         }
       }
     }
@@ -147,8 +164,8 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
       await client.query(updateUserQuery, updateValues);
     }
 
-    // Handle group assignments
-    if (updates.groupIds !== undefined) {
+    // Handle group assignments - only if Admin
+    if (isAdmin && updates.groupIds !== undefined) {
       auditChanges.push('groupIds');
       await client.query('DELETE FROM "User_UserGroup" WHERE "userId" = $1', [params.id]);
       if (updates.groupIds.length > 0) {
@@ -159,8 +176,8 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
       }
     }
     
-    if (updateFields.length === 0 && updates.groupIds === undefined) {
-      await client.query('ROLLBACK'); // No actual user field changes and no group changes
+    if (updateFields.length === 0 && (!isAdmin || updates.groupIds === undefined)) {
+      await client.query('ROLLBACK'); 
       const currentUserQuery = `
         SELECT u.*, COALESCE(json_agg(json_build_object('id', g.id, 'name', g.name)) FILTER (WHERE g.id IS NOT NULL), '[]'::json) as groups
         FROM "User" u
@@ -191,7 +208,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
       FROM "User" u
       WHERE u.id = $1
     `;
-    const updatedResult = await pool.query(finalUserQuery, [params.id]); // Use pool for final fetch after commit
+    const updatedResult = await pool.query(finalUserQuery, [params.id]);
     const updatedUser = {
         ...updatedResult.rows[0],
         modulePermissions: updatedResult.rows[0].modulePermissions || [],
@@ -245,7 +262,7 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
   } catch (error) {
     await client.query('ROLLBACK');
     console.error(`Failed to delete user ${params.id}:`, error);
-    await logAudit('ERROR', `Failed to delete user ${params.id} by ${session.user.name}. Error: ${(error as Error).message}`, 'API:Users:Delete', session.user.id, { targetUserId: params.id });
+    await logAudit('ERROR', `Failed to delete user ${params.id} by ${session.user.name}. Error: ${error.message}`, 'API:Users:Delete', session.user.id, { targetUserId: params.id });
     return NextResponse.json({ message: "Error deleting user", error: (error as Error).message }, { status: 500 });
   } finally {
     client.release();

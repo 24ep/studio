@@ -118,8 +118,9 @@ export async function GET(request: NextRequest) {
     const phoneFilter = searchParams.get('phone');
     const applicationDateStartFilter = searchParams.get('applicationDateStart');
     const applicationDateEndFilter = searchParams.get('applicationDateEnd');
-    const recruiterIdFilter = searchParams.get('recruiterId'); // Renamed from assignedRecruiterIdParam
-    const assignedRecruiterIdParam = searchParams.get('assignedRecruiterId'); // Keep for My Tasks page if needed
+    const recruiterIdFilter = searchParams.get('recruiterId');
+    const assignedRecruiterIdParam = searchParams.get('assignedRecruiterId'); // For My Tasks page
+    const keywordsFilter = searchParams.get('keywords'); // New filter
 
     let query = `
       SELECT
@@ -162,37 +163,38 @@ export async function GET(request: NextRequest) {
     if (phoneFilter) { conditions.push(`c.phone ILIKE $${paramIndex++}`); queryParams.push(`%${phoneFilter}%`); }
     if (applicationDateStartFilter) { conditions.push(`c."applicationDate" >= $${paramIndex++}`); queryParams.push(new Date(applicationDateStartFilter).toISOString()); }
     if (applicationDateEndFilter) { const endDate = new Date(applicationDateEndFilter); endDate.setHours(23, 59, 59, 999); conditions.push(`c."applicationDate" <= $${paramIndex++}`); queryParams.push(endDate.toISOString()); }
-    if (recruiterIdFilter) { conditions.push(`c."recruiterId" = $${paramIndex++}`); queryParams.push(recruiterIdFilter); }
-
-
-    // Handling for My Tasks page specific filter (assignedRecruiterIdParam)
-    const finalRecruiterFilterParam = recruiterIdFilter || assignedRecruiterIdParam; // Prefer specific filter if both present
-
-    if (finalRecruiterFilterParam) {
-      if (finalRecruiterFilterParam === 'me') {
-        conditions.push(`c."recruiterId" = $${paramIndex++}`);
-        queryParams.push(userId);
-      } else if (z.string().uuid().safeParse(finalRecruiterFilterParam).success) {
-        if (!canViewAll && userRole !== 'Admin') {
-          return NextResponse.json({ message: "Forbidden: Insufficient permissions to filter by specific recruiter." }, { status: 403 });
+    
+    // Use specific recruiterIdFilter from general candidates page first
+    if (recruiterIdFilter) { 
+        conditions.push(`c."recruiterId" = $${paramIndex++}`); 
+        queryParams.push(recruiterIdFilter); 
+    } else if (assignedRecruiterIdParam) { // Fallback to assignedRecruiterIdParam from My Tasks page
+        if (assignedRecruiterIdParam === 'me') {
+            conditions.push(`c."recruiterId" = $${paramIndex++}`);
+            queryParams.push(userId);
+        } else if (z.string().uuid().safeParse(assignedRecruiterIdParam).success) {
+            if (!canViewAll && userRole !== 'Admin') { // Admins can always filter by specific recruiter
+                return NextResponse.json({ message: "Forbidden: Insufficient permissions to filter by specific recruiter." }, { status: 403 });
+            }
+            conditions.push(`c."recruiterId" = $${paramIndex++}`);
+            queryParams.push(assignedRecruiterIdParam);
+        } else if (assignedRecruiterIdParam === 'ALL_CANDIDATES_ADMIN') {
+            if (userRole !== 'Admin') {
+                return NextResponse.json({ message: "Forbidden: Only Admins can view all candidates without recruiter filter." }, { status: 403 });
+            }
+            // No recruiter condition added, shows all
         }
-        conditions.push(`c."recruiterId" = $${paramIndex++}`);
-        queryParams.push(finalRecruiterFilterParam);
-      } else if (finalRecruiterFilterParam === 'ALL_CANDIDATES_ADMIN') {
-        if (userRole !== 'Admin') {
-          return NextResponse.json({ message: "Forbidden: Only Admins can view all candidates without recruiter filter." }, { status: 403 });
-        }
-      }
     } else {
-      // Default behavior: If not Admin and no explicit "all candidates" admin filter, and no CANDIDATES_VIEW permission, filter by own ID for Recruiters.
-      if (userRole === 'Recruiter' && !canViewAll) {
-        conditions.push(`c."recruiterId" = $${paramIndex++}`);
-        queryParams.push(userId);
-      } else if (userRole !== 'Admin' && !canViewAll) {
-        // If not admin, not recruiter, and no CANDIDATES_VIEW, they shouldn't see any candidates.
-        return NextResponse.json({ message: "Forbidden: Insufficient permissions to view candidates." }, { status: 403 });
-      }
+        // Default behavior: If not Admin and no explicit "all candidates" admin filter, and no CANDIDATES_VIEW permission, filter by own ID for Recruiters.
+        if (userRole === 'Recruiter' && !canViewAll) {
+            conditions.push(`c."recruiterId" = $${paramIndex++}`);
+            queryParams.push(userId);
+        } else if (userRole !== 'Admin' && !canViewAll) {
+            // If not admin, not recruiter, and no CANDIDATES_VIEW, they shouldn't see any candidates.
+            return NextResponse.json({ message: "Forbidden: Insufficient permissions to view candidates." }, { status: 403 });
+        }
     }
+    if (keywordsFilter) { conditions.push(`c."parsedData"::text ILIKE $${paramIndex++}`); queryParams.push(`%${keywordsFilter}%`); }
 
 
     if (conditions.length > 0) {
@@ -437,5 +439,3 @@ export async function POST(request: NextRequest) {
     client.release();
   }
 }
-
-    

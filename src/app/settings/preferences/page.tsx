@@ -13,9 +13,16 @@ import { signIn, useSession } from 'next-auth/react';
 import { useRouter, usePathname } from 'next/navigation';
 import type { SystemSetting } from '@/lib/types';
 import { Separator } from '@/components/ui/separator';
+import { cn } from '@/lib/utils';
 
 type ThemePreference = "light" | "dark" | "system";
 const DEFAULT_APP_NAME = "CandiTrack";
+
+const PREFERENCE_SECTIONS = [
+  { id: 'appName', label: 'App Name', icon: PenSquare },
+  { id: 'theme', label: 'Theme', icon: Palette },
+  { id: 'logo', label: 'Logo', icon: ImageUp },
+];
 
 export default function PreferencesSettingsPage() {
   const { toast } = useToast();
@@ -185,13 +192,13 @@ export default function PreferencesSettingsPage() {
   };
 
   if (sessionStatus === 'loading' || (isLoading && !fetchError && !isClient)) {
-    return ( <div className="flex h-screen w-screen items-center justify-center bg-background fixed inset-0 z-50"> <Loader2 className="h-16 w-16 animate-spin text-primary" /> </div> );
+    return ( <div className="flex h-full items-center justify-center"><Loader2 className="h-16 w-16 animate-spin text-primary" /></div> );
   }
 
-  if (fetchError) {
+  if (fetchError && !isLoading) {
     return (
-      <div className="flex flex-col items-center justify-center h-[calc(100vh-10rem)] text-center p-4">
-        <ShieldAlert className="w-16 h-16 text-destructive mb-4" />
+      <div className="flex flex-col items-center justify-center h-full text-center p-4">
+        <ServerCrash className="w-16 h-16 text-destructive mb-4" />
         <h2 className="text-2xl font-semibold text-foreground mb-2">Access Denied or Error</h2>
         <p className="text-muted-foreground mb-4 max-w-md">{fetchError}</p>
         <Button onClick={() => router.push('/')} className="btn-hover-primary-gradient">Go to Dashboard</Button>
@@ -200,69 +207,85 @@ export default function PreferencesSettingsPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <Card className="w-full max-w-2xl mx-auto shadow-lg">
-        <CardHeader>
-          <CardTitle className="flex items-center text-xl">
-            <Settings2 className="mr-3 h-6 w-6 text-primary" /> Application Preferences
-          </CardTitle>
-          <CardDescription>Manage global application settings like name, theme, and logo. These settings are saved on the server.</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-8 pt-6">
-          <section>
-            <div className="flex items-center mb-3">
-                <PenSquare className="mr-3 h-5 w-5 text-muted-foreground" />
-                <h3 className="text-lg font-semibold text-foreground">App Name</h3>
-            </div>
-            <div>
-                <Label htmlFor="app-name-input" className="text-sm">Application Name</Label>
-                <Input id="app-name-input" type="text" value={appName} onChange={(e) => setAppName(e.target.value)} className="mt-1" placeholder="e.g., My ATS" />
-            </div>
-          </section>
+    <Card className="shadow-lg overflow-hidden">
+      <div className="flex flex-col md:flex-row min-h-[calc(100vh-10rem)]"> {/* Ensure Card fills height */}
+        {/* Left Gradient Panel - HIDDEN ON MOBILE */}
+        <div className="hidden md:block md:w-64 lg:w-72 bg-preferences-gradient p-6 text-primary-foreground sticky top-0 h-full">
+          <div className="space-y-6">
+            {PREFERENCE_SECTIONS.map(section => (
+              <a key={section.id} href={`#section-${section.id}`} 
+                 className="flex items-center space-x-3 opacity-80 hover:opacity-100 transition-opacity py-2 px-2 rounded-md hover:bg-white/10">
+                <section.icon className="h-5 w-5" />
+                <span>{section.label}</span>
+              </a>
+            ))}
+          </div>
+        </div>
 
-          <Separator />
+        {/* Right Content Area */}
+        <div className="flex-1">
+          <CardHeader className="md:pl-6">
+            <CardTitle className="flex items-center text-2xl"><Settings2 className="mr-3 h-6 w-6 text-primary"/>Application Preferences</CardTitle>
+            <CardDescription>Manage global application settings like name, theme, and logo. These settings are saved on the server.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-8 pt-6 md:pl-6">
+            <section id="section-appName">
+              <div className="flex items-center mb-3">
+                  <PenSquare className="mr-3 h-5 w-5 text-muted-foreground" />
+                  <h3 className="text-lg font-semibold text-foreground">App Name</h3>
+              </div>
+              <div>
+                  <Label htmlFor="app-name-input" className="text-sm">Application Name</Label>
+                  <Input id="app-name-input" type="text" value={appName} onChange={(e) => setAppName(e.target.value)} className="mt-1" placeholder="e.g., My ATS" />
+              </div>
+            </section>
 
-          <section>
-            <div className="flex items-center mb-3">
-                <Palette className="mr-3 h-5 w-5 text-muted-foreground" />
-                <h3 className="text-lg font-semibold text-foreground">Theme Preference</h3>
-            </div>
-            <RadioGroup value={themePreference} onValueChange={(value) => setThemePreference(value as ThemePreference)} className="flex flex-col sm:flex-row sm:space-x-6 space-y-2 sm:space-y-0">
-              <div className="flex items-center space-x-2"><RadioGroupItem value="light" id="theme-light" /><Label htmlFor="theme-light" className="font-normal">Light</Label></div>
-              <div className="flex items-center space-x-2"><RadioGroupItem value="dark" id="theme-dark" /><Label htmlFor="theme-dark" className="font-normal">Dark</Label></div>
-              <div className="flex items-center space-x-2"><RadioGroupItem value="system" id="theme-system" /><Label htmlFor="theme-system" className="font-normal">System Default</Label></div>
-            </RadioGroup>
-             <p className="text-xs text-muted-foreground mt-2">This sets your preferred theme. Actual theme switching is handled by the header toggle using browser settings.</p>
-          </section>
+            <Separator />
 
-          <Separator />
+            <section id="section-theme">
+              <div className="flex items-center mb-3">
+                  <Palette className="mr-3 h-5 w-5 text-muted-foreground" />
+                  <h3 className="text-lg font-semibold text-foreground">Theme Preference</h3>
+              </div>
+              <RadioGroup value={themePreference} onValueChange={(value) => setThemePreference(value as ThemePreference)} className="flex flex-col sm:flex-row sm:space-x-6 space-y-2 sm:space-y-0">
+                <div className="flex items-center space-x-2"><RadioGroupItem value="light" id="theme-light" /><Label htmlFor="theme-light" className="font-normal">Light</Label></div>
+                <div className="flex items-center space-x-2"><RadioGroupItem value="dark" id="theme-dark" /><Label htmlFor="theme-dark" className="font-normal">Dark</Label></div>
+                <div className="flex items-center space-x-2"><RadioGroupItem value="system" id="theme-system" /><Label htmlFor="theme-system" className="font-normal">System Default</Label></div>
+              </RadioGroup>
+              <p className="text-xs text-muted-foreground mt-2">This sets your preferred theme. Actual theme switching is handled by the header toggle using browser settings.</p>
+            </section>
 
-          <section>
-            <div className="flex items-center mb-3">
-              <ImageUp className="mr-3 h-5 w-5 text-muted-foreground" />
-              <h3 className="text-lg font-semibold text-foreground">App Logo</h3>
-            </div>
-            <div>
-              <Label htmlFor="app-logo-upload" className="text-sm">Change App Logo <span className="text-xs text-muted-foreground">(Recommended: square, max 200KB)</span></Label>
-              <Input id="app-logo-upload" type="file" accept="image/*" onChange={handleLogoFileChange} className="mt-1" />
-              {logoPreviewUrl && (
-                <div className="mt-3 p-2 border rounded-md inline-flex items-center gap-3 bg-muted/50">
-                  <Image src={logoPreviewUrl} alt="Logo preview" width={48} height={48} className="h-12 w-12 object-contain rounded" data-ai-hint="company logo"/>
-                  {selectedLogoFile && <span className="text-sm text-foreground truncate max-w-[150px] sm:max-w-xs">{selectedLogoFile.name}</span>}
-                  <Button variant="ghost" size="icon" onClick={() => removeSelectedLogo(false)} className="h-7 w-7"> <XCircle className="h-4 w-4 text-muted-foreground hover:text-destructive"/> </Button>
-                </div>
-              )}
-              {savedLogoDataUrl && ( <div className="mt-2"> <Button variant="outline" size="sm" onClick={() => removeSelectedLogo(true)} disabled={isSaving}> {isSaving && savedLogoDataUrl === null ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Trash2 className="mr-2 h-4 w-4"/>} Reset to Default Logo </Button> </div> )}
-            </div>
-          </section>
-        </CardContent>
-        <CardFooter className="border-t pt-6">
-          <Button onClick={handleSavePreferences} className="w-full sm:w-auto btn-primary-gradient" disabled={isSaving || isLoading}>
-            {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-            {isSaving ? 'Saving...' : 'Save All Preferences'}
-          </Button>
-        </CardFooter>
-      </Card>
-    </div>
+            <Separator />
+
+            <section id="section-logo">
+              <div className="flex items-center mb-3">
+                <ImageUp className="mr-3 h-5 w-5 text-muted-foreground" />
+                <h3 className="text-lg font-semibold text-foreground">App Logo</h3>
+              </div>
+              <div>
+                <Label htmlFor="app-logo-upload" className="text-sm">Change App Logo <span className="text-xs text-muted-foreground">(Recommended: square, max 200KB)</span></Label>
+                <Input id="app-logo-upload" type="file" accept="image/*" onChange={handleLogoFileChange} className="mt-1" />
+                {logoPreviewUrl && (
+                  <div className="mt-3 p-2 border rounded-md inline-flex items-center gap-3 bg-muted/50">
+                    <Image src={logoPreviewUrl} alt="Logo preview" width={48} height={48} className="h-12 w-12 object-contain rounded" data-ai-hint="company logo"/>
+                    {selectedLogoFile && <span className="text-sm text-foreground truncate max-w-[150px] sm:max-w-xs">{selectedLogoFile.name}</span>}
+                    <Button variant="ghost" size="icon" onClick={() => removeSelectedLogo(false)} className="h-7 w-7"> <XCircle className="h-4 w-4 text-muted-foreground hover:text-destructive"/> </Button>
+                  </div>
+                )}
+                {savedLogoDataUrl && ( <div className="mt-2"> <Button variant="outline" size="sm" onClick={() => removeSelectedLogo(true)} disabled={isSaving}> {isSaving && savedLogoDataUrl === null ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Trash2 className="mr-2 h-4 w-4"/>} Reset to Default Logo </Button> </div> )}
+              </div>
+            </section>
+          </CardContent>
+          <CardFooter className="border-t pt-6 md:pl-6">
+            <Button onClick={handleSavePreferences} className="w-full sm:w-auto btn-primary-gradient" disabled={isSaving || isLoading}>
+              {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+              {isSaving ? 'Saving...' : 'Save All Preferences'}
+            </Button>
+          </CardFooter>
+        </div>
+      </div>
+    </Card>
   );
 }
+
+    

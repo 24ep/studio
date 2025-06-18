@@ -11,22 +11,27 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Sun, Moon, LogOut, UserCircle, LogIn, KeyRound } from "lucide-react"; 
+import { Sun, Moon, LogOut, UserCircle, LogIn, KeyRound, Edit3 } from "lucide-react"; 
 import { useSession, signIn, signOut } from "next-auth/react";
 import { useEffect, useState } from "react";
 import { ChangePasswordModal } from '@/components/auth/ChangePasswordModal';
+import { EditUserModal, type EditUserFormValues } from '@/components/users/EditUserModal';
+import { useToast } from "@/hooks/use-toast";
+import type { UserProfile } from "@/lib/types";
+
 
 const APP_CONFIG_APP_NAME_KEY = 'appConfigAppName';
 const DEFAULT_APP_NAME = "CandiTrack";
 
 export function Header({ pageTitle: initialPageTitle }: { pageTitle: string }) {
   const { isMobile } = useSidebar();
-  const { data: session, status } = useSession();
+  const { data: session, status, update: updateSession } = useSession();
   const [mounted, setMounted] = useState(false);
   const [currentAppName, setCurrentAppName] = useState<string>(DEFAULT_APP_NAME);
   const [effectivePageTitle, setEffectivePageTitle] = useState(initialPageTitle);
   const [isChangePasswordModalOpen, setIsChangePasswordModalOpen] = useState(false);
-
+  const [isEditProfileModalOpen, setIsEditProfileModalOpen] = useState(false);
+  const { toast } = useToast();
 
   useEffect(() => setMounted(true), []);
 
@@ -48,6 +53,34 @@ export function Header({ pageTitle: initialPageTitle }: { pageTitle: string }) {
   const toggleTheme = () => {
     document.documentElement.classList.toggle('dark');
   };
+
+  const handleEditProfile = async (userId: string, data: EditUserFormValues) => {
+    if (!session?.user) return;
+    try {
+      const response = await fetch(`/api/users/${userId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      });
+      const result = await response.json();
+      if (!response.ok) {
+        throw new Error(result.message || 'Failed to update profile');
+      }
+      toast({ title: "Profile Updated", description: `Your profile has been updated successfully.` });
+      
+      // Trigger session update if name or email changed
+      if (session.user.name !== result.name || session.user.email !== result.email) {
+        await updateSession({
+          name: result.name,
+          email: result.email,
+        });
+      }
+      setIsEditProfileModalOpen(false);
+    } catch (error) {
+      toast({ title: "Error Updating Profile", description: (error as Error).message, variant: "destructive" });
+    }
+  };
+
 
   if (!mounted || status === "loading") { 
     return (
@@ -96,6 +129,10 @@ export function Header({ pageTitle: initialPageTitle }: { pageTitle: string }) {
                   </div>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
+                 <DropdownMenuItem onClick={() => setIsEditProfileModalOpen(true)}>
+                  <Edit3 className="mr-2 h-4 w-4" />
+                  Edit My Profile
+                </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => setIsChangePasswordModalOpen(true)}>
                   <KeyRound className="mr-2 h-4 w-4" />
                   Change Password
@@ -116,10 +153,19 @@ export function Header({ pageTitle: initialPageTitle }: { pageTitle: string }) {
         </div>
       </header>
       {user && (
-        <ChangePasswordModal 
-          isOpen={isChangePasswordModalOpen} 
-          onOpenChange={setIsChangePasswordModalOpen} 
-        />
+        <>
+          <ChangePasswordModal 
+            isOpen={isChangePasswordModalOpen} 
+            onOpenChange={setIsChangePasswordModalOpen} 
+          />
+          <EditUserModal
+            isOpen={isEditProfileModalOpen}
+            onOpenChange={setIsEditProfileModalOpen}
+            onEditUser={handleEditProfile}
+            user={session?.user as UserProfile | null} // Cast needed as session.user is DefaultUser
+            isSelfEdit={true} // Indicate this is for self-editing
+          />
+        </>
       )}
     </>
   );

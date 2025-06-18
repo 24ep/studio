@@ -68,6 +68,11 @@ body {
     --custom-green-checked-foreground: 0 0% 100%; /* Text on green bg (e.g., Switch) */
     --custom-green-checked-icon: 142 76% 36%; /* Color for the check icon itself */
 
+    /* Preferences Page Specific Gradient */
+    --preferences-left-panel-gradient-start: 220 60% 25%; /* Darker Blue */
+    --preferences-left-panel-gradient-end: 230 50% 45%; /* Slightly Lighter/Varied Dark Blue */
+
+
   }
 
   .dark {
@@ -127,6 +132,10 @@ body {
     --custom-green-checked: 147 80% 40%;
     --custom-green-checked-foreground: 0 0% 100%; /* Text on green bg (e.g., Switch) */
     --custom-green-checked-icon: 147 80% 40%; /* Color for the check icon itself */
+
+    /* Preferences Page Specific Gradient - Dark Mode */
+    --preferences-left-panel-gradient-start: 220 70% 30%; /* Darker, saturated Blue */
+    --preferences-left-panel-gradient-end: 230 60% 50%;   /* Slightly Lighter/Varied Dark Blue */
   }
 }
 
@@ -165,7 +174,7 @@ body {
   }
 
 
-  /* Sidebar base style for dark theme - Modern Dark Gradient */
+  /* Sidebar base style for dark theme - Modernized */
   .dark [data-sidebar="sidebar"] {
     background-image: var(--sidebar-background-d); /* Retain dark gradient */
     color: hsl(var(--sidebar-foreground-d));
@@ -252,5 +261,10 @@ body {
   }
   .dark .switch-green[data-state="checked"] {
      background-color: hsl(var(--custom-green-checked)) !important;
+  }
+
+  /* Preferences Page Specific Gradient Utility */
+  .bg-preferences-gradient {
+    background-image: linear-gradient(to bottom right, hsl(var(--preferences-left-panel-gradient-start)), hsl(var(--preferences-left-panel-gradient-end)));
   }
 }

@@ -1,4 +1,3 @@
-
 "use client";
 import React, { type ReactNode, useState, useEffect } from "react";
 import {
@@ -19,6 +18,7 @@ import { usePathname } from "next/navigation";
 import Image from 'next/image';
 import { SetupFlowHandler } from './SetupFlowHandler';
 import type { SystemSetting } from '@/lib/types';
+import SettingsLayout from '@/app/settings/layout'; // Import the new settings layout
 
 const DEFAULT_APP_NAME = "CandiTrack";
 const DEFAULT_LOGO_ICON = <Package2 className="h-6 w-6" />;
@@ -37,19 +37,10 @@ function getPageTitle(pathname: string, currentAppName: string): string {
     }
     return "Job Positions";
   }
-  if (pathname.startsWith("/users")) return "Manage Users";
   if (pathname.startsWith("/my-tasks")) return "My Task Board";
-  if (pathname.startsWith("/settings/preferences")) return "Preferences";
-  if (pathname.startsWith("/settings/integrations")) return "Integrations";
-  if (pathname.startsWith("/settings/stages")) return "Recruitment Stages";
-  if (pathname.startsWith("/settings/data-models")) return "Data Model Preferences";
-  if (pathname.startsWith("/settings/custom-fields")) return "Custom Field Definitions";
-  if (pathname.startsWith("/settings/webhook-mapping")) return "Webhook Payload Mapping";
-  if (pathname.startsWith("/settings/user-groups")) return "User Groups";
-  if (pathname.startsWith("/api-docs")) return "API Documentation";
-  if (pathname.startsWith("/logs")) return "Application Logs";
+  if (pathname.startsWith("/settings")) return "Settings"; // General title for settings section
   if (pathname.startsWith("/auth/signin")) return "Sign In";
-  return currentAppName; // Use dynamic app name as fallback
+  return currentAppName; 
 }
 
 export function AppLayout({ children }: { children: React.ReactNode }) {
@@ -59,6 +50,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   const [isClient, setIsClient] = useState(false);
 
   const pageTitle = pathname === "/auth/signin" ? "Sign In" : getPageTitle(pathname, currentAppName);
+  const isSettingsPage = pathname.startsWith("/settings");
 
   useEffect(() => {
     setIsClient(true);
@@ -74,7 +66,6 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
           setAppLogoUrl(logoSetting?.value || null);
         } else {
           console.warn("Failed to fetch server-side system settings, using defaults/localStorage.");
-          // Fallback to localStorage if server fetch fails or for offline, but server is primary
           const storedAppName = localStorage.getItem('appConfigAppName');
           setCurrentAppName(storedAppName || DEFAULT_APP_NAME);
           const storedLogo = localStorage.getItem('appLogoDataUrl');
@@ -82,7 +73,6 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
         }
       } catch (error) {
         console.error("Error fetching server-side system settings:", error);
-        // Fallback to localStorage
         const storedAppName = localStorage.getItem('appConfigAppName');
         setCurrentAppName(storedAppName || DEFAULT_APP_NAME);
         const storedLogo = localStorage.getItem('appLogoDataUrl');
@@ -90,7 +80,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
       }
     };
     
-    updateAppConfigFromServer(); // Initial load
+    updateAppConfigFromServer(); 
 
     const handleAppConfigChange = (event: Event) => {
         const customEvent = event as CustomEvent<{ appName?: string; logoUrl?: string | null }>;
@@ -98,7 +88,6 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
             if (customEvent.detail.appName) setCurrentAppName(customEvent.detail.appName);
             if (customEvent.detail.logoUrl !== undefined) setAppLogoUrl(customEvent.detail.logoUrl);
         } else {
-            // Fallback if event detail is not as expected, re-fetch from server or localStorage
             updateAppConfigFromServer();
         }
     };
@@ -147,8 +136,12 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
         </Sidebar>
         <SidebarInset className="flex flex-col bg-background">
           <Header pageTitle={pageTitle} />
-          <main className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8">
-            {children}
+          <main className="flex-1 overflow-y-auto">
+            {isSettingsPage ? (
+              <SettingsLayout>{children}</SettingsLayout>
+            ) : (
+              <div className="p-4 md:p-6 lg:p-8">{children}</div>
+            )}
           </main>
         </SidebarInset>
       </SidebarProvider>

@@ -30,15 +30,17 @@ export default function IntegrationsSettingsPage() {
   const [smtpPassword, setSmtpPassword] = useState(''); 
   const [smtpSecure, setSmtpSecure] = useState(true);
   const [smtpFromEmail, setSmtpFromEmail] = useState('');
+  const [n8nResumeWebhookUrl, setN8nResumeWebhookUrl] = useState('');
+  const [n8nGenericPdfWebhookUrl, setN8nGenericPdfWebhookUrl] = useState('');
 
 
-  const fetchSMTPSettings = useCallback(async () => {
+  const fetchSystemSettings = useCallback(async () => {
     setIsLoading(true);
     setFetchError(null);
     try {
       const response = await fetch('/api/settings/system-settings');
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ message: 'Failed to load SMTP settings' }));
+        const errorData = await response.json().catch(() => ({ message: 'Failed to load system settings' }));
         throw new Error(errorData.message);
       }
       const settings: SystemSetting[] = await response.json();
@@ -48,9 +50,11 @@ export default function IntegrationsSettingsPage() {
       setSmtpUser(settings.find(s => s.key === 'smtpUser')?.value || '');
       setSmtpSecure(settings.find(s => s.key === 'smtpSecure')?.value === 'true');
       setSmtpFromEmail(settings.find(s => s.key === 'smtpFromEmail')?.value || '');
+      setN8nResumeWebhookUrl(settings.find(s => s.key === 'n8nResumeWebhookUrl')?.value || '');
+      setN8nGenericPdfWebhookUrl(settings.find(s => s.key === 'n8nGenericPdfWebhookUrl')?.value || '');
 
     } catch (error) {
-      console.error("Error fetching SMTP settings:", error);
+      console.error("Error fetching system settings:", error);
       setFetchError((error as Error).message);
     } finally {
       setIsLoading(false);
@@ -63,17 +67,17 @@ export default function IntegrationsSettingsPage() {
     if (sessionStatus === 'unauthenticated') {
       signIn(undefined, { callbackUrl: pathname });
     } else if (sessionStatus === 'authenticated') {
-        if (session.user.role !== 'Admin' && !session.user.modulePermissions?.includes('SYSTEM_SETTINGS_MANAGE')) { // Assuming SYSTEM_SETTINGS_MANAGE covers this
+        if (session.user.role !== 'Admin' && !session.user.modulePermissions?.includes('SYSTEM_SETTINGS_MANAGE')) { 
             setFetchError("You do not have permission to manage integration settings.");
             setIsLoading(false);
         } else {
-            fetchSMTPSettings();
+            fetchSystemSettings();
         }
     }
-  }, [sessionStatus, session, pathname, signIn, fetchSMTPSettings]);
+  }, [sessionStatus, session, pathname, signIn, fetchSystemSettings]);
 
 
-  const handleSaveIntegrations = async () => {
+  const handleSaveSettings = async () => {
     if (!isClient) return;
     setIsSaving(true);
     
@@ -83,6 +87,8 @@ export default function IntegrationsSettingsPage() {
       { key: 'smtpUser', value: smtpUser },
       { key: 'smtpSecure', value: String(smtpSecure) },
       { key: 'smtpFromEmail', value: smtpFromEmail },
+      { key: 'n8nResumeWebhookUrl', value: n8nResumeWebhookUrl },
+      { key: 'n8nGenericPdfWebhookUrl', value: n8nGenericPdfWebhookUrl },
     ];
 
     try {
@@ -93,18 +99,18 @@ export default function IntegrationsSettingsPage() {
       });
 
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ message: 'Failed to save SMTP settings' }));
+        const errorData = await response.json().catch(() => ({ message: 'Failed to save settings' }));
         throw new Error(errorData.message);
       }
       
       toast({
-        title: 'SMTP Settings Saved',
-        description: 'Your SMTP configuration has been updated on the server.',
+        title: 'Settings Saved',
+        description: 'Your integration settings have been updated on the server.',
       });
-      fetchSMTPSettings(); 
+      fetchSystemSettings(); 
     } catch (error) {
-      console.error("Error saving SMTP settings:", error);
-      toast({ title: "Error Saving SMTP Settings", description: (error as Error).message, variant: "destructive" });
+      console.error("Error saving settings:", error);
+      toast({ title: "Error Saving Settings", description: (error as Error).message, variant: "destructive" });
     } finally {
       setIsSaving(false);
     }
@@ -112,16 +118,16 @@ export default function IntegrationsSettingsPage() {
 
   if (sessionStatus === 'loading' || (isLoading && !fetchError && !isClient)) {
     return (
-        <div className="flex h-screen w-screen items-center justify-center bg-background fixed inset-0 z-50">
+        <div className="flex h-full items-center justify-center">
             <Loader2 className="h-16 w-16 animate-spin text-primary" />
         </div>
     );
   }
   
-  if (fetchError) {
+  if (fetchError && !isLoading) {
      return (
-      <div className="flex flex-col items-center justify-center h-[calc(100vh-10rem)] text-center p-4">
-        <ShieldAlert className="w-16 h-16 text-destructive mb-4" />
+      <div className="flex flex-col items-center justify-center h-full text-center p-4">
+        <ServerCrash className="w-16 h-16 text-destructive mb-4" />
         <h2 className="text-2xl font-semibold text-foreground mb-2">Access Denied or Error</h2>
         <p className="text-muted-foreground mb-4 max-w-md">{fetchError}</p>
         <Button onClick={() => router.push('/')} className="btn-hover-primary-gradient">Go to Dashboard</Button>
@@ -131,45 +137,38 @@ export default function IntegrationsSettingsPage() {
 
 
   return (
-    <div className="space-y-8 max-w-3xl mx-auto">
+    <div className="space-y-8">
       <Card className="shadow-lg">
         <CardHeader>
-          <CardTitle className="flex items-center text-xl">
+          <CardTitle className="flex items-center text-2xl">
             <Zap className="mr-3 h-6 w-6 text-primary" /> Workflow Automation (Webhooks)
           </CardTitle>
-          <CardDescription>Details about server-configured webhooks for automated processing.</CardDescription>
+          <CardDescription>Configure server-side webhook URLs for automated processing tasks via n8n or similar tools.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4 pt-6">
             <div>
-              <h4 className="font-medium text-foreground flex items-center"><UploadCloud className="mr-2 h-5 w-5 text-muted-foreground"/>Resume Processing Webhook</h4>
-              <p className="text-sm text-muted-foreground mt-1">
-                Used for resumes uploaded to existing candidates. Configured via server environment variable: <code className="font-mono text-xs bg-muted px-1 py-0.5 rounded">N8N_RESUME_WEBHOOK_URL</code>.
-              </p>
+              <Label htmlFor="n8n-resume-webhook">Resume Processing Webhook URL</Label>
+              <Input id="n8n-resume-webhook" type="url" placeholder="https://your-n8n-instance/webhook/resume-processing" value={n8nResumeWebhookUrl} onChange={(e) => setN8nResumeWebhookUrl(e.target.value)} className="mt-1" disabled={isSaving}/>
+              <p className="text-xs text-muted-foreground mt-1">Used for resumes uploaded to existing candidates. The application will send candidate details and a MinIO presigned URL for the resume to this endpoint.</p>
             </div>
             <Separator />
             <div>
-                <h4 className="font-medium text-foreground flex items-center"><FileText className="mr-2 h-5 w-5 text-muted-foreground"/>New Candidate PDF Webhook</h4>
-                <p className="text-sm text-muted-foreground mt-1">
-                    Used by "Create via Resume (Automated)" feature. Configured via server environment variable: <code className="font-mono text-xs bg-muted px-1 py-0.5 rounded">N8N_GENERIC_PDF_WEBHOOK_URL</code>.
-                </p>
-            </div>
-             <div className="mt-6 p-3 bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-700 rounded-md">
-                <div className="flex items-start">
-                    <Info className="h-5 w-5 text-blue-600 dark:text-blue-400 mr-2 mt-0.5 shrink-0" />
-                    <div>
-                        <p className="text-sm font-medium text-blue-700 dark:text-blue-300">Note on Webhook Configuration</p>
-                        <p className="text-xs text-blue-600 dark:text-blue-400">
-                            The webhook URLs are set on the server using environment variables for security. This page provides information about their purpose. The actual mapping of data from these webhooks to candidate fields is configured in <Button variant="link" size="sm" className="p-0 h-auto text-xs text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300" onClick={() => router.push('/settings/webhook-mapping')}>Webhook Payload Mapping</Button>.
-                        </p>
-                    </div>
-                </div>
+                <Label htmlFor="n8n-generic-pdf-webhook">New Candidate PDF Webhook URL</Label>
+                <Input id="n8n-generic-pdf-webhook" type="url" placeholder="https://your-n8n-instance/webhook/new-candidate-pdf" value={n8nGenericPdfWebhookUrl} onChange={(e) => setN8nGenericPdfWebhookUrl(e.target.value)} className="mt-1" disabled={isSaving}/>
+                 <p className="text-xs text-muted-foreground mt-1">Used by "Create via Resume (Automated)" feature. The application sends the PDF file (as FormData) and optional target position info to this endpoint.</p>
             </div>
         </CardContent>
+         <CardFooter className="border-t pt-6">
+          <Button onClick={handleSaveSettings} className="btn-primary-gradient" disabled={isSaving || isLoading}>
+            {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+            {isSaving ? 'Saving Webhooks...' : 'Save Webhook URLs'}
+          </Button>
+        </CardFooter>
       </Card>
 
       <Card className="shadow-lg">
         <CardHeader>
-          <CardTitle className="flex items-center text-xl">
+          <CardTitle className="flex items-center text-2xl">
             <Mail className="mr-3 h-6 w-6 text-primary" /> SMTP Configuration
           </CardTitle>
           <CardDescription>Set up your SMTP server for sending application emails. Settings are saved on the server (excluding password).</CardDescription>
@@ -192,7 +191,7 @@ export default function IntegrationsSettingsPage() {
               <Input id="smtp-user" type="text" placeholder="your-email@example.com" value={smtpUser} onChange={(e) => setSmtpUser(e.target.value)} className="mt-1" disabled={isSaving}/>
             </div>
             <div>
-              <Label htmlFor="smtp-password">SMTP Password</Label>
+              <Label htmlFor="smtp-password">SMTP Password (Set via Environment Variable)</Label>
               <Input id="smtp-password" type="password" placeholder="••••••••" value={smtpPassword} onChange={(e) => setSmtpPassword(e.target.value)} className="mt-1" disabled={isSaving}/>
               <p className="text-xs text-muted-foreground mt-1">
                 The SMTP password should be set as an environment variable (e.g., <code className="font-mono text-xs bg-muted px-1 rounded">SMTP_PASSWORD</code>) on the server for security. This field is for your reference and conceptual testing; its value is NOT saved to the database from here.
@@ -204,12 +203,14 @@ export default function IntegrationsSettingsPage() {
             </div>
         </CardContent>
          <CardFooter className="border-t pt-6">
-          <Button onClick={handleSaveIntegrations} className="w-full sm:w-auto btn-primary-gradient" disabled={isSaving || isLoading}>
+          <Button onClick={handleSaveSettings} className="btn-primary-gradient" disabled={isSaving || isLoading}>
             {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-            {isSaving ? 'Saving...' : 'Save SMTP Settings'}
+            {isSaving ? 'Saving SMTP...' : 'Save SMTP Settings'}
           </Button>
         </CardFooter>
       </Card>
     </div>
   );
 }
+
+    

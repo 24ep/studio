@@ -1,7 +1,7 @@
 
 import { NextResponse, type NextRequest } from 'next/server';
 import { minioClient, MINIO_BUCKET_NAME } from '../../../../lib/minio';
-import pool from '../../../../lib/db';
+import pool, { getSystemSetting } from '../../../../lib/db'; // Import getSystemSetting
 import type { Candidate, ResumeHistoryEntry } from '@/lib/types';
 import { logAudit } from '@/lib/auditLog';
 import { getServerSession } from 'next-auth/next';
@@ -12,9 +12,10 @@ const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 const ACCEPTED_FILE_TYPES = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
 
 async function sendToN8N(candidateId: string, candidateName: string, fileNameInMinio: string, originalFileName: string, mimeType: string): Promise<{ success: boolean, data?: any, error?: string, message?: string }> {
-  const n8nWebhookUrl = process.env.N8N_RESUME_WEBHOOK_URL;
+  const n8nWebhookUrl = await getSystemSetting('n8nResumeWebhookUrl'); // Fetch from DB
+  
   if (!n8nWebhookUrl) {
-    console.log('N8N_RESUME_WEBHOOK_URL not configured. Skipping n8n notification.');
+    console.log('N8N_RESUME_WEBHOOK_URL not configured in SystemSetting table. Skipping n8n notification.');
     return { success: true, message: "N8N notification skipped (not configured)." };
   }
 

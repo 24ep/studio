@@ -223,13 +223,13 @@ export interface Position {
   candidates?: Candidate[];
 }
 
-export interface UserGroup {
+export interface UserGroup { // This is now "Role" in the UI
   id: string;
   name: string;
   description?: string | null;
   permissions?: PlatformModuleId[];
-  is_default?: boolean; // New field
-  is_system_role?: boolean; // New field
+  is_default?: boolean;
+  is_system_role?: boolean;
   user_count?: number; // For API response
   createdAt?: string;
   updatedAt?: string;
@@ -361,7 +361,9 @@ export interface CustomFieldDefinition {
 
 // System-wide settings
 export interface SystemSetting {
-    key: 'appName' | 'appLogoDataUrl' | 'appThemePreference' | 'smtpHost' | 'smtpPort' | 'smtpUser' | 'smtpSecure' | 'smtpFromEmail';
+    key: 'appName' | 'appLogoDataUrl' | 'appThemePreference' | 
+         'smtpHost' | 'smtpPort' | 'smtpUser' | 'smtpSecure' | 'smtpFromEmail' |
+         'n8nResumeWebhookUrl' | 'n8nGenericPdfWebhookUrl'; // Added webhook URL keys
     value: string | null;
     updatedAt?: string;
 }
@@ -403,5 +405,17 @@ export interface NotificationEventWithSettings extends NotificationEvent {
     settingId?: string; // ID of the NotificationSetting record, if exists
   }>;
 }
+
+// For the new Settings Layout sub-navigation
+export interface SettingsNavigationItem {
+  href: string;
+  label: string;
+  icon: React.ElementType;
+  description: string;
+  adminOnly?: boolean;
+  permissionId?: PlatformModuleId;
+  adminOnlyOrPermission?: boolean;
+}
+    
 
     

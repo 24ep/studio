@@ -13,8 +13,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'; // Changed from Accordion
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'; 
 import { useToast } from '@/hooks/use-toast';
 import { signIn, useSession } from 'next-auth/react';
 import { useRouter, usePathname } from 'next/navigation';
@@ -86,7 +86,7 @@ const AttributeEditor: React.FC<{
   const hasSubAttributes = attr.subAttributes && attr.subAttributes.length > 0;
 
   return (
-    <div className={`py-3 ${level > 0 ? `ml-${level * 4} pl-3 border-l border-dashed border-muted` : ''} ${hasSubAttributes ? 'mb-2' : 'border-b border-muted'}`}>
+    <div className={`py-3 ${level > 0 ? `ml-${level * 4} pl-3 border-l border-dashed border-muted` : ''} ${hasSubAttributes ? 'mb-2' : 'border-b border-muted last:border-b-0'}`}>
       <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-2 sm:gap-4">
         <div className="flex-1">
           <h4 className="font-semibold text-foreground">{attr.label}</h4>
@@ -190,7 +190,7 @@ export default function DataModelsPage() {
     } finally {
       setIsLoadingData(false);
     }
-  }, [session?.user?.id, candidatePrefs, positionPrefs]); // Removed loadPreferencesFromServer from deps
+  }, [session?.user?.id]); 
 
   useEffect(() => {
     setIsClient(true);
@@ -204,8 +204,7 @@ export default function DataModelsPage() {
         loadPreferencesFromServer();
       }
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sessionStatus, session, pathname, signIn]); // Removed loadPreferencesFromServer from deps here too
+  }, [sessionStatus, session, pathname, signIn, loadPreferencesFromServer]); 
 
 
   const handlePreferenceChange = (
@@ -268,14 +267,14 @@ export default function DataModelsPage() {
     }
   };
   
-  if (sessionStatus === 'loading' || (isLoadingData && !fetchError && !isClient)) {
-    return ( <div className="flex h-screen w-screen items-center justify-center bg-background fixed inset-0 z-50"> <Loader2 className="h-16 w-16 animate-spin text-primary" /> </div> );
+  if (sessionStatus === 'loading' || (isLoadingData && !fetchError && !isClient && Object.keys(candidatePrefs).length === 0 && Object.keys(positionPrefs).length === 0)) {
+    return ( <div className="flex h-full items-center justify-center"><Loader2 className="h-16 w-16 animate-spin text-primary" /></div> );
   }
 
   if (fetchError && !isLoadingData) {
     return (
-      <div className="flex flex-col items-center justify-center h-[calc(100vh-10rem)] text-center p-4">
-        <ShieldAlert className="w-16 h-16 text-destructive mb-4" />
+      <div className="flex flex-col items-center justify-center h-full text-center p-4">
+        <ServerCrash className="w-16 h-16 text-destructive mb-4" />
         <h2 className="text-2xl font-semibold text-foreground mb-2">Access Denied or Error</h2>
         <p className="text-muted-foreground mb-4 max-w-md">{fetchError}</p>
         <Button onClick={() => router.push('/')} className="btn-hover-primary-gradient mr-2">Go to Dashboard</Button>
@@ -287,67 +286,63 @@ export default function DataModelsPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center"><DatabaseZap className="mr-2 h-6 w-6 text-primary"/>Data Model Preferences</CardTitle>
-          <CardDescription>
-            View attributes of your core data models (Candidate, Position) and set your UI display preferences or custom notes. These settings are saved server-side for your user account.
-          </CardDescription>
-        </CardHeader>
-      </Card>
-
-      <Tabs defaultValue="candidate-model" className="w-full">
-        <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="candidate-model">Candidate Model</TabsTrigger>
-          <TabsTrigger value="position-model">Position Model</TabsTrigger>
-        </TabsList>
-        <TabsContent value="candidate-model">
-          <Card>
-            <CardHeader>
-              <CardTitle>Candidate Model Attributes</CardTitle>
-              <CardDescription>Set preferences for candidate data fields.</CardDescription>
-            </CardHeader>
-            <CardContent className="pt-0">
-              {CANDIDATE_ATTRIBUTES.map(attr => (
-                <AttributeEditor
-                  key={attr.key}
-                  attr={attr}
-                  preferences={candidatePrefs}
-                  onPreferenceChange={(key, type, val) => handlePreferenceChange('Candidate', key, type, val)}
-                />
-              ))}
-            </CardContent>
-          </Card>
-        </TabsContent>
-        <TabsContent value="position-model">
-          <Card>
-            <CardHeader>
-              <CardTitle>Position Model Attributes</CardTitle>
-              <CardDescription>Set preferences for job position data fields.</CardDescription>
-            </CardHeader>
-            <CardContent className="pt-0">
-              {POSITION_ATTRIBUTES.map(attr => (
-                <AttributeEditor
-                  key={attr.key}
-                  attr={attr}
-                  preferences={positionPrefs}
-                  onPreferenceChange={(key, type, val) => handlePreferenceChange('Position', key, type, val)}
-                />
-              ))}
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
-      
-      <div className="flex justify-end mt-6">
+    <Card className="shadow-lg">
+      <CardHeader>
+        <CardTitle className="flex items-center text-2xl"><DatabaseZap className="mr-3 h-6 w-6 text-primary"/>Data Model Preferences</CardTitle>
+        <CardDescription>
+          View attributes of your core data models (Candidate, Position) and set your UI display preferences or custom notes. These settings are saved server-side for your user account.
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <Tabs defaultValue="candidate-model" className="w-full">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="candidate-model">Candidate Model</TabsTrigger>
+            <TabsTrigger value="position-model">Position Model</TabsTrigger>
+          </TabsList>
+          <TabsContent value="candidate-model" className="mt-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>Candidate Model Attributes</CardTitle>
+                <CardDescription>Set preferences for candidate data fields.</CardDescription>
+              </CardHeader>
+              <CardContent className="pt-0 max-h-[calc(100vh-25rem)] overflow-y-auto">
+                {CANDIDATE_ATTRIBUTES.map(attr => (
+                  <AttributeEditor
+                    key={attr.key}
+                    attr={attr}
+                    preferences={candidatePrefs}
+                    onPreferenceChange={(key, type, val) => handlePreferenceChange('Candidate', key, type, val)}
+                  />
+                ))}
+              </CardContent>
+            </Card>
+          </TabsContent>
+          <TabsContent value="position-model" className="mt-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>Position Model Attributes</CardTitle>
+                <CardDescription>Set preferences for job position data fields.</CardDescription>
+              </CardHeader>
+              <CardContent className="pt-0 max-h-[calc(100vh-25rem)] overflow-y-auto">
+                {POSITION_ATTRIBUTES.map(attr => (
+                  <AttributeEditor
+                    key={attr.key}
+                    attr={attr}
+                    preferences={positionPrefs}
+                    onPreferenceChange={(key, type, val) => handlePreferenceChange('Position', key, type, val)}
+                  />
+                ))}
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
+      </CardContent>
+      <CardFooter className="border-t pt-6 flex justify-end">
         <Button onClick={handleSavePreferences} size="lg" className="btn-primary-gradient" disabled={isSaving || isLoadingData}>
           {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
           {isSaving ? 'Saving...' : 'Save My Preferences'}
         </Button>
-      </div>
-    </div>
+      </CardFooter>
+    </Card>
   );
 }
-
-    

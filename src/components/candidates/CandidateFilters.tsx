@@ -27,6 +27,7 @@ export interface CandidateFilterValues {
   applicationDateStart?: Date;
   applicationDateEnd?: Date;
   recruiterId?: string;
+  keywords?: string; // New filter for keywords in resume data
 }
 
 interface CandidateFiltersProps {
@@ -64,6 +65,7 @@ export function CandidateFilters({
   const [applicationDateStart, setApplicationDateStart] = useState<Date | undefined>(initialFilters.applicationDateStart);
   const [applicationDateEnd, setApplicationDateEnd] = useState<Date | undefined>(initialFilters.applicationDateEnd);
   const [recruiterId, setRecruiterId] = useState(initialFilters.recruiterId || ALL_RECRUITERS_SELECT_VALUE);
+  const [keywords, setKeywords] = useState(initialFilters.keywords || ''); // New keywords state
 
 
   const [positionSearchOpen, setPositionSearchOpen] = useState(false);
@@ -100,6 +102,7 @@ export function CandidateFilters({
     setApplicationDateStart(initialFilters.applicationDateStart ? parseISO(String(initialFilters.applicationDateStart)) : undefined);
     setApplicationDateEnd(initialFilters.applicationDateEnd ? parseISO(String(initialFilters.applicationDateEnd)) : undefined);
     setRecruiterId(initialFilters.recruiterId || ALL_RECRUITERS_SELECT_VALUE);
+    setKeywords(initialFilters.keywords || ''); // Initialize new filter
 
   }, [initialFilters]);
 
@@ -117,6 +120,7 @@ export function CandidateFilters({
       applicationDateStart: applicationDateStart,
       applicationDateEnd: applicationDateEnd,
       recruiterId: recruiterId === ALL_RECRUITERS_SELECT_VALUE ? undefined : recruiterId,
+      keywords: keywords || undefined, // Include new filter
     });
   };
 
@@ -131,6 +135,7 @@ export function CandidateFilters({
     setApplicationDateStart(undefined);
     setApplicationDateEnd(undefined);
     setRecruiterId(ALL_RECRUITERS_SELECT_VALUE);
+    setKeywords(''); // Reset new filter
     setPositionSearchQuery('');
     setStatusSearchQuery('');
     setRecruiterSearchQuery('');
@@ -140,6 +145,7 @@ export function CandidateFilters({
       positionId: undefined, 
       status: undefined,
       recruiterId: undefined,
+      keywords: undefined,
     });
   };
 
@@ -158,10 +164,14 @@ export function CandidateFilters({
 
   return (
     <div className="mb-6 p-4 border rounded-lg bg-card shadow">
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 items-end">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 items-end">
         <div><Label htmlFor="name-search">Name</Label><Input id="name-search" placeholder="Search by name..." value={name} onChange={(e) => setName(e.target.value)} className="mt-1" disabled={isLoading}/></div>
         <div><Label htmlFor="email-search">Email</Label><Input id="email-search" placeholder="Search by email..." value={email} onChange={(e) => setEmail(e.target.value)} className="mt-1" disabled={isLoading}/></div>
         <div><Label htmlFor="phone-search">Phone</Label><Input id="phone-search" placeholder="Search by phone..." value={phone} onChange={(e) => setPhone(e.target.value)} className="mt-1" disabled={isLoading}/></div>
+        <div>
+          <Label htmlFor="keywords-search">Keywords in Resume Data</Label>
+          <Input id="keywords-search" placeholder="Search keywords..." value={keywords} onChange={(e) => setKeywords(e.target.value)} className="mt-1" disabled={isLoading}/>
+        </div>
         <div>
           <Label htmlFor="position-combobox">Position</Label>
           <Popover open={positionSearchOpen} onOpenChange={setPositionSearchOpen}>
@@ -191,7 +201,7 @@ export function CandidateFilters({
                 {filteredRecruiters.map((rec) => (<Button key={rec.id} variant="ghost" className={cn("w-full justify-start px-2 py-1.5 text-sm font-normal h-auto", recruiterId === rec.id && "bg-accent text-accent-foreground")} onClick={() => {setRecruiterId(rec.id); setRecruiterSearchOpen(false); setRecruiterSearchQuery('');}}><Check className={cn("mr-2 h-4 w-4", recruiterId === rec.id ? "opacity-100" : "opacity-0")}/>{rec.name}</Button>))}
               </ScrollArea></PopoverContent></Popover></div>
 
-        <div className="md:col-span-1 lg:col-span-2"> {/* Date pickers might span more on smaller screens */}
+        <div className="lg:col-span-2 xl:col-span-2"> {/* Date pickers */}
           <Label>Application Date Range</Label>
           <div className="flex flex-col sm:flex-row gap-2 mt-1">
             <Popover><PopoverTrigger asChild><Button variant={"outline"} className={cn("w-full justify-start text-left font-normal", !applicationDateStart && "text-muted-foreground")} disabled={isLoading}><CalendarIcon className="mr-2 h-4 w-4" />{applicationDateStart ? format(applicationDateStart, "PPP") : <span>Start Date</span>}</Button></PopoverTrigger><PopoverContent className="w-auto p-0"><Calendar mode="single" selected={applicationDateStart} onSelect={setApplicationDateStart} initialFocus /></PopoverContent></Popover>
@@ -199,7 +209,7 @@ export function CandidateFilters({
           </div>
         </div>
         
-        <div className="md:col-span-full lg:col-span-2 xl:col-span-1"> {/* Fit score */}
+        <div className="lg:col-span-1 xl:col-span-1"> {/* Fit score */}
             <Label>Fit Score ({fitScoreRange[0]}% - {fitScoreRange[1]}%)</Label>
             <Popover>
                 <PopoverTrigger asChild><Button variant="outline" className="w-full mt-1 justify-start text-left font-normal" disabled={isLoading}><span>{fitScoreRange[0]} - {fitScoreRange[1]}%</span><ListFilter className="ml-auto h-4 w-4 opacity-50" /></Button></PopoverTrigger>
@@ -215,5 +225,3 @@ export function CandidateFilters({
     </div>
   );
 }
-
-    
