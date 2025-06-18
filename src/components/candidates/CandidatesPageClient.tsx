@@ -5,7 +5,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { CandidateFilters, type CandidateFilterValues } from '@/components/candidates/CandidateFilters';
 import { CandidateTable } from '@/components/candidates/CandidateTable';
-import type { Candidate, CandidateStatus, Position, RecruitmentStage } from '@/lib/types';
+import type { Candidate, CandidateStatus, Position, RecruitmentStage, UserProfile } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { PlusCircle, Users, ServerCrash, Zap, Loader2, FileDown, FileUp, ChevronDown, FileSpreadsheet, ShieldAlert } from 'lucide-react';
@@ -52,6 +52,7 @@ export function CandidatesPageClient({
   const [allCandidates, setAllCandidates] = useState<Candidate[]>(initialCandidates || []);
   const [availablePositions, setAvailablePositions] = useState<Position[]>(initialAvailablePositions || []);
   const [availableStages, setAvailableStages] = useState<RecruitmentStage[]>(initialAvailableStages || []);
+  const [availableRecruiters, setAvailableRecruiters] = useState<Pick<UserProfile, 'id' | 'name'>[]>([]);
   
   const [isLoading, setIsLoading] = useState(false);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -73,6 +74,22 @@ export function CandidatesPageClient({
   const canImportCandidates = session?.user?.role === 'Admin' || session?.user?.modulePermissions?.includes('CANDIDATES_IMPORT');
   const canExportCandidates = session?.user?.role === 'Admin' || session?.user?.modulePermissions?.includes('CANDIDATES_EXPORT');
 
+  const fetchRecruiters = useCallback(async () => {
+    if (sessionStatus !== 'authenticated') return;
+    try {
+      const response = await fetch('/api/users?role=Recruiter'); // Fetch users with 'Recruiter' role
+      if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error(errorData.message || 'Failed to fetch recruiters');
+      }
+      const recruitersData: UserProfile[] = await response.json();
+      setAvailableRecruiters(recruitersData.map(r => ({ id: r.id, name: r.name })));
+    } catch (error) {
+      console.error("Error fetching recruiters:", error);
+      toast({ title: "Error", description: "Could not load recruiters for filtering.", variant: "destructive" });
+    }
+  }, [sessionStatus, toast]);
+
 
   const fetchFilteredCandidatesOnClient = useCallback(async (currentFilters: CandidateFilterValues) => {
     if (sessionStatus !== 'authenticated') {
@@ -92,6 +109,12 @@ export function CandidatesPageClient({
       if (currentFilters.education) query.append('education', currentFilters.education);
       if (currentFilters.minFitScore !== undefined) query.append('minFitScore', String(currentFilters.minFitScore));
       if (currentFilters.maxFitScore !== undefined) query.append('maxFitScore', String(currentFilters.maxFitScore));
+      if (currentFilters.email) query.append('email', currentFilters.email);
+      if (currentFilters.phone) query.append('phone', currentFilters.phone);
+      if (currentFilters.applicationDateStart) query.append('applicationDateStart', currentFilters.applicationDateStart.toISOString());
+      if (currentFilters.applicationDateEnd) query.append('applicationDateEnd', currentFilters.applicationDateEnd.toISOString());
+      if (currentFilters.recruiterId && currentFilters.recruiterId !== "__ALL_RECRUITERS__") query.append('recruiterId', currentFilters.recruiterId);
+
 
       const response = await fetch(`/api/candidates?${query.toString()}`);
       if (!response.ok) {
@@ -128,8 +151,9 @@ export function CandidatesPageClient({
   useEffect(() => {
     if (sessionStatus === 'authenticated' && !serverAuthError && !serverPermissionError) {
       fetchFilteredCandidatesOnClient(filters);
+      fetchRecruiters(); // Fetch recruiters when authenticated
     }
-  }, [filters, sessionStatus, serverAuthError, serverPermissionError, fetchFilteredCandidatesOnClient]);
+  }, [filters, sessionStatus, serverAuthError, serverPermissionError, fetchFilteredCandidatesOnClient, fetchRecruiters]);
 
    useEffect(() => {
     if (sessionStatus === 'unauthenticated' && !serverAuthError && !serverPermissionError) {
@@ -303,9 +327,9 @@ export function CandidatesPageClient({
        "[]", "[]", "[]", "[]", "[]"
       ]
     ];
-     let csvContent = headers.join(',') + '\n';
+     let csvContent = headers.join(',') + '\\n';
     exampleRows.forEach(row => {
-        csvContent += row.map(val => `"${String(val || '').replace(/"/g, '""')}"`).join(',') + '\n';
+        csvContent += row.map(val => `"${String(val || '').replace(/"/g, '""')}"`).join(',') + '\\n';
     });
     csvContent += "\nNOTE: For array fields (education, experience, skills, job_suitable, job_matches), provide a valid JSON string representation of the array of objects, or leave blank (e.g., []).";
 
@@ -323,6 +347,12 @@ export function CandidatesPageClient({
       if (filters.name) query.append('name', filters.name);
       if (filters.positionId && filters.positionId !== "__ALL_POSITIONS__") query.append('positionId', filters.positionId);
       if (filters.status && filters.status !== "all") query.append('status', filters.status);
+      // Add new filters to export query if needed
+      if (filters.email) query.append('email', filters.email);
+      if (filters.phone) query.append('phone', filters.phone);
+      if (filters.applicationDateStart) query.append('applicationDateStart', filters.applicationDateStart.toISOString());
+      if (filters.applicationDateEnd) query.append('applicationDateEnd', filters.applicationDateEnd.toISOString());
+      if (filters.recruiterId && filters.recruiterId !== "__ALL_RECRUITERS__") query.append('recruiterId', filters.recruiterId);
 
 
       const response = await fetch(`/api/candidates/export?${query.toString()}`);
@@ -378,7 +408,7 @@ export function CandidatesPageClient({
         <div className="w-full flex flex-col sm:flex-row gap-2 items-center sm:justify-end">
           <Button onClick={() => setIsCreateViaN8nModalOpen(true)} className="w-full sm:w-auto btn-primary-gradient"> <Zap className="mr-2 h-4 w-4" /> Create via Resume (Automated) </Button>
           <DropdownMenu>
-            <DropdownMenuTrigger asChild><Button variant="outline" className="w-full sm:w-auto"> More Actions <ChevronDown className="ml-2 h-4 w-4" /> </Button></DropdownMenuTrigger>
+             <DropdownMenuTrigger asChild><Button variant="outline" className="w-full sm:w-auto"> More Actions <ChevronDown className="ml-2 h-4 w-4" /> </Button></DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuItem onClick={() => setIsAddModalOpen(true)}> <PlusCircle className="mr-2 h-4 w-4" /> Add Candidate Manually </DropdownMenuItem>
               {canImportCandidates && (<DropdownMenuItem onClick={() => setIsImportModalOpen(true)}> <FileUp className="mr-2 h-4 w-4" /> Import Candidates (CSV) </DropdownMenuItem>)}
@@ -389,7 +419,14 @@ export function CandidatesPageClient({
         </div>
       </div>
 
-      <CandidateFilters initialFilters={filters} onFilterChange={handleFilterChange} availablePositions={availablePositions} availableStages={availableStages} isLoading={isLoading && allCandidates.length > 0} />
+      <CandidateFilters 
+        initialFilters={filters} 
+        onFilterChange={handleFilterChange} 
+        availablePositions={availablePositions} 
+        availableStages={availableStages} 
+        availableRecruiters={availableRecruiters}
+        isLoading={isLoading && allCandidates.length > 0} 
+      />
 
       {isLoading && allCandidates.length === 0 && !fetchError ? ( <div className="flex flex-col items-center justify-center h-64 border rounded-lg bg-card shadow"> <Users className="w-16 h-16 text-muted-foreground animate-pulse mb-4" /> <h3 className="text-xl font-semibold text-foreground">Loading Candidates...</h3> <p className="text-muted-foreground">Please wait while we fetch the data.</p> </div>
       ) : (
@@ -404,3 +441,5 @@ export function CandidatesPageClient({
     </div>
   );
 }
+
+    

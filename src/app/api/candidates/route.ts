@@ -94,7 +94,6 @@ const createCandidateSchema = z.object({
   parsedData: candidateDetailsSchema.optional(),
   custom_attributes: z.record(z.any()).optional().nullable(),
   resumePath: z.string().optional().nullable(),
-  // avatarUrl and dataAiHint will be handled by candidate avatar upload endpoint
 });
 
 export async function GET(request: NextRequest) {
@@ -105,20 +104,22 @@ export async function GET(request: NextRequest) {
   if (!userId) {
     return NextResponse.json({ message: "Unauthorized: User session required." }, { status: 401 });
   }
-  // Admins can see all, Recruiters can see all if they have CANDIDATES_VIEW, otherwise only their own.
-  // Hiring Managers need CANDIDATES_VIEW to see any.
   const canViewAll = userRole === 'Admin' || (session.user.modulePermissions?.includes('CANDIDATES_VIEW'));
-
 
   try {
     const { searchParams } = new URL(request.url);
     const nameFilter = searchParams.get('name');
     const positionIdFilter = searchParams.get('positionId');
-    const statusFilter = searchParams.get('status'); // New
+    const statusFilter = searchParams.get('status');
     const educationFilter = searchParams.get('education');
     const minFitScoreParam = searchParams.get('minFitScore');
     const maxFitScoreParam = searchParams.get('maxFitScore');
-    const assignedRecruiterIdParam = searchParams.get('assignedRecruiterId');
+    const emailFilter = searchParams.get('email');
+    const phoneFilter = searchParams.get('phone');
+    const applicationDateStartFilter = searchParams.get('applicationDateStart');
+    const applicationDateEndFilter = searchParams.get('applicationDateEnd');
+    const recruiterIdFilter = searchParams.get('recruiterId'); // Renamed from assignedRecruiterIdParam
+    const assignedRecruiterIdParam = searchParams.get('assignedRecruiterId'); // Keep for My Tasks page if needed
 
     let query = `
       SELECT
@@ -151,52 +152,36 @@ export async function GET(request: NextRequest) {
     const queryParams = [];
     let paramIndex = 1;
 
-    if (nameFilter) {
-      conditions.push(`c.name ILIKE $${paramIndex++}`);
-      queryParams.push(`%${nameFilter}%`);
-    }
-    if (positionIdFilter) {
-      conditions.push(`c."positionId" = $${paramIndex++}`);
-      queryParams.push(positionIdFilter);
-    }
-    if (statusFilter) { // New
-      conditions.push(`c.status = $${paramIndex++}`);
-      queryParams.push(statusFilter);
-    }
-    if (educationFilter) {
-      conditions.push(`c."parsedData"::text ILIKE $${paramIndex++}`);
-      queryParams.push(`%${educationFilter}%`);
-    }
-    if (minFitScoreParam) {
-      const minFitScore = parseInt(minFitScoreParam, 10);
-      if (!isNaN(minFitScore)) {
-        conditions.push(`c."fitScore" >= $${paramIndex++}`);
-        queryParams.push(minFitScore);
-      }
-    }
-    if (maxFitScoreParam) {
-      const maxFitScore = parseInt(maxFitScoreParam, 10);
-      if (!isNaN(maxFitScore)) {
-        conditions.push(`c."fitScore" <= $${paramIndex++}`);
-        queryParams.push(maxFitScore);
-      }
-    }
+    if (nameFilter) { conditions.push(`c.name ILIKE $${paramIndex++}`); queryParams.push(`%${nameFilter}%`); }
+    if (positionIdFilter) { conditions.push(`c."positionId" = $${paramIndex++}`); queryParams.push(positionIdFilter); }
+    if (statusFilter) { conditions.push(`c.status = $${paramIndex++}`); queryParams.push(statusFilter); }
+    if (educationFilter) { conditions.push(`c."parsedData"::text ILIKE $${paramIndex++}`); queryParams.push(`%${educationFilter}%`); }
+    if (minFitScoreParam) { const minFitScore = parseInt(minFitScoreParam, 10); if (!isNaN(minFitScore)) { conditions.push(`c."fitScore" >= $${paramIndex++}`); queryParams.push(minFitScore); } }
+    if (maxFitScoreParam) { const maxFitScore = parseInt(maxFitScoreParam, 10); if (!isNaN(maxFitScore)) { conditions.push(`c."fitScore" <= $${paramIndex++}`); queryParams.push(maxFitScore); } }
+    if (emailFilter) { conditions.push(`c.email ILIKE $${paramIndex++}`); queryParams.push(`%${emailFilter}%`); }
+    if (phoneFilter) { conditions.push(`c.phone ILIKE $${paramIndex++}`); queryParams.push(`%${phoneFilter}%`); }
+    if (applicationDateStartFilter) { conditions.push(`c."applicationDate" >= $${paramIndex++}`); queryParams.push(new Date(applicationDateStartFilter).toISOString()); }
+    if (applicationDateEndFilter) { const endDate = new Date(applicationDateEndFilter); endDate.setHours(23, 59, 59, 999); conditions.push(`c."applicationDate" <= $${paramIndex++}`); queryParams.push(endDate.toISOString()); }
+    if (recruiterIdFilter) { conditions.push(`c."recruiterId" = $${paramIndex++}`); queryParams.push(recruiterIdFilter); }
 
-    if (assignedRecruiterIdParam) {
-      if (assignedRecruiterIdParam === 'me') {
+
+    // Handling for My Tasks page specific filter (assignedRecruiterIdParam)
+    const finalRecruiterFilterParam = recruiterIdFilter || assignedRecruiterIdParam; // Prefer specific filter if both present
+
+    if (finalRecruiterFilterParam) {
+      if (finalRecruiterFilterParam === 'me') {
         conditions.push(`c."recruiterId" = $${paramIndex++}`);
         queryParams.push(userId);
-      } else if (z.string().uuid().safeParse(assignedRecruiterIdParam).success) {
-        if (!canViewAll && userRole !== 'Admin') { // Non-Admins cannot filter by other specific recruiters unless they have broad view perm
+      } else if (z.string().uuid().safeParse(finalRecruiterFilterParam).success) {
+        if (!canViewAll && userRole !== 'Admin') {
           return NextResponse.json({ message: "Forbidden: Insufficient permissions to filter by specific recruiter." }, { status: 403 });
         }
         conditions.push(`c."recruiterId" = $${paramIndex++}`);
-        queryParams.push(assignedRecruiterIdParam);
-      } else if (assignedRecruiterIdParam === 'ALL_CANDIDATES_ADMIN') {
+        queryParams.push(finalRecruiterFilterParam);
+      } else if (finalRecruiterFilterParam === 'ALL_CANDIDATES_ADMIN') {
         if (userRole !== 'Admin') {
           return NextResponse.json({ message: "Forbidden: Only Admins can view all candidates without recruiter filter." }, { status: 403 });
         }
-        // No recruiterId condition added for this case
       }
     } else {
       // Default behavior: If not Admin and no explicit "all candidates" admin filter, and no CANDIDATES_VIEW permission, filter by own ID for Recruiters.
@@ -452,3 +437,5 @@ export async function POST(request: NextRequest) {
     client.release();
   }
 }
+
+    
