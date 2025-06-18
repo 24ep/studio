@@ -185,7 +185,6 @@ export default function DataModelsPage() {
     } catch (error) {
       console.error("Error loading preferences from server:", error);
       setFetchError((error as Error).message);
-      // Keep existing client-side state or initialize empty if first load failed
       if (Object.keys(candidatePrefs).length === 0 && Object.keys(positionPrefs).length === 0) {
         setCandidatePrefs({});
         setPositionPrefs({});
@@ -193,7 +192,7 @@ export default function DataModelsPage() {
     } finally {
       setIsLoadingData(false);
     }
-  }, [session?.user?.id, candidatePrefs, positionPrefs]); // Added deps
+  }, [session?.user?.id, candidatePrefs, positionPrefs]);
 
   useEffect(() => {
     setIsClient(true);
@@ -202,7 +201,7 @@ export default function DataModelsPage() {
     } else if (sessionStatus === 'authenticated') {
       if (session.user.role !== 'Admin' && !session.user.modulePermissions?.includes('USER_PREFERENCES_MANAGE')) {
         setFetchError("You do not have permission to manage data model preferences.");
-        setIsLoadingData(false); // Corrected from setIsLoading to setIsLoadingData
+        setIsLoadingData(false); 
       } else {
         loadPreferencesFromServer();
       }
@@ -233,7 +232,7 @@ export default function DataModelsPage() {
 
     Object.entries(candidatePrefs).forEach(([key, pref]) => {
       prefsToSave.push({
-        userId: session.user.id, // This should be the current user's ID
+        userId: session.user.id,
         modelType: 'Candidate',
         attributeKey: key,
         uiPreference: pref.uiPreference || 'Standard',
@@ -260,8 +259,8 @@ export default function DataModelsPage() {
         const errorData = await response.json().catch(() => ({ message: 'Failed to save preferences to server' }));
         throw new Error(errorData.message);
       }
-      toast({ title: 'Preferences Saved', description: 'Your data model display preferences have been saved to the server.' });
-      loadPreferencesFromServer(); // Refresh from server
+      toast({ title: 'Preferences Saved', description: 'Your data model display preferences have been saved.' });
+      loadPreferencesFromServer(); 
     } catch (error) {
       console.error("Error saving preferences to server:", error);
       toast({title: "Error Saving", description: (error as Error).message, variant: "destructive"});
@@ -271,14 +270,10 @@ export default function DataModelsPage() {
   };
   
   if (sessionStatus === 'loading' || (isLoadingData && !fetchError && !isClient)) {
-    return (
-        <div className="flex h-screen w-screen items-center justify-center bg-background fixed inset-0 z-50">
-            <Loader2 className="h-16 w-16 animate-spin text-primary" />
-        </div>
-    );
+    return ( <div className="flex h-screen w-screen items-center justify-center bg-background fixed inset-0 z-50"> <Loader2 className="h-16 w-16 animate-spin text-primary" /> </div> );
   }
 
-  if (fetchError && !isLoadingData) { // Ensure we don't show error if still initially loading
+  if (fetchError && !isLoadingData) {
     return (
       <div className="flex flex-col items-center justify-center h-[calc(100vh-10rem)] text-center p-4">
         <ShieldAlert className="w-16 h-16 text-destructive mb-4" />
@@ -298,8 +293,7 @@ export default function DataModelsPage() {
         <CardHeader>
           <CardTitle className="flex items-center"><DatabaseZap className="mr-2 h-6 w-6 text-primary"/>Data Model Preferences</CardTitle>
           <CardDescription>
-            View attributes of your core data models (Candidate, Position) and set your UI display preferences or custom notes.
-            These settings are now saved on the server for your user account.
+            View attributes of your core data models (Candidate, Position) and set your UI display preferences or custom notes. These settings are saved for your user account.
           </CardDescription>
         </CardHeader>
       </Card>

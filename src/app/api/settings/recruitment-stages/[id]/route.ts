@@ -9,7 +9,7 @@ import type { RecruitmentStage } from '@/lib/types';
 import { logAudit } from '@/lib/auditLog';
 
 const updateRecruitmentStageSchema = z.object({
-  name: z.string().min(1, { message: "Stage name is required" }).max(100).optional(), // Optional: system stages can't rename name
+  name: z.string().min(1, { message: "Stage name is required" }).max(100).optional(),
   description: z.string().optional().nullable(),
   sort_order: z.number().int().optional(),
 });
@@ -115,10 +115,13 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
     return NextResponse.json({ message: "Forbidden: Insufficient permissions" }, { status: 403 });
   }
 
+  const { searchParams } = new URL(request.url);
+  const replacementStageName = searchParams.get('replacementStageName');
+
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
-    const stageResult = await client.query('SELECT name, is_system FROM "RecruitmentStage" WHERE id = $1 FOR UPDATE', [params.id]);
+    const stageResult = await client.query('SELECT id, name, is_system FROM "RecruitmentStage" WHERE id = $1 FOR UPDATE', [params.id]);
     if (stageResult.rows.length === 0) {
       await client.query('ROLLBACK');
       return NextResponse.json({ message: "Recruitment stage not found" }, { status: 404 });
@@ -131,28 +134,37 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
       return NextResponse.json({ message: "System stages cannot be deleted." }, { status: 400 });
     }
 
-    // Check if stage is in use by candidates
+    // Check if stage is in use
     const candidateCheck = await client.query('SELECT 1 FROM "Candidate" WHERE status = $1 LIMIT 1', [stageToDelete.name]);
-    if (candidateCheck.rows.length > 0) {
-      await client.query('ROLLBACK');
-      await logAudit('WARN', `Attempt to delete recruitment stage '${stageToDelete.name}' (ID: ${params.id}) which is in use, by ${session.user.name}. Denied.`, 'API:RecruitmentStages:Delete', session.user.id, { targetStageId: params.id });
-      return NextResponse.json({ message: "Cannot delete stage: It is currently in use by one or more candidates." }, { status: 409 });
-    }
-     // Check if stage is in use by transition records (less likely to be an issue than current status but good to check)
     const transitionCheck = await client.query('SELECT 1 FROM "TransitionRecord" WHERE stage = $1 LIMIT 1', [stageToDelete.name]);
-    if (transitionCheck.rows.length > 0) {
+    const isInUse = candidateCheck.rows.length > 0 || transitionCheck.rows.length > 0;
+
+    if (isInUse && !replacementStageName) {
       await client.query('ROLLBACK');
-      await logAudit('WARN', `Attempt to delete recruitment stage '${stageToDelete.name}' (ID: ${params.id}) which is in use in transition history, by ${session.user.name}. Denied.`, 'API:RecruitmentStages:Delete', session.user.id, { targetStageId: params.id });
-      return NextResponse.json({ message: "Cannot delete stage: It is referenced in candidate transition history. Consider deactivating or renaming." }, { status: 409 });
+      await logAudit('INFO', `Attempt to delete recruitment stage '${stageToDelete.name}' (ID: ${params.id}) which is in use, by ${session.user.name}. Needs replacement.`, 'API:RecruitmentStages:Delete', session.user.id, { targetStageId: params.id });
+      return NextResponse.json({ message: "Stage is in use. Please provide a replacement stage to migrate records.", needsReplacement: true }, { status: 409 });
     }
 
+    if (isInUse && replacementStageName) {
+      const replacementStageResult = await client.query('SELECT id, name FROM "RecruitmentStage" WHERE name = $1 AND id != $2 AND is_system = FALSE', [replacementStageName, stageToDelete.id]);
+      if (replacementStageResult.rows.length === 0) {
+        await client.query('ROLLBACK');
+        return NextResponse.json({ message: `Invalid replacement stage: "${replacementStageName}" not found or is the same stage or a system stage.` }, { status: 400 });
+      }
+      const validReplacementStage = replacementStageResult.rows[0];
+
+      // Migrate candidates
+      await client.query('UPDATE "Candidate" SET status = $1, "updatedAt" = NOW() WHERE status = $2', [validReplacementStage.name, stageToDelete.name]);
+      // Migrate transition records
+      await client.query('UPDATE "TransitionRecord" SET stage = $1, "updatedAt" = NOW() WHERE stage = $2', [validReplacementStage.name, stageToDelete.name]);
+      await logAudit('AUDIT', `Recruitment stage '${stageToDelete.name}' (ID: ${params.id}) data migrated to '${validReplacementStage.name}' by ${session.user.name}.`, 'API:RecruitmentStages:Migrate', session.user.id, { oldStage: stageToDelete.name, newStage: validReplacementStage.name });
+    }
 
     const deleteResult = await client.query('DELETE FROM "RecruitmentStage" WHERE id = $1', [params.id]);
     await client.query('COMMIT');
 
     if (deleteResult.rowCount === 0) {
-        // Should not happen if previous check passed, but as a safeguard
-        return NextResponse.json({ message: "Recruitment stage not found or already deleted" }, { status: 404 });
+        return NextResponse.json({ message: "Recruitment stage not found or already deleted during transaction" }, { status: 404 });
     }
     await logAudit('AUDIT', `Recruitment stage '${stageToDelete.name}' (ID: ${params.id}) deleted by ${session.user.name}.`, 'API:RecruitmentStages:Delete', session.user.id, { targetStageId: params.id, deletedStageName: stageToDelete.name });
     return NextResponse.json({ message: "Recruitment stage deleted successfully" }, { status: 200 });
@@ -166,4 +178,3 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
     client.release();
   }
 }
-    

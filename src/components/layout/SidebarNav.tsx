@@ -3,7 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Users, Briefcase, Settings, UsersRound, Code2, ListOrdered, Palette, Zap, ListTodo, DatabaseZap, SlidersHorizontal, KanbanSquare, Settings2, UserCog } from "lucide-react"; 
+import { LayoutDashboard, Users, Briefcase, Settings, UsersRound, Code2, ListOrdered, Palette, Zap, ListTodo, DatabaseZap, SlidersHorizontal, KanbanSquare, Settings2, UserCog, FileUp, FileDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   SidebarMenu,
@@ -38,11 +38,11 @@ const baseSettingsSubItems = [
   { href: "/settings/preferences", label: "Preferences", icon: Palette },
   { href: "/settings/integrations", label: "Integrations", icon: Zap },
   { href: "/settings/stages", label: "Recruitment Stages", icon: KanbanSquare, permissionId: 'RECRUITMENT_STAGES_MANAGE' as PlatformModuleId },
-  { href: "/settings/data-models", label: "Data Models (Client)", icon: DatabaseZap, permissionId: 'DATA_MODELS_MANAGE' as PlatformModuleId },
-  { href: "/settings/custom-fields", label: "Custom Fields (Server)", icon: Settings2, permissionId: 'CUSTOM_FIELDS_MANAGE' as PlatformModuleId },
+  { href: "/settings/data-models", label: "Data Model Preferences", icon: DatabaseZap, permissionId: 'USER_PREFERENCES_MANAGE' as PlatformModuleId },
+  { href: "/settings/custom-fields", label: "Custom Field Definitions", icon: Settings2, permissionId: 'CUSTOM_FIELDS_MANAGE' as PlatformModuleId },
   { href: "/settings/webhook-mapping", label: "Webhook Payload Mapping", icon: SlidersHorizontal, permissionId: 'WEBHOOK_MAPPING_MANAGE' as PlatformModuleId },
   { href: "/users", label: "Manage Users", icon: UsersRound, adminOnly: true },
-  { href: "/settings/user-groups", label: "Manage User Groups", icon: UserCog, permissionId: 'USER_GROUPS_MANAGE' as PlatformModuleId, adminOnlyOrPermission: true }, // New item
+  { href: "/settings/user-groups", label: "Manage User Groups", icon: UserCog, permissionId: 'USER_GROUPS_MANAGE' as PlatformModuleId, adminOnlyOrPermission: true },
   { href: "/api-docs", label: "API Docs", icon: Code2 },
   { href: "/logs", label: "Logs", icon: ListOrdered, adminOnly: true },
 ];
@@ -63,7 +63,7 @@ export function SidebarNav() {
   const canAccess = (item: { adminOnly?: boolean, permissionId?: PlatformModuleId, adminOnlyOrPermission?: boolean }) => {
     if (!isClient || sessionStatus !== 'authenticated') return false;
     if (item.adminOnly && userRole !== 'Admin') return false;
-    if (item.adminOnlyOrPermission) { // If true, user needs to be Admin OR have the permission
+    if (item.adminOnlyOrPermission) { 
       if (userRole === 'Admin') return true;
       if (item.permissionId && modulePermissions.includes(item.permissionId)) return true;
       return false;
@@ -123,18 +123,11 @@ export function SidebarNav() {
                 isActive={pathname === item.href || (item.href !== "/" && pathname.startsWith(item.href))}
                 className="w-full justify-start"
                 tooltip={item.label}
-                onClick={() => {
-                  if (accordionValue === "settings-group" && !currentClientIsSettingsSectionActive) {
-                     setAccordionValue(undefined);
-                  }
-                }}
+                onClick={() => { if (accordionValue === "settings-group" && !currentClientIsSettingsSectionActive) { setAccordionValue(undefined); } }}
                 size="default"
                 data-active={pathname === item.href || (item.href !== "/" && pathname.startsWith(item.href))}
               >
-                <a>
-                  <item.icon className="h-5 w-5" />
-                  <span className="truncate">{item.label}</span>
-                </a>
+                <a> <item.icon className="h-5 w-5" /> <span className="truncate">{item.label}</span> </a>
               </SidebarMenuButton>
             </Link>
           </SidebarMenuItem>
@@ -148,67 +141,34 @@ export function SidebarNav() {
                 isActive={isMyTaskBoardActive}
                 className="w-full justify-start"
                 tooltip={myTaskBoardNavItem.label}
-                 onClick={() => {
-                   if (accordionValue === "settings-group" && !currentClientIsSettingsSectionActive) {
-                    setAccordionValue(undefined);
-                   }
-                 }}
+                 onClick={() => { if (accordionValue === "settings-group" && !currentClientIsSettingsSectionActive) { setAccordionValue(undefined); } }}
                 size="default"
                 data-active={isMyTaskBoardActive}
               >
-                <a>
-                  <myTaskBoardNavItem.icon className="h-5 w-5" />
-                  <span className="truncate">{myTaskBoardNavItem.label}</span>
-                </a>
+                <a> <myTaskBoardNavItem.icon className="h-5 w-5" /> <span className="truncate">{myTaskBoardNavItem.label}</span> </a>
               </SidebarMenuButton>
             </Link>
           </SidebarMenuItem>
         )}
 
         <SidebarMenuItem className="mt-auto">
-          <Accordion
-            type="single"
-            collapsible
-            className="w-full"
-            value={accordionValue}
-            onValueChange={setAccordionValue}
-          >
+          <Accordion type="single" collapsible className="w-full" value={accordionValue} onValueChange={setAccordionValue} >
             <AccordionItem value="settings-group" className="border-b-0">
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <AccordionTrigger
-                    className={cn(
-                      "flex w-full items-center gap-2 overflow-hidden rounded-md px-3 py-2 text-left text-sm outline-none ring-sidebar-ring transition-all focus-visible:ring-2 active:bg-sidebar-accent active:text-sidebar-accent-foreground disabled:pointer-events-none disabled:opacity-50",
-                      "my-1 justify-between group-data-[collapsible=icon]:!size-8 group-data-[collapsible=icon]:!p-2",
-                      "hover:no-underline"
-                    )}
-                    data-active={initialIsSettingsSectionActive}
-                  >
-                    <div className="flex items-center gap-2 group-data-[collapsible=icon]:hidden">
-                      <Settings className="h-5 w-5" />
-                      <span className="truncate">Settings</span>
-                    </div>
-                    <div className="hidden items-center justify-center group-data-[collapsible=icon]:flex">
-                      <Settings className="h-5 w-5" />
-                    </div>
+                  <AccordionTrigger className={cn( "flex w-full items-center gap-2 overflow-hidden rounded-md px-3 py-2 text-left text-sm outline-none ring-sidebar-ring transition-all focus-visible:ring-2 active:bg-sidebar-accent active:text-sidebar-accent-foreground disabled:pointer-events-none disabled:opacity-50", "my-1 justify-between group-data-[collapsible=icon]:!size-8 group-data-[collapsible=icon]:!p-2", "hover:no-underline" )} data-active={initialIsSettingsSectionActive} >
+                    <div className="flex items-center gap-2 group-data-[collapsible=icon]:hidden"> <Settings className="h-5 w-5" /> <span className="truncate">Settings</span> </div>
+                    <div className="hidden items-center justify-center group-data-[collapsible=icon]:flex"> <Settings className="h-5 w-5" /> </div>
                   </AccordionTrigger>
                 </TooltipTrigger>
-                <TooltipContent side="right" align="center" hidden={sidebarState !== "collapsed" || isMobile}>
-                  Settings
-                </TooltipContent>
+                <TooltipContent side="right" align="center" hidden={sidebarState !== "collapsed" || isMobile}> Settings </TooltipContent>
               </Tooltip>
               <AccordionContent className="pt-1 pb-0 pl-3 pr-0 group-data-[collapsible=icon]:hidden">
                 <SidebarMenu className="flex flex-col gap-0.5 py-0">
                   {isClient && clientSettingsSubItems.map((item) => (
                     <SidebarMenuItem key={item.href}>
                       <Link href={item.href} passHref legacyBehavior>
-                        <SidebarMenuButton
-                          isActive={pathname.startsWith(item.href)}
-                          className="w-full justify-start"
-                          size="sm"
-                          tooltip={item.label}
-                          data-active={pathname.startsWith(item.href)}
-                        >
+                        <SidebarMenuButton isActive={pathname.startsWith(item.href)} className="w-full justify-start" size="sm" tooltip={item.label} data-active={pathname.startsWith(item.href)} >
                           {item.icon && <item.icon className="h-4 w-4 ml-[1px]" />}
                           <span className="truncate">{item.label}</span>
                         </SidebarMenuButton>

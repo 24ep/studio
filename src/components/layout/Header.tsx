@@ -11,13 +11,13 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Sun, Moon, LogOut, UserCircle, LogIn } from "lucide-react"; 
+import { Sun, Moon, LogOut, UserCircle, LogIn, KeyRound } from "lucide-react"; 
 import { useSession, signIn, signOut } from "next-auth/react";
 import { useEffect, useState } from "react";
+import { ChangePasswordModal } from '@/components/auth/ChangePasswordModal';
 
-// Key for app name stored in localStorage by Preferences page
 const APP_CONFIG_APP_NAME_KEY = 'appConfigAppName';
-const DEFAULT_APP_NAME = "CandiTrack"; // Fallback default
+const DEFAULT_APP_NAME = "CandiTrack";
 
 export function Header({ pageTitle: initialPageTitle }: { pageTitle: string }) {
   const { isMobile } = useSidebar();
@@ -25,12 +25,12 @@ export function Header({ pageTitle: initialPageTitle }: { pageTitle: string }) {
   const [mounted, setMounted] = useState(false);
   const [currentAppName, setCurrentAppName] = useState<string>(DEFAULT_APP_NAME);
   const [effectivePageTitle, setEffectivePageTitle] = useState(initialPageTitle);
+  const [isChangePasswordModalOpen, setIsChangePasswordModalOpen] = useState(false);
 
 
   useEffect(() => setMounted(true), []);
 
   useEffect(() => {
-    // Update app name from localStorage if on client
     if (typeof window !== 'undefined') {
       const storedAppName = localStorage.getItem(APP_CONFIG_APP_NAME_KEY);
       setCurrentAppName(storedAppName || DEFAULT_APP_NAME);
@@ -38,8 +38,6 @@ export function Header({ pageTitle: initialPageTitle }: { pageTitle: string }) {
   }, []);
 
   useEffect(() => {
-    // Update effective page title when initialPageTitle or currentAppName changes
-    // This ensures the title is correct even if appName is loaded after initial render
     if (initialPageTitle === DEFAULT_APP_NAME && currentAppName !== DEFAULT_APP_NAME) {
       setEffectivePageTitle(currentAppName);
     } else {
@@ -49,8 +47,6 @@ export function Header({ pageTitle: initialPageTitle }: { pageTitle: string }) {
 
   const toggleTheme = () => {
     document.documentElement.classList.toggle('dark');
-    // Optionally, save theme preference to localStorage here if desired
-    // localStorage.setItem('appTheme', document.documentElement.classList.contains('dark') ? 'dark' : 'light');
   };
 
   if (!mounted || status === "loading") { 
@@ -71,51 +67,60 @@ export function Header({ pageTitle: initialPageTitle }: { pageTitle: string }) {
   const user = session?.user;
 
   return (
-    <header className="flex h-16 items-center justify-between border-b bg-card px-4 md:px-6 sticky top-0 z-30">
-      <div className="flex items-center gap-2">
-        {isMobile && <SidebarTrigger />}
-        <h1 className="text-lg font-semibold text-foreground">{effectivePageTitle}</h1>
-      </div>
-      <div className="flex items-center gap-3">
-        <Button variant="ghost" size="icon" onClick={toggleTheme} aria-label="Toggle theme">
-          <Sun className="h-5 w-5 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
-          <Moon className="absolute h-5 w-5 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
-        </Button>
-        {user ? (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="relative h-10 w-10 rounded-full">
-                <Avatar className="h-9 w-9">
-                  <AvatarImage src={user.image || undefined} alt={user.name || "User"} data-ai-hint={user.image ? undefined : "profile person"} />
-                  <AvatarFallback>{user.name ? user.name.charAt(0).toUpperCase() : <UserCircle className="h-5 w-5"/>}</AvatarFallback>
-                </Avatar>
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-56">
-              <DropdownMenuLabel className="font-normal">
-                <div className="flex flex-col space-y-1">
-                  <p className="text-sm font-medium leading-none">{user.name || "User"}</p>
-                  {user.email && (
-                    <p className="text-xs leading-none text-muted-foreground">
-                      {user.email}
-                    </p>
-                  )}
-                </div>
-              </DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => signOut()}>
-                <LogOut className="mr-2 h-4 w-4" />
-                Log out
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        ) : (
-          <Button variant="outline" onClick={() => signIn()}>
-            <LogIn className="mr-2 h-4 w-4" />
-            Sign In
+    <>
+      <header className="flex h-16 items-center justify-between border-b bg-card px-4 md:px-6 sticky top-0 z-30">
+        <div className="flex items-center gap-2">
+          {isMobile && <SidebarTrigger />}
+          <h1 className="text-lg font-semibold text-foreground">{effectivePageTitle}</h1>
+        </div>
+        <div className="flex items-center gap-3">
+          <Button variant="ghost" size="icon" onClick={toggleTheme} aria-label="Toggle theme">
+            <Sun className="h-5 w-5 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
+            <Moon className="absolute h-5 w-5 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
           </Button>
-        )}
-      </div>
-    </header>
+          {user ? (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" className="relative h-10 w-10 rounded-full">
+                  <Avatar className="h-9 w-9">
+                    <AvatarImage src={user.image || undefined} alt={user.name || "User"} data-ai-hint={user.image ? undefined : "profile person"} />
+                    <AvatarFallback>{user.name ? user.name.charAt(0).toUpperCase() : <UserCircle className="h-5 w-5"/>}</AvatarFallback>
+                  </Avatar>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                <DropdownMenuLabel className="font-normal">
+                  <div className="flex flex-col space-y-1">
+                    <p className="text-sm font-medium leading-none">{user.name || "User"}</p>
+                    {user.email && ( <p className="text-xs leading-none text-muted-foreground"> {user.email} </p> )}
+                  </div>
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => setIsChangePasswordModalOpen(true)}>
+                  <KeyRound className="mr-2 h-4 w-4" />
+                  Change Password
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => signOut()}>
+                  <LogOut className="mr-2 h-4 w-4" />
+                  Log out
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          ) : (
+            <Button variant="outline" onClick={() => signIn()}>
+              <LogIn className="mr-2 h-4 w-4" />
+              Sign In
+            </Button>
+          )}
+        </div>
+      </header>
+      {user && (
+        <ChangePasswordModal 
+          isOpen={isChangePasswordModalOpen} 
+          onOpenChange={setIsChangePasswordModalOpen} 
+        />
+      )}
+    </>
   );
 }

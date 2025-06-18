@@ -3,7 +3,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Button, buttonVariants } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button"; 
 import { PlusCircle, Briefcase, Edit, Trash2, ServerCrash, Loader2, FileDown, FileUp, ChevronDown, FileSpreadsheet } from "lucide-react";
 import type { Position } from "@/lib/types";
 import { Badge } from "@/components/ui/badge";
@@ -63,6 +63,8 @@ export default function PositionsPage() {
   const [positionToDelete, setPositionToDelete] = useState<Position | null>(null);
   const { data: session, status: sessionStatus } = useSession();
 
+  const canImportPositions = session?.user?.role === 'Admin' || session?.user?.modulePermissions?.includes('POSITIONS_IMPORT');
+  const canExportPositions = session?.user?.role === 'Admin' || session?.user?.modulePermissions?.includes('POSITIONS_EXPORT');
 
   const fetchPositions = useCallback(async () => {
     if (sessionStatus !== 'authenticated') {
@@ -134,17 +136,10 @@ export default function PositionsPage() {
         const newPosition: Position = await response.json();
         setPositions(prev => [newPosition, ...prev].sort((a,b) => new Date(b.createdAt!).getTime() - new Date(a.createdAt!).getTime()));
         setIsAddModalOpen(false);
-        toast({
-            title: "Position Added",
-            description: `${newPosition.title} has been successfully added.`,
-        });
+        toast({ title: "Position Added", description: `${newPosition.title} has been successfully added.` });
     } catch (error) {
         console.error("Error adding position:", error);
-          toast({
-              title: "Error Adding Position",
-              description: (error as Error).message || "Could not add position.",
-              variant: "destructive",
-          });
+          toast({ title: "Error Adding Position", description: (error as Error).message, variant: "destructive" });
     }
   };
 
@@ -171,11 +166,7 @@ export default function PositionsPage() {
       toast({ title: "Position Updated", description: `Position "${updatedPosition.title}" has been updated.` });
     } catch (error) {
       console.error("Error updating position:", error);
-        toast({
-            title: "Error Updating Position",
-            description: (error as Error).message,
-            variant: "destructive",
-        });
+        toast({ title: "Error Updating Position", description: (error as Error).message, variant: "destructive" });
     }
   };
 
@@ -186,9 +177,7 @@ export default function PositionsPage() {
   const handleDeletePosition = async () => {
     if (!positionToDelete) return;
     try {
-      const response = await fetch(`/api/positions/${positionToDelete.id}`, {
-        method: 'DELETE',
-      });
+      const response = await fetch(`/api/positions/${positionToDelete.id}`, { method: 'DELETE' });
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({message: "Failed to delete position."}));
         throw new Error(errorData.message || `Failed to delete position: ${response.statusText}`);
@@ -197,33 +186,26 @@ export default function PositionsPage() {
       toast({ title: "Position Deleted", description: `Position "${positionToDelete.title}" has been deleted.` });
     } catch (error) {
       console.error("Error deleting position:", error);
-        toast({
-            title: "Error Deleting Position",
-            description: (error as Error).message,
-            variant: "destructive",
-        });
+        toast({ title: "Error Deleting Position", description: (error as Error).message, variant: "destructive" });
     } finally {
       setPositionToDelete(null);
     }
   };
 
-  const handleDownloadCsvTemplateGuide = () => {
+  const handleDownloadCsvTemplate = () => {
     const headers = ["title", "department", "description", "isOpen", "position_level"];
     const exampleRows = [
-        ["Software Engineer", "Technology", "Develop amazing software solutions.", "true", "Senior"],
-        ["Product Designer", "Design", "Create user-friendly product interfaces.", "true", "Mid-Level"],
-        ["Marketing Intern", "Marketing", "Assist with marketing campaigns.", "true", "Entry Level"],
-        ["Sales Director", "Sales", "Lead the sales team and strategy.", "false", "Executive"]
+        ["Software Engineer (Backend)", "Technology", "Develops robust backend services for our platform.", "true", "Senior"],
+        ["UX/UI Designer", "Design", "Creates intuitive and visually appealing user interfaces for web and mobile applications.", "true", "Mid-Level"],
+        ["Marketing Specialist", "Marketing", "Develops and executes marketing campaigns across various channels.", "true", "Entry Level"],
+        ["Sales Director", "Sales", "Leads the sales team, develops sales strategies, and manages key client accounts.", "false", "Executive"]
     ];
     let csvContent = headers.join(',') + '\n';
     exampleRows.forEach(row => {
-        csvContent += row.map(val => `"${val.replace(/"/g, '""')}"`).join(',') + '\n';
+        csvContent += row.map(val => `"${String(val || '').replace(/"/g, '""')}"`).join(',') + '\n';
     });
-    downloadFile(csvContent, 'positions_template_guide.csv', 'text/csv;charset=utf-8;');
-    toast({
-      title: "Template Guide Downloaded",
-      description: "A CSV template guide for positions has been downloaded.",
-    });
+    downloadFile(csvContent, 'positions_template.csv', 'text/csv;charset=utf-8;');
+    toast({ title: "Template Downloaded", description: "A CSV template for positions has been downloaded." });
   };
 
   const handleExportToCsv = async () => {
@@ -257,21 +239,10 @@ export default function PositionsPage() {
 
 
   if (sessionStatus === 'loading' || (sessionStatus === 'unauthenticated' && !pathname.startsWith('/auth/signin')) || (isLoading && !fetchError && positions.length === 0)) {
-    return (
-      <div className="flex h-screen w-screen items-center justify-center bg-background fixed inset-0 z-50">
-        <Loader2 className="h-16 w-16 animate-spin text-primary" />
-      </div>
-    );
+    return ( <div className="flex h-screen w-screen items-center justify-center bg-background fixed inset-0 z-50"> <Loader2 className="h-16 w-16 animate-spin text-primary" /> </div> );
   }
    if (authError) {
-    return (
-        <div className="flex flex-col items-center justify-center h-[calc(100vh-10rem)] text-center p-4">
-            <ServerCrash className="w-16 h-16 text-destructive mb-4" />
-            <h2 className="text-2xl font-semibold text-foreground mb-2">Access Denied</h2>
-            <p className="text-muted-foreground mb-4 max-w-md">You need to be signed in to view this page.</p>
-            <Button onClick={() => signIn(undefined, { callbackUrl: pathname })} className="btn-hover-primary-gradient">Sign In</Button>
-        </div>
-    );
+    return ( <div className="flex flex-col items-center justify-center h-[calc(100vh-10rem)] text-center p-4"> <ServerCrash className="w-16 h-16 text-destructive mb-4" /> <h2 className="text-2xl font-semibold text-foreground mb-2">Access Denied</h2> <p className="text-muted-foreground mb-4 max-w-md">You need to be signed in to view this page.</p> <Button onClick={() => signIn(undefined, { callbackUrl: pathname })} className="btn-hover-primary-gradient">Sign In</Button> </div> );
   }
 
   if (fetchError && !authError) {
@@ -281,13 +252,7 @@ export default function PositionsPage() {
         <ServerCrash className="w-16 h-16 text-destructive mb-4" />
         <h2 className="text-2xl font-semibold text-foreground mb-2">Error Loading Positions</h2>
         <p className="text-muted-foreground mb-4 max-w-md">{fetchError}</p>
-        {isMissingTableError && (
-            <div className="mb-6 p-4 border border-destructive bg-destructive/10 rounded-md text-sm">
-                <p className="font-semibold">It looks like the "Position" database table is missing.</p>
-                <p className="mt-1">This usually means the database initialization script (`pg-init-scripts/init-db.sql`) did not run correctly when the PostgreSQL Docker container started.</p>
-                <p className="mt-2">Please refer to the troubleshooting steps in the `README.md` for guidance on how to resolve this, typically involving a clean Docker volume reset.</p>
-            </div>
-        )}
+        {isMissingTableError && ( <div className="mb-6 p-4 border border-destructive bg-destructive/10 rounded-md text-sm"> <p className="font-semibold">It looks like the "Position" database table is missing.</p> <p className="mt-1">This usually means the database initialization script (`pg-init-scripts/init-db.sql`) did not run correctly when the PostgreSQL Docker container started.</p> <p className="mt-2">Please refer to the troubleshooting steps in the `README.md` for guidance on how to resolve this, typically involving a clean Docker volume reset.</p> </div> )}
         <Button onClick={fetchPositions} className="btn-hover-primary-gradient">Try Again</Button>
       </div>
     );
@@ -300,112 +265,45 @@ export default function PositionsPage() {
          <div className="w-full flex flex-col sm:flex-row gap-2 items-center sm:justify-start">
            <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" className="w-full sm:w-auto">
-                Import/Export <ChevronDown className="ml-2 h-4 w-4" />
-              </Button>
+              <Button variant="outline" className="w-full sm:w-auto"> Import/Export <ChevronDown className="ml-2 h-4 w-4" /> </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start">
-              <DropdownMenuItem onClick={() => setIsImportModalOpen(true)}>
-                  <FileUp className="mr-2 h-4 w-4" /> Import Positions (Excel/CSV)
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={handleDownloadCsvTemplateGuide}>
-                  <FileDown className="mr-2 h-4 w-4" /> Download CSV Template Guide
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={handleExportToCsv} disabled={isLoading}>
-                  <FileSpreadsheet className="mr-2 h-4 w-4" /> Export Positions (CSV)
-              </DropdownMenuItem>
+              {canImportPositions && (<DropdownMenuItem onClick={() => setIsImportModalOpen(true)}> <FileUp className="mr-2 h-4 w-4" /> Import Positions (CSV) </DropdownMenuItem>)}
+              {canImportPositions && (<DropdownMenuItem onClick={handleDownloadCsvTemplate}> <FileDown className="mr-2 h-4 w-4" /> Download CSV Template </DropdownMenuItem>)}
+              {canExportPositions && (<DropdownMenuItem onClick={handleExportToCsv} disabled={isLoading}> <FileSpreadsheet className="mr-2 h-4 w-4" /> Export Positions (CSV) </DropdownMenuItem>)}
             </DropdownMenuContent>
           </DropdownMenu>
          </div>
-        <Button onClick={() => setIsAddModalOpen(true)} className="w-full sm:w-auto btn-primary-gradient">
-          <PlusCircle className="mr-2 h-4 w-4" /> Add New Position
-        </Button>
+        <Button onClick={() => setIsAddModalOpen(true)} className="w-full sm:w-auto btn-primary-gradient"> <PlusCircle className="mr-2 h-4 w-4" /> Add New Position </Button>
       </div>
 
       <PositionFilters initialFilters={filters} onFilterChange={handleFilterChange} isLoading={isLoading} />
 
 
       <Card className="shadow-sm">
-        <CardHeader>
-          <CardTitle className="flex items-center">
-             <Briefcase className="mr-2 h-5 w-5 text-primary" /> Job Positions
-          </CardTitle>
-          <CardDescription>Manage job positions and their statuses.</CardDescription>
-        </CardHeader>
+        <CardHeader> <CardTitle className="flex items-center"> <Briefcase className="mr-2 h-5 w-5 text-primary" /> Job Positions </CardTitle> <CardDescription>Manage job positions and their statuses.</CardDescription> </CardHeader>
         <CardContent>
-          {isLoading && positions.length === 0 && !fetchError ? (
-            <div className="text-center py-10">
-              <Briefcase className="mx-auto h-12 w-12 text-muted-foreground animate-pulse" />
-              <p className="mt-4 text-muted-foreground">Loading positions...</p>
-            </div>
-          ) : !isLoading && positions.length === 0 && !fetchError ? (
-            <div className="text-center py-10">
-              <Briefcase className="mx-auto h-12 w-12 text-muted-foreground" />
-              <p className="mt-4 text-muted-foreground">No positions found. Try adjusting filters or add a new position.</p>
-              <Button onClick={() => setIsAddModalOpen(true)} className="mt-4 btn-primary-gradient">
-                <PlusCircle className="mr-2 h-4 w-4" /> Add New Position
-              </Button>
-            </div>
+          {isLoading && positions.length === 0 && !fetchError ? ( <div className="text-center py-10"> <Briefcase className="mx-auto h-12 w-12 text-muted-foreground animate-pulse" /> <p className="mt-4 text-muted-foreground">Loading positions...</p> </div>
+          ) : !isLoading && positions.length === 0 && !fetchError ? ( <div className="text-center py-10"> <Briefcase className="mx-auto h-12 w-12 text-muted-foreground" /> <p className="mt-4 text-muted-foreground">No positions found. Try adjusting filters or add a new position.</p> <Button onClick={() => setIsAddModalOpen(true)} className="mt-4 btn-primary-gradient"> <PlusCircle className="mr-2 h-4 w-4" /> Add New Position </Button> </div>
           ) : (
             <div className="border rounded-lg overflow-hidden">
             <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Title</TableHead>
-                  <TableHead>Department</TableHead>
-                  <TableHead>Level</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="hidden md:table-cell">Description</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
+              <TableHeader> <TableRow> <TableHead>Title</TableHead> <TableHead>Department</TableHead> <TableHead>Level</TableHead> <TableHead>Status</TableHead> <TableHead className="hidden md:table-cell">Description</TableHead> <TableHead className="text-right">Actions</TableHead> </TableRow> </TableHeader>
               <TableBody>
                 {positions.map((pos) => (
                   <TableRow key={pos.id} className="hover:bg-muted/50 transition-colors">
-                    <TableCell className="font-medium">
-                      <Link href={`/positions/${pos.id}`} passHref>
-                        <span className="hover:underline text-primary cursor-pointer">{pos.title}</span>
-                      </Link>
-                    </TableCell>
+                    <TableCell className="font-medium"> <Link href={`/positions/${pos.id}`} passHref> <span className="hover:underline text-primary cursor-pointer">{pos.title}</span> </Link> </TableCell>
                     <TableCell>{pos.department}</TableCell>
                     <TableCell>{pos.position_level || 'N/A'}</TableCell>
-                    <TableCell>
-                      <Badge variant={pos.isOpen ? "default" : "outline"} className={pos.isOpen ? "bg-green-500 hover:bg-green-600 text-primary-foreground" : ""}>
-                        {pos.isOpen ? "Open" : "Closed"}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-sm text-muted-foreground truncate max-w-xs hidden md:table-cell">
-                      {pos.description || "No description"}
-                    </TableCell>
+                    <TableCell> <Badge variant={pos.isOpen ? "default" : "outline"} className={pos.isOpen ? "bg-green-500 hover:bg-green-600 text-primary-foreground" : ""}> {pos.isOpen ? "Open" : "Closed"} </Badge> </TableCell>
+                    <TableCell className="text-sm text-muted-foreground truncate max-w-xs hidden md:table-cell"> {pos.description || "No description"} </TableCell>
                     <TableCell className="text-right">
-                      <Button variant="ghost" size="icon" className="mr-1 h-8 w-8" onClick={() => handleOpenEditModal(pos)}>
-                        <Edit className="h-4 w-4" />
-                        <span className="sr-only">Edit</span>
-                      </Button>
+                      <Button variant="ghost" size="icon" className="mr-1 h-8 w-8" onClick={() => handleOpenEditModal(pos)}> <Edit className="h-4 w-4" /> <span className="sr-only">Edit</span> </Button>
                        <AlertDialog>
                         <AlertDialogTrigger asChild>
-                           <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive h-8 w-8" onClick={() => confirmDeletePosition(pos)}>
-                            <Trash2 className="h-4 w-4" />
-                            <span className="sr-only">Delete</span>
-                          </Button>
+                           <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive h-8 w-8" onClick={() => confirmDeletePosition(pos)}> <Trash2 className="h-4 w-4" /> <span className="sr-only">Delete</span> </Button>
                         </AlertDialogTrigger>
-                        {positionToDelete && positionToDelete.id === pos.id && (
-                           <AlertDialogContent>
-                              <AlertDialogHeader>
-                                <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                                <AlertDialogDescription>
-                                  This action cannot be undone. This will permanently delete the position <strong>{positionToDelete.title}</strong>.
-                                  If there are candidates associated with this position, deletion might be blocked by the database.
-                                </AlertDialogDescription>
-                              </AlertDialogHeader>
-                              <AlertDialogFooter>
-                                <AlertDialogCancel onClick={() => setPositionToDelete(null)}>Cancel</AlertDialogCancel>
-                                <AlertDialogAction onClick={handleDeletePosition} className={buttonVariants({ variant: "destructive" })}>
-                                  Delete Position
-                                </AlertDialogAction>
-                              </AlertDialogFooter>
-                            </AlertDialogContent>
-                        )}
+                        {positionToDelete && positionToDelete.id === pos.id && ( <AlertDialogContent> <AlertDialogHeader> <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle> <AlertDialogDescription> This action cannot be undone. This will permanently delete the position <strong>{positionToDelete.title}</strong>. If there are candidates associated with this position, deletion might be blocked by the database. </AlertDialogDescription> </AlertDialogHeader> <AlertDialogFooter> <AlertDialogCancel onClick={() => setPositionToDelete(null)}>Cancel</AlertDialogCancel> <AlertDialogAction onClick={handleDeletePosition} className={buttonVariants({ variant: "destructive" })}> Delete Position </AlertDialogAction> </AlertDialogFooter> </AlertDialogContent> )}
                       </AlertDialog>
                     </TableCell>
                   </TableRow>
@@ -416,27 +314,9 @@ export default function PositionsPage() {
           )}
         </CardContent>
       </Card>
-       <AddPositionModal
-        isOpen={isAddModalOpen}
-        onOpenChange={setIsAddModalOpen}
-        onAddPosition={handleAddPositionSubmit}
-      />
-      {selectedPositionForEdit && (
-        <EditPositionModal
-            isOpen={isEditModalOpen}
-            onOpenChange={(isOpen) => {
-                setIsEditModalOpen(isOpen);
-                if (!isOpen) setSelectedPositionForEdit(null);
-            }}
-            onEditPosition={handleEditPositionSubmit}
-            position={selectedPositionForEdit}
-        />
-      )}
-      <ImportPositionsModal
-        isOpen={isImportModalOpen}
-        onOpenChange={setIsImportModalOpen}
-        onImportSuccess={fetchPositions}
-      />
+       <AddPositionModal isOpen={isAddModalOpen} onOpenChange={setIsAddModalOpen} onAddPosition={handleAddPositionSubmit} />
+      {selectedPositionForEdit && ( <EditPositionModal isOpen={isEditModalOpen} onOpenChange={(isOpen) => { setIsEditModalOpen(isOpen); if (!isOpen) setSelectedPositionForEdit(null); }} onEditPosition={handleEditPositionSubmit} position={selectedPositionForEdit} /> )}
+      <ImportPositionsModal isOpen={isImportModalOpen} onOpenChange={setIsImportModalOpen} onImportSuccess={fetchPositions} />
     </div>
   );
 }

@@ -70,6 +70,10 @@ export function CandidatesPageClient({
   const [selectedPositionForEdit, setSelectedPositionForEdit] = useState<Position | null>(null);
   const { data: session, status: sessionStatus } = useSession();
 
+  const canImportCandidates = session?.user?.role === 'Admin' || session?.user?.modulePermissions?.includes('CANDIDATES_IMPORT');
+  const canExportCandidates = session?.user?.role === 'Admin' || session?.user?.modulePermissions?.includes('CANDIDATES_EXPORT');
+
+
   const fetchFilteredCandidatesOnClient = useCallback(async (currentFilters: CandidateFilterValues) => {
     if (sessionStatus !== 'authenticated') {
       setIsLoading(false);
@@ -269,36 +273,33 @@ export function CandidatesPageClient({
     setTimeout(() => { fetchFilteredCandidatesOnClient(filters); }, 15000);
   };
   
-  const handleDownloadExcelTemplateGuide = () => {
+  const handleDownloadCsvTemplateGuide = () => {
     const headers = [
       "name", "email", "phone", "positionId", "fitScore", "status", "applicationDate",
       "parsedData.cv_language",
-      "parsedData.personal_info.firstname", "parsedData.personal_info.lastname", 
+      "parsedData.personal_info.firstname", "parsedData.personal_info.lastname",
       "parsedData.personal_info.title_honorific", "parsedData.personal_info.nickname",
       "parsedData.personal_info.location", "parsedData.personal_info.introduction_aboutme",
-      "parsedData.contact_info.email (if different from main email)", "parsedData.contact_info.phone (if different from main phone)",
-      // For array fields like education, experience, skills, job_suitable, job_matches:
-      // These would ideally be JSON strings in their respective cells or handled by a more complex parser.
-      // For a simple CSV template, it's harder to represent. We'll provide a note.
-      "parsedData.education (JSON string or leave blank)",
-      "parsedData.experience (JSON string or leave blank)",
-      "parsedData.skills (JSON string or leave blank)",
-      "parsedData.job_suitable (JSON string or leave blank)",
-      "parsedData.job_matches (JSON string or leave blank)"
+      "parsedData.contact_info.email", "parsedData.contact_info.phone", // These might be redundant if same as main email/phone
+      "parsedData.education", // Expect JSON string
+      "parsedData.experience", // Expect JSON string
+      "parsedData.skills", // Expect JSON string
+      "parsedData.job_suitable", // Expect JSON string
+      "parsedData.job_matches" // Expect JSON string
     ];
     const exampleRows = [
-      ["John Doe", "john.doe@example.com", "555-1212", "position-uuid-123", "85", "Applied", new Date().toISOString(),
+      ["John Doe", "john.doe@example.com", "555-1212", "your-position-uuid-here", "85", "Applied", new Date().toISOString(),
        "EN", "John", "Doe", "Mr.", "Johnny", "New York, USA", "Experienced software engineer.",
-       "john.cv@example.com", "555-0000",
-       `[{"university":"Tech U","major":"CS"}]`, // Example JSON string for education
-       `[{"company":"Big Tech Inc.","position":"Dev"}]`, // Example JSON string for experience
-       `[{"segment_skill":"Languages","skill":["Python","JS"]}]`,
-       `[{"suitable_career":"Software Development"}]`,
-       `[{"job_title":"Senior Dev","fit_score":90}]`
+       "john.doe@example.com", "555-1212",
+       JSON.stringify([{university:"Tech U",major:"CS"}]),
+       JSON.stringify([{company:"Big Tech Inc.",position:"Dev"}]),
+       JSON.stringify([{segment_skill:"Languages",skill:["Python","JS"]}]),
+       JSON.stringify([{suitable_career:"Software Development"}]),
+       JSON.stringify([{job_title:"Senior Dev",fit_score:90}])
       ],
       ["Jane Smith", "jane.smith@example.com", "555-0011", "", "70", "Screening", new Date().toISOString(),
        "EN", "Jane", "Smith", "Ms.", "", "London, UK", "Product enthusiast.",
-       "", "",
+       "jane.smith@example.com", "555-0011",
        "[]", "[]", "[]", "[]", "[]"
       ]
     ];
@@ -306,16 +307,16 @@ export function CandidatesPageClient({
     exampleRows.forEach(row => {
         csvContent += row.map(val => `"${String(val || '').replace(/"/g, '""')}"`).join(',') + '\n';
     });
-    csvContent += "\nNOTE: For array fields (education, experience, skills, job_suitable, job_matches), provide a valid JSON string representation of the array of objects, or leave blank. Example for education: \"[{\\\"university\\\":\\\"Tech U\\\",\\\"major\\\":\\\"CS\\\"}]\"";
+    csvContent += "\nNOTE: For array fields (education, experience, skills, job_suitable, job_matches), provide a valid JSON string representation of the array of objects, or leave blank (e.g., []).";
 
-    downloadFile(csvContent, 'candidates_template_guide.csv', 'text/csv;charset=utf-8;');
+    downloadFile(csvContent, 'candidates_template.csv', 'text/csv;charset=utf-8;');
     toast({
       title: "Template Guide Downloaded",
-      description: "A CSV template guide for candidates has been downloaded.",
+      description: "A CSV template for candidates has been downloaded.",
     });
   };
 
-  const handleExportToExcel = async () => { 
+  const handleExportToCsv = async () => { 
     setIsLoading(true);
     try {
       const query = new URLSearchParams();
@@ -327,15 +328,10 @@ export function CandidatesPageClient({
       const response = await fetch(`/api/candidates/export?${query.toString()}`);
       if (!response.ok) { throw new Error("Export failed"); }
       const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = response.headers.get('content-disposition')?.split('filename=')[1]?.replace(/"/g, '') || 'candidates_export.csv';
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      window.URL.revokeObjectURL(url);
-      toast({ title: "Export Successful", description: "Candidates exported." });
+      const filename = response.headers.get('content-disposition')?.split('filename=')[1]?.replace(/"/g, '') || 'candidates_export.csv';
+      downloadFile(await blob.text(), filename, blob.type);
+
+      toast({ title: "Export Successful", description: "Candidates exported as CSV." });
     } catch (error) { toast({ title: "Export Failed", description: (error as Error).message, variant: "destructive" });
     } finally { setIsLoading(false); }
   };
@@ -356,24 +352,10 @@ export function CandidatesPageClient({
   };
 
   if (authError) {
-    return (
-        <div className="flex flex-col items-center justify-center h-[calc(100vh-10rem)] text-center p-4">
-            <ShieldAlert className="w-16 h-16 text-destructive mb-4" />
-            <h2 className="text-2xl font-semibold text-foreground mb-2">Access Denied</h2>
-            <p className="text-muted-foreground mb-4 max-w-md">You need to be signed in to view this page.</p>
-            <Button onClick={() => signIn(undefined, { callbackUrl: pathname })} className="btn-hover-primary-gradient">Sign In</Button>
-        </div>
-    );
+    return ( <div className="flex flex-col items-center justify-center h-[calc(100vh-10rem)] text-center p-4"> <ShieldAlert className="w-16 h-16 text-destructive mb-4" /> <h2 className="text-2xl font-semibold text-foreground mb-2">Access Denied</h2> <p className="text-muted-foreground mb-4 max-w-md">You need to be signed in to view this page.</p> <Button onClick={() => signIn(undefined, { callbackUrl: pathname })} className="btn-hover-primary-gradient">Sign In</Button> </div> );
   }
   if (permissionError) {
-     return (
-        <div className="flex flex-col items-center justify-center h-[calc(100vh-10rem)] text-center p-4">
-            <ShieldAlert className="w-16 h-16 text-destructive mb-4" />
-            <h2 className="text-2xl font-semibold text-foreground mb-2">Permission Denied</h2>
-            <p className="text-muted-foreground mb-4 max-w-md">{fetchError || "You do not have sufficient permissions to view this page."}</p>
-            <Button onClick={() => router.push('/')} className="btn-hover-primary-gradient">Go to Dashboard</Button>
-        </div>
-    );
+     return ( <div className="flex flex-col items-center justify-center h-[calc(100vh-10rem)] text-center p-4"> <ShieldAlert className="w-16 h-16 text-destructive mb-4" /> <h2 className="text-2xl font-semibold text-foreground mb-2">Permission Denied</h2> <p className="text-muted-foreground mb-4 max-w-md">{fetchError || "You do not have sufficient permissions to view this page."}</p> <Button onClick={() => router.push('/')} className="btn-hover-primary-gradient">Go to Dashboard</Button> </div> );
   }
 
   if (fetchError) {
@@ -383,13 +365,7 @@ export function CandidatesPageClient({
         <ServerCrash className="w-16 h-16 text-destructive mb-4" />
         <h2 className="text-2xl font-semibold text-foreground mb-2">Error Loading Candidates</h2>
         <p className="text-muted-foreground mb-4 max-w-md">{fetchError}</p>
-        {isMissingTableError && (
-            <div className="mb-6 p-4 border border-destructive bg-destructive/10 rounded-md text-sm">
-                <p className="font-semibold">It looks like a required database table (or a related one) is missing.</p>
-                <p className="mt-1">This usually means the database initialization script (`pg-init-scripts/init-db.sql`) did not run correctly.</p>
-                <p className="mt-2">Please refer to the troubleshooting steps in the `README.md` for guidance on how to resolve this.</p>
-            </div>
-        )}
+        {isMissingTableError && ( <div className="mb-6 p-4 border border-destructive bg-destructive/10 rounded-md text-sm"> <p className="font-semibold">It looks like a required database table (or a related one) is missing.</p> <p className="mt-1">This usually means the database initialization script (`pg-init-scripts/init-db.sql`) did not run correctly.</p> <p className="mt-2">Please refer to the troubleshooting steps in the `README.md` for guidance on how to resolve this.</p> </div> )}
         <Button onClick={() => fetchFilteredCandidatesOnClient(filters)} className="btn-hover-primary-gradient">Try Again</Button>
       </div>
     );
@@ -398,100 +374,33 @@ export function CandidatesPageClient({
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-center gap-2">
-        <h1 className="text-2xl font-semibold text-foreground hidden md:block">
-          Candidate Management
-        </h1>
+        <h1 className="text-2xl font-semibold text-foreground hidden md:block"> Candidate Management </h1>
         <div className="w-full flex flex-col sm:flex-row gap-2 items-center sm:justify-end">
-          <Button onClick={() => setIsCreateViaN8nModalOpen(true)} className="w-full sm:w-auto btn-primary-gradient">
-            <Zap className="mr-2 h-4 w-4" /> Create via Resume (Automated)
-          </Button>
+          <Button onClick={() => setIsCreateViaN8nModalOpen(true)} className="w-full sm:w-auto btn-primary-gradient"> <Zap className="mr-2 h-4 w-4" /> Create via Resume (Automated) </Button>
           <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" className="w-full sm:w-auto">
-                More Actions <ChevronDown className="ml-2 h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
+            <DropdownMenuTrigger asChild> <Button variant="outline" className="w-full sm:w-auto"> More Actions <ChevronDown className="ml-2 h-4 w-4" /> </Button> </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => setIsAddModalOpen(true)}>
-                <PlusCircle className="mr-2 h-4 w-4" /> Add Candidate Manually
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setIsImportModalOpen(true)}>
-                <FileUp className="mr-2 h-4 w-4" /> Import Candidates (Excel/CSV)
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={handleDownloadExcelTemplateGuide}>
-                <FileDown className="mr-2 h-4 w-4" /> Download CSV Template Guide
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={handleExportToExcel} disabled={isLoading}>
-                <FileSpreadsheet className="mr-2 h-4 w-4" /> Export Candidates (CSV)
-              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setIsAddModalOpen(true)}> <PlusCircle className="mr-2 h-4 w-4" /> Add Candidate Manually </DropdownMenuItem>
+              {canImportCandidates && (<DropdownMenuItem onClick={() => setIsImportModalOpen(true)}> <FileUp className="mr-2 h-4 w-4" /> Import Candidates (CSV) </DropdownMenuItem>)}
+              {canImportCandidates && (<DropdownMenuItem onClick={handleDownloadCsvTemplateGuide}> <FileDown className="mr-2 h-4 w-4" /> Download CSV Template </DropdownMenuItem>)}
+              {canExportCandidates && (<DropdownMenuItem onClick={handleExportToCsv} disabled={isLoading}> <FileSpreadsheet className="mr-2 h-4 w-4" /> Export Candidates (CSV) </DropdownMenuItem>)}
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
       </div>
 
-      <CandidateFilters
-        initialFilters={filters}
-        onFilterChange={handleFilterChange}
-        availablePositions={availablePositions}
-        availableStages={availableStages}
-        isLoading={isLoading && allCandidates.length > 0}
-      />
+      <CandidateFilters initialFilters={filters} onFilterChange={handleFilterChange} availablePositions={availablePositions} availableStages={availableStages} isLoading={isLoading && allCandidates.length > 0} />
 
-      {isLoading && allCandidates.length === 0 && !fetchError ? (
-         <div className="flex flex-col items-center justify-center h-64 border rounded-lg bg-card shadow">
-            <Users className="w-16 h-16 text-muted-foreground animate-pulse mb-4" />
-            <h3 className="text-xl font-semibold text-foreground">Loading Candidates...</h3>
-            <p className="text-muted-foreground">Please wait while we fetch the data.</p>
-        </div>
+      {isLoading && allCandidates.length === 0 && !fetchError ? ( <div className="flex flex-col items-center justify-center h-64 border rounded-lg bg-card shadow"> <Users className="w-16 h-16 text-muted-foreground animate-pulse mb-4" /> <h3 className="text-xl font-semibold text-foreground">Loading Candidates...</h3> <p className="text-muted-foreground">Please wait while we fetch the data.</p> </div>
       ) : (
-        <CandidateTable
-          candidates={allCandidates}
-          availablePositions={availablePositions}
-          availableStages={availableStages}
-          onUpdateCandidate={handleUpdateCandidateAPI}
-          onDeleteCandidate={handleDeleteCandidate}
-          onOpenUploadModal={handleOpenUploadModal}
-          onEditPosition={handleOpenEditPositionModal}
-          isLoading={isLoading && allCandidates.length > 0 && !fetchError}
-          onRefreshCandidateData={refreshCandidateInList}
-        />
+        <CandidateTable candidates={allCandidates} availablePositions={availablePositions} availableStages={availableStages} onUpdateCandidate={handleUpdateCandidateAPI} onDeleteCandidate={handleDeleteCandidate} onOpenUploadModal={handleOpenUploadModal} onEditPosition={handleOpenEditPositionModal} isLoading={isLoading && allCandidates.length > 0 && !fetchError} onRefreshCandidateData={refreshCandidateInList} />
       )}
 
-      <AddCandidateModal
-        isOpen={isAddModalOpen}
-        onOpenChange={setIsAddModalOpen}
-        onAddCandidate={handleAddCandidateSubmit}
-        availablePositions={availablePositions}
-        availableStages={availableStages}
-      />
-
-      <UploadResumeModal
-        isOpen={isUploadModalOpen}
-        onOpenChange={setIsUploadModalOpen}
-        candidate={selectedCandidateForUpload}
-        onUploadSuccess={handleUploadSuccess}
-      />
-      <CreateCandidateViaN8nModal
-        isOpen={isCreateViaN8nModalOpen}
-        onOpenChange={setIsCreateViaN8nModalOpen}
-        onProcessingStart={handleAutomatedProcessingStart}
-      />
-      <ImportCandidatesModal
-        isOpen={isImportModalOpen}
-        onOpenChange={setIsImportModalOpen}
-        onImportSuccess={() => fetchFilteredCandidatesOnClient(filters)}
-      />
-      {selectedPositionForEdit && (
-        <EditPositionModal
-          isOpen={isEditPositionModalOpen}
-          onOpenChange={(isOpen) => {
-            setIsEditPositionModalOpen(isOpen);
-            if (!isOpen) setSelectedPositionForEdit(null);
-          }}
-          position={selectedPositionForEdit}
-          onEditPosition={handlePositionEdited}
-        />
-      )}
+      <AddCandidateModal isOpen={isAddModalOpen} onOpenChange={setIsAddModalOpen} onAddCandidate={handleAddCandidateSubmit} availablePositions={availablePositions} availableStages={availableStages} />
+      <UploadResumeModal isOpen={isUploadModalOpen} onOpenChange={setIsUploadModalOpen} candidate={selectedCandidateForUpload} onUploadSuccess={handleUploadSuccess} />
+      <CreateCandidateViaN8nModal isOpen={isCreateViaN8nModalOpen} onOpenChange={setIsCreateViaN8nModalOpen} onProcessingStart={handleAutomatedProcessingStart} />
+      <ImportCandidatesModal isOpen={isImportModalOpen} onOpenChange={setIsImportModalOpen} onImportSuccess={() => fetchFilteredCandidatesOnClient(filters)} />
+      {selectedPositionForEdit && ( <EditPositionModal isOpen={isEditPositionModalOpen} onOpenChange={(isOpen) => { setIsEditPositionModalOpen(isOpen); if (!isOpen) setSelectedPositionForEdit(null); }} position={selectedPositionForEdit} onEditPosition={handlePositionEdited} /> )}
     </div>
   );
 }

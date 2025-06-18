@@ -1,6 +1,6 @@
 
 "use client";
-import { useState, useEffect, type ChangeEvent } from 'react';
+import { useState, useEffect, type ChangeEvent, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -56,7 +56,6 @@ export default function PreferencesSettingsPage() {
     } catch (error) {
       console.error("Error fetching system settings:", error);
       setFetchError((error as Error).message);
-      // Keep client-side defaults or previously loaded values if server fetch fails
     } finally {
       setIsLoading(false);
     }
@@ -68,7 +67,7 @@ export default function PreferencesSettingsPage() {
       signIn(undefined, { callbackUrl: pathname });
     } else if (sessionStatus === 'authenticated') {
       if (session.user.role !== 'Admin' && !session.user.modulePermissions?.includes('SYSTEM_SETTINGS_MANAGE')) {
-        setFetchError("You do not have permission to manage system preferences.");
+        setFetchError("You do not have permission to manage application preferences.");
         setIsLoading(false);
       } else {
         fetchSystemSettings();
@@ -80,7 +79,7 @@ export default function PreferencesSettingsPage() {
     const file = event.target.files?.[0];
     if (file) {
       if (file.type.startsWith('image/')) {
-        if (file.size > 200 * 1024) { // Max 200KB for logo
+        if (file.size > 200 * 1024) { 
             toast({ title: "Logo Too Large", description: "Please select an image smaller than 200KB.", variant: "destructive" });
             setSelectedLogoFile(null);
             setLogoPreviewUrl(savedLogoDataUrl);
@@ -123,7 +122,7 @@ export default function PreferencesSettingsPage() {
         setIsSaving(false);
       }
     } else {
-      setLogoPreviewUrl(savedLogoDataUrl); // Revert preview to saved one if not clearing server
+      setLogoPreviewUrl(savedLogoDataUrl);
     }
   };
 
@@ -131,18 +130,13 @@ export default function PreferencesSettingsPage() {
     if (!isClient) return;
     setIsSaving(true);
     
-    const settingsToUpdate: SystemSetting[] = [
+    const settingsToUpdate: Partial<SystemSetting>[] = [
       { key: 'appName', value: appName || DEFAULT_APP_NAME },
       { key: 'appThemePreference', value: themePreference },
     ];
 
-    if (selectedLogoFile && logoPreviewUrl) { // If a new logo file is selected
+    if (selectedLogoFile && logoPreviewUrl) { 
       settingsToUpdate.push({ key: 'appLogoDataUrl', value: logoPreviewUrl });
-    } else if (logoPreviewUrl === null && savedLogoDataUrl !== null) {
-      // This case means user cleared a preview of a new file OR explicitly wants to remove existing logo
-      // The removeSelectedLogo(true) function handles API call for removal.
-      // This save function will only update if a new logo is present, or if text fields change.
-      // If only logo removal happened, it's handled by removeSelectedLogo(true).
     }
 
 
@@ -162,14 +156,23 @@ export default function PreferencesSettingsPage() {
       const updatedLogoSetting = updatedSettings.find(s => s.key === 'appLogoDataUrl');
       if (updatedLogoSetting) {
         setSavedLogoDataUrl(updatedLogoSetting.value);
-        setLogoPreviewUrl(updatedLogoSetting.value); // Ensure preview matches saved
+        setLogoPreviewUrl(updatedLogoSetting.value); 
       }
-
+      // Update theme preference state from server response
+      const updatedThemeSetting = updatedSettings.find(s => s.key === 'appThemePreference');
+      if (updatedThemeSetting) {
+        setThemePreference(updatedThemeSetting.value as ThemePreference || 'system');
+      }
+      // Update app name state from server response
+      const updatedAppNameSetting = updatedSettings.find(s => s.key === 'appName');
+       if (updatedAppNameSetting) {
+        setAppName(updatedAppNameSetting.value || DEFAULT_APP_NAME);
+      }
 
       toast({ title: 'Preferences Saved', description: 'Your application preferences have been saved to the server.' });
       window.dispatchEvent(new CustomEvent('appConfigChanged', { 
         detail: { 
-          appName: appName || DEFAULT_APP_NAME,
+          appName: updatedAppNameSetting?.value || appName || DEFAULT_APP_NAME,
           logoUrl: updatedLogoSetting ? updatedLogoSetting.value : savedLogoDataUrl,
         } 
       }));
@@ -178,16 +181,12 @@ export default function PreferencesSettingsPage() {
       toast({ title: "Error Saving Preferences", description: (error as Error).message, variant: "destructive" });
     } finally {
       setIsSaving(false);
-      setSelectedLogoFile(null); // Clear selected file after save attempt
+      setSelectedLogoFile(null);
     }
   };
 
   if (sessionStatus === 'loading' || (isLoading && !fetchError && !isClient)) {
-    return (
-      <div className="flex h-screen w-screen items-center justify-center bg-background fixed inset-0 z-50">
-        <Loader2 className="h-16 w-16 animate-spin text-primary" />
-      </div>
-    );
+    return ( <div className="flex h-screen w-screen items-center justify-center bg-background fixed inset-0 z-50"> <Loader2 className="h-16 w-16 animate-spin text-primary" /> </div> );
   }
 
   if (fetchError) {
@@ -217,40 +216,18 @@ export default function PreferencesSettingsPage() {
             </h3>
             <div>
                 <Label htmlFor="app-name-input">Application Name</Label>
-                <Input
-                id="app-name-input"
-                type="text"
-                value={appName}
-                onChange={(e) => setAppName(e.target.value)}
-                className="mt-1"
-                placeholder="e.g., My ATS"
-                />
+                <Input id="app-name-input" type="text" value={appName} onChange={(e) => setAppName(e.target.value)} className="mt-1" placeholder="e.g., My ATS" />
             </div>
           </section>
 
           <section>
-            <h3 className="text-lg font-semibold text-foreground mb-2">Theme</h3>
-            <RadioGroup
-              value={themePreference}
-              onValueChange={(value) => setThemePreference(value as ThemePreference)}
-              className="flex flex-col sm:flex-row sm:space-x-4"
-            >
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="light" id="theme-light" />
-                <Label htmlFor="theme-light">Light</Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="dark" id="theme-dark" />
-                <Label htmlFor="theme-dark">Dark</Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="system" id="theme-system" />
-                <Label htmlFor="theme-system">System Default</Label>
-              </div>
+            <h3 className="text-lg font-semibold text-foreground mb-2">Theme Preference</h3>
+            <RadioGroup value={themePreference} onValueChange={(value) => setThemePreference(value as ThemePreference)} className="flex flex-col sm:flex-row sm:space-x-4">
+              <div className="flex items-center space-x-2"><RadioGroupItem value="light" id="theme-light" /><Label htmlFor="theme-light">Light</Label></div>
+              <div className="flex items-center space-x-2"><RadioGroupItem value="dark" id="theme-dark" /><Label htmlFor="theme-dark">Dark</Label></div>
+              <div className="flex items-center space-x-2"><RadioGroupItem value="system" id="theme-system" /><Label htmlFor="theme-system">System Default</Label></div>
             </RadioGroup>
-             <p className="text-xs text-muted-foreground mt-1">
-              Actual theme switching is handled by the header toggle using browser localStorage. This setting is for future centralized theme management.
-            </p>
+             <p className="text-xs text-muted-foreground mt-1">Actual theme switching is handled by the header toggle using browser localStorage. This setting is for your preferred theme.</p>
           </section>
 
           <section>
@@ -259,30 +236,15 @@ export default function PreferencesSettingsPage() {
             </h3>
             <div>
               <Label htmlFor="app-logo-upload">Change App Logo (Recommended: square, max 200KB)</Label>
-              <Input
-                id="app-logo-upload"
-                type="file"
-                accept="image/*"
-                onChange={handleLogoFileChange}
-                className="mt-1"
-              />
+              <Input id="app-logo-upload" type="file" accept="image/*" onChange={handleLogoFileChange} className="mt-1" />
               {logoPreviewUrl && (
                 <div className="mt-3 p-2 border rounded-md inline-flex items-center gap-3 bg-muted/50">
                   <Image src={logoPreviewUrl} alt="Logo preview" width={48} height={48} className="h-12 w-12 object-contain rounded" data-ai-hint="company logo"/>
                   {selectedLogoFile && <span className="text-sm text-foreground truncate max-w-xs">{selectedLogoFile.name}</span>}
-                  <Button variant="ghost" size="icon" onClick={() => removeSelectedLogo(false)} className="h-7 w-7">
-                    <XCircle className="h-4 w-4 text-muted-foreground hover:text-destructive"/>
-                  </Button>
+                  <Button variant="ghost" size="icon" onClick={() => removeSelectedLogo(false)} className="h-7 w-7"> <XCircle className="h-4 w-4 text-muted-foreground hover:text-destructive"/> </Button>
                 </div>
               )}
-              {savedLogoDataUrl && ( // Show reset button only if there's a saved logo
-                 <div className="mt-2">
-                    <Button variant="outline" size="sm" onClick={() => removeSelectedLogo(true)} disabled={isSaving}>
-                        {isSaving && savedLogoDataUrl === null ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Trash2 className="mr-2 h-4 w-4"/>}
-                        Reset to Default Logo
-                    </Button>
-                 </div>
-              )}
+              {savedLogoDataUrl && ( <div className="mt-2"> <Button variant="outline" size="sm" onClick={() => removeSelectedLogo(true)} disabled={isSaving}> {isSaving && savedLogoDataUrl === null ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Trash2 className="mr-2 h-4 w-4"/>} Reset to Default Logo </Button> </div> )}
             </div>
           </section>
         </CardContent>

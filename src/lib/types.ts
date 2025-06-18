@@ -8,15 +8,18 @@ import type { DefaultUser } from 'next-auth';
 export const PLATFORM_MODULES = [
   { id: 'CANDIDATES_VIEW', label: 'View Candidates' },
   { id: 'CANDIDATES_MANAGE', label: 'Manage Candidates (Add, Edit, Delete)' },
+  { id: 'CANDIDATES_IMPORT', label: 'Import Candidates' },
+  { id: 'CANDIDATES_EXPORT', label: 'Export Candidates' },
   { id: 'POSITIONS_VIEW', label: 'View Positions' },
   { id: 'POSITIONS_MANAGE', label: 'Manage Positions (Add, Edit, Delete)' },
-  { id: 'USERS_MANAGE', label: 'Manage Users & Permissions' }, // This permission is for accessing the user management page
+  { id: 'POSITIONS_IMPORT', label: 'Import Positions' },
+  { id: 'POSITIONS_EXPORT', label: 'Export Positions' },
+  { id: 'USERS_MANAGE', label: 'Manage Users & Permissions' },
   { id: 'USER_GROUPS_MANAGE', label: 'Manage User Groups' },
-  { id: 'SYSTEM_SETTINGS_MANAGE', label: 'Manage System-Wide Settings (Name, Logo, Theme)' }, // For server-side app name/logo
-  { id: 'USER_PREFERENCES_MANAGE', label: 'Manage Own UI Preferences (Server-Side)' }, // For server-side data model prefs
+  { id: 'SYSTEM_SETTINGS_MANAGE', label: 'Manage System-Wide Settings (Name, Logo, Theme)' },
+  { id: 'USER_PREFERENCES_MANAGE', label: 'Manage Own UI Preferences' },
   { id: 'RECRUITMENT_STAGES_MANAGE', label: 'Manage Recruitment Stages' },
-  { id: 'DATA_MODELS_MANAGE', label: 'Manage Data Model Preferences (Client)' }, // This might become deprecated if fully server-side
-  { id: 'CUSTOM_FIELDS_MANAGE', label: 'Manage Custom Field Definitions (Server)' },
+  { id: 'CUSTOM_FIELDS_MANAGE', label: 'Manage Custom Field Definitions' },
   { id: 'WEBHOOK_MAPPING_MANAGE', label: 'Manage Webhook Mappings' },
   { id: 'LOGS_VIEW', label: 'View Application Logs' },
 ] as const;
@@ -159,13 +162,13 @@ export interface CandidateDetails {
   experience?: ExperienceEntry[];
   skills?: SkillEntry[];
   job_suitable?: JobSuitableEntry[];
-  associatedMatchDetails?: { 
+  associatedMatchDetails?: {
     jobTitle: string;
     fitScore: number;
     reasons: string[];
     n8nJobId?: string;
   };
-  job_matches?: N8NJobMatch[]; 
+  job_matches?: N8NJobMatch[];
 }
 
 export interface N8NCandidateWebhookEntry {

@@ -40,15 +40,11 @@ const platformModuleIds = PLATFORM_MODULES.map(m => m.id) as [PlatformModuleId, 
 
 const editUserFormSchema = z.object({
   name: z.string().min(1, "Name is required"),
-  email: z.string().email("Invalid email address"), 
+  email: z.string().email("Invalid email address"),
   role: z.enum(userRoleOptions as [UserProfile['role'], ...UserProfile['role'][]], { required_error: "Role is required" }),
   newPassword: z.string().min(6, "New password must be at least 6 characters").optional().or(z.literal('')),
   modulePermissions: z.array(z.enum(platformModuleIds)).optional().default([]),
   groupIds: z.array(z.string().uuid()).optional().default([]),
-  // New filters for user table (if this modal was also for a filter bar, which it's not)
-  // nameFilter: z.string().optional(),
-  // emailFilter: z.string().optional(),
-  // roleFilter: z.enum([...userRoleOptions, "ALL_ROLES"] as [string, ...string[]]).optional().default("ALL_ROLES"),
 });
 
 export type EditUserFormValues = z.infer<typeof editUserFormSchema>;
@@ -119,7 +115,7 @@ export function EditUserModal({ isOpen, onOpenChange, onEditUser, user }: EditUs
     await onEditUser(user.id, payload);
   };
   
-  if (!user && isOpen) return null; 
+  if (!user && isOpen) return null;
 
   const filteredGroups = groupSearchQuery
     ? availableGroups.filter(group => group.name.toLowerCase().includes(groupSearchQuery.toLowerCase()))
@@ -144,7 +140,7 @@ export function EditUserModal({ isOpen, onOpenChange, onEditUser, user }: EditUs
           </DialogDescription>
         </DialogHeader>
         <ScrollArea className="flex-grow pr-2">
-          <Form {...form}> 
+          <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-2 pl-1">
               <FormField control={form.control} name="name" render={({ field }) => (<FormItem><FormLabel>Full Name *</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
               <FormField control={form.control} name="email" render={({ field }) => (<FormItem><FormLabel>Email Address *</FormLabel><FormControl><Input type="email" {...field} /></FormControl><FormMessage /></FormItem>)} />
@@ -172,7 +168,7 @@ export function EditUserModal({ isOpen, onOpenChange, onEditUser, user }: EditUs
                         </FormItem>
                       )}
                     />))}
-                </div><FormMessage /> 
+                </div><FormMessage />
               </div>
               
               <div className="space-y-2">

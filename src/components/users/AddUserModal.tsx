@@ -32,6 +32,10 @@ import type { UserProfile, PlatformModuleId, UserGroup } from '@/lib/types';
 import { PLATFORM_MODULES } from '@/lib/types';
 import { ScrollArea } from '../ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { cn } from '@/lib/utils';
+import { ChevronsUpDown, Check as CheckIcon } from 'lucide-react';
+
 
 const userRoleOptions: UserProfile['role'][] = ['Admin', 'Recruiter', 'Hiring Manager'];
 const platformModuleIds = PLATFORM_MODULES.map(m => m.id) as [PlatformModuleId, ...PlatformModuleId[]];
@@ -56,6 +60,8 @@ interface AddUserModalProps {
 export function AddUserModal({ isOpen, onOpenChange, onAddUser }: AddUserModalProps) {
   const { toast } = useToast();
   const [availableGroups, setAvailableGroups] = useState<UserGroup[]>([]);
+  const [groupSearchOpen, setGroupSearchOpen] = useState(false);
+  const [groupSearchQuery, setGroupSearchQuery] = useState('');
 
   const form = useForm<AddUserFormValues>({
     resolver: zodResolver(addUserFormSchema),
@@ -80,7 +86,6 @@ export function AddUserModal({ isOpen, onOpenChange, onAddUser }: AddUserModalPr
         groupIds: [],
       });
       
-      // Fetch available groups
       const fetchGroups = async () => {
         try {
           const response = await fetch('/api/settings/user-groups');
@@ -95,6 +100,9 @@ export function AddUserModal({ isOpen, onOpenChange, onAddUser }: AddUserModalPr
         }
       };
       fetchGroups();
+    } else {
+        setAvailableGroups([]);
+        setGroupSearchQuery('');
     }
   }, [isOpen, form, toast]);
 
@@ -102,11 +110,17 @@ export function AddUserModal({ isOpen, onOpenChange, onAddUser }: AddUserModalPr
     await onAddUser(data);
   };
 
+  const filteredGroups = groupSearchQuery
+    ? availableGroups.filter(group => group.name.toLowerCase().includes(groupSearchQuery.toLowerCase()))
+    : availableGroups;
+
   return (
     <Dialog open={isOpen} onOpenChange={(open) => {
       onOpenChange(open);
       if (!open) {
         form.reset();
+        setAvailableGroups([]);
+        setGroupSearchQuery('');
       }
     }}>
       <DialogContent className="sm:max-w-lg max-h-[90vh] flex flex-col">
@@ -121,153 +135,61 @@ export function AddUserModal({ isOpen, onOpenChange, onAddUser }: AddUserModalPr
         <ScrollArea className="flex-grow pr-2">
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-2 pl-1">
-              <FormField
-                control={form.control}
-                name="name"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel htmlFor="name-add">Full Name *</FormLabel>
-                    <FormControl>
-                      <Input id="name-add" {...field} className="mt-1" />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="email"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel htmlFor="email-add">Email Address *</FormLabel>
-                    <FormControl>
-                      <Input id="email-add" type="email" {...field} className="mt-1" />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="password"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel htmlFor="password-add">Password *</FormLabel>
-                    <FormControl>
-                      <Input id="password-add" type="password" {...field} className="mt-1" />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="role"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel htmlFor="role-add">Role *</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value} defaultValue={field.value}>
-                      <FormControl>
-                        <SelectTrigger id="role-add" className="mt-1">
-                          <SelectValue placeholder="Select a role" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {userRoleOptions.map(role => (
-                          <SelectItem key={role} value={role}>{role}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+              <FormField control={form.control} name="name" render={({ field }) => (<FormItem><FormLabel htmlFor="name-add">Full Name *</FormLabel><FormControl><Input id="name-add" {...field} className="mt-1" /></FormControl><FormMessage /></FormItem>)} />
+              <FormField control={form.control} name="email" render={({ field }) => (<FormItem><FormLabel htmlFor="email-add">Email Address *</FormLabel><FormControl><Input id="email-add" type="email" {...field} className="mt-1" /></FormControl><FormMessage /></FormItem>)} />
+              <FormField control={form.control} name="password" render={({ field }) => (<FormItem><FormLabel htmlFor="password-add">Password *</FormLabel><FormControl><Input id="password-add" type="password" {...field} className="mt-1" /></FormControl><FormMessage /></FormItem>)} />
+              <FormField control={form.control} name="role" render={({ field }) => (<FormItem><FormLabel htmlFor="role-add">Role *</FormLabel><Select onValueChange={field.onChange} value={field.value} defaultValue={field.value}><FormControl><SelectTrigger id="role-add" className="mt-1"><SelectValue placeholder="Select a role" /></SelectTrigger></FormControl><SelectContent>{userRoleOptions.map(role => (<SelectItem key={role} value={role}>{role}</SelectItem>))}</SelectContent></Select><FormMessage /></FormItem>)} />
 
               <div className="space-y-2">
                 <FormLabel className="flex items-center"><ShieldCheck className="mr-2 h-5 w-5 text-primary" /> Module Permissions</FormLabel>
                 <div className="space-y-2 rounded-md border p-4 max-h-32 overflow-y-auto">
                   {PLATFORM_MODULES.map((module) => (
-                    <FormField
-                      key={module.id}
-                      control={form.control}
-                      name="modulePermissions"
-                      render={({ field }) => {
-                        return (
-                          <FormItem className="flex flex-row items-center space-x-3 space-y-0">
-                            <FormControl>
-                              <Checkbox
-                                className="checkbox-green"
-                                checked={field.value?.includes(module.id)}
-                                onCheckedChange={(checked) => {
-                                  return checked
-                                    ? field.onChange([...(field.value || []), module.id])
-                                    : field.onChange(
-                                        (field.value || []).filter(
-                                          (value) => value !== module.id
-                                        )
-                                      );
-                                }}
-                              />
-                            </FormControl>
-                            <FormLabel className="text-sm font-normal">
-                              {module.label}
-                            </FormLabel>
-                          </FormItem>
-                        );
-                      }}
-                    />
-                  ))}
-                </div>
-                <FormMessage /> 
+                    <FormField key={module.id} control={form.control} name="modulePermissions"
+                      render={({ field }) => (
+                        <FormItem className="flex flex-row items-center space-x-3 space-y-0">
+                          <FormControl><Checkbox className="checkbox-green" checked={field.value?.includes(module.id)}
+                            onCheckedChange={(checked) => checked ? field.onChange([...(field.value || []), module.id]) : field.onChange((field.value || []).filter(v => v !== module.id))}
+                          /></FormControl>
+                          <FormLabel className="text-sm font-normal">{module.label}</FormLabel>
+                        </FormItem>
+                      )} /> ))}
+                </div><FormMessage />
               </div>
 
               <div className="space-y-2">
                 <FormLabel className="flex items-center"><Users className="mr-2 h-5 w-5 text-primary" /> User Groups</FormLabel>
-                 <div className="space-y-2 rounded-md border p-4 max-h-32 overflow-y-auto">
-                  {availableGroups.length === 0 && <p className="text-xs text-muted-foreground">No groups available. Create groups in Settings.</p>}
-                  {availableGroups.map((group) => (
-                    <FormField
-                      key={group.id}
-                      control={form.control}
-                      name="groupIds"
-                      render={({ field }) => {
-                        return (
-                          <FormItem className="flex flex-row items-center space-x-3 space-y-0">
-                            <FormControl>
-                              <Checkbox
-                                checked={field.value?.includes(group.id)}
-                                onCheckedChange={(checked) => {
-                                  return checked
-                                    ? field.onChange([...(field.value || []), group.id])
-                                    : field.onChange(
-                                        (field.value || []).filter(
-                                          (value) => value !== group.id
-                                        )
-                                      );
-                                }}
-                              />
-                            </FormControl>
-                            <FormLabel className="text-sm font-normal">
-                              {group.name}
-                            </FormLabel>
-                          </FormItem>
-                        );
-                      }}
-                    />
-                  ))}
-                </div>
+                <Popover open={groupSearchOpen} onOpenChange={setGroupSearchOpen}>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" role="combobox" aria-expanded={groupSearchOpen} className="w-full justify-between">
+                       {form.getValues("groupIds")?.length > 0 ? `${form.getValues("groupIds")?.length} group(s) selected` : "Select groups..."}
+                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-[--trigger-width] p-0 dropdown-content-height">
+                    <div className="p-2"><Input placeholder="Search group..." value={groupSearchQuery} onChange={(e) => setGroupSearchQuery(e.target.value)} className="h-9" /></div>
+                    <ScrollArea className="max-h-40">
+                      {availableGroups.length === 0 && <p className="p-2 text-xs text-muted-foreground text-center">No groups available.</p>}
+                      {filteredGroups.length === 0 && groupSearchQuery && <p className="p-2 text-xs text-muted-foreground text-center">No group found.</p>}
+                      {filteredGroups.map(group => (
+                        <FormField key={group.id} control={form.control} name="groupIds"
+                          render={({ field }) => (
+                            <FormItem className="flex flex-row items-center space-x-3 space-y-0 px-2 py-1.5 hover:bg-accent rounded-sm">
+                              <FormControl><Checkbox checked={field.value?.includes(group.id)}
+                                onCheckedChange={(checked) => checked ? field.onChange([...(field.value || []), group.id]) : field.onChange((field.value || []).filter(v => v !== group.id))}
+                              /></FormControl>
+                              <FormLabel className="text-sm font-normal cursor-pointer flex-grow">{group.name}</FormLabel>
+                            </FormItem>
+                          )} />
+                      ))}
+                    </ScrollArea>
+                  </PopoverContent>
+                </Popover>
                 <FormMessage />
               </div>
               
               <DialogFooter className="pt-4 sticky bottom-0 bg-background pb-1">
-                <DialogClose asChild>
-                  <Button type="button" variant="outline">
-                    Cancel
-                  </Button>
-                </DialogClose>
-                <Button type="submit" disabled={form.formState.isSubmitting}>
-                  {form.formState.isSubmitting ? 'Adding User...' : 'Add User'}
-                </Button>
+                <DialogClose asChild><Button type="button" variant="outline">Cancel</Button></DialogClose>
+                <Button type="submit" disabled={form.formState.isSubmitting}>{form.formState.isSubmitting ? 'Adding User...' : 'Add User'}</Button>
               </DialogFooter>
             </form>
           </Form>
