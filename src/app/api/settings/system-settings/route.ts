@@ -5,12 +5,21 @@ import pool from '../../../../lib/db';
 import { z } from 'zod';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/app/api/auth/[...nextauth]/route';
-import type { SystemSetting } from '@/lib/types';
+import type { SystemSetting, SystemSettingKey } from '@/lib/types';
 import { logAudit } from '@/lib/auditLog';
 
+const systemSettingKeyEnum = z.enum([
+    'appName', 'appLogoDataUrl', 'appThemePreference',
+    'smtpHost', 'smtpPort', 'smtpUser', 'smtpSecure', 'smtpFromEmail',
+    'n8nResumeWebhookUrl', 'n8nGenericPdfWebhookUrl', 'geminiApiKey',
+    'loginPageBackgroundType', 'loginPageBackgroundImageUrl', 
+    'loginPageBackgroundColor1', 'loginPageBackgroundColor2'
+]);
+
+
 const systemSettingSchema = z.object({
-  key: z.enum(['appName', 'appLogoDataUrl', 'appThemePreference']),
-  value: z.string().nullable(), // Allow null for resetting logo
+  key: systemSettingKeyEnum,
+  value: z.string().nullable(),
 });
 
 const saveSystemSettingsSchema = z.array(systemSettingSchema);
@@ -84,3 +93,4 @@ export async function POST(request: NextRequest) {
     client.release();
   }
 }
+    

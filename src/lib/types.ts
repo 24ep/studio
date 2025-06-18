@@ -361,13 +361,31 @@ export interface CustomFieldDefinition {
 }
 
 // System-wide settings
+export type SystemSettingKey =
+  | 'appName'
+  | 'appLogoDataUrl'
+  | 'appThemePreference'
+  | 'smtpHost'
+  | 'smtpPort'
+  | 'smtpUser'
+  | 'smtpSecure'
+  | 'smtpFromEmail'
+  | 'n8nResumeWebhookUrl'
+  | 'n8nGenericPdfWebhookUrl'
+  | 'geminiApiKey'
+  | 'loginPageBackgroundType'
+  | 'loginPageBackgroundImageUrl'
+  | 'loginPageBackgroundColor1'
+  | 'loginPageBackgroundColor2';
+
 export interface SystemSetting {
-    key: 'appName' | 'appLogoDataUrl' | 'appThemePreference' |
-         'smtpHost' | 'smtpPort' | 'smtpUser' | 'smtpSecure' | 'smtpFromEmail' |
-         'n8nResumeWebhookUrl' | 'n8nGenericPdfWebhookUrl' | 'geminiApiKey'; // Added geminiApiKey
+    key: SystemSettingKey;
     value: string | null;
     updatedAt?: string;
 }
+
+export type LoginPageBackgroundType = "default" | "image" | "color" | "gradient";
+
 
 // Notification System Types
 export interface NotificationEvent {

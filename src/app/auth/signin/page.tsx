@@ -10,10 +10,14 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AlertTriangle, Loader2 } from "lucide-react";
 import Image from 'next/image';
 import { CredentialsSignInForm } from "@/components/auth/CredentialsSignInForm";
+import type { SystemSetting, LoginPageBackgroundType } from '@/lib/types';
 
 const APP_LOGO_DATA_URL_KEY = 'appLogoDataUrl';
 const APP_CONFIG_APP_NAME_KEY = 'appConfigAppName';
 const DEFAULT_APP_NAME = "CandiTrack";
+const DEFAULT_LOGIN_BG_GRADIENT = "linear-gradient(90deg, rgba(255, 255, 255, 1) 0%, rgba(245, 245, 255, 1) 100%, rgba(252, 252, 255, 1) 55%)";
+const DEFAULT_LOGIN_BG_GRADIENT_DARK = "linear-gradient(90deg, hsl(220, 15%, 9%) 0%, hsl(220, 15%, 11%) 100%, hsl(220, 15%, 10%) 55%)";
+
 
 export default function SignInPage() {
   const { data: session, status } = useSession();
@@ -22,22 +26,80 @@ export default function SignInPage() {
   const [appLogoUrl, setAppLogoUrl] = useState<string | null>(null);
   const [currentAppName, setCurrentAppName] = useState<string>(DEFAULT_APP_NAME);
   const [isClient, setIsClient] = useState(false);
-  
+  const [loginPageStyle, setLoginPageStyle] = useState<React.CSSProperties>({});
+  const [isThemeDark, setIsThemeDark] = useState(false);
+
   const callbackUrl = nextSearchParams.get('callbackUrl') || "/";
 
   useEffect(() => {
     setIsClient(true);
-    const updateAppConfig = () => {
-      if (typeof window !== 'undefined') {
-        const storedLogo = localStorage.getItem(APP_LOGO_DATA_URL_KEY);
-        if (storedLogo) {
-          setAppLogoUrl(storedLogo);
-        }
-        const storedAppName = localStorage.getItem(APP_CONFIG_APP_NAME_KEY);
-        setCurrentAppName(storedAppName || DEFAULT_APP_NAME);
-      }
+    // Function to update theme status
+    const updateThemeStatus = () => {
+      setIsThemeDark(document.documentElement.classList.contains('dark'));
     };
-    updateAppConfig();
+    updateThemeStatus(); // Initial check
+
+    // Observe theme changes
+    const observer = new MutationObserver(updateThemeStatus);
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+
+
+    const fetchAppAndLoginConfig = async () => {
+      let appName = DEFAULT_APP_NAME;
+      let logoUrl = null;
+      let loginBgType: LoginPageBackgroundType = 'default';
+      let loginBgImageUrl: string | null = null;
+      let loginBgColor1: string | null = null;
+      let loginBgColor2: string | null = null;
+
+      try {
+        const response = await fetch('/api/settings/system-settings');
+        if (response.ok) {
+          const settings: SystemSetting[] = await response.json();
+          appName = settings.find(s => s.key === 'appName')?.value || DEFAULT_APP_NAME;
+          logoUrl = settings.find(s => s.key === 'appLogoDataUrl')?.value || null;
+          loginBgType = settings.find(s => s.key === 'loginPageBackgroundType')?.value as LoginPageBackgroundType || 'default';
+          loginBgImageUrl = settings.find(s => s.key === 'loginPageBackgroundImageUrl')?.value || null;
+          loginBgColor1 = settings.find(s => s.key === 'loginPageBackgroundColor1')?.value || null;
+          loginBgColor2 = settings.find(s => s.key === 'loginPageBackgroundColor2')?.value || null;
+        }
+      } catch (error) {
+        console.warn("Failed to fetch system settings for login page, using defaults/localStorage.", error);
+        // Fallback to localStorage for app name/logo if API fails
+        appName = localStorage.getItem(APP_CONFIG_APP_NAME_KEY) || DEFAULT_APP_NAME;
+        logoUrl = localStorage.getItem(APP_LOGO_DATA_URL_KEY) || null;
+      }
+      
+      setCurrentAppName(appName);
+      setAppLogoUrl(logoUrl);
+
+      // Determine login page style
+      const newStyle: React.CSSProperties = {
+        minHeight: '100vh',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: '1rem',
+        transition: 'background 0.5s ease-in-out',
+      };
+
+      if (loginBgType === 'image' && loginBgImageUrl) {
+        newStyle.backgroundImage = `url(${loginBgImageUrl})`;
+        newStyle.backgroundSize = 'cover';
+        newStyle.backgroundPosition = 'center';
+        newStyle.backgroundRepeat = 'no-repeat';
+      } else if (loginBgType === 'color' && loginBgColor1) {
+        newStyle.backgroundColor = loginBgColor1;
+      } else if (loginBgType === 'gradient' && loginBgColor1 && loginBgColor2) {
+        newStyle.backgroundImage = `linear-gradient(to right, ${loginBgColor1}, ${loginBgColor2})`;
+      } else { // Default
+        newStyle.backgroundImage = isThemeDark ? DEFAULT_LOGIN_BG_GRADIENT_DARK : DEFAULT_LOGIN_BG_GRADIENT;
+      }
+      setLoginPageStyle(newStyle);
+    };
+    
+    fetchAppAndLoginConfig();
 
     const handleAppConfigChange = (event: Event) => {
         const customEvent = event as CustomEvent<{ appName?: string; logoUrl?: string | null }>;
@@ -49,15 +111,18 @@ export default function SignInPage() {
                  setAppLogoUrl(customEvent.detail.logoUrl);
             }
         } else {
-            updateAppConfig();
+            // Refetch if no detail, could be a more generic update signal
+            fetchAppAndLoginConfig();
         }
     };
-
     window.addEventListener('appConfigChanged', handleAppConfigChange);
+
     return () => {
+      observer.disconnect();
       window.removeEventListener('appConfigChanged', handleAppConfigChange);
     };
-  }, []);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isThemeDark]); // Added isThemeDark dependency to re-evaluate default background
 
   useEffect(() => {
     if (status === "authenticated" && session) {
@@ -105,8 +170,8 @@ export default function SignInPage() {
   }
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-gradient-to-br from-slate-100 to-sky-100 dark:from-slate-900 dark:to-sky-900 p-4">
-      <Card className="w-full max-w-md shadow-2xl">
+    <div style={loginPageStyle}>
+      <Card className="w-full max-w-md bg-card/70 dark:bg-slate-800/20 backdrop-blur-lg border border-white/20 dark:border-slate-700/30 shadow-2xl">
         <CardHeader className="text-center">
           {isClient && appLogoUrl && (
             <Image
@@ -118,10 +183,10 @@ export default function SignInPage() {
               data-ai-hint="company logo"
             />
           )}
-          <CardTitle className="text-3xl font-bold tracking-tight">
+          <CardTitle className="text-3xl font-bold tracking-tight text-foreground dark:text-white">
             Welcome to<br />{currentAppName}
           </CardTitle>
-          <CardDescription className="text-muted-foreground">
+          <CardDescription className="text-muted-foreground dark:text-slate-300">
             Sign in to manage your recruitment pipeline.
           </CardDescription>
         </CardHeader>
@@ -140,10 +205,10 @@ export default function SignInPage() {
             <>
               <div className="relative my-6">
                 <div className="absolute inset-0 flex items-center">
-                  <span className="w-full border-t" />
+                  <span className="w-full border-t border-white/30 dark:border-slate-600/50" />
                 </div>
                 <div className="relative flex justify-center text-xs uppercase">
-                  <span className="bg-card px-2 text-muted-foreground">
+                  <span className="bg-transparent px-2 text-muted-foreground dark:text-slate-400">
                     Or continue with
                   </span>
                 </div>
@@ -153,9 +218,10 @@ export default function SignInPage() {
           )}
         </CardContent>
       </Card>
-      <footer className="mt-8 text-center text-sm text-muted-foreground">
+      <footer className="mt-8 text-center text-sm text-muted-foreground dark:text-slate-400">
         © {new Date().getFullYear()} {currentAppName}. All rights reserved.
       </footer>
     </div>
   );
 }
+    
