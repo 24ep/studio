@@ -49,6 +49,7 @@ const experienceEntrySchema = z.object({
 const skillEntrySchema = z.object({
   segment_skill: z.string().optional().default(''),
   skill: z.array(z.string()).optional().default([]),
+  skill_string: z.string().optional(), // For UI binding if skills are comma-separated in input
 });
 
 const jobSuitableEntrySchema = z.object({
@@ -119,8 +120,10 @@ export async function GET(request: NextRequest) {
     const applicationDateStartFilter = searchParams.get('applicationDateStart');
     const applicationDateEndFilter = searchParams.get('applicationDateEnd');
     const recruiterIdFilter = searchParams.get('recruiterId');
-    const assignedRecruiterIdParam = searchParams.get('assignedRecruiterId'); // For My Tasks page
-    const keywordsFilter = searchParams.get('keywords'); // New filter
+    const assignedRecruiterIdParam = searchParams.get('assignedRecruiterId'); 
+    // const keywordsFilter = searchParams.get('keywords'); // Replaced
+    const attributePathFilter = searchParams.get('attributePath');
+    const attributeValueFilter = searchParams.get('attributeValue');
 
     let query = `
       SELECT
@@ -164,16 +167,15 @@ export async function GET(request: NextRequest) {
     if (applicationDateStartFilter) { conditions.push(`c."applicationDate" >= $${paramIndex++}`); queryParams.push(new Date(applicationDateStartFilter).toISOString()); }
     if (applicationDateEndFilter) { const endDate = new Date(applicationDateEndFilter); endDate.setHours(23, 59, 59, 999); conditions.push(`c."applicationDate" <= $${paramIndex++}`); queryParams.push(endDate.toISOString()); }
     
-    // Use specific recruiterIdFilter from general candidates page first
     if (recruiterIdFilter) { 
         conditions.push(`c."recruiterId" = $${paramIndex++}`); 
         queryParams.push(recruiterIdFilter); 
-    } else if (assignedRecruiterIdParam) { // Fallback to assignedRecruiterIdParam from My Tasks page
+    } else if (assignedRecruiterIdParam) { 
         if (assignedRecruiterIdParam === 'me') {
             conditions.push(`c."recruiterId" = $${paramIndex++}`);
             queryParams.push(userId);
         } else if (z.string().uuid().safeParse(assignedRecruiterIdParam).success) {
-            if (!canViewAll && userRole !== 'Admin') { // Admins can always filter by specific recruiter
+            if (!canViewAll && userRole !== 'Admin') { 
                 return NextResponse.json({ message: "Forbidden: Insufficient permissions to filter by specific recruiter." }, { status: 403 });
             }
             conditions.push(`c."recruiterId" = $${paramIndex++}`);
@@ -182,19 +184,50 @@ export async function GET(request: NextRequest) {
             if (userRole !== 'Admin') {
                 return NextResponse.json({ message: "Forbidden: Only Admins can view all candidates without recruiter filter." }, { status: 403 });
             }
-            // No recruiter condition added, shows all
         }
     } else {
-        // Default behavior: If not Admin and no explicit "all candidates" admin filter, and no CANDIDATES_VIEW permission, filter by own ID for Recruiters.
         if (userRole === 'Recruiter' && !canViewAll) {
             conditions.push(`c."recruiterId" = $${paramIndex++}`);
             queryParams.push(userId);
         } else if (userRole !== 'Admin' && !canViewAll) {
-            // If not admin, not recruiter, and no CANDIDATES_VIEW, they shouldn't see any candidates.
             return NextResponse.json({ message: "Forbidden: Insufficient permissions to view candidates." }, { status: 403 });
         }
     }
-    if (keywordsFilter) { conditions.push(`c."parsedData"::text ILIKE $${paramIndex++}`); queryParams.push(`%${keywordsFilter}%`); }
+    // if (keywordsFilter) { conditions.push(`c."parsedData"::text ILIKE $${paramIndex++}`); queryParams.push(`%${keywordsFilter}%`); } // Replaced
+
+    if (attributePathFilter && attributeValueFilter) {
+        const pathParts = attributePathFilter.split('.');
+        if (pathParts[0] === 'parsedData' && pathParts.length > 1) {
+            // Filtering within JSONB 'parsedData'
+            // Example: parsedData.personal_info.location -> #>>'{personal_info,location}'
+            // This basic example handles direct string paths. Searching in arrays like skills.[].skill is more complex.
+            const jsonPath = pathParts.slice(1).join(',');
+             // For arrays, a simple ILIKE on the text representation might work for some cases.
+            // A more robust solution for arrays would involve jsonb_array_elements_text or similar.
+            if (attributePathFilter.includes("[]")) { // Heuristic for array search
+                 const arrayPath = pathParts.slice(1, -1).join(','); // Path to array
+                 const fieldInArray = pathParts.slice(-1)[0]; // Field within array objects
+                 // This is a simplified approach; a proper array search is more complex
+                 conditions.push(`EXISTS (
+                    SELECT 1 FROM jsonb_array_elements(c."parsedData" #> '{${arrayPath}}') elem
+                    WHERE elem ->> '${fieldInArray}' ILIKE $${paramIndex++}
+                 )`);
+                 queryParams.push(`%${attributeValueFilter}%`);
+
+            } else {
+                conditions.push(`c."parsedData"#>>'{${jsonPath}}' ILIKE $${paramIndex++}`);
+                queryParams.push(`%${attributeValueFilter}%`);
+            }
+        } else if (['name', 'email', 'phone', 'status'].includes(attributePathFilter)) {
+            // Filtering on top-level columns
+            conditions.push(`c."${attributePathFilter}" ILIKE $${paramIndex++}`);
+            queryParams.push(`%${attributeValueFilter}%`);
+        } else {
+            // Fallback for keywords if path is not specific enough or not top-level known
+             conditions.push(`c."parsedData"::text ILIKE $${paramIndex++}`);
+             queryParams.push(`%${attributeValueFilter}%`);
+        }
+    }
 
 
     if (conditions.length > 0) {
@@ -439,3 +472,4 @@ export async function POST(request: NextRequest) {
     client.release();
   }
 }
+

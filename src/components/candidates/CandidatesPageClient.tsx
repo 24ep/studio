@@ -5,7 +5,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { CandidateFilters, type CandidateFilterValues } from '@/components/candidates/CandidateFilters';
 import { CandidateTable } from '@/components/candidates/CandidateTable';
-import type { Candidate, CandidateStatus, Position, RecruitmentStage, UserProfile } from '@/lib/types';
+import type { Candidate, CandidateStatus, Position, RecruitmentStage, UserProfile, FilterableAttribute } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { PlusCircle, Users, ServerCrash, Zap, Loader2, FileDown, FileUp, ChevronDown, FileSpreadsheet, ShieldAlert, Brain } from 'lucide-react';
@@ -19,6 +19,21 @@ import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
 import { useSession, signIn } from 'next-auth/react';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+
+// Define filterable attributes here or import from a shared location
+const FILTERABLE_CANDIDATE_ATTRIBUTES: FilterableAttribute[] = [
+  { path: 'name', label: 'Name (Top Level)', type: 'string' },
+  { path: 'email', label: 'Email (Top Level)', type: 'string' },
+  { path: 'phone', label: 'Phone (Top Level)', type: 'string' },
+  { path: 'parsedData.personal_info.location', label: 'Location (Resume)', type: 'string' },
+  { path: 'parsedData.personal_info.introduction_aboutme', label: 'About Me (Resume)', type: 'string' },
+  { path: 'parsedData.education.[].university', label: 'University (Resume)', type: 'array_string' },
+  { path: 'parsedData.education.[].major', label: 'Major (Resume)', type: 'array_string' },
+  { path: 'parsedData.experience.[].company', label: 'Company (Resume)', type: 'array_string' },
+  { path: 'parsedData.experience.[].position', label: 'Past Position (Resume)', type: 'array_string' },
+  { path: 'parsedData.skills.[].skill_string', label: 'Skills String (Resume)', type: 'array_string' }, // Assuming skill_string exists and is searchable
+  { path: 'parsedData.cv_language', label: 'CV Language (Resume)', type: 'string' },
+];
 
 
 interface CandidatesPageClientProps {
@@ -49,15 +64,15 @@ export function CandidatesPageClient({
   authError: serverAuthError = false,
   permissionError: serverPermissionError = false,
 }: CandidatesPageClientProps) {
-  const [filters, setFilters] = useState<CandidateFilterValues>({ minFitScore: 0, maxFitScore: 100, positionId: "__ALL_POSITIONS__", status: "all" });
+  const [filters, setFilters] = useState<CandidateFilterValues>({ minFitScore: 0, maxFitScore: 100, positionId: "__ALL_POSITIONS__", status: "all", attributePath: "__NO_ATTRIBUTE_FILTER__" });
 
   const [allCandidates, setAllCandidates] = useState<Candidate[]>(initialCandidates || []);
   const [availablePositions, setAvailablePositions] = useState<Position[]>(initialAvailablePositions || []);
   const [availableStages, setAvailableStages] = useState<RecruitmentStage[]>(initialAvailableStages || []);
   const [availableRecruiters, setAvailableRecruiters] = useState<Pick<UserProfile, 'id' | 'name'>[]>([]);
 
-  const [isLoading, setIsLoading] = useState(false); // General loading for standard filters
-  const [isAiSearching, setIsAiSearching] = useState(false); // Specific loading for AI search
+  const [isLoading, setIsLoading] = useState(false); 
+  const [isAiSearching, setIsAiSearching] = useState(false); 
   const [aiSearchReasoning, setAiSearchReasoning] = useState<string | null>(null);
   const [aiMatchedCandidateIds, setAiMatchedCandidateIds] = useState<string[] | null>(null);
 
@@ -107,7 +122,7 @@ export function CandidatesPageClient({
     setFetchError(null);
     setAuthError(false);
     setPermissionError(false);
-    setAiMatchedCandidateIds(null); // Clear AI results when standard filters are applied
+    setAiMatchedCandidateIds(null); 
     setAiSearchReasoning(null);
 
     try {
@@ -123,7 +138,11 @@ export function CandidatesPageClient({
       if (currentFilters.applicationDateStart) query.append('applicationDateStart', currentFilters.applicationDateStart.toISOString());
       if (currentFilters.applicationDateEnd) query.append('applicationDateEnd', currentFilters.applicationDateEnd.toISOString());
       if (currentFilters.recruiterId && currentFilters.recruiterId !== "__ALL_RECRUITERS__") query.append('recruiterId', currentFilters.recruiterId);
-      if (currentFilters.keywords) query.append('keywords', currentFilters.keywords);
+      // if (currentFilters.keywords) query.append('keywords', currentFilters.keywords); // Removed
+      if (currentFilters.attributePath && currentFilters.attributePath !== "__NO_ATTRIBUTE_FILTER__" && currentFilters.attributeValue) {
+        query.append('attributePath', currentFilters.attributePath);
+        query.append('attributeValue', currentFilters.attributeValue);
+      }
 
 
       const response = await fetch(`/api/candidates?${query.toString()}`);
@@ -396,7 +415,11 @@ export function CandidatesPageClient({
       if (filters.applicationDateStart) query.append('applicationDateStart', filters.applicationDateStart.toISOString());
       if (filters.applicationDateEnd) query.append('applicationDateEnd', filters.applicationDateEnd.toISOString());
       if (filters.recruiterId && filters.recruiterId !== "__ALL_RECRUITERS__") query.append('recruiterId', filters.recruiterId);
-      if (filters.keywords) query.append('keywords', filters.keywords);
+      // if (filters.keywords) query.append('keywords', filters.keywords); // Removed
+      if (filters.attributePath && filters.attributePath !== "__NO_ATTRIBUTE_FILTER__" && filters.attributeValue) {
+        query.append('attributePath', filters.attributePath);
+        query.append('attributeValue', filters.attributeValue);
+      }
 
 
       const response = await fetch(`/api/candidates/export?${query.toString()}`);
@@ -476,6 +499,7 @@ export function CandidatesPageClient({
             availablePositions={availablePositions}
             availableStages={availableStages}
             availableRecruiters={availableRecruiters}
+            filterableAttributes={FILTERABLE_CANDIDATE_ATTRIBUTES}
             isLoading={isLoading || isAiSearching}
             isAiSearching={isAiSearching}
           />
@@ -509,4 +533,5 @@ export function CandidatesPageClient({
     </div>
   );
 }
+
 

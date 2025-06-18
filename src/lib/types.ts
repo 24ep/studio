@@ -1,3 +1,4 @@
+
 // This declares the shape of the user object returned by the session callback
 // and available in useSession() or getServerSession()
 // It needs to be augmented if you add custom properties to the session token
@@ -149,6 +150,7 @@ export interface ExperienceEntry {
 export interface SkillEntry {
   segment_skill?: string;
   skill?: string[];
+  skill_string?: string; // For UI binding if skills are comma-separated in input
 }
 
 export interface JobSuitableEntry {
@@ -414,6 +416,12 @@ export interface SettingsNavigationItem {
   adminOnly?: boolean;
   permissionId?: PlatformModuleId;
   adminOnlyOrPermission?: boolean;
+}
+
+export interface FilterableAttribute {
+  path: string; // e.g., "name", "parsedData.personal_info.location"
+  label: string; // e.g., "Candidate Name", "Location (Resume)"
+  type: 'string' | 'number' | 'date' | 'boolean' | 'array_string'; // To guide potential future UI or backend logic
 }
     
 
