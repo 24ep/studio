@@ -21,6 +21,7 @@ interface PositionFiltersProps {
   initialFilters?: PositionFilterValues;
   onFilterChange: (filters: PositionFilterValues) => void;
   isLoading?: boolean;
+  availableDepartments: string[]; // New prop
 }
 
 const statusOptions = [
@@ -29,17 +30,22 @@ const statusOptions = [
   { value: "false", label: "Closed" },
 ];
 
-export function PositionFilters({ initialFilters = { isOpen: "all" }, onFilterChange, isLoading }: PositionFiltersProps) {
+const ALL_DEPARTMENTS_SELECT_VALUE = "__ALL_DEPARTMENTS__";
+
+export function PositionFilters({ initialFilters = { isOpen: "all" }, onFilterChange, isLoading, availableDepartments }: PositionFiltersProps) {
   const [title, setTitle] = useState(initialFilters.title || '');
-  const [department, setDepartment] = useState(initialFilters.department || '');
+  const [department, setDepartment] = useState(initialFilters.department || ALL_DEPARTMENTS_SELECT_VALUE);
   const [isOpen, setIsOpen] = useState<PositionFilterValues['isOpen']>(initialFilters.isOpen || "all");
   const [positionLevel, setPositionLevel] = useState(initialFilters.positionLevel || '');
   
   const [statusSearchOpen, setStatusSearchOpen] = useState(false);
+  const [departmentSearchOpen, setDepartmentSearchOpen] = useState(false);
+  const [departmentSearchQuery, setDepartmentSearchQuery] = useState('');
+
 
   useEffect(() => {
     setTitle(initialFilters.title || '');
-    setDepartment(initialFilters.department || '');
+    setDepartment(initialFilters.department || ALL_DEPARTMENTS_SELECT_VALUE);
     setIsOpen(initialFilters.isOpen || "all");
     setPositionLevel(initialFilters.positionLevel || '');
   }, [initialFilters]);
@@ -48,7 +54,7 @@ export function PositionFilters({ initialFilters = { isOpen: "all" }, onFilterCh
   const handleApplyFilters = () => {
     onFilterChange({
       title: title || undefined,
-      department: department || undefined,
+      department: department === ALL_DEPARTMENTS_SELECT_VALUE ? undefined : department,
       isOpen: isOpen === "all" ? undefined : isOpen,
       positionLevel: positionLevel || undefined,
     });
@@ -56,11 +62,22 @@ export function PositionFilters({ initialFilters = { isOpen: "all" }, onFilterCh
 
   const handleResetFilters = () => {
     setTitle('');
-    setDepartment('');
+    setDepartment(ALL_DEPARTMENTS_SELECT_VALUE);
+    setDepartmentSearchQuery('');
     setIsOpen("all");
     setPositionLevel('');
     onFilterChange({ isOpen: "all" }); 
   };
+
+  const filteredDepartments = departmentSearchQuery
+    ? availableDepartments.filter(dept => dept.toLowerCase().includes(departmentSearchQuery.toLowerCase()))
+    : availableDepartments;
+  
+  const getCurrentDepartmentDisplayValue = () => {
+    if (department === ALL_DEPARTMENTS_SELECT_VALUE) return "All Departments";
+    return department || "All Departments";
+  };
+
 
   return (
     <div className="mb-6 p-4 border rounded-lg bg-card shadow">
@@ -77,15 +94,65 @@ export function PositionFilters({ initialFilters = { isOpen: "all" }, onFilterCh
           />
         </div>
         <div>
-          <Label htmlFor="department-search">Department</Label>
-          <Input
-            id="department-search"
-            placeholder="Search by department..."
-            value={department}
-            onChange={(e) => setDepartment(e.target.value)}
-            className="mt-1"
-            disabled={isLoading}
-          />
+          <Label htmlFor="department-combobox">Department</Label>
+          <Popover open={departmentSearchOpen} onOpenChange={setDepartmentSearchOpen}>
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                role="combobox"
+                aria-expanded={departmentSearchOpen}
+                className="w-full justify-between mt-1"
+                disabled={isLoading}
+              >
+                <span className="truncate">
+                  {getCurrentDepartmentDisplayValue()}
+                </span>
+                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-[--trigger-width] p-0 dropdown-content-height">
+              <div className="p-2">
+                <Input
+                  placeholder="Search department..."
+                  value={departmentSearchQuery}
+                  onChange={(e) => setDepartmentSearchQuery(e.target.value)}
+                  className="h-9"
+                />
+              </div>
+              <ScrollArea className="max-h-60">
+                <Button
+                  variant="ghost"
+                  className={cn("w-full justify-start px-2 py-1.5 text-sm font-normal h-auto", department === ALL_DEPARTMENTS_SELECT_VALUE && "bg-accent text-accent-foreground")}
+                  onClick={() => {
+                    setDepartment(ALL_DEPARTMENTS_SELECT_VALUE);
+                    setDepartmentSearchOpen(false);
+                    setDepartmentSearchQuery('');
+                  }}
+                >
+                  <Check className={cn("mr-2 h-4 w-4", department === ALL_DEPARTMENTS_SELECT_VALUE ? "opacity-100" : "opacity-0")}/>
+                  All Departments
+                </Button>
+                {filteredDepartments.length === 0 && departmentSearchQuery && (
+                  <p className="p-2 text-sm text-muted-foreground text-center">No department found.</p>
+                )}
+                {filteredDepartments.map((dept) => (
+                  <Button
+                    key={dept}
+                    variant="ghost"
+                    className={cn("w-full justify-start px-2 py-1.5 text-sm font-normal h-auto", department === dept && "bg-accent text-accent-foreground")}
+                    onClick={() => {
+                      setDepartment(dept);
+                      setDepartmentSearchOpen(false);
+                      setDepartmentSearchQuery('');
+                    }}
+                  >
+                    <Check className={cn("mr-2 h-4 w-4", department === dept ? "opacity-100" : "opacity-0")}/>
+                    {dept}
+                  </Button>
+                ))}
+              </ScrollArea>
+            </PopoverContent>
+          </Popover>
         </div>
         <div>
           <Label htmlFor="status-combobox">Status</Label>

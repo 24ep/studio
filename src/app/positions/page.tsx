@@ -3,7 +3,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Button, buttonVariants } from "@/components/ui/button"; 
+import { Button, buttonVariants } from '@/components/ui/button'; 
 import { PlusCircle, Briefcase, Edit, Trash2, ServerCrash, Loader2, FileDown, FileUp, ChevronDown, FileSpreadsheet } from "lucide-react";
 import type { Position } from "@/lib/types";
 import { Badge } from "@/components/ui/badge";
@@ -25,7 +25,7 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger, // Added missing import
+  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import {
   DropdownMenu,
@@ -56,6 +56,8 @@ export default function PositionsPage() {
   const pathname = usePathname();
   const [fetchError, setFetchError] = useState<string | null>(null);
   const [authError, setAuthError] = useState(false);
+  const [availableDepartments, setAvailableDepartments] = useState<string[]>([]);
+
 
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -78,7 +80,7 @@ export default function PositionsPage() {
     try {
       const query = new URLSearchParams();
       if (filters.title) query.append('title', filters.title);
-      if (filters.department) query.append('department', filters.department);
+      if (filters.department && filters.department !== "__ALL_DEPARTMENTS__") query.append('department', filters.department);
       if (filters.isOpen && filters.isOpen !== "all") query.append('isOpen', String(filters.isOpen === "true"));
       if (filters.positionLevel) query.append('position_level', filters.positionLevel);
 
@@ -98,6 +100,11 @@ export default function PositionsPage() {
       }
       const data: Position[] = await response.json();
       setPositions(data);
+      
+      // Extract unique departments for the filter dropdown
+      const uniqueDepts = Array.from(new Set(data.map(p => p.department).filter(Boolean)));
+      setAvailableDepartments(uniqueDepts.sort());
+
     } catch (error) {
       console.error("Error fetching positions:", error);
       const errorMessage = (error as Error).message || "Could not load position data.";
@@ -135,7 +142,8 @@ export default function PositionsPage() {
             throw new Error(errorData.message || `Failed to add position: ${response.statusText || `Status: ${response.status}`}`);
         }
         const newPosition: Position = await response.json();
-        setPositions(prev => [newPosition, ...prev].sort((a,b) => new Date(b.createdAt!).getTime() - new Date(a.createdAt!).getTime()));
+        // setPositions(prev => [newPosition, ...prev].sort((a,b) => new Date(b.createdAt!).getTime() - new Date(a.createdAt!).getTime()));
+        fetchPositions(); // Refetch to update list and department filter
         setIsAddModalOpen(false);
         toast({ title: "Position Added", description: `${newPosition.title} has been successfully added.` });
     } catch (error) {
@@ -161,7 +169,8 @@ export default function PositionsPage() {
         throw new Error(errorData.message || `Failed to update position: ${response.statusText || `Status: ${response.status}`}`);
       }
       const updatedPosition: Position = await response.json();
-      setPositions(prevPositions => prevPositions.map(p => p.id === updatedPosition.id ? updatedPosition : p));
+      // setPositions(prevPositions => prevPositions.map(p => p.id === updatedPosition.id ? updatedPosition : p));
+      fetchPositions(); // Refetch to update list and department filter
       setIsEditModalOpen(false);
       setSelectedPositionForEdit(null);
       toast({ title: "Position Updated", description: `Position "${updatedPosition.title}" has been updated.` });
@@ -183,7 +192,8 @@ export default function PositionsPage() {
         const errorData = await response.json().catch(() => ({message: "Failed to delete position."}));
         throw new Error(errorData.message || `Failed to delete position: ${response.statusText}`);
       }
-      setPositions(prevPositions => prevPositions.filter(p => p.id !== positionToDelete!.id));
+      // setPositions(prevPositions => prevPositions.filter(p => p.id !== positionToDelete!.id));
+      fetchPositions(); // Refetch to update list and department filter
       toast({ title: "Position Deleted", description: `Position "${positionToDelete.title}" has been deleted.` });
     } catch (error) {
       console.error("Error deleting position:", error);
@@ -214,7 +224,7 @@ export default function PositionsPage() {
     try {
       const query = new URLSearchParams();
       if (filters.title) query.append('title', filters.title);
-      if (filters.department) query.append('department', filters.department);
+      if (filters.department && filters.department !== "__ALL_DEPARTMENTS__") query.append('department', filters.department);
       if (filters.isOpen && filters.isOpen !== "all") query.append('isOpen', String(filters.isOpen === "true"));
       if (filters.positionLevel) query.append('position_level', filters.positionLevel);
 
@@ -278,7 +288,7 @@ export default function PositionsPage() {
         <Button onClick={() => setIsAddModalOpen(true)} className="w-full sm:w-auto btn-primary-gradient"> <PlusCircle className="mr-2 h-4 w-4" /> Add New Position </Button>
       </div>
 
-      <PositionFilters initialFilters={filters} onFilterChange={handleFilterChange} isLoading={isLoading} />
+      <PositionFilters initialFilters={filters} onFilterChange={handleFilterChange} isLoading={isLoading} availableDepartments={availableDepartments} />
 
 
       <Card className="shadow-sm">
