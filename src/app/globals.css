@@ -222,25 +222,25 @@ body {
 
   /* Primary buttons to use the new gradient */
   .btn-primary-gradient {
-    background-color: hsl(var(--primary-gradient-start-l)); /* Fallback solid color for light theme */
-    background-image: linear-gradient(90deg, hsl(var(--primary-gradient-start-l)) 0%, hsl(var(--primary-gradient-end-l)) 100%);
-    background-image: -webkit-linear-gradient(90deg, hsl(var(--primary-gradient-start-l)) 0%, hsl(var(--primary-gradient-end-l)) 100%);
-    background-image: -moz-linear-gradient(90deg, hsl(var(--primary-gradient-start-l)) 0%, hsl(var(--primary-gradient-end-l)) 100%);
-    background-image: -ms-linear-gradient(90deg, hsl(var(--primary-gradient-start-l)) 0%, hsl(var(--primary-gradient-end-l)) 100%);
+    background-color: hsl(var(--primary-gradient-start-l)); /* Fallback */
+    background-image: -ms-linear-gradient(90deg, hsl(var(--primary-gradient-start-l)) 0%, hsl(var(--primary-gradient-end-l)) 100%); /* Old IE */
+    background-image: -moz-linear-gradient(90deg, hsl(var(--primary-gradient-start-l)) 0%, hsl(var(--primary-gradient-end-l)) 100%); /* Firefox */
+    background-image: -webkit-linear-gradient(90deg, hsl(var(--primary-gradient-start-l)) 0%, hsl(var(--primary-gradient-end-l)) 100%); /* Old Chrome, Safari */
+    background-image: linear-gradient(90deg, hsl(var(--primary-gradient-start-l)) 0%, hsl(var(--primary-gradient-end-l)) 100%); /* Standard */
     color: hsl(var(--primary-foreground));
     border: none;
-    filter: progid: DXImageTransform.Microsoft.gradient( startColorstr="#6FE3E1", endColorstr="#5257E5", GradientType=1 );
+    filter: progid: DXImageTransform.Microsoft.gradient( startColorstr="#6FE3E1", endColorstr="#5257E5", GradientType=1 ); /* IE6-9 */
   }
 
   .dark .btn-primary-gradient {
-    background-color: hsl(var(--primary-gradient-start-d)); /* Fallback solid color for dark theme */
-    background-image: linear-gradient(90deg, hsl(var(--primary-gradient-start-d)) 0%, hsl(var(--primary-gradient-end-d)) 100%);
-    background-image: -webkit-linear-gradient(90deg, hsl(var(--primary-gradient-start-d)) 0%, hsl(var(--primary-gradient-end-d)) 100%);
-    background-image: -moz-linear-gradient(90deg, hsl(var(--primary-gradient-start-d)) 0%, hsl(var(--primary-gradient-end-d)) 100%);
+    background-color: hsl(var(--primary-gradient-start-d)); /* Fallback */
     background-image: -ms-linear-gradient(90deg, hsl(var(--primary-gradient-start-d)) 0%, hsl(var(--primary-gradient-end-d)) 100%);
+    background-image: -moz-linear-gradient(90deg, hsl(var(--primary-gradient-start-d)) 0%, hsl(var(--primary-gradient-end-d)) 100%);
+    background-image: -webkit-linear-gradient(90deg, hsl(var(--primary-gradient-start-d)) 0%, hsl(var(--primary-gradient-end-d)) 100%);
+    background-image: linear-gradient(90deg, hsl(var(--primary-gradient-start-d)) 0%, hsl(var(--primary-gradient-end-d)) 100%); /* Standard */
     color: hsl(var(--primary-foreground));
     border: none;
-    filter: progid: DXImageTransform.Microsoft.gradient( startColorstr="#6FE3E1", endColorstr="#5257E5", GradientType=1 );
+    filter: progid: DXImageTransform.Microsoft.gradient( startColorstr="#6FE3E1", endColorstr="#5257E5", GradientType=1 ); /* IE6-9 */
   }
 
   .btn-primary-gradient:hover {
@@ -312,4 +312,5 @@ body {
 
 
     
+
 
