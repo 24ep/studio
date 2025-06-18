@@ -26,8 +26,8 @@ body {
     --popover-foreground: 220 25% 20%;
 
     /* Primary Color Definition for Light Theme */
-    --primary-gradient-start-l: 192 95% 50%; 
-    --primary-gradient-end-l: 225 89% 47%;   
+    --primary-gradient-start-l: 191 75% 60%; /* New Start: hsla(191, 75%, 60%, 1) */
+    --primary-gradient-end-l: 248 87% 36%;   /* New End: hsla(248, 87%, 36%, 1) */
     --primary: hsl(var(--primary-gradient-start-l)); 
     --primary-foreground: 0 0% 100%;
 
@@ -100,8 +100,8 @@ body {
     --popover-foreground: 210 30% 95%;
 
     /* Primary Color Definition for Dark Theme */
-    --primary-gradient-start-d: 192 95% 50%; 
-    --primary-gradient-end-d: 225 89% 47%;   
+    --primary-gradient-start-d: 191 75% 60%; /* New Start: hsla(191, 75%, 60%, 1) */
+    --primary-gradient-end-d: 248 87% 36%;   /* New End: hsla(248, 87%, 36%, 1) */
     --primary: hsl(var(--primary-gradient-start-d)); 
     --primary-foreground: hsl(0 0% 100%); 
 
@@ -222,38 +222,33 @@ body {
 
   /* Primary buttons to use the new gradient */
   .btn-primary-gradient {
-    background-color: hsl(var(--primary-gradient-start-l)); /* Fallback solid color */
+    background-color: hsl(var(--primary-gradient-start-l)); /* Fallback solid color for light theme */
     background-image: linear-gradient(90deg, hsl(var(--primary-gradient-start-l)) 0%, hsl(var(--primary-gradient-end-l)) 100%);
     background-image: -webkit-linear-gradient(90deg, hsl(var(--primary-gradient-start-l)) 0%, hsl(var(--primary-gradient-end-l)) 100%);
     background-image: -moz-linear-gradient(90deg, hsl(var(--primary-gradient-start-l)) 0%, hsl(var(--primary-gradient-end-l)) 100%);
     background-image: -ms-linear-gradient(90deg, hsl(var(--primary-gradient-start-l)) 0%, hsl(var(--primary-gradient-end-l)) 100%);
-    /* IE6-9 filter should be the last 'background' type property if used as a fallback for ancient IE */
     color: hsl(var(--primary-foreground));
     border: none;
-  }
-  .btn-primary-gradient { /* Apply IE filter separately or ensure it's part of a comprehensive background stack */
-    filter: progid: DXImageTransform.Microsoft.gradient( startColorstr="#07C8F9", endColorstr="#0D41E1", GradientType=1 );
+    filter: progid: DXImageTransform.Microsoft.gradient( startColorstr="#4DC9E6", endColorstr="#210CAE", GradientType=1 );
   }
 
   .dark .btn-primary-gradient {
-    background-color: hsl(var(--primary-gradient-start-d)); /* Fallback solid color */
+    background-color: hsl(var(--primary-gradient-start-d)); /* Fallback solid color for dark theme */
     background-image: linear-gradient(90deg, hsl(var(--primary-gradient-start-d)) 0%, hsl(var(--primary-gradient-end-d)) 100%);
     background-image: -webkit-linear-gradient(90deg, hsl(var(--primary-gradient-start-d)) 0%, hsl(var(--primary-gradient-end-d)) 100%);
     background-image: -moz-linear-gradient(90deg, hsl(var(--primary-gradient-start-d)) 0%, hsl(var(--primary-gradient-end-d)) 100%);
     background-image: -ms-linear-gradient(90deg, hsl(var(--primary-gradient-start-d)) 0%, hsl(var(--primary-gradient-end-d)) 100%);
     color: hsl(var(--primary-foreground));
     border: none;
-  }
-   .dark .btn-primary-gradient { /* Apply IE filter separately for dark mode too if needed */
-    filter: progid: DXImageTransform.Microsoft.gradient( startColorstr="#07C8F9", endColorstr="#0D41E1", GradientType=1 );
+    filter: progid: DXImageTransform.Microsoft.gradient( startColorstr="#4DC9E6", endColorstr="#210CAE", GradientType=1 );
   }
 
   .btn-primary-gradient:hover {
-    filter: brightness(1.1) progid:DXImageTransform.Microsoft.gradient( startColorstr='#07C8F9', endColorstr='#0D41E1', GradientType=1 ); 
+    filter: brightness(1.1) progid:DXImageTransform.Microsoft.gradient( startColorstr="#4DC9E6", endColorstr="#210CAE", GradientType=1 ); 
     box-shadow: 0 2px 10px -3px hsla(var(--primary-gradient-start-l), 0.4); 
   }
    .dark .btn-primary-gradient:hover {
-    filter: brightness(1.1) progid:DXImageTransform.Microsoft.gradient( startColorstr='#07C8F9', endColorstr='#0D41E1', GradientType=1 );
+    filter: brightness(1.1) progid:DXImageTransform.Microsoft.gradient( startColorstr="#4DC9E6", endColorstr="#210CAE", GradientType=1 );
     box-shadow: 0 2px 10px -3px hsla(var(--primary-gradient-start-d), 0.4);
   }
 
@@ -314,3 +309,6 @@ body {
 
 
 
+
+
+    
