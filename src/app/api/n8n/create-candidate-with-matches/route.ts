@@ -120,8 +120,8 @@ const experienceEntrySchema = z.object({
     (val) => {
       if (typeof val === 'string') {
         const lowerVal = val.toLowerCase();
-        if (lowerVal === 'true') return true;
-        if (lowerVal === 'false' || lowerVal === 'none' || lowerVal === '') return false;
+        if (lowerVal === 'true' || lowerVal === 'yes') return true;
+        if (lowerVal === 'false' || lowerVal === 'no' || lowerVal === 'none' || lowerVal === '') return false;
       }
       if (val === null || val === undefined) return false; 
       return val; 
