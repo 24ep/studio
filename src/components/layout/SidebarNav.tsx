@@ -70,7 +70,12 @@ export function SidebarNav() {
                 size="default"
                 data-active={pathname === item.href || (item.href !== "/" && pathname.startsWith(item.href))}
               >
-                <a> <item.icon className="h-5 w-5" /> <span className="truncate">{item.label}</span> </a>
+                <a>
+                  <item.icon className="h-5 w-5" />
+                  <button className="truncate bg-transparent border-none p-0 m-0 text-left font-inherit text-inherit hover:bg-transparent focus:outline-none focus-visible:ring-0 w-auto">
+                    {item.label}
+                  </button>
+                </a>
               </SidebarMenuButton>
             </Link>
           </SidebarMenuItem>
@@ -87,7 +92,12 @@ export function SidebarNav() {
                 size="default"
                 data-active={pathname.startsWith(myTaskBoardNavItem.href)}
               >
-                <a> <myTaskBoardNavItem.icon className="h-5 w-5" /> <span className="truncate">{myTaskBoardNavItem.label}</span> </a>
+                <a>
+                  <myTaskBoardNavItem.icon className="h-5 w-5" />
+                  <button className="truncate bg-transparent border-none p-0 m-0 text-left font-inherit text-inherit hover:bg-transparent focus:outline-none focus-visible:ring-0 w-auto">
+                    {myTaskBoardNavItem.label}
+                  </button>
+                </a>
               </SidebarMenuButton>
             </Link>
           </SidebarMenuItem>
@@ -104,7 +114,12 @@ export function SidebarNav() {
                   size="default"
                   data-active={pathname.startsWith("/settings")}
                 >
-                    <a> <settingsNavItem.icon className="h-5 w-5" /> <span className="truncate">{settingsNavItem.label}</span> </a>
+                  <a>
+                    <settingsNavItem.icon className="h-5 w-5" />
+                    <button className="truncate bg-transparent border-none p-0 m-0 text-left font-inherit text-inherit hover:bg-transparent focus:outline-none focus-visible:ring-0 w-auto">
+                      {settingsNavItem.label}
+                    </button>
+                  </a>
                 </SidebarMenuButton>
              </Link>
            </SidebarMenuItem>
@@ -112,3 +127,4 @@ export function SidebarNav() {
       </SidebarMenu>
   );
 }
+
