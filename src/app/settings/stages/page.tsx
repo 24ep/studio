@@ -35,7 +35,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { useToast } from '@/hooks/use-toast';
 import { useSession, signIn } from 'next-auth/react';
 import { useRouter, usePathname } from 'next/navigation';
@@ -184,12 +184,6 @@ export default function RecruitmentStagesPage() {
     }
   };
 
-  const handleConfirmDelete = () => { // This is for fallback, direct delete
-    if (stageToDelete) {
-      attemptDeleteStage(stageToDelete);
-    }
-  };
-
   const handleConfirmDeleteWithReplacement = async () => {
     if (stageToDelete && replacementStageName) {
       setIsReplacementModalOpen(false); // Close modal before attempting delete
@@ -219,37 +213,48 @@ export default function RecruitmentStagesPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-semibold flex items-center"><KanbanSquare className="mr-3 h-6 w-6 text-primary"/>Recruitment Stages</h1>
-        <Button onClick={() => handleOpenModal()} className="btn-primary-gradient">
-          <PlusCircle className="mr-2 h-4 w-4" /> Add New Stage
-        </Button>
-      </div>
-       <CardDescription>
-        Manage the stages in your recruitment pipeline. System stages cannot be deleted or renamed. Custom stages can be reordered.
-        If a custom stage is in use, you will be prompted to migrate candidates to another stage upon deletion.
-      </CardDescription>
-
-      <Card>
+      <Card className="shadow-lg">
+        <CardHeader className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+          <div>
+            <CardTitle className="flex items-center text-2xl"><KanbanSquare className="mr-3 h-6 w-6 text-primary"/>Recruitment Stages</CardTitle>
+            <CardDescription>
+              Manage the stages in your recruitment pipeline. System stages cannot be deleted or renamed.
+              Drag-and-drop reordering is not available; use the 'Sort Order' field to manage stage sequence.
+              If a custom stage is in use, you will be prompted to migrate candidates to another stage upon deletion.
+            </CardDescription>
+          </div>
+          <Button onClick={() => handleOpenModal()} className="btn-primary-gradient mt-2 sm:mt-0">
+            <PlusCircle className="mr-2 h-4 w-4" /> Add New Stage
+          </Button>
+        </CardHeader>
         <CardContent className="pt-6">
-          {stages.length === 0 && !isLoading ? ( <p className="text-muted-foreground text-center">No recruitment stages configured yet.</p> ) : (
-            <Table>
-              <TableHeader><TableRow><TableHead>Name</TableHead><TableHead>Description</TableHead><TableHead className="w-[100px]">Type</TableHead><TableHead className="w-[100px]">Order</TableHead><TableHead className="text-right w-[120px]">Actions</TableHead></TableRow></TableHeader>
-              <TableBody>
-                {stages.map((stage) => (
-                  <TableRow key={stage.id}>
-                    <TableCell className="font-medium">{stage.name}</TableCell>
-                    <TableCell className="text-sm text-muted-foreground max-w-md truncate">{stage.description || 'N/A'}</TableCell>
-                    <TableCell><Badge variant={stage.is_system ? "secondary" : "outline"}>{stage.is_system ? "System" : "Custom"}</Badge></TableCell>
-                    <TableCell>{stage.sort_order}</TableCell>
-                    <TableCell className="text-right">
-                      <Button variant="ghost" size="icon" onClick={() => handleOpenModal(stage)} className="mr-1 h-8 w-8"><Edit3 className="h-4 w-4" /></Button>
-                      {!stage.is_system && (<Button variant="ghost" size="icon" onClick={() => attemptDeleteStage(stage)} className="text-destructive hover:text-destructive h-8 w-8"><Trash2 className="h-4 w-4" /></Button>)}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+          {isLoading && stages.length === 0 ? (
+             <div className="flex justify-center items-center py-10">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                <p className="ml-2 text-muted-foreground">Loading stages...</p>
+            </div>
+          ) : stages.length === 0 && !fetchError ? ( 
+            <p className="text-muted-foreground text-center">No recruitment stages configured yet.</p> 
+          ) : (
+            <div className="border rounded-lg overflow-hidden">
+              <Table>
+                <TableHeader><TableRow><TableHead>Name</TableHead><TableHead className="hidden sm:table-cell">Description</TableHead><TableHead className="w-[100px]">Type</TableHead><TableHead className="w-[100px]">Order</TableHead><TableHead className="text-right w-[120px]">Actions</TableHead></TableRow></TableHeader>
+                <TableBody>
+                  {stages.map((stage) => (
+                    <TableRow key={stage.id}>
+                      <TableCell className="font-medium">{stage.name}</TableCell>
+                      <TableCell className="text-sm text-muted-foreground max-w-xs sm:max-w-md truncate hidden sm:table-cell">{stage.description || 'N/A'}</TableCell>
+                      <TableCell><Badge variant={stage.is_system ? "secondary" : "outline"}>{stage.is_system ? "System" : "Custom"}</Badge></TableCell>
+                      <TableCell>{stage.sort_order}</TableCell>
+                      <TableCell className="text-right">
+                        <Button variant="ghost" size="icon" onClick={() => handleOpenModal(stage)} className="mr-1 h-8 w-8"><Edit3 className="h-4 w-4" /></Button>
+                        {!stage.is_system && (<Button variant="ghost" size="icon" onClick={() => attemptDeleteStage(stage)} className="text-destructive hover:text-destructive h-8 w-8"><Trash2 className="h-4 w-4" /></Button>)}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
           )}
         </CardContent>
       </Card>
@@ -261,7 +266,7 @@ export default function RecruitmentStagesPage() {
             <div><Label htmlFor="name">Name *</Label><Input id="name" {...form.register('name')} disabled={!!editingStage?.is_system} />{form.formState.errors.name && <p className="text-sm text-destructive mt-1">{form.formState.errors.name.message}</p>}{editingStage?.is_system && <p className="text-xs text-muted-foreground mt-1">System stage names cannot be changed.</p>}</div>
             <div><Label htmlFor="description">Description</Label><Textarea id="description" {...form.register('description')} /></div>
             <div><Label htmlFor="sort_order">Sort Order</Label><Input id="sort_order" type="number" {...form.register('sort_order')} /></div>
-            <DialogFooter className="pt-4"><DialogClose asChild><Button type="button" variant="outline">Cancel</Button></DialogClose><Button type="submit" disabled={form.formState.isSubmitting}>{form.formState.isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Save className="mr-2 h-4 w-4"/>}{editingStage ? 'Save Changes' : 'Create Stage'}</Button></DialogFooter>
+            <DialogFooter className="pt-4"><DialogClose asChild><Button type="button" variant="outline">Cancel</Button></DialogClose><Button type="submit" disabled={form.formState.isSubmitting} className="btn-primary-gradient">{form.formState.isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Save className="mr-2 h-4 w-4"/>}{editingStage ? 'Save Changes' : 'Create Stage'}</Button></DialogFooter>
           </form>
         </DialogContent>
       </Dialog>
@@ -269,7 +274,7 @@ export default function RecruitmentStagesPage() {
       <AlertDialog open={isReplacementModalOpen} onOpenChange={(open) => {
         setIsReplacementModalOpen(open);
         if (!open) {
-          setStageToDelete(null); // Clear stage to delete if modal is closed without action
+          setStageToDelete(null); 
           setReplacementStageName('');
         }
       }}>
@@ -302,18 +307,6 @@ export default function RecruitmentStagesPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-
-      {/* Fallback simple delete confirmation (only if not caught by needsReplacement flow initially) */}
-      {stageToDelete && !isReplacementModalOpen && (
-        <AlertDialog open={!!stageToDelete && !isReplacementModalOpen} onOpenChange={(open) => { if(!open) setStageToDelete(null);}}>
-          <AlertDialogContent>
-            <AlertDialogHeader><AlertDialogTitle>Are you sure?</AlertDialogTitle><AlertDialogDescription>This will delete the stage "<strong>{stageToDelete.name}</strong>". This action cannot be undone.</AlertDialogDescription></AlertDialogHeader>
-            <AlertDialogFooter><AlertDialogCancel onClick={() => setStageToDelete(null)}>Cancel</AlertDialogCancel><AlertDialogAction onClick={handleConfirmDelete} className={buttonVariants({ variant: "destructive" })}>Delete Stage</AlertDialogAction></AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
-      )}
     </div>
   );
 }
-
-    

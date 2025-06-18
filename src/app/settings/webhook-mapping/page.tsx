@@ -7,18 +7,14 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { useToast } from '@/hooks/use-toast';
 import { signIn, useSession } from 'next-auth/react';
 import { useRouter, usePathname } from 'next/navigation';
 import { Save, SlidersHorizontal, Info, Trash2, PlusCircle, Loader2, ShieldAlert, ServerCrash, RefreshCw } from 'lucide-react';
-import type { WebhookFieldMapping } from '@/lib/types'; // Server-side type
+import type { WebhookFieldMapping } from '@/lib/types'; 
 
-// Define the target candidate attributes we can map to.
-// This list should reflect the fields processable by the n8n/create-candidate-with-matches API's Zod schema.
-// Path uses dot notation for nesting.
-// This acts as the "master list" of what target paths are configurable.
 const TARGET_CANDIDATE_ATTRIBUTES_CONFIG: { path: string; label: string; type: string; example?: string, defaultNotes?: string }[] = [
   { path: 'candidate_info.cv_language', label: 'CV Language', type: 'string', example: 'payload.language', defaultNotes: 'Language code of the resume (e.g., EN, TH).' },
   { path: 'candidate_info.personal_info.title_honorific', label: 'Personal - Title', type: 'string', example: 'payload.profile.title', defaultNotes: 'E.g., Mr., Ms., Dr.' },
@@ -44,7 +40,6 @@ const TARGET_CANDIDATE_ATTRIBUTES_CONFIG: { path: string; label: string; type: s
   { path: 'targetPositionLevel', label: 'Target Position Level (Hint)', type: 'string', example: 'payload.initialTarget.level', defaultNotes: 'Hint from uploader about target position level.' },
 ];
 
-
 export default function WebhookMappingPage() {
   const { data: session, status: sessionStatus } = useSession();
   const router = useRouter();
@@ -63,7 +58,7 @@ export default function WebhookMappingPage() {
     const initialised = TARGET_CANDIDATE_ATTRIBUTES_CONFIG.map(attrConfig => {
       const existingDbMapping = dbMappingsMap.get(attrConfig.path);
       return {
-        id: existingDbMapping?.id, // Keep DB id if exists
+        id: existingDbMapping?.id,
         targetPath: attrConfig.path,
         sourcePath: existingDbMapping?.sourcePath || '',
         notes: existingDbMapping?.notes || attrConfig.defaultNotes || '',
@@ -71,7 +66,6 @@ export default function WebhookMappingPage() {
     });
     setMappings(initialised);
   }, []);
-
 
   const fetchMappings = useCallback(async () => {
     if (sessionStatus !== 'authenticated') return;
@@ -92,7 +86,7 @@ export default function WebhookMappingPage() {
     } catch (error) {
       console.error("Error fetching webhook mappings:", error);
       setFetchError((error as Error).message);
-      initializeMappings([]); // Initialize with empty source paths if fetch fails
+      initializeMappings([]); 
       toast({title: "Error Loading Mappings", description: (error as Error).message, variant: "destructive"});
     } finally {
       setIsLoadingData(false);
@@ -113,12 +107,9 @@ export default function WebhookMappingPage() {
     }
   }, [sessionStatus, session, pathname, signIn, fetchMappings]);
 
-
   const handleMappingChange = (index: number, field: 'sourcePath' | 'notes', value: string) => {
     const newMappings = [...mappings];
-    // Ensure the object exists before trying to set a property on it
     if (!newMappings[index]) {
-        // This case should ideally not happen if mappings are initialized correctly
         console.error(`Attempted to update non-existent mapping at index ${index}`);
         return;
     }
@@ -130,11 +121,9 @@ export default function WebhookMappingPage() {
     if (!isClient) return;
     setIsSaving(true);
     try {
-      // Filter out mappings where sourcePath is empty, as they don't need to be saved if they mean "no mapping"
-      // However, API currently expects all target paths. If sourcePath is empty, it means unmapped.
       const payloadToSave = mappings.map(m => ({
         targetPath: m.targetPath,
-        sourcePath: m.sourcePath || null, // Send null if empty string for DB consistency
+        sourcePath: m.sourcePath || null, 
         notes: m.notes || null,
       }));
 
@@ -147,7 +136,7 @@ export default function WebhookMappingPage() {
       if (!response.ok) {
         throw new Error(result.message || 'Failed to save mappings');
       }
-      initializeMappings(result); // Re-initialize with data from server (includes IDs, createdAt etc.)
+      initializeMappings(result); 
       toast({ title: 'Configuration Saved', description: 'Webhook payload mapping configuration saved to the server.' });
     } catch (error) {
       console.error("Error saving webhook mapping to server:", error);
@@ -168,7 +157,7 @@ export default function WebhookMappingPage() {
   if (fetchError) {
     return (
       <div className="flex flex-col items-center justify-center h-[calc(100vh-10rem)] text-center p-4">
-        <ShieldAlert className="w-16 h-16 text-destructive mb-4" />
+        <ServerCrash className="w-16 h-16 text-destructive mb-4" />
         <h2 className="text-2xl font-semibold text-foreground mb-2">Access Denied or Error</h2>
         <p className="text-muted-foreground mb-4 max-w-md">{fetchError}</p>
         <Button onClick={() => router.push('/')} className="btn-hover-primary-gradient mr-2">Go to Dashboard</Button>
@@ -179,12 +168,11 @@ export default function WebhookMappingPage() {
     );
   }
 
-
   return (
     <div className="space-y-6">
-      <Card>
+      <Card className="shadow-lg">
         <CardHeader>
-          <CardTitle className="flex items-center"><SlidersHorizontal className="mr-2 h-6 w-6 text-primary"/>Webhook Payload Mapping</CardTitle>
+          <CardTitle className="flex items-center text-2xl"><SlidersHorizontal className="mr-3 h-6 w-6 text-primary"/>Webhook Payload Mapping</CardTitle>
           <CardDescription>
             Define how incoming JSON fields from your automated workflow (e.g., n8n) map to the CandiTrack candidate attributes for the 
             <code>/api/n8n/create-candidate-with-matches</code> endpoint. This configuration is saved on the server.
@@ -201,8 +189,7 @@ export default function WebhookMappingPage() {
               </AlertDescription>
             </Alert>
             
-            <div className="text-sm font-medium text-muted-foreground mb-2">Field Mappings:</div>
-            {isLoadingData ? (
+            {isLoadingData && mappings.length === 0 ? (
                 <div className="flex justify-center items-center py-10">
                     <Loader2 className="h-8 w-8 animate-spin text-primary" />
                     <p className="ml-2 text-muted-foreground">Loading mapping configuration...</p>
@@ -215,11 +202,11 @@ export default function WebhookMappingPage() {
                     <Button onClick={fetchMappings} variant="outline"><RefreshCw className="mr-2 h-4 w-4"/>Reload Configuration</Button>
                 </div>
             ) : (
-              <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-2 border rounded-md p-3 bg-muted/20">
+              <div className="space-y-4 max-h-[calc(100vh-24rem)] overflow-y-auto pr-2 border rounded-md p-3 bg-muted/20">
                   {mappings.map((mapping, index) => {
                       const targetAttrInfo = TARGET_CANDIDATE_ATTRIBUTES_CONFIG.find(attr => attr.path === mapping.targetPath);
                       return (
-                      <Card key={mapping.targetPath} className="p-3 shadow-sm bg-card"> {/* Use targetPath for key for stability */}
+                      <Card key={mapping.targetPath} className="p-3 shadow-sm bg-card">
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 items-end">
                               <div>
                                   <Label htmlFor={`targetPath-${index}`} className="text-xs font-semibold">Target CandiTrack Attribute</Label>
@@ -258,15 +245,13 @@ export default function WebhookMappingPage() {
               </div>
             )}
         </CardContent>
+        <CardFooter className="border-t pt-6 flex justify-end">
+            <Button onClick={handleSaveConfiguration} size="lg" className="btn-primary-gradient" disabled={isSaving || isLoadingData || !!fetchError}>
+            {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+            {isSaving ? 'Saving...' : 'Save Mapping Configuration'}
+            </Button>
+        </CardFooter>
       </Card>
-      
-      <div className="flex justify-end mt-6">
-        <Button onClick={handleSaveConfiguration} size="lg" className="btn-primary-gradient" disabled={isSaving || isLoadingData || !!fetchError}>
-          {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-          {isSaving ? 'Saving...' : 'Save Mapping Configuration'}
-        </Button>
-      </div>
     </div>
   );
 }
-

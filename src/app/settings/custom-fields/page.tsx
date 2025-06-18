@@ -34,7 +34,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from '@/hooks/use-toast';
 import { useSession, signIn } from 'next-auth/react';
@@ -61,7 +61,7 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-} from "@/components/ui/form"; // Added missing imports
+} from "@/components/ui/form";
 
 const customFieldOptionSchemaClient = z.object({
   value: z.string().min(1, "Option value is required"),
@@ -166,7 +166,6 @@ export default function CustomFieldsPage() {
     const url = editingDefinition ? `/api/settings/custom-field-definitions/${editingDefinition.id}` : '/api/settings/custom-field-definitions';
     const method = editingDefinition ? 'PUT' : 'POST';
 
-    // For PUT, field_key and model_name are not part of the payload to prevent changing them
     const payload = editingDefinition ? {
         label: data.label,
         field_type: data.field_type,
@@ -174,7 +173,6 @@ export default function CustomFieldsPage() {
         is_required: data.is_required,
         sort_order: data.sort_order,
     } : data;
-
 
     try {
       const response = await fetch(url, {
@@ -239,55 +237,63 @@ export default function CustomFieldsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-semibold flex items-center"><Settings2 className="mr-3 h-6 w-6 text-primary"/>Custom Field Definitions</h1>
-        <Button onClick={() => handleOpenModal()} className="btn-primary-gradient">
-          <PlusCircle className="mr-2 h-4 w-4" /> Add New Field Definition
-        </Button>
-      </div>
-      <CardDescription>
-        Define custom fields that can be associated with Candidates or Positions. These fields will be stored in a flexible JSONB column.
-        The actual rendering of these fields on candidate/position forms is a future enhancement.
-      </CardDescription>
-
-      <Card>
+      <Card className="shadow-lg">
+        <CardHeader className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+          <div>
+            <CardTitle className="flex items-center text-2xl"><Settings2 className="mr-3 h-6 w-6 text-primary"/>Custom Field Definitions</CardTitle>
+            <CardDescription>
+              Define custom fields that can be associated with Candidates or Positions.
+              These fields are stored in a flexible JSONB column. The actual rendering of these fields on candidate/position forms is a future enhancement.
+            </CardDescription>
+          </div>
+          <Button onClick={() => handleOpenModal()} className="btn-primary-gradient mt-2 sm:mt-0">
+            <PlusCircle className="mr-2 h-4 w-4" /> Add New Field Definition
+          </Button>
+        </CardHeader>
         <CardContent className="pt-6">
-          {definitions.length === 0 && !isLoading ? (
+          {isLoading && definitions.length === 0 ? (
+             <div className="flex justify-center items-center py-10">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                <p className="ml-2 text-muted-foreground">Loading definitions...</p>
+            </div>
+          ) : definitions.length === 0 && !fetchError ? (
             <p className="text-muted-foreground text-center py-8">No custom field definitions yet.</p>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Label</TableHead>
-                  <TableHead>Model</TableHead>
-                  <TableHead>Field Key</TableHead>
-                  <TableHead>Type</TableHead>
-                  <TableHead>Required</TableHead>
-                  <TableHead>Order</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {definitions.map((def) => (
-                  <TableRow key={def.id}>
-                    <TableCell className="font-medium">{def.label}</TableCell>
-                    <TableCell><Badge variant="outline">{def.model_name}</Badge></TableCell>
-                    <TableCell><code className="text-xs bg-muted/50 px-1 rounded">{def.field_key}</code></TableCell>
-                    <TableCell>{def.field_type}</TableCell>
-                    <TableCell>{def.is_required ? 'Yes' : 'No'}</TableCell>
-                    <TableCell>{def.sort_order}</TableCell>
-                    <TableCell className="text-right">
-                      <Button variant="ghost" size="icon" onClick={() => handleOpenModal(def)} className="mr-1 h-8 w-8">
-                        <Edit3 className="h-4 w-4" />
-                      </Button>
-                      <Button variant="ghost" size="icon" onClick={() => confirmDelete(def)} className="text-destructive hover:text-destructive h-8 w-8">
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </TableCell>
+            <div className="border rounded-lg overflow-hidden">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Label</TableHead>
+                    <TableHead>Model</TableHead>
+                    <TableHead>Field Key</TableHead>
+                    <TableHead>Type</TableHead>
+                    <TableHead>Required</TableHead>
+                    <TableHead>Order</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {definitions.map((def) => (
+                    <TableRow key={def.id}>
+                      <TableCell className="font-medium">{def.label}</TableCell>
+                      <TableCell><Badge variant="outline">{def.model_name}</Badge></TableCell>
+                      <TableCell><code className="text-xs bg-muted/50 px-1 rounded">{def.field_key}</code></TableCell>
+                      <TableCell>{def.field_type}</TableCell>
+                      <TableCell>{def.is_required ? 'Yes' : 'No'}</TableCell>
+                      <TableCell>{def.sort_order}</TableCell>
+                      <TableCell className="text-right">
+                        <Button variant="ghost" size="icon" onClick={() => handleOpenModal(def)} className="mr-1 h-8 w-8">
+                          <Edit3 className="h-4 w-4" />
+                        </Button>
+                        <Button variant="ghost" size="icon" onClick={() => confirmDelete(def)} className="text-destructive hover:text-destructive h-8 w-8">
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
           )}
         </CardContent>
       </Card>
@@ -301,7 +307,7 @@ export default function CustomFieldsPage() {
             </DialogDescription>
           </DialogHeader>
           <ScrollArea className="flex-grow pr-2">
-            <Form {...form}> {/* This FormProvider wrapper is important */}
+            <Form {...form}>
               <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-4 py-2 pl-1">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <FormField
@@ -356,7 +362,7 @@ export default function CustomFieldsPage() {
                         <Select onValueChange={(value) => {
                             field.onChange(value);
                             if (!['select_single', 'select_multiple'].includes(value)) {
-                                replaceOptions([]); // Clear options if not a select type
+                                replaceOptions([]); 
                             }
                         }} value={field.value}>
                           <FormControl><SelectTrigger><SelectValue placeholder="Select field type" /></SelectTrigger></FormControl>
@@ -464,8 +470,3 @@ export default function CustomFieldsPage() {
     </div>
   );
 }
-
-    
-    
-    
-    
