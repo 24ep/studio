@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Slider } from '@/components/ui/slider';
 import { Label } from '@/components/ui/label';
-import { Search, FilterX, Check, ChevronsUpDown, Loader2, CalendarIcon, Brain, Users, Briefcase, Tag, Star, Building, ListFilter } from 'lucide-react'; // Added ListFilter
+import { Search, FilterX, Check, ChevronsUpDown, Loader2, CalendarIcon, Brain, Users, Briefcase, Tag, Star, Building, ListFilter } from 'lucide-react';
 import type { Position, CandidateStatus, RecruitmentStage, UserProfile } from '@/lib/types';
 import { cn } from "@/lib/utils";
 import { ScrollArea } from '../ui/scroll-area';

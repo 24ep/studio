@@ -11,10 +11,9 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { Loader2, ServerCrash, ShieldAlert, ListTodo, Users, Filter, LayoutGrid, List, Search, FilterX } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
-import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { ChevronsUpDown, Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -23,7 +22,7 @@ import { CandidateFilters, type CandidateFilterValues } from '@/components/candi
 
 const ALL_CANDIDATES_ADMIN_VALUE = "ALL_CANDIDATES_ADMIN";
 const MY_ASSIGNED_VALUE = "me";
-const ALL_POSITIONS_SELECT_VALUE = "__ALL_POSITIONS__"; // Added
+const ALL_POSITIONS_SELECT_VALUE = "__ALL_POSITIONS__"; 
 
 const KANBAN_STATUS_ORDER: CandidateStatus[] = [
   'Applied', 'Screening', 'Shortlisted', 'Interview Scheduled', 'Interviewing', 'Offer Extended', 'Offer Accepted', 'Hired', 'Rejected', 'On Hold'
@@ -38,55 +37,41 @@ export default function MyTasksPage() {
   const [candidates, setCandidates] = useState<Candidate[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [fetchError, setFetchError] = useState<string | null>(null);
-  const [recruiters, setRecruiters] = useState<Pick<UserProfile, 'id' | 'name'>[]>([]);
+  const [allRecruiters, setAllRecruiters] = useState<Pick<UserProfile, 'id' | 'name'>[]>([]); // Changed name for clarity
   const [selectedRecruiterFilter, setSelectedRecruiterFilter] = useState<string>(MY_ASSIGNED_VALUE);
   const [viewMode, setViewMode] = useState<'list' | 'kanban'>('kanban');
   
-  // State for new filters
-  const [nameFilter, setNameFilter] = useState('');
-  const [positionIdFilter, setPositionIdFilter] = useState(ALL_POSITIONS_SELECT_VALUE);
-  const [statusFilter, setStatusFilter] = useState<CandidateStatus | 'all'>('all');
-  const [educationFilter, setEducationFilter] = useState('');
-  const [fitScoreRange, setFitScoreRange] = useState<[number, number]>([0, 100]);
+  const [standardFilters, setStandardFilters] = useState<CandidateFilterValues>({
+    minFitScore: 0, maxFitScore: 100, status: 'all', positionId: ALL_POSITIONS_SELECT_VALUE
+  });
+  const [aiSearchQuery, setAiSearchQuery] = useState<string>('');
+  const [isAiSearching, setIsAiSearching] = useState(false);
+  const [aiSearchReasoning, setAiSearchReasoning] = useState<string | null>(null);
+  const [aiMatchedCandidateIds, setAiMatchedCandidateIds] = useState<string[] | null>(null);
+
 
   const [availablePositions, setAvailablePositions] = useState<Position[]>([]);
   const [availableStages, setAvailableStages] = useState<RecruitmentStage[]>([]);
 
-  const [positionSearchOpen, setPositionSearchOpen] = useState(false);
-  const [positionSearchQuery, setPositionSearchQuery] = useState('');
-  const [statusSearchOpen, setStatusSearchOpen] = useState(false);
-  const [statusSearchQuery, setStatusSearchQuery] = useState('');
-
-
-  const fetchInitialData = useCallback(async () => {
+  const fetchInitialFilterData = useCallback(async () => {
     if (sessionStatus !== 'authenticated') return;
     try {
-      const [posRes, stagesRes] = await Promise.all([
+      const [posRes, stagesRes, recRes] = await Promise.all([
         fetch('/api/positions'),
-        fetch('/api/settings/recruitment-stages')
+        fetch('/api/settings/recruitment-stages'),
+        session?.user?.role === 'Admin' ? fetch('/api/users?role=Recruiter') : Promise.resolve(null) 
       ]);
       if (posRes.ok) setAvailablePositions(await posRes.json());
       else console.error("Failed to fetch positions for filters");
       if (stagesRes.ok) setAvailableStages(await stagesRes.json());
       else console.error("Failed to fetch stages for filters");
+      if (recRes && recRes.ok) setAllRecruiters(await recRes.json());
+      else if (recRes) console.error("Failed to fetch recruiters for filters");
     } catch (error) {
       console.error("Error fetching initial data for filters:", error);
     }
-  }, [sessionStatus]);
+  }, [sessionStatus, session?.user?.role]);
 
-
-  const fetchRecruitersForAdmin = useCallback(async () => {
-    if (session?.user?.role !== 'Admin') return;
-    try {
-      const response = await fetch('/api/users?role=Recruiter');
-      if (!response.ok) throw new Error('Failed to fetch recruiters');
-      const data: UserProfile[] = await response.json();
-      setRecruiters(data);
-    } catch (error) {
-      console.error("Error fetching recruiters:", error);
-      toast({ title: "Error", description: "Could not load recruiters list.", variant: "destructive" });
-    }
-  }, [session, toast]);
 
   const fetchTaskBoardCandidates = useCallback(async () => {
     if (sessionStatus !== 'authenticated' || !session?.user?.id) {
@@ -103,22 +88,32 @@ export default function MyTasksPage() {
 
     setIsLoading(true);
     setFetchError(null);
+    setAiMatchedCandidateIds(null);
     
     const queryParams = new URLSearchParams();
+    // Determine base recruiter filter for task board
+    let effectiveRecruiterId = '';
     if (userRole === 'Admin') {
-      if (selectedRecruiterFilter !== ALL_CANDIDATES_ADMIN_VALUE) {
-        queryParams.append('assignedRecruiterId', selectedRecruiterFilter === MY_ASSIGNED_VALUE ? session.user.id : selectedRecruiterFilter);
+      if (selectedRecruiterFilter === ALL_CANDIDATES_ADMIN_VALUE) {
+        // No specific recruiterId, means ALL
+      } else {
+        effectiveRecruiterId = selectedRecruiterFilter === MY_ASSIGNED_VALUE ? session.user.id : selectedRecruiterFilter;
       }
     } else { // Recruiter
-      queryParams.append('assignedRecruiterId', session.user.id);
+      effectiveRecruiterId = session.user.id;
     }
-    
-    if (nameFilter) queryParams.append('name', nameFilter);
-    if (positionIdFilter && positionIdFilter !== ALL_POSITIONS_SELECT_VALUE) queryParams.append('positionId', positionIdFilter);
-    if (statusFilter !== 'all') queryParams.append('status', statusFilter);
-    if (educationFilter) queryParams.append('education', educationFilter);
-    queryParams.append('minFitScore', String(fitScoreRange[0]));
-    queryParams.append('maxFitScore', String(fitScoreRange[1]));
+    if (effectiveRecruiterId) {
+        queryParams.append('assignedRecruiterId', effectiveRecruiterId);
+    }
+
+    // Apply standard filters
+    if (standardFilters.name) queryParams.append('name', standardFilters.name);
+    if (standardFilters.positionId && standardFilters.positionId !== ALL_POSITIONS_SELECT_VALUE) queryParams.append('positionId', standardFilters.positionId);
+    if (standardFilters.status !== 'all' && standardFilters.status) queryParams.append('status', standardFilters.status);
+    if (standardFilters.education) queryParams.append('education', standardFilters.education);
+    if (standardFilters.minFitScore !== undefined) queryParams.append('minFitScore', String(standardFilters.minFitScore));
+    if (standardFilters.maxFitScore !== undefined) queryParams.append('maxFitScore', String(standardFilters.maxFitScore));
+    // Date filters can be added if CandidateFilters supports them for this view
     
     try {
       const response = await fetch(`/api/candidates?${queryParams.toString()}`);
@@ -144,73 +139,65 @@ export default function MyTasksPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [sessionStatus, session, pathname, signIn, selectedRecruiterFilter, nameFilter, positionIdFilter, statusFilter, educationFilter, fitScoreRange]);
+  }, [sessionStatus, session, pathname, signIn, selectedRecruiterFilter, standardFilters]);
 
   useEffect(() => {
     if (sessionStatus === 'unauthenticated') {
       signIn(undefined, { callbackUrl: pathname });
     } else if (sessionStatus === 'authenticated') {
-      fetchInitialData();
-      if (session.user.role === 'Admin') {
-        fetchRecruitersForAdmin();
-      }
+      fetchInitialFilterData();
       fetchTaskBoardCandidates();
     }
-  }, [sessionStatus, session, fetchTaskBoardCandidates, fetchRecruitersForAdmin, pathname, signIn, fetchInitialData]);
+  }, [sessionStatus, session, fetchTaskBoardCandidates, fetchInitialFilterData, pathname, signIn]);
   
   const handleRecruiterFilterChange = (newFilter: string) => {
     setSelectedRecruiterFilter(newFilter);
-    // fetchTaskBoardCandidates will be called by its own useEffect dependency on selectedRecruiterFilter
-  };
-
-  const handleUpdateCandidateOnTaskBoard = async (candidateId: string, newStatus: Candidate['status']) => {
-    toast({ title: "Action Recommendation", description: "To update status, please go to the main Candidates page or Candidate Detail page."});
-    fetchTaskBoardCandidates(); // Refresh
-  };
-
-  const handleDeleteCandidateOnTaskBoard = async (candidateId: string) => {
-    toast({ title: "Action Not Available", description: "To delete candidates, please use the main Candidates page."});
   };
   
-  const handleOpenUploadModalOnTaskBoard = (candidate: Candidate) => {
-     toast({ title: "Action Not Available", description: "To upload resumes, please use the main Candidates page or Candidate Detail page."});
+  const handleStandardFilterChange = (newFilters: CandidateFilterValues) => {
+    setStandardFilters(newFilters);
+    setAiSearchQuery(''); // Clear AI query when standard filters change
+    setAiMatchedCandidateIds(null);
+    setAiSearchReasoning(null);
+    // fetchTaskBoardCandidates will be called due to standardFilters dependency change
   };
 
-  const handleApplyFilters = () => {
-    fetchTaskBoardCandidates();
+  const handleAiSearch = async (query: string) => {
+    if (!query.trim()) {
+      toast({ title: "Empty AI Query", description: "Please enter a search term.", variant: "default" });
+      return;
+    }
+    setIsAiSearching(true);
+    setFetchError(null);
+    setAiSearchReasoning(null);
+    setAiMatchedCandidateIds(null);
+
+    try {
+      const response = await fetch('/api/ai/search-candidates', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query }),
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.message || `AI search failed. Status: ${response.status}`);
+      
+      setAiMatchedCandidateIds(result.matchedCandidateIds || []);
+      setAiSearchReasoning(result.aiReasoning || "AI search complete.");
+      toast({ title: "AI Search Complete", description: result.aiReasoning || "AI processing finished."});
+
+    } catch (error) {
+      toast({ title: "AI Search Error", description: (error as Error).message, variant: "destructive" });
+      setAiMatchedCandidateIds([]); // Show no candidates on error
+    } finally {
+      setIsAiSearching(false);
+    }
   };
 
-  const handleResetFilters = () => {
-    setNameFilter('');
-    setPositionIdFilter(ALL_POSITIONS_SELECT_VALUE);
-    setPositionSearchQuery('');
-    setStatusFilter('all');
-    setStatusSearchQuery('');
-    setEducationFilter('');
-    setFitScoreRange([0, 100]);
-    // Fetch will be triggered by useEffect on these state changes if they are dependencies
-    // or call fetchTaskBoardCandidates directly if needed.
-    // For simplicity, let's assume useEffect on selectedRecruiterFilter will handle the refetch if that's the primary driver,
-    // otherwise, you might need to call fetchTaskBoardCandidates here.
-  };
-
-  const getCurrentPositionDisplayValue = () => {
-    if (positionIdFilter === ALL_POSITIONS_SELECT_VALUE) return "All Positions";
-    return availablePositions.find(p => p.id === positionIdFilter)?.title || "All Positions";
-  };
-
-  const getCurrentStatusDisplayValue = () => {
-    if (statusFilter === 'all') return "All Statuses";
-    return availableStages.find(s => s.name === statusFilter)?.name || "All Statuses";
-  };
-
-  const filteredPositions = positionSearchQuery
-    ? availablePositions.filter(pos => pos.title.toLowerCase().includes(positionSearchQuery.toLowerCase()))
-    : availablePositions;
-
-  const filteredStages = statusSearchQuery
-    ? availableStages.filter(stage => stage.name.toLowerCase().includes(statusSearchQuery.toLowerCase()))
-    : availableStages;
+  const displayedCandidates = useMemo(() => {
+    return aiMatchedCandidateIds !== null
+      ? candidates.filter(c => aiMatchedCandidateIds.includes(c.id))
+      : candidates;
+  }, [candidates, aiMatchedCandidateIds]);
 
 
   if (sessionStatus === 'loading' || (isLoading && !fetchError && !pathname.startsWith('/auth/signin'))) {
@@ -246,108 +233,92 @@ export default function MyTasksPage() {
   const pageTitle = session?.user?.role === 'Admin' 
     ? (selectedRecruiterFilter === ALL_CANDIDATES_ADMIN_VALUE ? "All Candidates Overview" : 
        selectedRecruiterFilter === MY_ASSIGNED_VALUE ? "My Assigned Candidates (Admin)" :
-       `Candidates for ${recruiters.find(r => r.id === selectedRecruiterFilter)?.name || 'Recruiter'}`)
+       `Candidates for ${allRecruiters.find(r => r.id === selectedRecruiterFilter)?.name || 'Recruiter'}`)
     : "My Task Board";
   const pageDescription = session?.user?.role === 'Admin' 
     ? (selectedRecruiterFilter === ALL_CANDIDATES_ADMIN_VALUE ? "Overview of all candidates in the system." : 
        selectedRecruiterFilter === MY_ASSIGNED_VALUE ? "Candidates assigned to you (Admin)." :
-       `Candidates assigned to ${recruiters.find(r => r.id === selectedRecruiterFilter)?.name || 'the selected recruiter'}.`)
+       `Candidates assigned to ${allRecruiters.find(r => r.id === selectedRecruiterFilter)?.name || 'the selected recruiter'}.`)
     : "Candidates assigned to you for processing.";
 
   return (
-    <div className="space-y-6">
-      <Card>
-        <CardHeader>
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-            <div>
-              <CardTitle className="flex items-center">
-                <ListTodo className="mr-2 h-6 w-6 text-primary" /> {pageTitle}
-              </CardTitle>
-              <CardDescription>{pageDescription}</CardDescription>
-            </div>
-            <div className="flex gap-1 self-end sm:self-center">
-                <Button variant={viewMode === 'kanban' ? 'default' : 'outline'} size="icon" onClick={() => setViewMode('kanban')}><LayoutGrid className="h-4 w-4" /></Button>
-                <Button variant={viewMode === 'list' ? 'default' : 'outline'} size="icon" onClick={() => setViewMode('list')}><List className="h-4 w-4" /></Button>
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent>
-          {/* Enhanced Filters */}
-          <div className="mb-6 p-4 border rounded-lg bg-card shadow">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 items-end">
+    <div className="flex flex-col md:flex-row gap-6 h-full">
+        <aside className="w-full md:w-72 lg:w-80 flex-shrink-0 md:sticky md:top-0 md:h-screen">
+           <ScrollArea className="h-full md:max-h-[calc(100vh-var(--header-height,4rem)-2rem)] md:pr-2">
+                <div className="md:hidden mb-3"> {/* Recruiter filter for mobile, if admin */}
+                    {session?.user?.role === 'Admin' && (
+                        <div className="w-full">
+                            <Label htmlFor="recruiter-filter-select-mobile" className="text-xs font-medium">View tasks for:</Label>
+                            {/* Re-using logic from CandidateFilters for Recruiter selection or simplify to basic select */}
+                            <Input value="Recruiter filter placeholder for mobile" readOnly className="mt-1"/>
+                        </div>
+                    )}
+                </div>
+                 <CandidateFilters
+                    initialFilters={standardFilters}
+                    onFilterChange={handleStandardFilterChange}
+                    onAiSearch={handleAiSearch}
+                    availablePositions={availablePositions}
+                    availableStages={availableStages}
+                    availableRecruiters={allRecruiters}
+                    isLoading={isLoading || isAiSearching}
+                    isAiSearching={isAiSearching}
+                />
+            </ScrollArea>
+        </aside>
+
+        <div className="flex-1 space-y-6 min-w-0">
+            <Card>
+                <CardHeader>
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                    <div>
+                    <CardTitle className="flex items-center">
+                        <ListTodo className="mr-2 h-6 w-6 text-primary" /> {pageTitle}
+                    </CardTitle>
+                    <CardDescription>{pageDescription}</CardDescription>
+                    </div>
+                    <div className="flex gap-1 self-end sm:self-center">
+                        <Button variant={viewMode === 'kanban' ? 'default' : 'outline'} size="icon" onClick={() => setViewMode('kanban')}><LayoutGrid className="h-4 w-4" /></Button>
+                        <Button variant={viewMode === 'list' ? 'default' : 'outline'} size="icon" onClick={() => setViewMode('list')}><List className="h-4 w-4" /></Button>
+                    </div>
+                </div>
+                </CardHeader>
+                <CardContent>
+                {/* Admin-specific recruiter filter for desktop */}
                 {session?.user?.role === 'Admin' && (
-                    <div className="w-full">
-                        <Label htmlFor="recruiter-filter-select" className="text-xs font-medium">View tasks for:</Label>
-                        <Select value={selectedRecruiterFilter} onValueChange={handleRecruiterFilterChange}>
-                            <SelectTrigger id="recruiter-filter-select" className="w-full mt-1"><SelectValue /></SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value={ALL_CANDIDATES_ADMIN_VALUE}>All Candidates (Admin)</SelectItem>
-                                <SelectItem value={MY_ASSIGNED_VALUE}>My Assigned (Admin)</SelectItem>
-                                {recruiters.map(rec => (<SelectItem key={rec.id} value={rec.id}>{rec.name}'s Candidates</SelectItem>))}
-                            </SelectContent>
-                        </Select>
+                    <div className="mb-4 w-full md:max-w-xs">
+                        <Label htmlFor="recruiter-filter-select-desktop" className="text-xs font-medium">View tasks for:</Label>
+                        {/* This should use the searchable Popover pattern if many recruiters exist */}
+                        <Input value="Recruiter filter placeholder for desktop" readOnly className="mt-1"/>
                     </div>
                 )}
-                 <div>
-                    <Label htmlFor="name-filter-task">Name</Label>
-                    <Input id="name-filter-task" placeholder="Search by name..." value={nameFilter} onChange={(e) => setNameFilter(e.target.value)} className="mt-1" disabled={isLoading}/>
-                </div>
-                <div>
-                    <Label htmlFor="position-filter-task">Position</Label>
-                    <Popover open={positionSearchOpen} onOpenChange={setPositionSearchOpen}>
-                        <PopoverTrigger asChild><Button variant="outline" role="combobox" className="w-full justify-between mt-1"><span className="truncate">{getCurrentPositionDisplayValue()}</span><ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" /></Button></PopoverTrigger>
-                        <PopoverContent className="w-[--trigger-width] p-0 dropdown-content-height"><div className="p-2"><Input placeholder="Search position..." value={positionSearchQuery} onChange={(e) => setPositionSearchQuery(e.target.value)} className="h-9"/></div>
-                            <ScrollArea className="max-h-60">
-                                <Button variant="ghost" className={cn("w-full justify-start", positionIdFilter === ALL_POSITIONS_SELECT_VALUE && "bg-accent text-accent-foreground")} onClick={() => {setPositionIdFilter(ALL_POSITIONS_SELECT_VALUE); setPositionSearchOpen(false); setPositionSearchQuery('');}}><Check className={cn("mr-2 h-4 w-4", positionIdFilter === ALL_POSITIONS_SELECT_VALUE ? "opacity-100" : "opacity-0")}/>All Positions</Button>
-                                {filteredPositions.map(pos => (<Button key={pos.id} variant="ghost" className={cn("w-full justify-start", positionIdFilter === pos.id && "bg-accent text-accent-foreground")} onClick={() => {setPositionIdFilter(pos.id); setPositionSearchOpen(false); setPositionSearchQuery('');}}><Check className={cn("mr-2 h-4 w-4", positionIdFilter === pos.id ? "opacity-100" : "opacity-0")}/>{pos.title}</Button>))}
-                            </ScrollArea>
-                        </PopoverContent>
-                    </Popover>
-                </div>
-                 <div>
-                    <Label htmlFor="status-filter-task">Status</Label>
-                     <Popover open={statusSearchOpen} onOpenChange={setStatusSearchOpen}>
-                        <PopoverTrigger asChild><Button variant="outline" role="combobox" className="w-full justify-between mt-1"><span className="truncate">{getCurrentStatusDisplayValue()}</span><ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" /></Button></PopoverTrigger>
-                        <PopoverContent className="w-[--trigger-width] p-0 dropdown-content-height"><div className="p-2"><Input placeholder="Search status..." value={statusSearchQuery} onChange={(e) => setStatusSearchQuery(e.target.value)} className="h-9"/></div>
-                            <ScrollArea className="max-h-60">
-                                <Button variant="ghost" className={cn("w-full justify-start", statusFilter === 'all' && "bg-accent text-accent-foreground")} onClick={() => {setStatusFilter('all'); setStatusSearchOpen(false); setStatusSearchQuery('');}}><Check className={cn("mr-2 h-4 w-4", statusFilter === "all" ? "opacity-100" : "opacity-0")}/>All Statuses</Button>
-                                {filteredStages.map(st => (<Button key={st.id} variant="ghost" className={cn("w-full justify-start", statusFilter === st.name && "bg-accent text-accent-foreground")} onClick={() => {setStatusFilter(st.name); setStatusSearchOpen(false); setStatusSearchQuery('');}}><Check className={cn("mr-2 h-4 w-4", statusFilter === st.name ? "opacity-100" : "opacity-0")}/>{st.name}</Button>))}
-                            </ScrollArea>
-                        </PopoverContent>
-                    </Popover>
-                </div>
-                <div>
-                    <Label htmlFor="education-filter-task">Education</Label>
-                    <Input id="education-filter-task" placeholder="Filter by education..." value={educationFilter} onChange={(e) => setEducationFilter(e.target.value)} className="mt-1" disabled={isLoading}/>
-                </div>
-                <div className="xl:col-span-full flex justify-end gap-2 mt-2"> {/* Fit score and buttons might need different layout */}
-                    <Button variant="outline" onClick={handleResetFilters} disabled={isLoading}><FilterX className="mr-2 h-4 w-4" /> Reset</Button>
-                    <Button onClick={handleApplyFilters} disabled={isLoading}>{isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Search className="mr-2 h-4 w-4" />}Apply</Button>
-                </div>
-            </div>
-          </div>
 
-          {isLoading ? (
-             <div className="flex items-center justify-center h-64"><Loader2 className="h-12 w-12 animate-spin text-primary" /></div>
-          ) : candidates.length === 0 ? (
-             <div className="text-center py-10"><Users className="mx-auto h-12 w-12 text-muted-foreground" /><p className="mt-4 text-muted-foreground">No candidates match the current filters.</p></div>
-          ) : viewMode === 'list' ? (
-            <CandidateTable
-              candidates={candidates}
-              availablePositions={availablePositions}
-              availableStages={availableStages}
-              onUpdateCandidate={handleUpdateCandidateOnTaskBoard}
-              onDeleteCandidate={handleDeleteCandidateOnTaskBoard}
-              onOpenUploadModal={handleOpenUploadModalOnTaskBoard}
-              onEditPosition={() => toast({title: "Action Not Available", description: "Position editing from Task Board is not available."})}
-              isLoading={isLoading}
-              onRefreshCandidateData={fetchTaskBoardCandidates} 
-            />
-          ) : (
-            <CandidateKanbanView candidates={candidates} statuses={KANBAN_STATUS_ORDER} />
-          )}
-        </CardContent>
-      </Card>
+                {isLoading || isAiSearching ? (
+                    <div className="flex items-center justify-center h-64"><Loader2 className="h-12 w-12 animate-spin text-primary" /></div>
+                ) : displayedCandidates.length === 0 ? (
+                    <div className="text-center py-10"><Users className="mx-auto h-12 w-12 text-muted-foreground" /><p className="mt-4 text-muted-foreground">No candidates match the current filters.</p></div>
+                ) : viewMode === 'list' ? (
+                    <CandidateTable
+                    candidates={displayedCandidates}
+                    availablePositions={availablePositions}
+                    availableStages={availableStages}
+                    onUpdateCandidate={async (id, newStatus) => { /* Limited action from task board */ }}
+                    onDeleteCandidate={async (id) => { /* Limited action */ }}
+                    onOpenUploadModal={() => { /* Limited action */ }}
+                    onEditPosition={() => { /* Limited action */ }}
+                    isLoading={false} // Main page isLoading handles this
+                    onRefreshCandidateData={async (id) => fetchTaskBoardCandidates()}
+                    selectedCandidateIds={new Set()} // Bulk actions not primary on task board
+                    onToggleSelectCandidate={() => {}}
+                    onToggleSelectAllCandidates={() => {}}
+                    isAllCandidatesSelected={false}
+                    />
+                ) : (
+                    <CandidateKanbanView candidates={displayedCandidates} statuses={KANBAN_STATUS_ORDER} />
+                )}
+                </CardContent>
+            </Card>
+        </div>
     </div>
   );
 }

@@ -21,7 +21,7 @@ interface PositionFiltersProps {
   initialFilters?: PositionFilterValues;
   onFilterChange: (filters: PositionFilterValues) => void;
   isLoading?: boolean;
-  availableDepartments: string[]; // New prop
+  availableDepartments: string[]; 
 }
 
 const statusOptions = [
@@ -39,6 +39,7 @@ export function PositionFilters({ initialFilters = { isOpen: "all" }, onFilterCh
   const [positionLevel, setPositionLevel] = useState(initialFilters.positionLevel || '');
   
   const [statusSearchOpen, setStatusSearchOpen] = useState(false);
+  // No search for status as it's a small fixed list
   const [departmentSearchOpen, setDepartmentSearchOpen] = useState(false);
   const [departmentSearchQuery, setDepartmentSearchQuery] = useState('');
 
@@ -172,6 +173,7 @@ export function PositionFilters({ initialFilters = { isOpen: "all" }, onFilterCh
               </Button>
             </PopoverTrigger>
             <PopoverContent className="w-[--trigger-width] p-0 dropdown-content-height">
+              {/* No search input for status as it's a small fixed list */}
               <ScrollArea className="max-h-60">
                 {statusOptions.map((opt) => (
                   <Button
