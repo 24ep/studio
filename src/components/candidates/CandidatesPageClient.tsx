@@ -102,19 +102,32 @@ export function CandidatesPageClient({
     try {
       const response = await fetch('/api/users?role=Recruiter');
       if (!response.ok) {
-          const errorData = await response.json().catch(() => ({}));
-          console.error("API error fetching recruiters:", errorData);
-          let detailedErrorMessage = (errorData as any)?.message || 'Failed to fetch recruiters';
-          if (Object.keys(errorData).length === 0 && !(errorData as any)?.message) {
-            detailedErrorMessage = `Failed to fetch recruiters. Server responded with status ${response.status}: ${response.statusText || 'No additional error message.'}`;
-          } else {
-            if ((errorData as any)?.error) { 
-              detailedErrorMessage += ` (Details: ${(errorData as any).error})`;
-            }
-            if ((errorData as any)?.code) {
-             detailedErrorMessage += ` (Code: ${(errorData as any).code})`;
-            }
+          let errorData: any = {}; // Initialize as any to allow for various error shapes
+          let apiErrorMessage: string | null = null;
+          let apiErrorCode: string | null = null;
+
+          try {
+            errorData = await response.json();
+            apiErrorMessage = errorData?.message || errorData?.error; // Try to get message or error property
+            apiErrorCode = errorData?.code;
+          } catch (jsonParseError) {
+            // response.json() failed, likely empty or non-JSON body
+            console.warn("API error fetching recruiters: Failed to parse JSON response body.");
           }
+          
+          console.error("API error fetching recruiters (raw errorData object after attempt to parse):", errorData);
+
+          let detailedErrorMessage = apiErrorMessage;
+          if (!detailedErrorMessage) {
+            detailedErrorMessage = `Failed to fetch recruiters. Server responded with status ${response.status}: ${response.statusText || 'No additional error message.'}`;
+          }
+          
+          if (apiErrorCode) {
+            detailedErrorMessage += ` (Code: ${apiErrorCode})`;
+          }
+          
+          console.error("Constructed detailedErrorMessage for fetchRecruiters:", detailedErrorMessage);
+
           throw new Error(detailedErrorMessage);
       }
       const recruitersData: UserProfile[] | undefined = await response.json(); 
@@ -157,12 +170,18 @@ export function CandidatesPageClient({
 
       const response = await fetch(`/api/candidates?${query.toString()}`);
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ message: response.statusText || `Status: ${response.status}` }));
-        let errorMessage = errorData.message || `Failed to fetch candidates: ${response.statusText || `Status: ${response.status}`}`;
-        if (Object.keys(errorData).length === 0 && !errorData.message) {
-             errorMessage = `Failed to fetch candidates. Server responded with status ${response.status}: ${response.statusText || 'No additional error message.'}`;
-        } else if (errorData.error) {
-            errorMessage += ` (Details: ${errorData.error})`;
+        let errorData: any = {};
+        let errorMessageFromServer = null;
+        try {
+          errorData = await response.json();
+          errorMessageFromServer = errorData?.message || errorData?.error;
+        } catch (e) {
+          // Failed to parse JSON, use status text
+        }
+
+        let errorMessage = errorMessageFromServer || `Failed to fetch candidates. Server responded with status ${response.status}: ${response.statusText || 'No additional error message.'}`;
+        if (errorData?.code) {
+          errorMessage += ` (Code: ${errorData.code})`;
         }
 
         if (response.status === 401) {
@@ -711,4 +730,5 @@ export function CandidatesPageClient({
     </div>
   );
 }
+
 
