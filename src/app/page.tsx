@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react'; // Added useMemo
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import type { Candidate, Position, CandidateStatus, UserProfile } from "@/lib/types";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -21,7 +21,8 @@ export default function DashboardPage() {
   const [myAssignedCandidates, setMyAssignedCandidates] = useState<Candidate[]>([]);
   const [allPositions, setAllPositions] = useState<Position[]>([]);
   const [allUsers, setAllUsers] = useState<UserProfile[]>([]);
-  
+  const [myBacklogCandidates, setMyBacklogCandidates] = useState<Candidate[]>([]);
+
   const [isLoading, setIsLoading] = useState(true);
   const [fetchError, setFetchError] = useState<string | null>(null);
   const { data: session, status: sessionStatus } = useSession();
@@ -40,33 +41,42 @@ export default function DashboardPage() {
 
     try {
       const promises = [];
+      // For Admin/Manager, fetch all candidates and all users
+      // For Recruiter, fetch their assigned candidates and their own backlog
       if (userRole === 'Admin' || userRole === 'Hiring Manager') {
         promises.push(fetch('/api/candidates')); // All candidates
-        promises.push(fetch('/api/users')); // All users for recruiter count
+        promises.push(fetch('/api/users'));     // All users for recruiter count
+        promises.push(Promise.resolve(null)); // Placeholder for myBacklogCandidates
       } else if (userRole === 'Recruiter') {
-        promises.push(fetch(`/api/candidates?assignedRecruiterId=${userId}`)); // Only assigned candidates
-        promises.push(Promise.resolve(null)); // Placeholder for users promise
-      } else {
-        promises.push(Promise.resolve(null)); // Placeholder for candidates
-        promises.push(Promise.resolve(null)); // Placeholder for users
+        promises.push(fetch(`/api/candidates?assignedRecruiterId=${userId}`)); // Only assigned candidates for main lists
+        promises.push(Promise.resolve(null)); // Placeholder for allUsers
+        promises.push(fetch(`/api/candidates?assignedRecruiterId=${userId}`)); // Also for backlog
+      } else { // Other roles (should not happen if auth is set up)
+        promises.push(Promise.resolve(null));
+        promises.push(Promise.resolve(null));
+        promises.push(Promise.resolve(null));
       }
       promises.push(fetch('/api/positions')); // All positions for everyone
 
       const [
         candidatesResOrNull,
         usersResOrNull,
+        myBacklogCandidatesResOrNull, // This will be null for Admin/Manager from promises array
         positionsRes
       ] = await Promise.all(promises);
 
-      // Process Candidates
+
+      // Process Candidates (All or My Assigned)
       if (candidatesResOrNull && !candidatesResOrNull.ok) {
         const errorText = candidatesResOrNull.statusText || `Status: ${candidatesResOrNull.status}`;
         if (candidatesResOrNull.status === 401) { signIn(undefined, { callbackUrl: window.location.pathname }); return; }
         accumulatedFetchError += `Failed to fetch candidates: ${errorText}. `;
-        if (userRole === 'Admin' || userRole === 'Hiring Manager') setAllCandidates([]); else setMyAssignedCandidates([]);
+        if (userRole === 'Admin' || userRole === 'Hiring Manager') setAllCandidates([]);
+        else setMyAssignedCandidates([]);
       } else if (candidatesResOrNull) {
         const candidatesData: Candidate[] = await candidatesResOrNull.json();
-        if (userRole === 'Admin' || userRole === 'Hiring Manager') setAllCandidates(candidatesData); else setMyAssignedCandidates(candidatesData);
+        if (userRole === 'Admin' || userRole === 'Hiring Manager') setAllCandidates(candidatesData);
+        else setMyAssignedCandidates(candidatesData);
       }
 
       // Process Users (for Admin/Manager)
@@ -79,6 +89,17 @@ export default function DashboardPage() {
         setAllUsers(usersData);
       }
 
+      // Process My Backlog Candidates (for Recruiter)
+      if (myBacklogCandidatesResOrNull && !myBacklogCandidatesResOrNull.ok) {
+        const errorText = myBacklogCandidatesResOrNull.statusText || `Status: ${myBacklogCandidatesResOrNull.status}`;
+        accumulatedFetchError += `Failed to fetch backlog candidates: ${errorText}. `;
+        setMyBacklogCandidates([]);
+      } else if (myBacklogCandidatesResOrNull) {
+        const backlogData: Candidate[] = await myBacklogCandidatesResOrNull.json();
+        setMyBacklogCandidates(backlogData.filter(c => !BACKLOG_EXCLUSION_STATUSES.includes(c.status)));
+      }
+
+
       // Process Positions
       if (!positionsRes.ok) {
         const errorText = positionsRes.statusText || `Status: ${positionsRes.status}`;
@@ -89,19 +110,19 @@ export default function DashboardPage() {
         const positionsData: Position[] = await positionsRes.json();
         setAllPositions(positionsData);
       }
-      
+
       if (accumulatedFetchError) setFetchError(accumulatedFetchError.trim());
 
-    } catch (error) { 
+    } catch (error) {
       console.error("Unexpected error fetching dashboard data:", error);
       const genericMessage = (error as Error).message || "An unexpected error occurred.";
       setFetchError(genericMessage);
-      setAllCandidates([]); setMyAssignedCandidates([]); setAllPositions([]); setAllUsers([]);
+      setAllCandidates([]); setMyAssignedCandidates([]); setAllPositions([]); setAllUsers([]); setMyBacklogCandidates([]);
     } finally {
       setIsLoading(false);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sessionStatus, session?.user?.id, session?.user?.role]); 
+  }, [sessionStatus, session?.user?.id, session?.user?.role]);
 
   useEffect(() => {
     if (sessionStatus === 'unauthenticated') {
@@ -117,7 +138,7 @@ export default function DashboardPage() {
   const hiredThisMonthAdmin = useMemo(() => allCandidates.filter(c => {
     try {
       if (!c.applicationDate || typeof c.applicationDate !== 'string') return false;
-      const appDate = parseISO(c.applicationDate); 
+      const appDate = parseISO(c.applicationDate);
       return c.status === 'Hired' && appDate.getFullYear() === new Date().getFullYear() && appDate.getMonth() === new Date().getMonth();
     } catch { return false; }
   }).length, [allCandidates]);
@@ -142,6 +163,7 @@ export default function DashboardPage() {
         return isToday(parseISO(c.applicationDate));
       } catch { return false; }
   }), [myActiveCandidatesList]);
+  const myActionItemsList = useMemo(() => myBacklogCandidates.filter(c => c.recruiterId === session?.user?.id), [myBacklogCandidates, session?.user?.id]);
 
 
   if (sessionStatus === 'loading' || isLoading || (sessionStatus === 'unauthenticated' && !window.location.pathname.startsWith('/auth/signin'))) {
@@ -223,15 +245,15 @@ export default function DashboardPage() {
       </div>
       <div className="grid gap-6 md:grid-cols-1">
         <Card>
-          <CardHeader><CardTitle className="flex items-center text-lg"><ListChecks className="mr-2 h-5 w-5 text-primary" />My Action Items ({myActiveCandidatesList.length})</CardTitle><CardDescription>Active candidates assigned to you requiring attention.</CardDescription></CardHeader>
+          <CardHeader><CardTitle className="flex items-center text-lg"><ListChecks className="mr-2 h-5 w-5 text-primary" />My Action Items ({myActionItemsList.length})</CardTitle><CardDescription>Active candidates assigned to you requiring attention.</CardDescription></CardHeader>
           <CardContent>
-            {myActiveCandidatesList.length > 0 ? (
-              <ul className="space-y-3 max-h-96 overflow-y-auto">{myActiveCandidatesList.slice(0, 7).map(candidate => (
+            {myActionItemsList.length > 0 ? (
+              <ul className="space-y-3 max-h-96 overflow-y-auto">{myActionItemsList.slice(0, 5).map(candidate => (
                 <li key={candidate.id} className="flex items-center space-x-3 p-2 bg-muted/50 rounded-md hover:bg-muted/80 transition-colors">
                   <Avatar className="h-9 w-9"><AvatarImage src={candidate.avatarUrl || `https://placehold.co/40x40.png?text=${candidate.name.charAt(0)}`} alt={candidate.name} data-ai-hint="person avatar"/><AvatarFallback>{candidate.name.charAt(0).toUpperCase()}</AvatarFallback></Avatar>
                   <div className="flex-1 min-w-0"><Link href={`/candidates/${candidate.id}`} passHref><span className="text-sm font-medium text-foreground hover:underline cursor-pointer truncate block">{candidate.name}</span></Link><p className="text-xs text-muted-foreground truncate" title={candidate.position?.title || 'N/A'}>{candidate.position?.title || 'N/A'} - <span className="capitalize">{candidate.status}</span></p></div>
                 </li>))}
-                {myActiveCandidatesList.length > 7 && (<Link href="/my-tasks" passHref><Button variant="link" className="text-sm p-0 h-auto mt-2">View all {myActiveCandidatesList.length} action items...</Button></Link>)}
+                {myActionItemsList.length > 5 && (<Link href="/my-tasks" passHref><Button variant="link" className="text-sm p-0 h-auto mt-2">View all {myActionItemsList.length} action items...</Button></Link>)}
               </ul>
             ) : (<div className="flex flex-col items-center justify-center py-6 text-center"><CheckCircle2 className="h-10 w-10 text-green-500 mb-2" /><p className="text-sm text-muted-foreground">Your backlog is clear!</p></div>)}
           </CardContent>
@@ -253,7 +275,7 @@ export default function DashboardPage() {
       </div>
     </div>
   );
-  
+
   if (session?.user?.role === 'Recruiter') {
     return <RecruiterDashboard />;
   } else if (session?.user?.role === 'Admin' || session?.user?.role === 'Hiring Manager') {
