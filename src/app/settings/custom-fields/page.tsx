@@ -261,17 +261,7 @@ export default function CustomFieldsPage() {
           ) : (
             <div className="border rounded-lg overflow-hidden">
               <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Label</TableHead>
-                    <TableHead>Model</TableHead>
-                    <TableHead>Field Key</TableHead>
-                    <TableHead>Type</TableHead>
-                    <TableHead>Required</TableHead>
-                    <TableHead>Order</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
+                <TableHeader><TableRow><TableHead>Label</TableHead><TableHead>Model</TableHead><TableHead>Field Key</TableHead><TableHead>Type</TableHead><TableHead>Required</TableHead><TableHead>Order</TableHead><TableHead className="text-right">Actions</TableHead></TableRow></TableHeader>
                 <TableBody>
                   {definitions.map((def) => (
                     <TableRow key={def.id}>
@@ -286,9 +276,7 @@ export default function CustomFieldsPage() {
                           <Edit3 className="h-4 w-4" />
                         </Button>
                         <AlertDialog>
-                            <AlertDialogTrigger asChild>
-                                <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive h-8 w-8" onClick={() => confirmDelete(def)}><Trash2 className="h-4 w-4" /></Button>
-                            </AlertDialogTrigger>
+                            <AlertDialogTrigger asChild><Button variant="ghost" size="icon" className="text-destructive hover:text-destructive h-8 w-8" onClick={() => confirmDelete(def)}><Trash2 className="h-4 w-4" /></Button></AlertDialogTrigger>
                             {definitionToDelete?.id === def.id && (
                                 <AlertDialogContent>
                                     <AlertDialogHeader><AlertDialogTitle>Are you sure?</AlertDialogTitle><AlertDialogDescription>This will delete the custom field definition "<strong>{def.label}</strong>". This does not delete data already stored, but the definition will be removed.</AlertDialogDescription></AlertDialogHeader>

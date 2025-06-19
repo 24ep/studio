@@ -140,24 +140,11 @@ export function CandidateTable({
     <>
       <div className="border rounded-lg shadow overflow-hidden">
         <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead className="w-12">
-                <Checkbox
-                  checked={isAllCandidatesSelected}
-                  onCheckedChange={onToggleSelectAllCandidates}
-                  aria-label="Select all candidates"
-                />
-              </TableHead>
-              <TableHead className="w-[250px]">Candidate</TableHead>
-              <TableHead>Applied Job</TableHead>
-              <TableHead className="w-[100px]">Fit Score</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Last Update</TableHead>
-              <TableHead className="w-[120px]">Resume</TableHead>
-              <TableHead className="text-right w-[80px]">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
+          <TableHeader><TableRow><TableHead className="w-12"><Checkbox
+                checked={isAllCandidatesSelected}
+                onCheckedChange={onToggleSelectAllCandidates}
+                aria-label="Select all candidates"
+              /></TableHead><TableHead className="w-[250px]">Candidate</TableHead><TableHead>Applied Job</TableHead><TableHead className="w-[100px]">Fit Score</TableHead><TableHead>Status</TableHead><TableHead>Last Update</TableHead><TableHead className="w-[120px]">Resume</TableHead><TableHead className="text-right w-[80px]">Actions</TableHead></TableRow></TableHeader>
           <TableBody>
             {candidates.map((candidate) => {
               const dateValue = candidate.updatedAt || candidate.createdAt;
@@ -180,13 +167,11 @@ export function CandidateTable({
 
               return (
                 <TableRow key={candidate.id} className="hover:bg-muted/50 transition-colors" data-state={selectedCandidateIds.has(candidate.id) ? 'selected' : ''}>
-                  <TableCell>
-                    <Checkbox
+                  <TableCell><Checkbox
                       checked={selectedCandidateIds.has(candidate.id)}
                       onCheckedChange={() => onToggleSelectCandidate(candidate.id)}
                       aria-label={`Select candidate ${candidate.name}`}
-                    />
-                  </TableCell>
+                    /></TableCell>
                   <TableCell>
                     <div className="flex items-center gap-3">
                       <Avatar className="h-10 w-10">

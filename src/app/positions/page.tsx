@@ -27,7 +27,6 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import {
   DropdownMenu,
@@ -389,27 +388,21 @@ export default function PositionsPage() {
           ) : (
             <div className="border rounded-lg overflow-hidden">
             <Table>
-              <TableHeader><TableRow>
-                <TableHead className="w-12">
-                  <Checkbox
+              <TableHeader><TableRow><TableHead className="w-12"><Checkbox
                     checked={isAllPositionsSelected}
                     onCheckedChange={handleToggleSelectAllPositions}
                     aria-label="Select all positions"
                     disabled={isLoading || !canManagePositions}
-                  />
-                </TableHead>
-                <TableHead>Title</TableHead><TableHead>Department</TableHead><TableHead>Level</TableHead><TableHead>Status</TableHead><TableHead className="hidden md:table-cell">Description</TableHead><TableHead className="text-right">Actions</TableHead></TableRow></TableHeader>
+                  /></TableHead><TableHead>Title</TableHead><TableHead>Department</TableHead><TableHead>Level</TableHead><TableHead>Status</TableHead><TableHead className="hidden md:table-cell">Description</TableHead><TableHead className="text-right">Actions</TableHead></TableRow></TableHeader>
               <TableBody>
                 {positions.map((pos) => (
                   <TableRow key={pos.id} className="hover:bg-muted/50 transition-colors" data-state={selectedPositionIds.has(pos.id) ? "selected" : ""}>
-                    <TableCell>
-                      <Checkbox
+                    <TableCell><Checkbox
                         checked={selectedPositionIds.has(pos.id)}
                         onCheckedChange={() => handleToggleSelectPosition(pos.id)}
                         aria-label={`Select position ${pos.title}`}
                         disabled={isLoading || !canManagePositions}
-                      />
-                    </TableCell>
+                      /></TableCell>
                     <TableCell className="font-medium"> <Link href={`/positions/${pos.id}`} passHref> <span className="hover:underline text-primary cursor-pointer">{pos.title}</span> </Link> </TableCell>
                     <TableCell>{pos.department}</TableCell>
                     <TableCell>{pos.position_level || 'N/A'}</TableCell>
@@ -418,9 +411,7 @@ export default function PositionsPage() {
                     <TableCell className="text-right">
                       <Button variant="ghost" size="icon" className="mr-1 h-8 w-8" onClick={() => handleOpenEditModal(pos)} disabled={!canManagePositions}> <Edit className="h-4 w-4" /> <span className="sr-only">Edit</span> </Button>
                        <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                           <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive h-8 w-8" onClick={() => confirmDeletePosition(pos)} disabled={!canManagePositions}> <Trash2 className="h-4 w-4" /> <span className="sr-only">Delete</span> </Button>
-                        </AlertDialogTrigger>
+                        <AlertDialogTrigger asChild><Button variant="ghost" size="icon" className="text-destructive hover:text-destructive h-8 w-8" onClick={() => confirmDeletePosition(pos)} disabled={!canManagePositions}> <Trash2 className="h-4 w-4" /> <span className="sr-only">Delete</span> </Button></AlertDialogTrigger>
                         {positionToDelete && positionToDelete.id === pos.id && ( <AlertDialogContent> <AlertDialogHeader> <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle> <AlertDialogDescription> This action cannot be undone. This will permanently delete the position <strong>{positionToDelete.title}</strong>. If there are candidates associated with this position, deletion might be blocked. </AlertDialogDescription> </AlertDialogHeader> <AlertDialogFooter> <AlertDialogCancel onClick={() => setPositionToDelete(null)}>Cancel</AlertDialogCancel> <AlertDialogAction onClick={handleDeletePosition} className={buttonVariants({ variant: "destructive" })}> Delete Position </AlertDialogAction> </AlertDialogFooter> </AlertDialogContent> )}
                       </AlertDialog>
                     </TableCell>
