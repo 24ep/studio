@@ -20,6 +20,8 @@ import { signIn, useSession } from 'next-auth/react';
 import { useRouter, usePathname } from 'next/navigation';
 import { Save, DatabaseZap, Info, ServerCrash, ShieldAlert, Loader2, RefreshCw } from 'lucide-react';
 import type { UserDataModelPreference, UIDisplayPreference, ModelAttributeDefinition } from '@/lib/types';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 const UI_DISPLAY_PREFERENCES: UIDisplayPreference[] = ["Standard", "Emphasized", "Hidden"];
 
@@ -75,68 +77,52 @@ const POSITION_ATTRIBUTES: ModelAttributeDefinition[] = [
   { key: 'updatedAt', label: 'Last Updated At', type: 'date', description: 'Timestamp of last update.' },
 ];
 
-
-const AttributeEditor: React.FC<{
+const AttributeRow: React.FC<{
   attr: ModelAttributeDefinition;
   preferences: Record<string, Partial<Pick<UserDataModelPreference, 'uiPreference' | 'customNote'>>>;
   onPreferenceChange: (attrKey: string, prefType: 'uiPreference' | 'customNote', value: string) => void;
   level?: number;
 }> = ({ attr, preferences, onPreferenceChange, level = 0 }) => {
-  const currentPref = preferences[attr.key] || {};
+  const currentPref = preferences[attr.key] || { uiPreference: 'Standard', customNote: '' };
   const hasSubAttributes = attr.subAttributes && attr.subAttributes.length > 0;
 
   return (
-    <div className={`py-3 ${level > 0 ? `ml-${level * 4} pl-3 border-l border-dashed border-muted` : ''} ${hasSubAttributes ? 'mb-2' : 'border-b border-muted last:border-b-0'}`}>
-      <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-2 sm:gap-4">
-        <div className="flex-1">
-          <h4 className="font-semibold text-foreground">{attr.label}</h4>
-          <p className="text-xs text-muted-foreground italic">Type: {attr.type}{attr.arrayItemType ? ` of ${attr.arrayItemType}` : ''}</p>
-          {attr.description && <p className="text-xs text-muted-foreground mt-0.5">{attr.description}</p>}
-          <p className="text-xs text-muted-foreground mt-0.5">Key: <code className="text-xs bg-muted/50 px-1 rounded">{attr.key}</code></p>
-        </div>
-        <div className="flex-shrink-0 w-full sm:w-auto space-y-2 sm:space-y-0 sm:flex sm:items-end sm:gap-2">
-          <div className="flex-1 sm:min-w-[150px]">
-            <Label htmlFor={`${attr.key}-uiPref`} className="text-xs">UI Display</Label>
-            <Select
-              value={currentPref.uiPreference || 'Standard'}
-              onValueChange={(value) => onPreferenceChange(attr.key, 'uiPreference', value)}
-            >
-              <SelectTrigger id={`${attr.key}-uiPref`} className="h-9 text-xs mt-0.5">
-                <SelectValue placeholder="Select display preference" />
-              </SelectTrigger>
-              <SelectContent>
-                {UI_DISPLAY_PREFERENCES.map(opt => (
-                  <SelectItem key={opt} value={opt} className="text-xs">{opt}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-           <div className="flex-1 sm:min-w-[200px]">
-            <Label htmlFor={`${attr.key}-customNote`} className="text-xs">Custom Note</Label>
-            <Input
-              id={`${attr.key}-customNote`}
-              value={currentPref.customNote || ''}
-              onChange={(e) => onPreferenceChange(attr.key, 'customNote', e.target.value)}
-              className="h-9 text-xs mt-0.5"
-              placeholder="E.g., Used for X, Sync with Y"
-            />
-          </div>
-        </div>
-      </div>
-      {hasSubAttributes && (
-        <div className="mt-2">
-          {attr.subAttributes!.map(subAttr => (
-            <AttributeEditor
-              key={subAttr.key}
-              attr={subAttr}
-              preferences={preferences}
-              onPreferenceChange={onPreferenceChange}
-              level={level + 1}
-            />
-          ))}
-        </div>
-      )}
-    </div>
+    <>
+      <TableRow className={level > 0 ? 'bg-muted/30' : ''}>
+        <TableCell style={{ paddingLeft: `${level * 1.5 + 1}rem` }} className="py-3 align-top">
+          <div className="font-medium text-foreground">{attr.label}</div>
+          <div className="text-xs text-muted-foreground">{attr.key}</div>
+        </TableCell>
+        <TableCell className="text-xs text-muted-foreground py-3 align-top">{attr.type}{attr.arrayItemType ? ` of ${attr.arrayItemType}` : ''}</TableCell>
+        <TableCell className="text-xs text-muted-foreground py-3 align-top max-w-xs break-words">{attr.description}</TableCell>
+        <TableCell className="py-3 align-top w-40">
+          <Select
+            value={currentPref.uiPreference}
+            onValueChange={(value) => onPreferenceChange(attr.key, 'uiPreference', value)}
+          >
+            <SelectTrigger className="h-9 text-xs"><SelectValue /></SelectTrigger>
+            <SelectContent>{UI_DISPLAY_PREFERENCES.map(opt => (<SelectItem key={opt} value={opt} className="text-xs">{opt}</SelectItem>))}</SelectContent>
+          </Select>
+        </TableCell>
+        <TableCell className="py-3 align-top w-52">
+          <Input
+            value={currentPref.customNote || ''}
+            onChange={(e) => onPreferenceChange(attr.key, 'customNote', e.target.value)}
+            className="h-9 text-xs"
+            placeholder="E.g., Used for X..."
+          />
+        </TableCell>
+      </TableRow>
+      {hasSubAttributes && attr.subAttributes!.map(subAttr => (
+        <AttributeRow
+          key={subAttr.key}
+          attr={subAttr}
+          preferences={preferences}
+          onPreferenceChange={onPreferenceChange}
+          level={level + 1}
+        />
+      ))}
+    </>
   );
 };
 
@@ -190,7 +176,7 @@ export default function DataModelsPage() {
     } finally {
       setIsLoadingData(false);
     }
-  }, [session?.user?.id]); 
+  }, [session?.user?.id, candidatePrefs, positionPrefs]); 
 
   useEffect(() => {
     setIsClient(true);
@@ -285,6 +271,43 @@ export default function DataModelsPage() {
     );
   }
 
+  const renderTable = (modelType: 'Candidate' | 'Position', attributes: ModelAttributeDefinition[], prefs: Record<string, Partial<Pick<UserDataModelPreference, 'uiPreference' | 'customNote'>>>) => (
+     <Card>
+        <CardHeader>
+          <CardTitle>{modelType} Model Attributes</CardTitle>
+          <CardDescription>Set preferences for {modelType.toLowerCase()} data fields.</CardDescription>
+        </CardHeader>
+        <CardContent className="pt-0">
+           <div className="border rounded-lg overflow-hidden">
+            <ScrollArea className="max-h-[calc(100vh-25rem)]">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-[25%]">Attribute Label / Key</TableHead>
+                    <TableHead className="w-[15%]">Type</TableHead>
+                    <TableHead className="w-[30%]">Description</TableHead>
+                    <TableHead className="w-[15%]">UI Display</TableHead>
+                    <TableHead className="w-[15%]">Custom Note</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {attributes.map(attr => (
+                    <AttributeRow
+                      key={attr.key}
+                      attr={attr}
+                      preferences={prefs}
+                      onPreferenceChange={(key, type, val) => handlePreferenceChange(modelType, key, type, val)}
+                    />
+                  ))}
+                </TableBody>
+              </Table>
+            </ScrollArea>
+          </div>
+        </CardContent>
+      </Card>
+  );
+
+
   return (
     <Card className="shadow-lg">
       <CardHeader>
@@ -300,40 +323,10 @@ export default function DataModelsPage() {
             <TabsTrigger value="position-model">Position Model</TabsTrigger>
           </TabsList>
           <TabsContent value="candidate-model" className="mt-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>Candidate Model Attributes</CardTitle>
-                <CardDescription>Set preferences for candidate data fields.</CardDescription>
-              </CardHeader>
-              <CardContent className="pt-0 max-h-[calc(100vh-25rem)] overflow-y-auto">
-                {CANDIDATE_ATTRIBUTES.map(attr => (
-                  <AttributeEditor
-                    key={attr.key}
-                    attr={attr}
-                    preferences={candidatePrefs}
-                    onPreferenceChange={(key, type, val) => handlePreferenceChange('Candidate', key, type, val)}
-                  />
-                ))}
-              </CardContent>
-            </Card>
+            {renderTable('Candidate', CANDIDATE_ATTRIBUTES, candidatePrefs)}
           </TabsContent>
           <TabsContent value="position-model" className="mt-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>Position Model Attributes</CardTitle>
-                <CardDescription>Set preferences for job position data fields.</CardDescription>
-              </CardHeader>
-              <CardContent className="pt-0 max-h-[calc(100vh-25rem)] overflow-y-auto">
-                {POSITION_ATTRIBUTES.map(attr => (
-                  <AttributeEditor
-                    key={attr.key}
-                    attr={attr}
-                    preferences={positionPrefs}
-                    onPreferenceChange={(key, type, val) => handlePreferenceChange('Position', key, type, val)}
-                  />
-                ))}
-              </CardContent>
-            </Card>
+            {renderTable('Position', POSITION_ATTRIBUTES, positionPrefs)}
           </TabsContent>
         </Tabs>
       </CardContent>
@@ -346,3 +339,4 @@ export default function DataModelsPage() {
     </Card>
   );
 }
+

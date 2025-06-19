@@ -182,7 +182,7 @@ body {
   /* Light theme: Active menu item style */
  :root:not(.dark) [data-sidebar="menu-button"][data-active="true"] { 
     background-image: linear-gradient(to right, hsl(var(--sidebar-active-bg-start-l)), hsl(var(--sidebar-active-bg-end-l)));
-    color: hsl(var(--sidebar-active-text-l)) !important;
+    color: hsl(var(--sidebar-active-text-l)) !important; /* Ensure text color is applied */
     box-shadow: 0 2px 8px -2px hsla(var(--sidebar-active-bg-start-l), 0.3);
   }
    /* Light theme: Hover on active menu item */
@@ -205,7 +205,7 @@ body {
   /* Dark theme: Active menu item style */
   .dark [data-sidebar="menu-button"][data-active="true"] { 
     background-image: linear-gradient(to right, hsl(var(--sidebar-active-bg-start-d)), hsl(var(--sidebar-active-bg-end-d)));
-    color: hsl(var(--sidebar-active-text-d)) !important;
+    color: hsl(var(--sidebar-active-text-d)) !important; /* Ensure text color is applied */
     box-shadow: 0 2px 10px -3px hsla(var(--sidebar-active-bg-start-d), 0.4);
   }
   /* Dark theme: Hover on active menu item */
@@ -302,14 +302,3 @@ body {
   }
 }
     
-
-    
-
-
-
-
-
-    
-
-
-

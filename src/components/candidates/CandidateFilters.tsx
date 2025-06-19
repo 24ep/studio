@@ -14,6 +14,7 @@ import { ScrollArea } from '../ui/scroll-area';
 import { Calendar } from "@/components/ui/calendar";
 import { format, parseISO } from 'date-fns';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { Textarea } from '@/components/ui/textarea';
 
 
 export interface CandidateFilterValues {
@@ -254,8 +255,16 @@ export function CandidateFilters({
         <div>
             <Label htmlFor="ai-search-query" className="text-sm font-medium">AI Powered Search</Label>
             <div className="flex gap-2 mt-1">
-                <Input id="ai-search-query" placeholder="e.g., 'Java developer with React skills...'" value={aiSearchQueryInput} onChange={(e) => setAiSearchQueryInput(e.target.value)} disabled={isLoading || isAiSearching} className="flex-grow"/>
-                <Button onClick={handleAiSearchClick} disabled={isLoading || isAiSearching || !aiSearchQueryInput.trim()} className="whitespace-nowrap btn-primary-gradient">
+                <Textarea 
+                    id="ai-search-query" 
+                    placeholder="e.g., 'Java developer with React skills and 5 years experience in fintech...'" 
+                    value={aiSearchQueryInput} 
+                    onChange={(e) => setAiSearchQueryInput(e.target.value)} 
+                    disabled={isLoading || isAiSearching} 
+                    className="flex-grow min-h-[60px]"
+                    rows={3}
+                />
+                <Button onClick={handleAiSearchClick} disabled={isLoading || isAiSearching || !aiSearchQueryInput.trim()} className="whitespace-nowrap btn-primary-gradient self-end">
                     {isAiSearching ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Brain className="mr-2 h-4 w-4" />}
                     AI Search
                 </Button>
@@ -300,3 +309,4 @@ export function CandidateFilters({
 }
 
     
+

@@ -98,7 +98,7 @@ export function AddPositionModal({ isOpen, onOpenChange, onAddPosition }: AddPos
             {form.formState.errors.position_level && <p className="text-sm text-destructive mt-1">{form.formState.errors.position_level.message}</p>}
           </div>
           <div>
-            <Label htmlFor="description-add">Description</Label>
+            <Label htmlFor="description-add">Job Description</Label>
             <Textarea id="description-add" {...form.register('description')} className="mt-1" />
           </div>
           <div className="flex items-center space-x-2">
@@ -123,7 +123,7 @@ export function AddPositionModal({ isOpen, onOpenChange, onAddPosition }: AddPos
                 Cancel
               </Button>
             </DialogClose>
-            <Button type="submit" disabled={form.formState.isSubmitting}>
+            <Button type="submit" disabled={form.formState.isSubmitting} className="btn-primary-gradient">
               {form.formState.isSubmitting ? 'Adding Position...' : 'Add Position'}
             </Button>
           </DialogFooter>
@@ -132,3 +132,4 @@ export function AddPositionModal({ isOpen, onOpenChange, onAddPosition }: AddPos
     </Dialog>
   );
 }
+

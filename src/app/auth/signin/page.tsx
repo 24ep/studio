@@ -182,7 +182,7 @@ export default function SignInPage() {
 
   return (
     <div style={loginPageStyle}>
-      <Card className="w-full max-w-md bg-card/70 dark:bg-slate-800/20 backdrop-blur-lg border border-white/20 dark:border-slate-700/30 shadow-2xl">
+      <Card className="w-full max-w-md bg-card dark:bg-card border border-border shadow-2xl">
         <CardHeader className="text-center">
           {isClient && appLogoUrl && (
             <Image
@@ -194,10 +194,10 @@ export default function SignInPage() {
               data-ai-hint="company logo"
             />
           )}
-          <CardTitle className="text-3xl font-bold tracking-tight text-foreground dark:text-white">
+          <CardTitle className="text-3xl font-bold tracking-tight text-foreground">
             Welcome to<br />{currentAppName}
           </CardTitle>
-          <CardDescription className="text-muted-foreground dark:text-slate-300">
+          <CardDescription className="text-muted-foreground">
             Sign in to manage your recruitment pipeline.
           </CardDescription>
         </CardHeader>
@@ -216,10 +216,10 @@ export default function SignInPage() {
             <>
               <div className="relative my-6">
                 <div className="absolute inset-0 flex items-center">
-                  <span className="w-full border-t border-white/30 dark:border-slate-600/50" />
+                  <span className="w-full border-t border-border" />
                 </div>
                 <div className="relative flex justify-center text-xs uppercase">
-                  <span className="bg-transparent px-2 text-muted-foreground dark:text-slate-400">
+                  <span className="bg-card px-2 text-muted-foreground">
                     Or continue with
                   </span>
                 </div>
@@ -238,4 +238,5 @@ export default function SignInPage() {
     
 
     
+
 

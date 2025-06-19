@@ -43,7 +43,7 @@ interface EditPositionModalProps {
   position: Position | null;
 }
 
-export function EditPositionModal({ isOpen, onOpenChange, onEditPosition, position }: EditPositionFormValues) {
+export function EditPositionModal({ isOpen, onOpenChange, onEditPosition, position }: EditPositionModalProps) {
   const { toast } = useToast();
   const [associatedCandidates, setAssociatedCandidates] = useState<Candidate[]>([]);
   const [isLoadingCandidates, setIsLoadingCandidates] = useState(false);
@@ -141,7 +141,7 @@ export function EditPositionModal({ isOpen, onOpenChange, onEditPosition, positi
                 {form.formState.errors.position_level && <p className="text-sm text-destructive mt-1">{form.formState.errors.position_level.message}</p>}
               </div>
               <div>
-                <Label htmlFor="description-edit">Description</Label>
+                <Label htmlFor="description-edit">Job Description</Label>
                 <Textarea id="description-edit" {...form.register('description')} className="mt-1" />
               </div>
               <div className="flex items-center space-x-2 pt-2">
@@ -202,7 +202,7 @@ export function EditPositionModal({ isOpen, onOpenChange, onEditPosition, positi
               Cancel
             </Button>
           </DialogClose>
-          <Button type="button" onClick={form.handleSubmit(onSubmit)} disabled={form.formState.isSubmitting}>
+          <Button type="button" onClick={form.handleSubmit(onSubmit)} disabled={form.formState.isSubmitting} className="btn-primary-gradient">
             {form.formState.isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
             {form.formState.isSubmitting ? 'Saving...' : 'Save Changes'}
           </Button>
@@ -211,3 +211,4 @@ export function EditPositionModal({ isOpen, onOpenChange, onEditPosition, positi
     </Dialog>
   );
 }
+

@@ -7,20 +7,20 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useToast } from '@/hooks/use-toast';
-import { Save, Palette, ImageUp, Trash2, Loader2, XCircle, PenSquare, ServerCrash, ShieldAlert, Settings2, Wallpaper, Droplets, Type, Sidebar as SidebarIcon, PaintBucket } from 'lucide-react';
+import { Save, Palette, ImageUp, Trash2, Loader2, XCircle, PenSquare, ServerCrash, ShieldAlert, Settings2, Wallpaper, Droplets, Type, Sidebar as SidebarIcon } from 'lucide-react';
 import Image from 'next/image';
 import { signIn, useSession } from 'next-auth/react';
 import { useRouter, usePathname } from 'next/navigation';
 import type { SystemSetting, LoginPageBackgroundType, SystemSettingKey } from '@/lib/types';
-import { Separator } from '@/components/ui/separator';
+// Removed Separator import as per request
 import { cn } from '@/lib/utils';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 type ThemePreference = "light" | "dark" | "system";
 const DEFAULT_APP_NAME = "CandiTrack";
 const DEFAULT_LOGIN_BG_TYPE: LoginPageBackgroundType = "default";
-const DEFAULT_LOGIN_BG_COLOR1 = "#F0F4F7";
-const DEFAULT_LOGIN_BG_COLOR2 = "#3F51B5";
+const DEFAULT_LOGIN_BG_COLOR1 = "#F0F4F7"; // Default Light theme background
+const DEFAULT_LOGIN_BG_COLOR2 = "#3F51B5"; // Default Accent
 
 // Default HSL strings for primary gradient (Cyan to Blue)
 const DEFAULT_PRIMARY_GRADIENT_START = "179 67% 66%"; // hsla(179, 67%, 66%, 1)
@@ -51,12 +51,12 @@ const DEFAULT_SIDEBAR_BORDER_D = "220 15% 18%";
 
 
 const PREFERENCE_SECTIONS = [
-  { id: 'appName', label: 'App Name', icon: PenSquare },
-  { id: 'theme', label: 'Theme', icon: Palette },
-  { id: 'logo', label: 'Logo', icon: ImageUp },
-  { id: 'primaryColors', label: 'Primary Colors', icon: PaintBucket },
-  { id: 'loginAppearance', label: 'Login Page', icon: Wallpaper },
-  { id: 'sidebarAppearance', label: 'Sidebar Colors', icon: SidebarIcon },
+  { id: 'appName', label: 'App Name', icon: PenSquare, description: "Set the global name for the application." },
+  { id: 'theme', label: 'Theme Preference', icon: Palette, description: "Choose your preferred application theme." },
+  { id: 'logo', label: 'Application Logo', icon: ImageUp, description: "Upload or manage the application's logo." },
+  { id: 'primaryColors', label: 'Primary Color Theme', icon: PaintBucket, description: "Customize the primary gradient colors." },
+  { id: 'loginAppearance', label: 'Login Page Appearance', icon: Wallpaper, description: "Customize the background of the login page." },
+  { id: 'sidebarAppearance', label: 'Sidebar Colors', icon: SidebarIcon, description: "Customize the sidebar appearance for light and dark themes." },
 ];
 
 interface SidebarColors {
@@ -350,8 +350,6 @@ export default function PreferencesSettingsPage() {
           logoUrl: updatedLogoUrl,
           primaryGradientStart: updatedSettingsMap.get('primaryGradientStart') || primaryGradientStart,
           primaryGradientEnd: updatedSettingsMap.get('primaryGradientEnd') || primaryGradientEnd,
-          // Include sidebar colors if AppLayout needs to react to them specifically
-          // ...sidebarColors // if sending the whole object is useful
         }
       }));
     } catch (error) {
@@ -398,14 +396,10 @@ export default function PreferencesSettingsPage() {
           <div key={key}>
             <Label htmlFor={key} className="text-xs">{labels[key]}</Label>
             <div className="flex items-center gap-2 mt-1">
-              {/* Assuming HSL for input type="text", color picker for hex */}
-              <Input id={key} type="text" value={sidebarColors[key]} onChange={(e) => handleSidebarColorChange(key, e.target.value)} placeholder="e.g., 220 25% 97%" className="h-9 text-xs flex-grow" />
-              <Input type="color" value={sidebarColors[key].includes('#') ? sidebarColors[key] : `hsl(${sidebarColors[key].replace(/%/g,'').replace(/\s+/g,',')})`} onChange={(e) => {
-                  // Rough conversion from hex to HSL string for consistency if needed, or just store hex
-                  // For simplicity, we'll store the text input, color picker is for convenience.
-                  // User should ensure the text input is valid HSL or hex for CSS.
-                  handleSidebarColorChange(key, e.target.value); // Directly update with hex for now
-                }} className="w-10 h-9 p-1" title="Pick color (input stores text value)"
+              <Input id={key} type="text" value={sidebarColors[key]} onChange={(e) => handleSidebarColorChange(key, e.target.value)} placeholder="e.g., 220 25% 97% or #aabbcc" className="h-9 text-xs flex-grow"/>
+              <Input type="color" value={sidebarColors[key].startsWith('#') ? sidebarColors[key] : `hsl(${sidebarColors[key].replace(/%/g,'').replace(/\s+/g,',')})`} 
+                 onChange={(e) => handleSidebarColorChange(key, e.target.value)} 
+                 className="w-10 h-9 p-1 flex-shrink-0" title="Pick color (text input is source of truth)"
               />
             </div>
             <p className="text-xs text-muted-foreground mt-0.5">Enter HSL (e.g., "220 25% 97%") or Hex (e.g., "#RRGGBB")</p>
@@ -437,80 +431,77 @@ export default function PreferencesSettingsPage() {
             <CardDescription>Manage global application settings. These settings are saved on the server.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-8 pt-6 md:pl-6">
-            <section id="section-appName">
-              <div className="flex items-center mb-3"><PenSquare className="mr-3 h-5 w-5 text-muted-foreground" /><h3 className="text-lg font-semibold text-foreground">App Name</h3></div>
-              <div><Label htmlFor="app-name-input" className="text-sm">Application Name</Label><Input id="app-name-input" type="text" value={appName} onChange={(e) => setAppName(e.target.value)} className="mt-1" placeholder="e.g., My ATS" /></div>
-            </section>
-            <Separator />
-            <section id="section-theme">
-              <div className="flex items-center mb-3"><Palette className="mr-3 h-5 w-5 text-muted-foreground" /><h3 className="text-lg font-semibold text-foreground">Theme Preference</h3></div>
-              <RadioGroup value={themePreference} onValueChange={(value) => setThemePreference(value as ThemePreference)} className="flex flex-col sm:flex-row sm:space-x-6 space-y-2 sm:space-y-0">
-                <div className="flex items-center space-x-2"><RadioGroupItem value="light" id="theme-light" /><Label htmlFor="theme-light" className="font-normal">Light</Label></div>
-                <div className="flex items-center space-x-2"><RadioGroupItem value="dark" id="theme-dark" /><Label htmlFor="theme-dark" className="font-normal">Dark</Label></div>
-                <div className="flex items-center space-x-2"><RadioGroupItem value="system" id="theme-system" /><Label htmlFor="theme-system" className="font-normal">System Default</Label></div>
-              </RadioGroup>
-              <p className="text-xs text-muted-foreground mt-2">This sets your preferred theme. Actual theme switching is handled by the header toggle using browser settings.</p>
-            </section>
-            <Separator />
-            <section id="section-logo">
-              <div className="flex items-center mb-3"><ImageUp className="mr-3 h-5 w-5 text-muted-foreground" /><h3 className="text-lg font-semibold text-foreground">App Logo</h3></div>
-              <div>
-                <Label htmlFor="app-logo-upload" className="text-sm">Change App Logo <span className="text-xs text-muted-foreground">(Recommended: square, max 200KB)</span></Label>
-                <Input id="app-logo-upload" type="file" accept="image/*" onChange={(e) => handleLogoFileChange(e, 'appLogo')} className="mt-1" />
-                {logoPreviewUrl && (<div className="mt-3 p-2 border rounded-md inline-flex items-center gap-3 bg-muted/50"><Image src={logoPreviewUrl} alt="Logo preview" width={48} height={48} className="h-12 w-12 object-contain rounded" data-ai-hint="company logo"/><Button variant="ghost" size="icon" onClick={() => removeSelectedImage('appLogo', false)} className="h-7 w-7"> <XCircle className="h-4 w-4 text-muted-foreground hover:text-destructive"/> </Button></div>)}
-                {savedLogoDataUrl && ( <div className="mt-2"> <Button variant="outline" size="sm" onClick={() => removeSelectedImage('appLogo', true)} disabled={isSaving}> {isSaving && savedLogoDataUrl === null ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Trash2 className="mr-2 h-4 w-4"/>} Reset to Default Logo </Button> </div> )}
-              </div>
-            </section>
-            <Separator />
-             <section id="section-primaryColors">
-              <div className="flex items-center mb-3"><PaintBucket className="mr-3 h-5 w-5 text-muted-foreground" /><h3 className="text-lg font-semibold text-foreground">Primary Color Theme</h3></div>
-              <p className="text-sm text-muted-foreground mb-3">Define the primary gradient colors used for buttons and active elements. Enter HSL strings (e.g., "191 75% 60%") or Hex codes (e.g., "#4DC9E6").</p>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="primary-gradient-start" className="text-sm">Gradient Start Color</Label>
-                  <div className="flex items-center gap-2 mt-1">
-                    <Input id="primary-gradient-start" type="text" value={primaryGradientStart} onChange={(e) => setPrimaryGradientStart(e.target.value)} placeholder="e.g., 179 67% 66% or #6FE3E1" className="flex-grow"/>
-                    <Input type="color" value={primaryGradientStart.startsWith('#') ? primaryGradientStart : `hsl(${primaryGradientStart.replace(/%/g,'').replace(/\s+/g,',')})`} onChange={(e) => setPrimaryGradientStart(e.target.value)} className="w-10 h-10 p-1 flex-shrink-0" title="Pick color"/>
-                  </div>
+            {PREFERENCE_SECTIONS.map(section => (
+              <section key={section.id} id={`section-${section.id}`} className="pt-4 pb-6 border-b border-border last:border-b-0">
+                <div className="flex items-center mb-3">
+                    <section.icon className="mr-3 h-5 w-5 text-muted-foreground" />
+                    <h3 className="text-lg font-semibold text-foreground">{section.label}</h3>
                 </div>
-                <div>
-                  <Label htmlFor="primary-gradient-end" className="text-sm">Gradient End Color</Label>
-                   <div className="flex items-center gap-2 mt-1">
-                    <Input id="primary-gradient-end" type="text" value={primaryGradientEnd} onChange={(e) => setPrimaryGradientEnd(e.target.value)} placeholder="e.g., 238 74% 61% or #5257E5" className="flex-grow"/>
-                    <Input type="color" value={primaryGradientEnd.startsWith('#') ? primaryGradientEnd : `hsl(${primaryGradientEnd.replace(/%/g,'').replace(/\s+/g,',')})`} onChange={(e) => setPrimaryGradientEnd(e.target.value)} className="w-10 h-10 p-1 flex-shrink-0" title="Pick color"/>
-                  </div>
-                </div>
-              </div>
-            </section>
-            <Separator />
-            <section id="section-loginAppearance">
-              <div className="flex items-center mb-3"><Wallpaper className="mr-3 h-5 w-5 text-muted-foreground" /><h3 className="text-lg font-semibold text-foreground">Login Page Appearance</h3></div>
-              <div className="space-y-4">
-                <div><Label className="text-sm">Background Type</Label><RadioGroup value={loginBgType} onValueChange={(value) => setLoginBgType(value as LoginPageBackgroundType)} className="flex flex-col sm:flex-row sm:space-x-4 space-y-2 sm:space-y-0 mt-1"><div className="flex items-center space-x-2"><RadioGroupItem value="default" id="loginbg-default" /><Label htmlFor="loginbg-default" className="font-normal">Default</Label></div><div className="flex items-center space-x-2"><RadioGroupItem value="image" id="loginbg-image" /><Label htmlFor="loginbg-image" className="font-normal">Image</Label></div><div className="flex items-center space-x-2"><RadioGroupItem value="color" id="loginbg-color" /><Label htmlFor="loginbg-color" className="font-normal">Single Color</Label></div><div className="flex items-center space-x-2"><RadioGroupItem value="gradient" id="loginbg-gradient" /><Label htmlFor="loginbg-gradient" className="font-normal">Gradient</Label></div></RadioGroup></div>
-                {loginBgType === 'image' && (<div><Label htmlFor="login-bg-image-upload" className="text-sm">Login Background Image <span className="text-xs text-muted-foreground">(Max 500KB)</span></Label><Input id="login-bg-image-upload" type="file" accept="image/*" onChange={(e) => handleLogoFileChange(e, 'loginBg')} className="mt-1" />{loginBgImagePreviewUrl && (<div className="mt-3 p-2 border rounded-md inline-flex items-center gap-3 bg-muted/50"><Image src={loginBgImagePreviewUrl} alt="Login background preview" width={96} height={54} className="h-12 w-20 object-cover rounded" data-ai-hint="abstract background"/><Button variant="ghost" size="icon" onClick={() => removeSelectedImage('loginBg', false)} className="h-7 w-7"> <XCircle className="h-4 w-4 text-muted-foreground hover:text-destructive"/> </Button></div>)}{savedLoginBgImageUrl && ( <div className="mt-2"> <Button variant="outline" size="sm" onClick={() => removeSelectedImage('loginBg', true)} disabled={isSaving}> {isSaving && savedLoginBgImageUrl === null ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Trash2 className="mr-2 h-4 w-4"/>} Clear Saved Image </Button> </div> )}</div>)}
-                {loginBgType === 'color' && (<div><Label htmlFor="login-bg-color1" className="text-sm">Background Color</Label><div className="flex items-center gap-2 mt-1"><Input id="login-bg-color1" type="color" value={loginBgColor1} onChange={(e) => setLoginBgColor1(e.target.value)} className="w-20 h-10 p-1" /><Input type="text" value={loginBgColor1} onChange={(e) => setLoginBgColor1(e.target.value)} placeholder="#RRGGBB" className="max-w-[100px]" /></div></div>)}
-                {loginBgType === 'gradient' && (<div className="space-y-2"><div><Label htmlFor="login-bg-gradient-color1" className="text-sm">Gradient Color 1</Label><div className="flex items-center gap-2 mt-1"><Input id="login-bg-gradient-color1" type="color" value={loginBgColor1} onChange={(e) => setLoginBgColor1(e.target.value)} className="w-20 h-10 p-1" /><Input type="text" value={loginBgColor1} onChange={(e) => setLoginBgColor1(e.target.value)} placeholder="#RRGGBB" className="max-w-[100px]" /></div></div><div><Label htmlFor="login-bg-gradient-color2" className="text-sm">Gradient Color 2</Label><div className="flex items-center gap-2 mt-1"><Input id="login-bg-gradient-color2" type="color" value={loginBgColor2} onChange={(e) => setLoginBgColor2(e.target.value)} className="w-20 h-10 p-1" /><Input type="text" value={loginBgColor2} onChange={(e) => setLoginBgColor2(e.target.value)} placeholder="#RRGGBB" className="max-w-[100px]" /></div></div></div>)}
-              </div>
-            </section>
-            <Separator />
-            <section id="section-sidebarAppearance">
-                <div className="flex items-center mb-3"><SidebarIcon className="mr-3 h-5 w-5 text-muted-foreground" /><h3 className="text-lg font-semibold text-foreground">Sidebar Appearance</h3></div>
-                <p className="text-sm text-muted-foreground mb-3">Configure sidebar colors. Use HSL strings (e.g., "220 25% 97%") or Hex codes (e.g., "#aabbcc"). These colors define the default sidebar styles. Changes apply to the main `globals.css` upon saving and are loaded by `AppLayout` on initialization. Live updates without refresh are not directly part of this configuration but the CSS variables will be set.</p>
-                <Tabs defaultValue="light-sidebar" className="w-full">
-                    <TabsList className="grid w-full grid-cols-2 mb-4">
-                        <TabsTrigger value="light-sidebar">Light Theme Sidebar</TabsTrigger>
-                        <TabsTrigger value="dark-sidebar">Dark Theme Sidebar</TabsTrigger>
-                    </TabsList>
-                    <TabsContent value="light-sidebar">
-                        {renderSidebarColorInputs('Light')}
-                    </TabsContent>
-                    <TabsContent value="dark-sidebar">
-                        {renderSidebarColorInputs('Dark')}
-                    </TabsContent>
-                </Tabs>
-            </section>
-
-
+                <p className="text-sm text-muted-foreground mb-4 ml-8">{section.description}</p>
+                
+                {section.id === 'appName' && (
+                    <div><Label htmlFor="app-name-input" className="text-sm">Application Name</Label><Input id="app-name-input" type="text" value={appName} onChange={(e) => setAppName(e.target.value)} className="mt-1" placeholder="e.g., My ATS" /></div>
+                )}
+                {section.id === 'theme' && (
+                    <>
+                    <RadioGroup value={themePreference} onValueChange={(value) => setThemePreference(value as ThemePreference)} className="flex flex-col sm:flex-row sm:space-x-6 space-y-2 sm:space-y-0">
+                        <div className="flex items-center space-x-2"><RadioGroupItem value="light" id="theme-light" /><Label htmlFor="theme-light" className="font-normal">Light</Label></div>
+                        <div className="flex items-center space-x-2"><RadioGroupItem value="dark" id="theme-dark" /><Label htmlFor="theme-dark" className="font-normal">Dark</Label></div>
+                        <div className="flex items-center space-x-2"><RadioGroupItem value="system" id="theme-system" /><Label htmlFor="theme-system" className="font-normal">System Default</Label></div>
+                    </RadioGroup>
+                    <p className="text-xs text-muted-foreground mt-2">This sets your preferred theme. Actual theme switching is handled by the header toggle using browser settings.</p>
+                    </>
+                )}
+                {section.id === 'logo' && (
+                    <div>
+                        <Label htmlFor="app-logo-upload" className="text-sm">Change App Logo <span className="text-xs text-muted-foreground">(Recommended: square, max 200KB)</span></Label>
+                        <Input id="app-logo-upload" type="file" accept="image/*" onChange={(e) => handleLogoFileChange(e, 'appLogo')} className="mt-1" />
+                        {logoPreviewUrl && (<div className="mt-3 p-2 border rounded-md inline-flex items-center gap-3 bg-muted/10"><Image src={logoPreviewUrl} alt="Logo preview" width={48} height={48} className="h-12 w-12 object-contain rounded" data-ai-hint="company logo"/><Button variant="ghost" size="icon" onClick={() => removeSelectedImage('appLogo', false)} className="h-7 w-7"> <XCircle className="h-4 w-4 text-muted-foreground hover:text-destructive"/> </Button></div>)}
+                        {savedLogoDataUrl && ( <div className="mt-2"> <Button variant="outline" size="sm" onClick={() => removeSelectedImage('appLogo', true)} disabled={isSaving}> {isSaving && savedLogoDataUrl === null ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Trash2 className="mr-2 h-4 w-4"/>} Reset to Default Logo </Button> </div> )}
+                    </div>
+                )}
+                {section.id === 'primaryColors' && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                        <Label htmlFor="primary-gradient-start" className="text-sm">Gradient Start Color</Label>
+                        <div className="flex items-center gap-2 mt-1">
+                            <Input id="primary-gradient-start" type="text" value={primaryGradientStart} onChange={(e) => setPrimaryGradientStart(e.target.value)} placeholder="e.g., 179 67% 66% or #6FE3E1" className="flex-grow"/>
+                            <Input type="color" value={primaryGradientStart.startsWith('#') ? primaryGradientStart : `hsl(${primaryGradientStart.replace(/%/g,'').replace(/\s+/g,',')})`} onChange={(e) => setPrimaryGradientStart(e.target.value)} className="w-10 h-10 p-1 flex-shrink-0" title="Pick color (HSL/Hex text input is source of truth)"/>
+                        </div>
+                        </div>
+                        <div>
+                        <Label htmlFor="primary-gradient-end" className="text-sm">Gradient End Color</Label>
+                        <div className="flex items-center gap-2 mt-1">
+                            <Input id="primary-gradient-end" type="text" value={primaryGradientEnd} onChange={(e) => setPrimaryGradientEnd(e.target.value)} placeholder="e.g., 238 74% 61% or #5257E5" className="flex-grow"/>
+                            <Input type="color" value={primaryGradientEnd.startsWith('#') ? primaryGradientEnd : `hsl(${primaryGradientEnd.replace(/%/g,'').replace(/\s+/g,',')})`} onChange={(e) => setPrimaryGradientEnd(e.target.value)} className="w-10 h-10 p-1 flex-shrink-0" title="Pick color (HSL/Hex text input is source of truth)"/>
+                        </div>
+                        </div>
+                    </div>
+                )}
+                {section.id === 'loginAppearance' && (
+                    <div className="space-y-4">
+                        <div><Label className="text-sm">Background Type</Label><RadioGroup value={loginBgType} onValueChange={(value) => setLoginBgType(value as LoginPageBackgroundType)} className="flex flex-col sm:flex-row sm:space-x-4 space-y-2 sm:space-y-0 mt-1"><div className="flex items-center space-x-2"><RadioGroupItem value="default" id="loginbg-default" /><Label htmlFor="loginbg-default" className="font-normal">Default</Label></div><div className="flex items-center space-x-2"><RadioGroupItem value="image" id="loginbg-image" /><Label htmlFor="loginbg-image" className="font-normal">Image</Label></div><div className="flex items-center space-x-2"><RadioGroupItem value="color" id="loginbg-color" /><Label htmlFor="loginbg-color" className="font-normal">Single Color</Label></div><div className="flex items-center space-x-2"><RadioGroupItem value="gradient" id="loginbg-gradient" /><Label htmlFor="loginbg-gradient" className="font-normal">Gradient</Label></div></RadioGroup></div>
+                        {loginBgType === 'image' && (<div><Label htmlFor="login-bg-image-upload" className="text-sm">Login Background Image <span className="text-xs text-muted-foreground">(Max 500KB)</span></Label><Input id="login-bg-image-upload" type="file" accept="image/*" onChange={(e) => handleLogoFileChange(e, 'loginBg')} className="mt-1" />{loginBgImagePreviewUrl && (<div className="mt-3 p-2 border rounded-md inline-flex items-center gap-3 bg-muted/10"><Image src={loginBgImagePreviewUrl} alt="Login background preview" width={96} height={54} className="h-12 w-20 object-cover rounded" data-ai-hint="abstract background"/><Button variant="ghost" size="icon" onClick={() => removeSelectedImage('loginBg', false)} className="h-7 w-7"> <XCircle className="h-4 w-4 text-muted-foreground hover:text-destructive"/> </Button></div>)}{savedLoginBgImageUrl && ( <div className="mt-2"> <Button variant="outline" size="sm" onClick={() => removeSelectedImage('loginBg', true)} disabled={isSaving}> {isSaving && savedLoginBgImageUrl === null ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Trash2 className="mr-2 h-4 w-4"/>} Clear Saved Image </Button> </div> )}</div>)}
+                        {loginBgType === 'color' && (<div><Label htmlFor="login-bg-color1" className="text-sm">Background Color</Label><div className="flex items-center gap-2 mt-1"><Input id="login-bg-color1" type="color" value={loginBgColor1} onChange={(e) => setLoginBgColor1(e.target.value)} className="w-20 h-10 p-1" /><Input type="text" value={loginBgColor1} onChange={(e) => setLoginBgColor1(e.target.value)} placeholder="#RRGGBB" className="max-w-[100px]" /></div></div>)}
+                        {loginBgType === 'gradient' && (<div className="space-y-2"><div><Label htmlFor="login-bg-gradient-color1" className="text-sm">Gradient Color 1</Label><div className="flex items-center gap-2 mt-1"><Input id="login-bg-gradient-color1" type="color" value={loginBgColor1} onChange={(e) => setLoginBgColor1(e.target.value)} className="w-20 h-10 p-1" /><Input type="text" value={loginBgColor1} onChange={(e) => setLoginBgColor1(e.target.value)} placeholder="#RRGGBB" className="max-w-[100px]" /></div></div><div><Label htmlFor="login-bg-gradient-color2" className="text-sm">Gradient Color 2</Label><div className="flex items-center gap-2 mt-1"><Input id="login-bg-gradient-color2" type="color" value={loginBgColor2} onChange={(e) => setLoginBgColor2(e.target.value)} className="w-20 h-10 p-1" /><Input type="text" value={loginBgColor2} onChange={(e) => setLoginBgColor2(e.target.value)} placeholder="#RRGGBB" className="max-w-[100px]" /></div></div></div>)}
+                    </div>
+                )}
+                 {section.id === 'sidebarAppearance' && (
+                    <Tabs defaultValue="light-sidebar" className="w-full">
+                        <TabsList className="grid w-full grid-cols-2 mb-4">
+                            <TabsTrigger value="light-sidebar">Light Theme Sidebar</TabsTrigger>
+                            <TabsTrigger value="dark-sidebar">Dark Theme Sidebar</TabsTrigger>
+                        </TabsList>
+                        <TabsContent value="light-sidebar">
+                            {renderSidebarColorInputs('Light')}
+                        </TabsContent>
+                        <TabsContent value="dark-sidebar">
+                            {renderSidebarColorInputs('Dark')}
+                        </TabsContent>
+                    </Tabs>
+                 )}
+              </section>
+            ))}
           </CardContent>
           <CardFooter className="border-t pt-6 md:pl-6">
             <Button onClick={handleSavePreferences} className="w-full sm:w-auto btn-primary-gradient" disabled={isSaving || isLoading}>
@@ -523,3 +514,4 @@ export default function PreferencesSettingsPage() {
     </Card>
   );
 }
+

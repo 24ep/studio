@@ -2,7 +2,7 @@
 // src/app/settings/user-groups/page.tsx -> Now Roles & Permissions
 "use client";
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react'; // Added useRef
 import { Button, buttonVariants } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -68,6 +68,7 @@ export default function RolesPermissionsPage() {
 
   const [roles, setRoles] = useState<UserGroup[]>([]); // UserGroups are now "Roles"
   const [selectedRole, setSelectedRole] = useState<UserGroup | null>(null);
+  const selectedRoleIdRef = useRef<string | null>(null); // Ref to store selected role ID
   const [isLoading, setIsLoading] = useState(true);
   const [fetchError, setFetchError] = useState<string | null>(null);
 
@@ -80,12 +81,12 @@ export default function RolesPermissionsPage() {
     defaultValues: { name: '', description: '', permissions: [], is_default: false },
   });
 
-  const fetchRoles = useCallback(async () => {
+  const fetchRolesAndSelect = useCallback(async (roleIdToSelect?: string | null) => {
     if (sessionStatus !== 'authenticated') return;
     setIsLoading(true);
-    setFetchError(null); // Clear previous errors
+    setFetchError(null);
     try {
-      const response = await fetch('/api/settings/user-groups'); // API still uses /user-groups
+      const response = await fetch('/api/settings/user-groups');
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({ message: 'Failed to fetch roles' }));
         if (response.status === 401 || response.status === 403) {
@@ -97,22 +98,26 @@ export default function RolesPermissionsPage() {
       const data: UserGroup[] = await response.json();
       setRoles(data);
       
-      // Logic to update selectedRole based on fetched data
-      if (selectedRole) {
-        const refreshedSelectedRole = data.find(r => r.id === selectedRole.id);
-        setSelectedRole(refreshedSelectedRole || (data.length > 0 ? data[0] : null));
-      } else if (data.length > 0) {
-        setSelectedRole(data[0]); // Select first role by default if nothing was selected
-      } else {
-        setSelectedRole(null); // No roles available
+      if (roleIdToSelect) {
+        const roleToReselect = data.find(r => r.id === roleIdToSelect);
+        setSelectedRole(roleToReselect || (data.length > 0 ? data[0] : null));
+        selectedRoleIdRef.current = roleToReselect?.id || (data.length > 0 ? data[0].id : null);
+      } else if (data.length > 0 && !selectedRole) { // If no role was selected before, select the first one.
+        setSelectedRole(data[0]);
+        selectedRoleIdRef.current = data[0].id;
+      } else if (data.length === 0) {
+        setSelectedRole(null);
+        selectedRoleIdRef.current = null;
       }
+      // If a role was already selected, and it's still in the list, keep it.
+      // If it was deleted, then the selection will clear or pick the first if list not empty.
 
     } catch (error) {
       setFetchError((error as Error).message);
     } finally {
       setIsLoading(false);
     }
-  }, [sessionStatus, pathname, signIn, selectedRole]); // Added selectedRole to dependency array
+  }, [sessionStatus, pathname, signIn, selectedRole]); // Removed selectedRole to break potential loop
 
   useEffect(() => {
     if (sessionStatus === 'unauthenticated') {
@@ -122,10 +127,16 @@ export default function RolesPermissionsPage() {
         setFetchError("You do not have permission to manage roles & permissions.");
         setIsLoading(false);
       } else {
-        fetchRoles();
+        fetchRolesAndSelect(selectedRoleIdRef.current); // Fetch with current ref ID if set
       }
     }
-  }, [sessionStatus, session, fetchRoles, pathname, signIn]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sessionStatus, session, pathname, signIn]); // fetchRolesAndSelect is memoized
+
+  const handleSelectRole = (role: UserGroup) => {
+    setSelectedRole(role);
+    selectedRoleIdRef.current = role.id; // Update ref when user explicitly selects
+  };
 
   const handleOpenModal = (role: UserGroup | null = null) => {
     setEditingRole(role);
@@ -148,21 +159,7 @@ export default function RolesPermissionsPage() {
       
       toast({ title: `Role ${editingRole ? 'Updated' : 'Created'}`, description: `Role "${result.name}" was successfully ${editingRole ? 'updated' : 'created'}.` });
       setIsModalOpen(false);
-      const currentlySelectedRoleId = selectedRole?.id;
-      await fetchRoles(); // Refresh list
-      
-      // Attempt to re-select the role that was just created or edited
-      if (!editingRole && result.id) { // If new role created, select it
-        const newRole = roles.find(r => r.id === result.id) || result; // Prefer result from fetchRoles if available
-        setSelectedRole(newRole);
-      } else if (editingRole && result.id === editingRole.id) {
-         const editedRole = roles.find(r => r.id === result.id) || result;
-        setSelectedRole(editedRole);
-      } else if (currentlySelectedRoleId) {
-        const reselected = roles.find(r => r.id === currentlySelectedRoleId);
-        setSelectedRole(reselected || (roles.length > 0 ? roles[0] : null));
-      }
-
+      fetchRolesAndSelect(result.id); // Refresh list and attempt to select the created/edited role
 
     } catch (error) {
       toast({ title: `Error ${editingRole ? 'Updating' : 'Creating'} Role`, description: (error as Error).message, variant: "destructive" });
@@ -215,12 +212,7 @@ export default function RolesPermissionsPage() {
         throw new Error(errorData.message || 'Failed to delete role');
       }
       toast({ title: "Role Deleted", description: `Role "${roleToDelete.name}" has been deleted.` });
-      const currentSelectedId = selectedRole?.id;
-      await fetchRoles(); 
-      if (currentSelectedId === roleToDelete.id) {
-        const newRoles = roles.filter(r => r.id !== roleToDelete.id);
-        setSelectedRole(newRoles.length > 0 ? newRoles[0] : null);
-      }
+      fetchRolesAndSelect(null); // Refresh and select first item or nothing
     } catch (error) {
       toast({ title: "Error Deleting Role", description: (error as Error).message, variant: "destructive" });
     } finally {
@@ -239,17 +231,13 @@ export default function RolesPermissionsPage() {
         <ServerCrash className="w-16 h-16 text-destructive mb-4" />
         <h2 className="text-2xl font-semibold text-foreground mb-2">Error Loading Data</h2>
         <p className="text-muted-foreground mb-4 max-w-md">{fetchError}</p>
-        {isPermissionError ? (<Button onClick={() => router.push('/')} className="btn-hover-primary-gradient">Go to Dashboard</Button>) : (<Button onClick={fetchRoles} className="btn-hover-primary-gradient">Try Again</Button>)}
+        {isPermissionError ? (<Button onClick={() => router.push('/')} className="btn-hover-primary-gradient">Go to Dashboard</Button>) : (<Button onClick={() => fetchRolesAndSelect(selectedRoleIdRef.current)} className="btn-hover-primary-gradient">Try Again</Button>)}
       </div>
     );
   }
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        {/* Title is now handled by SettingsLayout */}
-      </div>
-      
       <div className="grid md:grid-cols-3 gap-6">
         {/* Left Panel: Roles List */}
         <Card className="md:col-span-1 shadow-sm">
@@ -274,7 +262,7 @@ export default function RolesPermissionsPage() {
                     <Button
                       key={role.id}
                       variant="ghost"
-                      onClick={() => setSelectedRole(role)}
+                      onClick={() => handleSelectRole(role)}
                       className={cn(
                         "w-full justify-start rounded-none p-4 text-left h-auto border-b border-border last:border-b-0",
                         selectedRole?.id === role.id && "bg-primary/10 text-primary font-semibold "
@@ -413,3 +401,4 @@ export default function RolesPermissionsPage() {
     </div>
   );
 }
+

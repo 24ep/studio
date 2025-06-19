@@ -14,6 +14,8 @@ import { signIn, useSession } from 'next-auth/react';
 import { useRouter, usePathname } from 'next/navigation';
 import { Save, SlidersHorizontal, Info, Trash2, PlusCircle, Loader2, ShieldAlert, ServerCrash, RefreshCw } from 'lucide-react';
 import type { WebhookFieldMapping } from '@/lib/types'; 
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 const TARGET_CANDIDATE_ATTRIBUTES_CONFIG: { path: string; label: string; type: string; example?: string, defaultNotes?: string }[] = [
   { path: 'candidate_info.cv_language', label: 'CV Language', type: 'string', example: 'payload.language', defaultNotes: 'Language code of the resume (e.g., EN, TH).' },
@@ -201,46 +203,51 @@ export default function WebhookMappingPage() {
                   <Button onClick={fetchMappings} variant="outline"><RefreshCw className="mr-2 h-4 w-4"/>Reload Configuration</Button>
               </div>
           ) : (
-            <div className="space-y-4 max-h-[calc(100vh-28rem)] overflow-y-auto pr-2 border rounded-md p-3 bg-muted/20">
-                {mappings.map((mapping, index) => {
-                    const targetAttrInfo = TARGET_CANDIDATE_ATTRIBUTES_CONFIG.find(attr => attr.path === mapping.targetPath);
-                    return (
-                    <Card key={mapping.targetPath} className="p-3 shadow-sm bg-card">
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 items-end">
-                            <div>
-                                <Label htmlFor={`targetPath-${index}`} className="text-xs font-semibold">Target CandiTrack Attribute</Label>
-                                <Input 
-                                    id={`targetPath-${index}`} 
-                                    value={targetAttrInfo?.label || mapping.targetPath} 
-                                    disabled 
-                                    className="mt-1 text-xs bg-muted/50"
-                                />
-                                <p className="text-xs text-muted-foreground mt-0.5">Path: <code className="text-xs bg-muted/50 px-1 rounded">{mapping.targetPath}</code> (Type: {targetAttrInfo?.type || 'unknown'})</p>
-                            </div>
-                            <div>
-                                <Label htmlFor={`sourcePath-${index}`} className="text-xs font-semibold">Source JSON Path (from your Workflow)</Label>
-                                <Input 
-                                    id={`sourcePath-${index}`} 
-                                    value={mapping.sourcePath || ''} 
-                                    onChange={(e) => handleMappingChange(index, 'sourcePath', e.target.value)}
-                                    placeholder={targetAttrInfo?.example || "e.g., data.profile.firstName"}
-                                    className="mt-1 text-xs"
-                                />
-                            </div>
-                        </div>
-                        <div className="mt-2">
-                            <Label htmlFor={`notes-${index}`} className="text-xs font-semibold">Notes/Details</Label>
+            <div className="border rounded-lg overflow-hidden">
+              <ScrollArea className="max-h-[calc(100vh-28rem)]">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="w-[30%]">Target CandiTrack Attribute</TableHead>
+                      <TableHead className="w-[30%]">Source JSON Path (from Workflow)</TableHead>
+                      <TableHead className="w-[40%]">Notes / Details</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {mappings.map((mapping, index) => {
+                      const targetAttrInfo = TARGET_CANDIDATE_ATTRIBUTES_CONFIG.find(attr => attr.path === mapping.targetPath);
+                      return (
+                        <TableRow key={mapping.targetPath}>
+                          <TableCell>
+                            <div className="font-medium">{targetAttrInfo?.label || mapping.targetPath}</div>
+                            <div className="text-xs text-muted-foreground">Path: <code className="text-xs bg-muted/50 px-1 rounded">{mapping.targetPath}</code></div>
+                            <div className="text-xs text-muted-foreground">Type: {targetAttrInfo?.type || 'unknown'}</div>
+                          </TableCell>
+                          <TableCell>
+                            <Input 
+                                id={`sourcePath-${index}`} 
+                                value={mapping.sourcePath || ''} 
+                                onChange={(e) => handleMappingChange(index, 'sourcePath', e.target.value)}
+                                placeholder={targetAttrInfo?.example || "e.g., data.profile.firstName"}
+                                className="text-sm"
+                            />
+                          </TableCell>
+                          <TableCell>
                             <Textarea
                                 id={`notes-${index}`}
                                 value={mapping.notes || ''}
                                 onChange={(e) => handleMappingChange(index, 'notes', e.target.value)}
                                 placeholder="Optional notes or details about this mapping"
-                                className="mt-1 text-xs min-h-[40px]"
+                                className="text-sm min-h-[60px]"
                                 rows={2}
                             />
-                        </div>
-                    </Card>
-                )})}
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </ScrollArea>
             </div>
           )}
       </CardContent>

@@ -103,11 +103,9 @@ export function CandidatesPageClient({
       const response = await fetch('/api/users?role=Recruiter');
       if (!response.ok) {
           const errorData = await response.json().catch(() => ({ message: 'Failed to fetch recruiters' }));
-          // Log the full errorData for debugging if possible
           console.error("API error fetching recruiters:", errorData);
-          // Construct a more detailed message for the Error thrown
           let detailedErrorMessage = errorData.message || 'Failed to fetch recruiters';
-          if (errorData.error) { // This 'error' field comes from our API's error response
+          if (errorData.error) { 
             detailedErrorMessage += ` (Details: ${errorData.error})`;
           }
           if (errorData.code) {
@@ -115,7 +113,7 @@ export function CandidatesPageClient({
           }
           throw new Error(detailedErrorMessage);
       }
-      const recruitersData: UserProfile[] | undefined = await response.json(); // Expect UserProfile[] or handle undefined
+      const recruitersData: UserProfile[] | undefined = await response.json(); 
       if (!recruitersData || !Array.isArray(recruitersData)) {
         throw new Error('Invalid data format received for recruiters.');
       }
@@ -270,8 +268,6 @@ export function CandidatesPageClient({
   const refreshCandidateInList = useCallback(async (candidateId: string) => {
     if (aiMatchedCandidateIds !== null) {
         toast({title: "AI Search Active", description: "Please clear AI search or re-run it to see specific updates.", variant: "default" });
-        // Optionally, refetch the entire list if AI search results are displayed
-        // fetchFilteredCandidatesOnClient(filters);
         return;
     }
 
