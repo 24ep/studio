@@ -39,13 +39,12 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
         u.id, u.name, u.email, u.role, u."avatarUrl", u."dataAiHint", u."modulePermissions", 
         u."createdAt", u."updatedAt",
         COALESCE(
-          (SELECT json_agg(DISTINCT json_build_object('id', g.id, 'name', g.name)) FILTER (WHERE g.id IS NOT NULL)
-           FROM "UserGroup" g
-           JOIN "User_UserGroup" ugg ON g.id = ugg."groupId"
-           WHERE ugg."userId" = u.id), 
-          '[]'::json
-        ) as groups
+          json_agg(DISTINCT jsonb_build_object('id', g.id, 'name', g.name)) FILTER (WHERE g.id IS NOT NULL), 
+          '[]'::jsonb
+        )::json as groups
       FROM "User" u
+      LEFT JOIN "User_UserGroup" ugg ON u.id = ugg."userId"
+      LEFT JOIN "UserGroup" g ON ugg."groupId" = g.id
       WHERE u.id = $1
       GROUP BY u.id; 
     `;
@@ -178,7 +177,10 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
     if (updateFields.length === 0 && (!isAdmin || updates.groupIds === undefined)) {
       await client.query('ROLLBACK'); 
       const currentUserQuery = `
-        SELECT u.*, COALESCE(json_agg(DISTINCT json_build_object('id', g.id, 'name', g.name)) FILTER (WHERE g.id IS NOT NULL), '[]'::json) as groups
+        SELECT u.*, COALESCE(
+          json_agg(DISTINCT jsonb_build_object('id', g.id, 'name', g.name)) FILTER (WHERE g.id IS NOT NULL), 
+          '[]'::jsonb
+        )::json as groups
         FROM "User" u
         LEFT JOIN "User_UserGroup" ugg ON u.id = ugg."userId"
         LEFT JOIN "UserGroup" g ON ugg."groupId" = g.id
@@ -198,13 +200,12 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
         u.id, u.name, u.email, u.role, u."avatarUrl", u."dataAiHint", u."modulePermissions", 
         u."createdAt", u."updatedAt",
         COALESCE(
-          (SELECT json_agg(DISTINCT json_build_object('id', g.id, 'name', g.name)) FILTER (WHERE g.id IS NOT NULL)
-           FROM "UserGroup" g
-           JOIN "User_UserGroup" ugg ON g.id = ugg."groupId"
-           WHERE ugg."userId" = u.id), 
-          '[]'::json
-        ) as groups
+          json_agg(DISTINCT jsonb_build_object('id', g.id, 'name', g.name)) FILTER (WHERE g.id IS NOT NULL), 
+          '[]'::jsonb
+        )::json as groups
       FROM "User" u
+      LEFT JOIN "User_UserGroup" ugg ON u.id = ugg."userId"
+      LEFT JOIN "UserGroup" g ON ugg."groupId" = g.id
       WHERE u.id = $1
       GROUP BY u.id;
     `;

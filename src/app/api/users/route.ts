@@ -41,7 +41,10 @@ export async function GET(request: NextRequest) {
     SELECT 
       u.id, u.name, u.email, u.role, u."avatarUrl", u."dataAiHint", u."modulePermissions", 
       u."createdAt", u."updatedAt",
-      COALESCE(json_agg(DISTINCT json_build_object('id', g.id, 'name', g.name)) FILTER (WHERE g.id IS NOT NULL), '[]'::json) as groups
+      COALESCE(
+        json_agg(DISTINCT jsonb_build_object('id', g.id, 'name', g.name)) FILTER (WHERE g.id IS NOT NULL), 
+        '[]'::jsonb
+      )::json as groups
     FROM "User" u
     LEFT JOIN "User_UserGroup" ugg ON u.id = ugg."userId"
     LEFT JOIN "UserGroup" g ON ugg."groupId" = g.id
@@ -174,7 +177,10 @@ export async function POST(request: NextRequest) {
       SELECT 
         u.id, u.name, u.email, u.role, u."avatarUrl", u."dataAiHint", u."modulePermissions", 
         u."createdAt", u."updatedAt",
-        COALESCE(json_agg(DISTINCT json_build_object('id', g.id, 'name', g.name)) FILTER (WHERE g.id IS NOT NULL), '[]'::json) as groups
+        COALESCE(
+          json_agg(DISTINCT jsonb_build_object('id', g.id, 'name', g.name)) FILTER (WHERE g.id IS NOT NULL), 
+          '[]'::jsonb
+        )::json as groups
       FROM "User" u
       LEFT JOIN "User_UserGroup" ugg ON u.id = ugg."userId"
       LEFT JOIN "UserGroup" g ON ugg."groupId" = g.id
