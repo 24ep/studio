@@ -126,14 +126,25 @@ export function CreateCandidateViaN8nModal({ isOpen, onOpenChange, onProcessingS
 
       if (!response.ok) {
         let description = result.message || `Failed to send PDF for automated candidate creation. Status: ${response.status}`;
-        if (result.message === "n8n integration for candidate creation is not configured on the server.") { 
+        
+        // Check for specific n8n "No item to return" error
+        if (response.status === 500 && result.message?.includes("n8n responded with status 500") && result.errorDetails) {
+            try {
+                const n8nErrorDetails = JSON.parse(String(result.errorDetails));
+                if (n8nErrorDetails.message === "No item to return got found") {
+                    description = "The n8n workflow reported: 'No item to return got found'. This means the workflow ran but didn't produce the expected candidate data. Please check the n8n workflow configuration and execution logs.";
+                } else {
+                    const detailsSnippet = String(result.errorDetails).substring(0, 150) + (String(result.errorDetails).length > 150 ? '...' : '');
+                    description = `The n8n workflow encountered an internal server error (500). Please check your n8n workflow logs for details. n8n Output: ${detailsSnippet}`;
+                }
+            } catch (e) {
+                // If parsing errorDetails fails, stick to a more generic message
+                const detailsSnippet = String(result.errorDetails).substring(0, 150) + (String(result.errorDetails).length > 150 ? '...' : '');
+                description = `The n8n workflow encountered an internal server error (500). Please check your n8n workflow logs for details. n8n Output: ${detailsSnippet}`;
+            }
+        } else if (result.message === "n8n integration for candidate creation is not configured on the server.") { 
           description = "Automated candidate creation is not configured on the server. Please ensure the Generic PDF Webhook URL environment variable is set.";
-        } else if (response.status === 500 && result.message?.includes("n8n responded with status 500") && result.errorDetails) {
-            // More specific message if n8n returned 500 and we have details from n8n
-            const detailsSnippet = String(result.errorDetails).substring(0, 150) + (String(result.errorDetails).length > 150 ? '...' : '');
-            description = `The n8n workflow encountered an internal server error (500). Please check your n8n workflow logs for details. n8n Output: ${detailsSnippet}`;
         } else if (result.errorDetails) {
-            // General case if errorDetails are present
             const detailsSnippet = String(result.errorDetails).substring(0, 150) + (String(result.errorDetails).length > 150 ? '...' : '');
             description = `${result.message || 'Failed to send PDF.'} Details: ${detailsSnippet}`;
         }
