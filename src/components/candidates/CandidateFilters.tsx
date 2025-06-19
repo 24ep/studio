@@ -12,7 +12,8 @@ import type { Position, CandidateStatus, RecruitmentStage, UserProfile } from '@
 import { cn } from "@/lib/utils";
 import { ScrollArea } from '../ui/scroll-area';
 import { Calendar } from "@/components/ui/calendar";
-import { format, parseISO } from 'date-fns';
+import { format, parseISO, addDays } from 'date-fns';
+import type { DateRange } from "react-day-picker";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -68,8 +69,13 @@ export function CandidateFilters({
     initialFilters.minFitScore || 0,
     initialFilters.maxFitScore || 100,
   ]);
-  const [applicationDateStart, setApplicationDateStart] = useState<Date | undefined>(initialFilters.applicationDateStart);
-  const [applicationDateEnd, setApplicationDateEnd] = useState<Date | undefined>(initialFilters.applicationDateEnd);
+  
+  const [applicationDateRange, setApplicationDateRange] = useState<DateRange | undefined>(
+    initialFilters.applicationDateStart && initialFilters.applicationDateEnd
+      ? { from: initialFilters.applicationDateStart, to: initialFilters.applicationDateEnd }
+      : undefined
+  );
+
   const [recruiterId, setRecruiterId] = useState(initialFilters.recruiterId || ALL_RECRUITERS_SELECT_VALUE);
   const [aiSearchQueryInput, setAiSearchQueryInput] = useState(initialFilters.aiSearchQuery || '');
 
@@ -85,8 +91,13 @@ export function CandidateFilters({
     setStatus(initialFilters.status || ALL_STATUSES_SELECT_VALUE);
     setEducation(initialFilters.education || '');
     setFitScoreRange([initialFilters.minFitScore || 0, initialFilters.maxFitScore || 100]);
-    setApplicationDateStart(initialFilters.applicationDateStart ? parseISO(String(initialFilters.applicationDateStart)) : undefined);
-    setApplicationDateEnd(initialFilters.applicationDateEnd ? parseISO(String(initialFilters.applicationDateEnd)) : undefined);
+    setApplicationDateRange(
+      initialFilters.applicationDateStart && initialFilters.applicationDateEnd
+        ? { from: parseISO(String(initialFilters.applicationDateStart)), to: parseISO(String(initialFilters.applicationDateEnd)) }
+        : initialFilters.applicationDateStart
+        ? { from: parseISO(String(initialFilters.applicationDateStart)), to: undefined }
+        : undefined
+    );
     setRecruiterId(initialFilters.recruiterId || ALL_RECRUITERS_SELECT_VALUE);
     setAiSearchQueryInput(initialFilters.aiSearchQuery || '');
   }, [initialFilters]);
@@ -102,8 +113,8 @@ export function CandidateFilters({
       education: education || undefined,
       minFitScore: fitScoreRange[0],
       maxFitScore: fitScoreRange[1],
-      applicationDateStart: applicationDateStart,
-      applicationDateEnd: applicationDateEnd,
+      applicationDateStart: applicationDateRange?.from,
+      applicationDateEnd: applicationDateRange?.to,
       recruiterId: recruiterId === ALL_RECRUITERS_SELECT_VALUE ? undefined : recruiterId,
       aiSearchQuery: undefined,
     });
@@ -123,8 +134,7 @@ export function CandidateFilters({
     setStatus(ALL_STATUSES_SELECT_VALUE);
     setEducation('');
     setFitScoreRange([0, 100]);
-    setApplicationDateStart(undefined);
-    setApplicationDateEnd(undefined);
+    setApplicationDateRange(undefined);
     setRecruiterId(ALL_RECRUITERS_SELECT_VALUE);
     setAiSearchQueryInput('');
     onFilterChange({
@@ -133,6 +143,8 @@ export function CandidateFilters({
       positionId: undefined,
       status: undefined,
       recruiterId: undefined,
+      applicationDateStart: undefined,
+      applicationDateEnd: undefined,
       aiSearchQuery: undefined,
     });
   };
@@ -219,8 +231,46 @@ export function CandidateFilters({
       defaultOpen: false,
       fields: (
          <div className="flex flex-col gap-2">
-            <Popover><PopoverTrigger asChild><Button variant={"outline"} className={cn("w-full justify-start text-left font-normal text-xs", !applicationDateStart && "text-muted-foreground")} disabled={isLoading || isAiSearching}><CalendarIcon className="mr-2 h-4 w-4" />{applicationDateStart ? format(applicationDateStart, "PPP") : <span>Start Date</span>}</Button></PopoverTrigger><PopoverContent className="w-auto p-0"><Calendar mode="single" selected={applicationDateStart} onSelect={setApplicationDateStart} initialFocus captionLayout="dropdown-buttons" fromYear={fromYear} toYear={toYear} /></PopoverContent></Popover>
-            <Popover><PopoverTrigger asChild><Button variant={"outline"} className={cn("w-full justify-start text-left font-normal text-xs", !applicationDateEnd && "text-muted-foreground")} disabled={isLoading || isAiSearching}><CalendarIcon className="mr-2 h-4 w-4" />{applicationDateEnd ? format(applicationDateEnd, "PPP") : <span>End Date</span>}</Button></PopoverTrigger><PopoverContent className="w-auto p-0"><Calendar mode="single" selected={applicationDateEnd} onSelect={setApplicationDateEnd} initialFocus captionLayout="dropdown-buttons" fromYear={fromYear} toYear={toYear} /></PopoverContent></Popover>
+            <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    id="date"
+                    variant={"outline"}
+                    className={cn(
+                      "w-full justify-start text-left font-normal text-xs",
+                      !applicationDateRange && "text-muted-foreground"
+                    )}
+                    disabled={isLoading || isAiSearching}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {applicationDateRange?.from ? (
+                      applicationDateRange.to ? (
+                        <>
+                          {format(applicationDateRange.from, "LLL dd, y")} -{" "}
+                          {format(applicationDateRange.to, "LLL dd, y")}
+                        </>
+                      ) : (
+                        format(applicationDateRange.from, "LLL dd, y")
+                      )
+                    ) : (
+                      <span>Pick a date range</span>
+                    )}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    initialFocus
+                    mode="range"
+                    defaultMonth={applicationDateRange?.from}
+                    selected={applicationDateRange}
+                    onSelect={setApplicationDateRange}
+                    numberOfMonths={2}
+                    captionLayout="dropdown-buttons" 
+                    fromYear={fromYear} 
+                    toYear={toYear}
+                  />
+                </PopoverContent>
+              </Popover>
          </div>
       )
     }
