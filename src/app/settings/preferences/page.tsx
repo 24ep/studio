@@ -60,7 +60,7 @@ interface SidebarColors {
   sidebarActiveBgStartL: string; sidebarActiveBgEndL: string; sidebarActiveTextL: string;
   sidebarHoverBgL: string; sidebarHoverTextL: string; sidebarBorderL: string;
   sidebarBgStartD: string; sidebarBgEndD: string; sidebarTextD: string;
-  sidebarActiveBgStartD: string; sidebarActiveBgEndD: string; sidebarActiveTextD: string;
+  sidebarActiveBgStartD: string; sidebarActiveBgEndL: string; sidebarActiveTextD: string;
   sidebarHoverBgD: string; sidebarHoverTextD: string; sidebarBorderD: string;
 }
 
@@ -378,7 +378,7 @@ export default function PreferencesSettingsPage() {
         sidebarHoverTextD: updatedSettingsMap.get('sidebarHoverTextD') || DEFAULT_SIDEBAR_COLORS_BASE.sidebarHoverTextD,
         sidebarBorderD: updatedSettingsMap.get('sidebarBorderD') || DEFAULT_SIDEBAR_COLORS_BASE.sidebarBorderD,
       });
-      toast({ title: 'Preferences Saved', description: 'Your application preferences have been saved to the server.' });
+      toast({ title: 'Preferences Saved', description: 'Your application preferences have been saved to the server.', variant: 'success' });
       window.dispatchEvent(new CustomEvent('appConfigChanged', {
         detail: {
           appName: updatedSettingsMap.get('appName') || appName || DEFAULT_APP_NAME,
@@ -567,7 +567,7 @@ export default function PreferencesSettingsPage() {
       </CardHeader>
       <CardContent className="p-0">
         <div className="flex flex-col md:flex-row min-h-[calc(100vh-18rem)]">
-          <aside className="md:w-60 lg:w-72 border-r bg-muted/30">
+          <aside className="md:w-72 lg:w-80 border-r bg-muted/30"> {/* Increased width here */}
             <ScrollArea className="h-full md:max-h-[calc(100vh-18rem)] p-4">
               <nav className="space-y-1">
                 {PREFERENCE_SECTIONS.map((section) => (
