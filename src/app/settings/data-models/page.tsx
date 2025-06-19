@@ -201,6 +201,7 @@ export default function DataModelsPage() {
         loadPreferencesFromServer();
       }
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sessionStatus, session, pathname, signIn, loadPreferencesFromServer]); 
 
 
@@ -290,7 +291,7 @@ export default function DataModelsPage() {
         </CardHeader>
         <CardContent className="pt-0">
            <div className="border rounded-lg overflow-hidden">
-            <ScrollArea className="max-h-[calc(100vh-25rem)]">
+            <ScrollArea className="max-h-[60vh]">
               <Table>
                 <TableHeader>
                   <TableRow>

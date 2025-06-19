@@ -204,7 +204,7 @@ export default function WebhookMappingPage() {
               </div>
           ) : (
             <div className="border rounded-lg overflow-hidden">
-              <ScrollArea className="max-h-[calc(100vh-28rem)]">
+              <ScrollArea className="max-h-[60vh]">
                 <Table>
                   <TableHeader><TableRow><TableHead className="w-[30%]">Target CandiTrack Attribute</TableHead><TableHead className="w-[30%]">Source JSON Path (from Workflow)</TableHead><TableHead className="w-[40%]">Notes / Details</TableHead></TableRow></TableHeader>
                   <TableBody>
