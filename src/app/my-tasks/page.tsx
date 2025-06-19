@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useSession, signIn } from 'next-auth/react';
 import { useRouter, usePathname } from 'next/navigation';
 import type { Candidate, UserProfile, CandidateStatus, Position, RecruitmentStage } from '@/lib/types';
@@ -9,7 +9,7 @@ import { CandidateTable } from '@/components/candidates/CandidateTable';
 import { CandidateKanbanView } from '@/components/candidates/CandidateKanbanView';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Loader2, ServerCrash, ShieldAlert, ListTodo, Users, Filter, LayoutGrid, List, Search, FilterX } from 'lucide-react';
+import { Loader2, ServerCrash, ShieldAlert, ListTodo, Users, Filter, LayoutGrid, List, Search, FilterX, Brain } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
 import { Label } from '@/components/ui/label';
@@ -18,6 +18,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { ChevronsUpDown, Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { CandidateFilters, type CandidateFilterValues } from '@/components/candidates/CandidateFilters';
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 
 const ALL_CANDIDATES_ADMIN_VALUE = "ALL_CANDIDATES_ADMIN";
@@ -37,9 +38,9 @@ export default function MyTasksPage() {
   const [candidates, setCandidates] = useState<Candidate[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [fetchError, setFetchError] = useState<string | null>(null);
-  const [allRecruiters, setAllRecruiters] = useState<Pick<UserProfile, 'id' | 'name'>[]>([]); // Changed name for clarity
+  const [allRecruiters, setAllRecruiters] = useState<Pick<UserProfile, 'id' | 'name'>[]>([]); 
   const [selectedRecruiterFilter, setSelectedRecruiterFilter] = useState<string>(MY_ASSIGNED_VALUE);
-  const [viewMode, setViewMode] = useState<'list' | 'kanban'>('kanban');
+  const [viewMode, setViewMode] = useState<'kanban' | 'list'>('kanban');
   
   const [standardFilters, setStandardFilters] = useState<CandidateFilterValues>({
     minFitScore: 0, maxFitScore: 100, status: 'all', positionId: ALL_POSITIONS_SELECT_VALUE
@@ -152,6 +153,7 @@ export default function MyTasksPage() {
   
   const handleRecruiterFilterChange = (newFilter: string) => {
     setSelectedRecruiterFilter(newFilter);
+    // fetchTaskBoardCandidates will be triggered by the useEffect dependency on selectedRecruiterFilter
   };
   
   const handleStandardFilterChange = (newFilters: CandidateFilterValues) => {
@@ -245,12 +247,29 @@ export default function MyTasksPage() {
     <div className="flex flex-col md:flex-row gap-6 h-full">
         <aside className="w-full md:w-72 lg:w-80 flex-shrink-0 md:sticky md:top-0 md:h-screen">
            <ScrollArea className="h-full md:max-h-[calc(100vh-var(--header-height,4rem)-2rem)] md:pr-2">
-                <div className="md:hidden mb-3"> {/* Recruiter filter for mobile, if admin */}
+                <div className="md:hidden mb-3"> 
                     {session?.user?.role === 'Admin' && (
                         <div className="w-full">
                             <Label htmlFor="recruiter-filter-select-mobile" className="text-xs font-medium">View tasks for:</Label>
-                            {/* Re-using logic from CandidateFilters for Recruiter selection or simplify to basic select */}
-                            <Input value="Recruiter filter placeholder for mobile" readOnly className="mt-1"/>
+                             <Popover>
+                                <PopoverTrigger asChild>
+                                    <Button variant="outline" role="combobox" className="w-full justify-between mt-1 text-xs">
+                                        <span className="truncate">
+                                            {selectedRecruiterFilter === MY_ASSIGNED_VALUE ? "My Assigned (Admin)" :
+                                            selectedRecruiterFilter === ALL_CANDIDATES_ADMIN_VALUE ? "All Candidates (Admin)" :
+                                            allRecruiters.find(r => r.id === selectedRecruiterFilter)?.name || "My Assigned (Admin)"}
+                                        </span>
+                                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                    </Button>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-[--trigger-width] p-0 dropdown-content-height">
+                                    <ScrollArea className="max-h-60">
+                                        <Button variant="ghost" className={cn("w-full justify-start px-2 py-1.5 text-xs font-normal h-auto", selectedRecruiterFilter === MY_ASSIGNED_VALUE && "bg-accent text-accent-foreground")} onClick={() => handleRecruiterFilterChange(MY_ASSIGNED_VALUE)}><Check className={cn("mr-2 h-4 w-4", selectedRecruiterFilter === MY_ASSIGNED_VALUE ? "opacity-100" : "opacity-0")}/>My Assigned (Admin)</Button>
+                                        <Button variant="ghost" className={cn("w-full justify-start px-2 py-1.5 text-xs font-normal h-auto", selectedRecruiterFilter === ALL_CANDIDATES_ADMIN_VALUE && "bg-accent text-accent-foreground")} onClick={() => handleRecruiterFilterChange(ALL_CANDIDATES_ADMIN_VALUE)}><Check className={cn("mr-2 h-4 w-4", selectedRecruiterFilter === ALL_CANDIDATES_ADMIN_VALUE ? "opacity-100" : "opacity-0")}/>All Candidates (Admin)</Button>
+                                        {allRecruiters.map(rec => (<Button key={rec.id} variant="ghost" className={cn("w-full justify-start px-2 py-1.5 text-xs font-normal h-auto", selectedRecruiterFilter === rec.id && "bg-accent text-accent-foreground")} onClick={() => handleRecruiterFilterChange(rec.id)}><Check className={cn("mr-2 h-4 w-4", selectedRecruiterFilter === rec.id ? "opacity-100" : "opacity-0")}/>{rec.name}</Button>))}
+                                    </ScrollArea>
+                                </PopoverContent>
+                            </Popover>
                         </div>
                     )}
                 </div>
@@ -288,9 +307,37 @@ export default function MyTasksPage() {
                 {session?.user?.role === 'Admin' && (
                     <div className="mb-4 w-full md:max-w-xs">
                         <Label htmlFor="recruiter-filter-select-desktop" className="text-xs font-medium">View tasks for:</Label>
-                        {/* This should use the searchable Popover pattern if many recruiters exist */}
-                        <Input value="Recruiter filter placeholder for desktop" readOnly className="mt-1"/>
+                         <Popover>
+                            <PopoverTrigger asChild>
+                                <Button variant="outline" role="combobox" className="w-full justify-between mt-1 text-xs">
+                                    <span className="truncate">
+                                        {selectedRecruiterFilter === MY_ASSIGNED_VALUE ? "My Assigned (Admin)" :
+                                        selectedRecruiterFilter === ALL_CANDIDATES_ADMIN_VALUE ? "All Candidates (Admin)" :
+                                        allRecruiters.find(r => r.id === selectedRecruiterFilter)?.name || "My Assigned (Admin)"}
+                                    </span>
+                                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-[--trigger-width] p-0 dropdown-content-height">
+                                <ScrollArea className="max-h-60">
+                                    <Button variant="ghost" className={cn("w-full justify-start px-2 py-1.5 text-xs font-normal h-auto", selectedRecruiterFilter === MY_ASSIGNED_VALUE && "bg-accent text-accent-foreground")} onClick={() => handleRecruiterFilterChange(MY_ASSIGNED_VALUE)}><Check className={cn("mr-2 h-4 w-4", selectedRecruiterFilter === MY_ASSIGNED_VALUE ? "opacity-100" : "opacity-0")}/>My Assigned (Admin)</Button>
+                                    <Button variant="ghost" className={cn("w-full justify-start px-2 py-1.5 text-xs font-normal h-auto", selectedRecruiterFilter === ALL_CANDIDATES_ADMIN_VALUE && "bg-accent text-accent-foreground")} onClick={() => handleRecruiterFilterChange(ALL_CANDIDATES_ADMIN_VALUE)}><Check className={cn("mr-2 h-4 w-4", selectedRecruiterFilter === ALL_CANDIDATES_ADMIN_VALUE ? "opacity-100" : "opacity-0")}/>All Candidates (Admin)</Button>
+                                    {allRecruiters.map(rec => (<Button key={rec.id} variant="ghost" className={cn("w-full justify-start px-2 py-1.5 text-xs font-normal h-auto", selectedRecruiterFilter === rec.id && "bg-accent text-accent-foreground")} onClick={() => handleRecruiterFilterChange(rec.id)}><Check className={cn("mr-2 h-4 w-4", selectedRecruiterFilter === rec.id ? "opacity-100" : "opacity-0")}/>{rec.name}</Button>))}
+                                </ScrollArea>
+                            </PopoverContent>
+                        </Popover>
                     </div>
+                )}
+
+                {aiSearchReasoning && (
+                  <Alert variant="default" className="mb-4 bg-blue-50 border-blue-300 dark:bg-blue-900/30 dark:border-blue-700">
+                    <Brain className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                    <AlertTitle className="font-semibold text-blue-700 dark:text-blue-300">AI Search Results</AlertTitle>
+                    <AlertDescription className="text-blue-700 dark:text-blue-300">
+                      {aiSearchReasoning}
+                      {aiMatchedCandidateIds && aiMatchedCandidateIds.length === 0 && " No strong matches found."}
+                    </AlertDescription>
+                  </Alert>
                 )}
 
                 {isLoading || isAiSearching ? (
@@ -314,7 +361,7 @@ export default function MyTasksPage() {
                     isAllCandidatesSelected={false}
                     />
                 ) : (
-                    <CandidateKanbanView candidates={displayedCandidates} statuses={KANBAN_STATUS_ORDER} />
+                    <CandidateKanbanView candidates={displayedCandidates} statuses={availableStages.map(s => s.name)} />
                 )}
                 </CardContent>
             </Card>
@@ -322,3 +369,4 @@ export default function MyTasksPage() {
     </div>
   );
 }
+
