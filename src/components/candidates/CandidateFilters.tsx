@@ -15,6 +15,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { format, parseISO } from 'date-fns';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 
 export interface CandidateFilterValues {
@@ -72,31 +73,9 @@ export function CandidateFilters({
   const [recruiterId, setRecruiterId] = useState(initialFilters.recruiterId || ALL_RECRUITERS_SELECT_VALUE);
   const [aiSearchQueryInput, setAiSearchQueryInput] = useState(initialFilters.aiSearchQuery || '');
 
-  const [positionSearchOpen, setPositionSearchOpen] = useState(false);
-  const [positionSearchQuery, setPositionSearchQuery] = useState('');
-  const [statusSearchOpen, setStatusSearchOpen] = useState(false);
-  const [statusSearchQuery, setStatusSearchQuery] = useState('');
-  const [recruiterSearchOpen, setRecruiterSearchOpen] = useState(false);
-  const [recruiterSearchQuery, setRecruiterSearchQuery] = useState('');
-
   const currentYear = new Date().getFullYear();
   const fromYear = currentYear - 10;
   const toYear = currentYear + 1;
-
-  const getCurrentPositionDisplayValue = () => {
-    if (positionId === ALL_POSITIONS_SELECT_VALUE) return "All Positions";
-    return availablePositions.find(p => p.id === positionId)?.title || "All Positions";
-  };
-
-  const getCurrentStatusDisplayValue = () => {
-    if (status === ALL_STATUSES_SELECT_VALUE) return "All Statuses";
-    return availableStages.find(s => s.name === status)?.name || "All Statuses";
-  };
-
-  const getCurrentRecruiterDisplayValue = () => {
-    if (recruiterId === ALL_RECRUITERS_SELECT_VALUE) return "All Recruiters";
-    return availableRecruiters.find(r => r.id === recruiterId)?.name || "All Recruiters";
-  }
 
   useEffect(() => {
     setName(initialFilters.name || '');
@@ -148,9 +127,6 @@ export function CandidateFilters({
     setApplicationDateEnd(undefined);
     setRecruiterId(ALL_RECRUITERS_SELECT_VALUE);
     setAiSearchQueryInput('');
-    setPositionSearchQuery('');
-    setStatusSearchQuery('');
-    setRecruiterSearchQuery('');
     onFilterChange({
       minFitScore: 0,
       maxFitScore: 100,
@@ -160,18 +136,6 @@ export function CandidateFilters({
       aiSearchQuery: undefined,
     });
   };
-
-  const filteredPositions = positionSearchQuery
-    ? availablePositions.filter(pos => pos.title.toLowerCase().includes(positionSearchQuery.toLowerCase()))
-    : availablePositions;
-
-  const filteredStages = statusSearchQuery
-    ? availableStages.filter(stage => stage.name.toLowerCase().includes(statusSearchQuery.toLowerCase()))
-    : availableStages;
-
-  const filteredRecruiters = recruiterSearchQuery
-    ? availableRecruiters.filter(r => r.name.toLowerCase().includes(recruiterSearchQuery.toLowerCase()))
-    : availableRecruiters;
 
   const filterGroups = [
     {
@@ -193,32 +157,41 @@ export function CandidateFilters({
       fields: (
         <>
           <div>
-            <Label htmlFor="position-combobox" className="text-xs">Position</Label>
-            <Popover open={positionSearchOpen} onOpenChange={setPositionSearchOpen}>
-              <PopoverTrigger asChild><Button variant="outline" role="combobox" aria-expanded={positionSearchOpen} className="w-full justify-between mt-1 text-xs" disabled={isLoading || isAiSearching}><span className="truncate">{getCurrentPositionDisplayValue()}</span><ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" /></Button></PopoverTrigger>
-              <PopoverContent className="w-[--trigger-width] p-0 dropdown-content-height"><div className="p-2"><Input placeholder="Search position..." value={positionSearchQuery} onChange={(e) => setPositionSearchQuery(e.target.value)} className="h-9 text-xs"/></div>
-                <ScrollArea className="max-h-60"><Button variant="ghost" className={cn("w-full justify-start px-2 py-1 text-xs font-normal h-auto", positionId === ALL_POSITIONS_SELECT_VALUE && "bg-accent text-accent-foreground")} onClick={() => {setPositionId(ALL_POSITIONS_SELECT_VALUE); setPositionSearchOpen(false); setPositionSearchQuery('');}}><Check className={cn("mr-2 h-4 w-4", positionId === ALL_POSITIONS_SELECT_VALUE ? "opacity-100" : "opacity-0")}/>All Positions</Button>
-                  {filteredPositions.length === 0 && positionSearchQuery && (<p className="p-2 text-xs text-muted-foreground text-center">No position found.</p>)}
-                  {filteredPositions.map((pos) => (<Button key={pos.id} variant="ghost" className={cn("w-full justify-start px-2 py-1 text-xs font-normal h-auto", positionId === pos.id && "bg-accent text-accent-foreground")} onClick={() => {setPositionId(pos.id); setPositionSearchOpen(false); setPositionSearchQuery('');}}><Check className={cn("mr-2 h-4 w-4", positionId === pos.id ? "opacity-100" : "opacity-0")}/>{pos.title}</Button>))}
-                </ScrollArea></PopoverContent></Popover></div>
+            <Label htmlFor="position-select" className="text-xs">Position</Label>
+            <Select value={positionId} onValueChange={(value) => setPositionId(value)} disabled={isLoading || isAiSearching}>
+              <SelectTrigger id="position-select" className="w-full mt-1 text-xs">
+                <SelectValue placeholder="All Positions" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={ALL_POSITIONS_SELECT_VALUE}>All Positions</SelectItem>
+                {availablePositions.map(pos => <SelectItem key={pos.id} value={pos.id}>{pos.title}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
           <div>
-            <Label htmlFor="status-combobox" className="text-xs">Status</Label>
-            <Popover open={statusSearchOpen} onOpenChange={setStatusSearchOpen}>
-              <PopoverTrigger asChild><Button variant="outline" role="combobox" aria-expanded={statusSearchOpen} className="w-full justify-between mt-1 text-xs" disabled={isLoading || isAiSearching}><span className="truncate">{getCurrentStatusDisplayValue()}</span><ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" /></Button></PopoverTrigger>
-              <PopoverContent className="w-[--trigger-width] p-0 dropdown-content-height"><div className="p-2"><Input placeholder="Search status..." value={statusSearchQuery} onChange={(e) => setStatusSearchQuery(e.target.value)} className="h-9 text-xs"/></div>
-                <ScrollArea className="max-h-60"><Button variant="ghost" className={cn("w-full justify-start px-2 py-1 text-xs font-normal h-auto", status === ALL_STATUSES_SELECT_VALUE && "bg-accent text-accent-foreground")} onClick={() => {setStatus(ALL_STATUSES_SELECT_VALUE); setStatusSearchOpen(false); setStatusSearchQuery('');}}><Check className={cn("mr-2 h-4 w-4", status === ALL_STATUSES_SELECT_VALUE ? "opacity-100" : "opacity-0")}/>All Statuses</Button>
-                  {filteredStages.length === 0 && statusSearchQuery && (<p className="p-2 text-xs text-muted-foreground text-center">No status found.</p>)}
-                  {filteredStages.map((st) => (<Button key={st.id} variant="ghost" className={cn("w-full justify-start px-2 py-1 text-xs font-normal h-auto", status === st.name && "bg-accent text-accent-foreground")} onClick={() => {setStatus(st.name); setStatusSearchOpen(false); setStatusSearchQuery('');}}><Check className={cn("mr-2 h-4 w-4", status === st.name ? "opacity-100" : "opacity-0")}/>{st.name}</Button>))}
-                </ScrollArea></PopoverContent></Popover></div>
+            <Label htmlFor="status-select" className="text-xs">Status</Label>
+            <Select value={status} onValueChange={(value) => setStatus(value as CandidateStatus | 'all')} disabled={isLoading || isAiSearching}>
+              <SelectTrigger id="status-select" className="w-full mt-1 text-xs">
+                <SelectValue placeholder="All Statuses" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={ALL_STATUSES_SELECT_VALUE}>All Statuses</SelectItem>
+                {availableStages.map(st => <SelectItem key={st.id} value={st.name}>{st.name}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
           <div>
-            <Label htmlFor="recruiter-combobox" className="text-xs">Assigned Recruiter</Label>
-            <Popover open={recruiterSearchOpen} onOpenChange={setRecruiterSearchOpen}>
-              <PopoverTrigger asChild><Button variant="outline" role="combobox" aria-expanded={recruiterSearchOpen} className="w-full justify-between mt-1 text-xs" disabled={isLoading || isAiSearching}><span className="truncate">{getCurrentRecruiterDisplayValue()}</span><ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" /></Button></PopoverTrigger>
-              <PopoverContent className="w-[--trigger-width] p-0 dropdown-content-height"><div className="p-2"><Input placeholder="Search recruiter..." value={recruiterSearchQuery} onChange={(e) => setRecruiterSearchQuery(e.target.value)} className="h-9 text-xs"/></div>
-                <ScrollArea className="max-h-60"><Button variant="ghost" className={cn("w-full justify-start px-2 py-1 text-xs font-normal h-auto", recruiterId === ALL_RECRUITERS_SELECT_VALUE && "bg-accent text-accent-foreground")} onClick={() => {setRecruiterId(ALL_RECRUITERS_SELECT_VALUE); setRecruiterSearchOpen(false); setRecruiterSearchQuery('');}}><Check className={cn("mr-2 h-4 w-4", recruiterId === ALL_RECRUITERS_SELECT_VALUE ? "opacity-100" : "opacity-0")}/>All Recruiters</Button>
-                  {filteredRecruiters.length === 0 && recruiterSearchQuery && (<p className="p-2 text-xs text-muted-foreground text-center">No recruiter found.</p>)}
-                  {filteredRecruiters.map((rec) => (<Button key={rec.id} variant="ghost" className={cn("w-full justify-start px-2 py-1 text-xs font-normal h-auto", recruiterId === rec.id && "bg-accent text-accent-foreground")} onClick={() => {setRecruiterId(rec.id); setRecruiterSearchOpen(false); setRecruiterSearchQuery('');}}><Check className={cn("mr-2 h-4 w-4", recruiterId === rec.id ? "opacity-100" : "opacity-0")}/>{rec.name}</Button>))}
-                </ScrollArea></PopoverContent></Popover></div>
+            <Label htmlFor="recruiter-select" className="text-xs">Assigned Recruiter</Label>
+            <Select value={recruiterId} onValueChange={(value) => setRecruiterId(value)} disabled={isLoading || isAiSearching}>
+              <SelectTrigger id="recruiter-select" className="w-full mt-1 text-xs">
+                <SelectValue placeholder="All Recruiters" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={ALL_RECRUITERS_SELECT_VALUE}>All Recruiters</SelectItem>
+                {availableRecruiters.map(rec => <SelectItem key={rec.id} value={rec.id}>{rec.name}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
         </>
       )
     },
@@ -254,7 +227,7 @@ export function CandidateFilters({
   ];
 
   return (
-    <div className="space-y-4 p-1"> {/* Removed border/card, padding adjusted to p-1 to make it look like a borderless filter group */}
+    <div className="space-y-4 p-1">
         <div>
             <Label htmlFor="ai-search-query" className="text-sm font-medium">AI Powered Search</Label>
             <Textarea
@@ -307,4 +280,3 @@ export function CandidateFilters({
     </div>
   );
 }
-
