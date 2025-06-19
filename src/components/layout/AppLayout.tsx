@@ -19,7 +19,8 @@ import { usePathname } from "next/navigation";
 import Image from 'next/image';
 import { SetupFlowHandler } from './SetupFlowHandler';
 import type { SystemSetting, SystemSettingKey } from '@/lib/types';
-import SettingsLayout from '@/app/settings/layout'; // Import the new settings layout
+// SettingsLayout import is removed as AppLayout will no longer explicitly render it here.
+// import SettingsLayout from '@/app/settings/layout'; 
 
 const DEFAULT_APP_NAME = "CandiTrack";
 const DEFAULT_LOGO_ICON = <Package2 className="h-6 w-6" />;
@@ -199,10 +200,17 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
         <SidebarInset className="flex flex-col bg-background">
           <Header pageTitle={pageTitle} />
           <main className="flex-1 overflow-y-auto">
+            {/*
+              If the current route is within /settings, Next.js automatically
+              uses src/app/settings/layout.tsx (which is our SettingsLayout).
+              So, AppLayout's {children} prop will ALREADY BE SettingsLayout wrapping the specific page.
+              We don't need to wrap it again here.
+              For non-settings pages, we apply the default padding.
+            */}
             {isSettingsPage ? (
-              <SettingsLayout>{children}</SettingsLayout>
+              children // This child is SettingsLayout(SpecificPage)
             ) : (
-              <div className="p-4 md:p-6 lg:p-8">{children}</div>
+              <div className="p-4 md:p-6 lg:p-8">{children}</div> // This child is a regular Page component
             )}
           </main>
         </SidebarInset>
@@ -210,3 +218,4 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
     </SetupFlowHandler>
   );
 }
+
