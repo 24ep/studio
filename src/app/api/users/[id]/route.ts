@@ -39,7 +39,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
         u.id, u.name, u.email, u.role, u."avatarUrl", u."dataAiHint", u."modulePermissions", 
         u."createdAt", u."updatedAt",
         COALESCE(
-          json_agg(DISTINCT jsonb_build_object('id', g.id, 'name', g.name)) FILTER (WHERE g.id IS NOT NULL), 
+          jsonb_agg(DISTINCT jsonb_build_object('id', g.id, 'name', g.name)) FILTER (WHERE g.id IS NOT NULL), 
           '[]'::jsonb
         )::json as groups
       FROM "User" u
@@ -178,7 +178,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
       await client.query('ROLLBACK'); 
       const currentUserQuery = `
         SELECT u.*, COALESCE(
-          json_agg(DISTINCT jsonb_build_object('id', g.id, 'name', g.name)) FILTER (WHERE g.id IS NOT NULL), 
+          jsonb_agg(DISTINCT jsonb_build_object('id', g.id, 'name', g.name)) FILTER (WHERE g.id IS NOT NULL), 
           '[]'::jsonb
         )::json as groups
         FROM "User" u
@@ -200,7 +200,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
         u.id, u.name, u.email, u.role, u."avatarUrl", u."dataAiHint", u."modulePermissions", 
         u."createdAt", u."updatedAt",
         COALESCE(
-          json_agg(DISTINCT jsonb_build_object('id', g.id, 'name', g.name)) FILTER (WHERE g.id IS NOT NULL), 
+          jsonb_agg(DISTINCT jsonb_build_object('id', g.id, 'name', g.name)) FILTER (WHERE g.id IS NOT NULL), 
           '[]'::jsonb
         )::json as groups
       FROM "User" u
@@ -269,3 +269,5 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
     client.release();
   }
 }
+
+    

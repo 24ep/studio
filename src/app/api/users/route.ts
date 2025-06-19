@@ -42,7 +42,7 @@ export async function GET(request: NextRequest) {
       u.id, u.name, u.email, u.role, u."avatarUrl", u."dataAiHint", u."modulePermissions", 
       u."createdAt", u."updatedAt",
       COALESCE(
-        json_agg(DISTINCT jsonb_build_object('id', g.id, 'name', g.name)) FILTER (WHERE g.id IS NOT NULL), 
+        jsonb_agg(DISTINCT jsonb_build_object('id', g.id, 'name', g.name)) FILTER (WHERE g.id IS NOT NULL), 
         '[]'::jsonb
       )::json as groups
     FROM "User" u
@@ -178,7 +178,7 @@ export async function POST(request: NextRequest) {
         u.id, u.name, u.email, u.role, u."avatarUrl", u."dataAiHint", u."modulePermissions", 
         u."createdAt", u."updatedAt",
         COALESCE(
-          json_agg(DISTINCT jsonb_build_object('id', g.id, 'name', g.name)) FILTER (WHERE g.id IS NOT NULL), 
+          jsonb_agg(DISTINCT jsonb_build_object('id', g.id, 'name', g.name)) FILTER (WHERE g.id IS NOT NULL), 
           '[]'::jsonb
         )::json as groups
       FROM "User" u
@@ -209,3 +209,5 @@ export async function POST(request: NextRequest) {
     client.release();
   }
 }
+
+    
