@@ -1,16 +1,17 @@
+
 "use client";
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Button, buttonVariants } from "@/components/ui/button"; 
+import { Button, buttonVariants } from '@/components/ui/button'; 
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label"; 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { PlusCircle, UsersRound, ShieldAlert, Edit3, Trash2, ServerCrash, Loader2, MoreHorizontal, KeyRound, Filter, Search, XCircle } from "lucide-react";
-import type { UserProfile, UserGroup } from '@/lib/types';
+import type { UserProfile, UserGroup } from '@/lib/types'; 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react'; 
 import { useToast } from "@/hooks/use-toast";
 import { AddUserModal, type AddUserFormValues } from '@/components/users/AddUserModal';
 import { EditUserModal, type EditUserFormValues } from '@/components/users/EditUserModal';
@@ -185,7 +186,7 @@ export default function ManageUsersPage() {
         }
         throw new Error(errorData.message || 'Failed to delete user');
       }
-      fetchUsers({name: nameFilter, email: emailFilter, role: roleFilter}); // Refetch
+      fetchUsers({name: nameFilter, email: emailFilter, role: roleFilter}); 
       toast({ title: "Success", description: `User ${userToDelete.name} deleted.` });
     } catch (error) {
       toast({ title: "Error Deleting User", description: (error as Error).message, variant: "destructive" });
@@ -218,175 +219,178 @@ export default function ManageUsersPage() {
   }
 
   return (
-    <Card className="shadow-lg">
-      <CardHeader className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
-        <div>
-          <CardTitle className="flex items-center text-2xl">
-            <UsersRound className="mr-3 h-6 w-6 text-primary" /> Manage Users
-          </CardTitle>
-          <CardDescription className="mt-1">
-             View, add, edit, and delete application users. Assign roles, permissions, and groups.
-          </CardDescription>
-        </div>
-        {session?.user?.role === 'Admin' && (
-            <Button className="w-full sm:w-auto btn-primary-gradient" onClick={() => setIsAddUserModalOpen(true)}> 
-            <PlusCircle className="mr-2 h-4 w-4" /> Add New User
-            </Button>
-        )}
-      </CardHeader>
-      <CardContent>
-        {/* Filters Section */}
-        <div className="mb-6 p-4 border rounded-lg bg-muted/30 shadow-sm">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
-            <div className="space-y-1">
-              <Label htmlFor="name-filter">Name</Label>
-              <Input id="name-filter" placeholder="Filter by name..." value={nameFilter} onChange={(e) => setNameFilter(e.target.value)} disabled={isLoading}/>
-            </div>
-            <div className="space-y-1">
-              <Label htmlFor="email-filter">Email</Label>
-              <Input id="email-filter" placeholder="Filter by email..." value={emailFilter} onChange={(e) => setEmailFilter(e.target.value)} disabled={isLoading}/>
-            </div>
-            <div className="space-y-1">
-              <Label htmlFor="role-filter">Role</Label>
-              <Select value={roleFilter} onValueChange={(value) => setRoleFilter(value as UserProfile['role'] | "ALL_ROLES")} disabled={isLoading}>
-                <SelectTrigger id="role-filter"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {userRoleOptionsFilter.map(opt => <SelectItem key={opt} value={opt}>{opt === "ALL_ROLES" ? "All Roles" : opt}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="flex gap-2">
-              <Button onClick={handleApplyFilters} disabled={isLoading} className="w-full sm:w-auto"><Search className="mr-2 h-4 w-4"/>Apply</Button>
-              <Button variant="outline" onClick={handleResetFilters} disabled={isLoading} className="w-full sm:w-auto"><XCircle className="mr-2 h-4 w-4"/>Reset</Button>
-            </div>
-          </div>
-        </div>
-
-        {isLoading && users.length === 0 && !fetchError ? (
-            <div className="text-center py-10">
-            <UsersRound className="mx-auto h-12 w-12 text-muted-foreground animate-pulse" />
-            <p className="mt-4 text-muted-foreground">Loading users...</p>
-          </div>
-        ) : users.length === 0 && !fetchError ? ( 
-          <div className="text-center py-10">
-            <UsersRound className="mx-auto h-12 w-12 text-muted-foreground" />
-            <p className="mt-4 text-muted-foreground">No users found matching your criteria.</p>
-              {session?.user?.role === 'Admin' && (
-                <Button className="mt-4 btn-primary-gradient" onClick={() => setIsAddUserModalOpen(true)}> 
-                  <PlusCircle className="mr-2 h-4 w-4" /> Add First User
-              </Button>
-              )}
-          </div>
-        ) : (
-          <div className="border rounded-lg overflow-hidden">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>Email</TableHead>
-                <TableHead>Role</TableHead>
-                <TableHead>Groups</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {users.map((user) => (
-                <TableRow key={user.id}>
-                  <TableCell>
-                    <div className="flex items-center gap-3">
-                      <Avatar className="h-9 w-9">
-                        <AvatarImage src={user.avatarUrl} alt={user.name} data-ai-hint={user.avatarUrl ? undefined : user.dataAiHint || "profile person"}/>
-                        <AvatarFallback>{user.name.charAt(0).toUpperCase()}</AvatarFallback>
-                      </Avatar>
-                      <span className="font-medium">{user.name}</span>
-                    </div>
-                  </TableCell>
-                  <TableCell>{user.email}</TableCell>
-                  <TableCell>
-                    <Badge variant={user.role === 'Admin' ? "default" : "secondary"} className={user.role === 'Admin' ? 'bg-primary hover:bg-primary/90' : ''}>
-                      {user.role}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    {user.groups && user.groups.length > 0 
-                      ? user.groups.map(g => <Badge key={g.id} variant="outline" className="mr-1 mb-1">{g.name}</Badge>) 
-                      : <span className="text-xs text-muted-foreground">No groups</span>
-                    }
-                  </TableCell>
-                  <TableCell className="text-right">
-                    {session?.user?.role === 'Admin' && (
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon" className="h-8 w-8">
-                            <MoreHorizontal className="h-4 w-4" />
-                            <span className="sr-only">Actions</span>
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => openEditModal(user)}>
-                            <Edit3 className="mr-2 h-4 w-4" /> Edit User
-                          </DropdownMenuItem>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem 
-                            onClick={() => confirmDeleteUser(user)} 
-                            disabled={session?.user?.id === user.id} 
-                            className="text-destructive hover:!bg-destructive/10 focus:!bg-destructive/10 focus:!text-destructive"
-                          >
-                            <Trash2 className="mr-2 h-4 w-4" /> Delete User
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    )}
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-          </div>
-        )}
-          <div className="mt-6 p-3 bg-secondary/30 border border-secondary/50 rounded-md flex items-start text-sm text-secondary-foreground">
-          <ShieldAlert className="h-5 w-5 mr-2 mt-0.5 text-primary shrink-0" />
+    <div className="space-y-6">
+      <Card className="shadow-lg">
+        <CardHeader className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
           <div>
-            <span className="font-semibold">Security Note:</span> User creation, deletion, and modification of roles/permissions are restricted to 'Admin' users. User passwords are securely hashed using bcrypt.
+            <CardTitle className="flex items-center text-2xl">
+              <UsersRound className="mr-3 h-6 w-6 text-primary" /> Manage Users
+            </CardTitle>
+            <CardDescription className="mt-1">
+               View, add, edit, and delete application users. Assign roles, permissions, and groups.
+            </CardDescription>
           </div>
-        </div>
-      </CardContent>
-    </Card>
-    <AddUserModal 
-      isOpen={isAddUserModalOpen} 
-      onOpenChange={setIsAddUserModalOpen}
-      onAddUser={handleAddUser}
-    />
-    {selectedUserForEdit && (
-      <EditUserModal
-        isOpen={isEditUserModalOpen}
-        onOpenChange={(isOpen) => {
-          setIsEditUserModalOpen(isOpen);
-          if (!isOpen) setSelectedUserForEdit(null); 
-        }}
-        onEditUser={handleEditUser}
-        user={selectedUserForEdit}
-      />
-    )}
+          {session?.user?.role === 'Admin' && (
+              <Button className="w-full sm:w-auto btn-primary-gradient" onClick={() => setIsAddUserModalOpen(true)}> 
+              <PlusCircle className="mr-2 h-4 w-4" /> Add New User
+              </Button>
+          )}
+        </CardHeader>
+        <CardContent>
+          {/* Filters Section */}
+          <div className="mb-6 p-4 border rounded-lg bg-muted/30 shadow-sm">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
+              <div className="space-y-1">
+                <Label htmlFor="name-filter">Name</Label>
+                <Input id="name-filter" placeholder="Filter by name..." value={nameFilter} onChange={(e) => setNameFilter(e.target.value)} disabled={isLoading}/>
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="email-filter">Email</Label>
+                <Input id="email-filter" placeholder="Filter by email..." value={emailFilter} onChange={(e) => setEmailFilter(e.target.value)} disabled={isLoading}/>
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="role-filter">Role</Label>
+                <Select value={roleFilter} onValueChange={(value) => setRoleFilter(value as UserProfile['role'] | "ALL_ROLES")} disabled={isLoading}>
+                  <SelectTrigger id="role-filter"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {userRoleOptionsFilter.map(opt => <SelectItem key={opt} value={opt}>{opt === "ALL_ROLES" ? "All Roles" : opt}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex gap-2">
+                <Button onClick={handleApplyFilters} disabled={isLoading} className="w-full sm:w-auto"><Search className="mr-2 h-4 w-4"/>Apply</Button>
+                <Button variant="outline" onClick={handleResetFilters} disabled={isLoading} className="w-full sm:w-auto"><XCircle className="mr-2 h-4 w-4"/>Reset</Button>
+              </div>
+            </div>
+          </div>
 
-    {userToDelete && (
-      <AlertDialog open={!!userToDelete} onOpenChange={(open) => { if(!open) setUserToDelete(null);}}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This action cannot be undone. This will permanently delete the user <strong>{userToDelete.name}</strong>.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => setUserToDelete(null)}>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDeleteUser} className={buttonVariants({ variant: "destructive" })}>
-              Delete User
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-    )}
-  </div>
+          {isLoading && users.length === 0 && !fetchError ? (
+              <div className="text-center py-10">
+              <UsersRound className="mx-auto h-12 w-12 text-muted-foreground animate-pulse" />
+              <p className="mt-4 text-muted-foreground">Loading users...</p>
+            </div>
+          ) : users.length === 0 && !fetchError ? ( 
+            <div className="text-center py-10">
+              <UsersRound className="mx-auto h-12 w-12 text-muted-foreground" />
+              <p className="mt-4 text-muted-foreground">No users found matching your criteria.</p>
+                {session?.user?.role === 'Admin' && (
+                  <Button className="mt-4 btn-primary-gradient" onClick={() => setIsAddUserModalOpen(true)}> 
+                    <PlusCircle className="mr-2 h-4 w-4" /> Add First User
+                </Button>
+                )}
+            </div>
+          ) : (
+            <div className="border rounded-lg overflow-hidden">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Name</TableHead>
+                  <TableHead>Email</TableHead>
+                  <TableHead>Role</TableHead>
+                  <TableHead>Groups</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {users.map((user) => (
+                  <TableRow key={user.id}>
+                    <TableCell>
+                      <div className="flex items-center gap-3">
+                        <Avatar className="h-9 w-9">
+                          <AvatarImage src={user.avatarUrl} alt={user.name} data-ai-hint={user.avatarUrl ? undefined : user.dataAiHint || "profile person"}/>
+                          <AvatarFallback>{user.name.charAt(0).toUpperCase()}</AvatarFallback>
+                        </Avatar>
+                        <span className="font-medium">{user.name}</span>
+                      </div>
+                    </TableCell>
+                    <TableCell>{user.email}</TableCell>
+                    <TableCell>
+                      <Badge variant={user.role === 'Admin' ? "default" : "secondary"} className={user.role === 'Admin' ? 'bg-primary hover:bg-primary/90' : ''}>
+                        {user.role}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      {user.groups && user.groups.length > 0 
+                        ? user.groups.map(g => <Badge key={g.id} variant="outline" className="mr-1 mb-1">{g.name}</Badge>) 
+                        : <span className="text-xs text-muted-foreground">No groups</span>
+                      }
+                    </TableCell>
+                    <TableCell className="text-right">
+                      {session?.user?.role === 'Admin' && (
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-8 w-8">
+                              <MoreHorizontal className="h-4 w-4" />
+                              <span className="sr-only">Actions</span>
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => openEditModal(user)}>
+                              <Edit3 className="mr-2 h-4 w-4" /> Edit User
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem 
+                              onClick={() => confirmDeleteUser(user)} 
+                              disabled={session?.user?.id === user.id} 
+                              className="text-destructive hover:!bg-destructive/10 focus:!bg-destructive/10 focus:!text-destructive"
+                            >
+                              <Trash2 className="mr-2 h-4 w-4" /> Delete User
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      )}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+            </div>
+          )}
+            <div className="mt-6 p-3 bg-secondary/30 border border-secondary/50 rounded-md flex items-start text-sm text-secondary-foreground">
+            <ShieldAlert className="h-5 w-5 mr-2 mt-0.5 text-primary shrink-0" />
+            <div>
+              <span className="font-semibold">Security Note:</span> User creation, deletion, and modification of roles/permissions are restricted to 'Admin' users. User passwords are securely hashed using bcrypt.
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+      <React.Fragment>
+        <AddUserModal 
+          isOpen={isAddUserModalOpen} 
+          onOpenChange={setIsAddUserModalOpen}
+          onAddUser={handleAddUser}
+        />
+        {selectedUserForEdit && (
+          <EditUserModal
+            isOpen={isEditUserModalOpen}
+            onOpenChange={(isOpen) => {
+              setIsEditUserModalOpen(isOpen);
+              if (!isOpen) setSelectedUserForEdit(null); 
+            }}
+            onEditUser={handleEditUser}
+            user={selectedUserForEdit}
+          />
+        )}
+        {userToDelete && (
+          <AlertDialog open={!!userToDelete} onOpenChange={(open) => { if(!open) setUserToDelete(null);}}>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  This action cannot be undone. This will permanently delete the user <strong>{userToDelete.name}</strong>.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel onClick={() => setUserToDelete(null)}>Cancel</AlertDialogCancel>
+                <AlertDialogAction onClick={handleDeleteUser} className={buttonVariants({ variant: "destructive" })}>
+                  Delete User
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        )}
+      </React.Fragment>
+    </div>
   );
 }
+    
