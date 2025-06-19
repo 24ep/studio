@@ -16,36 +16,53 @@ export function SetupFlowHandler({ children }: { children: ReactNode }) {
 
   const performSetupCheck = useCallback(async () => {
     setIsLoading(true);
+    let schemaInitialized = false; // Default to false
+
     try {
       const response = await fetch('/api/system/initial-setup-check');
-      // No matter the API outcome (error or success), we want to get its JSON response
-      // to determine if schemaInitialized is true or false.
-      const data = await response.json(); 
 
-      if (!data.schemaInitialized) {
-        // If schema is not initialized and we are not already on guidance page, redirect.
+      if (response.ok) {
+        try {
+          const data = await response.json();
+          schemaInitialized = data.schemaInitialized === true; // Explicitly check for true
+        } catch (jsonError) {
+          // This case is unusual: response.ok was true, but JSON parsing failed.
+          console.error('Setup check: API response was OK, but JSON parsing failed:', jsonError);
+          // Treat as if schema is not initialized or check failed to be safe.
+          schemaInitialized = false;
+        }
+      } else {
+        // Response not OK (e.g., 500 error from API), schema check failed or schema is not initialized.
+        console.error(`Setup check: API request failed with status ${response.status}.`);
+        // Attempt to get text from the response body for more details, but don't let it break anything.
+        try {
+          const errorText = await response.text();
+          console.error('Setup check: API error response text:', errorText);
+        } catch (textError) {
+          console.error('Setup check: Failed to get error text from non-OK API response.');
+        }
+        schemaInitialized = false; // Treat as not initialized
+      }
+
+      if (!schemaInitialized) {
         if (pathname !== '/setup-guidance') {
           router.replace('/setup-guidance');
-          // setIsLoading(false) will be handled by the effect re-running due to pathname change
-          return; // Exit early to let redirection take effect
+          return; // Exit early to let redirection take effect before finally block sets isLoading
         }
       }
-      // If schema is initialized, or if API call failed but we are on setup-guidance,
-      // or if schema is not initialized BUT we are already on setup-guidance,
-      // then we stop loading and let the current page render.
-    } catch (error) {
-      console.error('Error calling initial setup check API:', error);
-      // If API call itself fails, and we are not on setup-guidance, redirect to it.
+      // If schemaInitialized is true, or if !schemaInitialized BUT we are already on /setup-guidance, proceed.
+    } catch (networkError) { // Catches network errors from fetch() itself
+      console.error('Setup check: Network error during initial setup check API call:', networkError);
       if (pathname !== '/setup-guidance') {
         router.replace('/setup-guidance');
-         return; 
+        return; // Exit early
       }
     } finally {
       setIsLoading(false);
       setInitialCheckDone(true);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pathname, router]); // router is stable, pathname changes trigger re-evaluation
+  }, [pathname, router]); // router and pathname are dependencies
 
   useEffect(() => {
     const isBypassPath = BYPASS_PATHS.includes(pathname) || pathname.startsWith('/_next/');
