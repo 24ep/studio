@@ -102,21 +102,22 @@ export function CandidatesPageClient({
     try {
       const response = await fetch('/api/users?role=Recruiter');
       if (!response.ok) {
-          const errorData = await response.json().catch(() => ({})); // Catch if .json() fails (e.g. empty body)
-          console.error("API error fetching recruiters:", errorData);
+          const errorData = await response.json().catch(() => ({})); // Default to empty object on JSON parse fail
+          console.error("API error fetching recruiters:", errorData); // Log the object we got
+          
           let detailedErrorMessage = (errorData as any)?.message || 'Failed to fetch recruiters';
           if (Object.keys(errorData).length === 0 && !(errorData as any)?.message) {
+            // If errorData is empty and has no message, use statusText
             detailedErrorMessage = `Failed to fetch recruiters. Server responded with status ${response.status}: ${response.statusText || 'No additional error message.'}`;
-          }
-          if ((errorData as any).error) { 
+          } else if ((errorData as any)?.error) { // If there's an 'error' property in the JSON
             detailedErrorMessage += ` (Details: ${(errorData as any).error})`;
           }
-          if ((errorData as any).code) {
+          if ((errorData as any).code) { // If there's a 'code' property
              detailedErrorMessage += ` (Code: ${(errorData as any).code})`;
           }
           throw new Error(detailedErrorMessage);
       }
-      const recruitersData: UserProfile[] | undefined = await response.json();
+      const recruitersData: UserProfile[] | undefined = await response.json(); 
       if (!recruitersData || !Array.isArray(recruitersData)) {
         throw new Error('Invalid data format received for recruiters.');
       }
@@ -579,7 +580,7 @@ export function CandidatesPageClient({
 
   return (
     <div className="flex flex-col md:flex-row gap-6 h-full">
-      <aside className="w-full md:w-1/4 lg:w-1/5 flex-shrink-0 md:sticky md:top-[calc(var(--header-height,4rem)_+_1rem)] md:max-h-[calc(100vh-var(--header-height,4rem)-2rem)]">
+      <aside className="w-full md:w-1/5 flex-shrink-0 md:sticky md:top-[calc(var(--header-height,4rem)_+_1rem)] md:max-h-[calc(100vh-var(--header-height,4rem)-2rem)]">
         <ScrollArea className="h-full md:pr-2">
           <div className="flex justify-between items-center mb-3 md:hidden"> 
             <h2 className="text-lg font-semibold">Filters</h2>
@@ -597,7 +598,7 @@ export function CandidatesPageClient({
         </ScrollArea>
       </aside>
 
-      <div className="flex-1 md:w-3/4 lg:w-4/5 space-y-6 min-w-0"> 
+      <div className="flex-1 md:w-4/5 space-y-6 min-w-0"> 
         <div className="flex flex-col sm:flex-row justify-between items-center gap-2">
           <h1 className="text-2xl font-semibold text-foreground hidden md:block"> Candidate Management </h1>
           <div className="w-full md:w-auto flex flex-col sm:flex-row gap-2 items-center sm:justify-end">
@@ -716,3 +717,4 @@ export function CandidatesPageClient({
     </div>
   );
 }
+

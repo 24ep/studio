@@ -141,15 +141,25 @@ export default function SignInPage() {
     }
   }, [session, status, router, callbackUrl]);
 
-  const isAzureAdConfigured = !!(
+  // For the client-side check to show the Azure AD button, we only need to know if Azure AD
+  // integration is intended. The presence of NEXT_PUBLIC_AZURE_AD_CLIENT_ID and NEXT_PUBLIC_AZURE_AD_TENANT_ID
+  // is sufficient for this hint. The actual secret is only used server-side by NextAuth.js.
+  const isAzureAdClientSideHintConfigured = !!(
     process.env.NEXT_PUBLIC_AZURE_AD_CLIENT_ID &&
-    process.env.NEXT_PUBLIC_AZURE_AD_CLIENT_SECRET &&
     process.env.NEXT_PUBLIC_AZURE_AD_TENANT_ID
-  ) || !!(
+  );
+  
+  // The server-side check (if the process.env are available during build for SSG/SSR of this page)
+  // uses the actual server-side environment variables.
+  const isAzureAdServerSideConfigured = !!(
     process.env.AZURE_AD_CLIENT_ID &&
-    process.env.AZURE_AD_CLIENT_SECRET &&
+    process.env.AZURE_AD_CLIENT_SECRET && // Server-side only, fine to check here
     process.env.AZURE_AD_TENANT_ID
   );
+
+  // Show button if either client-side hint OR server-side actual config is present.
+  const isAzureAdConfigured = isAzureAdClientSideHintConfigured || isAzureAdServerSideConfigured;
+
 
   const errorParam = nextSearchParams.get('error');
   let errorMessage = '';
@@ -238,5 +248,6 @@ export default function SignInPage() {
     
 
     
+
 
 
