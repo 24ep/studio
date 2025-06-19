@@ -15,7 +15,8 @@ if [ ! -f .env.local ]; then
     echo "It's HIGHLY recommended to create a .env.local file from .env.example and customize it."
     echo "Pay special attention to NEXTAUTH_URL - it should be http://localhost:9846 if using default docker-compose port mapping."
     echo "The default admin credentials are admin@ncc.com / nccadmin (defined in pg-init-scripts/init-db.sql)."
-    echo "Make sure to update the bcrypt hash in init-db.sql if you change the default admin password BEFORE first run."
+    echo "Make suimport { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
+re to update the bcrypt hash in init-db.sql if you change the default admin password BEFORE first run."
     echo "" # Adding a blank line for readability
 fi
 

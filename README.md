@@ -11,6 +11,7 @@ This is a Next.js application prototype for an Applicant Tracking System, built 
     *   Resume Uploads: Direct upload to MinIO, with optional n8n webhook trigger for processing.
     *   **Resume History:** Tracks all uploaded resume versions for a candidate (API support; UI display for history is a future enhancement).
     *   **Profile Image Upload:** Upload and display candidate profile images.
+    *   Drag-and-drop interface for reordering recruitment stages.
     *   Transition History: Track candidate stage changes with notes; ability to edit notes and delete records.
     *   Recruiter Assignment: Assign candidates to specific recruiters.
     *   Custom Fields: Support for defining and using custom data fields for candidates.
