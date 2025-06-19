@@ -103,12 +103,12 @@ export function CandidatesPageClient({
       const response = await fetch('/api/users?role=Recruiter');
       if (!response.ok) {
           const errorData = await response.json().catch(() => ({ message: 'Failed to fetch recruiters' }));
-          console.error("API error fetching recruiters:", errorData);
-          let detailedErrorMessage = errorData.message || 'Failed to fetch recruiters';
-          if (errorData.error) { 
+          console.error("API error fetching recruiters:", errorData); // Log the actual errorData
+          let detailedErrorMessage = errorData?.message || `Failed to fetch recruiters (Status: ${response.status})`;
+          if (errorData && typeof errorData === 'object' && 'error' in errorData && typeof errorData.error === 'string') {
             detailedErrorMessage += ` (Details: ${errorData.error})`;
           }
-          if (errorData.code) {
+          if (errorData && typeof errorData === 'object' && 'code' in errorData && typeof errorData.code === 'string') {
              detailedErrorMessage += ` (Code: ${errorData.code})`;
           }
           throw new Error(detailedErrorMessage);
@@ -705,3 +705,4 @@ export function CandidatesPageClient({
 }
 
     
+
