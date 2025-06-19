@@ -23,7 +23,6 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 const ALL_CANDIDATES_ADMIN_VALUE = "ALL_CANDIDATES_ADMIN";
 const MY_ASSIGNED_VALUE = "me";
-const ALL_POSITIONS_SELECT_VALUE = "__ALL_POSITIONS__"; 
 
 const KANBAN_STATUS_ORDER: CandidateStatus[] = [
   'Applied', 'Screening', 'Shortlisted', 'Interview Scheduled', 'Interviewing', 'Offer Extended', 'Offer Accepted', 'Hired', 'Rejected', 'On Hold'
@@ -43,7 +42,7 @@ export default function MyTasksPage() {
   const [viewMode, setViewMode] = useState<'kanban' | 'list'>('kanban');
   
   const [standardFilters, setStandardFilters] = useState<CandidateFilterValues>({
-    minFitScore: 0, maxFitScore: 100, status: 'all', positionId: ALL_POSITIONS_SELECT_VALUE
+    minFitScore: 0, maxFitScore: 100, selectedStatuses: [], selectedPositionIds: []
   });
   const [aiSearchQuery, setAiSearchQuery] = useState<string>('');
   const [isAiSearching, setIsAiSearching] = useState(false);
@@ -92,29 +91,30 @@ export default function MyTasksPage() {
     setAiMatchedCandidateIds(null);
     
     const queryParams = new URLSearchParams();
-    // Determine base recruiter filter for task board
-    let effectiveRecruiterId = '';
+    let effectiveRecruiterIdForParam = '';
     if (userRole === 'Admin') {
       if (selectedRecruiterFilter === ALL_CANDIDATES_ADMIN_VALUE) {
         // No specific recruiterId, means ALL
       } else {
-        effectiveRecruiterId = selectedRecruiterFilter === MY_ASSIGNED_VALUE ? session.user.id : selectedRecruiterFilter;
+        effectiveRecruiterIdForParam = selectedRecruiterFilter === MY_ASSIGNED_VALUE ? session.user.id : selectedRecruiterFilter;
       }
     } else { // Recruiter
-      effectiveRecruiterId = session.user.id;
+      effectiveRecruiterIdForParam = session.user.id;
     }
-    if (effectiveRecruiterId) {
-        queryParams.append('assignedRecruiterId', effectiveRecruiterId);
+    if (effectiveRecruiterIdForParam) {
+        queryParams.append('assignedRecruiterId', effectiveRecruiterIdForParam); // This API param expects a single ID for now
     }
 
     // Apply standard filters
     if (standardFilters.name) queryParams.append('name', standardFilters.name);
-    if (standardFilters.positionId && standardFilters.positionId !== ALL_POSITIONS_SELECT_VALUE) queryParams.append('positionId', standardFilters.positionId);
-    if (standardFilters.status !== 'all' && standardFilters.status) queryParams.append('status', standardFilters.status);
+    if (standardFilters.selectedPositionIds && standardFilters.selectedPositionIds.length > 0) queryParams.append('positionId', standardFilters.selectedPositionIds.join(','));
+    if (standardFilters.selectedStatuses && standardFilters.selectedStatuses.length > 0) queryParams.append('status', standardFilters.selectedStatuses.join(','));
     if (standardFilters.education) queryParams.append('education', standardFilters.education);
     if (standardFilters.minFitScore !== undefined) queryParams.append('minFitScore', String(standardFilters.minFitScore));
     if (standardFilters.maxFitScore !== undefined) queryParams.append('maxFitScore', String(standardFilters.maxFitScore));
-    // Date filters can be added if CandidateFilters supports them for this view
+    // Date filters
+    if (standardFilters.applicationDateStart) queryParams.append('applicationDateStart', standardFilters.applicationDateStart.toISOString());
+    if (standardFilters.applicationDateEnd) queryParams.append('applicationDateEnd', standardFilters.applicationDateEnd.toISOString());
     
     try {
       const response = await fetch(`/api/candidates?${queryParams.toString()}`);
@@ -369,4 +369,3 @@ export default function MyTasksPage() {
     </div>
   );
 }
-

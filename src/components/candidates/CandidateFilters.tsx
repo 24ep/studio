@@ -5,6 +5,7 @@ import React, { useState, useEffect } from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList, CommandSeparator } from '@/components/ui/command';
 import { Slider } from '@/components/ui/slider';
 import { Label } from '@/components/ui/label';
 import { Search, FilterX, Check, ChevronsUpDown, Loader2, CalendarIcon, Brain, Users, Briefcase, Tag, Star, Building, ListFilter } from 'lucide-react';
@@ -12,25 +13,24 @@ import type { Position, CandidateStatus, RecruitmentStage, UserProfile } from '@
 import { cn } from "@/lib/utils";
 import { ScrollArea } from '../ui/scroll-area';
 import { Calendar } from "@/components/ui/calendar";
-import { format, parseISO, addDays } from 'date-fns';
+import { format, parseISO } from 'date-fns';
 import type { DateRange } from "react-day-picker";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 
 export interface CandidateFilterValues {
   name?: string;
   email?: string;
   phone?: string;
-  positionId?: string;
-  status?: CandidateStatus | 'all';
+  selectedPositionIds?: string[];
+  selectedStatuses?: string[];
   education?: string; // Education Keywords
   minFitScore?: number;
   maxFitScore?: number;
   applicationDateStart?: Date;
   applicationDateEnd?: Date;
-  recruiterId?: string;
+  selectedRecruiterIds?: string[];
   aiSearchQuery?: string;
 }
 
@@ -45,10 +45,6 @@ interface CandidateFiltersProps {
   isAiSearching?: boolean;
 }
 
-const ALL_POSITIONS_SELECT_VALUE = "__ALL_POSITIONS__";
-const ALL_STATUSES_SELECT_VALUE = "all";
-const ALL_RECRUITERS_SELECT_VALUE = "__ALL_RECRUITERS__";
-
 export function CandidateFilters({
     initialFilters = {},
     onFilterChange,
@@ -62,8 +58,8 @@ export function CandidateFilters({
   const [name, setName] = useState(initialFilters.name || '');
   const [email, setEmail] = useState(initialFilters.email || '');
   const [phone, setPhone] = useState(initialFilters.phone || '');
-  const [positionId, setPositionId] = useState(initialFilters.positionId || ALL_POSITIONS_SELECT_VALUE);
-  const [status, setStatus] = useState<CandidateStatus | 'all'>(initialFilters.status || ALL_STATUSES_SELECT_VALUE);
+  const [selectedPositionIds, setSelectedPositionIds] = useState<Set<string>>(new Set(initialFilters.selectedPositionIds || []));
+  const [selectedStatuses, setSelectedStatuses] = useState<Set<string>>(new Set(initialFilters.selectedStatuses || []));
   const [education, setEducation] = useState(initialFilters.education || '');
   const [fitScoreRange, setFitScoreRange] = useState<[number, number]>([
     initialFilters.minFitScore || 0,
@@ -76,7 +72,7 @@ export function CandidateFilters({
       : undefined
   );
 
-  const [recruiterId, setRecruiterId] = useState(initialFilters.recruiterId || ALL_RECRUITERS_SELECT_VALUE);
+  const [selectedRecruiterIds, setSelectedRecruiterIds] = useState<Set<string>>(new Set(initialFilters.selectedRecruiterIds || []));
   const [aiSearchQueryInput, setAiSearchQueryInput] = useState(initialFilters.aiSearchQuery || '');
 
   const currentYear = new Date().getFullYear();
@@ -87,8 +83,8 @@ export function CandidateFilters({
     setName(initialFilters.name || '');
     setEmail(initialFilters.email || '');
     setPhone(initialFilters.phone || '');
-    setPositionId(initialFilters.positionId || ALL_POSITIONS_SELECT_VALUE);
-    setStatus(initialFilters.status || ALL_STATUSES_SELECT_VALUE);
+    setSelectedPositionIds(new Set(initialFilters.selectedPositionIds || []));
+    setSelectedStatuses(new Set(initialFilters.selectedStatuses || []));
     setEducation(initialFilters.education || '');
     setFitScoreRange([initialFilters.minFitScore || 0, initialFilters.maxFitScore || 100]);
     setApplicationDateRange(
@@ -98,7 +94,7 @@ export function CandidateFilters({
         ? { from: parseISO(String(initialFilters.applicationDateStart)), to: undefined }
         : undefined
     );
-    setRecruiterId(initialFilters.recruiterId || ALL_RECRUITERS_SELECT_VALUE);
+    setSelectedRecruiterIds(new Set(initialFilters.selectedRecruiterIds || []));
     setAiSearchQueryInput(initialFilters.aiSearchQuery || '');
   }, [initialFilters]);
 
@@ -108,14 +104,14 @@ export function CandidateFilters({
       name: name || undefined,
       email: email || undefined,
       phone: phone || undefined,
-      positionId: positionId === ALL_POSITIONS_SELECT_VALUE ? undefined : positionId,
-      status: status === ALL_STATUSES_SELECT_VALUE ? undefined : status,
+      selectedPositionIds: selectedPositionIds.size > 0 ? Array.from(selectedPositionIds) : undefined,
+      selectedStatuses: selectedStatuses.size > 0 ? Array.from(selectedStatuses) : undefined,
       education: education || undefined,
       minFitScore: fitScoreRange[0],
       maxFitScore: fitScoreRange[1],
       applicationDateStart: applicationDateRange?.from,
       applicationDateEnd: applicationDateRange?.to,
-      recruiterId: recruiterId === ALL_RECRUITERS_SELECT_VALUE ? undefined : recruiterId,
+      selectedRecruiterIds: selectedRecruiterIds.size > 0 ? Array.from(selectedRecruiterIds) : undefined,
       aiSearchQuery: undefined,
     });
   };
@@ -130,24 +126,37 @@ export function CandidateFilters({
     setName('');
     setEmail('');
     setPhone('');
-    setPositionId(ALL_POSITIONS_SELECT_VALUE);
-    setStatus(ALL_STATUSES_SELECT_VALUE);
+    setSelectedPositionIds(new Set());
+    setSelectedStatuses(new Set());
     setEducation('');
     setFitScoreRange([0, 100]);
     setApplicationDateRange(undefined);
-    setRecruiterId(ALL_RECRUITERS_SELECT_VALUE);
+    setSelectedRecruiterIds(new Set());
     setAiSearchQueryInput('');
     onFilterChange({
       minFitScore: 0,
       maxFitScore: 100,
-      positionId: undefined,
-      status: undefined,
-      recruiterId: undefined,
+      selectedPositionIds: undefined,
+      selectedStatuses: undefined,
+      selectedRecruiterIds: undefined,
       applicationDateStart: undefined,
       applicationDateEnd: undefined,
       aiSearchQuery: undefined,
     });
   };
+  
+  const renderMultiSelectTrigger = (placeholder: string, selectedItems: Set<string>, allItems: {id: string; name: string}[] | {name: string}[]) => {
+    if (selectedItems.size === 0) return placeholder;
+    if (selectedItems.size === 1) {
+      const firstId = Array.from(selectedItems)[0];
+      const item = 'id' in allItems[0] 
+        ? (allItems as {id: string; name: string}[]).find(p => p.id === firstId)?.name 
+        : (allItems as {name: string}[]).find(s => s.name === firstId)?.name;
+      return item || placeholder;
+    }
+    return `${selectedItems.size} selected`;
+  };
+
 
   const filterGroups = [
     {
@@ -169,40 +178,121 @@ export function CandidateFilters({
       fields: (
         <>
           <div>
-            <Label htmlFor="position-select" className="text-xs">Position</Label>
-            <Select value={positionId} onValueChange={(value) => setPositionId(value)} disabled={isLoading || isAiSearching}>
-              <SelectTrigger id="position-select" className="w-full mt-1 text-xs">
-                <SelectValue placeholder="All Positions" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value={ALL_POSITIONS_SELECT_VALUE}>All Positions</SelectItem>
-                {availablePositions.map(pos => <SelectItem key={pos.id} value={pos.id}>{pos.title}</SelectItem>)}
-              </SelectContent>
-            </Select>
+            <Label htmlFor="position-select" className="text-xs">Position(s)</Label>
+            <Popover>
+                <PopoverTrigger asChild>
+                    <Button variant="outline" role="combobox" className="w-full mt-1 justify-between text-xs font-normal">
+                        {renderMultiSelectTrigger("Select position(s)...", selectedPositionIds, availablePositions)}
+                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[--trigger-width] p-0 dropdown-content-height">
+                    <Command>
+                        <CommandInput placeholder="Search positions..." className="h-9 text-xs" />
+                        <CommandEmpty>No positions found.</CommandEmpty>
+                        <CommandList>
+                            <ScrollArea className="max-h-48">
+                            {availablePositions.map((pos) => (
+                                <CommandItem
+                                    key={pos.id}
+                                    value={pos.title}
+                                    onSelect={() => {
+                                        setSelectedPositionIds(prev => {
+                                            const newSet = new Set(prev);
+                                            if (newSet.has(pos.id)) newSet.delete(pos.id);
+                                            else newSet.add(pos.id);
+                                            return newSet;
+                                        });
+                                    }}
+                                    className="text-xs"
+                                >
+                                    <Check className={cn("mr-2 h-4 w-4", selectedPositionIds.has(pos.id) ? "opacity-100" : "opacity-0")}/>
+                                    {pos.title}
+                                </CommandItem>
+                            ))}
+                            </ScrollArea>
+                        </CommandList>
+                    </Command>
+                </PopoverContent>
+            </Popover>
           </div>
           <div>
-            <Label htmlFor="status-select" className="text-xs">Status</Label>
-            <Select value={status} onValueChange={(value) => setStatus(value as CandidateStatus | 'all')} disabled={isLoading || isAiSearching}>
-              <SelectTrigger id="status-select" className="w-full mt-1 text-xs">
-                <SelectValue placeholder="All Statuses" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value={ALL_STATUSES_SELECT_VALUE}>All Statuses</SelectItem>
-                {availableStages.map(st => <SelectItem key={st.id} value={st.name}>{st.name}</SelectItem>)}
-              </SelectContent>
-            </Select>
+            <Label htmlFor="status-select" className="text-xs">Status(es)</Label>
+            <Popover>
+                <PopoverTrigger asChild>
+                    <Button variant="outline" role="combobox" className="w-full mt-1 justify-between text-xs font-normal">
+                        {renderMultiSelectTrigger("Select status(es)...", selectedStatuses, availableStages)}
+                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[--trigger-width] p-0 dropdown-content-height">
+                    <Command>
+                        <CommandInput placeholder="Search statuses..." className="h-9 text-xs" />
+                        <CommandEmpty>No statuses found.</CommandEmpty>
+                        <CommandList>
+                            <ScrollArea className="max-h-48">
+                            {availableStages.map((stage) => (
+                                <CommandItem
+                                    key={stage.id}
+                                    value={stage.name}
+                                    onSelect={() => {
+                                        setSelectedStatuses(prev => {
+                                            const newSet = new Set(prev);
+                                            if (newSet.has(stage.name)) newSet.delete(stage.name);
+                                            else newSet.add(stage.name);
+                                            return newSet;
+                                        });
+                                    }}
+                                    className="text-xs"
+                                >
+                                    <Check className={cn("mr-2 h-4 w-4", selectedStatuses.has(stage.name) ? "opacity-100" : "opacity-0")}/>
+                                    {stage.name}
+                                </CommandItem>
+                            ))}
+                            </ScrollArea>
+                        </CommandList>
+                    </Command>
+                </PopoverContent>
+            </Popover>
           </div>
           <div>
-            <Label htmlFor="recruiter-select" className="text-xs">Assigned Recruiter</Label>
-            <Select value={recruiterId} onValueChange={(value) => setRecruiterId(value)} disabled={isLoading || isAiSearching}>
-              <SelectTrigger id="recruiter-select" className="w-full mt-1 text-xs">
-                <SelectValue placeholder="All Recruiters" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value={ALL_RECRUITERS_SELECT_VALUE}>All Recruiters</SelectItem>
-                {availableRecruiters.map(rec => <SelectItem key={rec.id} value={rec.id}>{rec.name}</SelectItem>)}
-              </SelectContent>
-            </Select>
+            <Label htmlFor="recruiter-select" className="text-xs">Assigned Recruiter(s)</Label>
+            <Popover>
+                <PopoverTrigger asChild>
+                    <Button variant="outline" role="combobox" className="w-full mt-1 justify-between text-xs font-normal">
+                        {renderMultiSelectTrigger("Select recruiter(s)...", selectedRecruiterIds, availableRecruiters)}
+                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[--trigger-width] p-0 dropdown-content-height">
+                    <Command>
+                        <CommandInput placeholder="Search recruiters..." className="h-9 text-xs" />
+                        <CommandEmpty>No recruiters found.</CommandEmpty>
+                        <CommandList>
+                            <ScrollArea className="max-h-48">
+                            {availableRecruiters.map((rec) => (
+                                <CommandItem
+                                    key={rec.id}
+                                    value={rec.name}
+                                    onSelect={() => {
+                                        setSelectedRecruiterIds(prev => {
+                                            const newSet = new Set(prev);
+                                            if (newSet.has(rec.id)) newSet.delete(rec.id);
+                                            else newSet.add(rec.id);
+                                            return newSet;
+                                        });
+                                    }}
+                                    className="text-xs"
+                                >
+                                    <Check className={cn("mr-2 h-4 w-4", selectedRecruiterIds.has(rec.id) ? "opacity-100" : "opacity-0")}/>
+                                    {rec.name}
+                                </CommandItem>
+                            ))}
+                            </ScrollArea>
+                        </CommandList>
+                    </Command>
+                </PopoverContent>
+            </Popover>
           </div>
         </>
       )

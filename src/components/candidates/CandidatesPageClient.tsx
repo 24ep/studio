@@ -56,7 +56,12 @@ export function CandidatesPageClient({
   permissionError: serverPermissionError = false,
   initialFetchError,
 }: CandidatesPageClientProps) {
-  const [filters, setFilters] = useState<CandidateFilterValues>({ minFitScore: 0, maxFitScore: 100, positionId: "__ALL_POSITIONS__", status: "all" });
+  const [filters, setFilters] = useState<CandidateFilterValues>({ 
+    minFitScore: 0, 
+    maxFitScore: 100, 
+    selectedPositionIds: [], 
+    selectedStatuses: [] 
+  });
 
   const [allCandidates, setAllCandidates] = useState<Candidate[]>(initialCandidates || []);
   const [availablePositions, setAvailablePositions] = useState<Position[]>(initialAvailablePositions || []);
@@ -146,14 +151,14 @@ export function CandidatesPageClient({
       if (currentFilters.name) query.append('name', currentFilters.name);
       if (currentFilters.email) query.append('email', currentFilters.email);
       if (currentFilters.phone) query.append('phone', currentFilters.phone);
-      if (currentFilters.positionId && currentFilters.positionId !== "__ALL_POSITIONS__") query.append('positionId', currentFilters.positionId);
-      if (currentFilters.status && currentFilters.status !== "all") query.append('status', currentFilters.status);
+      if (currentFilters.selectedPositionIds && currentFilters.selectedPositionIds.length > 0) query.append('positionId', currentFilters.selectedPositionIds.join(','));
+      if (currentFilters.selectedStatuses && currentFilters.selectedStatuses.length > 0) query.append('status', currentFilters.selectedStatuses.join(','));
       if (currentFilters.education) query.append('education', currentFilters.education);
       if (currentFilters.minFitScore !== undefined) query.append('minFitScore', String(currentFilters.minFitScore));
       if (currentFilters.maxFitScore !== undefined) query.append('maxFitScore', String(currentFilters.maxFitScore));
       if (currentFilters.applicationDateStart) query.append('applicationDateStart', currentFilters.applicationDateStart.toISOString());
       if (currentFilters.applicationDateEnd) query.append('applicationDateEnd', currentFilters.applicationDateEnd.toISOString());
-      if (currentFilters.recruiterId && currentFilters.recruiterId !== "__ALL_RECRUITERS__") query.append('recruiterId', currentFilters.recruiterId);
+      if (currentFilters.selectedRecruiterIds && currentFilters.selectedRecruiterIds.length > 0) query.append('recruiterId', currentFilters.selectedRecruiterIds.join(','));
 
       const response = await fetch(`/api/candidates?${query.toString()}`);
       if (!response.ok) {
@@ -437,14 +442,15 @@ export function CandidatesPageClient({
       if (filters.name) query.append('name', filters.name);
       if (filters.email) query.append('email', filters.email);
       if (filters.phone) query.append('phone', filters.phone);
-      if (filters.positionId && filters.positionId !== "__ALL_POSITIONS__") query.append('positionId', filters.positionId);
-      if (filters.status && filters.status !== "all") query.append('status', filters.status);
+      if (filters.selectedPositionIds && filters.selectedPositionIds.length > 0) query.append('positionId', filters.selectedPositionIds.join(','));
+      if (filters.selectedStatuses && filters.selectedStatuses.length > 0) query.append('status', filters.selectedStatuses.join(','));
       if (filters.education) query.append('education', filters.education);
       if (filters.minFitScore !== undefined) query.append('minFitScore', String(filters.minFitScore));
       if (filters.maxFitScore !== undefined) query.append('maxFitScore', String(filters.maxFitScore));
       if (filters.applicationDateStart) query.append('applicationDateStart', filters.applicationDateStart.toISOString());
       if (filters.applicationDateEnd) query.append('applicationDateEnd', filters.applicationDateEnd.toISOString());
-      if (filters.recruiterId && filters.recruiterId !== "__ALL_RECRUITERS__") query.append('recruiterId', filters.recruiterId);
+      if (filters.selectedRecruiterIds && filters.selectedRecruiterIds.length > 0) query.append('recruiterId', filters.selectedRecruiterIds.join(','));
+
 
       const response = await fetch(`/api/candidates/export?${query.toString()}`);
       if (!response.ok) {
@@ -717,4 +723,3 @@ export function CandidatesPageClient({
     </div>
   );
 }
-

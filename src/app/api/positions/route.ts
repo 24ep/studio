@@ -17,7 +17,7 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const titleFilter = searchParams.get('title');
-    const departmentFilter = searchParams.get('department');
+    const departmentFilter = searchParams.get('department'); // Expects comma-separated strings
     const isOpenFilter = searchParams.get('isOpen');
     const positionLevelFilter = searchParams.get('position_level');
 
@@ -32,8 +32,8 @@ export async function GET(request: NextRequest) {
       queryParams.push(`%${titleFilter}%`);
     }
     if (departmentFilter) {
-      conditions.push(`department ILIKE $${paramIndex++}`);
-      queryParams.push(`%${departmentFilter}%`);
+      conditions.push(`department = ANY($${paramIndex++}::text[])`);
+      queryParams.push(departmentFilter.split(','));
     }
     if (isOpenFilter === "true") {
       conditions.push(`"isOpen" = TRUE`);

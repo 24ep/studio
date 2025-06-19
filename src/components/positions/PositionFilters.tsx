@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Search, FilterX, Check, ChevronsUpDown, Loader2 } from 'lucide-react';
 import { cn } from "@/lib/utils";
@@ -13,7 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 
 export interface PositionFilterValues {
   title?: string;
-  department?: string;
+  selectedDepartments?: string[];
   isOpen?: "all" | "true" | "false";
   positionLevel?: string;
 }
@@ -31,17 +32,15 @@ const statusOptions = [
   { value: "false", label: "Closed" },
 ];
 
-const ALL_DEPARTMENTS_SELECT_VALUE = "__ALL_DEPARTMENTS__";
-
 export function PositionFilters({ initialFilters = { isOpen: "all" }, onFilterChange, isLoading, availableDepartments }: PositionFiltersProps) {
   const [title, setTitle] = useState(initialFilters.title || '');
-  const [department, setDepartment] = useState(initialFilters.department || ALL_DEPARTMENTS_SELECT_VALUE);
+  const [selectedDepartments, setSelectedDepartments] = useState<Set<string>>(new Set(initialFilters.selectedDepartments || []));
   const [isOpen, setIsOpen] = useState<PositionFilterValues['isOpen']>(initialFilters.isOpen || "all");
   const [positionLevel, setPositionLevel] = useState(initialFilters.positionLevel || '');
   
   useEffect(() => {
     setTitle(initialFilters.title || '');
-    setDepartment(initialFilters.department || ALL_DEPARTMENTS_SELECT_VALUE);
+    setSelectedDepartments(new Set(initialFilters.selectedDepartments || []));
     setIsOpen(initialFilters.isOpen || "all");
     setPositionLevel(initialFilters.positionLevel || '');
   }, [initialFilters]);
@@ -50,7 +49,7 @@ export function PositionFilters({ initialFilters = { isOpen: "all" }, onFilterCh
   const handleApplyFilters = () => {
     onFilterChange({
       title: title || undefined,
-      department: department === ALL_DEPARTMENTS_SELECT_VALUE ? undefined : department,
+      selectedDepartments: selectedDepartments.size > 0 ? Array.from(selectedDepartments) : undefined,
       isOpen: isOpen === "all" ? undefined : isOpen,
       positionLevel: positionLevel || undefined,
     });
@@ -58,11 +57,18 @@ export function PositionFilters({ initialFilters = { isOpen: "all" }, onFilterCh
 
   const handleResetFilters = () => {
     setTitle('');
-    setDepartment(ALL_DEPARTMENTS_SELECT_VALUE);
+    setSelectedDepartments(new Set());
     setIsOpen("all");
     setPositionLevel('');
-    onFilterChange({ isOpen: "all" }); 
+    onFilterChange({ isOpen: "all", selectedDepartments: undefined }); 
   };
+  
+  const renderMultiSelectDepartmentTrigger = () => {
+    if (selectedDepartments.size === 0) return "All Departments";
+    if (selectedDepartments.size === 1) return Array.from(selectedDepartments)[0];
+    return `${selectedDepartments.size} departments selected`;
+  };
+
 
   return (
     <div className="mb-6 p-4 border rounded-lg bg-card shadow">
@@ -79,16 +85,43 @@ export function PositionFilters({ initialFilters = { isOpen: "all" }, onFilterCh
           />
         </div>
         <div>
-          <Label htmlFor="department-select">Department</Label>
-          <Select value={department} onValueChange={(value) => setDepartment(value)} disabled={isLoading}>
-            <SelectTrigger id="department-select" className="w-full mt-1">
-              <SelectValue placeholder="All Departments" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value={ALL_DEPARTMENTS_SELECT_VALUE}>All Departments</SelectItem>
-              {availableDepartments.map(dept => <SelectItem key={dept} value={dept}>{dept}</SelectItem>)}
-            </SelectContent>
-          </Select>
+          <Label htmlFor="department-select">Department(s)</Label>
+          <Popover>
+            <PopoverTrigger asChild>
+                <Button variant="outline" role="combobox" className="w-full mt-1 justify-between text-xs font-normal">
+                    {renderMultiSelectDepartmentTrigger()}
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-[--trigger-width] p-0 dropdown-content-height">
+                <Command>
+                    <CommandInput placeholder="Search departments..." className="h-9 text-xs" />
+                    <CommandEmpty>No departments found.</CommandEmpty>
+                    <CommandList>
+                        <ScrollArea className="max-h-48">
+                        {availableDepartments.map((dept) => (
+                            <CommandItem
+                                key={dept}
+                                value={dept}
+                                onSelect={() => {
+                                    setSelectedDepartments(prev => {
+                                        const newSet = new Set(prev);
+                                        if (newSet.has(dept)) newSet.delete(dept);
+                                        else newSet.add(dept);
+                                        return newSet;
+                                    });
+                                }}
+                                className="text-xs"
+                            >
+                                <Check className={cn("mr-2 h-4 w-4", selectedDepartments.has(dept) ? "opacity-100" : "opacity-0")}/>
+                                {dept}
+                            </CommandItem>
+                        ))}
+                        </ScrollArea>
+                    </CommandList>
+                </Command>
+            </PopoverContent>
+          </Popover>
         </div>
         <div>
           <Label htmlFor="status-select">Status</Label>

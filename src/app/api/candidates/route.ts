@@ -87,10 +87,10 @@ const createCandidateSchema = z.object({
   name: z.string().min(1, { message: "Name is required" }).optional(),
   email: z.string().email({ message: "Invalid email address" }).optional(),
   phone: z.string().optional().nullable(),
-  positionId: z.string().uuid({ message: "Valid Position ID (UUID) is required" }).nullable().optional(),
-  recruiterId: z.string().uuid().nullable().optional(),
+  positionId: z.string().uuid({ message: "Valid Position ID (UUID) is required" }).nullable().optional(), // Can be single for direct creation
+  recruiterId: z.string().uuid().nullable().optional(), // Can be single for direct creation
   fitScore: z.number().min(0).max(100).optional().default(0),
-  status: z.string().min(1).default('Applied'),
+  status: z.string().min(1).default('Applied'), // Can be single for direct creation
   applicationDate: z.string().datetime({ message: "Invalid datetime string. Must be UTC ISO8601" }).optional(),
   parsedData: candidateDetailsSchema.optional(),
   custom_attributes: z.record(z.any()).optional().nullable(),
@@ -110,8 +110,8 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const nameFilter = searchParams.get('name');
-    const positionIdFilter = searchParams.get('positionId');
-    const statusFilter = searchParams.get('status');
+    const positionIdFilter = searchParams.get('positionId'); // Expects comma-separated UUIDs
+    const statusFilter = searchParams.get('status'); // Expects comma-separated statuses
     const educationFilter = searchParams.get('education');
     const minFitScoreParam = searchParams.get('minFitScore');
     const maxFitScoreParam = searchParams.get('maxFitScore');
@@ -119,8 +119,8 @@ export async function GET(request: NextRequest) {
     const phoneFilter = searchParams.get('phone');
     const applicationDateStartFilter = searchParams.get('applicationDateStart');
     const applicationDateEndFilter = searchParams.get('applicationDateEnd');
-    const recruiterIdFilter = searchParams.get('recruiterId');
-    const assignedRecruiterIdParam = searchParams.get('assignedRecruiterId'); 
+    const recruiterIdFilter = searchParams.get('recruiterId'); // Expects comma-separated UUIDs
+    const assignedRecruiterIdParam = searchParams.get('assignedRecruiterId'); // Single UUID or "me"
 
     let query = `
       SELECT
@@ -154,9 +154,9 @@ export async function GET(request: NextRequest) {
     let paramIndex = 1;
 
     if (nameFilter) { conditions.push(`c.name ILIKE $${paramIndex++}`); queryParams.push(`%${nameFilter}%`); }
-    if (positionIdFilter) { conditions.push(`c."positionId" = $${paramIndex++}`); queryParams.push(positionIdFilter); }
-    if (statusFilter) { conditions.push(`c.status = $${paramIndex++}`); queryParams.push(statusFilter); }
-    if (educationFilter) { conditions.push(`(c."parsedData"->'education')::text ILIKE $${paramIndex++}`); queryParams.push(`%${educationFilter}%`); } // Search specifically in education
+    if (positionIdFilter) { conditions.push(`c."positionId" = ANY($${paramIndex++}::uuid[])`); queryParams.push(positionIdFilter.split(',')); }
+    if (statusFilter) { conditions.push(`c.status = ANY($${paramIndex++}::text[])`); queryParams.push(statusFilter.split(',')); }
+    if (educationFilter) { conditions.push(`(c."parsedData"->'education')::text ILIKE $${paramIndex++}`); queryParams.push(`%${educationFilter}%`); }
     if (minFitScoreParam) { const minFitScore = parseInt(minFitScoreParam, 10); if (!isNaN(minFitScore)) { conditions.push(`c."fitScore" >= $${paramIndex++}`); queryParams.push(minFitScore); } }
     if (maxFitScoreParam) { const maxFitScore = parseInt(maxFitScoreParam, 10); if (!isNaN(maxFitScore)) { conditions.push(`c."fitScore" <= $${paramIndex++}`); queryParams.push(maxFitScore); } }
     if (emailFilter) { conditions.push(`c.email ILIKE $${paramIndex++}`); queryParams.push(`%${emailFilter}%`); }
@@ -165,8 +165,8 @@ export async function GET(request: NextRequest) {
     if (applicationDateEndFilter) { const endDate = new Date(applicationDateEndFilter); endDate.setHours(23, 59, 59, 999); conditions.push(`c."applicationDate" <= $${paramIndex++}`); queryParams.push(endDate.toISOString()); }
     
     if (recruiterIdFilter) { 
-        conditions.push(`c."recruiterId" = $${paramIndex++}`); 
-        queryParams.push(recruiterIdFilter); 
+        conditions.push(`c."recruiterId" = ANY($${paramIndex++}::uuid[])`); 
+        queryParams.push(recruiterIdFilter.split(',')); 
     } else if (assignedRecruiterIdParam) { 
         if (assignedRecruiterIdParam === 'me') {
             conditions.push(`c."recruiterId" = $${paramIndex++}`);
@@ -433,5 +433,3 @@ export async function POST(request: NextRequest) {
     client.release();
   }
 }
-
-    
