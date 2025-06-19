@@ -25,8 +25,8 @@ const DEFAULT_PRIMARY_GRADIENT_END = "238 74% 61%";
 
 // Default Login Page Appearance
 const DEFAULT_LOGIN_BG_TYPE: LoginPageBackgroundType = "default";
-const DEFAULT_LOGIN_BG_COLOR1_HEX = "#F0F4F7"; // A light neutral for 'color' type if re-selected
-const DEFAULT_LOGIN_BG_COLOR2_HEX = "#3F51B5"; // A complementary color for 'gradient' type if re-selected
+const DEFAULT_LOGIN_BG_COLOR1_HEX = "#F0F4F7"; 
+const DEFAULT_LOGIN_BG_COLOR2_HEX = "#3F51B5"; 
 
 // Default Sidebar Colors (HSL strings)
 const DEFAULT_SIDEBAR_COLORS_BASE: Omit<Record<SystemSettingKey, string>, 
@@ -60,7 +60,7 @@ interface SidebarColors {
   sidebarActiveBgStartL: string; sidebarActiveBgEndL: string; sidebarActiveTextL: string;
   sidebarHoverBgL: string; sidebarHoverTextL: string; sidebarBorderL: string;
   sidebarBgStartD: string; sidebarBgEndD: string; sidebarTextD: string;
-  sidebarActiveBgStartD: string; sidebarActiveBgEndL: string; sidebarActiveTextD: string;
+  sidebarActiveBgStartD: string; sidebarActiveBgEndD: string; sidebarActiveTextD: string; // Corrected: sidebarActiveBgEndD
   sidebarHoverBgD: string; sidebarHoverTextD: string; sidebarBorderD: string;
 }
 
@@ -94,7 +94,7 @@ function hexToHslString(hex: string): string {
     r = parseInt(hex.substring(0, 2), 16);
     g = parseInt(hex.substring(2, 4), 16);
     b = parseInt(hex.substring(4, 6), 16);
-  } else { return "0 0% 0%"; } // Invalid hex
+  } else { return "0 0% 0%"; } 
 
   r /= 255; g /= 255; b /= 255;
   const max = Math.max(r, g, b), min = Math.min(r, g, b);
@@ -151,14 +151,10 @@ export default function PreferencesSettingsPage() {
   const [loginBgColor1, setLoginBgColor1] = useState<string>(DEFAULT_LOGIN_BG_COLOR1_HEX);
   const [loginBgColor2, setLoginBgColor2] = useState<string>(DEFAULT_LOGIN_BG_COLOR2_HEX);
 
-  const [sidebarColors, setSidebarColors] = useState<SidebarColors>({
-    sidebarBgStartL: DEFAULT_SIDEBAR_COLORS_BASE.sidebarBgStartL, sidebarBgEndL: DEFAULT_SIDEBAR_COLORS_BASE.sidebarBgEndL, sidebarTextL: DEFAULT_SIDEBAR_COLORS_BASE.sidebarTextL,
-    sidebarActiveBgStartL: DEFAULT_SIDEBAR_COLORS_BASE.sidebarActiveBgStartL, sidebarActiveBgEndL: DEFAULT_SIDEBAR_COLORS_BASE.sidebarActiveBgEndL, sidebarActiveTextL: DEFAULT_SIDEBAR_COLORS_BASE.sidebarActiveTextL,
-    sidebarHoverBgL: DEFAULT_SIDEBAR_COLORS_BASE.sidebarHoverBgL, sidebarHoverTextL: DEFAULT_SIDEBAR_COLORS_BASE.sidebarHoverTextL, sidebarBorderL: DEFAULT_SIDEBAR_COLORS_BASE.sidebarBorderL,
-    sidebarBgStartD: DEFAULT_SIDEBAR_COLORS_BASE.sidebarBgStartD, sidebarBgEndD: DEFAULT_SIDEBAR_COLORS_BASE.sidebarBgEndD, sidebarTextD: DEFAULT_SIDEBAR_COLORS_BASE.sidebarTextD,
-    sidebarActiveBgStartD: DEFAULT_SIDEBAR_COLORS_BASE.sidebarActiveBgStartD, sidebarActiveBgEndD: DEFAULT_SIDEBAR_COLORS_BASE.sidebarActiveBgEndD, sidebarActiveTextD: DEFAULT_SIDEBAR_COLORS_BASE.sidebarActiveTextD,
-    sidebarHoverBgD: DEFAULT_SIDEBAR_COLORS_BASE.sidebarHoverBgD, sidebarHoverTextD: DEFAULT_SIDEBAR_COLORS_BASE.sidebarHoverTextD, sidebarBorderD: DEFAULT_SIDEBAR_COLORS_BASE.sidebarBorderD,
-  });
+  const [sidebarColors, setSidebarColors] = useState<SidebarColors>(
+    // Use the corrected SidebarColors interface here
+    DEFAULT_SIDEBAR_COLORS_BASE as unknown as SidebarColors
+  );
   
   const [activeSection, setActiveSection] = useState<string>(PREFERENCE_SECTIONS[0].id);
 
@@ -192,26 +188,13 @@ export default function PreferencesSettingsPage() {
       setLoginBgImagePreviewUrl(loginImgUrl);
       setLoginBgColor1(settingsMap.get('loginPageBackgroundColor1') || DEFAULT_LOGIN_BG_COLOR1_HEX);
       setLoginBgColor2(settingsMap.get('loginPageBackgroundColor2') || DEFAULT_LOGIN_BG_COLOR2_HEX);
-      setSidebarColors({
-        sidebarBgStartL: settingsMap.get('sidebarBgStartL') || DEFAULT_SIDEBAR_COLORS_BASE.sidebarBgStartL,
-        sidebarBgEndL: settingsMap.get('sidebarBgEndL') || DEFAULT_SIDEBAR_COLORS_BASE.sidebarBgEndL,
-        sidebarTextL: settingsMap.get('sidebarTextL') || DEFAULT_SIDEBAR_COLORS_BASE.sidebarTextL,
-        sidebarActiveBgStartL: settingsMap.get('sidebarActiveBgStartL') || DEFAULT_SIDEBAR_COLORS_BASE.sidebarActiveBgStartL,
-        sidebarActiveBgEndL: settingsMap.get('sidebarActiveBgEndL') || DEFAULT_SIDEBAR_COLORS_BASE.sidebarActiveBgEndL,
-        sidebarActiveTextL: settingsMap.get('sidebarActiveTextL') || DEFAULT_SIDEBAR_COLORS_BASE.sidebarActiveTextL,
-        sidebarHoverBgL: settingsMap.get('sidebarHoverBgL') || DEFAULT_SIDEBAR_COLORS_BASE.sidebarHoverBgL,
-        sidebarHoverTextL: settingsMap.get('sidebarHoverTextL') || DEFAULT_SIDEBAR_COLORS_BASE.sidebarHoverTextL,
-        sidebarBorderL: settingsMap.get('sidebarBorderL') || DEFAULT_SIDEBAR_COLORS_BASE.sidebarBorderL,
-        sidebarBgStartD: settingsMap.get('sidebarBgStartD') || DEFAULT_SIDEBAR_COLORS_BASE.sidebarBgStartD,
-        sidebarBgEndD: settingsMap.get('sidebarBgEndD') || DEFAULT_SIDEBAR_COLORS_BASE.sidebarBgEndD,
-        sidebarTextD: settingsMap.get('sidebarTextD') || DEFAULT_SIDEBAR_COLORS_BASE.sidebarTextD,
-        sidebarActiveBgStartD: settingsMap.get('sidebarActiveBgStartD') || DEFAULT_SIDEBAR_COLORS_BASE.sidebarActiveBgStartD,
-        sidebarActiveBgEndD: settingsMap.get('sidebarActiveBgEndD') || DEFAULT_SIDEBAR_COLORS_BASE.sidebarActiveBgEndD,
-        sidebarActiveTextD: settingsMap.get('sidebarActiveTextD') || DEFAULT_SIDEBAR_COLORS_BASE.sidebarActiveTextD,
-        sidebarHoverBgD: settingsMap.get('sidebarHoverBgD') || DEFAULT_SIDEBAR_COLORS_BASE.sidebarHoverBgD,
-        sidebarHoverTextD: settingsMap.get('sidebarHoverTextD') || DEFAULT_SIDEBAR_COLORS_BASE.sidebarHoverTextD,
-        sidebarBorderD: settingsMap.get('sidebarBorderD') || DEFAULT_SIDEBAR_COLORS_BASE.sidebarBorderD,
-      });
+      
+      const newSidebarColors: Partial<SidebarColors> = {};
+      for (const key of Object.keys(DEFAULT_SIDEBAR_COLORS_BASE) as Array<keyof typeof DEFAULT_SIDEBAR_COLORS_BASE>) {
+        (newSidebarColors as any)[key] = settingsMap.get(key) || DEFAULT_SIDEBAR_COLORS_BASE[key];
+      }
+      setSidebarColors(newSidebarColors as SidebarColors);
+
     } catch (error) {
       console.error("Error fetching system settings:", error);
       setFetchError((error as Error).message);
@@ -358,26 +341,13 @@ export default function PreferencesSettingsPage() {
       setLoginBgImagePreviewUrl(updatedLoginBgTypeVal === 'image' ? updatedLoginBgImageVal : null);
       setLoginBgColor1(updatedSettingsMap.get('loginPageBackgroundColor1') || DEFAULT_LOGIN_BG_COLOR1_HEX);
       setLoginBgColor2(updatedSettingsMap.get('loginPageBackgroundColor2') || DEFAULT_LOGIN_BG_COLOR2_HEX);
-      setSidebarColors({
-        sidebarBgStartL: updatedSettingsMap.get('sidebarBgStartL') || DEFAULT_SIDEBAR_COLORS_BASE.sidebarBgStartL,
-        sidebarBgEndL: updatedSettingsMap.get('sidebarBgEndL') || DEFAULT_SIDEBAR_COLORS_BASE.sidebarBgEndL,
-        sidebarTextL: updatedSettingsMap.get('sidebarTextL') || DEFAULT_SIDEBAR_COLORS_BASE.sidebarTextL,
-        sidebarActiveBgStartL: updatedSettingsMap.get('sidebarActiveBgStartL') || DEFAULT_SIDEBAR_COLORS_BASE.sidebarActiveBgStartL,
-        sidebarActiveBgEndL: updatedSettingsMap.get('sidebarActiveBgEndL') || DEFAULT_SIDEBAR_COLORS_BASE.sidebarActiveBgEndL,
-        sidebarActiveTextL: updatedSettingsMap.get('sidebarActiveTextL') || DEFAULT_SIDEBAR_COLORS_BASE.sidebarActiveTextL,
-        sidebarHoverBgL: updatedSettingsMap.get('sidebarHoverBgL') || DEFAULT_SIDEBAR_COLORS_BASE.sidebarHoverBgL,
-        sidebarHoverTextL: updatedSettingsMap.get('sidebarHoverTextL') || DEFAULT_SIDEBAR_COLORS_BASE.sidebarHoverTextL,
-        sidebarBorderL: updatedSettingsMap.get('sidebarBorderL') || DEFAULT_SIDEBAR_COLORS_BASE.sidebarBorderL,
-        sidebarBgStartD: updatedSettingsMap.get('sidebarBgStartD') || DEFAULT_SIDEBAR_COLORS_BASE.sidebarBgStartD,
-        sidebarBgEndD: updatedSettingsMap.get('sidebarBgEndD') || DEFAULT_SIDEBAR_COLORS_BASE.sidebarBgEndD,
-        sidebarTextD: updatedSettingsMap.get('sidebarTextD') || DEFAULT_SIDEBAR_COLORS_BASE.sidebarTextD,
-        sidebarActiveBgStartD: updatedSettingsMap.get('sidebarActiveBgStartD') || DEFAULT_SIDEBAR_COLORS_BASE.sidebarActiveBgStartD,
-        sidebarActiveBgEndD: updatedSettingsMap.get('sidebarActiveBgEndD') || DEFAULT_SIDEBAR_COLORS_BASE.sidebarActiveBgEndD,
-        sidebarActiveTextD: updatedSettingsMap.get('sidebarActiveTextD') || DEFAULT_SIDEBAR_COLORS_BASE.sidebarActiveTextD,
-        sidebarHoverBgD: updatedSettingsMap.get('sidebarHoverBgD') || DEFAULT_SIDEBAR_COLORS_BASE.sidebarHoverBgD,
-        sidebarHoverTextD: updatedSettingsMap.get('sidebarHoverTextD') || DEFAULT_SIDEBAR_COLORS_BASE.sidebarHoverTextD,
-        sidebarBorderD: updatedSettingsMap.get('sidebarBorderD') || DEFAULT_SIDEBAR_COLORS_BASE.sidebarBorderD,
-      });
+      
+      const newSidebarColors: Partial<SidebarColors> = {};
+      for (const key of Object.keys(DEFAULT_SIDEBAR_COLORS_BASE) as Array<keyof typeof DEFAULT_SIDEBAR_COLORS_BASE>) {
+        (newSidebarColors as any)[key] = updatedSettingsMap.get(key) || DEFAULT_SIDEBAR_COLORS_BASE[key];
+      }
+      setSidebarColors(newSidebarColors as SidebarColors);
+
       toast({ title: 'Preferences Saved', description: 'Your application preferences have been saved to the server.', variant: 'success' });
       window.dispatchEvent(new CustomEvent('appConfigChanged', {
         detail: {
@@ -397,7 +367,6 @@ export default function PreferencesSettingsPage() {
     }
   };
 
-  // Reset functions
   const resetPrimaryColors = () => {
     setPrimaryGradientStart(DEFAULT_PRIMARY_GRADIENT_START);
     setPrimaryGradientEnd(DEFAULT_PRIMARY_GRADIENT_END);
@@ -409,7 +378,7 @@ export default function PreferencesSettingsPage() {
     setLoginBgColor1(DEFAULT_LOGIN_BG_COLOR1_HEX);
     setLoginBgColor2(DEFAULT_LOGIN_BG_COLOR2_HEX);
     setSelectedLoginBgFile(null);
-    setLoginBgImagePreviewUrl(null); // Clear preview, savedLoginBgImageUrl will be cleared on global save if type is not 'image'
+    setLoginBgImagePreviewUrl(null); 
     toast({ title: "Login Background Reset", description: "Login page background reset to default. Click 'Save All' to persist." });
   };
 
@@ -449,7 +418,7 @@ export default function PreferencesSettingsPage() {
   const renderSectionContent = (sectionId: string) => {
     switch (sectionId) {
       case 'appName':
-        return (<div className="space-y-2"><Label htmlFor="app-name-input" className="text-sm">Application Name</Label><Input id="app-name-input" type="text" value={appName} onChange={(e) => setAppName(e.target.value)} className="mt-1" placeholder="e.g., My ATS" /></div>);
+        return (<div className="space-y-2"><Label htmlFor="app-name-input" className="text-sm">Application Name</Label><Input id="app-name-input" type="text" value={appName || ''} onChange={(e) => setAppName(e.target.value)} className="mt-1" placeholder="e.g., My ATS" /></div>);
       case 'theme':
         return (
             <div className="space-y-2">
@@ -478,7 +447,7 @@ export default function PreferencesSettingsPage() {
                     <div>
                         <Label htmlFor="primary-gradient-start" className="text-sm">Gradient Start Color (HSL)</Label>
                         <div className="flex items-center gap-2 mt-1">
-                            <Input id="primary-gradient-start" type="text" value={primaryGradientStart} onChange={(e) => setPrimaryGradientStart(e.target.value)} placeholder="e.g., 179 67% 66%" className="flex-grow"/>
+                            <Input id="primary-gradient-start" type="text" value={primaryGradientStart || ''} onChange={(e) => setPrimaryGradientStart(e.target.value)} placeholder="e.g., 179 67% 66%" className="flex-grow"/>
                             <Input type="color" value={convertHslStringToHex(primaryGradientStart)} onChange={(e) => setPrimaryGradientStart(hexToHslString(e.target.value))} className="w-10 h-10 p-1 flex-shrink-0 rounded-md border" title="Pick color"/>
                         </div>
                         <p className="text-xs text-muted-foreground mt-0.5">Enter as HSL string (e.g., "179 67% 66%").</p>
@@ -486,7 +455,7 @@ export default function PreferencesSettingsPage() {
                     <div>
                         <Label htmlFor="primary-gradient-end" className="text-sm">Gradient End Color (HSL)</Label>
                         <div className="flex items-center gap-2 mt-1">
-                            <Input id="primary-gradient-end" type="text" value={primaryGradientEnd} onChange={(e) => setPrimaryGradientEnd(e.target.value)} placeholder="e.g., 238 74% 61%" className="flex-grow"/>
+                            <Input id="primary-gradient-end" type="text" value={primaryGradientEnd || ''} onChange={(e) => setPrimaryGradientEnd(e.target.value)} placeholder="e.g., 238 74% 61%" className="flex-grow"/>
                             <Input type="color" value={convertHslStringToHex(primaryGradientEnd)} onChange={(e) => setPrimaryGradientEnd(hexToHslString(e.target.value))} className="w-10 h-10 p-1 flex-shrink-0 rounded-md border" title="Pick color"/>
                         </div>
                         <p className="text-xs text-muted-foreground mt-0.5">Enter as HSL string (e.g., "238 74% 61%").</p>
@@ -500,8 +469,8 @@ export default function PreferencesSettingsPage() {
             <div className="space-y-4">
                 <div><Label className="text-sm">Background Type</Label><RadioGroup value={loginBgType} onValueChange={(value) => setLoginBgType(value as LoginPageBackgroundType)} className="flex flex-col sm:flex-row sm:space-x-4 space-y-2 sm:space-y-0 mt-1"><div className="flex items-center space-x-2"><RadioGroupItem value="default" id="loginbg-default" /><Label htmlFor="loginbg-default" className="font-normal">Default</Label></div><div className="flex items-center space-x-2"><RadioGroupItem value="image" id="loginbg-image" /><Label htmlFor="loginbg-image" className="font-normal">Image</Label></div><div className="flex items-center space-x-2"><RadioGroupItem value="color" id="loginbg-color" /><Label htmlFor="loginbg-color" className="font-normal">Single Color</Label></div><div className="flex items-center space-x-2"><RadioGroupItem value="gradient" id="loginbg-gradient" /><Label htmlFor="loginbg-gradient" className="font-normal">Gradient</Label></div></RadioGroup></div>
                 {loginBgType === 'image' && (<div><Label htmlFor="login-bg-image-upload" className="text-sm">Login Background Image <span className="text-xs text-muted-foreground">(Max 500KB)</span></Label><Input id="login-bg-image-upload" type="file" accept="image/*" onChange={(e) => handleLogoFileChange(e, 'loginBg')} className="mt-1" />{loginBgImagePreviewUrl && (<div className="mt-3 p-2 border rounded-md inline-flex items-center gap-3"><Image src={loginBgImagePreviewUrl} alt="Login background preview" width={96} height={54} className="h-12 w-20 object-cover rounded" data-ai-hint="abstract background"/><Button variant="ghost" size="icon" onClick={() => removeSelectedImage('loginBg', false)} className="h-7 w-7"> <XCircle className="h-4 w-4 text-muted-foreground hover:text-destructive"/> </Button></div>)}{savedLoginBgImageUrl && ( <div className="mt-2"> <Button variant="outline" size="sm" onClick={() => removeSelectedImage('loginBg', true)} disabled={isSaving}> {isSaving && savedLoginBgImageUrl === null ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Trash2 className="mr-2 h-4 w-4"/>} Clear Saved Image </Button> </div> )}</div>)}
-                {loginBgType === 'color' && (<div><Label htmlFor="login-bg-color1" className="text-sm">Background Color</Label><div className="flex items-center gap-2 mt-1"><Input id="login-bg-color1" type="color" value={loginBgColor1} onChange={(e) => setLoginBgColor1(e.target.value)} className="w-20 h-10 p-1 rounded-md border" /><Input type="text" value={loginBgColor1} onChange={(e) => setLoginBgColor1(e.target.value)} placeholder="#RRGGBB" className="max-w-[100px]" /></div></div>)}
-                {loginBgType === 'gradient' && (<div className="space-y-2"><div><Label htmlFor="login-bg-gradient-color1" className="text-sm">Gradient Color 1</Label><div className="flex items-center gap-2 mt-1"><Input id="login-bg-gradient-color1" type="color" value={loginBgColor1} onChange={(e) => setLoginBgColor1(e.target.value)} className="w-20 h-10 p-1 rounded-md border" /><Input type="text" value={loginBgColor1} onChange={(e) => setLoginBgColor1(e.target.value)} placeholder="#RRGGBB" className="max-w-[100px]" /></div></div><div><Label htmlFor="login-bg-gradient-color2" className="text-sm">Gradient Color 2</Label><div className="flex items-center gap-2 mt-1"><Input id="login-bg-gradient-color2" type="color" value={loginBgColor2} onChange={(e) => setLoginBgColor2(e.target.value)} className="w-20 h-10 p-1 rounded-md border" /><Input type="text" value={loginBgColor2} onChange={(e) => setLoginBgColor2(e.target.value)} placeholder="#RRGGBB" className="max-w-[100px]" /></div></div></div>)}
+                {loginBgType === 'color' && (<div><Label htmlFor="login-bg-color1" className="text-sm">Background Color</Label><div className="flex items-center gap-2 mt-1"><Input id="login-bg-color1" type="color" value={loginBgColor1 || ''} onChange={(e) => setLoginBgColor1(e.target.value)} className="w-20 h-10 p-1 rounded-md border" /><Input type="text" value={loginBgColor1 || ''} onChange={(e) => setLoginBgColor1(e.target.value)} placeholder="#RRGGBB" className="max-w-[100px]" /></div></div>)}
+                {loginBgType === 'gradient' && (<div className="space-y-2"><div><Label htmlFor="login-bg-gradient-color1" className="text-sm">Gradient Color 1</Label><div className="flex items-center gap-2 mt-1"><Input id="login-bg-gradient-color1" type="color" value={loginBgColor1 || ''} onChange={(e) => setLoginBgColor1(e.target.value)} className="w-20 h-10 p-1 rounded-md border" /><Input type="text" value={loginBgColor1 || ''} onChange={(e) => setLoginBgColor1(e.target.value)} placeholder="#RRGGBB" className="max-w-[100px]" /></div></div><div><Label htmlFor="login-bg-gradient-color2" className="text-sm">Gradient Color 2</Label><div className="flex items-center gap-2 mt-1"><Input id="login-bg-gradient-color2" type="color" value={loginBgColor2 || ''} onChange={(e) => setLoginBgColor2(e.target.value)} className="w-20 h-10 p-1 rounded-md border" /><Input type="text" value={loginBgColor2 || ''} onChange={(e) => setLoginBgColor2(e.target.value)} placeholder="#RRGGBB" className="max-w-[100px]" /></div></div></div>)}
                 <Button variant="outline" size="sm" onClick={resetLoginBackground} disabled={isSaving}><RotateCcw className="mr-2 h-4 w-4"/>Reset Login Background</Button>
             </div>
         );
@@ -530,9 +499,15 @@ export default function PreferencesSettingsPage() {
   const renderSidebarColorInputs = (theme: 'Light' | 'Dark') => {
     const suffix = theme === 'Light' ? 'L' : 'D';
     const keys: (keyof SidebarColors)[] = [
-      `sidebarBgStart${suffix}`, `sidebarBgEnd${suffix}`, `sidebarText${suffix}`,
-      `sidebarActiveBgStart${suffix}`, `sidebarActiveBgEnd${suffix}`, `sidebarActiveText${suffix}`,
-      `sidebarHoverBg${suffix}`, `sidebarHoverText${suffix}`, `sidebarBorder${suffix}`
+      `sidebarBgStart${suffix}` as keyof SidebarColors, 
+      `sidebarBgEnd${suffix}` as keyof SidebarColors, 
+      `sidebarText${suffix}` as keyof SidebarColors,
+      `sidebarActiveBgStart${suffix}` as keyof SidebarColors, 
+      `sidebarActiveBgEnd${suffix}` as keyof SidebarColors, 
+      `sidebarActiveText${suffix}` as keyof SidebarColors,
+      `sidebarHoverBg${suffix}` as keyof SidebarColors, 
+      `sidebarHoverText${suffix}` as keyof SidebarColors, 
+      `sidebarBorder${suffix}` as keyof SidebarColors
     ];
     const labels: Record<string, string> = { 
       [`sidebarBgStart${suffix}`]: "Background Start", [`sidebarBgEnd${suffix}`]: "Background End", [`sidebarText${suffix}`]: "Text Color",
@@ -546,7 +521,7 @@ export default function PreferencesSettingsPage() {
           <div key={key}>
             <Label htmlFor={key} className="text-xs">{labels[key]}</Label>
             <div className="flex items-center gap-2 mt-1">
-              <Input id={key} type="text" value={sidebarColors[key]} onChange={(e) => handleSidebarColorChange(key as keyof SidebarColors, e.target.value)} placeholder="e.g., 220 25% 97% or #aabbcc" className="h-9 text-xs flex-grow"/>
+              <Input id={key} type="text" value={sidebarColors[key] || ''} onChange={(e) => handleSidebarColorChange(key as keyof SidebarColors, e.target.value)} placeholder="e.g., 220 25% 97% or #aabbcc" className="h-9 text-xs flex-grow"/>
               <Input type="color" value={convertHslStringToHex(sidebarColors[key])} 
                  onChange={(e) => handleSidebarColorChange(key as keyof SidebarColors, hexToHslString(e.target.value))} 
                  className="w-10 h-9 p-1 flex-shrink-0 rounded-md border" title="Pick color"
@@ -567,7 +542,7 @@ export default function PreferencesSettingsPage() {
       </CardHeader>
       <CardContent className="p-0">
         <div className="flex flex-col md:flex-row min-h-[calc(100vh-18rem)]">
-          <aside className="md:w-72 lg:w-80 border-r bg-muted/30"> {/* Increased width here */}
+          <aside className="md:w-72 lg:w-80 border-r bg-muted/30">
             <ScrollArea className="h-full md:max-h-[calc(100vh-18rem)] p-4">
               <nav className="space-y-1">
                 {PREFERENCE_SECTIONS.map((section) => (
