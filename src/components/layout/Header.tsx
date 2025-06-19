@@ -138,7 +138,7 @@ export function Header({ pageTitle: initialPageTitle }: { pageTitle: string }) {
                   Change Password
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => signOut()}>
+                <DropdownMenuItem onClick={() => signOut({ callbackUrl: '/auth/signin' })}>
                   <LogOut className="mr-2 h-4 w-4" />
                   Log out
                 </DropdownMenuItem>
@@ -162,8 +162,8 @@ export function Header({ pageTitle: initialPageTitle }: { pageTitle: string }) {
             isOpen={isEditProfileModalOpen}
             onOpenChange={setIsEditProfileModalOpen}
             onEditUser={handleEditProfile}
-            user={session?.user as UserProfile | null} // Cast needed as session.user is DefaultUser
-            isSelfEdit={true} // Indicate this is for self-editing
+            user={session?.user as UserProfile | null} 
+            isSelfEdit={true} 
           />
         </>
       )}
