@@ -26,7 +26,7 @@ import {
 } from '@/components/ui/select';
 import { Checkbox } from "@/components/ui/checkbox";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { Edit3, ShieldCheck, Users, Filter, ChevronsUpDown, Check as CheckIcon, Loader2, UserCog, Settings, KeyRound, UserCircle, Palette } from 'lucide-react';
+import { Edit3, ShieldCheck, Users, Filter, ChevronsUpDown, Check as CheckIcon, Loader2, UserCog, Settings, KeyRound, UserCircle, Palette, Save } from 'lucide-react'; // Added Save
 import type { UserProfile, PlatformModuleId, UserGroup, PlatformModuleCategory } from '@/lib/types';
 import { PLATFORM_MODULES, PLATFORM_MODULE_CATEGORIES } from '@/lib/types';
 import { ScrollArea } from '../ui/scroll-area';
