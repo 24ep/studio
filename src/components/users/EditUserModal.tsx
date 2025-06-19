@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useEffect, useState } from 'react';
@@ -84,7 +85,7 @@ export function EditUserModal({ isOpen, onOpenChange, onEditUser, user, isSelfEd
         modulePermissions: user.modulePermissions || [],
         groupIds: user.groups?.map(g => g.id) || [],
       });
-      setActiveTab(isSelfEdit ? 'general' : 'general'); 
+      setActiveTab(isSelfEdit ? 'general' : 'general');
 
       if (!isSelfEdit) {
         const fetchGroups = async () => {
@@ -110,8 +111,8 @@ export function EditUserModal({ isOpen, onOpenChange, onEditUser, user, isSelfEd
 
   const onSubmit = async (data: EditUserFormValues) => {
     if (!user) return;
-    const payload: Partial<EditUserFormValues> = { ...data }; 
-    if (!payload.newPassword) { 
+    const payload: Partial<EditUserFormValues> = { ...data };
+    if (!payload.newPassword) {
       delete payload.newPassword;
     }
     if (isSelfEdit) {
@@ -121,7 +122,7 @@ export function EditUserModal({ isOpen, onOpenChange, onEditUser, user, isSelfEd
     }
     await onEditUser(user.id, payload as EditUserFormValues);
   };
-  
+
   if (!user && isOpen) return null;
 
   const filteredGroups = groupSearchQuery
@@ -129,7 +130,7 @@ export function EditUserModal({ isOpen, onOpenChange, onEditUser, user, isSelfEd
     : availableGroups;
 
   const dialogTitle = isSelfEdit ? "Edit My Profile" : `Edit User: ${user?.name || 'N/A'}`;
-  const dialogDescription = isSelfEdit 
+  const dialogDescription = isSelfEdit
     ? "Update your personal information. Leave 'New Password' blank to keep your current password."
     : "Update user details, assign roles, groups, and permissions.";
 
@@ -156,34 +157,33 @@ export function EditUserModal({ isOpen, onOpenChange, onEditUser, user, isSelfEd
           <DialogDescription>{dialogDescription}</DialogDescription>
         </DialogHeader>
 
-        <div className="flex flex-grow overflow-hidden">
-          {/* Left Navigation Menu */}
-          <aside className="w-1/4 border-r p-4 space-y-1 bg-muted/30">
-            {navItems.map(item => (
-              <Button
-                key={item.id}
-                variant={activeTab === item.id ? "default" : "ghost"}
-                onClick={() => setActiveTab(item.id as 'general' | 'permissions')}
-                className={cn(
-                  "w-full justify-start text-sm",
-                  activeTab === item.id && "btn-primary-gradient text-primary-foreground",
-                )}
-              >
-                <item.icon className="mr-2 h-4 w-4" /> {item.label}
-              </Button>
-            ))}
-          </aside>
+        <div className="flex flex-grow overflow-hidden p-6">
+          {!isSelfEdit && (
+            <aside className="w-1/4 border-r pr-6 space-y-1">
+              {navItems.map(item => (
+                <Button
+                  key={item.id}
+                  variant={activeTab === item.id ? "default" : "ghost"}
+                  onClick={() => setActiveTab(item.id as 'general' | 'permissions')}
+                  className={cn(
+                    "w-full justify-start text-sm",
+                    activeTab === item.id && "btn-primary-gradient text-primary-foreground",
+                  )}
+                >
+                  <item.icon className="mr-2 h-4 w-4" /> {item.label}
+                </Button>
+              ))}
+            </aside>
+          )}
 
-          {/* Right Content Area */}
-          <main className="w-3/4 flex-grow overflow-hidden">
-            <ScrollArea className="h-full p-6">
+          <main className={cn("flex-grow overflow-hidden", !isSelfEdit ? "w-3/4 pl-6" : "w-full")}>
+            <ScrollArea className="h-full">
               <Form {...form}>
                 <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
                   {activeTab === 'general' && (
                     <div className="space-y-4">
                       <FormField control={form.control} name="name" render={({ field }) => (<FormItem><FormLabel>Full Name *</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
                       <FormField control={form.control} name="email" render={({ field }) => (<FormItem><FormLabel>Email Address *</FormLabel><FormControl><Input type="email" {...field} /></FormControl><FormMessage /></FormItem>)} />
-                      
                       {!isSelfEdit && (
                         <FormField control={form.control} name="role" render={({ field }) => (
                           <FormItem><FormLabel>System Role *</FormLabel>
@@ -231,9 +231,7 @@ export function EditUserModal({ isOpen, onOpenChange, onEditUser, user, isSelfEd
                         </Popover>
                         <FormMessage />
                       </div>
-
                       <Separator />
-                      
                       <div className="space-y-2">
                         <Label className="flex items-center text-md font-medium"><ShieldCheck className="mr-2 h-5 w-5 text-primary" /> Direct Module Permissions</Label>
                         <div className="space-y-4 rounded-md border p-4 max-h-60 overflow-y-auto">
@@ -262,21 +260,20 @@ export function EditUserModal({ isOpen, onOpenChange, onEditUser, user, isSelfEd
                       </div>
                     </div>
                   )}
-
-                  <DialogFooter className="pt-6 mt-auto sticky bottom-0 bg-background pb-1">
-                    <DialogClose asChild><Button type="button" variant="outline">Cancel</Button></DialogClose>
-                    <Button type="submit" disabled={form.formState.isSubmitting} className="btn-primary-gradient">
-                      {form.formState.isSubmitting ? <Loader2 className="animate-spin mr-2"/> : <Save className="mr-2 h-4 w-4"/>}
-                      {form.formState.isSubmitting ? 'Saving...' : 'Save Changes'}
-                    </Button>
-                  </DialogFooter>
                 </form>
               </Form>
             </ScrollArea>
           </main>
         </div>
+
+        <DialogFooter className="p-6 pt-4 border-t">
+          <DialogClose asChild><Button type="button" variant="outline">Cancel</Button></DialogClose>
+          <Button onClick={form.handleSubmit(onSubmit)} disabled={form.formState.isSubmitting} className="btn-primary-gradient">
+            {form.formState.isSubmitting ? <Loader2 className="animate-spin mr-2"/> : <Save className="mr-2 h-4 w-4"/>}
+            {form.formState.isSubmitting ? 'Saving...' : 'Save Changes'}
+          </Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );
 }
-
