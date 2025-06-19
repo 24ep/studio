@@ -22,8 +22,8 @@ import { useSession, signIn } from 'next-auth/react';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'; 
-import { Textarea } from '@/components/ui/textarea'; 
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
 
 
 interface CandidatesPageClientProps {
@@ -63,8 +63,8 @@ export function CandidatesPageClient({
   const [availableStages, setAvailableStages] = useState<RecruitmentStage[]>(initialAvailableStages || []);
   const [availableRecruiters, setAvailableRecruiters] = useState<Pick<UserProfile, 'id' | 'name'>[]>([]);
 
-  const [isLoading, setIsLoading] = useState(true); 
-  const [isAiSearching, setIsAiSearching] = useState(false); 
+  const [isLoading, setIsLoading] = useState(true);
+  const [isAiSearching, setIsAiSearching] = useState(false);
   const [aiSearchReasoning, setAiSearchReasoning] = useState<string | null>(null);
   const [aiMatchedCandidateIds, setAiMatchedCandidateIds] = useState<string[] | null>(null);
 
@@ -103,7 +103,17 @@ export function CandidatesPageClient({
       const response = await fetch('/api/users?role=Recruiter');
       if (!response.ok) {
           const errorData = await response.json().catch(() => ({ message: 'Failed to fetch recruiters' }));
-          throw new Error(errorData.message || 'Failed to fetch recruiters');
+          // Log the full errorData for debugging if possible
+          console.error("API error fetching recruiters:", errorData);
+          // Construct a more detailed message for the Error thrown
+          let detailedErrorMessage = errorData.message || 'Failed to fetch recruiters';
+          if (errorData.error) { // This 'error' field comes from our API's error response
+            detailedErrorMessage += ` (Details: ${errorData.error})`;
+          }
+          if (errorData.code) {
+             detailedErrorMessage += ` (Code: ${errorData.code})`;
+          }
+          throw new Error(detailedErrorMessage);
       }
       const recruitersData: UserProfile[] | undefined = await response.json(); // Expect UserProfile[] or handle undefined
       if (!recruitersData || !Array.isArray(recruitersData)) {
@@ -126,7 +136,7 @@ export function CandidatesPageClient({
     setFetchError(null);
     setAuthError(false);
     setPermissionError(false);
-    setAiMatchedCandidateIds(null); 
+    setAiMatchedCandidateIds(null);
     setAiSearchReasoning(null);
 
     try {
@@ -205,7 +215,7 @@ export function CandidatesPageClient({
     } catch (error) {
       console.error("AI Search Error:", error);
       toast({ title: "AI Search Error", description: (error as Error).message, variant: "destructive" });
-      setAiMatchedCandidateIds([]); 
+      setAiMatchedCandidateIds([]);
     } finally {
       setIsAiSearching(false);
     }
@@ -220,7 +230,7 @@ export function CandidatesPageClient({
       }
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sessionStatus, serverAuthError, serverPermissionError, fetchRecruiters]); 
+  }, [sessionStatus, serverAuthError, serverPermissionError, fetchRecruiters]);
 
 
    useEffect(() => {
@@ -236,7 +246,7 @@ export function CandidatesPageClient({
 
   const handleFilterChange = (newFilters: CandidateFilterValues) => {
     const combinedFilters = { ...filters, ...newFilters, aiSearchQuery: undefined };
-    setFilters(combinedFilters); 
+    setFilters(combinedFilters);
     setAiMatchedCandidateIds(null);
     setAiSearchReasoning(null);
     fetchFilteredCandidatesOnClient(combinedFilters);
@@ -261,7 +271,7 @@ export function CandidatesPageClient({
     if (aiMatchedCandidateIds !== null) {
         toast({title: "AI Search Active", description: "Please clear AI search or re-run it to see specific updates.", variant: "default" });
         // Optionally, refetch the entire list if AI search results are displayed
-        // fetchFilteredCandidatesOnClient(filters); 
+        // fetchFilteredCandidatesOnClient(filters);
         return;
     }
 
@@ -427,7 +437,7 @@ export function CandidatesPageClient({
       if (filters.recruiterId && filters.recruiterId !== "__ALL_RECRUITERS__") query.append('recruiterId', filters.recruiterId);
 
       const response = await fetch(`/api/candidates/export?${query.toString()}`);
-      if (!response.ok) { 
+      if (!response.ok) {
         const errorData = await response.json().catch(() => ({ message: "Error exporting candidate data." }));
         throw new Error(errorData.message);
       }
@@ -436,7 +446,7 @@ export function CandidatesPageClient({
       downloadFile(await blob.text(), filename, blob.type);
 
       toast({ title: "Export Successful", description: "Candidates exported as CSV." });
-    } catch (error) { 
+    } catch (error) {
       toast({ title: "Export Failed", description: (error as Error).message, variant: "destructive" });
     } finally { setIsLoading(false); }
   };
@@ -521,7 +531,7 @@ export function CandidatesPageClient({
       });
       const result = await response.json();
       if (!response.ok) throw new Error(result.message || 'Bulk action failed');
-      
+
       toast({ title: "Bulk Action Successful", description: `${result.successCount} candidate(s) affected. ${result.failCount > 0 ? `${result.failCount} failed.` : ''}`});
       setSelectedCandidateIds(new Set()); // Clear selection
       fetchFilteredCandidatesOnClient(filters); // Refresh list
@@ -559,9 +569,9 @@ export function CandidatesPageClient({
   }
 
   return (
-    <div className="flex flex-col md:flex-row gap-6 h-full"> 
+    <div className="flex flex-col md:flex-row gap-6 h-full">
       <aside className="w-full md:w-72 lg:w-80 flex-shrink-0 md:sticky md:top-0 md:h-screen">
-        <ScrollArea className="h-full md:max-h-[calc(100vh-var(--header-height,4rem)-2rem)] md:pr-2"> 
+        <ScrollArea className="h-full md:max-h-[calc(100vh-var(--header-height,4rem)-2rem)] md:pr-2">
           <div className="flex justify-between items-center mb-3 md:hidden">
             <h1 className="text-xl font-semibold">Filters</h1>
           </div>
@@ -616,7 +626,7 @@ export function CandidatesPageClient({
             </DropdownMenu>
           </div>
         </div>
-        
+
         {aiSearchReasoning && (
           <Alert variant="default" className="bg-blue-50 border-blue-300 dark:bg-blue-900/30 dark:border-blue-700">
             <Brain className="h-5 w-5 text-blue-600 dark:text-blue-400" />
@@ -630,15 +640,15 @@ export function CandidatesPageClient({
 
         {(isLoading || isAiSearching) && displayedCandidates.length === 0 && !fetchError ? ( <div className="flex flex-col items-center justify-center h-64 border rounded-lg bg-card shadow"> <Users className="w-16 h-16 text-muted-foreground animate-pulse mb-4" /> <h3 className="text-xl font-semibold text-foreground"> {isAiSearching ? "AI Searching Candidates..." : "Loading Candidates..."}</h3> <p className="text-muted-foreground">Please wait while we fetch the data.</p> </div>
         ) : (
-          <CandidateTable 
-            candidates={displayedCandidates} 
-            availablePositions={availablePositions} 
-            availableStages={availableStages} 
-            onUpdateCandidate={handleUpdateCandidateAPI} 
-            onDeleteCandidate={handleDeleteCandidate} 
-            onOpenUploadModal={handleOpenUploadModal} 
-            onEditPosition={handleOpenEditPositionModal} 
-            isLoading={(isLoading || isAiSearching) && displayedCandidates.length > 0 && !fetchError} 
+          <CandidateTable
+            candidates={displayedCandidates}
+            availablePositions={availablePositions}
+            availableStages={availableStages}
+            onUpdateCandidate={handleUpdateCandidateAPI}
+            onDeleteCandidate={handleDeleteCandidate}
+            onOpenUploadModal={handleOpenUploadModal}
+            onEditPosition={handleOpenEditPositionModal}
+            isLoading={(isLoading || isAiSearching) && displayedCandidates.length > 0 && !fetchError}
             onRefreshCandidateData={refreshCandidateInList}
             selectedCandidateIds={selectedCandidateIds}
             onToggleSelectCandidate={handleToggleSelectCandidate}
@@ -653,7 +663,7 @@ export function CandidatesPageClient({
       {canManageCandidates && <CreateCandidateViaN8nModal isOpen={isCreateViaN8nModalOpen} onOpenChange={setIsCreateViaN8nModalOpen} onProcessingStart={handleAutomatedProcessingStart} />}
       {canImportCandidates && <ImportCandidatesModal isOpen={isImportModalOpen} onOpenChange={setIsImportModalOpen} onImportSuccess={() => fetchFilteredCandidatesOnClient(filters)} />}
       {selectedPositionForEdit && ( <EditPositionModal isOpen={isEditPositionModalOpen} onOpenChange={(isOpen) => { setIsEditPositionModalOpen(isOpen); if (!isOpen) setSelectedPositionForEdit(null); }} position={selectedPositionForEdit} onEditPosition={handlePositionEdited} /> )}
-    
+
       <AlertDialog open={isBulkActionConfirmOpen} onOpenChange={setIsBulkActionConfirmOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -697,3 +707,5 @@ export function CandidatesPageClient({
     </div>
   );
 }
+
+    
