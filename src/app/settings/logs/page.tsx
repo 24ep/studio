@@ -22,9 +22,9 @@ import { cn } from "@/lib/utils";
 const getLogLevelBadgeVariant = (level: LogLevel): "default" | "secondary" | "destructive" | "outline" => {
   switch (level) {
     case 'ERROR': return 'destructive';
-    case 'WARN': return 'secondary'; 
+    case 'WARN': return 'secondary';
     case 'AUDIT': return 'default'; // Changed for better visibility
-    case 'INFO': return 'outline'; 
+    case 'INFO': return 'outline';
     case 'DEBUG': return 'outline';
     default: return 'outline';
   }
@@ -33,10 +33,10 @@ const getLogLevelBadgeVariant = (level: LogLevel): "default" | "secondary" | "de
 const getLogLevelIcon = (level: LogLevel) => {
   switch (level) {
     case 'ERROR': return <ServerCrash className="h-4 w-4 mr-1.5" />;
-    case 'WARN': return <AlertTriangle className="h-4 w-4 mr-1.5" />; 
+    case 'WARN': return <AlertTriangle className="h-4 w-4 mr-1.5" />;
     case 'AUDIT': return <ShieldAlert className="h-4 w-4 mr-1.5" />;
     case 'INFO': return <Info className="h-4 w-4 mr-1.5" />;
-    case 'DEBUG': return <ListOrdered className="h-4 w-4 mr-1.5" />; 
+    case 'DEBUG': return <ListOrdered className="h-4 w-4 mr-1.5" />;
     default: return <Info className="h-4 w-4 mr-1.5" />;
   }
 };
@@ -71,7 +71,7 @@ export default function ApplicationLogsPage() {
 
   const fetchLogUsers = useCallback(async () => {
     try {
-      const response = await fetch('/api/users'); 
+      const response = await fetch('/api/users');
       if (!response.ok) throw new Error('Failed to fetch users for log filter');
       const usersData: UserProfile[] = await response.json();
       setAllUsers(usersData.map(u => ({ id: u.id, name: u.name })));
@@ -96,9 +96,9 @@ export default function ApplicationLogsPage() {
       if (filters.userId !== "ALL") url += `&actingUserId=${filters.userId}`;
       if (filters.start) url += `&startDate=${filters.start.toISOString()}`;
       if (filters.end) url += `&endDate=${filters.end.toISOString()}`;
-      
+
       const response = await fetch(url);
-      
+
       if (!response.ok) {
         let errorJson;
         let errorMessageFromServer;
@@ -112,7 +112,7 @@ export default function ApplicationLogsPage() {
         setFetchError(errorMessageFromServer || `An unknown error occurred. Status: ${response.status}`);
         setLogs([]); setTotalLogs(0); return;
       }
-      
+
       const data: { logs: LogEntry[], total: number } = await response.json();
       setLogs(data.logs); setTotalLogs(data.total);
     } catch (err) {
@@ -125,7 +125,7 @@ export default function ApplicationLogsPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [sessionStatus, toast, pathname]); 
+  }, [sessionStatus, toast, pathname]);
 
   useEffect(() => {
     setIsClient(true);
@@ -144,10 +144,10 @@ export default function ApplicationLogsPage() {
 
 
   const handleApplyFilters = () => {
-    setCurrentPage(1); 
+    setCurrentPage(1);
     fetchLogs(1, { level: levelFilter, search: searchQuery, userId: actingUserIdFilter, start: startDate, end: endDate });
   };
-  
+
   const handleResetFilters = () => {
     setSearchQuery('');
     setLevelFilter('ALL');
@@ -158,7 +158,7 @@ export default function ApplicationLogsPage() {
     fetchLogs(1, { level: "ALL", search: "", userId: "ALL", start: undefined, end: undefined });
   };
 
-  if (sessionStatus === 'loading' || (isLoading && !fetchError && !isClient && logs.length === 0)) { 
+  if (sessionStatus === 'loading' || (isLoading && !fetchError && !isClient && logs.length === 0)) {
     return ( <div className="flex h-full items-center justify-center"> <Loader2 className="h-16 w-16 animate-spin text-primary" /> </div> );
   }
 
@@ -211,7 +211,7 @@ export default function ApplicationLogsPage() {
           <>
           <div className="border rounded-lg overflow-hidden">
             <Table>
-              <TableHeader> <TableRow> <TableHead className="w-[200px]">Timestamp</TableHead> <TableHead className="w-[120px]">Level</TableHead> <TableHead>Message</TableHead> <TableHead className="w-[150px]">Source</TableHead> <TableHead className="w-[180px]">Acting User</TableHead> </TableRow> </TableHeader>
+              <TableHeader><TableRow><TableHead className="w-[200px]">Timestamp</TableHead><TableHead className="w-[120px]">Level</TableHead><TableHead>Message</TableHead><TableHead className="w-[150px]">Source</TableHead><TableHead className="w-[180px]">Acting User</TableHead></TableRow></TableHeader>
               <TableBody>
                 {logs.map((log) => (
                   <TableRow key={log.id} className="hover:bg-muted/50 transition-colors">
@@ -246,4 +246,3 @@ export default function ApplicationLogsPage() {
     </Card>
   );
 }
-

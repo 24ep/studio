@@ -4,7 +4,7 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Button, buttonVariants } from '@/components/ui/button'; 
+import { Button, buttonVariants } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { PlusCircle, Briefcase, Edit, Trash2, ServerCrash, Loader2, FileDown, FileUp, ChevronDown, FileSpreadsheet, ShieldAlert, MoreHorizontal, Trash2 as BulkTrashIcon, Edit as BulkEditIcon } from "lucide-react";
 import type { Position } from "@/lib/types";
@@ -27,7 +27,7 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger, // Added missing import
+  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import {
   DropdownMenu,
@@ -110,7 +110,7 @@ export default function PositionsPage() {
       }
       const data: Position[] = await response.json();
       setPositions(data);
-      
+
       const uniqueDepts = Array.from(new Set(data.map(p => p.department).filter(Boolean)));
       setAvailableDepartments(uniqueDepts.sort());
 
@@ -151,7 +151,7 @@ export default function PositionsPage() {
             throw new Error(errorData.message || `Failed to add position: ${response.statusText || `Status: ${response.status}`}`);
         }
         const newPosition: Position = await response.json();
-        fetchPositions(); 
+        fetchPositions();
         setIsAddModalOpen(false);
         toast({ title: "Position Added", description: `${newPosition.title} has been successfully added.` });
     } catch (error) {
@@ -177,7 +177,7 @@ export default function PositionsPage() {
         throw new Error(errorData.message || `Failed to update position: ${response.statusText || `Status: ${response.status}`}`);
       }
       const updatedPosition: Position = await response.json();
-      fetchPositions(); 
+      fetchPositions();
       setIsEditModalOpen(false);
       setSelectedPositionForEdit(null);
       toast({ title: "Position Updated", description: `Position "${updatedPosition.title}" has been updated.` });
@@ -199,7 +199,7 @@ export default function PositionsPage() {
         const errorData = await response.json().catch(() => ({message: "Failed to delete position."}));
         throw new Error(errorData.message || `Failed to delete position: ${response.statusText}`);
       }
-      fetchPositions(); 
+      fetchPositions();
       toast({ title: "Position Deleted", description: `Position "${positionToDelete.title}" has been deleted.` });
     } catch (error) {
       console.error("Error deleting position:", error);
@@ -279,7 +279,7 @@ export default function PositionsPage() {
   const handleBulkPositionAction = (action: 'delete' | 'change_status') => {
     setBulkActionType(action);
     if (action === 'change_status') {
-      setBulkNewIsOpenStatus(true); 
+      setBulkNewIsOpenStatus(true);
     }
     setIsBulkConfirmOpen(true);
   };
@@ -300,7 +300,7 @@ export default function PositionsPage() {
         });
         const result = await response.json();
         if (!response.ok) throw new Error(result.message || 'Bulk position action failed');
-        
+
         toast({ title: "Bulk Action Successful", description: `${result.successCount} position(s) affected. ${result.failCount > 0 ? `${result.failCount} failed.` : ''}`});
         if (result.failCount > 0 && result.failedDetails) {
             result.failedDetails.forEach((detail: {positionId: string, reason: string}) => {
@@ -389,7 +389,7 @@ export default function PositionsPage() {
           ) : (
             <div className="border rounded-lg overflow-hidden">
             <Table>
-              <TableHeader> <TableRow> 
+              <TableHeader><TableRow>
                 <TableHead className="w-12">
                   <Checkbox
                     checked={isAllPositionsSelected}
@@ -398,7 +398,7 @@ export default function PositionsPage() {
                     disabled={isLoading || !canManagePositions}
                   />
                 </TableHead>
-                <TableHead>Title</TableHead> <TableHead>Department</TableHead> <TableHead>Level</TableHead> <TableHead>Status</TableHead> <TableHead className="hidden md:table-cell">Description</TableHead> <TableHead className="text-right">Actions</TableHead> </TableRow> </TableHeader>
+                <TableHead>Title</TableHead><TableHead>Department</TableHead><TableHead>Level</TableHead><TableHead>Status</TableHead><TableHead className="hidden md:table-cell">Description</TableHead><TableHead className="text-right">Actions</TableHead></TableRow></TableHeader>
               <TableBody>
                 {positions.map((pos) => (
                   <TableRow key={pos.id} className="hover:bg-muted/50 transition-colors" data-state={selectedPositionIds.has(pos.id) ? "selected" : ""}>
@@ -435,7 +435,7 @@ export default function PositionsPage() {
       {canManagePositions && <AddPositionModal isOpen={isAddModalOpen} onOpenChange={setIsAddModalOpen} onAddPosition={handleAddPositionSubmit} />}
       {canManagePositions && selectedPositionForEdit && ( <EditPositionModal isOpen={isEditModalOpen} onOpenChange={(isOpen) => { setIsEditModalOpen(isOpen); if (!isOpen) setSelectedPositionForEdit(null); }} onEditPosition={handleEditPositionSubmit} position={selectedPositionForEdit} /> )}
       {canImportPositions && <ImportPositionsModal isOpen={isImportModalOpen} onOpenChange={setIsImportModalOpen} onImportSuccess={fetchPositions} />}
-    
+
       <AlertDialog open={isBulkConfirmOpen} onOpenChange={setIsBulkConfirmOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -468,4 +468,3 @@ export default function PositionsPage() {
     </div>
   );
 }
-
