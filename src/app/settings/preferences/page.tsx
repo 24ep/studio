@@ -14,7 +14,7 @@ import { useRouter, usePathname } from 'next/navigation';
 import type { SystemSetting, LoginPageBackgroundType, SystemSettingKey } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ScrollArea } from '@/components/ui/scroll-area'; // Added ScrollArea
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 type ThemePreference = "light" | "dark" | "system";
 const DEFAULT_APP_NAME = "CandiTrack";
@@ -57,6 +57,69 @@ interface SidebarColors {
   sidebarActiveBgStartD: string; sidebarActiveBgEndD: string; sidebarActiveTextD: string;
   sidebarHoverBgD: string; sidebarHoverTextD: string; sidebarBorderD: string;
 }
+
+// Helper functions for HSL and Hex color conversions
+function parseHslString(hslString: string): { h: number; s: number; l: number } | null {
+  const match = hslString.match(/^(\d+)\s+(\d+)%\s+(\d+)%$/);
+  if (!match) return null;
+  return {
+    h: parseInt(match[1], 10),
+    s: parseInt(match[2], 10) / 100,
+    l: parseInt(match[3], 10) / 100,
+  };
+}
+
+function hslToHex(h: number, s: number, l: number): string {
+  const k = (n: number) => (n + h / 30) % 12;
+  const a = s * Math.min(l, 1 - l);
+  const f = (n: number) =>
+    l - a * Math.max(-1, Math.min(k(n) - 3, Math.min(9 - k(n), 1)));
+  
+  const toHex = (x: number) => {
+    const hex = Math.round(x * 255).toString(16);
+    return hex.length === 1 ? '0' + hex : hex;
+  };
+  return `#${toHex(f(0))}${toHex(f(8))}${toHex(f(4))}`;
+}
+
+function hexToHslString(hex: string): string {
+  let r = 0, g = 0, b = 0;
+  if (hex.length === 4) {
+    r = parseInt(hex[1] + hex[1], 16);
+    g = parseInt(hex[2] + hex[2], 16);
+    b = parseInt(hex[3] + hex[3], 16);
+  } else if (hex.length === 7) {
+    r = parseInt(hex.substring(1, 3), 16);
+    g = parseInt(hex.substring(3, 5), 16);
+    b = parseInt(hex.substring(5, 7), 16);
+  }
+  r /= 255; g /= 255; b /= 255;
+  const max = Math.max(r, g, b), min = Math.min(r, g, b);
+  let h = 0, s = 0;
+  const l = (max + min) / 2;
+
+  if (max !== min) {
+    const d = max - min;
+    s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+    switch (max) {
+      case r: h = (g - b) / d + (g < b ? 6 : 0); break;
+      case g: h = (b - r) / d + 2; break;
+      case b: h = (r - g) / d + 4; break;
+    }
+    h /= 6;
+  }
+  h = Math.round(h * 360);
+  s = Math.round(s * 100);
+  const lPercent = Math.round(l * 100);
+  return `${h} ${s}% ${lPercent}%`;
+}
+
+function convertHslStringToHex(hslString: string): string {
+    const hslObj = parseHslString(hslString);
+    if (!hslObj) return '#000000'; // Fallback
+    return hslToHex(hslObj.h, hslObj.s, hslObj.l);
+}
+
 
 export default function PreferencesSettingsPage() {
   const { toast } = useToast();
@@ -377,7 +440,7 @@ export default function PreferencesSettingsPage() {
                     <Label htmlFor="primary-gradient-start" className="text-sm">Gradient Start Color (HSL)</Label>
                     <div className="flex items-center gap-2 mt-1">
                         <Input id="primary-gradient-start" type="text" value={primaryGradientStart} onChange={(e) => setPrimaryGradientStart(e.target.value)} placeholder="e.g., 179 67% 66%" className="flex-grow"/>
-                        <Input type="color" value={`hsl(${primaryGradientStart.replace(/%/g,'').replace(/\s+/g,',')})`} onChange={(e) => setPrimaryGradientStart(e.target.value)} className="w-10 h-10 p-1 flex-shrink-0" title="Pick color (HSL text input is source of truth)"/>
+                        <Input type="color" value={convertHslStringToHex(primaryGradientStart)} onChange={(e) => setPrimaryGradientStart(hexToHslString(e.target.value))} className="w-10 h-10 p-1 flex-shrink-0" title="Pick color"/>
                     </div>
                     <p className="text-xs text-muted-foreground mt-0.5">Enter as HSL string (e.g., "179 67% 66%").</p>
                 </div>
@@ -385,7 +448,7 @@ export default function PreferencesSettingsPage() {
                     <Label htmlFor="primary-gradient-end" className="text-sm">Gradient End Color (HSL)</Label>
                     <div className="flex items-center gap-2 mt-1">
                         <Input id="primary-gradient-end" type="text" value={primaryGradientEnd} onChange={(e) => setPrimaryGradientEnd(e.target.value)} placeholder="e.g., 238 74% 61%" className="flex-grow"/>
-                        <Input type="color" value={`hsl(${primaryGradientEnd.replace(/%/g,'').replace(/\s+/g,',')})`} onChange={(e) => setPrimaryGradientEnd(e.target.value)} className="w-10 h-10 p-1 flex-shrink-0" title="Pick color (HSL text input is source of truth)"/>
+                        <Input type="color" value={convertHslStringToHex(primaryGradientEnd)} onChange={(e) => setPrimaryGradientEnd(hexToHslString(e.target.value))} className="w-10 h-10 p-1 flex-shrink-0" title="Pick color"/>
                     </div>
                     <p className="text-xs text-muted-foreground mt-0.5">Enter as HSL string (e.g., "238 74% 61%").</p>
                 </div>
@@ -439,10 +502,10 @@ export default function PreferencesSettingsPage() {
           <div key={key}>
             <Label htmlFor={key} className="text-xs">{labels[key]}</Label>
             <div className="flex items-center gap-2 mt-1">
-              <Input id={key} type="text" value={sidebarColors[key]} onChange={(e) => handleSidebarColorChange(key, e.target.value)} placeholder="e.g., 220 25% 97% or #aabbcc" className="h-9 text-xs flex-grow"/>
-              <Input type="color" value={sidebarColors[key].startsWith('#') ? sidebarColors[key] : `hsl(${sidebarColors[key].replace(/%/g,'').replace(/\s+/g,',')})`} 
-                 onChange={(e) => handleSidebarColorChange(key, e.target.value)} 
-                 className="w-10 h-9 p-1 flex-shrink-0" title="Pick color (text input is source of truth)"
+              <Input id={key} type="text" value={sidebarColors[key]} onChange={(e) => handleSidebarColorChange(key as keyof SidebarColors, e.target.value)} placeholder="e.g., 220 25% 97% or #aabbcc" className="h-9 text-xs flex-grow"/>
+              <Input type="color" value={convertHslStringToHex(sidebarColors[key])} 
+                 onChange={(e) => handleSidebarColorChange(key as keyof SidebarColors, hexToHslString(e.target.value))} 
+                 className="w-10 h-9 p-1 flex-shrink-0" title="Pick color"
               />
             </div>
             <p className="text-xs text-muted-foreground mt-0.5">Enter HSL (e.g., "220 25% 97%") or Hex (e.g., "#RRGGBB")</p>
@@ -459,9 +522,9 @@ export default function PreferencesSettingsPage() {
         <CardDescription>Manage global application settings. These settings are saved on the server.</CardDescription>
       </CardHeader>
       <CardContent className="p-0">
-        <div className="flex flex-col md:flex-row min-h-[calc(100vh-18rem)]"> {/* Adjusted min-height */}
+        <div className="flex flex-col md:flex-row min-h-[calc(100vh-18rem)]">
           <aside className="md:w-60 lg:w-72 border-r bg-muted/30">
-            <ScrollArea className="h-full md:max-h-[calc(100vh-18rem)] p-4"> {/* ScrollArea for left nav */}
+            <ScrollArea className="h-full md:max-h-[calc(100vh-18rem)] p-4">
               <nav className="space-y-1">
                 {PREFERENCE_SECTIONS.map((section) => (
                   <Button
@@ -485,7 +548,7 @@ export default function PreferencesSettingsPage() {
           </aside>
 
           <main className="flex-1">
-            <ScrollArea className="h-full md:max-h-[calc(100vh-18rem)] p-6"> {/* ScrollArea for right content */}
+            <ScrollArea className="h-full md:max-h-[calc(100vh-18rem)] p-6">
               <div className="space-y-6">
                 {renderSectionContent(activeSection)}
               </div>
