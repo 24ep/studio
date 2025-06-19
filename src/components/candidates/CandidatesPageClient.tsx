@@ -102,14 +102,18 @@ export function CandidatesPageClient({
     try {
       const response = await fetch('/api/users?role=Recruiter');
       if (!response.ok) {
-          const errorData = await response.json().catch(() => ({ message: 'Failed to fetch recruiters' }));
-          console.error("API error fetching recruiters:", errorData); // Log the actual errorData
+          const errorData = await response.json().catch(() => ({})); // Attempt to parse JSON, default to {} on failure
+          console.error("API error fetching recruiters:", errorData);
           let detailedErrorMessage = errorData?.message || `Failed to fetch recruiters (Status: ${response.status})`;
-          if (errorData && typeof errorData === 'object' && 'error' in errorData && typeof errorData.error === 'string') {
-            detailedErrorMessage += ` (Details: ${errorData.error})`;
-          }
-          if (errorData && typeof errorData === 'object' && 'code' in errorData && typeof errorData.code === 'string') {
+          if (Object.keys(errorData).length === 0 && !errorData.message) { // Check if errorData is truly empty
+            detailedErrorMessage = `Failed to fetch recruiters. Server responded with status ${response.status}: ${response.statusText || 'No additional error message.'}`;
+          } else {
+            if (errorData.error) { 
+              detailedErrorMessage += ` (Details: ${errorData.error})`;
+            }
+            if (errorData.code) {
              detailedErrorMessage += ` (Code: ${errorData.code})`;
+            }
           }
           throw new Error(detailedErrorMessage);
       }
@@ -150,12 +154,17 @@ export function CandidatesPageClient({
       if (currentFilters.applicationDateStart) query.append('applicationDateStart', currentFilters.applicationDateStart.toISOString());
       if (currentFilters.applicationDateEnd) query.append('applicationDateEnd', currentFilters.applicationDateEnd.toISOString());
       if (currentFilters.recruiterId && currentFilters.recruiterId !== "__ALL_RECRUITERS__") query.append('recruiterId', currentFilters.recruiterId);
-      // attributePath and attributeValue are not standard filters for candidates list
 
       const response = await fetch(`/api/candidates?${query.toString()}`);
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({ message: response.statusText || `Status: ${response.status}` }));
-        const errorMessage = errorData.message || `Failed to fetch candidates: ${response.statusText || `Status: ${response.status}`}`;
+        let errorMessage = errorData.message || `Failed to fetch candidates: ${response.statusText || `Status: ${response.status}`}`;
+        if (Object.keys(errorData).length === 0 && !errorData.message) {
+             errorMessage = `Failed to fetch candidates. Server responded with status ${response.status}: ${response.statusText || 'No additional error message.'}`;
+        } else if (errorData.error) {
+            errorMessage += ` (Details: ${errorData.error})`;
+        }
+
         if (response.status === 401) {
             setAuthError(true);
             signIn(undefined, { callbackUrl: pathname });
@@ -327,7 +336,6 @@ export function CandidatesPageClient({
     setIsLoading(true);
     try {
       const apiPayload = {
-        // Name and email derived from parsedData or top-level fields
         name: `${formData.personal_info.firstname} ${formData.personal_info.lastname}`.trim(),
         email: formData.contact_info.email,
         phone: formData.contact_info.phone || null,
@@ -542,10 +550,10 @@ export function CandidatesPageClient({
 
 
   if (authError) {
-    return ( <div className="flex flex-col items-center justify-center h-[calc(100vh-10rem)] text-center p-4"> <ShieldAlert className="w-16 h-16 text-destructive mb-4" /> <h2 className="text-2xl font-semibold text-foreground mb-2">Access Denied</h2> <p className="text-muted-foreground mb-4 max-w-md">You need to be signed in to view this page.</p> <Button onClick={() => signIn(undefined, { callbackUrl: pathname })} className="btn-hover-primary-gradient">Sign In</Button> </div> );
+    return ( <div className="flex flex-col items-center justify-center h-[calc(100vh-10rem)] text-center p-4"> <ShieldAlert className="w-16 h-16 text-destructive mb-4" /> <h2 className="text-2xl font-semibold text-foreground mb-2">Access Denied</h2> <p className="text-muted-foreground mb-4 max-w-md">You need to be signed in to view this page.</p> <Button onClick={() => signIn(undefined, { callbackUrl: pathname })} className="btn-primary-gradient">Sign In</Button> </div> );
   }
   if (permissionError) {
-     return ( <div className="flex flex-col items-center justify-center h-[calc(100vh-10rem)] text-center p-4"> <ShieldAlert className="w-16 h-16 text-destructive mb-4" /> <h2 className="text-2xl font-semibold text-foreground mb-2">Permission Denied</h2> <p className="text-muted-foreground mb-4 max-w-md">{fetchError || "You do not have sufficient permissions to view this page."}</p> <Button onClick={() => router.push('/')} className="btn-hover-primary-gradient">Go to Dashboard</Button> </div> );
+     return ( <div className="flex flex-col items-center justify-center h-[calc(100vh-10rem)] text-center p-4"> <ShieldAlert className="w-16 h-16 text-destructive mb-4" /> <h2 className="text-2xl font-semibold text-foreground mb-2">Permission Denied</h2> <p className="text-muted-foreground mb-4 max-w-md">{fetchError || "You do not have sufficient permissions to view this page."}</p> <Button onClick={() => router.push('/')} className="btn-primary-gradient">Go to Dashboard</Button> </div> );
   }
   if (sessionStatus === 'loading' || (isLoading && allCandidates.length === 0 && !fetchError)) {
     return ( <div className="flex h-screen w-screen items-center justify-center bg-background fixed inset-0 z-50"><Loader2 className="h-16 w-16 animate-spin text-primary" /></div> );
@@ -559,7 +567,7 @@ export function CandidatesPageClient({
         <h2 className="text-2xl font-semibold text-foreground mb-2">Error Loading Candidates</h2>
         <p className="text-muted-foreground mb-4 max-w-md">{fetchError}</p>
         {isMissingTableError && ( <div className="mb-6 p-4 border border-destructive bg-destructive/10 rounded-md text-sm"> <p className="font-semibold">It looks like a required database table (e.g., "Candidate", "Position", "User", "RecruitmentStage") is missing or not accessible.</p> <p className="mt-1">This usually means the database initialization script (`pg-init-scripts/init-db.sql`) did not run correctly when the PostgreSQL Docker container started.</p> <p className="mt-2">Please refer to the troubleshooting steps in the `README.md` for guidance on how to resolve this, typically involving a clean Docker volume reset.</p> </div> )}
-        <Button onClick={() => fetchFilteredCandidatesOnClient(filters)} className="btn-hover-primary-gradient">Try Again</Button>
+        <Button onClick={() => fetchFilteredCandidatesOnClient(filters)} className="btn-primary-gradient">Try Again</Button>
       </div>
     );
   }
@@ -703,6 +711,3 @@ export function CandidatesPageClient({
     </div>
   );
 }
-
-    
-
