@@ -102,35 +102,21 @@ export function CandidatesPageClient({
     try {
       const response = await fetch('/api/users?role=Recruiter');
       if (!response.ok) {
-          let errorData: any = {}; // Initialize as any to allow for various error shapes
-          let apiErrorMessage: string | null = null;
-          let apiErrorCode: string | null = null;
-
-          try {
-            errorData = await response.json();
-            apiErrorMessage = errorData?.message || errorData?.error; // Try to get message or error property
-            apiErrorCode = errorData?.code;
-          } catch (jsonParseError) {
-            // response.json() failed, likely empty or non-JSON body
-            console.warn("API error fetching recruiters: Failed to parse JSON response body.");
-          }
-          
-          console.error("API error fetching recruiters (raw errorData object after attempt to parse):", errorData);
-
-          let detailedErrorMessage = apiErrorMessage;
-          if (!detailedErrorMessage) {
+          const errorData = await response.json().catch(() => ({})); // Catch if .json() fails (e.g. empty body)
+          console.error("API error fetching recruiters:", errorData);
+          let detailedErrorMessage = (errorData as any)?.message || 'Failed to fetch recruiters';
+          if (Object.keys(errorData).length === 0 && !(errorData as any)?.message) {
             detailedErrorMessage = `Failed to fetch recruiters. Server responded with status ${response.status}: ${response.statusText || 'No additional error message.'}`;
           }
-          
-          if (apiErrorCode) {
-            detailedErrorMessage += ` (Code: ${apiErrorCode})`;
+          if ((errorData as any).error) { // Assuming 'error' for PostgreSQL error message string
+            detailedErrorMessage += ` (Details: ${(errorData as any).error})`;
           }
-          
-          console.error("Constructed detailedErrorMessage for fetchRecruiters:", detailedErrorMessage);
-
+          if ((errorData as any).code) { // Assuming 'code' for PostgreSQL error code
+             detailedErrorMessage += ` (Code: ${(errorData as any).code})`;
+          }
           throw new Error(detailedErrorMessage);
       }
-      const recruitersData: UserProfile[] | undefined = await response.json(); 
+      const recruitersData: UserProfile[] | undefined = await response.json();
       if (!recruitersData || !Array.isArray(recruitersData)) {
         throw new Error('Invalid data format received for recruiters.');
       }
@@ -593,10 +579,11 @@ export function CandidatesPageClient({
 
   return (
     <div className="flex flex-col md:flex-row gap-6 h-full">
-      <aside className="w-full md:w-72 lg:w-80 flex-shrink-0 md:sticky md:top-0 md:h-screen">
-        <ScrollArea className="h-full md:max-h-[calc(100vh-var(--header-height,4rem)-2rem)] md:pr-2">
-          <div className="flex justify-between items-center mb-3 md:hidden">
-            <h1 className="text-xl font-semibold">Filters</h1>
+      <aside className="w-full md:w-72 lg:w-80 flex-shrink-0 md:sticky md:top-[calc(var(--header-height,4rem)_+_1rem)] md:max-h-[calc(100vh-var(--header-height,4rem)-2rem)]">
+        {/* Removed border from ScrollArea, filters component is now borderless itself */}
+        <ScrollArea className="h-full md:pr-2">
+          <div className="flex justify-between items-center mb-3 md:hidden"> {/* Mobile Filter Title */}
+            <h2 className="text-lg font-semibold">Filters</h2>
           </div>
           <CandidateFilters
             initialFilters={filters}
@@ -611,7 +598,7 @@ export function CandidatesPageClient({
         </ScrollArea>
       </aside>
 
-      <div className="flex-1 space-y-6 min-w-0">
+      <div className="flex-1 space-y-6 min-w-0"> {/* Main content area */}
         <div className="flex flex-col sm:flex-row justify-between items-center gap-2">
           <h1 className="text-2xl font-semibold text-foreground hidden md:block"> Candidate Management </h1>
           <div className="w-full md:w-auto flex flex-col sm:flex-row gap-2 items-center sm:justify-end">
@@ -730,5 +717,3 @@ export function CandidatesPageClient({
     </div>
   );
 }
-
-

@@ -29,18 +29,18 @@ export interface CandidateFilterValues {
   applicationDateStart?: Date;
   applicationDateEnd?: Date;
   recruiterId?: string;
-  aiSearchQuery?: string; 
+  aiSearchQuery?: string;
 }
 
 interface CandidateFiltersProps {
   initialFilters?: CandidateFilterValues;
   onFilterChange: (filters: CandidateFilterValues) => void;
-  onAiSearch: (aiQuery: string) => void; 
+  onAiSearch: (aiQuery: string) => void;
   availablePositions: Position[];
   availableStages: RecruitmentStage[];
   availableRecruiters: Pick<UserProfile, 'id' | 'name'>[];
   isLoading?: boolean;
-  isAiSearching?: boolean; 
+  isAiSearching?: boolean;
 }
 
 const ALL_POSITIONS_SELECT_VALUE = "__ALL_POSITIONS__";
@@ -93,7 +93,7 @@ export function CandidateFilters({
     if (recruiterId === ALL_RECRUITERS_SELECT_VALUE) return "All Recruiters";
     return availableRecruiters.find(r => r.id === recruiterId)?.name || "All Recruiters";
   }
-  
+
   useEffect(() => {
     setName(initialFilters.name || '');
     setEmail(initialFilters.email || '');
@@ -122,7 +122,7 @@ export function CandidateFilters({
       applicationDateStart: applicationDateStart,
       applicationDateEnd: applicationDateEnd,
       recruiterId: recruiterId === ALL_RECRUITERS_SELECT_VALUE ? undefined : recruiterId,
-      aiSearchQuery: undefined, 
+      aiSearchQuery: undefined,
     });
   };
 
@@ -147,7 +147,7 @@ export function CandidateFilters({
     setPositionSearchQuery('');
     setStatusSearchQuery('');
     setRecruiterSearchQuery('');
-    onFilterChange({ 
+    onFilterChange({
       minFitScore: 0,
       maxFitScore: 100,
       positionId: undefined,
@@ -250,27 +250,24 @@ export function CandidateFilters({
   ];
 
   return (
-    <div className="p-4 border rounded-lg bg-card shadow-sm">
-      <div className="space-y-4">
+    <div className="p-4 space-y-4"> {/* Removed Card wrapper, added padding directly */}
         <div>
             <Label htmlFor="ai-search-query" className="text-sm font-medium">AI Powered Search</Label>
-            <div className="flex gap-2 mt-1">
-                <Textarea 
-                    id="ai-search-query" 
-                    placeholder="e.g., 'Java developer with React skills and 5 years experience in fintech...'" 
-                    value={aiSearchQueryInput} 
-                    onChange={(e) => setAiSearchQueryInput(e.target.value)} 
-                    disabled={isLoading || isAiSearching} 
-                    className="flex-grow min-h-[60px]"
-                    rows={3}
-                />
-                <Button onClick={handleAiSearchClick} disabled={isLoading || isAiSearching || !aiSearchQueryInput.trim()} className="whitespace-nowrap btn-primary-gradient self-end">
-                    {isAiSearching ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Brain className="mr-2 h-4 w-4" />}
-                    AI Search
-                </Button>
-            </div>
+            <Textarea
+                id="ai-search-query"
+                placeholder="e.g., 'Java developer with React skills and 5 years experience in fintech...'"
+                value={aiSearchQueryInput}
+                onChange={(e) => setAiSearchQueryInput(e.target.value)}
+                disabled={isLoading || isAiSearching}
+                className="mt-1 min-h-[80px]" // Adjusted min-height
+                rows={4} // Suggest more rows for textarea
+            />
+            <Button onClick={handleAiSearchClick} disabled={isLoading || isAiSearching || !aiSearchQueryInput.trim()} className="mt-2 w-full sm:w-auto btn-primary-gradient">
+                {isAiSearching ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Brain className="mr-2 h-4 w-4" />}
+                AI Search
+            </Button>
         </div>
-        
+
         <div className="flex items-center my-3">
           <span className="flex-grow border-t"></span>
           <span className="mx-2 text-xs text-muted-foreground uppercase">Or</span>
@@ -293,7 +290,7 @@ export function CandidateFilters({
             </AccordionItem>
           ))}
         </Accordion>
-        
+
         <div className="mt-6 flex flex-col sm:flex-row justify-end gap-2 pt-4 border-t">
             <Button variant="outline" onClick={handleResetFilters} disabled={isLoading || isAiSearching} className="w-full sm:w-auto">
                 <FilterX className="mr-2 h-4 w-4" /> Reset All Filters
@@ -303,10 +300,6 @@ export function CandidateFilters({
                 Apply Standard Filters
             </Button>
         </div>
-      </div>
     </div>
   );
 }
-
-    
-
