@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useEffect, useState } from 'react';
@@ -26,7 +25,7 @@ import {
 } from '@/components/ui/select';
 import { Checkbox } from "@/components/ui/checkbox";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { Edit3, ShieldCheck, Users, Filter, ChevronsUpDown, Check as CheckIcon, Loader2, UserCog, Settings, KeyRound, UserCircle, Palette, Save } from 'lucide-react'; // Added Save
+import { Edit3, ShieldCheck, Users, Filter, ChevronsUpDown, Check as CheckIcon, Loader2, UserCog, Settings, KeyRound, UserCircle, Palette, Save } from 'lucide-react';
 import type { UserProfile, PlatformModuleId, UserGroup, PlatformModuleCategory } from '@/lib/types';
 import { PLATFORM_MODULES, PLATFORM_MODULE_CATEGORIES } from '@/lib/types';
 import { ScrollArea } from '../ui/scroll-area';
@@ -34,7 +33,6 @@ import { useToast } from '@/hooks/use-toast';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { cn } from '@/lib/utils';
 import { Separator } from '../ui/separator';
-
 
 const userRoleOptions: UserProfile['role'][] = ['Admin', 'Recruiter', 'Hiring Manager'];
 const platformModuleIds = PLATFORM_MODULES.map(m => m.id) as [PlatformModuleId, ...PlatformModuleId[]];
@@ -86,7 +84,7 @@ export function EditUserModal({ isOpen, onOpenChange, onEditUser, user, isSelfEd
         modulePermissions: user.modulePermissions || [],
         groupIds: user.groups?.map(g => g.id) || [],
       });
-      setActiveTab(isSelfEdit ? 'general' : 'general'); // Reset to general tab, especially if self-editing
+      setActiveTab(isSelfEdit ? 'general' : 'general'); 
 
       if (!isSelfEdit) {
         const fetchGroups = async () => {
@@ -106,13 +104,14 @@ export function EditUserModal({ isOpen, onOpenChange, onEditUser, user, isSelfEd
       form.reset({ name: '', email: '', role: 'Recruiter', newPassword: '', modulePermissions: [], groupIds: [] });
       setAvailableGroups([]);
       setGroupSearchQuery('');
+      setActiveTab('general');
     }
   }, [user, isOpen, form, toast, isSelfEdit]);
 
   const onSubmit = async (data: EditUserFormValues) => {
     if (!user) return;
-    const payload: Partial<EditUserFormValues> = { ...data }; // Use Partial to allow deleting properties
-    if (!payload.newPassword) { // If newPassword is empty string or undefined
+    const payload: Partial<EditUserFormValues> = { ...data }; 
+    if (!payload.newPassword) { 
       delete payload.newPassword;
     }
     if (isSelfEdit) {
@@ -207,7 +206,7 @@ export function EditUserModal({ isOpen, onOpenChange, onEditUser, user, isSelfEd
                         <Popover open={groupSearchOpen} onOpenChange={setGroupSearchOpen}>
                           <PopoverTrigger asChild>
                             <Button variant="outline" role="combobox" aria-expanded={groupSearchOpen} className="w-full justify-between">
-                              {form.getValues("groupIds")?.length > 0 ? `${form.getValues("groupIds")?.length} group(s) selected` : "Select groups..."}
+                               {form.getValues("groupIds")?.length > 0 ? `${form.getValues("groupIds")?.length} group(s) selected` : "Select groups..."}
                               <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                             </Button>
                           </PopoverTrigger>

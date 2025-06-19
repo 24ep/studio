@@ -202,7 +202,7 @@ CREATE TABLE IF NOT EXISTS "ResumeHistory" (
 -- Example hash for 'nccadmin': $2b$10$YourGeneratedBcryptHashHere (replace with actual hash)
 -- To generate: require('bcrypt').hashSync('nccadmin', 10)
 INSERT INTO "User" (name, email, password, role)
-VALUES ('Admin User', 'admin@ncc.com', '$2b$10$3h2f.bV8t.tP8.yJ7qJ9qOtk0F4b5V/o.B.A.S.P.B/3U5f5Q1b4G', 'Admin')
+VALUES ('Admin User', 'admin@ncc.com', '$2a$10$zONW1TLkiTD1TUa11NpuOufsVSt4dra4RFdfp2XjXajv4yW1aWM8.', 'Admin')
 ON CONFLICT (email) DO NOTHING;
 
 -- Insert default User Groups (Roles)
