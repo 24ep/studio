@@ -458,4 +458,11 @@ export default function ApiDocumentationPage() {
                 <Button type="button" variant="outline">
                   Close
                 </Button>
-              </Dialog
+              </DialogClose>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
+    </Card>
+  );
+}
