@@ -26,13 +26,14 @@ import {
 } from '@/components/ui/select';
 import { Checkbox } from "@/components/ui/checkbox";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { Edit3, ShieldCheck, Users, Filter, ChevronsUpDown, Check as CheckIcon, Loader2 } from 'lucide-react';
-import type { UserProfile, PlatformModuleId, UserGroup } from '@/lib/types';
-import { PLATFORM_MODULES } from '@/lib/types';
+import { Edit3, ShieldCheck, Users, Filter, ChevronsUpDown, Check as CheckIcon, Loader2, UserCog, Settings, KeyRound, UserCircle, Palette } from 'lucide-react';
+import type { UserProfile, PlatformModuleId, UserGroup, PlatformModuleCategory } from '@/lib/types';
+import { PLATFORM_MODULES, PLATFORM_MODULE_CATEGORIES } from '@/lib/types';
 import { ScrollArea } from '../ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { cn } from '@/lib/utils';
+import { Separator } from '../ui/separator';
 
 
 const userRoleOptions: UserProfile['role'][] = ['Admin', 'Recruiter', 'Hiring Manager'];
@@ -54,26 +55,25 @@ interface EditUserModalProps {
   onOpenChange: (isOpen: boolean) => void;
   onEditUser: (userId: string, data: EditUserFormValues) => Promise<void>;
   user: UserProfile | null;
-  isSelfEdit?: boolean; // New prop
+  isSelfEdit?: boolean;
 }
+
+const groupedPermissions = Object.values(PLATFORM_MODULE_CATEGORIES).map(category => ({
+  category,
+  permissions: PLATFORM_MODULES.filter(p => p.category === category)
+}));
+
 
 export function EditUserModal({ isOpen, onOpenChange, onEditUser, user, isSelfEdit = false }: EditUserModalProps) {
   const { toast } = useToast();
+  const [activeTab, setActiveTab] = useState<'general' | 'permissions'>(isSelfEdit ? 'general' : 'general');
   const [availableGroups, setAvailableGroups] = useState<UserGroup[]>([]);
   const [groupSearchOpen, setGroupSearchOpen] = useState(false);
   const [groupSearchQuery, setGroupSearchQuery] = useState('');
 
-
   const form = useForm<EditUserFormValues>({
     resolver: zodResolver(editUserFormSchema),
-    defaultValues: {
-      name: '',
-      email: '',
-      role: 'Recruiter',
-      newPassword: '',
-      modulePermissions: [],
-      groupIds: [],
-    },
+    defaultValues: { name: '', email: '', role: 'Recruiter', newPassword: '', modulePermissions: [], groupIds: [] },
   });
 
   useEffect(() => {
@@ -86,8 +86,9 @@ export function EditUserModal({ isOpen, onOpenChange, onEditUser, user, isSelfEd
         modulePermissions: user.modulePermissions || [],
         groupIds: user.groups?.map(g => g.id) || [],
       });
+      setActiveTab(isSelfEdit ? 'general' : 'general'); // Reset to general tab, especially if self-editing
 
-      if (!isSelfEdit) { // Only fetch groups if not self-editing (Admin context)
+      if (!isSelfEdit) {
         const fetchGroups = async () => {
           try {
             const response = await fetch('/api/settings/user-groups');
@@ -101,28 +102,25 @@ export function EditUserModal({ isOpen, onOpenChange, onEditUser, user, isSelfEd
         };
         fetchGroups();
       }
-
     } else if (!isOpen) {
-        form.reset({ name: '', email: '', role: 'Recruiter', newPassword: '', modulePermissions: [], groupIds: [] });
-        setAvailableGroups([]);
-        setGroupSearchQuery('');
+      form.reset({ name: '', email: '', role: 'Recruiter', newPassword: '', modulePermissions: [], groupIds: [] });
+      setAvailableGroups([]);
+      setGroupSearchQuery('');
     }
   }, [user, isOpen, form, toast, isSelfEdit]);
 
   const onSubmit = async (data: EditUserFormValues) => {
     if (!user) return;
-    const payload: EditUserFormValues = { ...data };
-    if (payload.newPassword === '' || payload.newPassword === undefined) {
+    const payload: Partial<EditUserFormValues> = { ...data }; // Use Partial to allow deleting properties
+    if (!payload.newPassword) { // If newPassword is empty string or undefined
       delete payload.newPassword;
     }
-    // If self-editing, ensure role, permissions, and groups are not part of the payload
-    // The API will also enforce this, but good to prevent sending.
     if (isSelfEdit) {
       delete (payload as any).role;
       delete (payload as any).modulePermissions;
       delete (payload as any).groupIds;
     }
-    await onEditUser(user.id, payload);
+    await onEditUser(user.id, payload as EditUserFormValues);
   };
   
   if (!user && isOpen) return null;
@@ -134,8 +132,12 @@ export function EditUserModal({ isOpen, onOpenChange, onEditUser, user, isSelfEd
   const dialogTitle = isSelfEdit ? "Edit My Profile" : `Edit User: ${user?.name || 'N/A'}`;
   const dialogDescription = isSelfEdit 
     ? "Update your personal information. Leave 'New Password' blank to keep your current password."
-    : "Update the user's details, permissions, and group memberships. Leave 'New Password' blank to keep current password.";
+    : "Update user details, assign roles, groups, and permissions.";
 
+  const navItems = [
+    { id: 'general', label: 'General Information', icon: UserCircle },
+    ...(!isSelfEdit ? [{ id: 'permissions', label: 'Groups & Permissions', icon: ShieldCheck }] : [])
+  ];
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => {
@@ -144,99 +146,138 @@ export function EditUserModal({ isOpen, onOpenChange, onEditUser, user, isSelfEd
         form.reset({ name: '', email: '', role: 'Recruiter', newPassword: '', modulePermissions: [], groupIds: [] });
         setAvailableGroups([]);
         setGroupSearchQuery('');
+        setActiveTab('general');
       }
     }}>
-      <DialogContent className="sm:max-w-lg max-h-[90vh] flex flex-col">
-        <DialogHeader>
+      <DialogContent className="sm:max-w-3xl max-h-[90vh] flex flex-col p-0">
+        <DialogHeader className="p-6 pb-4 border-b">
           <DialogTitle className="flex items-center">
             <Edit3 className="mr-2 h-5 w-5 text-primary" /> {dialogTitle}
           </DialogTitle>
-          <DialogDescription>
-            {dialogDescription}
-          </DialogDescription>
+          <DialogDescription>{dialogDescription}</DialogDescription>
         </DialogHeader>
-        <ScrollArea className="flex-grow pr-2">
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-2 pl-1">
-              <FormField control={form.control} name="name" render={({ field }) => (<FormItem><FormLabel>Full Name *</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
-              <FormField control={form.control} name="email" render={({ field }) => (<FormItem><FormLabel>Email Address *</FormLabel><FormControl><Input type="email" {...field} /></FormControl><FormMessage /></FormItem>)} />
-              
-              {!isSelfEdit && (
-                <FormField control={form.control} name="role" render={({ field }) => (
-                  <FormItem><FormLabel>Role *</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value} defaultValue={field.value}>
-                      <FormControl><SelectTrigger><SelectValue placeholder="Select a role" /></SelectTrigger></FormControl>
-                      <SelectContent>{userRoleOptions.map(roleValue => (<SelectItem key={roleValue} value={roleValue}>{roleValue}</SelectItem>))}</SelectContent>
-                    </Select><FormMessage />
-                  </FormItem>)}
-                />
-              )}
 
-              <FormField control={form.control} name="newPassword" render={({ field }) => (<FormItem><FormLabel>New Password (Optional)</FormLabel><FormControl><Input type="password" {...field} placeholder="Leave blank to keep current" /></FormControl><FormMessage /></FormItem>)} />
+        <div className="flex flex-grow overflow-hidden">
+          {/* Left Navigation Menu */}
+          <aside className="w-1/4 border-r p-4 space-y-1 bg-muted/30">
+            {navItems.map(item => (
+              <Button
+                key={item.id}
+                variant={activeTab === item.id ? "default" : "ghost"}
+                onClick={() => setActiveTab(item.id as 'general' | 'permissions')}
+                className={cn(
+                  "w-full justify-start text-sm",
+                  activeTab === item.id && "btn-primary-gradient text-primary-foreground",
+                )}
+              >
+                <item.icon className="mr-2 h-4 w-4" /> {item.label}
+              </Button>
+            ))}
+          </aside>
 
-              {!isSelfEdit && (
-                <>
-                  <div className="space-y-2">
-                    <FormLabel className="flex items-center"><ShieldCheck className="mr-2 h-5 w-5 text-primary" /> Module Permissions</FormLabel>
-                    <div className="space-y-2 rounded-md border p-4 max-h-32 overflow-y-auto">
-                      {PLATFORM_MODULES.map((module) => (
-                        <FormField key={module.id} control={form.control} name="modulePermissions"
-                          render={({ field }) => (
-                            <FormItem className="flex flex-row items-center space-x-3 space-y-0">
-                              <FormControl><Checkbox className="checkbox-green" checked={field.value?.includes(module.id)}
-                                onCheckedChange={(checked) => checked ? field.onChange([...(field.value || []), module.id]) : field.onChange((field.value || []).filter(v => v !== module.id))}
-                              /></FormControl>
-                              <FormLabel className="text-sm font-normal">{module.label}</FormLabel>
-                            </FormItem>
-                          )}
-                        />))}
-                    </div><FormMessage />
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <FormLabel className="flex items-center"><Users className="mr-2 h-5 w-5 text-primary" /> User Groups (Roles)</FormLabel>
-                    <Popover open={groupSearchOpen} onOpenChange={setGroupSearchOpen}>
-                      <PopoverTrigger asChild>
-                        <Button variant="outline" role="combobox" aria-expanded={groupSearchOpen} className="w-full justify-between">
-                          {form.getValues("groupIds")?.length > 0 ? `${form.getValues("groupIds")?.length} group(s) selected` : "Select groups..."}
-                          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-[--trigger-width] p-0 dropdown-content-height">
-                        <div className="p-2"><Input placeholder="Search group..." value={groupSearchQuery} onChange={(e) => setGroupSearchQuery(e.target.value)} className="h-9" /></div>
-                        <ScrollArea className="max-h-40">
-                          {availableGroups.length === 0 && <p className="p-2 text-xs text-muted-foreground text-center">No groups available.</p>}
-                          {filteredGroups.length === 0 && groupSearchQuery && <p className="p-2 text-xs text-muted-foreground text-center">No group found.</p>}
-                          {filteredGroups.map(group => (
-                            <FormField key={group.id} control={form.control} name="groupIds"
-                              render={({ field }) => (
-                                <FormItem className="flex flex-row items-center space-x-3 space-y-0 px-2 py-1.5 hover:bg-accent rounded-sm">
-                                  <FormControl><Checkbox checked={field.value?.includes(group.id)}
-                                    onCheckedChange={(checked) => checked ? field.onChange([...(field.value || []), group.id]) : field.onChange((field.value || []).filter(v => v !== group.id))}
-                                  /></FormControl>
-                                  <FormLabel className="text-sm font-normal cursor-pointer flex-grow">{group.name}</FormLabel>
-                                </FormItem>
-                              )} />
+          {/* Right Content Area */}
+          <main className="w-3/4 flex-grow overflow-hidden">
+            <ScrollArea className="h-full p-6">
+              <Form {...form}>
+                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+                  {activeTab === 'general' && (
+                    <div className="space-y-4">
+                      <FormField control={form.control} name="name" render={({ field }) => (<FormItem><FormLabel>Full Name *</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
+                      <FormField control={form.control} name="email" render={({ field }) => (<FormItem><FormLabel>Email Address *</FormLabel><FormControl><Input type="email" {...field} /></FormControl><FormMessage /></FormItem>)} />
+                      
+                      {!isSelfEdit && (
+                        <FormField control={form.control} name="role" render={({ field }) => (
+                          <FormItem><FormLabel>System Role *</FormLabel>
+                            <Select onValueChange={field.onChange} value={field.value} defaultValue={field.value}>
+                              <FormControl><SelectTrigger><SelectValue placeholder="Select a role" /></SelectTrigger></FormControl>
+                              <SelectContent>{userRoleOptions.map(roleValue => (<SelectItem key={roleValue} value={roleValue}>{roleValue}</SelectItem>))}</SelectContent>
+                            </Select><FormMessage />
+                             <p className="text-xs text-muted-foreground mt-1">This is the primary system role. Specific permissions are managed via groups and direct assignments.</p>
+                          </FormItem>)}
+                        />
+                      )}
+                      <FormField control={form.control} name="newPassword" render={({ field }) => (<FormItem><FormLabel>New Password (Optional)</FormLabel><FormControl><Input type="password" {...field} placeholder="Leave blank to keep current" /></FormControl><FormMessage /></FormItem>)} />
+                    </div>
+                  )}
+
+                  {activeTab === 'permissions' && !isSelfEdit && (
+                    <div className="space-y-6">
+                      <div className="space-y-2">
+                        <Label className="flex items-center text-md font-medium"><Users className="mr-2 h-5 w-5 text-primary" /> Assign to Groups (Roles)</Label>
+                        <Popover open={groupSearchOpen} onOpenChange={setGroupSearchOpen}>
+                          <PopoverTrigger asChild>
+                            <Button variant="outline" role="combobox" aria-expanded={groupSearchOpen} className="w-full justify-between">
+                              {form.getValues("groupIds")?.length > 0 ? `${form.getValues("groupIds")?.length} group(s) selected` : "Select groups..."}
+                              <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-[--trigger-width] p-0 dropdown-content-height">
+                            <div className="p-2"><Input placeholder="Search group..." value={groupSearchQuery} onChange={(e) => setGroupSearchQuery(e.target.value)} className="h-9" /></div>
+                            <ScrollArea className="max-h-40">
+                              {availableGroups.length === 0 && <p className="p-2 text-xs text-muted-foreground text-center">No groups available.</p>}
+                              {filteredGroups.length === 0 && groupSearchQuery && <p className="p-2 text-xs text-muted-foreground text-center">No group found.</p>}
+                              {filteredGroups.map(group => (
+                                <FormField key={group.id} control={form.control} name="groupIds"
+                                  render={({ field }) => (
+                                    <FormItem className="flex flex-row items-center space-x-3 space-y-0 px-2 py-1.5 hover:bg-accent rounded-sm">
+                                      <FormControl><Checkbox checked={field.value?.includes(group.id)}
+                                        onCheckedChange={(checked) => checked ? field.onChange([...(field.value || []), group.id]) : field.onChange((field.value || []).filter(v => v !== group.id))}
+                                      /></FormControl>
+                                      <FormLabel className="text-sm font-normal cursor-pointer flex-grow">{group.name}</FormLabel>
+                                    </FormItem>
+                                  )} />
+                              ))}
+                            </ScrollArea>
+                          </PopoverContent>
+                        </Popover>
+                        <FormMessage />
+                      </div>
+
+                      <Separator />
+                      
+                      <div className="space-y-2">
+                        <Label className="flex items-center text-md font-medium"><ShieldCheck className="mr-2 h-5 w-5 text-primary" /> Direct Module Permissions</Label>
+                        <div className="space-y-4 rounded-md border p-4 max-h-60 overflow-y-auto">
+                          {groupedPermissions.map(group => (
+                            <div key={group.category}>
+                              <h4 className="font-medium text-sm text-muted-foreground mb-1.5">{group.category}</h4>
+                              {group.permissions.map((module) => (
+                                <FormField key={module.id} control={form.control} name="modulePermissions"
+                                  render={({ field }) => (
+                                    <FormItem className="flex flex-row items-start space-x-3 space-y-0 mb-2">
+                                      <FormControl><Checkbox className="checkbox-green mt-1" checked={field.value?.includes(module.id)}
+                                        onCheckedChange={(checked) => checked ? field.onChange([...(field.value || []), module.id]) : field.onChange((field.value || []).filter(v => v !== module.id))}
+                                      /></FormControl>
+                                      <div className="space-y-0.5">
+                                        <FormLabel className="text-sm font-normal">{module.label}</FormLabel>
+                                        <p className="text-xs text-muted-foreground">{module.description}</p>
+                                      </div>
+                                    </FormItem>
+                                  )}
+                                />))}
+                            </div>
                           ))}
-                        </ScrollArea>
-                      </PopoverContent>
-                    </Popover>
-                    <FormMessage />
-                  </div>
-                </>
-              )}
+                        </div>
+                        <FormMessage />
+                        <p className="text-xs text-muted-foreground mt-1">These are direct permissions. User also inherits permissions from assigned groups.</p>
+                      </div>
+                    </div>
+                  )}
 
-              <DialogFooter className="pt-4 sticky bottom-0 bg-background pb-1">
-                <DialogClose asChild><Button type="button" variant="outline">Cancel</Button></DialogClose>
-                <Button type="submit" disabled={form.formState.isSubmitting}>
-                  {form.formState.isSubmitting ? <Loader2 className="animate-spin mr-2"/> : null}
-                  {form.formState.isSubmitting ? 'Saving Changes...' : 'Save Changes'}
-                  </Button>
-              </DialogFooter>
-            </form>
-          </Form>
-        </ScrollArea>
+                  <DialogFooter className="pt-6 mt-auto sticky bottom-0 bg-background pb-1">
+                    <DialogClose asChild><Button type="button" variant="outline">Cancel</Button></DialogClose>
+                    <Button type="submit" disabled={form.formState.isSubmitting} className="btn-primary-gradient">
+                      {form.formState.isSubmitting ? <Loader2 className="animate-spin mr-2"/> : <Save className="mr-2 h-4 w-4"/>}
+                      {form.formState.isSubmitting ? 'Saving...' : 'Save Changes'}
+                    </Button>
+                  </DialogFooter>
+                </form>
+              </Form>
+            </ScrollArea>
+          </main>
+        </div>
       </DialogContent>
     </Dialog>
   );
 }
+
