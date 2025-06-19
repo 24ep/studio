@@ -25,7 +25,7 @@ body {
     --popover: 0 0% 100%;
     --popover-foreground: 220 25% 20%;
 
-    /* Primary Color Definition for Light Theme - NEW DEFAULT GRADIENT */
+    /* Primary Color Definition for Light Theme - NEW DEFAULT GRADIENT (cyan-to-blue) */
     --primary-gradient-start-l: 179 67% 66%; /* hsla(179, 67%, 66%, 1) */
     --primary-gradient-end-l: 238 74% 61%;   /* hsla(238, 74%, 61%, 1) */
     --primary: hsl(var(--primary-gradient-start-l)); 
@@ -99,7 +99,7 @@ body {
     --popover: 220 15% 16%; 
     --popover-foreground: 210 30% 95%;
 
-    /* Primary Color Definition for Dark Theme - NEW DEFAULT GRADIENT */
+    /* Primary Color Definition for Dark Theme - NEW DEFAULT GRADIENT (cyan-to-blue) */
     --primary-gradient-start-d: 179 67% 66%; /* hsla(179, 67%, 66%, 1) */
     --primary-gradient-end-d: 238 74% 61%;   /* hsla(238, 74%, 61%, 1) */
     --primary: hsl(var(--primary-gradient-start-d)); 
@@ -180,8 +180,7 @@ body {
     color: hsl(var(--sidebar-hover-text-l));
   }
   /* Light theme: Active menu item style */
- :root:not(.dark) [data-sidebar="menu-button"][data-active="true"],
- :root:not(.dark) [data-sidebar="menu-button"][data-active="true"] button { 
+ :root:not(.dark) [data-sidebar="menu-button"][data-active="true"] { 
     background-image: linear-gradient(to right, hsl(var(--sidebar-active-bg-start-l)), hsl(var(--sidebar-active-bg-end-l)));
     color: hsl(var(--sidebar-active-text-l)) !important;
     box-shadow: 0 2px 8px -2px hsla(var(--sidebar-active-bg-start-l), 0.3);
@@ -204,8 +203,7 @@ body {
     color: hsl(var(--sidebar-hover-text-d));
   }
   /* Dark theme: Active menu item style */
-  .dark [data-sidebar="menu-button"][data-active="true"],
-  .dark [data-sidebar="menu-button"][data-active="true"] button { 
+  .dark [data-sidebar="menu-button"][data-active="true"] { 
     background-image: linear-gradient(to right, hsl(var(--sidebar-active-bg-start-d)), hsl(var(--sidebar-active-bg-end-d)));
     color: hsl(var(--sidebar-active-text-d)) !important;
     box-shadow: 0 2px 10px -3px hsla(var(--sidebar-active-bg-start-d), 0.4);
@@ -223,9 +221,9 @@ body {
   /* Primary buttons to use the new gradient */
   .btn-primary-gradient {
     background-color: hsl(var(--primary-gradient-start-l)); /* Fallback */
-    background-image: -ms-linear-gradient(90deg, hsl(var(--primary-gradient-start-l)) 0%, hsl(var(--primary-gradient-end-l)) 100%); /* Old IE */
     background-image: -moz-linear-gradient(90deg, hsl(var(--primary-gradient-start-l)) 0%, hsl(var(--primary-gradient-end-l)) 100%); /* Firefox */
     background-image: -webkit-linear-gradient(90deg, hsl(var(--primary-gradient-start-l)) 0%, hsl(var(--primary-gradient-end-l)) 100%); /* Old Chrome, Safari */
+    background-image: -ms-linear-gradient(90deg, hsl(var(--primary-gradient-start-l)) 0%, hsl(var(--primary-gradient-end-l)) 100%); /* Old IE */
     background-image: linear-gradient(90deg, hsl(var(--primary-gradient-start-l)) 0%, hsl(var(--primary-gradient-end-l)) 100%); /* Standard */
     color: hsl(var(--primary-foreground));
     border: none;
@@ -234,9 +232,9 @@ body {
 
   .dark .btn-primary-gradient {
     background-color: hsl(var(--primary-gradient-start-d)); /* Fallback */
-    background-image: -ms-linear-gradient(90deg, hsl(var(--primary-gradient-start-d)) 0%, hsl(var(--primary-gradient-end-d)) 100%);
     background-image: -moz-linear-gradient(90deg, hsl(var(--primary-gradient-start-d)) 0%, hsl(var(--primary-gradient-end-d)) 100%);
     background-image: -webkit-linear-gradient(90deg, hsl(var(--primary-gradient-start-d)) 0%, hsl(var(--primary-gradient-end-d)) 100%);
+    background-image: -ms-linear-gradient(90deg, hsl(var(--primary-gradient-start-d)) 0%, hsl(var(--primary-gradient-end-d)) 100%);
     background-image: linear-gradient(90deg, hsl(var(--primary-gradient-start-d)) 0%, hsl(var(--primary-gradient-end-d)) 100%); /* Standard */
     color: hsl(var(--primary-foreground));
     border: none;
@@ -312,5 +310,6 @@ body {
 
 
     
+
 
 

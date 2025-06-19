@@ -24,11 +24,11 @@ import SettingsLayout from '@/app/settings/layout'; // Import the new settings l
 const DEFAULT_APP_NAME = "CandiTrack";
 const DEFAULT_LOGO_ICON = <Package2 className="h-6 w-6" />;
 
-// Default primary gradient HSL strings
+// NEW Default primary gradient HSL strings (cyan-to-blue)
 const DEFAULT_PRIMARY_GRADIENT_START = "179 67% 66%";
 const DEFAULT_PRIMARY_GRADIENT_END = "238 74% 61%";
 
-// Default Sidebar colors (HSL strings) - these match globals.css defaults
+// Default Sidebar colors (HSL strings) - using the NEW primary gradient defaults
 const DEFAULT_SIDEBAR_COLORS: Record<SystemSettingKey, string> = {
   sidebarBgStartL: "220 25% 97%", sidebarBgEndL: "220 20% 94%", sidebarTextL: "220 25% 30%",
   sidebarActiveBgStartL: DEFAULT_PRIMARY_GRADIENT_START, sidebarActiveBgEndL: DEFAULT_PRIMARY_GRADIENT_END, sidebarActiveTextL: "0 0% 100%",      
@@ -69,7 +69,9 @@ function getPageTitle(pathname: string, currentAppName: string): string {
 function applySystemStyles(settingsMap: Map<string, string | null>) {
     const applyStyle = (variableName: string, settingKey: SystemSettingKey, defaultValue: string) => {
         const value = settingsMap.get(settingKey) || defaultValue;
-        if (value) document.documentElement.style.setProperty(variableName, value);
+        if (typeof document !== 'undefined' && value) {
+             document.documentElement.style.setProperty(variableName, value);
+        }
     };
 
     // Primary Colors
@@ -77,7 +79,11 @@ function applySystemStyles(settingsMap: Map<string, string | null>) {
     applyStyle('--primary-gradient-end-l', 'primaryGradientEnd', DEFAULT_PRIMARY_GRADIENT_END);
     applyStyle('--primary-gradient-start-d', 'primaryGradientStart', DEFAULT_PRIMARY_GRADIENT_START); 
     applyStyle('--primary-gradient-end-d', 'primaryGradientEnd', DEFAULT_PRIMARY_GRADIENT_END);   
-    document.documentElement.style.setProperty('--primary', `hsl(${settingsMap.get('primaryGradientStart') || DEFAULT_PRIMARY_GRADIENT_START})`);
+    const primaryStartForVar = settingsMap.get('primaryGradientStart') || DEFAULT_PRIMARY_GRADIENT_START;
+    if (typeof document !== 'undefined' && primaryStartForVar) {
+        document.documentElement.style.setProperty('--primary', `hsl(${primaryStartForVar})`);
+    }
+
 
     // Sidebar Light Theme
     applyStyle('--sidebar-bg-start-l', 'sidebarBgStartL', DEFAULT_SIDEBAR_COLORS.sidebarBgStartL);
@@ -128,11 +134,15 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
         } else {
           console.warn("Failed to fetch server-side system settings, using defaults.");
           const defaultSettingsMap = new Map(Object.entries(DEFAULT_SIDEBAR_COLORS).map(([key, value]) => [key as SystemSettingKey, value as string | null]));
+          defaultSettingsMap.set('primaryGradientStart', DEFAULT_PRIMARY_GRADIENT_START);
+          defaultSettingsMap.set('primaryGradientEnd', DEFAULT_PRIMARY_GRADIENT_END);
           applySystemStyles(defaultSettingsMap);
         }
       } catch (error) {
         console.error("Error fetching server-side system settings:", error);
         const defaultSettingsMap = new Map(Object.entries(DEFAULT_SIDEBAR_COLORS).map(([key, value]) => [key as SystemSettingKey, value as string | null]));
+        defaultSettingsMap.set('primaryGradientStart', DEFAULT_PRIMARY_GRADIENT_START);
+        defaultSettingsMap.set('primaryGradientEnd', DEFAULT_PRIMARY_GRADIENT_END);
         applySystemStyles(defaultSettingsMap);
       }
     };
@@ -140,15 +150,8 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
     updateAppConfigFromServer(); 
 
     const handleAppConfigChange = (event: Event) => {
-        const customEvent = event as CustomEvent<{ appName?: string; logoUrl?: string | null; primaryGradientStart?: string; primaryGradientEnd?: string; /* Add other relevant keys if Preferences page sends them */ }>;
-        if (customEvent.detail) {
-            if (customEvent.detail.appName) setCurrentAppName(customEvent.detail.appName);
-            if (customEvent.detail.logoUrl !== undefined) setAppLogoUrl(customEvent.detail.logoUrl);
-             // Re-fetch all settings to apply colors, or pass specific color settings if event detail includes them
-            updateAppConfigFromServer(); // Simplest way to ensure all color settings are reapplied
-        } else {
-            updateAppConfigFromServer();
-        }
+        // Re-fetch all settings to apply colors and other configs
+        updateAppConfigFromServer();
     };
     
     window.addEventListener('appConfigChanged', handleAppConfigChange);

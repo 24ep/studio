@@ -18,7 +18,7 @@ const DEFAULT_APP_NAME = "CandiTrack";
 const DEFAULT_LOGIN_BG_GRADIENT = "linear-gradient(90deg, rgba(255, 255, 255, 1) 0%, rgba(245, 245, 255, 1) 100%, rgba(252, 252, 255, 1) 55%)";
 const DEFAULT_LOGIN_BG_GRADIENT_DARK = "linear-gradient(90deg, hsl(220, 15%, 9%) 0%, hsl(220, 15%, 11%) 100%, hsl(220, 15%, 10%) 55%)";
 
-// Default HSL strings for primary gradient, matching globals.css and preferences page
+// Updated HSL strings for primary gradient, matching globals.css and preferences page
 const DEFAULT_PRIMARY_GRADIENT_START_SIGNIN = "179 67% 66%";
 const DEFAULT_PRIMARY_GRADIENT_END_SIGNIN = "238 74% 61%";
 
@@ -88,7 +88,6 @@ export default function SignInPage() {
       if (typeof document !== 'undefined') {
         document.documentElement.style.setProperty('--primary-gradient-start-l', primaryStart);
         document.documentElement.style.setProperty('--primary-gradient-end-l', primaryEnd);
-        // For simplicity, assume dark mode uses same primary colors on login page or they are handled by globals.css default
         document.documentElement.style.setProperty('--primary-gradient-start-d', primaryStart); 
         document.documentElement.style.setProperty('--primary-gradient-end-d', primaryEnd);
         document.documentElement.style.setProperty('--primary', `hsl(${primaryStart})`);
@@ -124,18 +123,8 @@ export default function SignInPage() {
     fetchAppAndLoginConfig();
 
     const handleAppConfigChange = (event: Event) => {
-        const customEvent = event as CustomEvent<{ appName?: string; logoUrl?: string | null }>;
-        if (customEvent.detail) {
-            if (customEvent.detail.appName) {
-                setCurrentAppName(customEvent.detail.appName);
-            }
-            if (customEvent.detail.logoUrl !== undefined) { 
-                 setAppLogoUrl(customEvent.detail.logoUrl);
-            }
-        } else {
-            // Refetch if no detail, could be a more generic update signal
-            fetchAppAndLoginConfig();
-        }
+        // Re-fetch all configurations to ensure login page also picks up primary color changes.
+        fetchAppAndLoginConfig();
     };
     window.addEventListener('appConfigChanged', handleAppConfigChange);
 
@@ -249,3 +238,4 @@ export default function SignInPage() {
     
 
     
+

@@ -72,9 +72,7 @@ export function SidebarNav() {
               >
                 <a>
                   <item.icon className="h-5 w-5" />
-                  <button className="truncate bg-transparent border-none p-0 m-0 text-left font-inherit text-inherit hover:bg-transparent focus:outline-none focus-visible:ring-0 w-auto">
-                    {item.label}
-                  </button>
+                  <span className="truncate">{item.label}</span>
                 </a>
               </SidebarMenuButton>
             </Link>
@@ -94,9 +92,7 @@ export function SidebarNav() {
               >
                 <a>
                   <myTaskBoardNavItem.icon className="h-5 w-5" />
-                  <button className="truncate bg-transparent border-none p-0 m-0 text-left font-inherit text-inherit hover:bg-transparent focus:outline-none focus-visible:ring-0 w-auto">
-                    {myTaskBoardNavItem.label}
-                  </button>
+                  <span className="truncate">{myTaskBoardNavItem.label}</span>
                 </a>
               </SidebarMenuButton>
             </Link>
@@ -116,9 +112,7 @@ export function SidebarNav() {
                 >
                   <a>
                     <settingsNavItem.icon className="h-5 w-5" />
-                    <button className="truncate bg-transparent border-none p-0 m-0 text-left font-inherit text-inherit hover:bg-transparent focus:outline-none focus-visible:ring-0 w-auto">
-                      {settingsNavItem.label}
-                    </button>
+                    <span className="truncate">{settingsNavItem.label}</span>
                   </a>
                 </SidebarMenuButton>
              </Link>
@@ -127,4 +121,3 @@ export function SidebarNav() {
       </SidebarMenu>
   );
 }
-
