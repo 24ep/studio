@@ -30,9 +30,9 @@ const DEFAULT_PRIMARY_GRADIENT_END = "238 74% 61%";
 const DEFAULT_SIDEBAR_BG_START_L = "220 25% 97%";
 const DEFAULT_SIDEBAR_BG_END_L = "220 20% 94%";
 const DEFAULT_SIDEBAR_TEXT_L = "220 25% 30%";
-const DEFAULT_SIDEBAR_ACTIVE_BG_START_L = DEFAULT_PRIMARY_GRADIENT_START; 
-const DEFAULT_SIDEBAR_ACTIVE_BG_END_L = DEFAULT_PRIMARY_GRADIENT_END;   
-const DEFAULT_SIDEBAR_ACTIVE_TEXT_L = "0 0% 100%";      
+const DEFAULT_SIDEBAR_ACTIVE_BG_START_L = DEFAULT_PRIMARY_GRADIENT_START;
+const DEFAULT_SIDEBAR_ACTIVE_BG_END_L = DEFAULT_PRIMARY_GRADIENT_END;
+const DEFAULT_SIDEBAR_ACTIVE_TEXT_L = "0 0% 100%";
 const DEFAULT_SIDEBAR_HOVER_BG_L = "220 10% 92%";
 const DEFAULT_SIDEBAR_HOVER_TEXT_L = "220 25% 25%";
 const DEFAULT_SIDEBAR_BORDER_L = "220 15% 85%";
@@ -40,9 +40,9 @@ const DEFAULT_SIDEBAR_BORDER_L = "220 15% 85%";
 const DEFAULT_SIDEBAR_BG_START_D = "220 15% 12%";
 const DEFAULT_SIDEBAR_BG_END_D = "220 15% 9%";
 const DEFAULT_SIDEBAR_TEXT_D = "210 30% 85%";
-const DEFAULT_SIDEBAR_ACTIVE_BG_START_D = DEFAULT_PRIMARY_GRADIENT_START; 
-const DEFAULT_SIDEBAR_ACTIVE_BG_END_D = DEFAULT_PRIMARY_GRADIENT_END;   
-const DEFAULT_SIDEBAR_ACTIVE_TEXT_D = "0 0% 100%";      
+const DEFAULT_SIDEBAR_ACTIVE_BG_START_D = DEFAULT_PRIMARY_GRADIENT_START;
+const DEFAULT_SIDEBAR_ACTIVE_BG_END_D = DEFAULT_PRIMARY_GRADIENT_END;
+const DEFAULT_SIDEBAR_ACTIVE_TEXT_D = "0 0% 100%";
 const DEFAULT_SIDEBAR_HOVER_BG_D = "220 15% 20%";
 const DEFAULT_SIDEBAR_HOVER_TEXT_D = "210 30% 90%";
 const DEFAULT_SIDEBAR_BORDER_D = "220 15% 18%";
@@ -121,7 +121,7 @@ export default function PreferencesSettingsPage() {
         throw new Error(errorData.message);
       }
       const settings: SystemSetting[] = await response.json();
-      
+
       const settingsMap = new Map(settings.map(s => [s.key, s.value]));
 
       setAppName(settingsMap.get('appName') || DEFAULT_APP_NAME);
@@ -187,7 +187,7 @@ export default function PreferencesSettingsPage() {
     const file = event.target.files?.[0];
     if (file) {
       if (file.type.startsWith('image/')) {
-        if (file.size > 500 * 1024) { 
+        if (file.size > 500 * 1024) {
             toast({ title: "Image Too Large", description: "Please select an image smaller than 500KB.", variant: "destructive" });
             if (type === 'appLogo') { setSelectedLogoFile(null); setLogoPreviewUrl(savedLogoDataUrl); }
             else { setSelectedLoginBgFile(null); setLoginBgImagePreviewUrl(savedLoginBgImageUrl); }
@@ -227,7 +227,7 @@ export default function PreferencesSettingsPage() {
       } else {
         setLogoPreviewUrl(savedLogoDataUrl);
       }
-    } else { 
+    } else {
       setSelectedLoginBgFile(null);
       if (clearSaved) {
         await saveSpecificSetting('loginPageBackgroundImageUrl', null);
@@ -239,7 +239,7 @@ export default function PreferencesSettingsPage() {
       }
     }
   };
-  
+
   const saveSpecificSetting = async (key: SystemSettingKey, value: string | null) => {
     setIsSaving(true);
     try {
@@ -260,7 +260,7 @@ export default function PreferencesSettingsPage() {
   const handleSavePreferences = async () => {
     if (!isClient) return;
     setIsSaving(true);
-    
+
     const settingsToUpdate: SystemSetting[] = [
       { key: 'appName', value: appName || DEFAULT_APP_NAME },
       { key: 'appThemePreference', value: themePreference },
@@ -276,12 +276,13 @@ export default function PreferencesSettingsPage() {
       })),
     ];
 
-    if (selectedLogoFile && logoPreviewUrl) { 
+    if (selectedLogoFile && logoPreviewUrl) {
       settingsToUpdate.push({ key: 'appLogoDataUrl', value: logoPreviewUrl });
     }
     if (selectedLoginBgFile && loginBgImagePreviewUrl && loginBgType === 'image') {
       settingsToUpdate.push({ key: 'loginPageBackgroundImageUrl', value: loginBgImagePreviewUrl });
     } else if (loginBgType !== 'image' && savedLoginBgImageUrl !== null) {
+      // If user switched away from image type, and there was a saved image, clear it
       settingsToUpdate.push({ key: 'loginPageBackgroundImageUrl', value: null });
     }
 
@@ -297,14 +298,14 @@ export default function PreferencesSettingsPage() {
         const errorData = await response.json().catch(() => ({ message: 'Failed to save preferences to server' }));
         throw new Error(errorData.message);
       }
-      
+
       const updatedSettingsList: SystemSetting[] = await response.json();
       const updatedSettingsMap = new Map(updatedSettingsList.map(s => [s.key, s.value]));
-      
+
       const updatedLogoUrl = updatedSettingsMap.get('appLogoDataUrl') || null;
-      setSavedLogoDataUrl(updatedLogoUrl); 
+      setSavedLogoDataUrl(updatedLogoUrl);
       setLogoPreviewUrl(updatedLogoUrl);
-      
+
       setThemePreference((updatedSettingsMap.get('appThemePreference') as ThemePreference) || 'system');
       setAppName(updatedSettingsMap.get('appName') || DEFAULT_APP_NAME);
 
@@ -332,7 +333,7 @@ export default function PreferencesSettingsPage() {
         sidebarBorderL: settingsMap.get('sidebarBorderL') || DEFAULT_SIDEBAR_BORDER_L,
         sidebarBgStartD: updatedSettingsMap.get('sidebarBgStartD') || DEFAULT_SIDEBAR_BG_START_D,
         sidebarBgEndD: updatedSettingsMap.get('sidebarBgEndD') || DEFAULT_SIDEBAR_BG_END_D,
-        sidebarTextD: settingsMap.get('sidebarTextD') || DEFAULT_SIDEBAR_TEXT_D,
+        sidebarTextD: updatedSettingsMap.get('sidebarTextD') || DEFAULT_SIDEBAR_TEXT_D,
         sidebarActiveBgStartD: updatedSettingsMap.get('sidebarActiveBgStartD') || DEFAULT_SIDEBAR_ACTIVE_BG_START_D,
         sidebarActiveBgEndD: updatedSettingsMap.get('sidebarActiveBgEndD') || DEFAULT_SIDEBAR_ACTIVE_BG_END_D,
         sidebarActiveTextD: updatedSettingsMap.get('sidebarActiveTextD') || DEFAULT_SIDEBAR_ACTIVE_TEXT_D,
@@ -342,22 +343,22 @@ export default function PreferencesSettingsPage() {
       });
 
       toast({ title: 'Preferences Saved', description: 'Your application preferences have been saved to the server.' });
-      window.dispatchEvent(new CustomEvent('appConfigChanged', { 
-        detail: { 
+      window.dispatchEvent(new CustomEvent('appConfigChanged', {
+        detail: {
           appName: updatedSettingsMap.get('appName') || appName || DEFAULT_APP_NAME,
           logoUrl: updatedLogoUrl,
           primaryGradientStart: updatedSettingsMap.get('primaryGradientStart') || primaryGradientStart,
           primaryGradientEnd: updatedSettingsMap.get('primaryGradientEnd') || primaryGradientEnd,
           // Include sidebar colors if AppLayout needs to react to them specifically
           // ...sidebarColors // if sending the whole object is useful
-        } 
+        }
       }));
     } catch (error) {
       console.error("Error saving preferences to server:", error);
       toast({ title: "Error Saving Preferences", description: (error as Error).message, variant: "destructive" });
     } finally {
       setIsSaving(false);
-      setSelectedLogoFile(null); 
+      setSelectedLogoFile(null);
       setSelectedLoginBgFile(null);
     }
   };
@@ -376,7 +377,7 @@ export default function PreferencesSettingsPage() {
       </div>
     );
   }
-  
+
   const renderSidebarColorInputs = (theme: 'Light' | 'Dark') => {
     const suffix = theme === 'Light' ? 'L' : 'D';
     const keys: (keyof SidebarColors)[] = [
@@ -416,11 +417,11 @@ export default function PreferencesSettingsPage() {
 
   return (
     <Card className="shadow-lg overflow-hidden">
-      <div className="flex flex-col md:flex-row min-h-[calc(100vh-10rem)]"> 
+      <div className="flex flex-col md:flex-row min-h-[calc(100vh-10rem)]">
         <div className="hidden md:block md:w-64 lg:w-72 bg-preferences-gradient p-6 text-primary-foreground sticky top-0 h-full">
           <div className="space-y-6">
             {PREFERENCE_SECTIONS.map(section => (
-              <a key={section.id} href={`#section-${section.id}`} 
+              <a key={section.id} href={`#section-${section.id}`}
                  className="flex items-center space-x-3 opacity-80 hover:opacity-100 transition-opacity py-2 px-2 rounded-md hover:bg-white/10">
                 <section.icon className="h-5 w-5" />
                 <span>{section.label}</span>
@@ -521,9 +522,3 @@ export default function PreferencesSettingsPage() {
     </Card>
   );
 }
-    
-
-    
-      
-
-    
