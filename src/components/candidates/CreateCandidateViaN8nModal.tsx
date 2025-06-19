@@ -127,24 +127,24 @@ export function CreateCandidateViaN8nModal({ isOpen, onOpenChange, onProcessingS
       if (!response.ok) {
         let description = result.message || `Failed to send PDF for automated candidate creation. Status: ${response.status}`;
         
-        // Check for specific n8n "No item to return" error
-        if (response.status === 500 && result.message?.includes("n8n responded with status 500") && result.errorDetails) {
+        if (response.status === 500 && typeof result.errorDetails === 'string') {
             try {
-                const n8nErrorDetails = JSON.parse(String(result.errorDetails));
-                if (n8nErrorDetails.message === "No item to return got found") {
+                const parsedN8nError = JSON.parse(result.errorDetails);
+                if (parsedN8nError.message === "No item to return got found") {
                     description = "The n8n workflow reported: 'No item to return got found'. This means the workflow ran but didn't produce the expected candidate data. Please check the n8n workflow configuration and execution logs.";
-                } else {
+                } else if (parsedN8nError.message === "Error in workflow") {
+                    description = "The n8n workflow reported a general error: 'Error in workflow'. This indicates an issue within the n8n workflow itself. Please check the n8n execution logs for more specific details about what went wrong during its processing.";
+                } else { // Other JSON error from n8n
                     const detailsSnippet = String(result.errorDetails).substring(0, 150) + (String(result.errorDetails).length > 150 ? '...' : '');
                     description = `The n8n workflow encountered an internal server error (500). Please check your n8n workflow logs for details. n8n Output: ${detailsSnippet}`;
                 }
-            } catch (e) {
-                // If parsing errorDetails fails, stick to a more generic message
+            } catch (e) { // JSON.parse failed or errorDetails was not a JSON string
                 const detailsSnippet = String(result.errorDetails).substring(0, 150) + (String(result.errorDetails).length > 150 ? '...' : '');
-                description = `The n8n workflow encountered an internal server error (500). Please check your n8n workflow logs for details. n8n Output: ${detailsSnippet}`;
+                description = `The n8n workflow encountered an internal server error (500) with non-JSON output. Please check your n8n workflow logs. Output Snippet: ${detailsSnippet}`;
             }
         } else if (result.message === "n8n integration for candidate creation is not configured on the server.") { 
           description = "Automated candidate creation is not configured on the server. Please ensure the Generic PDF Webhook URL environment variable is set.";
-        } else if (result.errorDetails) {
+        } else if (result.errorDetails) { // Non-500 error, but with errorDetails
             const detailsSnippet = String(result.errorDetails).substring(0, 150) + (String(result.errorDetails).length > 150 ? '...' : '');
             description = `${result.message || 'Failed to send PDF.'} Details: ${detailsSnippet}`;
         }
