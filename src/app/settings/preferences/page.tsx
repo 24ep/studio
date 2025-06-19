@@ -22,9 +22,10 @@ const DEFAULT_LOGIN_BG_TYPE: LoginPageBackgroundType = "default";
 const DEFAULT_LOGIN_BG_COLOR1 = "#F0F4F7";
 const DEFAULT_LOGIN_BG_COLOR2 = "#3F51B5";
 
-// Updated Default HSL strings for primary gradient
-const DEFAULT_PRIMARY_GRADIENT_START = "179 67% 66%";
-const DEFAULT_PRIMARY_GRADIENT_END = "238 74% 61%";
+// Default HSL strings for primary gradient (Cyan to Blue)
+const DEFAULT_PRIMARY_GRADIENT_START = "179 67% 66%"; // hsla(179, 67%, 66%, 1)
+const DEFAULT_PRIMARY_GRADIENT_END = "238 74% 61%";   // hsla(238, 74%, 61%, 1)
+
 
 // Sidebar default colors (HSL strings)
 const DEFAULT_SIDEBAR_BG_START_L = "220 25% 97%";
@@ -117,7 +118,7 @@ export default function PreferencesSettingsPage() {
     try {
       const response = await fetch('/api/settings/system-settings');
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ message: 'Failed to load system settings. Response not valid JSON.' }));
+        const errorData = await response.json().catch(() => ({ message: 'Failed to load system settings' }));
         throw new Error(errorData.message);
       }
       const settings: SystemSetting[] = await response.json();
@@ -329,8 +330,8 @@ export default function PreferencesSettingsPage() {
         sidebarActiveBgEndL: updatedSettingsMap.get('sidebarActiveBgEndL') || DEFAULT_SIDEBAR_ACTIVE_BG_END_L,
         sidebarActiveTextL: updatedSettingsMap.get('sidebarActiveTextL') || DEFAULT_SIDEBAR_ACTIVE_TEXT_L,
         sidebarHoverBgL: updatedSettingsMap.get('sidebarHoverBgL') || DEFAULT_SIDEBAR_HOVER_BG_L,
-        sidebarHoverTextL: settingsMap.get('sidebarHoverTextL') || DEFAULT_SIDEBAR_HOVER_TEXT_L,
-        sidebarBorderL: settingsMap.get('sidebarBorderL') || DEFAULT_SIDEBAR_BORDER_L,
+        sidebarHoverTextL: updatedSettingsMap.get('sidebarHoverTextL') || DEFAULT_SIDEBAR_HOVER_TEXT_L,
+        sidebarBorderL: updatedSettingsMap.get('sidebarBorderL') || DEFAULT_SIDEBAR_BORDER_L,
         sidebarBgStartD: updatedSettingsMap.get('sidebarBgStartD') || DEFAULT_SIDEBAR_BG_START_D,
         sidebarBgEndD: updatedSettingsMap.get('sidebarBgEndD') || DEFAULT_SIDEBAR_BG_END_D,
         sidebarTextD: updatedSettingsMap.get('sidebarTextD') || DEFAULT_SIDEBAR_TEXT_D,
@@ -338,8 +339,8 @@ export default function PreferencesSettingsPage() {
         sidebarActiveBgEndD: updatedSettingsMap.get('sidebarActiveBgEndD') || DEFAULT_SIDEBAR_ACTIVE_BG_END_D,
         sidebarActiveTextD: updatedSettingsMap.get('sidebarActiveTextD') || DEFAULT_SIDEBAR_ACTIVE_TEXT_D,
         sidebarHoverBgD: updatedSettingsMap.get('sidebarHoverBgD') || DEFAULT_SIDEBAR_HOVER_BG_D,
-        sidebarHoverTextD: settingsMap.get('sidebarHoverTextD') || DEFAULT_SIDEBAR_HOVER_TEXT_D,
-        sidebarBorderD: settingsMap.get('sidebarBorderD') || DEFAULT_SIDEBAR_BORDER_D,
+        sidebarHoverTextD: updatedSettingsMap.get('sidebarHoverTextD') || DEFAULT_SIDEBAR_HOVER_TEXT_D,
+        sidebarBorderD: updatedSettingsMap.get('sidebarBorderD') || DEFAULT_SIDEBAR_BORDER_D,
       });
 
       toast({ title: 'Preferences Saved', description: 'Your application preferences have been saved to the server.' });
@@ -399,11 +400,11 @@ export default function PreferencesSettingsPage() {
             <div className="flex items-center gap-2 mt-1">
               {/* Assuming HSL for input type="text", color picker for hex */}
               <Input id={key} type="text" value={sidebarColors[key]} onChange={(e) => handleSidebarColorChange(key, e.target.value)} placeholder="e.g., 220 25% 97%" className="h-9 text-xs flex-grow" />
-              <Input type="color" value={`hsl(${sidebarColors[key].replace(/%/g,'').replace(/\s+/g,',')})`} onChange={(e) => {
+              <Input type="color" value={sidebarColors[key].includes('#') ? sidebarColors[key] : `hsl(${sidebarColors[key].replace(/%/g,'').replace(/\s+/g,',')})`} onChange={(e) => {
                   // Rough conversion from hex to HSL string for consistency if needed, or just store hex
                   // For simplicity, we'll store the text input, color picker is for convenience.
                   // User should ensure the text input is valid HSL or hex for CSS.
-                  // Or, implement a hex to HSL converter.
+                  handleSidebarColorChange(key, e.target.value); // Directly update with hex for now
                 }} className="w-10 h-9 p-1" title="Pick color (input stores text value)"
               />
             </div>
@@ -469,14 +470,14 @@ export default function PreferencesSettingsPage() {
                   <Label htmlFor="primary-gradient-start" className="text-sm">Gradient Start Color</Label>
                   <div className="flex items-center gap-2 mt-1">
                     <Input id="primary-gradient-start" type="text" value={primaryGradientStart} onChange={(e) => setPrimaryGradientStart(e.target.value)} placeholder="e.g., 179 67% 66% or #6FE3E1" className="flex-grow"/>
-                    <Input type="color" value={primaryGradientStart.startsWith('#') ? primaryGradientStart : `#${primaryGradientStart.replace(/[^0-9a-fA-F]/g, '')}`} onChange={(e) => setPrimaryGradientStart(e.target.value)} className="w-10 h-10 p-1 flex-shrink-0" title="Pick color"/>
+                    <Input type="color" value={primaryGradientStart.startsWith('#') ? primaryGradientStart : `hsl(${primaryGradientStart.replace(/%/g,'').replace(/\s+/g,',')})`} onChange={(e) => setPrimaryGradientStart(e.target.value)} className="w-10 h-10 p-1 flex-shrink-0" title="Pick color"/>
                   </div>
                 </div>
                 <div>
                   <Label htmlFor="primary-gradient-end" className="text-sm">Gradient End Color</Label>
                    <div className="flex items-center gap-2 mt-1">
                     <Input id="primary-gradient-end" type="text" value={primaryGradientEnd} onChange={(e) => setPrimaryGradientEnd(e.target.value)} placeholder="e.g., 238 74% 61% or #5257E5" className="flex-grow"/>
-                    <Input type="color" value={primaryGradientEnd.startsWith('#') ? primaryGradientEnd : `#${primaryGradientEnd.replace(/[^0-9a-fA-F]/g, '')}`} onChange={(e) => setPrimaryGradientEnd(e.target.value)} className="w-10 h-10 p-1 flex-shrink-0" title="Pick color"/>
+                    <Input type="color" value={primaryGradientEnd.startsWith('#') ? primaryGradientEnd : `hsl(${primaryGradientEnd.replace(/%/g,'').replace(/\s+/g,',')})`} onChange={(e) => setPrimaryGradientEnd(e.target.value)} className="w-10 h-10 p-1 flex-shrink-0" title="Pick color"/>
                   </div>
                 </div>
               </div>
