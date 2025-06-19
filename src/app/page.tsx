@@ -3,9 +3,9 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import type { Candidate, Position } from "@/lib/types";
+import type { Candidate, Position, CandidateStatus } from "@/lib/types";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Users, Briefcase, CheckCircle2, UserPlus, FileWarning, UserRoundSearch, ServerCrash, Loader2 } from "lucide-react";
+import { Users, Briefcase, CheckCircle2, UserPlus, FileWarning, UserRoundSearch, ServerCrash, Loader2, ListChecks } from "lucide-react";
 import { isToday, parseISO } from 'date-fns';
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -13,16 +13,20 @@ import { signIn, useSession } from "next-auth/react";
 import { CandidatesPerPositionChart } from '@/components/dashboard/CandidatesPerPositionChart';
 import { useRouter } from 'next/navigation';
 
+// Define active statuses that constitute a backlog item
+const BACKLOG_EXCLUSION_STATUSES: CandidateStatus[] = ['Hired', 'Rejected', 'Offer Accepted'];
+
 export default function DashboardPage() {
   const [candidates, setCandidates] = useState<Candidate[]>([]);
   const [positions, setPositions] = useState<Position[]>([]);
+  const [myBacklogCandidates, setMyBacklogCandidates] = useState<Candidate[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [fetchError, setFetchError] = useState<string | null>(null);
   const { data: session, status: sessionStatus } = useSession();
   const router = useRouter();
 
   const fetchData = useCallback(async () => {
-    if (sessionStatus !== 'authenticated') {
+    if (sessionStatus !== 'authenticated' || !session?.user?.id) {
       setIsLoading(false);
       return;
     }
@@ -31,23 +35,49 @@ export default function DashboardPage() {
     let accumulatedFetchError = "";
 
     try {
-      const [candidatesRes, positionsRes] = await Promise.all([
-        fetch('/api/candidates'),
+      const candidatePromises = [
+        fetch('/api/candidates'), // Fetches general candidate list
+      ];
+      
+      // Fetch "My Action Items" if user is Recruiter or Admin
+      if (session.user.role === 'Recruiter' || session.user.role === 'Admin') {
+        candidatePromises.push(fetch(`/api/candidates?assignedRecruiterId=${session.user.id}`));
+      } else {
+        candidatePromises.push(Promise.resolve(null)); // Placeholder if not fetching backlog
+      }
+
+      const [
+        generalCandidatesRes,
+        myBacklogCandidatesResOrNull, // This will be null if not fetched
+        positionsRes
+      ] = await Promise.all([
+        ...candidatePromises,
         fetch('/api/positions'),
       ]);
 
-      if (!candidatesRes.ok) {
-        const errorText = candidatesRes.statusText || `Status: ${candidatesRes.status}`;
-        if (candidatesRes.status === 401) {
+
+      if (!generalCandidatesRes.ok) {
+        const errorText = generalCandidatesRes.statusText || `Status: ${generalCandidatesRes.status}`;
+        if (generalCandidatesRes.status === 401) {
           signIn(undefined, { callbackUrl: window.location.pathname });
           return; 
         }
         accumulatedFetchError += `Failed to fetch candidates: ${errorText}. `;
         setCandidates([]);
       } else {
-        const candidatesData: Candidate[] = await candidatesRes.json();
+        const candidatesData: Candidate[] = await generalCandidatesRes.json();
         setCandidates(candidatesData);
       }
+
+      if (myBacklogCandidatesResOrNull && myBacklogCandidatesResOrNull.ok) {
+        const backlogData: Candidate[] = await myBacklogCandidatesResOrNull.json();
+        setMyBacklogCandidates(backlogData.filter(c => !BACKLOG_EXCLUSION_STATUSES.includes(c.status)));
+      } else if (myBacklogCandidatesResOrNull) { // If fetch was attempted but failed
+         const errorText = myBacklogCandidatesResOrNull.statusText || `Status: ${myBacklogCandidatesResOrNull.status}`;
+         accumulatedFetchError += `Failed to fetch user's backlog: ${errorText}. `;
+         setMyBacklogCandidates([]);
+      }
+
 
       if (!positionsRes.ok) {
         const errorText = positionsRes.statusText || `Status: ${positionsRes.status}`;
@@ -72,10 +102,12 @@ export default function DashboardPage() {
       setFetchError(genericMessage);
       setCandidates([]);
       setPositions([]);
+      setMyBacklogCandidates([]);
     } finally {
       setIsLoading(false);
     }
-  }, [sessionStatus, signIn]); 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sessionStatus, session?.user?.id, session?.user?.role]); 
 
   useEffect(() => {
     if (sessionStatus === 'unauthenticated') {
@@ -159,8 +191,52 @@ export default function DashboardPage() {
         ))}
       </div>
 
-      <div className="grid gap-6 md:grid-cols-1 lg:grid-cols-2">
-        <Card>
+      <div className="grid gap-6 md:grid-cols-1 lg:grid-cols-3">
+        {(session?.user?.role === 'Recruiter' || session?.user?.role === 'Admin') && (
+          <Card className="lg:col-span-1">
+            <CardHeader>
+              <CardTitle className="flex items-center text-lg">
+                <ListChecks className="mr-2 h-5 w-5 text-primary" />
+                My Action Items ({myBacklogCandidates.length})
+              </CardTitle>
+              <CardDescription>Active candidates assigned to you requiring attention.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {myBacklogCandidates.length > 0 ? (
+                <ul className="space-y-3">
+                  {myBacklogCandidates.slice(0, 5).map(candidate => (
+                    <li key={candidate.id} className="flex items-center space-x-3 p-2 bg-muted/50 rounded-md hover:bg-muted/80 transition-colors">
+                      <Avatar className="h-9 w-9">
+                        <AvatarImage src={candidate.avatarUrl || `https://placehold.co/40x40.png?text=${candidate.name.charAt(0)}`} alt={candidate.name} data-ai-hint="person avatar"/>
+                        <AvatarFallback>{candidate.name.charAt(0).toUpperCase()}</AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1 min-w-0">
+                        <Link href={`/candidates/${candidate.id}`} passHref><span className="text-sm font-medium text-foreground hover:underline cursor-pointer truncate block">{candidate.name}</span></Link>
+                        <p className="text-xs text-muted-foreground truncate" title={candidate.position?.title || 'N/A - General Application'}>
+                          {candidate.position?.title || 'N/A - General Application'} - <span className="capitalize">{candidate.status}</span>
+                        </p>
+                      </div>
+                    </li>
+                  ))}
+                  {myBacklogCandidates.length > 5 && (
+                     <Link href="/my-tasks" passHref>
+                        <Button variant="link" className="text-sm p-0 h-auto mt-2">
+                            View all {myBacklogCandidates.length} action items...
+                        </Button>
+                    </Link>
+                  )}
+                </ul>
+              ) : (
+                <div className="flex flex-col items-center justify-center py-6 text-center">
+                    <CheckCircle2 className="h-10 w-10 text-green-500 mb-2" />
+                    <p className="text-sm text-muted-foreground">Your backlog is clear!</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
+
+        <Card className="lg:col-span-1">
           <CardHeader>
             <CardTitle className="flex items-center text-lg">
               <UserPlus className="mr-2 h-5 w-5 text-primary" />
@@ -174,18 +250,18 @@ export default function DashboardPage() {
                 {newCandidatesTodayList.slice(0, 5).map(candidate => (
                   <li key={candidate.id} className="flex items-center space-x-3 p-2 bg-muted/50 rounded-md hover:bg-muted/80 transition-colors">
                     <Avatar className="h-9 w-9">
-                      <AvatarImage src={`https://placehold.co/40x40.png?text=${candidate.name.charAt(0)}`} alt={candidate.name} data-ai-hint="person avatar"/>
+                      <AvatarImage src={candidate.avatarUrl || `https://placehold.co/40x40.png?text=${candidate.name.charAt(0)}`} alt={candidate.name} data-ai-hint="person avatar"/>
                       <AvatarFallback>{candidate.name.charAt(0).toUpperCase()}</AvatarFallback>
                     </Avatar>
-                    <div>
-                      <p className="text-sm font-medium text-foreground">{candidate.name}</p>
-                      <p className="text-xs text-muted-foreground">{candidate.position?.title || 'N/A'}</p>
+                    <div className="flex-1 min-w-0">
+                      <Link href={`/candidates/${candidate.id}`} passHref><span className="text-sm font-medium text-foreground hover:underline cursor-pointer truncate block">{candidate.name}</span></Link>
+                      <p className="text-xs text-muted-foreground truncate" title={candidate.position?.title || 'N/A - General Application'}>{candidate.position?.title || 'N/A - General Application'}</p>
                     </div>
                   </li>
                 ))}
                 {newCandidatesTodayList.length > 5 && (
                    <Link href="/candidates" passHref>
-                      <Button variant="link" className="text-sm p-0 h-auto">
+                      <Button variant="link" className="text-sm p-0 h-auto mt-2">
                           View all {newCandidatesTodayList.length} new candidates...
                       </Button>
                   </Link>
@@ -200,7 +276,7 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="lg:col-span-1">
           <CardHeader>
             <CardTitle className="flex items-center text-lg">
               <FileWarning className="mr-2 h-5 w-5 text-amber-600" />
@@ -213,13 +289,13 @@ export default function DashboardPage() {
               <ul className="space-y-2">
                 {openPositionsWithNoCandidates.slice(0,5).map(position => (
                   <li key={position.id} className="p-2 bg-muted/50 rounded-md hover:bg-muted/80 transition-colors">
-                    <p className="text-sm font-medium text-foreground">{position.title}</p>
-                    <p className="text-xs text-muted-foreground">{position.department}</p>
+                    <Link href={`/positions/${position.id}`} passHref><span className="text-sm font-medium text-foreground hover:underline cursor-pointer block truncate">{position.title}</span></Link>
+                    <p className="text-xs text-muted-foreground truncate">{position.department}</p>
                   </li>
                 ))}
                 {openPositionsWithNoCandidates.length > 5 && (
                    <Link href="/positions" passHref>
-                      <Button variant="link" className="text-sm p-0 h-auto">
+                      <Button variant="link" className="text-sm p-0 h-auto mt-2">
                           View all {openPositionsWithNoCandidates.length} positions...
                       </Button>
                   </Link>
@@ -240,3 +316,4 @@ export default function DashboardPage() {
     </div>
   );
 }
+

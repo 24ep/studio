@@ -245,8 +245,8 @@ export default function MyTasksPage() {
 
   return (
     <div className="flex flex-col md:flex-row gap-6 h-full">
-        <aside className="w-full md:w-72 lg:w-80 flex-shrink-0 md:sticky md:top-0 md:h-screen">
-           <ScrollArea className="h-full md:max-h-[calc(100vh-var(--header-height,4rem)-2rem)] md:pr-2">
+        <aside className="w-full md:w-72 lg:w-80 flex-shrink-0 md:sticky md:top-[calc(var(--header-height,4rem)_+_1rem)] md:max-h-[calc(100vh-var(--header-height,4rem)-2rem)]">
+           <ScrollArea className="h-full md:pr-2">
                 <div className="md:hidden mb-3"> 
                     {session?.user?.role === 'Admin' && (
                         <div className="w-full">
@@ -264,9 +264,9 @@ export default function MyTasksPage() {
                                 </PopoverTrigger>
                                 <PopoverContent className="w-[--trigger-width] p-0 dropdown-content-height">
                                     <ScrollArea className="max-h-60">
-                                        <Button variant="ghost" className={cn("w-full justify-start px-2 py-1.5 text-xs font-normal h-auto", selectedRecruiterFilter === MY_ASSIGNED_VALUE && "bg-accent text-accent-foreground")} onClick={() => handleRecruiterFilterChange(MY_ASSIGNED_VALUE)}><Check className={cn("mr-2 h-4 w-4", selectedRecruiterFilter === MY_ASSIGNED_VALUE ? "opacity-100" : "opacity-0")}/>My Assigned (Admin)</Button>
-                                        <Button variant="ghost" className={cn("w-full justify-start px-2 py-1.5 text-xs font-normal h-auto", selectedRecruiterFilter === ALL_CANDIDATES_ADMIN_VALUE && "bg-accent text-accent-foreground")} onClick={() => handleRecruiterFilterChange(ALL_CANDIDATES_ADMIN_VALUE)}><Check className={cn("mr-2 h-4 w-4", selectedRecruiterFilter === ALL_CANDIDATES_ADMIN_VALUE ? "opacity-100" : "opacity-0")}/>All Candidates (Admin)</Button>
-                                        {allRecruiters.map(rec => (<Button key={rec.id} variant="ghost" className={cn("w-full justify-start px-2 py-1.5 text-xs font-normal h-auto", selectedRecruiterFilter === rec.id && "bg-accent text-accent-foreground")} onClick={() => handleRecruiterFilterChange(rec.id)}><Check className={cn("mr-2 h-4 w-4", selectedRecruiterFilter === rec.id ? "opacity-100" : "opacity-0")}/>{rec.name}</Button>))}
+                                        <Button variant="ghost" className={cn("w-full justify-start px-2 py-1 text-xs font-normal h-auto", selectedRecruiterFilter === MY_ASSIGNED_VALUE && "bg-accent text-accent-foreground")} onClick={() => handleRecruiterFilterChange(MY_ASSIGNED_VALUE)}><Check className={cn("mr-2 h-4 w-4", selectedRecruiterFilter === MY_ASSIGNED_VALUE ? "opacity-100" : "opacity-0")}/>My Assigned (Admin)</Button>
+                                        <Button variant="ghost" className={cn("w-full justify-start px-2 py-1 text-xs font-normal h-auto", selectedRecruiterFilter === ALL_CANDIDATES_ADMIN_VALUE && "bg-accent text-accent-foreground")} onClick={() => handleRecruiterFilterChange(ALL_CANDIDATES_ADMIN_VALUE)}><Check className={cn("mr-2 h-4 w-4", selectedRecruiterFilter === ALL_CANDIDATES_ADMIN_VALUE ? "opacity-100" : "opacity-0")}/>All Candidates (Admin)</Button>
+                                        {allRecruiters.map(rec => (<Button key={rec.id} variant="ghost" className={cn("w-full justify-start px-2 py-1 text-xs font-normal h-auto", selectedRecruiterFilter === rec.id && "bg-accent text-accent-foreground")} onClick={() => handleRecruiterFilterChange(rec.id)}><Check className={cn("mr-2 h-4 w-4", selectedRecruiterFilter === rec.id ? "opacity-100" : "opacity-0")}/>{rec.name}</Button>))}
                                     </ScrollArea>
                                 </PopoverContent>
                             </Popover>
@@ -320,9 +320,9 @@ export default function MyTasksPage() {
                             </PopoverTrigger>
                             <PopoverContent className="w-[--trigger-width] p-0 dropdown-content-height">
                                 <ScrollArea className="max-h-60">
-                                    <Button variant="ghost" className={cn("w-full justify-start px-2 py-1.5 text-xs font-normal h-auto", selectedRecruiterFilter === MY_ASSIGNED_VALUE && "bg-accent text-accent-foreground")} onClick={() => handleRecruiterFilterChange(MY_ASSIGNED_VALUE)}><Check className={cn("mr-2 h-4 w-4", selectedRecruiterFilter === MY_ASSIGNED_VALUE ? "opacity-100" : "opacity-0")}/>My Assigned (Admin)</Button>
-                                    <Button variant="ghost" className={cn("w-full justify-start px-2 py-1.5 text-xs font-normal h-auto", selectedRecruiterFilter === ALL_CANDIDATES_ADMIN_VALUE && "bg-accent text-accent-foreground")} onClick={() => handleRecruiterFilterChange(ALL_CANDIDATES_ADMIN_VALUE)}><Check className={cn("mr-2 h-4 w-4", selectedRecruiterFilter === ALL_CANDIDATES_ADMIN_VALUE ? "opacity-100" : "opacity-0")}/>All Candidates (Admin)</Button>
-                                    {allRecruiters.map(rec => (<Button key={rec.id} variant="ghost" className={cn("w-full justify-start px-2 py-1.5 text-xs font-normal h-auto", selectedRecruiterFilter === rec.id && "bg-accent text-accent-foreground")} onClick={() => handleRecruiterFilterChange(rec.id)}><Check className={cn("mr-2 h-4 w-4", selectedRecruiterFilter === rec.id ? "opacity-100" : "opacity-0")}/>{rec.name}</Button>))}
+                                    <Button variant="ghost" className={cn("w-full justify-start px-2 py-1 text-xs font-normal h-auto", selectedRecruiterFilter === MY_ASSIGNED_VALUE && "bg-accent text-accent-foreground")} onClick={() => handleRecruiterFilterChange(MY_ASSIGNED_VALUE)}><Check className={cn("mr-2 h-4 w-4", selectedRecruiterFilter === MY_ASSIGNED_VALUE ? "opacity-100" : "opacity-0")}/>My Assigned (Admin)</Button>
+                                    <Button variant="ghost" className={cn("w-full justify-start px-2 py-1 text-xs font-normal h-auto", selectedRecruiterFilter === ALL_CANDIDATES_ADMIN_VALUE && "bg-accent text-accent-foreground")} onClick={() => handleRecruiterFilterChange(ALL_CANDIDATES_ADMIN_VALUE)}><Check className={cn("mr-2 h-4 w-4", selectedRecruiterFilter === ALL_CANDIDATES_ADMIN_VALUE ? "opacity-100" : "opacity-0")}/>All Candidates (Admin)</Button>
+                                    {allRecruiters.map(rec => (<Button key={rec.id} variant="ghost" className={cn("w-full justify-start px-2 py-1 text-xs font-normal h-auto", selectedRecruiterFilter === rec.id && "bg-accent text-accent-foreground")} onClick={() => handleRecruiterFilterChange(rec.id)}><Check className={cn("mr-2 h-4 w-4", selectedRecruiterFilter === rec.id ? "opacity-100" : "opacity-0")}/>{rec.name}</Button>))}
                                 </ScrollArea>
                             </PopoverContent>
                         </Popover>

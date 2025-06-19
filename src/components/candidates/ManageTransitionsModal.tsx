@@ -218,7 +218,7 @@ export function ManageTransitionsModal({
                                 key={stage.id}
                                 variant="ghost"
                                 className={cn(
-                                  "w-full justify-start px-2 py-1.5 text-sm font-normal h-auto",
+                                  "w-full justify-start px-2 py-1 text-sm font-normal h-auto", // Reduced py
                                   field.value === stage.name && "bg-accent text-accent-foreground"
                                 )}
                                 onClick={() => {
@@ -346,3 +346,4 @@ export function ManageTransitionsModal({
     </>
   );
 }
+

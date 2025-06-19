@@ -123,7 +123,7 @@ export function PositionFilters({ initialFilters = { isOpen: "all" }, onFilterCh
               <ScrollArea className="max-h-60">
                 <Button
                   variant="ghost"
-                  className={cn("w-full justify-start px-2 py-1.5 text-sm font-normal h-auto", department === ALL_DEPARTMENTS_SELECT_VALUE && "bg-accent text-accent-foreground")}
+                  className={cn("w-full justify-start px-2 py-1 text-sm font-normal h-auto", department === ALL_DEPARTMENTS_SELECT_VALUE && "bg-accent text-accent-foreground")}
                   onClick={() => {
                     setDepartment(ALL_DEPARTMENTS_SELECT_VALUE);
                     setDepartmentSearchOpen(false);
@@ -140,7 +140,7 @@ export function PositionFilters({ initialFilters = { isOpen: "all" }, onFilterCh
                   <Button
                     key={dept}
                     variant="ghost"
-                    className={cn("w-full justify-start px-2 py-1.5 text-sm font-normal h-auto", department === dept && "bg-accent text-accent-foreground")}
+                    className={cn("w-full justify-start px-2 py-1 text-sm font-normal h-auto", department === dept && "bg-accent text-accent-foreground")}
                     onClick={() => {
                       setDepartment(dept);
                       setDepartmentSearchOpen(false);
@@ -179,7 +179,7 @@ export function PositionFilters({ initialFilters = { isOpen: "all" }, onFilterCh
                   <Button
                     key={opt.value}
                     variant="ghost"
-                    className={cn("w-full justify-start px-2 py-1.5 text-sm font-normal h-auto", isOpen === opt.value && "bg-accent text-accent-foreground")}
+                    className={cn("w-full justify-start px-2 py-1 text-sm font-normal h-auto", isOpen === opt.value && "bg-accent text-accent-foreground")}
                     onClick={() => {
                       setIsOpen(opt.value as PositionFilterValues['isOpen']);
                       setStatusSearchOpen(false);
@@ -217,3 +217,4 @@ export function PositionFilters({ initialFilters = { isOpen: "all" }, onFilterCh
     </div>
   );
 }
+
