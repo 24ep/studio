@@ -250,7 +250,7 @@ export function CandidateFilters({
   ];
 
   return (
-    <div className="space-y-4"> {/* No border/card, just padding */}
+    <div className="space-y-4 p-1"> {/* Removed border/card, padding adjusted to p-1 to make it look like a borderless filter group */}
         <div>
             <Label htmlFor="ai-search-query" className="text-sm font-medium">AI Powered Search</Label>
             <Textarea

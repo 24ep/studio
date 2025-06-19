@@ -108,10 +108,10 @@ export function CandidatesPageClient({
           if (Object.keys(errorData).length === 0 && !(errorData as any)?.message) {
             detailedErrorMessage = `Failed to fetch recruiters. Server responded with status ${response.status}: ${response.statusText || 'No additional error message.'}`;
           }
-          if ((errorData as any).error) { // Assuming 'error' for PostgreSQL error message string
+          if ((errorData as any).error) { 
             detailedErrorMessage += ` (Details: ${(errorData as any).error})`;
           }
-          if ((errorData as any).code) { // Assuming 'code' for PostgreSQL error code
+          if ((errorData as any).code) {
              detailedErrorMessage += ` (Code: ${(errorData as any).code})`;
           }
           throw new Error(detailedErrorMessage);
@@ -579,10 +579,9 @@ export function CandidatesPageClient({
 
   return (
     <div className="flex flex-col md:flex-row gap-6 h-full">
-      <aside className="w-full md:w-72 lg:w-80 flex-shrink-0 md:sticky md:top-[calc(var(--header-height,4rem)_+_1rem)] md:max-h-[calc(100vh-var(--header-height,4rem)-2rem)]">
-        {/* Removed border from ScrollArea, filters component is now borderless itself */}
+      <aside className="w-full md:w-1/4 lg:w-1/5 flex-shrink-0 md:sticky md:top-[calc(var(--header-height,4rem)_+_1rem)] md:max-h-[calc(100vh-var(--header-height,4rem)-2rem)]">
         <ScrollArea className="h-full md:pr-2">
-          <div className="flex justify-between items-center mb-3 md:hidden"> {/* Mobile Filter Title */}
+          <div className="flex justify-between items-center mb-3 md:hidden"> 
             <h2 className="text-lg font-semibold">Filters</h2>
           </div>
           <CandidateFilters
@@ -598,7 +597,7 @@ export function CandidatesPageClient({
         </ScrollArea>
       </aside>
 
-      <div className="flex-1 space-y-6 min-w-0"> {/* Main content area */}
+      <div className="flex-1 md:w-3/4 lg:w-4/5 space-y-6 min-w-0"> 
         <div className="flex flex-col sm:flex-row justify-between items-center gap-2">
           <h1 className="text-2xl font-semibold text-foreground hidden md:block"> Candidate Management </h1>
           <div className="w-full md:w-auto flex flex-col sm:flex-row gap-2 items-center sm:justify-end">

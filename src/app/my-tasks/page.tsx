@@ -245,7 +245,7 @@ export default function MyTasksPage() {
 
   return (
     <div className="flex flex-col md:flex-row gap-6 h-full">
-        <aside className="w-full md:w-72 lg:w-80 flex-shrink-0 md:sticky md:top-[calc(var(--header-height,4rem)_+_1rem)] md:max-h-[calc(100vh-var(--header-height,4rem)-2rem)]">
+        <aside className="w-full md:w-1/4 lg:w-1/5 flex-shrink-0 md:sticky md:top-[calc(var(--header-height,4rem)_+_1rem)] md:max-h-[calc(100vh-var(--header-height,4rem)-2rem)]">
            <ScrollArea className="h-full md:pr-2">
                 <div className="md:hidden mb-3"> 
                     {session?.user?.role === 'Admin' && (
@@ -286,7 +286,7 @@ export default function MyTasksPage() {
             </ScrollArea>
         </aside>
 
-        <div className="flex-1 space-y-6 min-w-0">
+        <div className="flex-1 md:w-3/4 lg:w-4/5 space-y-6 min-w-0">
             <Card>
                 <CardHeader>
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
