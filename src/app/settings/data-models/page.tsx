@@ -56,7 +56,18 @@ const CANDIDATE_ATTRIBUTES: ModelAttributeDefinition[] = [
     { key: 'parsedData.experience', label: 'Work Experience', type: 'array', arrayItemType: 'ExperienceEntry object', description: 'List of previous jobs.' },
     { key: 'parsedData.skills', label: 'Skills', type: 'array', arrayItemType: 'SkillEntry object', description: 'List of skills.' },
     { key: 'parsedData.job_suitable', label: 'Job Suitability', type: 'array', arrayItemType: 'JobSuitableEntry object', description: 'Information on suitable job types.' },
-    { key: 'parsedData.associatedMatchDetails', label: 'Primary Matched Job Details', type: 'object', description: 'Details of the job the candidate was primarily matched/applied to.'},
+    { 
+      key: 'parsedData.associatedMatchDetails', 
+      label: 'Primary Matched Job Details', 
+      type: 'object', 
+      description: 'Details of the job the candidate was primarily matched/applied to by automated processing.',
+      subAttributes: [
+        { key: 'parsedData.associatedMatchDetails.jobTitle', label: 'Matched Job Title', type: 'string', description: 'Title of the matched job.'},
+        { key: 'parsedData.associatedMatchDetails.fitScore', label: 'Matched Fit Score', type: 'number', description: 'Fit score for this specific match.'},
+        { key: 'parsedData.associatedMatchDetails.reasons', label: 'Match Reasons', type: 'array of strings', description: 'Reasons for this match.'},
+        { key: 'parsedData.associatedMatchDetails.n8nJobId', label: 'Matched Job n8n ID', type: 'string', description: 'ID of the job from the n8n matching process, if available.'},
+      ]
+    },
     { key: 'parsedData.job_matches', label: 'All Suggested Job Matches', type: 'array', arrayItemType: 'N8NJobMatch object', description: 'Full list of job suggestions from automated processing.'},
   ]},
   { key: 'transitionHistory', label: 'Transition History', type: 'array', arrayItemType: 'TransitionRecord object', description: 'Log of status changes.' },

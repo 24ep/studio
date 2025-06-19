@@ -27,15 +27,15 @@ const TARGET_CANDIDATE_ATTRIBUTES_CONFIG: { path: string; label: string; type: s
   { path: 'candidate_info.personal_info.introduction_aboutme', label: 'Personal - About Me', type: 'string (multiline)', example: 'payload.profile.summary', defaultNotes: 'Brief introduction or summary.' },
   { path: 'candidate_info.contact_info.email', label: 'Contact - Email', type: 'string', example: 'payload.contact.emailAddress', defaultNotes: 'Primary email.' },
   { path: 'candidate_info.contact_info.phone', label: 'Contact - Phone', type: 'string', example: 'payload.contact.phoneNumber', defaultNotes: 'Primary phone number.' },
-  { path: 'candidate_info.education', label: 'Education (Array)', type: 'array of objects', example: 'payload.educationHistory', defaultNotes: 'Source should be an array of education objects.' },
-  { path: 'candidate_info.experience', label: 'Experience (Array)', type: 'array of objects', example: 'payload.workHistory', defaultNotes: 'Source should be an array of experience objects.' },
-  { path: 'candidate_info.skills', label: 'Skills (Array)', type: 'array of objects', example: 'payload.skillSet', defaultNotes: 'Source should be an array of skill objects/groups.' },
-  { path: 'candidate_info.job_suitable', label: 'Job Suitability (Array)', type: 'array of objects', example: 'payload.preferences.jobTypes', defaultNotes: 'Source should be an array of job suitability objects.' },
-  { path: 'jobs', label: 'Job Matches (Array)', type: 'array of N8NJobMatch objects', example: 'payload.suggestedRoles', defaultNotes: 'Array of suggested job matches from processing.' },
+  { path: 'candidate_info.education', label: 'Education (Array)', type: 'array of objects', example: 'payload.educationHistory', defaultNotes: 'Source should be an array of education objects matching EducationEntry structure.' },
+  { path: 'candidate_info.experience', label: 'Experience (Array)', type: 'array of objects', example: 'payload.workHistory', defaultNotes: 'Source should be an array of experience objects matching ExperienceEntry structure.' },
+  { path: 'candidate_info.skills', label: 'Skills (Array)', type: 'array of objects', example: 'payload.skillSet', defaultNotes: 'Source should be an array of skill objects/groups matching SkillEntry structure.' },
+  { path: 'candidate_info.job_suitable', label: 'Job Suitability (Array)', type: 'array of objects', example: 'payload.preferences.jobTypes', defaultNotes: 'Source should be an array of job suitability objects matching JobSuitableEntry structure.' },
+  { path: 'jobs', label: 'Job Matches (Array)', type: 'array of N8NJobMatch objects', example: 'payload.suggestedRoles', defaultNotes: 'Array of suggested job matches from processing, matching N8NJobMatch structure.' },
   { path: 'job_applied.job_id', label: 'Applied Job - ID', type: 'string (UUID)', example: 'payload.application.jobReferenceID', defaultNotes: 'ID of the job applied for.' },
   { path: 'job_applied.job_title', label: 'Applied Job - Title', type: 'string', example: 'payload.application.jobTitle', defaultNotes: 'Title of the job applied for.' },
   { path: 'job_applied.fit_score', label: 'Applied Job - Fit Score', type: 'number', example: 'payload.application.matchScore', defaultNotes: 'Fit score for the applied job.' },
-  { path: 'job_applied.justification', label: 'Applied Job - Justification (Array)', type: 'array of strings', example: 'payload.application.justificationText', defaultNotes: 'Justification for the match score.' },
+  { path: 'job_applied.justification', label: 'Applied Job - Justification (Array)', type: 'array of strings', example: 'payload.application.justificationText', defaultNotes: 'Array of strings justifying the match score.' },
   { path: 'targetPositionId', label: 'Target Position ID (Hint)', type: 'string (UUID)', example: 'payload.initialTarget.id', defaultNotes: 'Hint from uploader about target position ID.' },
   { path: 'targetPositionTitle', label: 'Target Position Title (Hint)', type: 'string', example: 'payload.initialTarget.title', defaultNotes: 'Hint from uploader about target position title.' },
   { path: 'targetPositionDescription', label: 'Target Position Description (Hint)', type: 'string', example: 'payload.initialTarget.description', defaultNotes: 'Hint from uploader about target position description.' },
@@ -186,7 +186,7 @@ export default function WebhookMappingPage() {
             <AlertDescription>
               The CandiTrack API (<code>/api/n8n/create-candidate-with-matches</code>) will use these server-side mappings to transform the JSON payload it receives from your workflow.
               Enter the JSON path from your workflow's output (e.g., <code className="font-mono text-xs bg-blue-200 dark:bg-blue-800 px-1 rounded">data.profile.firstName</code>) into the "Source JSON Path" field for each corresponding CandiTrack attribute.
-              If a "Source JSON Path" is left empty, that CandiTrack attribute will not be populated from the webhook for that field.
+              If a "Source JSON Path" is left empty, that CandiTrack attribute will not be populated from the webhook for that field. For array fields, ensure the source path points to an array of objects with a compatible structure.
             </AlertDescription>
           </Alert>
           
