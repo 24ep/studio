@@ -44,6 +44,10 @@ body {
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 0 0% 98%;
 
+    --success: 140 70% 45%; /* A nice green */
+    --success-foreground: 0 0% 100%; /* White text */
+    --success-border: 140 70% 35%; /* Darker green border */
+
     --border: 220 15% 88%; 
     --input: 220 15% 88%; 
     --ring: hsl(var(--primary)); 
@@ -116,6 +120,10 @@ body {
 
     --destructive: 0 70% 55%; 
     --destructive-foreground: 0 0% 98%;
+    
+    --success: 140 65% 40%; /* Slightly adjusted green for dark mode */
+    --success-foreground: 0 0% 100%;
+    --success-border: 140 65% 30%;
 
     --border: 220 15% 22%; 
     --input: 220 15% 18%; 

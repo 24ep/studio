@@ -1,3 +1,4 @@
+
 "use client"
 
 // Inspired by react-hot-toast library
@@ -16,6 +17,7 @@ type ToasterToast = ToastProps & {
   title?: React.ReactNode
   description?: React.ReactNode
   action?: ToastActionElement
+  variant?: 'default' | 'destructive' | 'success' // Added 'success'
 }
 
 const actionTypes = {
@@ -140,7 +142,9 @@ function dispatch(action: Action) {
   })
 }
 
-type Toast = Omit<ToasterToast, "id">
+type Toast = Omit<ToasterToast, "id"> & { // Ensure Toast type here also allows the 'success' variant
+  variant?: 'default' | 'destructive' | 'success';
+}
 
 function toast({ ...props }: Toast) {
   const id = genId()
