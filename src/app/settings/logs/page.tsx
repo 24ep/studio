@@ -7,7 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label'; // Added missing import
+import { Label } from '@/components/ui/label';
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { format, parseISO } from 'date-fns';
@@ -65,6 +65,9 @@ export default function ApplicationLogsPage() {
   const pathname = usePathname();
 
   const totalPages = Math.ceil(totalLogs / ITEMS_PER_PAGE);
+  const currentYear = new Date().getFullYear();
+  const fromYear = currentYear - 10;
+  const toYear = currentYear + 1;
 
   const fetchLogUsers = useCallback(async () => {
     try {
@@ -192,8 +195,8 @@ export default function ApplicationLogsPage() {
                   <div className="space-y-1"><Label htmlFor="search-query">Search Message/Source</Label><Input id="search-query" type="search" placeholder="Search..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleApplyFilters()} className="w-full"/></div>
                   <div className="space-y-1"><Label htmlFor="level-filter">Log Level</Label><Select value={levelFilter} onValueChange={(value) => setLevelFilter(value as LogLevel | "ALL")}><SelectTrigger id="level-filter"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="ALL">All Levels</SelectItem><SelectItem value="DEBUG">Debug</SelectItem><SelectItem value="INFO">Info</SelectItem><SelectItem value="WARN">Warn</SelectItem><SelectItem value="ERROR">Error</SelectItem><SelectItem value="AUDIT">Audit</SelectItem></SelectContent></Select></div>
                   <div className="space-y-1"><Label htmlFor="user-filter">Acting User</Label><Select value={actingUserIdFilter} onValueChange={setActingUserIdFilter}><SelectTrigger id="user-filter"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="ALL">All Users</SelectItem>{allUsers.map(user => (<SelectItem key={user.id} value={user.id}>{user.name}</SelectItem>))}</SelectContent></Select></div>
-                  <div className="space-y-1"><Label htmlFor="start-date">Start Date</Label><Popover><PopoverTrigger asChild><Button id="start-date" variant={"outline"} className={cn("w-full justify-start text-left font-normal", !startDate && "text-muted-foreground")}><CalendarIcon className="mr-2 h-4 w-4" />{startDate ? format(startDate, "PPP") : <span>Pick a date</span>}</Button></PopoverTrigger><PopoverContent className="w-auto p-0"><Calendar mode="single" selected={startDate} onSelect={setStartDate} initialFocus /></PopoverContent></Popover></div>
-                  <div className="space-y-1"><Label htmlFor="end-date">End Date</Label><Popover><PopoverTrigger asChild><Button id="end-date" variant={"outline"} className={cn("w-full justify-start text-left font-normal", !endDate && "text-muted-foreground")}><CalendarIcon className="mr-2 h-4 w-4" />{endDate ? format(endDate, "PPP") : <span>Pick a date</span>}</Button></PopoverTrigger><PopoverContent className="w-auto p-0"><Calendar mode="single" selected={endDate} onSelect={setEndDate} initialFocus /></PopoverContent></Popover></div>
+                  <div className="space-y-1"><Label htmlFor="start-date">Start Date</Label><Popover><PopoverTrigger asChild><Button id="start-date" variant={"outline"} className={cn("w-full justify-start text-left font-normal", !startDate && "text-muted-foreground")}><CalendarIcon className="mr-2 h-4 w-4" />{startDate ? format(startDate, "PPP") : <span>Pick a date</span>}</Button></PopoverTrigger><PopoverContent className="w-auto p-0"><Calendar mode="single" selected={startDate} onSelect={setStartDate} initialFocus captionLayout="dropdown-buttons" fromYear={fromYear} toYear={toYear} /></PopoverContent></Popover></div>
+                  <div className="space-y-1"><Label htmlFor="end-date">End Date</Label><Popover><PopoverTrigger asChild><Button id="end-date" variant={"outline"} className={cn("w-full justify-start text-left font-normal", !endDate && "text-muted-foreground")}><CalendarIcon className="mr-2 h-4 w-4" />{endDate ? format(endDate, "PPP") : <span>Pick a date</span>}</Button></PopoverTrigger><PopoverContent className="w-auto p-0"><Calendar mode="single" selected={endDate} onSelect={setEndDate} initialFocus captionLayout="dropdown-buttons" fromYear={fromYear} toYear={toYear} /></PopoverContent></Popover></div>
                   <div className="flex gap-2 items-end">
                       <Button variant="outline" onClick={handleResetFilters} disabled={isLoading} className="w-full"><FilterX className="mr-2 h-4 w-4"/>Reset</Button>
                       <Button onClick={handleApplyFilters} disabled={isLoading} className="w-full"><Search className={`mr-2 h-4 w-4 ${isLoading ? 'animate-spin' : ''}`}/>Apply</Button>
@@ -243,3 +246,4 @@ export default function ApplicationLogsPage() {
     </Card>
   );
 }
+

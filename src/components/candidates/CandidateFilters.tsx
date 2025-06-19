@@ -79,6 +79,10 @@ export function CandidateFilters({
   const [recruiterSearchOpen, setRecruiterSearchOpen] = useState(false);
   const [recruiterSearchQuery, setRecruiterSearchQuery] = useState('');
 
+  const currentYear = new Date().getFullYear();
+  const fromYear = currentYear - 10;
+  const toYear = currentYear + 1;
+
   const getCurrentPositionDisplayValue = () => {
     if (positionId === ALL_POSITIONS_SELECT_VALUE) return "All Positions";
     return availablePositions.find(p => p.id === positionId)?.title || "All Positions";
@@ -242,8 +246,8 @@ export function CandidateFilters({
       defaultOpen: false,
       fields: (
          <div className="flex flex-col gap-2">
-            <Popover><PopoverTrigger asChild><Button variant={"outline"} className={cn("w-full justify-start text-left font-normal text-xs", !applicationDateStart && "text-muted-foreground")} disabled={isLoading || isAiSearching}><CalendarIcon className="mr-2 h-4 w-4" />{applicationDateStart ? format(applicationDateStart, "PPP") : <span>Start Date</span>}</Button></PopoverTrigger><PopoverContent className="w-auto p-0"><Calendar mode="single" selected={applicationDateStart} onSelect={setApplicationDateStart} initialFocus /></PopoverContent></Popover>
-            <Popover><PopoverTrigger asChild><Button variant={"outline"} className={cn("w-full justify-start text-left font-normal text-xs", !applicationDateEnd && "text-muted-foreground")} disabled={isLoading || isAiSearching}><CalendarIcon className="mr-2 h-4 w-4" />{applicationDateEnd ? format(applicationDateEnd, "PPP") : <span>End Date</span>}</Button></PopoverTrigger><PopoverContent className="w-auto p-0"><Calendar mode="single" selected={applicationDateEnd} onSelect={setApplicationDateEnd} initialFocus /></PopoverContent></Popover>
+            <Popover><PopoverTrigger asChild><Button variant={"outline"} className={cn("w-full justify-start text-left font-normal text-xs", !applicationDateStart && "text-muted-foreground")} disabled={isLoading || isAiSearching}><CalendarIcon className="mr-2 h-4 w-4" />{applicationDateStart ? format(applicationDateStart, "PPP") : <span>Start Date</span>}</Button></PopoverTrigger><PopoverContent className="w-auto p-0"><Calendar mode="single" selected={applicationDateStart} onSelect={setApplicationDateStart} initialFocus captionLayout="dropdown-buttons" fromYear={fromYear} toYear={toYear} /></PopoverContent></Popover>
+            <Popover><PopoverTrigger asChild><Button variant={"outline"} className={cn("w-full justify-start text-left font-normal text-xs", !applicationDateEnd && "text-muted-foreground")} disabled={isLoading || isAiSearching}><CalendarIcon className="mr-2 h-4 w-4" />{applicationDateEnd ? format(applicationDateEnd, "PPP") : <span>End Date</span>}</Button></PopoverTrigger><PopoverContent className="w-auto p-0"><Calendar mode="single" selected={applicationDateEnd} onSelect={setApplicationDateEnd} initialFocus captionLayout="dropdown-buttons" fromYear={fromYear} toYear={toYear} /></PopoverContent></Popover>
          </div>
       )
     }
