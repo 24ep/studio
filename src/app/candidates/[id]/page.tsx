@@ -292,11 +292,21 @@ export default function CandidateDetailPage() {
   const fetchAllPositions = useCallback(async () => {
     try {
       const response = await fetch('/api/positions?isOpen=true');
-      if (!response.ok) throw new Error('Failed to fetch positions');
+      if (!response.ok) {
+        let errorDetails = `Failed to fetch positions. Status: ${response.status}`;
+        try {
+            const errorData = await response.json();
+            errorDetails = errorData.message || errorData.error || errorDetails;
+        } catch (e) {
+            errorDetails = `${errorDetails} - ${response.statusText || 'No further details from server.'}`;
+        }
+        throw new Error(errorDetails);
+      }
       const data: Position[] = await response.json();
       setAllDbPositions(data);
     } catch (error) {
       console.error("Error fetching all positions:", error);
+      // Optionally toast or set an error state for positions if critical for the page
     }
   }, []);
 
@@ -359,7 +369,7 @@ export default function CandidateDetailPage() {
             const errorData = await response.json().catch(() => ({ message: "An unknown error occurred" }));
             throw new Error(errorData.message || `Failed to update candidate status: ${response.statusText}`);
         }
-        await fetchCandidateDetails(); // This will re-render the page with fresh data
+        await fetchCandidateDetails(); 
         toast({ title: "Status Updated", description: `Candidate status updated to ${newStatus}.` });
     } catch (error) {
         toast({
@@ -367,7 +377,7 @@ export default function CandidateDetailPage() {
             description: (error as Error).message || "Could not update candidate status.",
             variant: "destructive",
         });
-        throw error; // Re-throw to allow modal to handle its state
+        throw error; 
     }
   };
 
@@ -674,13 +684,12 @@ export default function CandidateDetailPage() {
                         {renderField("CV Language", parsed?.cv_language, Tag)}
                     </>
                 )}
-                {/* Resume Download Link - Ensure your MinIO bucket allows public reads or implement a presigned URL strategy if private */}
                 {candidate.resumePath && !isEditing && renderField(
                   "Resume",
                   getDisplayFilename(candidate.resumePath),
                   HardDrive,
                   true,
-                  `${MINIO_PUBLIC_BASE_URL}/${MINIO_BUCKET}/${candidate.resumePath}`, // This link assumes public bucket or appropriate proxy
+                  `${MINIO_PUBLIC_BASE_URL}/${MINIO_BUCKET}/${candidate.resumePath}`, 
                   "_blank"
                 )}
                  {(parsed?.associatedMatchDetails && !isEditing) && (
