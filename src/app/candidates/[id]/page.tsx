@@ -313,7 +313,16 @@ export default function CandidateDetailPage() {
   const fetchRecruitmentStages = useCallback(async () => {
     try {
       const response = await fetch('/api/settings/recruitment-stages');
-      if (!response.ok) throw new Error('Failed to fetch recruitment stages');
+      if (!response.ok) {
+        let errorDetails = `Failed to fetch recruitment stages. Status: ${response.status}`;
+        try {
+            const errorData = await response.json();
+            errorDetails = errorData.message || errorData.error || errorDetails;
+        } catch (e) {
+            errorDetails = `${errorDetails} - ${response.statusText || 'No further details from server.'}`;
+        }
+        throw new Error(errorDetails);
+      }
       const data: RecruitmentStage[] = await response.json();
       setAvailableStages(data);
     } catch (error) {
