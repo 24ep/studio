@@ -93,17 +93,18 @@ This is a Next.js application prototype for an Applicant Tracking System, built 
         cp .env.example .env.local
         ```
     *   Open `.env.local` and fill in your actual credentials and configurations. **Crucial variables include:**
-        *   `NEXTAUTH_URL`: **Essential for redirects.** This should be the URL you use to access the application in your browser.
-            *   If using default Docker Compose setup (app on host port 9846): `http://localhost:9846`
-            *   If running `npm run dev` directly (app on port 9002): `http://localhost:9002`
+        *   `NEXTAUTH_URL`: **ESSENTIAL FOR AUTHENTICATION TO WORK CORRECTLY.** This **must** be the publicly accessible URL of your application.
+            *   If using default Docker Compose setup (app on host port 9846): `NEXTAUTH_URL=http://localhost:9846`
+            *   If running `npm run dev` directly (app on port 9002 by default): `NEXTAUTH_URL=http://localhost:9002`
+            *   **Important:** If you expose your app on a different port or domain, update this URL accordingly. Mismatches will lead to authentication errors (e.g., "CLIENT_FETCH_ERROR" or infinite redirects).
         *   `NEXTAUTH_SECRET`: Generate a strong secret (e.g., `openssl rand -base64 32`).
         *   `DATABASE_URL`: Connection string for PostgreSQL.
-            *   If Next.js app runs **inside Docker** (default with `docker-compose up`): `postgresql://devuser:devpassword@postgres:5432/canditrack_db` (or use values from `.env.local` if overridden).
-            *   If Next.js app runs **outside Docker** (e.g., `npm run dev`) but DB is in Docker: `postgresql://devuser:devpassword@localhost:5432/canditrack_db`.
+            *   If Next.js app runs **inside Docker** (default with `docker-compose up`): `DATABASE_URL=postgresql://devuser:devpassword@postgres:5432/canditrack_db` (or use values from `.env.local` if overridden).
+            *   If Next.js app runs **outside Docker** (e.g., `npm run dev`) but DB is in Docker: `DATABASE_URL=postgresql://devuser:devpassword@localhost:5432/canditrack_db`.
         *   MinIO Credentials: `MINIO_ENDPOINT` (e.g., `minio` if app in Docker, `localhost` if app outside Docker but MinIO in Docker), `MINIO_PORT`, `MINIO_ACCESS_KEY`, `MINIO_SECRET_KEY`, `MINIO_BUCKET_NAME`.
         *   Redis URL: `REDIS_URL`
-            *   If Next.js app runs **inside Docker**: `redis://redis:6379`
-            *   If Next.js app runs **outside Docker** but Redis is in Docker: `redis://localhost:9849` (if using default port mapping)
+            *   If Next.js app runs **inside Docker**: `REDIS_URL=redis://redis:6379`
+            *   If Next.js app runs **outside Docker** but Redis is in Docker: `REDIS_URL=redis://localhost:9849` (if using default port mapping)
         *   Azure AD (Optional): `AZURE_AD_CLIENT_ID`, `AZURE_AD_CLIENT_SECRET`, `AZURE_AD_TENANT_ID`.
         *   n8n Webhooks (Optional): `N8N_RESUME_WEBHOOK_URL`, `N8N_GENERIC_PDF_WEBHOOK_URL`.
         *   Google API Key (Optional, for Genkit): `GOOGLE_API_KEY`.
@@ -134,7 +135,7 @@ This method runs the Next.js app, PostgreSQL, MinIO, and Redis in Docker contain
 
 1.  **Ensure Docker and Docker Compose are installed and running.**
 2.  **Verify your `.env.local` file (see Step 3 of Installation).** Key settings for Docker:
-    *   `NEXTAUTH_URL=http://localhost:9846` (if using default port mapping in `docker-compose.yml`).
+    *   `NEXTAUTH_URL=http://localhost:9846` (if using default port mapping in `docker-compose.yml`). **This is critical.**
     *   `DATABASE_URL=postgresql://devuser:devpassword@postgres:5432/canditrack_db`
     *   `MINIO_ENDPOINT=minio`
     *   `MINIO_PORT=9000` (internal MinIO port)
@@ -208,3 +209,5 @@ This method runs the Next.js app, PostgreSQL, MinIO, and Redis in Docker contain
 *   **MinIO:** Check Next.js app logs for "Successfully connected to MinIO server..." or "MinIO: Bucket ... already exists/created..."
 *   **Redis:** Check Next.js app logs for "Successfully connected to Redis server." or "Redis client connection established and ready."
 If connection errors occur, verify your `.env.local` settings, Docker networking, and ensure backend services are running correctly.
+
+```

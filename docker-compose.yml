@@ -28,7 +28,12 @@ services:
       AZURE_AD_CLIENT_ID: "${AZURE_AD_CLIENT_ID:-your_azure_ad_application_client_id}"
       AZURE_AD_CLIENT_SECRET: "${AZURE_AD_CLIENT_SECRET:-your_azure_ad_client_secret_value}"
       AZURE_AD_TENANT_ID: "${AZURE_AD_TENANT_ID:-your_azure_ad_directory_tenant_id}"
-      NEXTAUTH_URL: "${NEXTAUTH_URL:-http://localhost:9002}"
+      # IMPORTANT: NEXTAUTH_URL must be the publicly accessible URL of your application.
+      # For default Docker setup, if you access the app via http://localhost:9846 in your browser,
+      # then NEXTAUTH_URL should be http://localhost:9846.
+      # If running `npm run dev` directly (port 9002), it would be http://localhost:9002.
+      # Incorrect NEXTAUTH_URL leads to auth errors (e.g., CLIENT_FETCH_ERROR or redirect loops).
+      NEXTAUTH_URL: "${NEXTAUTH_URL:-http://localhost:9002}" # Default for Docker, update if different in .env.local
       NEXTAUTH_SECRET: "${NEXTAUTH_SECRET:-super-secret-nextauth-key-replace-this}" # Generate with: openssl rand -base64 32
 
       # --- Genkit Configuration ---
@@ -107,3 +112,4 @@ volumes:
   redis_data:
   app_node_modules:
   app_next:
+```
