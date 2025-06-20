@@ -11,82 +11,90 @@ const BYPASS_PATHS = ['/auth/signin', '/setup-guidance'];
 export function SetupFlowHandler({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
-  const [isLoading, setIsLoading] = useState(true);
-  const [initialCheckDone, setInitialCheckDone] = useState(false);
+  const [isLoading, setIsLoading] = useState(true); // Manages the global loader visibility
+  const [initialCheckDone, setInitialCheckDone] = useState(false); // Tracks if the very first setup check has completed
 
+  // Callback to perform the actual setup check API call
+  // This manages its own isLoading state changes during the API call.
   const performSetupCheck = useCallback(async () => {
-    setIsLoading(true);
-    let schemaInitialized = false; // Default to false
+    console.log("SetupFlowHandler: performSetupCheck called. Pathname:", pathname);
+    setIsLoading(true); // Show loader when this check is active
+    let schemaInitialized = false;
 
     try {
       const response = await fetch('/api/system/initial-setup-check');
-
       if (response.ok) {
-        try {
-          const data = await response.json();
-          schemaInitialized = data.schemaInitialized === true; // Explicitly check for true
-        } catch (jsonError) {
-          // This case is unusual: response.ok was true, but JSON parsing failed.
-          console.error('Setup check: API response was OK, but JSON parsing failed:', jsonError);
-          // Treat as if schema is not initialized or check failed to be safe.
-          schemaInitialized = false;
-        }
+        const data = await response.json();
+        schemaInitialized = data.schemaInitialized === true;
       } else {
-        // Response not OK (e.g., 500 error from API), schema check failed or schema is not initialized.
-        console.error(`Setup check: API request failed with status ${response.status}.`);
-        // Attempt to get text from the response body for more details, but don't let it break anything.
-        try {
-          const errorText = await response.text();
-          console.error('Setup check: API error response text:', errorText);
-        } catch (textError) {
-          console.error('Setup check: Failed to get error text from non-OK API response.');
-        }
-        schemaInitialized = false; // Treat as not initialized
+        console.error(`SetupFlowHandler: API request failed with status ${response.status}.`);
+        // Consider schema not initialized on API error to be safe or to show guidance
+        schemaInitialized = false; 
       }
 
       if (!schemaInitialized) {
         if (pathname !== '/setup-guidance') {
+          console.log("SetupFlowHandler: Schema not initialized, redirecting to /setup-guidance.");
           router.replace('/setup-guidance');
-          return; // Exit early to let redirection take effect before finally block sets isLoading
+          // setIsLoading(false) will be handled by the finally block after redirection or in next effect run
+          return; 
         }
+        // If already on setup-guidance and schema not init, let it stay.
+        console.log("SetupFlowHandler: Schema not initialized, but already on /setup-guidance.");
+      } else {
+        console.log("SetupFlowHandler: Schema initialized.");
       }
-      // If schemaInitialized is true, or if !schemaInitialized BUT we are already on /setup-guidance, proceed.
-    } catch (networkError) { // Catches network errors from fetch() itself
-      console.error('Setup check: Network error during initial setup check API call:', networkError);
+    } catch (networkError) {
+      console.error('SetupFlowHandler: Network error during setup check API call:', networkError);
       if (pathname !== '/setup-guidance') {
         router.replace('/setup-guidance');
-        return; // Exit early
+        return; 
       }
     } finally {
-      setIsLoading(false);
-      setInitialCheckDone(true);
+      setIsLoading(false); // Hide loader after check completes or redirects
+      setInitialCheckDone(true); // Mark that an initial check attempt has been made
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pathname, router]); // router and pathname are dependencies
+  }, [pathname, router]); // router is stable. pathname ensures it re-evaluates if needed (though gated by initialCheckDone).
 
+  // Main effect to decide if a setup check is needed or if bypass.
   useEffect(() => {
+    console.log(`SetupFlowHandler: Main effect. Path: ${pathname}, InitialCheckDone: ${initialCheckDone}`);
     const isBypassPath = BYPASS_PATHS.includes(pathname) || pathname.startsWith('/_next/');
-    
+
     if (isBypassPath) {
-      setIsLoading(false); // Stop loading for bypass paths
-      setInitialCheckDone(true); // Consider check done for bypass paths
+      console.log("SetupFlowHandler: Bypass path detected.");
+      setIsLoading(false); // No loading for bypass paths
+      // We don't set initialCheckDone to true here unconditionally for bypass,
+      // as navigating from signin back to a protected route should re-trigger a check if not done.
+      // It's okay if initialCheckDone remains false; the next non-bypass path will trigger the check.
       return;
     }
 
-    if (!initialCheckDone) { // Only run the check if it hasn't been done yet
-        performSetupCheck();
+    if (!initialCheckDone) {
+      console.log("SetupFlowHandler: Initial check not completed, performing check.");
+      performSetupCheck();
     } else {
-        // If check was done, but path changed (e.g. navigation after login),
-        // we might not need to re-check immediately unless it's a crucial path.
-        // For now, simply stop loading if the check has been performed.
-        setIsLoading(false);
+      // If initial check is done, and it's not a bypass path, ensure loader is off.
+      // This covers navigation between regular app pages after the first check.
+      console.log("SetupFlowHandler: Initial check already done, ensuring loader is off.");
+      setIsLoading(false);
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pathname, initialCheckDone]); // performSetupCheck is not needed here as it's called conditionally
 
-  }, [pathname, initialCheckDone, performSetupCheck]);
+  // Logging for component mount/unmount and state changes for deeper debugging if needed
+  useEffect(() => {
+    console.log(`SetupFlowHandler: Component instance Mounted/Updated. Current Pathname: ${pathname}. InitialCheckDone: ${initialCheckDone}`);
+    return () => {
+      // console.log(`SetupFlowHandler: Component instance Unmounted. Pathname was: ${pathname}`);
+    };
+  }, [pathname, initialCheckDone]); // Log when these crucial states/props change
 
-  if (isLoading) {
+
+  if (isLoading && !BYPASS_PATHS.includes(pathname) && !pathname.startsWith('/_next/')) {
     return (
-      <div className="flex h-screen w-screen items-center justify-center bg-background fixed inset-0 z-50">
+      <div className="flex h-screen w-screen items-center justify-center bg-background fixed inset-0 z-[100]"> {/* Increased z-index */}
         <Loader2 className="h-16 w-16 animate-spin text-primary" />
         <p className="ml-3 text-muted-foreground">Verifying application setup...</p>
       </div>
