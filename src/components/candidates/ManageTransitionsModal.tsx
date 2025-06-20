@@ -78,7 +78,6 @@ export function ManageTransitionsModal({
 
   useEffect(() => {
     if (candidate && isOpen) {
-      console.log("ManageTransitionsModal: Resetting form. Current candidate status:", candidate.status);
       form.reset({
         newStatus: candidate.status,
         notes: '',
@@ -91,24 +90,18 @@ export function ManageTransitionsModal({
   if (!candidate) return null;
 
   const handleAddTransitionSubmit = async (data: TransitionFormValues) => {
-    console.log("ManageTransitionsModal: handleAddTransitionSubmit called.");
-    console.log("Data from form:", data);
-    console.log("Current candidate status prop:", candidate.status);
-
     const noChangeCondition = data.newStatus === candidate.status && !data.notes?.trim();
-    console.log("No change condition (data.newStatus === candidate.status && !data.notes?.trim()):", noChangeCondition);
     
     if (noChangeCondition) {
         toast({ title: "No Change", description: "Please select a new status or add notes to create a transition.", variant: "default" });
         return;
     }
     try {
-        console.log("ManageTransitionsModal: Calling onUpdateCandidate with:", {candidateId: candidate.id, newStatus: data.newStatus, notes: data.notes});
         await onUpdateCandidate(candidate.id, data.newStatus, data.notes); 
         form.reset({ newStatus: data.newStatus, notes: '' }); 
         setStatusSearchQuery(''); 
     } catch (error) {
-        console.error("Error during onUpdateCandidate in ManageTransitionsModal:", error);
+        // Error is already toasted by onUpdateCandidate caller in CandidateDetailPage
     }
   };
 

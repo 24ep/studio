@@ -180,7 +180,8 @@ const updateCandidateSchema = z.object({
   parsedData: candidateDetailsSchemaPartial.optional(),
   custom_attributes: z.record(z.any()).optional().nullable(),
   resumePath: z.string().optional().nullable(),
-  // avatarUrl and dataAiHint are handled by a separate endpoint for avatar uploads
+  // Added to receive transition notes explicitly for the update
+  transitionNotes: z.string().optional().nullable(), 
 });
 
 export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {
@@ -261,7 +262,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
     let paramIndex = 1;
 
     Object.entries(validatedData).forEach(([key, value]) => {
-      if (value !== undefined) {
+      if (value !== undefined && key !== 'transitionNotes') { // Exclude transitionNotes from direct candidate update
         if (key === 'parsedData') {
           const existingPD = (existingCandidate.parsedData || { personal_info: {} as PersonalInfo, contact_info: {} as ContactInfo }) as CandidateDetails;
           const newPD = value as Partial<CandidateDetails>;
@@ -289,11 +290,10 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
       }
     });
 
-    if (updateFields.length === 0 && (!validatedData.status || validatedData.status === existingCandidate.status)) {
-      // No actual changes to candidate fields, only potentially a status update which might be same as current.
-      // If status is also same, just return current candidate.
+    if (updateFields.length === 0 && (!validatedData.status || validatedData.status === existingCandidate.status) && !validatedData.transitionNotes?.trim()) {
+      // No actual changes to candidate fields, status is same, and no new notes.
       if(!validatedData.status || validatedData.status === existingCandidate.status) {
-          await client.query('ROLLBACK'); // No transaction needed
+          await client.query('ROLLBACK');
           const currentCandidateQuery = `
               SELECT
                   c.*,
@@ -346,9 +346,16 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
       await client.query(updateQuery, updateValues);
     }
 
-    if (validatedData.status && validatedData.status !== existingCandidate.status) {
+    // Determine if a new transition record should be created
+    const statusActuallyChanged = validatedData.status && validatedData.status !== existingCandidate.status;
+    const notesProvidedForTransition = validatedData.transitionNotes && validatedData.transitionNotes.trim() !== '';
+    const shouldCreateTransition = statusActuallyChanged || (validatedData.status && notesProvidedForTransition);
+
+    if (shouldCreateTransition && validatedData.status) {
       try {
-          const notesForTransition = body.transitionNotes || `Status updated from ${oldStatus} to ${validatedData.status} by ${actingUserName}.`;
+          const statusForTransition = validatedData.status; 
+          const notesForTransition = validatedData.transitionNotes?.trim() || `Status changed to ${statusForTransition} by ${actingUserName}.`;
+          
           const insertTransitionQuery = `
             INSERT INTO "TransitionRecord" (id, "candidateId", date, stage, notes, "actingUserId", "createdAt", "updatedAt")
             VALUES ($1, $2, NOW(), $3, $4, $5, NOW(), NOW());
@@ -356,17 +363,18 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
           await client.query(insertTransitionQuery, [
             uuidv4(),
             params.id,
-            validatedData.status,
+            statusForTransition,
             notesForTransition,
             actingUserId
           ]);
-          await logAudit('AUDIT', `Candidate '${existingCandidate.name}' (ID: ${params.id}) status changed from '${oldStatus}' to '${validatedData.status}' by ${actingUserName}. Notes: "${notesForTransition}"`, 'API:Candidates:UpdateStatus', actingUserId, { targetCandidateId: params.id, newStatus: validatedData.status, oldStatus: oldStatus, notes: notesForTransition });
+          await logAudit('AUDIT', `Candidate '${existingCandidate.name}' (ID: ${params.id}) status set to '${statusForTransition}' by ${actingUserName}. Notes: "${notesForTransition}"`, 'API:Candidates:UpdateStatus', actingUserId, { targetCandidateId: params.id, newStatus: statusForTransition, oldStatus: oldStatus, notes: notesForTransition });
       } catch (transitionError: any) {
           console.error(`DB Error creating transition record for candidate ${params.id}:`, transitionError);
-          await logAudit('ERROR', `DB Error creating transition record for candidate ${params.id} by ${actingUserName}. Error: ${transitionError.message}. Code: ${transitionError.code}, Constraint: ${transitionError.constraint}`, 'API:Candidates:Update', actingUserId, { targetCandidateId: params.id, errorCode: transitionError.code, errorConstraint: transitionError.constraint, transitionNotesAttempted: body.transitionNotes });
+          await logAudit('ERROR', `DB Error creating transition record for candidate ${params.id} by ${actingUserName}. Error: ${transitionError.message}. Code: ${transitionError.code}, Constraint: ${transitionError.constraint}`, 'API:Candidates:Update', actingUserId, { targetCandidateId: params.id, errorCode: transitionError.code, errorConstraint: transitionError.constraint, transitionNotesAttempted: validatedData.transitionNotes });
           throw new Error(`Failed to create transition record: ${transitionError.message}. DB Code: ${transitionError.code}`);
       }
     }
+
 
     if (validatedData.recruiterId !== undefined && validatedData.recruiterId !== oldRecruiterId) {
         const newRecruiterName = validatedData.recruiterId ? (await client.query('SELECT name FROM "User" WHERE id = $1', [validatedData.recruiterId])).rows[0]?.name : 'Unassigned';
@@ -446,7 +454,8 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
         transitionHistory: finalResult.rows[0].transitionHistory || [],
     };
 
-    await logAudit('AUDIT', `Candidate '${updatedCandidateWithDetails.name}' (ID: ${params.id}) updated by ${actingUserName}.`, 'API:Candidates:Update', actingUserId, { targetCandidateId: params.id, changes: Object.keys(validatedData) });
+    const auditChanges = Object.keys(validatedData).filter(k => k !== 'transitionNotes');
+    await logAudit('AUDIT', `Candidate '${updatedCandidateWithDetails.name}' (ID: ${params.id}) updated by ${actingUserName}.`, 'API:Candidates:Update', actingUserId, { targetCandidateId: params.id, changes: auditChanges });
     return NextResponse.json(updatedCandidateWithDetails, { status: 200 });
   } catch (error: any) {
     await client.query('ROLLBACK');
@@ -506,3 +515,5 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
     client.release();
   }
 }
+
+    
