@@ -28,21 +28,21 @@ const DEFAULT_LOGIN_BG_TYPE: LoginPageBackgroundType = "default";
 const DEFAULT_LOGIN_BG_COLOR1_HEX = "#F0F4F7"; 
 const DEFAULT_LOGIN_BG_COLOR2_HEX = "#3F51B5"; 
 
-// Default Sidebar Colors (HSL strings)
-const DEFAULT_SIDEBAR_COLORS_BASE: Omit<Record<SystemSettingKey, string>, 
-  'appName' | 'appLogoDataUrl' | 'appThemePreference' | 
-  'primaryGradientStart' | 'primaryGradientEnd' |
-  'smtpHost' | 'smtpPort' | 'smtpUser' | 'smtpSecure' | 'smtpFromEmail' |
-  'n8nResumeWebhookUrl' | 'n8nGenericPdfWebhookUrl' | 'geminiApiKey' |
-  'loginPageBackgroundType' | 'loginPageBackgroundImageUrl' | 
-  'loginPageBackgroundColor1' | 'loginPageBackgroundColor2'
-> = {
+// Default Sidebar colors (HSL strings) - using the NEW primary gradient defaults
+const DEFAULT_SIDEBAR_COLORS_BASE: Record<SystemSettingKey, string> = {
   sidebarBgStartL: "220 25% 97%", sidebarBgEndL: "220 20% 94%", sidebarTextL: "220 25% 30%",
   sidebarActiveBgStartL: DEFAULT_PRIMARY_GRADIENT_START, sidebarActiveBgEndL: DEFAULT_PRIMARY_GRADIENT_END, sidebarActiveTextL: "0 0% 100%",      
   sidebarHoverBgL: "220 10% 92%", sidebarHoverTextL: "220 25% 25%", sidebarBorderL: "220 15% 85%",
   sidebarBgStartD: "220 15% 12%", sidebarBgEndD: "220 15% 9%", sidebarTextD: "210 30% 85%",
   sidebarActiveBgStartD: DEFAULT_PRIMARY_GRADIENT_START, sidebarActiveBgEndD: DEFAULT_PRIMARY_GRADIENT_END, sidebarActiveTextD: "0 0% 100%",      
   sidebarHoverBgD: "220 15% 20%", sidebarHoverTextD: "210 30% 90%", sidebarBorderD: "220 15% 18%",
+  // Ensure other keys expected by AppLayout are also here if needed, or handle undefined gracefully
+  appName: DEFAULT_APP_NAME, appLogoDataUrl: '', appThemePreference: 'system', 
+  primaryGradientStart: DEFAULT_PRIMARY_GRADIENT_START, primaryGradientEnd: DEFAULT_PRIMARY_GRADIENT_END,
+  smtpHost: '', smtpPort: '', smtpUser: '', smtpSecure: 'true', smtpFromEmail: '',
+  n8nResumeWebhookUrl: '', n8nGenericPdfWebhookUrl: '', geminiApiKey: '',
+  loginPageBackgroundType: 'default', loginPageBackgroundImageUrl: '', 
+  loginPageBackgroundColor1: '#F0F4F7', loginPageBackgroundColor2: '#3F51B5'
 };
 
 
@@ -60,7 +60,8 @@ interface SidebarColors {
   sidebarActiveBgStartL: string; sidebarActiveBgEndL: string; sidebarActiveTextL: string;
   sidebarHoverBgL: string; sidebarHoverTextL: string; sidebarBorderL: string;
   sidebarBgStartD: string; sidebarBgEndD: string; sidebarTextD: string;
-  sidebarActiveBgStartD: string; sidebarActiveBgEndD: string; sidebarActiveTextD: string; // Corrected: sidebarActiveBgEndD
+  sidebarActiveBgStartD: string; sidebarActiveBgEndD: string; 
+  sidebarActiveTextD: string;
   sidebarHoverBgD: string; sidebarHoverTextD: string; sidebarBorderD: string;
 }
 
@@ -152,7 +153,6 @@ export default function PreferencesSettingsPage() {
   const [loginBgColor2, setLoginBgColor2] = useState<string>(DEFAULT_LOGIN_BG_COLOR2_HEX);
 
   const [sidebarColors, setSidebarColors] = useState<SidebarColors>(
-    // Use the corrected SidebarColors interface here
     DEFAULT_SIDEBAR_COLORS_BASE as unknown as SidebarColors
   );
   
@@ -191,7 +191,9 @@ export default function PreferencesSettingsPage() {
       
       const newSidebarColors: Partial<SidebarColors> = {};
       for (const key of Object.keys(DEFAULT_SIDEBAR_COLORS_BASE) as Array<keyof typeof DEFAULT_SIDEBAR_COLORS_BASE>) {
-        (newSidebarColors as any)[key] = settingsMap.get(key) || DEFAULT_SIDEBAR_COLORS_BASE[key];
+        if (key in DEFAULT_SIDEBAR_COLORS_BASE) { // Check if key is actually part of sidebar config
+           (newSidebarColors as any)[key] = settingsMap.get(key) || DEFAULT_SIDEBAR_COLORS_BASE[key];
+        }
       }
       setSidebarColors(newSidebarColors as SidebarColors);
 
@@ -331,20 +333,22 @@ export default function PreferencesSettingsPage() {
       setSavedLogoDataUrl(updatedLogoUrl);
       setLogoPreviewUrl(updatedLogoUrl);
       setThemePreference((updatedSettingsMap.get('appThemePreference') as ThemePreference) || 'system');
-      setAppName(updatedSettingsMap.get('appName') || DEFAULT_APP_NAME);
-      setPrimaryGradientStart(updatedSettingsMap.get('primaryGradientStart') || DEFAULT_PRIMARY_GRADIENT_START);
-      setPrimaryGradientEnd(updatedSettingsMap.get('primaryGradientEnd') || DEFAULT_PRIMARY_GRADIENT_END);
+      setAppName(updatedSettingsMap.get('appName') || appName || DEFAULT_APP_NAME);
+      setPrimaryGradientStart(updatedSettingsMap.get('primaryGradientStart') || primaryGradientStart);
+      setPrimaryGradientEnd(updatedSettingsMap.get('primaryGradientEnd') || primaryGradientEnd);
       const updatedLoginBgTypeVal = (updatedSettingsMap.get('loginPageBackgroundType') as LoginPageBackgroundType) || DEFAULT_LOGIN_BG_TYPE;
       const updatedLoginBgImageVal = updatedSettingsMap.get('loginPageBackgroundImageUrl') || null;
       setLoginBgType(updatedLoginBgTypeVal);
       setSavedLoginBgImageUrl(updatedLoginBgImageVal);
       setLoginBgImagePreviewUrl(updatedLoginBgTypeVal === 'image' ? updatedLoginBgImageVal : null);
-      setLoginBgColor1(updatedSettingsMap.get('loginPageBackgroundColor1') || DEFAULT_LOGIN_BG_COLOR1_HEX);
-      setLoginBgColor2(updatedSettingsMap.get('loginPageBackgroundColor2') || DEFAULT_LOGIN_BG_COLOR2_HEX);
+      setLoginBgColor1(updatedSettingsMap.get('loginPageBackgroundColor1') || loginBgColor1);
+      setLoginBgColor2(updatedSettingsMap.get('loginPageBackgroundColor2') || loginBgColor2);
       
       const newSidebarColors: Partial<SidebarColors> = {};
       for (const key of Object.keys(DEFAULT_SIDEBAR_COLORS_BASE) as Array<keyof typeof DEFAULT_SIDEBAR_COLORS_BASE>) {
-        (newSidebarColors as any)[key] = updatedSettingsMap.get(key) || DEFAULT_SIDEBAR_COLORS_BASE[key];
+        if (key in sidebarColors) { // Check if key is actually part of SidebarColors interface
+           (newSidebarColors as any)[key] = updatedSettingsMap.get(key) || DEFAULT_SIDEBAR_COLORS_BASE[key];
+        }
       }
       setSidebarColors(newSidebarColors as SidebarColors);
 
@@ -434,7 +438,7 @@ export default function PreferencesSettingsPage() {
       case 'logo':
         return (
             <div className="space-y-2">
-                <Label htmlFor="app-logo-upload" className="text-sm">App Logo <span className="text-xs text-muted-foreground">(Recommended: square, max 200KB)</span></Label>
+                <Label htmlFor="app-logo-upload" className="text-sm">App Logo <span className="text-xs text-muted-foreground">(Recommended: square, max 500KB)</span></Label>
                 <Input id="app-logo-upload" type="file" accept="image/*" onChange={(e) => handleLogoFileChange(e, 'appLogo')} className="mt-1" />
                 {logoPreviewUrl && (<div className="mt-3 p-2 border rounded-md inline-flex items-center gap-3"><Image src={logoPreviewUrl} alt="Logo preview" width={48} height={48} className="h-12 w-12 object-contain rounded" data-ai-hint="company logo"/><Button variant="ghost" size="icon" onClick={() => removeSelectedImage('appLogo', false)} className="h-7 w-7"> <XCircle className="h-4 w-4 text-muted-foreground hover:text-destructive"/> </Button></div>)}
                 {savedLogoDataUrl && ( <div className="mt-2"> <Button variant="outline" size="sm" onClick={() => removeSelectedImage('appLogo', true)} disabled={isSaving}> {isSaving && savedLogoDataUrl === null ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Trash2 className="mr-2 h-4 w-4"/>} Reset to Default Logo </Button> </div> )}
@@ -584,3 +588,5 @@ export default function PreferencesSettingsPage() {
     </Card>
   );
 }
+
+    
