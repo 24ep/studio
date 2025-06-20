@@ -49,6 +49,7 @@ This is a Next.js application prototype for an Applicant Tracking System, built 
     *   Credentials (Email/Password): Backend by PostgreSQL, passwords hashed using `bcrypt`.
 *   **Styling:** ShadCN UI components and Tailwind CSS.
 *   **File Storage:** Uses MinIO for resume and other file storage (e.g., candidate avatars).
+*   **Caching:** Uses Redis for caching frequently accessed data like recruitment stages.
 
 ## Tech Stack
 
@@ -58,9 +59,9 @@ This is a Next.js application prototype for an Applicant Tracking System, built 
 *   **Backend API:** Next.js API Routes
 *   **Database:** PostgreSQL (via `pg` library)
 *   **File Storage:** MinIO
+*   **Caching:** Redis (via `redis` library)
 *   **Password Hashing:** `bcrypt`
 *   **AI (Conceptual/Future):** Genkit (Google AI for LLMs/Image Generation)
-*   **Real-time (Conceptual/Future):** Redis
 *   **Deployment:** Docker & Docker Compose
 
 ## Getting Started
@@ -100,6 +101,9 @@ This is a Next.js application prototype for an Applicant Tracking System, built 
             *   If Next.js app runs **inside Docker** (default with `docker-compose up`): `postgresql://devuser:devpassword@postgres:5432/canditrack_db` (or use values from `.env.local` if overridden).
             *   If Next.js app runs **outside Docker** (e.g., `npm run dev`) but DB is in Docker: `postgresql://devuser:devpassword@localhost:5432/canditrack_db`.
         *   MinIO Credentials: `MINIO_ENDPOINT` (e.g., `minio` if app in Docker, `localhost` if app outside Docker but MinIO in Docker), `MINIO_PORT`, `MINIO_ACCESS_KEY`, `MINIO_SECRET_KEY`, `MINIO_BUCKET_NAME`.
+        *   Redis URL: `REDIS_URL`
+            *   If Next.js app runs **inside Docker**: `redis://redis:6379`
+            *   If Next.js app runs **outside Docker** but Redis is in Docker: `redis://localhost:9849` (if using default port mapping)
         *   Azure AD (Optional): `AZURE_AD_CLIENT_ID`, `AZURE_AD_CLIENT_SECRET`, `AZURE_AD_TENANT_ID`.
         *   n8n Webhooks (Optional): `N8N_RESUME_WEBHOOK_URL`, `N8N_GENERIC_PDF_WEBHOOK_URL`.
         *   Google API Key (Optional, for Genkit): `GOOGLE_API_KEY`.
@@ -126,7 +130,7 @@ This is a Next.js application prototype for an Applicant Tracking System, built 
 
 ### Running with Docker (Recommended)
 
-This method runs the Next.js app, PostgreSQL, and MinIO in Docker containers.
+This method runs the Next.js app, PostgreSQL, MinIO, and Redis in Docker containers.
 
 1.  **Ensure Docker and Docker Compose are installed and running.**
 2.  **Verify your `.env.local` file (see Step 3 of Installation).** Key settings for Docker:
@@ -134,14 +138,14 @@ This method runs the Next.js app, PostgreSQL, and MinIO in Docker containers.
     *   `DATABASE_URL=postgresql://devuser:devpassword@postgres:5432/canditrack_db`
     *   `MINIO_ENDPOINT=minio`
     *   `MINIO_PORT=9000` (internal MinIO port)
-    *   `REDIS_URL=redis://redis:6379` (if Redis is used)
+    *   `REDIS_URL=redis://redis:6379` (internal Redis port)
 
 3.  **Database Initialization (`pg-init-scripts/init-db.sql`):**
     *   The `pg-init-scripts/init-db.sql` file (located in the `pg-init-scripts` directory in your project root) is **automatically executed by PostgreSQL on its first startup** when the database volume (`postgres_data`) is empty or newly created.
     *   This script creates all necessary tables and inserts the default admin user.
     *   **If you encounter "relation ... does not exist" errors:** This means `init-db.sql` did not run or complete. This usually happens if the `postgres_data` Docker volume already existed from a previous run. To force re-initialization:
         1.  Stop services: `docker-compose down`
-        2.  **CRITICAL: Remove all Docker volumes (this deletes ALL database and MinIO data):**
+        2.  **CRITICAL: Remove all Docker volumes (this deletes ALL database, MinIO, and Redis data):**
             ```bash
             docker-compose down -v
             # OR, use the provided script:
@@ -170,7 +174,7 @@ This method runs the Next.js app, PostgreSQL, and MinIO in Docker containers.
     *   **MinIO API:** `http://localhost:9847` (Internally `minio:9000`)
     *   **MinIO Console:** `http://localhost:9848` (Login with `MINIO_ROOT_USER` / `MINIO_ROOT_PASSWORD`)
     *   **PostgreSQL:** `localhost:5432` (from host)
-    *   **Redis:** `localhost:9849` (from host, if Redis service is active)
+    *   **Redis:** `localhost:9849` (from host, corresponds to `redis:6379` internally)
 
 7.  **Stopping Services:**
     ```bash
@@ -202,5 +206,5 @@ This method runs the Next.js app, PostgreSQL, and MinIO in Docker containers.
 
 *   **PostgreSQL:** Check Next.js app logs for "Successfully connected to PostgreSQL database..."
 *   **MinIO:** Check Next.js app logs for "Successfully connected to MinIO server..." or "MinIO: Bucket ... already exists/created..."
+*   **Redis:** Check Next.js app logs for "Successfully connected to Redis server." or "Redis client connection established and ready."
 If connection errors occur, verify your `.env.local` settings, Docker networking, and ensure backend services are running correctly.
-```

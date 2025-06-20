@@ -7,6 +7,8 @@ import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 import type { RecruitmentStage } from '@/lib/types';
 import { logAudit } from '@/lib/auditLog';
+import { getRedisClient, CACHE_KEY_RECRUITMENT_STAGES } from '@/lib/redis';
+
 
 const moveStageSchema = z.object({
   direction: z.enum(['up', 'down']),
@@ -37,11 +39,11 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
   const { direction } = validationResult.data;
   const stageIdToMove = params.id;
   const client = await pool.connect();
+  const redisClient = await getRedisClient();
 
   try {
     await client.query('BEGIN');
 
-    // Fetch all stages, sorted, and lock them for update to prevent race conditions
     const allStagesResult = await client.query<RecruitmentStage>(
       'SELECT * FROM "RecruitmentStage" ORDER BY sort_order ASC, "createdAt" ASC FOR UPDATE'
     );
@@ -75,26 +77,32 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
       return NextResponse.json({ message: "Cannot determine stage to swap with" }, { status: 500 });
     }
 
-    // Swap sort_order values
     const tempSortOrder = stageToMove.sort_order;
     const newSortOrderForStageToMove = otherStage.sort_order;
     const newSortOrderForOtherStage = tempSortOrder;
 
-    // Update stageToMove
     await client.query(
       'UPDATE "RecruitmentStage" SET sort_order = $1, "updatedAt" = NOW() WHERE id = $2',
       [newSortOrderForStageToMove, stageToMove.id]
     );
-    // Update otherStage
     await client.query(
       'UPDATE "RecruitmentStage" SET sort_order = $1, "updatedAt" = NOW() WHERE id = $2',
       [newSortOrderForOtherStage, otherStage.id]
     );
 
     await client.query('COMMIT');
+
+    if (redisClient) {
+      try {
+        await redisClient.del(CACHE_KEY_RECRUITMENT_STAGES);
+        console.log('Recruitment stages cache invalidated due to MOVE.');
+      } catch (cacheError) {
+        console.error('Error invalidating recruitment stages cache (MOVE):', cacheError);
+      }
+    }
+
     await logAudit('AUDIT', `Recruitment stage '${stageToMove.name}' (ID: ${stageToMove.id}) moved ${direction} by ${session.user.name}.`, 'API:RecruitmentStages:Move', session.user.id, { targetStageId: stageToMove.id, direction });
     
-    // Fetch and return the updated list
     const finalStagesResult = await client.query<RecruitmentStage>(
         'SELECT * FROM "RecruitmentStage" ORDER BY sort_order ASC, "createdAt" ASC'
     );

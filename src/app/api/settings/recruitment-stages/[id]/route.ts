@@ -7,6 +7,7 @@ import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 import type { RecruitmentStage } from '@/lib/types';
 import { logAudit } from '@/lib/auditLog';
+import { getRedisClient, CACHE_KEY_RECRUITMENT_STAGES } from '@/lib/redis';
 
 const updateRecruitmentStageSchema = z.object({
   name: z.string().min(1, { message: "Stage name is required" }).max(100).optional(),
@@ -38,6 +39,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
   
   const updates = validationResult.data;
   const client = await pool.connect();
+  const redisClient = await getRedisClient();
 
   try {
     await client.query('BEGIN');
@@ -91,6 +93,16 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
     const updatedStage = result.rows[0];
 
     await client.query('COMMIT');
+
+    if (redisClient) {
+      try {
+        await redisClient.del(CACHE_KEY_RECRUITMENT_STAGES);
+        console.log('Recruitment stages cache invalidated due to PUT.');
+      } catch (cacheError) {
+        console.error('Error invalidating recruitment stages cache (PUT):', cacheError);
+      }
+    }
+
     await logAudit('AUDIT', `Recruitment stage '${updatedStage.name}' (ID: ${updatedStage.id}) updated by ${session.user.name}.`, 'API:RecruitmentStages:Update', session.user.id, { targetStageId: updatedStage.id, changes: Object.keys(updates) });
     return NextResponse.json(updatedStage, { status: 200 });
 
@@ -119,6 +131,7 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
   const replacementStageName = searchParams.get('replacementStageName');
 
   const client = await pool.connect();
+  const redisClient = await getRedisClient();
   try {
     await client.query('BEGIN');
     const stageResult = await client.query('SELECT id, name, is_system FROM "RecruitmentStage" WHERE id = $1 FOR UPDATE', [params.id]);
@@ -134,7 +147,6 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
       return NextResponse.json({ message: "System stages cannot be deleted." }, { status: 400 });
     }
 
-    // Check if stage is in use
     const candidateCheck = await client.query('SELECT 1 FROM "Candidate" WHERE status = $1 LIMIT 1', [stageToDelete.name]);
     const transitionCheck = await client.query('SELECT 1 FROM "TransitionRecord" WHERE stage = $1 LIMIT 1', [stageToDelete.name]);
     const isInUse = candidateCheck.rows.length > 0 || transitionCheck.rows.length > 0;
@@ -153,9 +165,7 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
       }
       const validReplacementStage = replacementStageResult.rows[0];
 
-      // Migrate candidates
       await client.query('UPDATE "Candidate" SET status = $1, "updatedAt" = NOW() WHERE status = $2', [validReplacementStage.name, stageToDelete.name]);
-      // Migrate transition records
       await client.query('UPDATE "TransitionRecord" SET stage = $1, "updatedAt" = NOW() WHERE stage = $2', [validReplacementStage.name, stageToDelete.name]);
       await logAudit('AUDIT', `Recruitment stage '${stageToDelete.name}' (ID: ${params.id}) data migrated to '${validReplacementStage.name}' by ${session.user.name}.`, 'API:RecruitmentStages:Migrate', session.user.id, { oldStage: stageToDelete.name, newStage: validReplacementStage.name });
     }
@@ -164,9 +174,18 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
     await client.query('COMMIT');
 
     if (deleteResult.rowCount === 0) {
-        // This case should ideally not be reached if the FOR UPDATE lock worked and stage wasn't deleted by another transaction
         return NextResponse.json({ message: "Recruitment stage not found or already deleted during transaction" }, { status: 404 });
     }
+
+    if (redisClient) {
+      try {
+        await redisClient.del(CACHE_KEY_RECRUITMENT_STAGES);
+        console.log('Recruitment stages cache invalidated due to DELETE.');
+      } catch (cacheError) {
+        console.error('Error invalidating recruitment stages cache (DELETE):', cacheError);
+      }
+    }
+
     await logAudit('AUDIT', `Recruitment stage '${stageToDelete.name}' (ID: ${params.id}) deleted by ${session.user.name}.`, 'API:RecruitmentStages:Delete', session.user.id, { targetStageId: params.id, deletedStageName: stageToDelete.name });
     return NextResponse.json({ message: "Recruitment stage deleted successfully" }, { status: 200 });
 
