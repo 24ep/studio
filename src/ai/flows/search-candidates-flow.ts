@@ -10,7 +10,7 @@
 
 import { genkit as globalGenkit } from 'genkit'; // Use 'globalGenkit' to avoid conflict if 'ai' is redefined locally
 import { googleAI } from '@genkit-ai/googleai';
-import { z } from 'genkit/zod';
+import { z } from 'genkit'; // CORRECTED IMPORT
 import pool, { getSystemSetting } from '@/lib/db';
 import type { Candidate, CandidateDetails, ExperienceEntry } from '@/lib/types';
 import { ai as globalAi } from '@/ai/genkit'; // The global Genkit instance
