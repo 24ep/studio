@@ -130,7 +130,6 @@ function createCandidateSummary(candidate: Candidate): string {
   }
 
   const finalSummary = summaryParts.join('\n');
-  // console.log(`Summary for ${id}: ${finalSummary.substring(0,100)}...`); // For debugging summary generation
   return finalSummary;
 }
 
@@ -221,9 +220,20 @@ Ensure your output is in the specified JSON format.
 If no candidate data is provided but a search query is present, indicate that no data was available to search.
 `,
     },
-    async (params) => {
+    async (params) => { // params here is of type { prompt: string, history?: ..., config?: ..., input?: {searchQuery, candidateData} }
+      console.log("AI Search (Custom Renderer): Received input for Handlebars rendering (params.input):", JSON.stringify(params.input).substring(0,500) + (JSON.stringify(params.input).length > 500 ? "..." : ""));
+      console.log("AI Search (Custom Renderer): Rendered prompt string (params.prompt) length:", params.prompt?.length);
+      if (params.prompt && params.prompt.length < 500) { // Log snippet of rendered prompt if short
+          console.log("AI Search (Custom Renderer): Rendered prompt snippet:", params.prompt);
+      } else if (params.prompt) {
+          console.log("AI Search (Custom Renderer): Rendered prompt snippet (first 500 chars):", params.prompt.substring(0,500) + "...");
+      }
+
+
       if (!params.prompt || params.prompt.trim() === "") {
-        console.error("AI Search Error: The prompt text to be sent to the LLM is empty. This will cause an 'at least one message is required' error.");
+        console.error("AI Search Error: The prompt text to be sent to the LLM is empty (params.prompt was empty). This will cause an 'at least one message is required' error.");
+        console.error("AI Search (Custom Renderer): Debug - params.input.searchQuery (original):", params.input?.searchQuery);
+        console.error("AI Search (Custom Renderer): Debug - params.input.candidateData (original) length:", params.input?.candidateData?.length);
         throw new Error("Internal error: Compiled prompt for AI is empty.");
       }
       
@@ -246,6 +256,13 @@ If no candidate data is provided but a search query is present, indicate that no
   
   try {
     const effectiveCandidateData = candidateSummariesText.trim() ? candidateSummariesText : "No candidate details available for processing.";
+    
+    console.log("AI Search: Calling searchPrompt with actual input:", { searchQuery: input.query, candidateDataLength: effectiveCandidateData.length });
+    if (effectiveCandidateData.length < 500) {
+      console.log("AI Search: candidateData content snippet (effectiveCandidateData):", effectiveCandidateData.substring(0, 500));
+    } else {
+      console.log("AI Search: candidateData content snippet (first 500 chars of effectiveCandidateData):", effectiveCandidateData.substring(0,500) + "...");
+    }
 
     const result = await searchPrompt({ searchQuery: input.query, candidateData: effectiveCandidateData });
     let finalReasoning = result?.aiReasoning;
@@ -273,5 +290,3 @@ If no candidate data is provided but a search query is present, indicate that no
     return { matchedCandidateIds: [], aiReasoning: `AI search failed: ${(flowError as Error).message}` };
   }
 }
-
-    
