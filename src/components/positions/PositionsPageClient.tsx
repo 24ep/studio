@@ -1,3 +1,4 @@
+
 // src/components/positions/PositionsPageClient.tsx
 "use client";
 
@@ -26,6 +27,7 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
+  AlertDialogTrigger, // Added missing import
 } from "@/components/ui/alert-dialog";
 import {
   DropdownMenu,
