@@ -1,373 +1,142 @@
+// src/app/my-tasks/page.tsx (Server Component)
+import { getServerSession } from 'next-auth/next';
+import { authOptions } from '@/app/api/auth/[...nextauth]/route';
+import pool from '@/lib/db';
+import { MyTasksPageClient } from '@/components/tasks/MyTasksPageClient';
+import type { Candidate, Position, RecruitmentStage, UserProfile } from '@/lib/types';
+import { fetchAllPositionsDb, fetchAllRecruitmentStagesDb } from '@/lib/apiUtils';
 
-"use client";
+async function getInitialTaskBoardData(session: any): Promise<{
+  initialCandidates: Candidate[];
+  initialPositions: Position[];
+  initialStages: RecruitmentStage[];
+  initialRecruiters: Pick<UserProfile, 'id' | 'name'>[];
+  error?: string;
+  authError?: boolean;
+  permissionError?: boolean;
+}> {
+  const userRole = session?.user?.role;
+  const userId = session?.user?.id;
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
-import { useSession, signIn } from 'next-auth/react';
-import { useRouter, usePathname } from 'next/navigation';
-import type { Candidate, UserProfile, CandidateStatus, Position, RecruitmentStage } from '@/lib/types';
-import { CandidateTable } from '@/components/candidates/CandidateTable';
-import { CandidateKanbanView } from '@/components/candidates/CandidateKanbanView';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Loader2, ServerCrash, ShieldAlert, ListTodo, Users, Filter, LayoutGrid, List, Search, FilterX, Brain } from 'lucide-react';
-import { useToast } from "@/hooks/use-toast";
-import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
-import { Label } from '@/components/ui/label';
-import { Input } from '@/components/ui/input';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { ChevronsUpDown, Check } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { CandidateFilters, type CandidateFilterValues } from '@/components/candidates/CandidateFilters';
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+  let initialPositions: Position[] = [];
+  let initialStages: RecruitmentStage[] = [];
+  let initialRecruiters: Pick<UserProfile, 'id' | 'name'>[] = [];
+  let initialCandidates: Candidate[] = [];
+  let accumulatedError = "";
 
+  if (!userId) {
+    return { initialCandidates, initialPositions, initialStages, initialRecruiters, authError: true, error: "User session required." };
+  }
 
-const ALL_CANDIDATES_ADMIN_VALUE = "ALL_CANDIDATES_ADMIN";
-const MY_ASSIGNED_VALUE = "me";
+  if (userRole !== 'Recruiter' && userRole !== 'Admin') {
+    return { initialCandidates, initialPositions, initialStages, initialRecruiters, permissionError: true, error: "You do not have permission to view this page." };
+  }
 
-const KANBAN_STATUS_ORDER: CandidateStatus[] = [
-  'Applied', 'Screening', 'Shortlisted', 'Interview Scheduled', 'Interviewing', 'Offer Extended', 'Offer Accepted', 'Hired', 'Rejected', 'On Hold'
-];
+  try {
+    initialPositions = await fetchAllPositionsDb();
+  } catch (e) { accumulatedError += "Failed to load positions. "; console.error("MyTasksPageServer fetchAllPositionsDb Error:", e); }
 
-export default function MyTasksPage() {
-  const { data: session, status: sessionStatus } = useSession();
-  const router = useRouter();
-  const pathname = usePathname();
-  const { toast } = useToast();
+  try {
+    initialStages = await fetchAllRecruitmentStagesDb();
+  } catch (e) { accumulatedError += "Failed to load stages. "; console.error("MyTasksPageServer fetchAllRecruitmentStagesDb Error:", e); }
 
-  const [candidates, setCandidates] = useState<Candidate[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [fetchError, setFetchError] = useState<string | null>(null);
-  const [allRecruiters, setAllRecruiters] = useState<Pick<UserProfile, 'id' | 'name'>[]>([]); 
-  const [selectedRecruiterFilter, setSelectedRecruiterFilter] = useState<string>(MY_ASSIGNED_VALUE);
-  const [viewMode, setViewMode] = useState<'kanban' | 'list'>('kanban');
-  
-  const [standardFilters, setStandardFilters] = useState<CandidateFilterValues>({
-    minFitScore: 0, maxFitScore: 100, selectedStatuses: [], selectedPositionIds: []
-  });
-  const [aiSearchQuery, setAiSearchQuery] = useState<string>('');
-  const [isAiSearching, setIsAiSearching] = useState(false);
-  const [aiSearchReasoning, setAiSearchReasoning] = useState<string | null>(null);
-  const [aiMatchedCandidateIds, setAiMatchedCandidateIds] = useState<string[] | null>(null);
-
-
-  const [availablePositions, setAvailablePositions] = useState<Position[]>([]);
-  const [availableStages, setAvailableStages] = useState<RecruitmentStage[]>([]);
-
-  const fetchInitialFilterData = useCallback(async () => {
-    if (sessionStatus !== 'authenticated') return;
-    try {
-      const [posRes, stagesRes, recRes] = await Promise.all([
-        fetch('/api/positions'),
-        fetch('/api/settings/recruitment-stages'),
-        session?.user?.role === 'Admin' ? fetch('/api/users?role=Recruiter') : Promise.resolve(null) 
-      ]);
-      if (posRes.ok) setAvailablePositions(await posRes.json());
-      else console.error("Failed to fetch positions for filters");
-      if (stagesRes.ok) setAvailableStages(await stagesRes.json());
-      else console.error("Failed to fetch stages for filters");
-      if (recRes && recRes.ok) setAllRecruiters(await recRes.json());
-      else if (recRes) console.error("Failed to fetch recruiters for filters");
-    } catch (error) {
-      console.error("Error fetching initial data for filters:", error);
-    }
-  }, [sessionStatus, session?.user?.role]);
-
-
-  const fetchTaskBoardCandidates = useCallback(async () => {
-    if (sessionStatus !== 'authenticated' || !session?.user?.id) {
-      setIsLoading(false);
-      return;
-    }
-
-    const userRole = session.user.role;
-    if (userRole !== 'Recruiter' && userRole !== 'Admin') {
-        setFetchError("You do not have permission to view this page.");
-        setIsLoading(false);
-        return;
-    }
-
-    setIsLoading(true);
-    setFetchError(null);
-    setAiMatchedCandidateIds(null);
-    
-    const queryParams = new URLSearchParams();
-    let effectiveRecruiterIdForParam = '';
+  try {
     if (userRole === 'Admin') {
-      if (selectedRecruiterFilter === ALL_CANDIDATES_ADMIN_VALUE) {
-        // No specific recruiterId, means ALL
-      } else {
-        effectiveRecruiterIdForParam = selectedRecruiterFilter === MY_ASSIGNED_VALUE ? session.user.id : selectedRecruiterFilter;
-      }
-    } else { // Recruiter
-      effectiveRecruiterIdForParam = session.user.id;
+      const recResult = await pool.query('SELECT id, name FROM "User" WHERE role = $1 ORDER BY name ASC', ['Recruiter']);
+      initialRecruiters = recResult.rows;
+    } else {
+      // For a Recruiter, they might only need their own details initially for "My Assigned"
+      initialRecruiters = [{id: userId, name: session.user.name || 'My Tasks'}];
     }
-    if (effectiveRecruiterIdForParam) {
-        queryParams.append('assignedRecruiterId', effectiveRecruiterIdForParam); 
-    }
+  } catch (e) { accumulatedError += "Failed to load recruiters. "; console.error("MyTasksPageServer fetch recruiters Error:", e); }
 
-    // Apply standard filters
-    if (standardFilters.name) queryParams.append('name', standardFilters.name);
-    if (standardFilters.selectedPositionIds && standardFilters.selectedPositionIds.length > 0) queryParams.append('positionId', standardFilters.selectedPositionIds.join(','));
-    if (standardFilters.selectedStatuses && standardFilters.selectedStatuses.length > 0) queryParams.append('status', standardFilters.selectedStatuses.join(','));
-    if (standardFilters.education) queryParams.append('education', standardFilters.education);
-    if (standardFilters.minFitScore !== undefined) queryParams.append('minFitScore', String(standardFilters.minFitScore));
-    if (standardFilters.maxFitScore !== undefined) queryParams.append('maxFitScore', String(standardFilters.maxFitScore));
-    // Date filters
-    if (standardFilters.applicationDateStart) queryParams.append('applicationDateStart', standardFilters.applicationDateStart.toISOString());
-    if (standardFilters.applicationDateEnd) queryParams.append('applicationDateEnd', standardFilters.applicationDateEnd.toISOString());
+  try {
+    // Default filter for task board: assigned to the logged-in user if Recruiter,
+    // or their own tasks if Admin initially selects "My Assigned" (client-side will handle full admin view)
+    let defaultRecruiterIdFilter = userId;
     
-    try {
-      const response = await fetch(`/api/candidates?${queryParams.toString()}`);
-      
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ message: response.statusText || `Status: ${response.status}` }));
-        if (response.status === 401 || response.status === 403) {
-          signIn(undefined, { callbackUrl: pathname });
-          return;
-        }
-        setFetchError(errorData.message || 'Failed to fetch assigned candidates');
-        setCandidates([]);
-        return;
-      }
-      const data: Candidate[] = await response.json();
-      setCandidates(data);
-    } catch (error) {
-      const errorMessage = (error as Error).message || "Could not load assigned candidates.";
-      if (!(errorMessage.toLowerCase().includes("unauthorized") || errorMessage.toLowerCase().includes("forbidden"))) {
-        setFetchError(errorMessage);
-      }
-      setCandidates([]);
-    } finally {
-      setIsLoading(false);
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sessionStatus, session, pathname, signIn, selectedRecruiterFilter, standardFilters]);
+    // For admin, initially load their own tasks. The client can then change filter to view all or others.
+    // If it's a recruiter, always load their tasks.
+    // This initial query is for the default view of the page.
 
-  useEffect(() => {
-    if (sessionStatus === 'unauthenticated') {
-      signIn(undefined, { callbackUrl: pathname });
-    } else if (sessionStatus === 'authenticated') {
-      fetchInitialFilterData();
-      fetchTaskBoardCandidates();
-    }
-  }, [sessionStatus, session, fetchTaskBoardCandidates, fetchInitialFilterData, pathname, signIn]);
-  
-  const handleRecruiterFilterChange = (newFilter: string) => {
-    setSelectedRecruiterFilter(newFilter);
-    // fetchTaskBoardCandidates will be triggered by the useEffect dependency on selectedRecruiterFilter
-  };
-  
-  const handleStandardFilterChange = (newFilters: CandidateFilterValues) => {
-    setStandardFilters(newFilters);
-    setAiSearchQuery(''); // Clear AI query when standard filters change
-    setAiMatchedCandidateIds(null);
-    setAiSearchReasoning(null);
-    // fetchTaskBoardCandidates will be called due to standardFilters dependency change
-  };
+    let candidateQuery = `
+      SELECT
+        c.id, c.name, c.email, c.phone, c."avatarUrl", c."dataAiHint", c."resumePath", c."parsedData", c.custom_attributes,
+        c."positionId", c."fitScore", c.status, c."applicationDate",
+        c."recruiterId", c."createdAt", c."updatedAt",
+        p.title as "positionTitle", p.department as "positionDepartment", p.position_level as "positionLevel",
+        rec_user.name as "recruiterName",
+        COALESCE(th_data.history, '[]'::json) as "transitionHistory"
+      FROM "Candidate" c
+      LEFT JOIN "Position" p ON c."positionId" = p.id
+      LEFT JOIN "User" rec_user ON c."recruiterId" = rec_user.id
+      LEFT JOIN LATERAL (
+        SELECT json_agg(
+          json_build_object(
+            'id', th.id, 'candidateId', th."candidateId", 'date', th.date, 'stage', th.stage,
+            'notes', th.notes, 'actingUserId', th."actingUserId", 'actingUserName', u_th.name,
+            'createdAt', th."createdAt", 'updatedAt', th."updatedAt"
+          ) ORDER BY th.date DESC
+        ) AS history
+        FROM "TransitionRecord" th
+        LEFT JOIN "User" u_th ON th."actingUserId" = u_th.id
+        WHERE th."candidateId" = c.id
+      ) AS th_data ON true
+      WHERE c."recruiterId" = $1
+      ORDER BY c."createdAt" DESC LIMIT 50;
+    `;
+    const queryParams = [defaultRecruiterIdFilter];
 
-  const handleAiSearch = async (query: string) => {
-    if (!query.trim()) {
-      toast({ title: "Empty AI Query", description: "Please enter a search term.", variant: "default" });
-      return;
-    }
-    setIsAiSearching(true);
-    setFetchError(null);
-    setAiSearchReasoning(null);
-    setAiMatchedCandidateIds(null);
+    const result = await pool.query(candidateQuery, queryParams);
+    initialCandidates = result.rows.map(row => ({
+      ...row,
+      parsedData: row.parsedData || { personal_info: {}, contact_info: {} },
+      custom_attributes: row.custom_attributes || {},
+      position: row.positionId ? { id: row.positionId, title: row.positionTitle, department: row.positionDepartment, position_level: row.positionLevel } : null,
+      recruiter: row.recruiterId ? { id: row.recruiterId, name: row.recruiterName, email: null } : null,
+      transitionHistory: row.transitionHistory || [],
+    }));
 
-    try {
-      const response = await fetch('/api/ai/search-candidates', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ query }),
-      });
-      const result = await response.json();
-      if (!response.ok) throw new Error(result.message || `AI search failed. Status: ${response.status}`);
-      
-      setAiMatchedCandidateIds(result.matchedCandidateIds || []);
-      setAiSearchReasoning(result.aiReasoning || "AI search complete.");
-      toast({ title: "AI Search Complete", description: result.aiReasoning || "AI processing finished."});
+  } catch (e) { accumulatedError += `Failed to load initial candidates: ${(e as Error).message}. `; console.error("MyTasksPageServer fetch initial candidates Error:", e); }
 
-    } catch (error) {
-      toast({ title: "AI Search Error", description: (error as Error).message, variant: "destructive" });
-      setAiMatchedCandidateIds([]); // Show no candidates on error
-    } finally {
-      setIsAiSearching(false);
-    }
-  };
-
-  const displayedCandidates = useMemo(() => {
-    return aiMatchedCandidateIds !== null
-      ? candidates.filter(c => aiMatchedCandidateIds.includes(c.id))
-      : candidates;
-  }, [candidates, aiMatchedCandidateIds]);
-
-
-  if (sessionStatus === 'loading' || (isLoading && !fetchError && !pathname.startsWith('/auth/signin'))) {
-    return (
-      <div className="flex h-screen w-screen items-center justify-center bg-background fixed inset-0 z-50">
-        <Loader2 className="h-16 w-16 animate-spin text-primary" />
-      </div>
-    );
-  }
-  
-  if (session?.user?.role !== 'Recruiter' && session?.user?.role !== 'Admin') {
-     return (
-      <div className="flex flex-col items-center justify-center h-[calc(100vh-10rem)] text-center p-4">
-        <ShieldAlert className="w-16 h-16 text-destructive mb-4" />
-        <h2 className="text-2xl font-semibold text-foreground mb-2">Access Denied</h2>
-        <p className="text-muted-foreground">You do not have permission to view this page.</p>
-        <Button onClick={() => router.push('/')} className="mt-4">Go to Dashboard</Button>
-      </div>
-    );
-  }
-
-  if (fetchError) {
-    return (
-      <div className="flex flex-col items-center justify-center h-[calc(100vh-10rem)] text-center p-4">
-        <ServerCrash className="w-16 h-16 text-destructive mb-4" />
-        <h2 className="text-2xl font-semibold text-foreground mb-2">Error Loading Tasks</h2>
-        <p className="text-muted-foreground mb-4 max-w-md">{fetchError}</p>
-        <Button onClick={fetchTaskBoardCandidates} className="btn-hover-primary-gradient">Try Again</Button>
-      </div>
-    );
-  }
-
-  const pageTitle = session?.user?.role === 'Admin' 
-    ? (selectedRecruiterFilter === ALL_CANDIDATES_ADMIN_VALUE ? "All Candidates Overview" : 
-       selectedRecruiterFilter === MY_ASSIGNED_VALUE ? "My Assigned Candidates (Admin)" :
-       `Candidates for ${allRecruiters.find(r => r.id === selectedRecruiterFilter)?.name || 'Recruiter'}`)
-    : "My Task Board";
-  const pageDescription = session?.user?.role === 'Admin' 
-    ? (selectedRecruiterFilter === ALL_CANDIDATES_ADMIN_VALUE ? "Overview of all candidates in the system." : 
-       selectedRecruiterFilter === MY_ASSIGNED_VALUE ? "Candidates assigned to you (Admin)." :
-       `Candidates assigned to ${allRecruiters.find(r => r.id === selectedRecruiterFilter)?.name || 'the selected recruiter'}.`)
-    : "Candidates assigned to you for processing.";
-
-  return (
-    <div className="flex flex-col md:flex-row gap-6 h-full">
-        <aside className="w-full md:w-[280px] lg:w-[320px] flex-shrink-0 md:sticky md:top-[calc(var(--header-height,4rem)_+_1rem)] md:max-h-[calc(100vh-var(--header-height,4rem)-2rem)]">
-           <ScrollArea className="h-full md:pr-2">
-                <div className="md:hidden mb-3"> 
-                    {session?.user?.role === 'Admin' && (
-                        <div className="w-full">
-                            <Label htmlFor="recruiter-filter-select-mobile" className="text-xs font-medium">View tasks for:</Label>
-                             <Popover>
-                                <PopoverTrigger asChild>
-                                    <Button variant="outline" role="combobox" className="w-full justify-between mt-1 text-xs">
-                                        <span className="truncate">
-                                            {selectedRecruiterFilter === MY_ASSIGNED_VALUE ? "My Assigned (Admin)" :
-                                            selectedRecruiterFilter === ALL_CANDIDATES_ADMIN_VALUE ? "All Candidates (Admin)" :
-                                            allRecruiters.find(r => r.id === selectedRecruiterFilter)?.name || "My Assigned (Admin)"}
-                                        </span>
-                                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                                    </Button>
-                                </PopoverTrigger>
-                                <PopoverContent className="w-[--trigger-width] p-0 dropdown-content-height">
-                                    <ScrollArea className="max-h-60">
-                                        <Button variant="ghost" className={cn("w-full justify-start px-2 py-1 text-xs font-normal h-auto", selectedRecruiterFilter === MY_ASSIGNED_VALUE && "bg-accent text-accent-foreground")} onClick={() => handleRecruiterFilterChange(MY_ASSIGNED_VALUE)}><Check className={cn("mr-2 h-4 w-4", selectedRecruiterFilter === MY_ASSIGNED_VALUE ? "opacity-100" : "opacity-0")}/>My Assigned (Admin)</Button>
-                                        <Button variant="ghost" className={cn("w-full justify-start px-2 py-1 text-xs font-normal h-auto", selectedRecruiterFilter === ALL_CANDIDATES_ADMIN_VALUE && "bg-accent text-accent-foreground")} onClick={() => handleRecruiterFilterChange(ALL_CANDIDATES_ADMIN_VALUE)}><Check className={cn("mr-2 h-4 w-4", selectedRecruiterFilter === ALL_CANDIDATES_ADMIN_VALUE ? "opacity-100" : "opacity-0")}/>All Candidates (Admin)</Button>
-                                        {allRecruiters.map(rec => (<Button key={rec.id} variant="ghost" className={cn("w-full justify-start px-2 py-1 text-xs font-normal h-auto", selectedRecruiterFilter === rec.id && "bg-accent text-accent-foreground")} onClick={() => handleRecruiterFilterChange(rec.id)}><Check className={cn("mr-2 h-4 w-4", selectedRecruiterFilter === rec.id ? "opacity-100" : "opacity-0")}/>{rec.name}</Button>))}
-                                    </ScrollArea>
-                                </PopoverContent>
-                            </Popover>
-                        </div>
-                    )}
-                </div>
-                 <CandidateFilters
-                    initialFilters={standardFilters}
-                    onFilterChange={handleStandardFilterChange}
-                    onAiSearch={handleAiSearch}
-                    availablePositions={availablePositions}
-                    availableStages={availableStages}
-                    availableRecruiters={allRecruiters}
-                    isLoading={isLoading || isAiSearching}
-                    isAiSearching={isAiSearching}
-                />
-            </ScrollArea>
-        </aside>
-
-        <div className="flex-1 space-y-6 min-w-0">
-            <Card>
-                <CardHeader>
-                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                    <div>
-                    <CardTitle className="flex items-center">
-                        <ListTodo className="mr-2 h-6 w-6 text-primary" /> {pageTitle}
-                    </CardTitle>
-                    <CardDescription>{pageDescription}</CardDescription>
-                    </div>
-                    <div className="flex gap-1 self-end sm:self-center">
-                        <Button variant={viewMode === 'kanban' ? 'default' : 'outline'} size="icon" onClick={() => setViewMode('kanban')}><LayoutGrid className="h-4 w-4" /></Button>
-                        <Button variant={viewMode === 'list' ? 'default' : 'outline'} size="icon" onClick={() => setViewMode('list')}><List className="h-4 w-4" /></Button>
-                    </div>
-                </div>
-                </CardHeader>
-                <CardContent>
-                {/* Admin-specific recruiter filter for desktop */}
-                {session?.user?.role === 'Admin' && (
-                    <div className="mb-4 w-full md:max-w-xs hidden md:block">
-                        <Label htmlFor="recruiter-filter-select-desktop" className="text-xs font-medium">View tasks for:</Label>
-                         <Popover>
-                            <PopoverTrigger asChild>
-                                <Button variant="outline" role="combobox" className="w-full justify-between mt-1 text-xs">
-                                    <span className="truncate">
-                                        {selectedRecruiterFilter === MY_ASSIGNED_VALUE ? "My Assigned (Admin)" :
-                                        selectedRecruiterFilter === ALL_CANDIDATES_ADMIN_VALUE ? "All Candidates (Admin)" :
-                                        allRecruiters.find(r => r.id === selectedRecruiterFilter)?.name || "My Assigned (Admin)"}
-                                    </span>
-                                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                                </Button>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-[--trigger-width] p-0 dropdown-content-height">
-                                <ScrollArea className="max-h-60">
-                                    <Button variant="ghost" className={cn("w-full justify-start px-2 py-1 text-xs font-normal h-auto", selectedRecruiterFilter === MY_ASSIGNED_VALUE && "bg-accent text-accent-foreground")} onClick={() => handleRecruiterFilterChange(MY_ASSIGNED_VALUE)}><Check className={cn("mr-2 h-4 w-4", selectedRecruiterFilter === MY_ASSIGNED_VALUE ? "opacity-100" : "opacity-0")}/>My Assigned (Admin)</Button>
-                                    <Button variant="ghost" className={cn("w-full justify-start px-2 py-1 text-xs font-normal h-auto", selectedRecruiterFilter === ALL_CANDIDATES_ADMIN_VALUE && "bg-accent text-accent-foreground")} onClick={() => handleRecruiterFilterChange(ALL_CANDIDATES_ADMIN_VALUE)}><Check className={cn("mr-2 h-4 w-4", selectedRecruiterFilter === ALL_CANDIDATES_ADMIN_VALUE ? "opacity-100" : "opacity-0")}/>All Candidates (Admin)</Button>
-                                    {allRecruiters.map(rec => (<Button key={rec.id} variant="ghost" className={cn("w-full justify-start px-2 py-1 text-xs font-normal h-auto", selectedRecruiterFilter === rec.id && "bg-accent text-accent-foreground")} onClick={() => handleRecruiterFilterChange(rec.id)}><Check className={cn("mr-2 h-4 w-4", selectedRecruiterFilter === rec.id ? "opacity-100" : "opacity-0")}/>{rec.name}</Button>))}
-                                </ScrollArea>
-                            </PopoverContent>
-                        </Popover>
-                    </div>
-                )}
-
-                {aiSearchReasoning && (
-                  <Alert variant="default" className="mb-4 bg-blue-50 border-blue-300 dark:bg-blue-900/30 dark:border-blue-700">
-                    <Brain className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-                    <AlertTitle className="font-semibold text-blue-700 dark:text-blue-300">AI Search Results</AlertTitle>
-                    <AlertDescription className="text-blue-700 dark:text-blue-300">
-                      {aiSearchReasoning}
-                      {aiMatchedCandidateIds && aiMatchedCandidateIds.length === 0 && " No strong matches found."}
-                    </AlertDescription>
-                  </Alert>
-                )}
-
-                {isLoading || isAiSearching ? (
-                    <div className="flex items-center justify-center h-64"><Loader2 className="h-12 w-12 animate-spin text-primary" /></div>
-                ) : displayedCandidates.length === 0 ? (
-                    <div className="text-center py-10"><Users className="mx-auto h-12 w-12 text-muted-foreground" /><p className="mt-4 text-muted-foreground">No candidates match the current filters.</p></div>
-                ) : viewMode === 'list' ? (
-                    <CandidateTable
-                    candidates={displayedCandidates}
-                    availablePositions={availablePositions}
-                    availableStages={availableStages}
-                    onUpdateCandidate={async (id, newStatus) => { /* Limited action from task board */ }}
-                    onDeleteCandidate={async (id) => { /* Limited action */ }}
-                    onOpenUploadModal={() => { /* Limited action */ }}
-                    onEditPosition={() => { /* Limited action */ }}
-                    isLoading={false} // Main page isLoading handles this
-                    onRefreshCandidateData={async (id) => fetchTaskBoardCandidates()}
-                    selectedCandidateIds={new Set()} // Bulk actions not primary on task board
-                    onToggleSelectCandidate={() => {}}
-                    onToggleSelectAllCandidates={() => {}}
-                    isAllCandidatesSelected={false}
-                    />
-                ) : (
-                    <CandidateKanbanView candidates={displayedCandidates} statuses={availableStages.map(s => s.name)} />
-                )}
-                </CardContent>
-            </Card>
-        </div>
-    </div>
-  );
+  return { initialCandidates, initialPositions, initialStages, initialRecruiters, error: accumulatedError.trim() || undefined };
 }
 
+
+export default async function MyTasksPageServer() {
+  const session = await getServerSession(authOptions);
+
+  if (!session?.user) {
+    return <MyTasksPageClient
+             initialCandidates={[]}
+             initialPositions={[]}
+             initialStages={[]}
+             initialRecruiters={[]}
+             authError={true}
+           />;
+  }
+
+  const { initialCandidates, initialPositions, initialStages, initialRecruiters, error, authError, permissionError } = await getInitialTaskBoardData(session);
+
+  if (authError || permissionError) {
+     return <MyTasksPageClient
+             initialCandidates={[]}
+             initialPositions={initialPositions}
+             initialStages={initialStages}
+             initialRecruiters={initialRecruiters}
+             authError={authError}
+             permissionError={permissionError}
+             initialFetchError={error}
+           />;
+  }
+
+  return (
+    <MyTasksPageClient
+      initialCandidates={initialCandidates}
+      initialPositions={initialPositions}
+      initialStages={initialStages}
+      initialRecruiters={initialRecruiters}
+      initialFetchError={error}
+    />
+  );
+}
