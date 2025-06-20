@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
+import { Command, CommandEmpty, CommandInput, CommandList, CommandItem } from '@/components/ui/command';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Search, FilterX, Check, ChevronsUpDown, Loader2 } from 'lucide-react';
 import { cn } from "@/lib/utils";
@@ -38,6 +38,9 @@ export function PositionFilters({ initialFilters = { isOpen: "all" }, onFilterCh
   const [isOpen, setIsOpen] = useState<PositionFilterValues['isOpen']>(initialFilters.isOpen || "all");
   const [positionLevel, setPositionLevel] = useState(initialFilters.positionLevel || '');
   
+  const [departmentSearch, setDepartmentSearch] = useState('');
+  const [departmentPopoverOpen, setDepartmentPopoverOpen] = useState(false);
+
   useEffect(() => {
     setTitle(initialFilters.title || '');
     setSelectedDepartments(new Set(initialFilters.selectedDepartments || []));
@@ -69,6 +72,8 @@ export function PositionFilters({ initialFilters = { isOpen: "all" }, onFilterCh
     return `${selectedDepartments.size} departments selected`;
   };
 
+  const filteredDepartments = availableDepartments.filter(dept => dept.toLowerCase().includes(departmentSearch.toLowerCase()));
+
 
   return (
     <div className="mb-6 p-4 border rounded-lg bg-card shadow">
@@ -86,20 +91,20 @@ export function PositionFilters({ initialFilters = { isOpen: "all" }, onFilterCh
         </div>
         <div>
           <Label htmlFor="department-select">Department(s)</Label>
-          <Popover>
+          <Popover open={departmentPopoverOpen} onOpenChange={setDepartmentPopoverOpen}>
             <PopoverTrigger asChild>
-                <Button variant="outline" role="combobox" className="w-full mt-1 justify-between text-xs font-normal">
+                <Button variant="outline" role="combobox" aria-expanded={departmentPopoverOpen} className="w-full mt-1 justify-between text-xs font-normal">
                     {renderMultiSelectDepartmentTrigger()}
                     <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                 </Button>
             </PopoverTrigger>
             <PopoverContent className="w-[--trigger-width] p-0 dropdown-content-height">
                 <Command>
-                    <CommandInput placeholder="Search departments..." className="h-9 text-xs" />
-                    <CommandEmpty>No departments found.</CommandEmpty>
+                    <CommandInput placeholder="Search departments..." value={departmentSearch} onValueChange={setDepartmentSearch} className="h-9 text-xs" />
                     <CommandList>
+                         <CommandEmpty>{departmentSearch ? 'No departments found.' : 'Type to search departments.'}</CommandEmpty>
                         <ScrollArea className="max-h-48">
-                        {availableDepartments.map((dept) => (
+                        {filteredDepartments.map((dept) => (
                             <CommandItem
                                 key={dept}
                                 value={dept}
@@ -158,3 +163,4 @@ export function PositionFilters({ initialFilters = { isOpen: "all" }, onFilterCh
     </div>
   );
 }
+

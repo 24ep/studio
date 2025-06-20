@@ -5,7 +5,7 @@ import React, { useState, useEffect } from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList, CommandSeparator } from '@/components/ui/command';
+import { Command, CommandEmpty, CommandInput, CommandList, CommandItem } from '@/components/ui/command';
 import { Slider } from '@/components/ui/slider';
 import { Label } from '@/components/ui/label';
 import { Search, FilterX, Check, ChevronsUpDown, Loader2, CalendarIcon, Brain, Users, Briefcase, Tag, Star, Building, ListFilter } from 'lucide-react';
@@ -74,6 +74,15 @@ export function CandidateFilters({
 
   const [selectedRecruiterIds, setSelectedRecruiterIds] = useState<Set<string>>(new Set(initialFilters.selectedRecruiterIds || []));
   const [aiSearchQueryInput, setAiSearchQueryInput] = useState(initialFilters.aiSearchQuery || '');
+
+  const [positionSearch, setPositionSearch] = useState('');
+  const [statusSearch, setStatusSearch] = useState('');
+  const [recruiterSearch, setRecruiterSearch] = useState('');
+  
+  const [positionPopoverOpen, setPositionPopoverOpen] = useState(false);
+  const [statusPopoverOpen, setStatusPopoverOpen] = useState(false);
+  const [recruiterPopoverOpen, setRecruiterPopoverOpen] = useState(false);
+
 
   const currentYear = new Date().getFullYear();
   const fromYear = currentYear - 10;
@@ -145,17 +154,26 @@ export function CandidateFilters({
     });
   };
   
-  const renderMultiSelectTrigger = (placeholder: string, selectedItems: Set<string>, allItems: {id: string; name: string}[] | {name: string}[]) => {
+  const renderMultiSelectTrigger = (placeholder: string, selectedItems: Set<string>, allItems: {id: string; title?: string; name?: string}[], itemType: 'position' | 'status' | 'recruiter') => {
     if (selectedItems.size === 0) return placeholder;
     if (selectedItems.size === 1) {
       const firstId = Array.from(selectedItems)[0];
-      const item = 'id' in allItems[0] 
-        ? (allItems as {id: string; name: string}[]).find(p => p.id === firstId)?.name 
-        : (allItems as {name: string}[]).find(s => s.name === firstId)?.name;
-      return item || placeholder;
+      let itemName = '';
+      if (itemType === 'position') {
+        itemName = (allItems as Position[]).find(p => p.id === firstId)?.title || placeholder;
+      } else if (itemType === 'status') {
+        itemName = (allItems as RecruitmentStage[]).find(s => s.name === firstId)?.name || placeholder;
+      } else if (itemType === 'recruiter') {
+        itemName = (allItems as UserProfile[]).find(r => r.id === firstId)?.name || placeholder;
+      }
+      return itemName;
     }
     return `${selectedItems.size} selected`;
   };
+
+  const filteredPositions = availablePositions.filter(pos => pos.title.toLowerCase().includes(positionSearch.toLowerCase()));
+  const filteredStages = availableStages.filter(stage => stage.name.toLowerCase().includes(statusSearch.toLowerCase()));
+  const filteredRecruiters = availableRecruiters.filter(rec => rec.name.toLowerCase().includes(recruiterSearch.toLowerCase()));
 
 
   const filterGroups = [
@@ -179,20 +197,20 @@ export function CandidateFilters({
         <>
           <div>
             <Label htmlFor="position-select" className="text-xs">Position(s)</Label>
-            <Popover>
+            <Popover open={positionPopoverOpen} onOpenChange={setPositionPopoverOpen}>
                 <PopoverTrigger asChild>
-                    <Button variant="outline" role="combobox" className="w-full mt-1 justify-between text-xs font-normal">
-                        {renderMultiSelectTrigger("Select position(s)...", selectedPositionIds, availablePositions)}
+                    <Button variant="outline" role="combobox" aria-expanded={positionPopoverOpen} className="w-full mt-1 justify-between text-xs font-normal">
+                        {renderMultiSelectTrigger("Select position(s)...", selectedPositionIds, availablePositions, 'position')}
                         <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                     </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-[--trigger-width] p-0 dropdown-content-height">
                     <Command>
-                        <CommandInput placeholder="Search positions..." className="h-9 text-xs" />
-                        <CommandEmpty>No positions found.</CommandEmpty>
+                        <CommandInput placeholder="Search positions..." value={positionSearch} onValueChange={setPositionSearch} className="h-9 text-xs" />
                         <CommandList>
+                            <CommandEmpty>{positionSearch ? 'No positions found.' : 'Type to search positions.'}</CommandEmpty>
                             <ScrollArea className="max-h-48">
-                            {availablePositions.map((pos) => (
+                            {filteredPositions.map((pos) => (
                                 <CommandItem
                                     key={pos.id}
                                     value={pos.title}
@@ -203,6 +221,7 @@ export function CandidateFilters({
                                             else newSet.add(pos.id);
                                             return newSet;
                                         });
+                                        // setPositionPopoverOpen(false); // Keep open for multi-select
                                     }}
                                     className="text-xs"
                                 >
@@ -218,20 +237,20 @@ export function CandidateFilters({
           </div>
           <div>
             <Label htmlFor="status-select" className="text-xs">Status(es)</Label>
-            <Popover>
+            <Popover open={statusPopoverOpen} onOpenChange={setStatusPopoverOpen}>
                 <PopoverTrigger asChild>
-                    <Button variant="outline" role="combobox" className="w-full mt-1 justify-between text-xs font-normal">
-                        {renderMultiSelectTrigger("Select status(es)...", selectedStatuses, availableStages)}
+                    <Button variant="outline" role="combobox" aria-expanded={statusPopoverOpen} className="w-full mt-1 justify-between text-xs font-normal">
+                        {renderMultiSelectTrigger("Select status(es)...", selectedStatuses, availableStages, 'status')}
                         <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                     </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-[--trigger-width] p-0 dropdown-content-height">
                     <Command>
-                        <CommandInput placeholder="Search statuses..." className="h-9 text-xs" />
-                        <CommandEmpty>No statuses found.</CommandEmpty>
+                        <CommandInput placeholder="Search statuses..." value={statusSearch} onValueChange={setStatusSearch} className="h-9 text-xs" />
                         <CommandList>
+                            <CommandEmpty>{statusSearch ? 'No statuses found.' : 'Type to search statuses.'}</CommandEmpty>
                             <ScrollArea className="max-h-48">
-                            {availableStages.map((stage) => (
+                            {filteredStages.map((stage) => (
                                 <CommandItem
                                     key={stage.id}
                                     value={stage.name}
@@ -257,20 +276,20 @@ export function CandidateFilters({
           </div>
           <div>
             <Label htmlFor="recruiter-select" className="text-xs">Assigned Recruiter(s)</Label>
-            <Popover>
+            <Popover open={recruiterPopoverOpen} onOpenChange={setRecruiterPopoverOpen}>
                 <PopoverTrigger asChild>
-                    <Button variant="outline" role="combobox" className="w-full mt-1 justify-between text-xs font-normal">
-                        {renderMultiSelectTrigger("Select recruiter(s)...", selectedRecruiterIds, availableRecruiters)}
+                    <Button variant="outline" role="combobox" aria-expanded={recruiterPopoverOpen} className="w-full mt-1 justify-between text-xs font-normal">
+                        {renderMultiSelectTrigger("Select recruiter(s)...", selectedRecruiterIds, availableRecruiters, 'recruiter')}
                         <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                     </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-[--trigger-width] p-0 dropdown-content-height">
                     <Command>
-                        <CommandInput placeholder="Search recruiters..." className="h-9 text-xs" />
-                        <CommandEmpty>No recruiters found.</CommandEmpty>
-                        <CommandList>
+                        <CommandInput placeholder="Search recruiters..." value={recruiterSearch} onValueChange={setRecruiterSearch} className="h-9 text-xs" />
+                         <CommandList>
+                           <CommandEmpty>{recruiterSearch ? 'No recruiters found.' : 'Type to search recruiters.'}</CommandEmpty>
                             <ScrollArea className="max-h-48">
-                            {availableRecruiters.map((rec) => (
+                            {filteredRecruiters.map((rec) => (
                                 <CommandItem
                                     key={rec.id}
                                     value={rec.name}
@@ -420,3 +439,4 @@ export function CandidateFilters({
     </div>
   );
 }
+

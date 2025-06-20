@@ -1,3 +1,4 @@
+
 // src/app/my-tasks/page.tsx (Server Component)
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/app/api/auth/[...nextauth]/route';
@@ -42,7 +43,7 @@ async function getInitialTaskBoardData(session: any): Promise<{
 
   try {
     if (userRole === 'Admin') {
-      const recResult = await pool.query('SELECT id, name FROM "User" WHERE role = $1 ORDER BY name ASC', ['Recruiter']);
+      const recResult = await pool.query('SELECT id, name FROM "User" WHERE role = $1 OR role = $2 ORDER BY name ASC', ['Recruiter', 'Admin']);
       initialRecruiters = recResult.rows;
     } else {
       // For a Recruiter, they might only need their own details initially for "My Assigned"
@@ -140,3 +141,4 @@ export default async function MyTasksPageServer() {
     />
   );
 }
+

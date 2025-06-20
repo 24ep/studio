@@ -10,14 +10,16 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Command, CommandEmpty, CommandInput, CommandList, CommandItem } from '@/components/ui/command';
 import { format, parseISO } from 'date-fns';
-import { ListOrdered, ServerCrash, ShieldAlert, Info, RefreshCw, ChevronsLeft, ChevronLeft, ChevronRight, ChevronsRight, AlertTriangle, Loader2, Search, CalendarIcon, UserCircle, FilterX } from "lucide-react";
+import { ListOrdered, ServerCrash, ShieldAlert, Info, RefreshCw, ChevronsLeft, ChevronLeft, ChevronRight, ChevronsRight, AlertTriangle, Loader2, Search, CalendarIcon, UserCircle, FilterX, ChevronsUpDown, Check } from "lucide-react";
 import type { LogEntry, LogLevel, UserProfile } from '@/lib/types';
 import { useToast } from "@/hooks/use-toast";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { signIn, useSession } from "next-auth/react";
 import { useRouter, usePathname } from 'next/navigation';
 import { cn } from "@/lib/utils";
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 const getLogLevelBadgeVariant = (level: LogLevel): "default" | "secondary" | "destructive" | "outline" => {
   switch (level) {
@@ -58,6 +60,9 @@ export default function ApplicationLogsPage() {
   const [startDate, setStartDate] = useState<Date | undefined>(undefined);
   const [endDate, setEndDate] = useState<Date | undefined>(undefined);
   const [allUsers, setAllUsers] = useState<Pick<UserProfile, 'id' | 'name'>[]>([]);
+  
+  const [userSearch, setUserSearch] = useState('');
+  const [userPopoverOpen, setUserPopoverOpen] = useState(false);
 
 
   const { data: session, status: sessionStatus } = useSession();
@@ -158,6 +163,9 @@ export default function ApplicationLogsPage() {
     setCurrentPage(1);
     fetchLogs(1, { level: "ALL", search: "", userId: "ALL", start: undefined, end: undefined });
   };
+  
+  const filteredUsersForDropdown = allUsers.filter(user => user.name.toLowerCase().includes(userSearch.toLowerCase()));
+
 
   if (sessionStatus === 'loading' || (isLoading && !fetchError && !isClient && logs.length === 0)) {
     return ( <div className="flex h-full items-center justify-center"> <Loader2 className="h-16 w-16 animate-spin text-primary" /> </div> );
@@ -195,7 +203,37 @@ export default function ApplicationLogsPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 items-end">
                   <div className="space-y-1"><Label htmlFor="search-query">Search Message/Source</Label><Input id="search-query" type="search" placeholder="Search..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleApplyFilters()} className="w-full"/></div>
                   <div className="space-y-1"><Label htmlFor="level-filter">Log Level</Label><Select value={levelFilter} onValueChange={(value) => setLevelFilter(value as LogLevel | "ALL")}><SelectTrigger id="level-filter"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="ALL">All Levels</SelectItem><SelectItem value="DEBUG">Debug</SelectItem><SelectItem value="INFO">Info</SelectItem><SelectItem value="WARN">Warn</SelectItem><SelectItem value="ERROR">Error</SelectItem><SelectItem value="AUDIT">Audit</SelectItem></SelectContent></Select></div>
-                  <div className="space-y-1"><Label htmlFor="user-filter">Acting User</Label><Select value={actingUserIdFilter} onValueChange={setActingUserIdFilter}><SelectTrigger id="user-filter"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="ALL">All Users</SelectItem>{allUsers.map(user => (<SelectItem key={user.id} value={user.id}>{user.name}</SelectItem>))}</SelectContent></Select></div>
+                  <div className="space-y-1">
+                    <Label htmlFor="user-filter">Acting User</Label>
+                    <Popover open={userPopoverOpen} onOpenChange={setUserPopoverOpen}>
+                      <PopoverTrigger asChild>
+                        <Button variant="outline" role="combobox" aria-expanded={userPopoverOpen} className="w-full justify-between font-normal">
+                          {actingUserIdFilter === 'ALL' ? 'All Users' : allUsers.find(u => u.id === actingUserIdFilter)?.name || 'All Users'}
+                          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-[--trigger-width] p-0 dropdown-content-height">
+                        <Command>
+                          <CommandInput placeholder="Search user..." value={userSearch} onValueChange={setUserSearch} className="h-9" />
+                          <CommandList>
+                            <CommandEmpty>{userSearch ? 'No user found.' : 'Type to search users.'}</CommandEmpty>
+                            <CommandItem value="ALL" onSelect={() => { setActingUserIdFilter('ALL'); setUserPopoverOpen(false); setUserSearch(''); }}>
+                              <Check className={cn("mr-2 h-4 w-4", actingUserIdFilter === 'ALL' ? "opacity-100" : "opacity-0")} />
+                              All Users
+                            </CommandItem>
+                            <ScrollArea className="max-h-48">
+                              {filteredUsersForDropdown.map((user) => (
+                                <CommandItem key={user.id} value={user.name} onSelect={() => { setActingUserIdFilter(user.id); setUserPopoverOpen(false); setUserSearch(''); }}>
+                                  <Check className={cn("mr-2 h-4 w-4", actingUserIdFilter === user.id ? "opacity-100" : "opacity-0")} />
+                                  {user.name}
+                                </CommandItem>
+                              ))}
+                            </ScrollArea>
+                          </CommandList>
+                        </Command>
+                      </PopoverContent>
+                    </Popover>
+                  </div>
                   <div className="space-y-1"><Label htmlFor="start-date">Start Date</Label><Popover><PopoverTrigger asChild><Button id="start-date" variant={"outline"} className={cn("w-full justify-start text-left font-normal", !startDate && "text-muted-foreground")}><CalendarIcon className="mr-2 h-4 w-4" />{startDate ? format(startDate, "PPP") : <span>Pick a date</span>}</Button></PopoverTrigger><PopoverContent className="w-auto p-0"><Calendar mode="single" selected={startDate} onSelect={setStartDate} initialFocus captionLayout="dropdown-buttons" fromYear={fromYear} toYear={toYear} /></PopoverContent></Popover></div>
                   <div className="space-y-1"><Label htmlFor="end-date">End Date</Label><Popover><PopoverTrigger asChild><Button id="end-date" variant={"outline"} className={cn("w-full justify-start text-left font-normal", !endDate && "text-muted-foreground")}><CalendarIcon className="mr-2 h-4 w-4" />{endDate ? format(endDate, "PPP") : <span>Pick a date</span>}</Button></PopoverTrigger><PopoverContent className="w-auto p-0"><Calendar mode="single" selected={endDate} onSelect={setEndDate} initialFocus captionLayout="dropdown-buttons" fromYear={fromYear} toYear={toYear} /></PopoverContent></Popover></div>
                   <div className="flex gap-2 items-end">
