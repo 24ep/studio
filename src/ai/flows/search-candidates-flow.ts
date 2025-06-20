@@ -8,12 +8,12 @@
  * - SearchCandidatesOutput - Output schema containing matched candidate IDs and AI reasoning.
  */
 
-import { genkit as globalGenkit } from 'genkit'; // Use 'globalGenkit' to avoid conflict if 'ai' is redefined locally
+import { genkit as globalGenkit } from 'genkit';
 import { googleAI } from '@genkit-ai/googleai';
-import { z } from 'genkit'; // CORRECTED IMPORT
+import { z } from 'genkit';
 import pool, { getSystemSetting } from '@/lib/db';
-import type { Candidate, CandidateDetails, ExperienceEntry } from '@/lib/types';
-import { ai as globalAi } from '@/ai/genkit'; // The global Genkit instance
+import type { Candidate, CandidateDetails, EducationEntry, ExperienceEntry, SkillEntry, JobSuitableEntry, TransitionRecord } from '@/lib/types';
+import { ai as globalAi } from '@/ai/genkit';
 
 // Input Schema
 const SearchCandidatesInputSchema = z.object({
@@ -28,87 +28,164 @@ const SearchCandidatesOutputSchema = z.object({
 });
 export type SearchCandidatesOutput = z.infer<typeof SearchCandidatesOutputSchema>;
 
-// Helper to create a concise summary for a candidate
+// Enhanced helper to create a more comprehensive summary for a candidate
 function createCandidateSummary(candidate: Candidate): string {
-  const { id, name, email, phone, status, fitScore, position, parsedData } = candidate;
+  const { id, name, email, phone, status, fitScore, position, parsedData, custom_attributes, applicationDate, recruiter, transitionHistory } = candidate;
   const details = parsedData as CandidateDetails | null;
 
   let summaryParts: string[] = [];
-  summaryParts.push(`ID: ${id}`);
+  summaryParts.push(`Candidate ID: ${id}`);
   summaryParts.push(`Name: ${name}`);
   if (email) summaryParts.push(`Email: ${email}`);
   if (phone) summaryParts.push(`Phone: ${phone}`);
-  if (position?.title) summaryParts.push(`Applied for: ${position.title} (Fit: ${fitScore}%, Status: ${status})`);
-  else summaryParts.push(`Status: ${status}, General Fit: ${fitScore}%`);
+  
+  if (position?.title) summaryParts.push(`Applied for Position: ${position.title} (Fit Score: ${fitScore}%, Status: ${status})`);
+  else summaryParts.push(`General Application (Status: ${status}, Overall Fit Score: ${fitScore}%)`);
+  
+  if (applicationDate) summaryParts.push(`Application Date: ${new Date(applicationDate).toLocaleDateString()}`);
+  if (recruiter?.name) summaryParts.push(`Assigned Recruiter: ${recruiter.name}`);
+  
+  const latestTransition = transitionHistory?.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0];
+  if (latestTransition) {
+    summaryParts.push(`Last Status Update: ${latestTransition.stage} on ${new Date(latestTransition.date).toLocaleDateString()}`);
+  }
+
 
   if (details) {
-    if (details.personal_info?.location) summaryParts.push(`Location: ${details.personal_info.location}`);
-    if (details.personal_info?.introduction_aboutme) summaryParts.push(`About: ${details.personal_info.introduction_aboutme.substring(0, 150)}...`);
+    if (details.cv_language) summaryParts.push(`CV Language: ${details.cv_language}`);
+    
+    if (details.personal_info) {
+      const pi = details.personal_info;
+      if (pi.title_honorific) summaryParts.push(`Title: ${pi.title_honorific}`);
+      if (pi.nickname) summaryParts.push(`Nickname: ${pi.nickname}`);
+      if (pi.location) summaryParts.push(`Location: ${pi.location}`);
+      if (pi.introduction_aboutme) summaryParts.push(`About Me: ${pi.introduction_aboutme}`);
+    }
 
     if (details.education && details.education.length > 0) {
-      const eduHighlight = details.education.map(edu => `${edu.major || edu.field || ''} at ${edu.university || ''} (${edu.period || ''})`).join('; ');
-      if (eduHighlight.trim()) summaryParts.push(`Education: ${eduHighlight}`);
+      summaryParts.push("Education History:");
+      details.education.forEach((edu: EducationEntry, index: number) => {
+        let eduStr = `  ${index + 1}. University: ${edu.university || 'N/A'}`;
+        if (edu.major || edu.field) eduStr += `, Major/Field: ${edu.major || ''}${edu.major && edu.field ? ' / ' : ''}${edu.field || ''}`;
+        if (edu.campus) eduStr += `, Campus: ${edu.campus}`;
+        if (edu.period) eduStr += `, Period: ${edu.period}`;
+        if (edu.duration) eduStr += `, Duration: ${edu.duration}`;
+        if (edu.GPA) eduStr += `, GPA: ${edu.GPA}`;
+        summaryParts.push(eduStr);
+      });
     }
 
     if (details.experience && details.experience.length > 0) {
-      const expSummary = details.experience.map(exp => `${exp.position} at ${exp.company} (${exp.period || exp.duration || 'N/A'})`).slice(0, 2).join('; ');
-      // Basic total experience calculation (very rough)
-      let totalYears = 0;
-      details.experience.forEach(exp => {
-        if (exp.duration) {
-          const match = exp.duration.match(/(\d+)\s*y/i);
-          if (match && match[1]) totalYears += parseInt(match[1]);
-        }
+      summaryParts.push("Work Experience:");
+      details.experience.forEach((exp: ExperienceEntry, index: number) => {
+        let expStr = `  ${index + 1}. Company: ${exp.company || 'N/A'}, Position: ${exp.position || 'N/A'}`;
+        if (exp.postition_level) expStr += ` (Level: ${exp.postition_level})`;
+        if (exp.period) expStr += `, Period: ${exp.period}`;
+        if (exp.duration) expStr += `, Duration: ${exp.duration}`;
+        if (exp.is_current_position) expStr += ` (Current Position)`;
+        if (exp.description) expStr += `\n    Description: ${exp.description.substring(0, 250)}${exp.description.length > 250 ? '...' : ''}`;
+        summaryParts.push(expStr);
       });
-      if (totalYears > 0) summaryParts.push(`Experience: ${expSummary} (Total approx. ${totalYears} years)`);
-      else if (expSummary.trim()) summaryParts.push(`Experience: ${expSummary}`);
     }
 
     if (details.skills && details.skills.length > 0) {
-      const allSkills = details.skills.flatMap(sEntry => sEntry.skill || []).slice(0, 10).join(', ');
-      if (allSkills.trim()) summaryParts.push(`Key Skills: ${allSkills}`);
+      summaryParts.push("Skills:");
+      details.skills.forEach((skillEntry: SkillEntry) => {
+        let skillStr = `  - Segment: ${skillEntry.segment_skill || 'General'}: `;
+        if (skillEntry.skill && skillEntry.skill.length > 0) {
+          skillStr += skillEntry.skill.join(', ');
+        } else if (skillEntry.skill_string) {
+           skillStr += skillEntry.skill_string;
+        } else {
+            skillStr += "N/A";
+        }
+        summaryParts.push(skillStr);
+      });
+    }
+
+    if (details.job_suitable && details.job_suitable.length > 0) {
+        summaryParts.push("Job Suitability Preferences:");
+        details.job_suitable.forEach((js: JobSuitableEntry, index: number) => {
+            let jsStr = `  ${index + 1}. Career: ${js.suitable_career || 'N/A'}`;
+            if (js.suitable_job_position) jsStr += `, Position: ${js.suitable_job_position}`;
+            if (js.suitable_job_level) jsStr += `, Level: ${js.suitable_job_level}`;
+            if (js.suitable_salary_bath_month) jsStr += `, Salary Expectation (THB/Month): ${js.suitable_salary_bath_month}`;
+            summaryParts.push(jsStr);
+        });
+    }
+    
+    if (details.job_matches && details.job_matches.length > 0) {
+      summaryParts.push("Automated Job Matches (from n8n):");
+      details.job_matches.forEach(match => {
+        summaryParts.push(`  - Job: ${match.job_title || match.job_id || 'N/A'}, Fit: ${match.fit_score}%, Reasons: ${(match.match_reasons || []).join(', ')}`);
+      });
     }
   }
-  return summaryParts.join('\n');
+  
+  if (custom_attributes && Object.keys(custom_attributes).length > 0) {
+    summaryParts.push("Custom Attributes:");
+    for (const [key, value] of Object.entries(custom_attributes)) {
+        summaryParts.push(`  ${key}: ${typeof value === 'object' ? JSON.stringify(value) : value}`);
+    }
+  }
+
+  const finalSummary = summaryParts.join('\n');
+  // console.log(`Summary for ${id}: ${finalSummary.substring(0,100)}...`); // For debugging summary generation
+  return finalSummary;
 }
 
 // The main flow function
 export async function searchCandidatesAIChat(input: SearchCandidatesInput): Promise<SearchCandidatesOutput> {
-  let activeAi = globalAi; // Use global 'ai' by default
+  let activeAi = globalAi;
 
   const dbApiKey = await getSystemSetting('geminiApiKey');
 
   if (dbApiKey) {
-    console.log("AI Search: Using Gemini API Key from database.");
+    console.log("AI Search: Using Gemini API Key from database for this flow instance.");
     const customGoogleAI = googleAI({ apiKey: dbApiKey });
-    // Re-initialize a local genkit instance if DB key is found
     activeAi = globalGenkit({ plugins: [customGoogleAI], model: 'googleai/gemini-pro' });
   } else if (process.env.GOOGLE_API_KEY) {
-    console.log("AI Search: Using GOOGLE_API_KEY environment variable.");
-    // Global 'ai' will use this by default.
+    console.log("AI Search: Using GOOGLE_API_KEY environment variable (global Genkit instance).");
   } else {
-    console.error('AI Search: Gemini API Key not configured in database or GOOGLE_API_KEY env var not set.');
+    console.error('AI Search: Gemini API Key not configured. AI features unavailable.');
     return { matchedCandidateIds: [], aiReasoning: 'AI features are not available due to missing API Key configuration.' };
   }
 
   let allCandidates: Candidate[] = [];
   try {
-    // Fetch ALL candidates - for a production system with many candidates, this needs optimization (e.g., pre-filtering or RAG)
     const candidatesResult = await pool.query(`
-        SELECT c.*, p.title as "positionTitle" 
+        SELECT 
+            c.*, 
+            p.title as "positionTitle",
+            rec.name as "recruiterName",
+            COALESCE(th_data.history, '[]'::json) as "transitionHistory"
         FROM "Candidate" c 
         LEFT JOIN "Position" p ON c."positionId" = p.id
+        LEFT JOIN "User" rec ON c."recruiterId" = rec.id
+        LEFT JOIN LATERAL (
+          SELECT json_agg(
+            json_build_object(
+              'id', th.id, 'date', th.date, 'stage', th.stage, 'notes', th.notes
+            ) ORDER BY th.date DESC
+          ) AS history
+          FROM "TransitionRecord" th
+          WHERE th."candidateId" = c.id
+        ) AS th_data ON true
     `);
+
     allCandidates = candidatesResult.rows.map(row => ({
         ...row,
-        parsedData: row.parsedData || { personal_info: {}, contact_info: {} }, // Ensure parsedData is at least an empty object
-        position: row.positionId ? { id: row.positionId, title: row.positionTitle } : null, // simplified position
+        parsedData: row.parsedData || { personal_info: {}, contact_info: {} },
+        position: row.positionId ? { id: row.positionId, title: row.positionTitle } : null,
+        recruiter: row.recruiterId ? { id: row.recruiterId, name: row.recruiterName, email: null } : null,
+        transitionHistory: (row.transitionHistory || []) as TransitionRecord[],
+        custom_attributes: row.custom_attributes || {},
     })) as Candidate[];
 
     if (allCandidates.length === 0) {
       return { matchedCandidateIds: [], aiReasoning: "No candidates found in the database to search." };
     }
-    console.log(`AI Search: Processing ${allCandidates.length} candidate profiles.`);
+    console.log(`AI Search: Preparing to process ${allCandidates.length} candidate profiles.`);
   } catch (dbError) {
     console.error("AI Search: Error fetching candidates from DB:", dbError);
     return { matchedCandidateIds: [], aiReasoning: "Failed to retrieve candidate data for searching." };
@@ -117,6 +194,11 @@ export async function searchCandidatesAIChat(input: SearchCandidatesInput): Prom
   const candidateSummariesText = allCandidates
     .map(c => `CANDIDATE_START\n${createCandidateSummary(c)}\nCANDIDATE_END`)
     .join('\n\n---\n\n');
+  
+  if (!candidateSummariesText.trim() && allCandidates.length > 0) {
+      console.warn("AI Search: Candidate summaries text is empty even though candidates were fetched. This might indicate an issue with createCandidateSummary or empty candidate details.");
+  }
+
 
   const searchPrompt = activeAi.definePrompt(
     {
@@ -127,39 +209,48 @@ export async function searchCandidatesAIChat(input: SearchCandidatesInput): Prom
 Identify the candidates that best match the query.
 
 User Search Query:
-{{searchQuery}}
+{{{searchQuery}}}
 
 Candidate Data (each candidate is between CANDIDATE_START and CANDIDATE_END):
-{{candidateData}}
+{{{candidateData}}}
 
 Based *only* on the provided candidate summaries and the user's query, return a list of candidate IDs that are strong matches.
 If no candidates seem to match, return an empty list for matchedCandidateIds.
 Provide a brief reasoning for your selection or if no matches are found.
 Ensure your output is in the specified JSON format.
+If no candidate data is provided but a search query is present, indicate that no data was available to search.
 `,
     },
     async (params) => {
-      // The 'generate' call is now within the callback, using the 'activeAi' instance
+      if (!params.prompt || params.prompt.trim() === "") {
+        console.error("AI Search Error: The prompt text to be sent to the LLM is empty. This will cause an 'at least one message is required' error.");
+        throw new Error("Internal error: Compiled prompt for AI is empty.");
+      }
+      
       const llmResponse = await activeAi.generate({
-        prompt: params.prompt!, // The template string is already compiled into params.prompt
-        history: params.history,
+        prompt: params.prompt, 
+        history: params.history, 
         config: params.config,
-        input: params.input, // Pass structured input here
         output: {
           format: 'json',
           schema: SearchCandidatesOutputSchema,
         },
-        // model: 'googleai/gemini-pro' // Specify model if not default in activeAi
       });
-      return llmResponse.output!;
+      if (!llmResponse.output) {
+        console.warn("AI Search: LLM generated a response, but the 'output' field is missing or null. Check LLM logs and schema compliance.");
+        return { matchedCandidateIds: [], aiReasoning: "AI model did not return structured output. Check model logs or schema compliance." };
+      }
+      return llmResponse.output;
     }
   );
   
   try {
-    const result = await searchPrompt({ searchQuery: input.query, candidateData: candidateSummariesText });
+    const effectiveCandidateData = candidateSummariesText.trim() ? candidateSummariesText : "No candidate details available for processing.";
+
+    const result = await searchPrompt({ searchQuery: input.query, candidateData: effectiveCandidateData });
     let finalReasoning = result?.aiReasoning;
 
-    if (allCandidates.length > 100) { // Threshold for "many candidates"
+    if (allCandidates.length > 100) {
         const perfWarning = "Note: Search may be slow due to the large number of candidate profiles being analyzed.";
         if (finalReasoning && finalReasoning.trim().length > 0) {
             finalReasoning = `${finalReasoning} ${perfWarning}`;
@@ -167,6 +258,10 @@ Ensure your output is in the specified JSON format.
             finalReasoning = perfWarning;
         }
     }
+    if (input.query && effectiveCandidateData !== "No candidate details available for processing." && (result?.matchedCandidateIds || []).length === 0 && (!finalReasoning || finalReasoning.trim() === '')) {
+        finalReasoning = (finalReasoning || "") + " No strong matches found for your query based on the available candidate data.";
+    }
+
 
     return {
         matchedCandidateIds: result?.matchedCandidateIds || [],
@@ -179,3 +274,4 @@ Ensure your output is in the specified JSON format.
   }
 }
 
+    
