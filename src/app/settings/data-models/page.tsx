@@ -137,6 +137,39 @@ const AttributeRow: React.FC<{
   );
 };
 
+const renderTable = (
+  modelType: 'Candidate' | 'Position',
+  attributes: ModelAttributeDefinition[],
+  prefs: Record<string, Partial<Pick<UserDataModelPreference, 'uiPreference' | 'customNote'>>>,
+  onPreferenceChange: (model: 'Candidate' | 'Position', attrKey: string, prefType: 'uiPreference' | 'customNote', value: string) => void
+) => (
+  <div className="border rounded-lg overflow-hidden">
+    <ScrollArea className="max-h-[60vh]"> {/* max-h constraint for scrollability */}
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead className="w-[25%]">Attribute Label / Key</TableHead>
+            <TableHead className="w-[15%]">Type</TableHead>
+            <TableHead className="w-[30%]">Description</TableHead>
+            <TableHead className="w-[15%]">UI Display</TableHead>
+            <TableHead className="w-[15%]">Custom Note</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {attributes.map(attr => (
+            <AttributeRow
+              key={attr.key}
+              attr={attr}
+              preferences={prefs}
+              onPreferenceChange={(key, type, val) => onPreferenceChange(modelType, key, type, val)}
+            />
+          ))}
+        </TableBody>
+      </Table>
+    </ScrollArea>
+  </div>
+);
+
 
 export default function DataModelsPage() {
   const { data: session, status: sessionStatus } = useSession();
@@ -283,43 +316,6 @@ export default function DataModelsPage() {
     );
   }
 
-  const renderTable = (modelType: 'Candidate' | 'Position', attributes: ModelAttributeDefinition[], prefs: Record<string, Partial<Pick<UserDataModelPreference, 'uiPreference' | 'customNote'>>>) => (
-     <Card>
-        <CardHeader>
-          <CardTitle>{modelType} Model Attributes</CardTitle>
-          <CardDescription>Set preferences for {modelType.toLowerCase()} data fields.</CardDescription>
-        </CardHeader>
-        <CardContent className="pt-0">
-           <div className="border rounded-lg overflow-hidden">
-            <ScrollArea className="max-h-[60vh]">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="w-[25%]">Attribute Label / Key</TableHead>
-                    <TableHead className="w-[15%]">Type</TableHead>
-                    <TableHead className="w-[30%]">Description</TableHead>
-                    <TableHead className="w-[15%]">UI Display</TableHead>
-                    <TableHead className="w-[15%]">Custom Note</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {attributes.map(attr => (
-                    <AttributeRow
-                      key={attr.key}
-                      attr={attr}
-                      preferences={prefs}
-                      onPreferenceChange={(key, type, val) => handlePreferenceChange(modelType, key, type, val)}
-                    />
-                  ))}
-                </TableBody>
-              </Table>
-            </ScrollArea>
-          </div>
-        </CardContent>
-      </Card>
-  );
-
-
   return (
     <Card className="shadow-lg">
       <CardHeader>
@@ -335,10 +331,10 @@ export default function DataModelsPage() {
             <TabsTrigger value="position-model">Position Model</TabsTrigger>
           </TabsList>
           <TabsContent value="candidate-model" className="mt-4">
-            {renderTable('Candidate', CANDIDATE_ATTRIBUTES, candidatePrefs)}
+            {renderTable('Candidate', CANDIDATE_ATTRIBUTES, candidatePrefs, handlePreferenceChange)}
           </TabsContent>
           <TabsContent value="position-model" className="mt-4">
-            {renderTable('Position', POSITION_ATTRIBUTES, positionPrefs)}
+            {renderTable('Position', POSITION_ATTRIBUTES, positionPrefs, handlePreferenceChange)}
           </TabsContent>
         </Tabs>
       </CardContent>
