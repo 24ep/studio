@@ -19,11 +19,9 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 type ThemePreference = "light" | "dark" | "system";
 const DEFAULT_APP_NAME = "CandiTrack";
 
-// Default Primary Colors (HSL strings)
 const DEFAULT_PRIMARY_GRADIENT_START = "179 67% 66%";
 const DEFAULT_PRIMARY_GRADIENT_END = "238 74% 61%";
 
-// Default Login Page Appearance
 const DEFAULT_LOGIN_BG_TYPE: LoginPageBackgroundType = "default";
 const DEFAULT_LOGIN_BG_COLOR1_HEX = "#F0F4F7"; 
 const DEFAULT_LOGIN_BG_COLOR2_HEX = "#3F51B5"; 
@@ -36,7 +34,6 @@ const DEFAULT_SIDEBAR_COLORS_BASE: Record<SystemSettingKey, string> = {
   sidebarBgStartD: "220 15% 12%", sidebarBgEndD: "220 15% 9%", sidebarTextD: "210 30% 85%",
   sidebarActiveBgStartD: DEFAULT_PRIMARY_GRADIENT_START, sidebarActiveBgEndD: DEFAULT_PRIMARY_GRADIENT_END, sidebarActiveTextD: "0 0% 100%",      
   sidebarHoverBgD: "220 15% 20%", sidebarHoverTextD: "210 30% 90%", sidebarBorderD: "220 15% 18%",
-  // Ensure other keys expected by AppLayout are also here if needed, or handle undefined gracefully
   appName: DEFAULT_APP_NAME, appLogoDataUrl: '', appThemePreference: 'system', 
   primaryGradientStart: DEFAULT_PRIMARY_GRADIENT_START, primaryGradientEnd: DEFAULT_PRIMARY_GRADIENT_END,
   smtpHost: '', smtpPort: '', smtpUser: '', smtpSecure: 'true', smtpFromEmail: '',
@@ -64,6 +61,29 @@ interface SidebarColors {
   sidebarActiveTextD: string;
   sidebarHoverBgD: string; sidebarHoverTextD: string; sidebarBorderD: string;
 }
+
+// Helper to create a fully typed initial state for SidebarColors
+const createInitialSidebarColors = (): SidebarColors => ({
+  sidebarBgStartL: DEFAULT_SIDEBAR_COLORS_BASE.sidebarBgStartL,
+  sidebarBgEndL: DEFAULT_SIDEBAR_COLORS_BASE.sidebarBgEndL,
+  sidebarTextL: DEFAULT_SIDEBAR_COLORS_BASE.sidebarTextL,
+  sidebarActiveBgStartL: DEFAULT_SIDEBAR_COLORS_BASE.sidebarActiveBgStartL,
+  sidebarActiveBgEndL: DEFAULT_SIDEBAR_COLORS_BASE.sidebarActiveBgEndL,
+  sidebarActiveTextL: DEFAULT_SIDEBAR_COLORS_BASE.sidebarActiveTextL,
+  sidebarHoverBgL: DEFAULT_SIDEBAR_COLORS_BASE.sidebarHoverBgL,
+  sidebarHoverTextL: DEFAULT_SIDEBAR_COLORS_BASE.sidebarHoverTextL,
+  sidebarBorderL: DEFAULT_SIDEBAR_COLORS_BASE.sidebarBorderL,
+  sidebarBgStartD: DEFAULT_SIDEBAR_COLORS_BASE.sidebarBgStartD,
+  sidebarBgEndD: DEFAULT_SIDEBAR_COLORS_BASE.sidebarBgEndD,
+  sidebarTextD: DEFAULT_SIDEBAR_COLORS_BASE.sidebarTextD,
+  sidebarActiveBgStartD: DEFAULT_SIDEBAR_COLORS_BASE.sidebarActiveBgStartD,
+  sidebarActiveBgEndD: DEFAULT_SIDEBAR_COLORS_BASE.sidebarActiveBgEndD,
+  sidebarActiveTextD: DEFAULT_SIDEBAR_COLORS_BASE.sidebarActiveTextD,
+  sidebarHoverBgD: DEFAULT_SIDEBAR_COLORS_BASE.sidebarHoverBgD,
+  sidebarHoverTextD: DEFAULT_SIDEBAR_COLORS_BASE.sidebarHoverTextD,
+  sidebarBorderD: DEFAULT_SIDEBAR_COLORS_BASE.sidebarBorderD,
+});
+
 
 function parseHslString(hslString: string): { h: number; s: number; l: number } | null {
   const match = hslString?.match(/^(\d+)\s+(\d+)%\s+(\d+)%$/);
@@ -152,9 +172,7 @@ export default function PreferencesSettingsPage() {
   const [loginBgColor1, setLoginBgColor1] = useState<string>(DEFAULT_LOGIN_BG_COLOR1_HEX);
   const [loginBgColor2, setLoginBgColor2] = useState<string>(DEFAULT_LOGIN_BG_COLOR2_HEX);
 
-  const [sidebarColors, setSidebarColors] = useState<SidebarColors>(
-    DEFAULT_SIDEBAR_COLORS_BASE as unknown as SidebarColors
-  );
+  const [sidebarColors, setSidebarColors] = useState<SidebarColors>(createInitialSidebarColors());
   
   const [activeSection, setActiveSection] = useState<string>(PREFERENCE_SECTIONS[0].id);
 
@@ -189,13 +207,14 @@ export default function PreferencesSettingsPage() {
       setLoginBgColor1(settingsMap.get('loginPageBackgroundColor1') || DEFAULT_LOGIN_BG_COLOR1_HEX);
       setLoginBgColor2(settingsMap.get('loginPageBackgroundColor2') || DEFAULT_LOGIN_BG_COLOR2_HEX);
       
-      const newSidebarColors: Partial<SidebarColors> = {};
-      for (const key of Object.keys(DEFAULT_SIDEBAR_COLORS_BASE) as Array<keyof typeof DEFAULT_SIDEBAR_COLORS_BASE>) {
-        if (key in DEFAULT_SIDEBAR_COLORS_BASE) { // Check if key is actually part of sidebar config
-           (newSidebarColors as any)[key] = settingsMap.get(key) || DEFAULT_SIDEBAR_COLORS_BASE[key];
+      const newSidebarColorsData: SidebarColors = { ...createInitialSidebarColors() };
+      (Object.keys(newSidebarColorsData) as Array<keyof SidebarColors>).forEach(key => {
+        const dbValue = settingsMap.get(key as SystemSettingKey);
+        if (dbValue !== null && dbValue !== undefined) {
+          newSidebarColorsData[key] = dbValue;
         }
-      }
-      setSidebarColors(newSidebarColors as SidebarColors);
+      });
+      setSidebarColors(newSidebarColorsData);
 
     } catch (error) {
       console.error("Error fetching system settings:", error);
@@ -303,8 +322,9 @@ export default function PreferencesSettingsPage() {
       { key: 'loginPageBackgroundType', value: loginBgType },
       { key: 'loginPageBackgroundColor1', value: loginBgColor1 },
       { key: 'loginPageBackgroundColor2', value: loginBgColor2 },
+      // Serialize sidebarColors correctly
       ...(Object.keys(sidebarColors) as Array<keyof SidebarColors>).map(key => ({
-        key: key as SystemSettingKey,
+        key: key as SystemSettingKey, // Cast here, ensure SidebarColors keys are subset of SystemSettingKey
         value: sidebarColors[key]
       })),
     ];
@@ -329,36 +349,41 @@ export default function PreferencesSettingsPage() {
       }
       const updatedSettingsList: SystemSetting[] = await response.json();
       const updatedSettingsMap = new Map(updatedSettingsList.map(s => [s.key, s.value]));
+      
+      // Re-populate states from the server response to ensure consistency
+      setAppName(updatedSettingsMap.get('appName') || DEFAULT_APP_NAME);
+      setThemePreference((updatedSettingsMap.get('appThemePreference') as ThemePreference) || 'system');
       const updatedLogoUrl = updatedSettingsMap.get('appLogoDataUrl') || null;
       setSavedLogoDataUrl(updatedLogoUrl);
       setLogoPreviewUrl(updatedLogoUrl);
-      setThemePreference((updatedSettingsMap.get('appThemePreference') as ThemePreference) || 'system');
-      setAppName(updatedSettingsMap.get('appName') || appName || DEFAULT_APP_NAME);
-      setPrimaryGradientStart(updatedSettingsMap.get('primaryGradientStart') || primaryGradientStart);
-      setPrimaryGradientEnd(updatedSettingsMap.get('primaryGradientEnd') || primaryGradientEnd);
+      setPrimaryGradientStart(updatedSettingsMap.get('primaryGradientStart') || DEFAULT_PRIMARY_GRADIENT_START);
+      setPrimaryGradientEnd(updatedSettingsMap.get('primaryGradientEnd') || DEFAULT_PRIMARY_GRADIENT_END);
+      
       const updatedLoginBgTypeVal = (updatedSettingsMap.get('loginPageBackgroundType') as LoginPageBackgroundType) || DEFAULT_LOGIN_BG_TYPE;
       const updatedLoginBgImageVal = updatedSettingsMap.get('loginPageBackgroundImageUrl') || null;
       setLoginBgType(updatedLoginBgTypeVal);
       setSavedLoginBgImageUrl(updatedLoginBgImageVal);
       setLoginBgImagePreviewUrl(updatedLoginBgTypeVal === 'image' ? updatedLoginBgImageVal : null);
-      setLoginBgColor1(updatedSettingsMap.get('loginPageBackgroundColor1') || loginBgColor1);
-      setLoginBgColor2(updatedSettingsMap.get('loginPageBackgroundColor2') || loginBgColor2);
+      setLoginBgColor1(updatedSettingsMap.get('loginPageBackgroundColor1') || DEFAULT_LOGIN_BG_COLOR1_HEX);
+      setLoginBgColor2(updatedSettingsMap.get('loginPageBackgroundColor2') || DEFAULT_LOGIN_BG_COLOR2_HEX);
       
-      const newSidebarColors: Partial<SidebarColors> = {};
-      for (const key of Object.keys(DEFAULT_SIDEBAR_COLORS_BASE) as Array<keyof typeof DEFAULT_SIDEBAR_COLORS_BASE>) {
-        if (key in sidebarColors) { // Check if key is actually part of SidebarColors interface
-           (newSidebarColors as any)[key] = updatedSettingsMap.get(key) || DEFAULT_SIDEBAR_COLORS_BASE[key];
+      const newSidebarColorsData: SidebarColors = { ...createInitialSidebarColors() };
+      (Object.keys(newSidebarColorsData) as Array<keyof SidebarColors>).forEach(key => {
+        const dbValue = updatedSettingsMap.get(key as SystemSettingKey);
+        // Ensure we only assign if dbValue is string, otherwise default from createInitialSidebarColors is used
+        if (typeof dbValue === 'string') {
+          newSidebarColorsData[key] = dbValue;
         }
-      }
-      setSidebarColors(newSidebarColors as SidebarColors);
+      });
+      setSidebarColors(newSidebarColorsData);
 
       toast({ title: 'Preferences Saved', description: 'Your application preferences have been saved to the server.', variant: 'success' });
       window.dispatchEvent(new CustomEvent('appConfigChanged', {
         detail: {
-          appName: updatedSettingsMap.get('appName') || appName || DEFAULT_APP_NAME,
+          appName: updatedSettingsMap.get('appName') || DEFAULT_APP_NAME,
           logoUrl: updatedLogoUrl,
-          primaryGradientStart: updatedSettingsMap.get('primaryGradientStart') || primaryGradientStart,
-          primaryGradientEnd: updatedSettingsMap.get('primaryGradientEnd') || primaryGradientEnd,
+          primaryGradientStart: updatedSettingsMap.get('primaryGradientStart') || DEFAULT_PRIMARY_GRADIENT_START,
+          primaryGradientEnd: updatedSettingsMap.get('primaryGradientEnd') || DEFAULT_PRIMARY_GRADIENT_END,
         }
       }));
     } catch (error) {
@@ -387,18 +412,19 @@ export default function PreferencesSettingsPage() {
   };
 
   const resetSidebarColors = (themeType: 'Light' | 'Dark') => {
+    const defaultColorsForTheme = createInitialSidebarColors();
     const suffix = themeType === 'Light' ? 'L' : 'D';
     setSidebarColors(prev => ({
       ...prev,
-      [`sidebarBgStart${suffix}`]: DEFAULT_SIDEBAR_COLORS_BASE[`sidebarBgStart${suffix}` as keyof typeof DEFAULT_SIDEBAR_COLORS_BASE],
-      [`sidebarBgEnd${suffix}`]: DEFAULT_SIDEBAR_COLORS_BASE[`sidebarBgEnd${suffix}` as keyof typeof DEFAULT_SIDEBAR_COLORS_BASE],
-      [`sidebarText${suffix}`]: DEFAULT_SIDEBAR_COLORS_BASE[`sidebarText${suffix}` as keyof typeof DEFAULT_SIDEBAR_COLORS_BASE],
-      [`sidebarActiveBgStart${suffix}`]: DEFAULT_SIDEBAR_COLORS_BASE[`sidebarActiveBgStart${suffix}` as keyof typeof DEFAULT_SIDEBAR_COLORS_BASE],
-      [`sidebarActiveBgEnd${suffix}`]: DEFAULT_SIDEBAR_COLORS_BASE[`sidebarActiveBgEnd${suffix}` as keyof typeof DEFAULT_SIDEBAR_COLORS_BASE],
-      [`sidebarActiveText${suffix}`]: DEFAULT_SIDEBAR_COLORS_BASE[`sidebarActiveText${suffix}` as keyof typeof DEFAULT_SIDEBAR_COLORS_BASE],
-      [`sidebarHoverBg${suffix}`]: DEFAULT_SIDEBAR_COLORS_BASE[`sidebarHoverBg${suffix}` as keyof typeof DEFAULT_SIDEBAR_COLORS_BASE],
-      [`sidebarHoverText${suffix}`]: DEFAULT_SIDEBAR_COLORS_BASE[`sidebarHoverText${suffix}` as keyof typeof DEFAULT_SIDEBAR_COLORS_BASE],
-      [`sidebarBorder${suffix}`]: DEFAULT_SIDEBAR_COLORS_BASE[`sidebarBorder${suffix}` as keyof typeof DEFAULT_SIDEBAR_COLORS_BASE],
+      [`sidebarBgStart${suffix}`]: defaultColorsForTheme[`sidebarBgStart${suffix}` as keyof SidebarColors],
+      [`sidebarBgEnd${suffix}`]: defaultColorsForTheme[`sidebarBgEnd${suffix}` as keyof SidebarColors],
+      [`sidebarText${suffix}`]: defaultColorsForTheme[`sidebarText${suffix}` as keyof SidebarColors],
+      [`sidebarActiveBgStart${suffix}`]: defaultColorsForTheme[`sidebarActiveBgStart${suffix}` as keyof SidebarColors],
+      [`sidebarActiveBgEnd${suffix}`]: defaultColorsForTheme[`sidebarActiveBgEnd${suffix}` as keyof SidebarColors],
+      [`sidebarActiveText${suffix}`]: defaultColorsForTheme[`sidebarActiveText${suffix}` as keyof SidebarColors],
+      [`sidebarHoverBg${suffix}`]: defaultColorsForTheme[`sidebarHoverBg${suffix}` as keyof SidebarColors],
+      [`sidebarHoverText${suffix}`]: defaultColorsForTheme[`sidebarHoverText${suffix}` as keyof SidebarColors],
+      [`sidebarBorder${suffix}`]: defaultColorsForTheme[`sidebarBorder${suffix}` as keyof SidebarColors],
     }));
     toast({ title: `${themeType} Sidebar Colors Reset`, description: `${themeType} sidebar colors reset to default. Click 'Save All' to persist.` });
   };
