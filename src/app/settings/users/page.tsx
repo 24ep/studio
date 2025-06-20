@@ -1,4 +1,5 @@
 
+// src/app/settings/users/page.tsx
 "use client";
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -104,7 +105,8 @@ export default function ManageUsersPage() {
             fetchUsers({name: nameFilter, email: emailFilter, role: roleFilter});
         }
     }
-  }, [sessionStatus, session, fetchUsers, pathname, signIn, nameFilter, emailFilter, roleFilter]); 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sessionStatus, session, pathname, signIn, nameFilter, emailFilter, roleFilter]); 
 
   const handleApplyFilters = () => {
     fetchUsers({name: nameFilter, email: emailFilter, role: roleFilter});
@@ -285,9 +287,9 @@ export default function ManageUsersPage() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Name</TableHead>
-                  <TableHead>Email</TableHead>
+                  <TableHead className="hidden sm:table-cell">Email</TableHead>
                   <TableHead>Role</TableHead>
-                  <TableHead>Groups</TableHead>
+                  <TableHead className="hidden md:table-cell">Groups</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -303,13 +305,13 @@ export default function ManageUsersPage() {
                         <span className="font-medium">{user.name}</span>
                       </div>
                     </TableCell>
-                    <TableCell>{user.email}</TableCell>
+                    <TableCell className="hidden sm:table-cell">{user.email}</TableCell>
                     <TableCell>
                       <Badge variant={user.role === 'Admin' ? "default" : "secondary"} className={user.role === 'Admin' ? 'bg-primary hover:bg-primary/90' : ''}>
                         {user.role}
                       </Badge>
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="hidden md:table-cell">
                       {user.groups && user.groups.length > 0 
                         ? user.groups.map(g => <Badge key={g.id} variant="outline" className="mr-1 mb-1">{g.name}</Badge>) 
                         : <span className="text-xs text-muted-foreground">No groups</span>

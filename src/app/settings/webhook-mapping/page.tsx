@@ -206,7 +206,7 @@ export default function WebhookMappingPage() {
             <div className="border rounded-lg overflow-hidden">
               <ScrollArea className="max-h-[60vh]">
                 <Table>
-                  <TableHeader><TableRow><TableHead className="w-[30%]">Target CandiTrack Attribute</TableHead><TableHead className="w-[30%]">Source JSON Path (from Workflow)</TableHead><TableHead className="w-[40%]">Notes / Details</TableHead></TableRow></TableHeader>
+                  <TableHeader><TableRow><TableHead className="w-[30%]">Target CandiTrack Attribute</TableHead><TableHead className="w-[30%]">Source JSON Path (from Workflow)</TableHead><TableHead className="w-[40%] hidden md:table-cell">Notes / Details</TableHead></TableRow></TableHeader>
                   <TableBody>
                     {mappings.map((mapping, index) => {
                       const targetAttrInfo = TARGET_CANDIDATE_ATTRIBUTES_CONFIG.find(attr => attr.path === mapping.targetPath);
@@ -226,7 +226,7 @@ export default function WebhookMappingPage() {
                                 className="text-sm"
                             />
                           </TableCell>
-                          <TableCell>
+                          <TableCell className="hidden md:table-cell">
                             <Textarea
                                 id={`notes-${index}`}
                                 value={mapping.notes || ''}
@@ -256,3 +256,4 @@ export default function WebhookMappingPage() {
 }
 
     
+

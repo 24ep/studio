@@ -144,7 +144,7 @@ export function CandidateTable({
                 checked={isAllCandidatesSelected}
                 onCheckedChange={onToggleSelectAllCandidates}
                 aria-label="Select all candidates"
-              /></TableHead><TableHead className="w-[250px]">Candidate</TableHead><TableHead>Applied Job</TableHead><TableHead className="w-[100px]">Fit Score</TableHead><TableHead>Status</TableHead><TableHead>Last Update</TableHead><TableHead className="w-[120px]">Resume</TableHead><TableHead className="text-right w-[80px]">Actions</TableHead></TableRow></TableHeader>
+              /></TableHead><TableHead className="w-[250px]">Candidate</TableHead><TableHead>Applied Job</TableHead><TableHead className="w-[100px] hidden sm:table-cell">Fit Score</TableHead><TableHead>Status</TableHead><TableHead className="hidden md:table-cell">Last Update</TableHead><TableHead className="w-[120px] hidden sm:table-cell">Resume</TableHead><TableHead className="text-right w-[80px]">Actions</TableHead></TableRow></TableHeader>
           <TableBody>
             {candidates.map((candidate) => {
               const dateValue = candidate.updatedAt || candidate.createdAt;
@@ -199,7 +199,7 @@ export function CandidateTable({
                       <span className="text-muted-foreground">N/A</span>
                     )}
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="hidden sm:table-cell">
                     <div className="flex items-center gap-2">
                       <Progress value={candidate.fitScore || 0} className="h-2 w-[60px]" />
                       <span className="text-sm font-medium text-foreground">{(candidate.fitScore || 0)}%</span>
@@ -210,10 +210,10 @@ export function CandidateTable({
                       {candidate.status}
                     </Badge>
                   </TableCell>
-                  <TableCell className="text-sm text-muted-foreground">
+                  <TableCell className="text-sm text-muted-foreground hidden md:table-cell">
                     {displayDate}
                   </TableCell>
-                  <TableCell className="text-xs">
+                  <TableCell className="text-xs hidden sm:table-cell">
                     {candidate.resumePath ?
                       <span className="text-green-600 truncate block max-w-[100px] hover:underline cursor-pointer" title={candidate.resumePath}>
                         {candidate.resumePath.split('-').pop()?.split('.').slice(0,-1).join('.') || candidate.resumePath.split('-').pop()}
@@ -288,3 +288,4 @@ export function CandidateTable({
     </>
   );
 }
+

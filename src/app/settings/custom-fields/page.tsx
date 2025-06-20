@@ -261,16 +261,16 @@ export default function CustomFieldsPage() {
           ) : (
             <div className="border rounded-lg overflow-hidden">
               <Table>
-                <TableHeader><TableRow><TableHead>Label</TableHead><TableHead>Model</TableHead><TableHead>Field Key</TableHead><TableHead>Type</TableHead><TableHead>Required</TableHead><TableHead>Order</TableHead><TableHead className="text-right">Actions</TableHead></TableRow></TableHeader>
+                <TableHeader><TableRow><TableHead>Label</TableHead><TableHead className="hidden sm:table-cell">Model</TableHead><TableHead>Field Key</TableHead><TableHead className="hidden md:table-cell">Type</TableHead><TableHead className="hidden md:table-cell">Required</TableHead><TableHead className="hidden md:table-cell">Order</TableHead><TableHead className="text-right">Actions</TableHead></TableRow></TableHeader>
                 <TableBody>
                   {definitions.map((def) => (
                     <TableRow key={def.id}>
                       <TableCell className="font-medium">{def.label}</TableCell>
-                      <TableCell><Badge variant="outline">{def.model_name}</Badge></TableCell>
+                      <TableCell className="hidden sm:table-cell"><Badge variant="outline">{def.model_name}</Badge></TableCell>
                       <TableCell><code className="text-xs bg-muted/50 px-1 rounded">{def.field_key}</code></TableCell>
-                      <TableCell>{def.field_type}</TableCell>
-                      <TableCell>{def.is_required ? 'Yes' : 'No'}</TableCell>
-                      <TableCell>{def.sort_order}</TableCell>
+                      <TableCell className="hidden md:table-cell">{def.field_type}</TableCell>
+                      <TableCell className="hidden md:table-cell">{def.is_required ? 'Yes' : 'No'}</TableCell>
+                      <TableCell className="hidden md:table-cell">{def.sort_order}</TableCell>
                       <TableCell className="text-right">
                         <Button variant="ghost" size="icon" onClick={() => handleOpenModal(def)} className="mr-1 h-8 w-8">
                           <Edit3 className="h-4 w-4" />
@@ -446,3 +446,4 @@ export default function CustomFieldsPage() {
     </div>
   );
 }
+

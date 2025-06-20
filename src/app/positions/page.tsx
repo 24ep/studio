@@ -89,7 +89,7 @@ export default function PositionsPage() {
     try {
       const query = new URLSearchParams();
       if (filters.title) query.append('title', filters.title);
-      if (filters.department && filters.department !== "__ALL_DEPARTMENTS__") query.append('department', filters.department);
+      if (filters.selectedDepartments && filters.selectedDepartments.length > 0) query.append('department', filters.selectedDepartments.join(','));
       if (filters.isOpen && filters.isOpen !== "all") query.append('isOpen', String(filters.isOpen === "true"));
       if (filters.positionLevel) query.append('position_level', filters.positionLevel);
 
@@ -229,7 +229,7 @@ export default function PositionsPage() {
     try {
       const query = new URLSearchParams();
       if (filters.title) query.append('title', filters.title);
-      if (filters.department && filters.department !== "__ALL_DEPARTMENTS__") query.append('department', filters.department);
+      if (filters.selectedDepartments && filters.selectedDepartments.length > 0) query.append('department', filters.selectedDepartments.join(','));
       if (filters.isOpen && filters.isOpen !== "all") query.append('isOpen', String(filters.isOpen === "true"));
       if (filters.positionLevel) query.append('position_level', filters.positionLevel);
 
@@ -393,7 +393,7 @@ export default function PositionsPage() {
                     onCheckedChange={handleToggleSelectAllPositions}
                     aria-label="Select all positions"
                     disabled={isLoading || !canManagePositions}
-                  /></TableHead><TableHead>Title</TableHead><TableHead>Department</TableHead><TableHead>Level</TableHead><TableHead>Status</TableHead><TableHead className="hidden md:table-cell">Description</TableHead><TableHead className="text-right">Actions</TableHead></TableRow></TableHeader>
+                  /></TableHead><TableHead>Title</TableHead><TableHead className="hidden sm:table-cell">Department</TableHead><TableHead className="hidden md:table-cell">Level</TableHead><TableHead>Status</TableHead><TableHead className="hidden lg:table-cell">Description</TableHead><TableHead className="text-right">Actions</TableHead></TableRow></TableHeader>
               <TableBody>
                 {positions.map((pos) => (
                   <TableRow key={pos.id} className="hover:bg-muted/50 transition-colors" data-state={selectedPositionIds.has(pos.id) ? "selected" : ""}>
@@ -404,10 +404,10 @@ export default function PositionsPage() {
                         disabled={isLoading || !canManagePositions}
                       /></TableCell>
                     <TableCell className="font-medium"> <Link href={`/positions/${pos.id}`} passHref> <span className="hover:underline text-primary cursor-pointer">{pos.title}</span> </Link> </TableCell>
-                    <TableCell>{pos.department}</TableCell>
-                    <TableCell>{pos.position_level || 'N/A'}</TableCell>
+                    <TableCell className="hidden sm:table-cell">{pos.department}</TableCell>
+                    <TableCell className="hidden md:table-cell">{pos.position_level || 'N/A'}</TableCell>
                     <TableCell> <Badge variant={pos.isOpen ? "default" : "outline"} className={pos.isOpen ? "bg-green-500 hover:bg-green-600 text-primary-foreground" : ""}> {pos.isOpen ? "Open" : "Closed"} </Badge> </TableCell>
-                    <TableCell className="text-sm text-muted-foreground truncate max-w-xs hidden md:table-cell"> {pos.description || "No description"} </TableCell>
+                    <TableCell className="text-sm text-muted-foreground truncate max-w-xs hidden lg:table-cell"> {pos.description || "No description"} </TableCell>
                     <TableCell className="text-right">
                       <Button variant="ghost" size="icon" className="mr-1 h-8 w-8" onClick={() => handleOpenEditModal(pos)} disabled={!canManagePositions}> <Edit className="h-4 w-4" /> <span className="sr-only">Edit</span> </Button>
                        <AlertDialog>
@@ -459,3 +459,4 @@ export default function PositionsPage() {
     </div>
   );
 }
+

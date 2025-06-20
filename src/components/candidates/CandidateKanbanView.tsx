@@ -41,54 +41,52 @@ export function CandidateKanbanView({ candidates, statuses }: CandidateKanbanVie
 
   return (
     <>
-      <ScrollArea className="w-full rounded-md border">
-        <div className="flex flex-col space-y-4 p-4"> 
+      <ScrollArea className="w-full whitespace-nowrap rounded-md border">
+        <div className="flex space-x-4 p-4">
           {statuses.map(status => (
-            <div key={status} className="w-full"> 
-              <Card className="flex flex-col shadow-sm">
-                <CardHeader className="p-3 sm:p-4 border-b">
+            <div key={status} className="flex-shrink-0 w-72 md:w-80">
+              <Card className="flex flex-col h-full shadow-sm">
+                <CardHeader className="p-3 sm:p-4 border-b sticky top-0 bg-card z-10">
                   <CardTitle className="text-base sm:text-lg capitalize">{status} ({candidatesByStatus[status]?.length || 0})</CardTitle>
                 </CardHeader>
-                <CardContent className="p-0 min-h-[150px]">
-                  {candidatesByStatus[status]?.length > 0 ? (
-                    <ScrollArea className="whitespace-nowrap"> 
-                      <div className="flex w-max space-x-3 p-3 sm:p-4"> 
-                        {candidatesByStatus[status].map(candidate => (
-                          <div
-                            key={candidate.id}
-                            onClick={() => handleCardClick(candidate)}
-                            className="cursor-pointer"
-                          >
-                            <Card className="p-3 hover:shadow-lg transition-shadow bg-background dark:bg-muted/30 w-[260px] sm:w-[280px] flex-shrink-0">
-                              <div className="flex items-center gap-3">
-                                <Avatar className="h-9 w-9">
-                                  <AvatarImage src={(candidate.parsedData as any)?.personal_info?.avatar_url || `https://placehold.co/40x40.png?text=${candidate.name.charAt(0)}`} alt={candidate.name} data-ai-hint="person avatar"/>
-                                  <AvatarFallback>{candidate.name.charAt(0).toUpperCase()}</AvatarFallback>
-                                </Avatar>
-                                <div>
-                                  <p className="text-sm font-medium text-foreground truncate" title={candidate.name}>{candidate.name}</p>
-                                  <p className="text-xs text-muted-foreground truncate" title={candidate.position?.title || 'N/A'}>{candidate.position?.title || 'N/A'}</p>
-                                </div>
+                <ScrollArea className="flex-grow">
+                  <CardContent className="p-3 sm:p-4 space-y-3 min-h-[150px]">
+                    {candidatesByStatus[status]?.length > 0 ? (
+                      candidatesByStatus[status].map(candidate => (
+                        <div
+                          key={candidate.id}
+                          onClick={() => handleCardClick(candidate)}
+                          className="cursor-pointer"
+                        >
+                          <Card className="p-3 hover:shadow-lg transition-shadow bg-background dark:bg-muted/30">
+                            <div className="flex items-center gap-3">
+                              <Avatar className="h-9 w-9">
+                                <AvatarImage src={(candidate.parsedData as any)?.personal_info?.avatar_url || `https://placehold.co/40x40.png?text=${candidate.name.charAt(0)}`} alt={candidate.name} data-ai-hint="person avatar"/>
+                                <AvatarFallback>{candidate.name.charAt(0).toUpperCase()}</AvatarFallback>
+                              </Avatar>
+                              <div>
+                                <p className="text-sm font-medium text-foreground truncate" title={candidate.name}>{candidate.name}</p>
+                                <p className="text-xs text-muted-foreground truncate" title={candidate.position?.title || 'N/A'}>{candidate.position?.title || 'N/A'}</p>
                               </div>
-                              {candidate.fitScore !== undefined && candidate.fitScore !== null && (
-                                 <p className="text-xs text-muted-foreground mt-1.5">Fit Score: <span className="font-semibold text-foreground">{candidate.fitScore}%</span></p>
-                              )}
-                            </Card>
-                          </div>
-                        ))}
+                            </div>
+                            {candidate.fitScore !== undefined && candidate.fitScore !== null && (
+                               <p className="text-xs text-muted-foreground mt-1.5">Fit Score: <span className="font-semibold text-foreground">{candidate.fitScore}%</span></p>
+                            )}
+                          </Card>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="flex items-center justify-center h-full">
+                        <p className="text-sm text-muted-foreground text-center py-4">No candidates here.</p>
                       </div>
-                      <ScrollBar orientation="horizontal" />
-                    </ScrollArea>
-                  ) : (
-                    <div className="flex items-center justify-center h-full p-4">
-                      <p className="text-sm text-muted-foreground text-center py-4">No candidates in this stage.</p>
-                    </div>
-                  )}
-                </CardContent>
+                    )}
+                  </CardContent>
+                </ScrollArea>
               </Card>
             </div>
           ))}
         </div>
+        <ScrollBar orientation="horizontal" />
       </ScrollArea>
       {selectedCandidateSummary && (
         <CandidateDetailModal
@@ -100,4 +98,3 @@ export function CandidateKanbanView({ candidates, statuses }: CandidateKanbanVie
     </>
   );
 }
-

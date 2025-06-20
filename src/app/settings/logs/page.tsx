@@ -140,7 +140,8 @@ export default function ApplicationLogsPage() {
         fetchLogs(currentPage, { level: levelFilter, search: searchQuery, userId: actingUserIdFilter, start: startDate, end: endDate });
       }
     }
-  }, [sessionStatus, session, currentPage, levelFilter, searchQuery, actingUserIdFilter, startDate, endDate, pathname, signIn, fetchLogUsers, fetchLogs]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sessionStatus, session, currentPage, levelFilter, searchQuery, actingUserIdFilter, startDate, endDate, pathname, signIn, fetchLogUsers]);
 
 
   const handleApplyFilters = () => {
@@ -211,15 +212,15 @@ export default function ApplicationLogsPage() {
           <>
           <div className="border rounded-lg overflow-hidden">
             <Table>
-              <TableHeader><TableRow><TableHead className="w-[200px]">Timestamp</TableHead><TableHead className="w-[120px]">Level</TableHead><TableHead>Message</TableHead><TableHead className="w-[150px]">Source</TableHead><TableHead className="w-[180px]">Acting User</TableHead></TableRow></TableHeader>
+              <TableHeader><TableRow><TableHead className="w-[200px]">Timestamp</TableHead><TableHead className="w-[120px]">Level</TableHead><TableHead>Message</TableHead><TableHead className="w-[150px] hidden md:table-cell">Source</TableHead><TableHead className="w-[180px] hidden lg:table-cell">Acting User</TableHead></TableRow></TableHeader>
               <TableBody>
                 {logs.map((log) => (
                   <TableRow key={log.id} className="hover:bg-muted/50 transition-colors">
                     <TableCell className="text-xs text-muted-foreground"> {log.timestamp ? format(parseISO(log.timestamp), "MMM d, yyyy, HH:mm:ss.SSS") : 'Invalid Date'} </TableCell>
                     <TableCell> <Badge variant={getLogLevelBadgeVariant(log.level)} className="text-xs capitalize items-center"> {getLogLevelIcon(log.level)} {log.level} </Badge> </TableCell>
                     <TableCell className="text-sm break-all">{log.message}</TableCell>
-                    <TableCell className="text-xs text-muted-foreground">{log.source || 'N/A'}</TableCell>
-                    <TableCell className="text-xs text-muted-foreground">
+                    <TableCell className="text-xs text-muted-foreground hidden md:table-cell">{log.source || 'N/A'}</TableCell>
+                    <TableCell className="text-xs text-muted-foreground hidden lg:table-cell">
                       {log.actingUserName ? (
                           <div className="flex items-center gap-1.5"> <UserCircle className="h-3.5 w-3.5"/> {log.actingUserName} </div>
                       ) : log.actingUserId ? (
@@ -246,3 +247,4 @@ export default function ApplicationLogsPage() {
     </Card>
   );
 }
+
