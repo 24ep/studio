@@ -108,6 +108,7 @@ export async function searchCandidatesAIChat(input: SearchCandidatesInput): Prom
     if (allCandidates.length === 0) {
       return { matchedCandidateIds: [], aiReasoning: "No candidates found in the database to search." };
     }
+    console.log(`AI Search: Processing ${allCandidates.length} candidate profiles.`);
   } catch (dbError) {
     console.error("AI Search: Error fetching candidates from DB:", dbError);
     return { matchedCandidateIds: [], aiReasoning: "Failed to retrieve candidate data for searching." };
@@ -156,9 +157,25 @@ Ensure your output is in the specified JSON format.
   
   try {
     const result = await searchPrompt({ searchQuery: input.query, candidateData: candidateSummariesText });
-    return result || { matchedCandidateIds: [], aiReasoning: "AI model did not return a valid response." };
+    let finalReasoning = result?.aiReasoning;
+
+    if (allCandidates.length > 100) { // Threshold for "many candidates"
+        const perfWarning = "Note: Search may be slow due to the large number of candidate profiles being analyzed.";
+        if (finalReasoning && finalReasoning.trim().length > 0) {
+            finalReasoning = `${finalReasoning} ${perfWarning}`;
+        } else {
+            finalReasoning = perfWarning;
+        }
+    }
+
+    return {
+        matchedCandidateIds: result?.matchedCandidateIds || [],
+        aiReasoning: finalReasoning,
+    };
+
   } catch (flowError) {
     console.error("AI Search: Error executing Genkit flow:", flowError);
     return { matchedCandidateIds: [], aiReasoning: `AI search failed: ${(flowError as Error).message}` };
   }
 }
+
