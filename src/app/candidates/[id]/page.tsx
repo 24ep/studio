@@ -344,18 +344,22 @@ export default function CandidateDetailPage() {
     toast({ title: "Resume Uploaded", description: "Resume successfully updated." });
   };
 
-  const handleUpdateCandidateStatus = async (id: string, newStatus: Candidate['status']) => {
+  const handleUpdateCandidateStatus = async (id: string, newStatus: Candidate['status'], notes?: string) => {
     try {
+        const payload: { status: Candidate['status'], transitionNotes?: string } = { status: newStatus };
+        if (notes) {
+            payload.transitionNotes = notes;
+        }
         const response = await fetch(`/api/candidates/${id}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ status: newStatus }),
+            body: JSON.stringify(payload),
         });
         if (!response.ok) {
             const errorData = await response.json().catch(() => ({ message: "An unknown error occurred" }));
             throw new Error(errorData.message || `Failed to update candidate status: ${response.statusText}`);
         }
-        await fetchCandidateDetails();
+        await fetchCandidateDetails(); // This will re-render the page with fresh data
         toast({ title: "Status Updated", description: `Candidate status updated to ${newStatus}.` });
     } catch (error) {
         toast({
@@ -363,6 +367,7 @@ export default function CandidateDetailPage() {
             description: (error as Error).message || "Could not update candidate status.",
             variant: "destructive",
         });
+        throw error; // Re-throw to allow modal to handle its state
     }
   };
 

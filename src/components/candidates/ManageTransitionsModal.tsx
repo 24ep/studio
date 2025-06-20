@@ -78,30 +78,37 @@ export function ManageTransitionsModal({
 
   useEffect(() => {
     if (candidate && isOpen) {
+      console.log("ManageTransitionsModal: Resetting form. Current candidate status:", candidate.status);
       form.reset({
         newStatus: candidate.status,
         notes: '',
       });
       setEditingTransitionId(null);
+      setStatusSearchQuery('');
     }
-  }, [candidate, isOpen, form, availableStages]); // Added availableStages to deps
+  }, [candidate, isOpen, form, availableStages]);
 
   if (!candidate) return null;
 
   const handleAddTransitionSubmit = async (data: TransitionFormValues) => {
-    if (data.newStatus === candidate.status && !data.notes?.trim()) {
+    console.log("ManageTransitionsModal: handleAddTransitionSubmit called.");
+    console.log("Data from form:", data);
+    console.log("Current candidate status prop:", candidate.status);
+
+    const noChangeCondition = data.newStatus === candidate.status && !data.notes?.trim();
+    console.log("No change condition (data.newStatus === candidate.status && !data.notes?.trim()):", noChangeCondition);
+    
+    if (noChangeCondition) {
         toast({ title: "No Change", description: "Please select a new status or add notes to create a transition.", variant: "default" });
         return;
     }
     try {
-        // Pass notes to onUpdateCandidate, which now is handleUpdateCandidateAPI directly or similar.
+        console.log("ManageTransitionsModal: Calling onUpdateCandidate with:", {candidateId: candidate.id, newStatus: data.newStatus, notes: data.notes});
         await onUpdateCandidate(candidate.id, data.newStatus, data.notes); 
-        form.reset({ newStatus: data.newStatus, notes: '' }); // Keep new status, clear notes
+        form.reset({ newStatus: data.newStatus, notes: '' }); 
         setStatusSearchQuery(''); 
-        // onRefreshCandidateData should be called by the parent component after onUpdateCandidate if needed
     } catch (error) {
         console.error("Error during onUpdateCandidate in ManageTransitionsModal:", error);
-        // Toast for error is likely handled by the calling function (e.g. handleUpdateCandidateAPI)
     }
   };
 
@@ -346,4 +353,3 @@ export function ManageTransitionsModal({
     </>
   );
 }
-
