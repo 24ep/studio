@@ -17,27 +17,57 @@ export default async function DashboardPageServer() {
            />;
   }
   
-  // Check for general view permission if applicable for dashboard, or rely on role for now
-  // Example: if (session.user.role !== 'Admin' && !session.user.modulePermissions?.includes('DASHBOARD_VIEW')) { ... }
-  // For this ATS, Admin/Manager typically see all, Recruiter sees their slice.
-
   let initialCandidates: Candidate[] = [];
   let initialPositions: Position[] = [];
   let initialUsers: UserProfile[] = [];
   let fetchError: string | undefined = undefined;
 
   try {
+    const positionsPromise = fetchAllPositionsDb();
+    let candidatesPromise: Promise<Candidate[]>;
+    let usersPromise: Promise<UserProfile[]> | Promise<null> = Promise.resolve(null);
+
     if (session.user.role === 'Admin' || session.user.role === 'Hiring Manager') {
-      initialCandidates = await fetchInitialDashboardCandidatesDb(50); // Fetch a reasonable number for admin dashboard
-      initialUsers = await fetchAllUsersDb(); // Fetch all users for recruiter count
+      candidatesPromise = fetchInitialDashboardCandidatesDb(50);
+      usersPromise = fetchAllUsersDb();
     } else if (session.user.role === 'Recruiter') {
       // For recruiter, dashboard candidates are their assigned ones
-      // This might be simplified if the fetchInitialDashboardCandidatesDb can take a recruiterId
-      const allMyCandidates = await fetchInitialDashboardCandidatesDb(200); // Fetch more, then filter
-      initialCandidates = allMyCandidates.filter(c => c.recruiterId === session.user.id);
-      // Recruiter might not need all users list
+      candidatesPromise = fetchInitialDashboardCandidatesDb(200); // Fetch more to filter client-side for now
+    } else {
+      candidatesPromise = Promise.resolve([]);
     }
-    initialPositions = await fetchAllPositionsDb();
+
+    const [positionsResult, candidatesResult, usersResult] = await Promise.allSettled([
+      positionsPromise,
+      candidatesPromise,
+      usersPromise
+    ]);
+
+    if (positionsResult.status === 'fulfilled') {
+      initialPositions = positionsResult.value;
+    } else {
+      console.error("Dashboard server fetch error (positions):", positionsResult.reason);
+      fetchError = (fetchError || "") + "Failed to load positions. ";
+    }
+    
+    if (candidatesResult.status === 'fulfilled') {
+      if (session.user.role === 'Recruiter') {
+         initialCandidates = candidatesResult.value.filter(c => c.recruiterId === session.user.id);
+      } else {
+         initialCandidates = candidatesResult.value;
+      }
+    } else {
+      console.error("Dashboard server fetch error (candidates):", candidatesResult.reason);
+      fetchError = (fetchError || "") + "Failed to load candidates. ";
+    }
+
+    if (usersResult.status === 'fulfilled' && usersResult.value) {
+      initialUsers = usersResult.value;
+    } else if (usersResult.status === 'rejected') {
+      console.error("Dashboard server fetch error (users):", usersResult.reason);
+      fetchError = (fetchError || "") + "Failed to load users. ";
+    }
+    
   } catch (error) {
     console.error("Server-side fetch error for dashboard:", error);
     fetchError = (error as Error).message || "Failed to load initial dashboard data.";
@@ -48,7 +78,7 @@ export default async function DashboardPageServer() {
       initialCandidates={initialCandidates}
       initialPositions={initialPositions}
       initialUsers={initialUsers}
-      initialFetchError={fetchError}
+      initialFetchError={fetchError?.trim()}
     />
   );
 }

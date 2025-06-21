@@ -1,4 +1,3 @@
-
 // src/app/my-tasks/page.tsx (Server Component)
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/app/api/auth/[...nextauth]/route';
@@ -19,90 +18,100 @@ async function getInitialTaskBoardData(session: any): Promise<{
   const userRole = session?.user?.role;
   const userId = session?.user?.id;
 
-  let initialPositions: Position[] = [];
-  let initialStages: RecruitmentStage[] = [];
-  let initialRecruiters: Pick<UserProfile, 'id' | 'name'>[] = [];
-  let initialCandidates: Candidate[] = [];
+  if (!userId) {
+    return { initialCandidates: [], initialPositions: [], initialStages: [], initialRecruiters: [], authError: true, error: "User session required." };
+  }
+  if (userRole !== 'Recruiter' && userRole !== 'Admin') {
+    return { initialCandidates: [], initialPositions: [], initialStages: [], initialRecruiters: [], permissionError: true, error: "You do not have permission to view this page." };
+  }
+
   let accumulatedError = "";
 
-  if (!userId) {
-    return { initialCandidates, initialPositions, initialStages, initialRecruiters, authError: true, error: "User session required." };
+  // Set up all promises
+  const positionsPromise = fetchAllPositionsDb();
+  const stagesPromise = fetchAllRecruitmentStagesDb();
+
+  let recruitersPromise;
+  if (userRole === 'Admin') {
+    recruitersPromise = pool.query('SELECT id, name FROM "User" WHERE role = $1 OR role = $2 ORDER BY name ASC', ['Recruiter', 'Admin']);
+  } else {
+    recruitersPromise = Promise.resolve({ rows: [{id: userId, name: session.user.name || 'My Tasks'}] });
   }
 
-  if (userRole !== 'Recruiter' && userRole !== 'Admin') {
-    return { initialCandidates, initialPositions, initialStages, initialRecruiters, permissionError: true, error: "You do not have permission to view this page." };
+  const defaultRecruiterIdFilter = userId;
+  const candidateQuery = `
+    SELECT
+      c.id, c.name, c.email, c.phone, c."avatarUrl", c."dataAiHint", c."resumePath", c."parsedData", c.custom_attributes,
+      c."positionId", c."fitScore", c.status, c."applicationDate",
+      c."recruiterId", c."createdAt", c."updatedAt",
+      p.title as "positionTitle", p.department as "positionDepartment", p.position_level as "positionLevel",
+      rec_user.name as "recruiterName",
+      COALESCE(th_data.history, '[]'::json) as "transitionHistory"
+    FROM "Candidate" c
+    LEFT JOIN "Position" p ON c."positionId" = p.id
+    LEFT JOIN "User" rec_user ON c."recruiterId" = rec_user.id
+    LEFT JOIN LATERAL (
+      SELECT json_agg(json_build_object('id', th.id, 'candidateId', th."candidateId", 'date', th.date, 'stage', th.stage, 'notes', th.notes, 'actingUserId', th."actingUserId", 'actingUserName', u_th.name, 'createdAt', th."createdAt", 'updatedAt', th."updatedAt")) AS history FROM "TransitionRecord" th LEFT JOIN "User" u_th ON th."actingUserId" = u_th.id WHERE th."candidateId" = c.id
+    ) AS th_data ON true
+    WHERE c."recruiterId" = $1
+    ORDER BY c."createdAt" DESC LIMIT 50;
+  `;
+  const candidatesPromise = pool.query(candidateQuery, [defaultRecruiterIdFilter]);
+
+  // Await all promises
+  const [
+    positionsResult,
+    stagesResult,
+    recruitersQueryResult,
+    candidatesQueryResult
+  ] = await Promise.allSettled([
+    positionsPromise,
+    stagesPromise,
+    recruitersPromise,
+    candidatesPromise
+  ]);
+
+  let initialPositions: Position[] = [];
+  if (positionsResult.status === 'fulfilled') {
+    initialPositions = positionsResult.value;
+  } else {
+    accumulatedError += "Failed to load positions. ";
+    console.error("MyTasksPageServer fetchAllPositionsDb Error:", positionsResult.reason);
   }
 
-  try {
-    initialPositions = await fetchAllPositionsDb();
-  } catch (e) { accumulatedError += "Failed to load positions. "; console.error("MyTasksPageServer fetchAllPositionsDb Error:", e); }
+  let initialStages: RecruitmentStage[] = [];
+  if (stagesResult.status === 'fulfilled') {
+    initialStages = stagesResult.value;
+  } else {
+    accumulatedError += "Failed to load stages. ";
+    console.error("MyTasksPageServer fetchAllRecruitmentStagesDb Error:", stagesResult.reason);
+  }
 
-  try {
-    initialStages = await fetchAllRecruitmentStagesDb();
-  } catch (e) { accumulatedError += "Failed to load stages. "; console.error("MyTasksPageServer fetchAllRecruitmentStagesDb Error:", e); }
+  let initialRecruiters: Pick<UserProfile, 'id' | 'name'>[] = [];
+  if (recruitersQueryResult.status === 'fulfilled') {
+    initialRecruiters = recruitersQueryResult.value.rows;
+  } else {
+    accumulatedError += "Failed to load recruiters. ";
+    console.error("MyTasksPageServer fetch recruiters Error:", recruitersQueryResult.reason);
+  }
 
-  try {
-    if (userRole === 'Admin') {
-      const recResult = await pool.query('SELECT id, name FROM "User" WHERE role = $1 OR role = $2 ORDER BY name ASC', ['Recruiter', 'Admin']);
-      initialRecruiters = recResult.rows;
-    } else {
-      // For a Recruiter, they might only need their own details initially for "My Assigned"
-      initialRecruiters = [{id: userId, name: session.user.name || 'My Tasks'}];
-    }
-  } catch (e) { accumulatedError += "Failed to load recruiters. "; console.error("MyTasksPageServer fetch recruiters Error:", e); }
-
-  try {
-    // Default filter for task board: assigned to the logged-in user if Recruiter,
-    // or their own tasks if Admin initially selects "My Assigned" (client-side will handle full admin view)
-    let defaultRecruiterIdFilter = userId;
-    
-    // For admin, initially load their own tasks. The client can then change filter to view all or others.
-    // If it's a recruiter, always load their tasks.
-    // This initial query is for the default view of the page.
-
-    let candidateQuery = `
-      SELECT
-        c.id, c.name, c.email, c.phone, c."avatarUrl", c."dataAiHint", c."resumePath", c."parsedData", c.custom_attributes,
-        c."positionId", c."fitScore", c.status, c."applicationDate",
-        c."recruiterId", c."createdAt", c."updatedAt",
-        p.title as "positionTitle", p.department as "positionDepartment", p.position_level as "positionLevel",
-        rec_user.name as "recruiterName",
-        COALESCE(th_data.history, '[]'::json) as "transitionHistory"
-      FROM "Candidate" c
-      LEFT JOIN "Position" p ON c."positionId" = p.id
-      LEFT JOIN "User" rec_user ON c."recruiterId" = rec_user.id
-      LEFT JOIN LATERAL (
-        SELECT json_agg(
-          json_build_object(
-            'id', th.id, 'candidateId', th."candidateId", 'date', th.date, 'stage', th.stage,
-            'notes', th.notes, 'actingUserId', th."actingUserId", 'actingUserName', u_th.name,
-            'createdAt', th."createdAt", 'updatedAt', th."updatedAt"
-          ) ORDER BY th.date DESC
-        ) AS history
-        FROM "TransitionRecord" th
-        LEFT JOIN "User" u_th ON th."actingUserId" = u_th.id
-        WHERE th."candidateId" = c.id
-      ) AS th_data ON true
-      WHERE c."recruiterId" = $1
-      ORDER BY c."createdAt" DESC LIMIT 50;
-    `;
-    const queryParams = [defaultRecruiterIdFilter];
-
-    const result = await pool.query(candidateQuery, queryParams);
-    initialCandidates = result.rows.map(row => ({
+  let initialCandidates: Candidate[] = [];
+  if (candidatesQueryResult.status === 'fulfilled') {
+    initialCandidates = candidatesQueryResult.value.rows.map(row => ({
       ...row,
       parsedData: row.parsedData || { personal_info: {}, contact_info: {} },
       custom_attributes: row.custom_attributes || {},
-      position: row.positionId ? { id: row.positionId, title: row.positionTitle, department: row.positionDepartment, position_level: row.positionLevel } : null,
+      position: row.positionId ? { id: row.positionId, title: row.positionTitle, department: row.department, position_level: row.positionLevel } : null,
       recruiter: row.recruiterId ? { id: row.recruiterId, name: row.recruiterName, email: null } : null,
       transitionHistory: row.transitionHistory || [],
     }));
-
-  } catch (e) { accumulatedError += `Failed to load initial candidates: ${(e as Error).message}. `; console.error("MyTasksPageServer fetch initial candidates Error:", e); }
+  } else {
+    accumulatedError += `Failed to load initial candidates: ${(candidatesQueryResult.reason as Error).message}. `;
+    console.error("MyTasksPageServer fetch initial candidates Error:", candidatesQueryResult.reason);
+  }
 
   return { initialCandidates, initialPositions, initialStages, initialRecruiters, error: accumulatedError.trim() || undefined };
 }
-
 
 export default async function MyTasksPageServer() {
   const session = await getServerSession(authOptions);
@@ -141,4 +150,3 @@ export default async function MyTasksPageServer() {
     />
   );
 }
-

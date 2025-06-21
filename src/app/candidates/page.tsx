@@ -15,7 +15,6 @@ async function getInitialCandidatesData(session: any): Promise<{ candidates: Can
     return { candidates: [], authError: true, error: "User session required." };
   }
   
-  // If user is not Admin and doesn't have CANDIDATES_VIEW permission, deny access.
   if (userRole !== 'Admin' && !session?.user?.modulePermissions?.includes('CANDIDATES_VIEW')) {
     return { candidates: [], permissionError: true, error: "You do not have permission to view candidates." };
   }
@@ -48,19 +47,15 @@ async function getInitialCandidatesData(session: any): Promise<{ candidates: Can
   let paramIndex = 1;
   const conditions = [];
 
-  // Recruiters by default see only their assigned candidates if they don't have general CANDIDATES_VIEW permission.
-  // If they *do* have CANDIDATES_VIEW, they see all, similar to Admin.
   if (userRole === 'Recruiter' && !session?.user?.modulePermissions?.includes('CANDIDATES_VIEW')) {
     conditions.push(`c."recruiterId" = $${paramIndex++}`);
     queryParams.push(userId);
   }
-  // Admins see all by default unless filtered on client.
-
 
   if (conditions.length > 0) {
     initialQuery += ' WHERE ' + conditions.join(' AND ');
   }
-  initialQuery += ' ORDER BY c."createdAt" DESC LIMIT 50;'; // Initial limit
+  initialQuery += ' ORDER BY c."createdAt" DESC LIMIT 50;';
 
   try {
     const result = await pool.query(initialQuery, queryParams);
@@ -100,22 +95,49 @@ export default async function CandidatesPageServer() {
            />;
   }
 
-  const { candidates: initialCandidates, error: candidatesError, authError: candidatesAuthError, permissionError: candidatesPermissionError } = await getInitialCandidatesData(session);
+  const candidatesPromise = getInitialCandidatesData(session);
+  const positionsPromise = fetchAllPositionsDb();
+  const stagesPromise = fetchAllRecruitmentStagesDb();
   
-  let initialPositions: Position[] = [];
-  let initialStages: RecruitmentStage[] = [];
-  let auxDataError: string | null = null;
+  const [
+    candidatesResult,
+    positionsResult,
+    stagesResult,
+  ] = await Promise.allSettled([
+    candidatesPromise,
+    positionsPromise,
+    stagesPromise,
+  ]);
 
-  try {
-    initialPositions = await fetchAllPositionsDb();
-  } catch(e) {
-    console.error("Error fetching initial positions:", e);
+  let initialCandidates: Candidate[] = [];
+  let candidatesError: string | undefined = undefined;
+  let candidatesAuthError: boolean = false;
+  let candidatesPermissionError: boolean = false;
+  
+  if (candidatesResult.status === 'fulfilled') {
+      initialCandidates = candidatesResult.value.candidates;
+      candidatesError = candidatesResult.value.error;
+      candidatesAuthError = candidatesResult.value.authError || false;
+      candidatesPermissionError = candidatesResult.value.permissionError || false;
+  } else {
+      console.error("Error fetching initial candidates data:", candidatesResult.reason);
+      candidatesError = "Failed to load candidates data.";
+  }
+
+  let initialPositions: Position[] = [];
+  let auxDataError: string | null = null;
+  if (positionsResult.status === 'fulfilled') {
+    initialPositions = positionsResult.value;
+  } else {
+    console.error("Error fetching initial positions:", positionsResult.reason);
     auxDataError = (auxDataError || "") + "Failed to load positions. ";
   }
-  try {
-    initialStages = await fetchAllRecruitmentStagesDb();
-  } catch (e) {
-    console.error("Error fetching initial stages:", e);
+
+  let initialStages: RecruitmentStage[] = [];
+  if (stagesResult.status === 'fulfilled') {
+    initialStages = stagesResult.value;
+  } else {
+    console.error("Error fetching initial stages:", stagesResult.reason);
     auxDataError = (auxDataError || "") + "Failed to load recruitment stages. ";
   }
   
