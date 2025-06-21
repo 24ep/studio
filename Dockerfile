@@ -22,18 +22,18 @@ ENV AZURE_AD_CLIENT_SECRET=$AZURE_AD_CLIENT_SECRET
 ENV AZURE_AD_TENANT_ID=$AZURE_AD_TENANT_ID
 ENV GOOGLE_API_KEY=$GOOGLE_API_KEY
 
-# Install dependencies using yarn
+# Install dependencies - This layer is cached if yarn.lock doesn't change
 COPY package.json yarn.lock ./
 RUN yarn install --frozen-lockfile
 
-# Copy the rest of the source code
+# Copy source code - This layer is cached if your source code doesn't change
 COPY . .
 
-# Print environment variables for debugging
-RUN echo "--- Build-time Environment Variables ---" && printenv && echo "------------------------------------"
-
-# Build the Next.js application
+# Build the Next.js application - This only runs if source code has changed
 RUN yarn build
+
+# Prune development dependencies for the final stage
+RUN npm prune --production
 
 # =================================================================
 # == Stage 2: Production Stage
@@ -42,15 +42,21 @@ FROM node:20-alpine
 
 WORKDIR /app
 
-# Install only production dependencies
-COPY package.json yarn.lock ./
-RUN yarn install --production --frozen-lockfile
+# Don't run production as root
+RUN addgroup -g 1001 -S nodejs
+RUN adduser -S nextjs -u 1001
+USER nextjs
 
-# Copy built Next.js application from builder stage
+# Copy only the necessary production artifacts from the builder stage
+COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/.next ./.next
+COPY --from=builder /app/package.json ./package.json
 
 # Expose the port the app will run on
 EXPOSE 3000
+
+# Set this to disable Next.js telemetry
+ENV NEXT_TELEMETRY_DISABLED 1
 
 # Start the app
 CMD ["yarn", "start"]
