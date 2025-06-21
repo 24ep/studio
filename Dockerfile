@@ -22,18 +22,18 @@ ENV AZURE_AD_CLIENT_SECRET=$AZURE_AD_CLIENT_SECRET
 ENV AZURE_AD_TENANT_ID=$AZURE_AD_TENANT_ID
 ENV GOOGLE_API_KEY=$GOOGLE_API_KEY
 
-# Install dependencies - This layer is cached if yarn.lock doesn't change
-COPY package.json yarn.lock ./
-RUN yarn install
+# Install dependencies
+COPY package.json package-lock.json* ./
+RUN npm install --legacy-peer-deps
 
 # Copy source code - This layer is cached if your source code doesn't change
 COPY . .
 
 # Build the Next.js application - This only runs if source code has changed
-RUN yarn build
+RUN npm run build
 
 # Prune development dependencies for the final stage
-RUN npm prune --production
+# No need for prune, as npm install in production stage will handle it.
 
 # =================================================================
 # == Stage 2: Production Stage
@@ -59,4 +59,4 @@ EXPOSE 3000
 ENV NEXT_TELEMETRY_DISABLED 1
 
 # Start the app
-CMD ["yarn", "start"]
+CMD ["npm", "start"]
