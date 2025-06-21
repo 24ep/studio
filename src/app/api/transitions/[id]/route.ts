@@ -1,6 +1,7 @@
 // src/app/api/transitions/[id]/route.ts
 import { NextResponse, type NextRequest } from 'next/server';
-import { pool } from '../../../../lib/db';
+// import { pool } from '../../../../lib/db';
+import { pool } from '@/lib/db';
 import { z } from 'zod';
 import { logAudit } from '@/lib/auditLog';
 import { getServerSession } from 'next-auth/next';
@@ -9,7 +10,13 @@ const updateTransitionSchema = z.object({
   notes: z.string().optional().nullable(),
 });
 
-export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {
+function extractIdFromUrl(request: NextRequest): string | null {
+  const match = request.nextUrl.pathname.match(/\/transitions\/([^/]+)/);
+  return match ? match[1] : null;
+}
+
+export async function PUT(request: NextRequest) {
+  const id = extractIdFromUrl(request);
   const session = await getServerSession();
   const actingUserId = session?.user?.id;
   if (!actingUserId) {
@@ -31,24 +38,25 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
   const client = await pool.connect();
   try {
     const query = 'UPDATE "TransitionRecord" SET notes = $1, "updatedAt" = NOW() WHERE id = $2 RETURNING *';
-    const result = await client.query(query, [validationResult.data.notes, params.id]);
+    const result = await client.query(query, [validationResult.data.notes, id]);
 
     if (result.rowCount === 0) {
       return NextResponse.json({ message: "Transition record not found" }, { status: 404 });
     }
     
-    await logAudit('AUDIT', `Transition record (ID: ${params.id}) was updated.`, 'API:Transitions:Update', actingUserId, { transitionId: params.id });
+    await logAudit('AUDIT', `Transition record (ID: ${id}) was updated.`, 'API:Transitions:Update', actingUserId, { transitionId: id });
     return NextResponse.json(result.rows[0], { status: 200 });
   } catch (error: any) {
-    console.error(`Failed to update transition record ${params.id}:`, error);
-    await logAudit('ERROR', `Failed to update transition record (ID: ${params.id}). Error: ${error.message}`, 'API:Transitions:Update', actingUserId);
+    console.error(`Failed to update transition record ${id}:`, error);
+    await logAudit('ERROR', `Failed to update transition record (ID: ${id}). Error: ${error.message}`, 'API:Transitions:Update', actingUserId);
     return NextResponse.json({ message: "Error updating transition record", error: error.message }, { status: 500 });
   } finally {
     client.release();
   }
 }
 
-export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(request: NextRequest) {
+  const id = extractIdFromUrl(request);
   const session = await getServerSession();
   const actingUserId = session?.user?.id;
   if (!actingUserId) {
@@ -57,17 +65,17 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
   
   const client = await pool.connect();
   try {
-    const result = await client.query('DELETE FROM "TransitionRecord" WHERE id = $1', [params.id]);
+    const result = await client.query('DELETE FROM "TransitionRecord" WHERE id = $1', [id]);
 
     if (result.rowCount === 0) {
       return NextResponse.json({ message: "Transition record not found" }, { status: 404 });
     }
     
-    await logAudit('AUDIT', `Transition record (ID: ${params.id}) was deleted.`, 'API:Transitions:Delete', actingUserId, { transitionId: params.id });
+    await logAudit('AUDIT', `Transition record (ID: ${id}) was deleted.`, 'API:Transitions:Delete', actingUserId, { transitionId: id });
     return NextResponse.json({ message: "Transition record deleted successfully" }, { status: 200 });
   } catch (error: any) {
-    console.error(`Failed to delete transition record ${params.id}:`, error);
-    await logAudit('ERROR', `Failed to delete transition record (ID: ${params.id}). Error: ${error.message}`, 'API:Transitions:Delete', actingUserId);
+    console.error(`Failed to delete transition record ${id}:`, error);
+    await logAudit('ERROR', `Failed to delete transition record (ID: ${id}). Error: ${error.message}`, 'API:Transitions:Delete', actingUserId);
     return NextResponse.json({ message: "Error deleting transition record", error: error.message }, { status: 500 });
   } finally {
     client.release();

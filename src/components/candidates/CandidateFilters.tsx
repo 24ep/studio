@@ -258,7 +258,7 @@ export function CandidateFilters({
               </PopoverTrigger>
               <PopoverContent className="w-full p-0">
                 <Command>
-                  <CommandInput placeholder="Search positions..." value={positionSearch} onValueChange={setPositionSearch} />
+                  <CommandInput placeholder="Search positions..." value={positionSearch} onChange={e => setPositionSearch(e.target.value)} />
                   <CommandList>
                     <CommandEmpty>No position found.</CommandEmpty>
                     {filteredPositions.map((position) => (
@@ -305,7 +305,7 @@ export function CandidateFilters({
               </PopoverTrigger>
               <PopoverContent className="w-full p-0">
                 <Command>
-                  <CommandInput placeholder="Search statuses..." value={statusSearch} onValueChange={setStatusSearch} />
+                  <CommandInput placeholder="Search statuses..." value={statusSearch} onChange={e => setStatusSearch(e.target.value)} />
                   <CommandList>
                     <CommandEmpty>No status found.</CommandEmpty>
                     {filteredStages.map((stage) => (
@@ -506,7 +506,7 @@ export function CandidateFilters({
             <div className="flex items-center gap-2">
               <Slider
                 value={fitScoreRange}
-                onValueChange={setFitScoreRange}
+                onValueChange={val => setFitScoreRange([val[0], val[1]])}
                 max={100}
                 step={1}
                 className="flex-1"
@@ -576,7 +576,7 @@ export function CandidateFilters({
               </PopoverTrigger>
               <PopoverContent className="w-full p-0">
                 <Command>
-                  <CommandInput placeholder="Search recruiters..." value={recruiterSearch} onValueChange={setRecruiterSearch} />
+                  <CommandInput placeholder="Search recruiters..." value={recruiterSearch} onChange={e => setRecruiterSearch(e.target.value)} />
                   <CommandList>
                     <CommandEmpty>No recruiter found.</CommandEmpty>
                     {filteredRecruiters.map((recruiter) => (

@@ -23,6 +23,9 @@ export default function PositionDetailPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [fetchError, setFetchError] = useState<string | null>(null);
   const [authError, setAuthError] = useState(false);
+  const [availablePositions, setAvailablePositions] = useState<Position[]>([]);
+  const [availableStages, setAvailableStages] = useState<any[]>([]); // Use RecruitmentStage[] if imported
+  const [selectedCandidateIds, setSelectedCandidateIds] = useState<Set<string>>(new Set());
 
   const { data: session, status: sessionStatus } = useSession();
   const { toast } = useToast();
@@ -79,6 +82,15 @@ export default function PositionDetailPage() {
     }
   }, [positionId, sessionStatus, fetchPositionAndCandidates]);
 
+  useEffect(() => {
+    fetch('/api/positions')
+      .then(res => res.json())
+      .then(data => setAvailablePositions(data.positions || []));
+    fetch('/api/settings/recruitment-stages')
+      .then(res => res.json())
+      .then(data => setAvailableStages(data.stages || []));
+  }, []);
+
   const handleUpdateCandidateStatus = async (candidateId: string, status: Candidate['status']) => {
     toast({ title: "Action Not Available", description: "Candidate status updates should be done from the main Candidates page or Candidate Detail page.", variant: "default" });
     // Re-fetch candidates for this position to reflect any external changes
@@ -103,6 +115,27 @@ export default function PositionDetailPage() {
   };
    const refreshCandidateInList = async (candidateId: string) => {
     await fetchPositionAndCandidates();
+  };
+
+  const onToggleSelectCandidate = (candidateId: string) => {
+    setSelectedCandidateIds(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(candidateId)) newSet.delete(candidateId);
+      else newSet.add(candidateId);
+      return newSet;
+    });
+  };
+  const onToggleSelectAllCandidates = () => {
+    if (selectedCandidateIds.size === associatedCandidates.length) {
+      setSelectedCandidateIds(new Set());
+    } else {
+      setSelectedCandidateIds(new Set(associatedCandidates.map(c => c.id)));
+    }
+  };
+  const isAllCandidatesSelected = selectedCandidateIds.size === associatedCandidates.length && associatedCandidates.length > 0;
+
+  const handleEditPosition = (position: Position) => {
+    toast({ title: "Action Not Available", description: "Edit position is not available on this page.", variant: "default" });
   };
 
   if (isLoading) {
@@ -204,11 +237,18 @@ export default function PositionDetailPage() {
           {associatedCandidates.length > 0 ? (
             <CandidateTable
               candidates={associatedCandidates}
+              availablePositions={availablePositions}
+              availableStages={availableStages}
               onUpdateCandidate={handleUpdateCandidateStatus}
               onDeleteCandidate={handleDeleteCandidate}
               onOpenUploadModal={handleOpenUploadModal}
-              isLoading={isLoading && associatedCandidates.length === 0} 
+              onEditPosition={handleEditPosition}
+              isLoading={isLoading && associatedCandidates.length === 0}
               onRefreshCandidateData={refreshCandidateInList}
+              selectedCandidateIds={selectedCandidateIds}
+              onToggleSelectCandidate={onToggleSelectCandidate}
+              onToggleSelectAllCandidates={onToggleSelectAllCandidates}
+              isAllCandidatesSelected={isAllCandidatesSelected}
             />
           ) : (
             <div className="text-center py-8 text-muted-foreground">

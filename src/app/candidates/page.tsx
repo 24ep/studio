@@ -1,6 +1,5 @@
 // src/app/candidates/page.tsx - Server Component
 import { getServerSession } from 'next-auth/next';
-import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 import { pool } from '@/lib/db';
 import { CandidatesPageClient } from '@/components/candidates/CandidatesPageClient';
 import type { Candidate, Position, RecruitmentStage, UserProfile } from '@/lib/types';
@@ -83,7 +82,7 @@ async function getInitialCandidatesData(session: any): Promise<{ candidates: Can
 }
 
 export default async function CandidatesPageServer() {
-  const session = await getServerSession(authOptions);
+  const session = await getServerSession();
 
   if (!session?.user) {
     return <CandidatesPageClient 

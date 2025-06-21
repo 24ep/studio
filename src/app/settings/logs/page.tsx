@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect, useCallback } from 'react';
@@ -214,7 +213,12 @@ export default function ApplicationLogsPage() {
                       </PopoverTrigger>
                       <PopoverContent className="w-[--trigger-width] p-0 dropdown-content-height">
                         <Command>
-                          <CommandInput placeholder="Search user..." value={userSearch} onValueChange={setUserSearch} className="h-9" />
+                          <CommandInput
+                            placeholder="Search user..."
+                            value={userSearch}
+                            onChange={e => setUserSearch(e.target.value)}
+                            className="h-9"
+                          />
                           <CommandList>
                             <CommandEmpty>{userSearch ? 'No user found.' : 'Type to search users.'}</CommandEmpty>
                             <CommandItem value="ALL" onSelect={() => { setActingUserIdFilter('ALL'); setUserPopoverOpen(false); setUserSearch(''); }}>

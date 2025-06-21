@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect } from 'react';
@@ -100,7 +99,7 @@ export function PositionFilters({ initialFilters = { isOpen: "all" }, onFilterCh
             </PopoverTrigger>
             <PopoverContent className="w-[--trigger-width] p-0 dropdown-content-height">
                 <Command>
-                    <CommandInput placeholder="Search departments..." value={departmentSearch} onValueChange={setDepartmentSearch} className="h-9 text-xs" />
+                    <CommandInput placeholder="Search departments..." value={departmentSearch} onChange={e => setDepartmentSearch(e.target.value)} className="h-9 text-xs" />
                     <CommandList>
                          <CommandEmpty>{departmentSearch ? 'No departments found.' : 'Type to search departments.'}</CommandEmpty>
                         <ScrollArea className="max-h-48">

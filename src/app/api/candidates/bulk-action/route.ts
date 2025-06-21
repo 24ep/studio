@@ -53,7 +53,7 @@ export async function POST(request: NextRequest) {
       await client.query('DELETE FROM "ResumeHistory" WHERE "candidateId" = ANY($1::uuid[])', [candidateIds]);
       await client.query('DELETE FROM "TransitionRecord" WHERE "candidateId" = ANY($1::uuid[])', [candidateIds]);
       const deleteResult = await client.query('DELETE FROM "Candidate" WHERE id = ANY($1::uuid[]) RETURNING id', [candidateIds]);
-      successCount = deleteResult.rowCount;
+      successCount = deleteResult.rowCount ?? 0;
       const deletedIds = deleteResult.rows.map((r: { id: string }) => r.id);
       failCount = candidateIds.length - successCount;
       candidateIds.forEach(id => {
@@ -79,7 +79,7 @@ export async function POST(request: NextRequest) {
         'UPDATE "Candidate" SET status = $1, "updatedAt" = NOW() WHERE id = ANY($2::uuid[]) RETURNING id, name',
         [newStatus, candidateIds]
       );
-      successCount = updateResult.rowCount;
+      successCount = updateResult.rowCount ?? 0;
       const updatedIds = updateResult.rows.map((r: { id: string }) => r.id);
       failCount = candidateIds.length - successCount;
       candidateIds.forEach(id => {
@@ -110,7 +110,7 @@ export async function POST(request: NextRequest) {
         'UPDATE "Candidate" SET "recruiterId" = $1, "updatedAt" = NOW() WHERE id = ANY($2::uuid[]) RETURNING id',
         [newRecruiterId, candidateIds]
       );
-      successCount = updateResult.rowCount;
+      successCount = updateResult.rowCount ?? 0;
       const updatedIds = updateResult.rows.map((r: { id: string }) => r.id);
       failCount = candidateIds.length - successCount;
        candidateIds.forEach(id => {

@@ -4,6 +4,7 @@ import { logAudit } from '@/lib/auditLog';
 import { getServerSession } from 'next-auth/next';
 import { v4 as uuidv4 } from 'uuid';
 import { getRedisClient, CACHE_KEY_POSITIONS } from '@/lib/redis';
+import { pool } from '@/lib/db';
 
 export async function GET(request: NextRequest) {
   const session = await getServerSession();

@@ -94,7 +94,7 @@ export default function DashboardPageClient({
         setMyBacklogCandidates(backlogData.filter(c => !BACKLOG_EXCLUSION_STATUSES.includes(c.status)));
       }
 
-      if (!positionsRes.ok) { /* ... error handling ... */ setAllPositions([]); }
+      if (!positionsRes || !positionsRes.ok) { /* ... error handling ... */ setAllPositions([]); }
       else { setAllPositions(await positionsRes.json()); }
 
       if (accumulatedFetchError) setFetchError(accumulatedFetchError.trim());

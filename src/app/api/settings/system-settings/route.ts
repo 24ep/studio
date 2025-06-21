@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { getServerSession } from 'next-auth/next';
 import type { SystemSetting, SystemSettingKey } from '@/lib/types';
 import { logAudit } from '@/lib/auditLog';
+import { pool } from '@/lib/db';
 
 const systemSettingKeyEnum = z.enum([
     'appName', 'appLogoDataUrl', 'appThemePreference',

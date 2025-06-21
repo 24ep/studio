@@ -1,4 +1,3 @@
-
 "use client"
 
 import * as React from "react"
@@ -7,7 +6,7 @@ import * as React from "react"
 // This will make the Command component non-functional.
 
 import { cn } from "@/lib/utils"
-import { Dialog, type DialogProps } from "@/components/ui/dialog" // Dialog import kept as it's a local component
+import { Dialog } from "@/components/ui/dialog"
 
 const Command = React.forwardRef<
   HTMLDivElement, // Changed from React.ElementRef<typeof CommandPrimitive>
@@ -23,17 +22,6 @@ const Command = React.forwardRef<
   />
 ))
 Command.displayName = "Command" // Original: CommandPrimitive.displayName
-
-interface CommandDialogProps extends DialogProps {}
-
-const CommandDialog = ({ children, ...props }: CommandDialogProps) => {
-  return (
-    <Dialog {...props}>
-      {/* Content of DialogContent and Command inside it is removed to avoid cmdk-specific attributes */}
-      {/* This will mean the dialog will not function as intended if it relied on cmdk structure */}
-    </Dialog>
-  )
-}
 
 const CommandInput = React.forwardRef<
   HTMLInputElement, // Changed from React.ElementRef<typeof CommandPrimitive.Input>
@@ -149,7 +137,6 @@ CommandShortcut.displayName = "CommandShortcut"
 
 export {
   Command,
-  CommandDialog,
   CommandInput,
   CommandList,
   CommandEmpty,

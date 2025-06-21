@@ -5,7 +5,6 @@ import { z } from 'zod';
 import { v4 as uuidv4 } from 'uuid';
 import { logAudit } from '@/lib/auditLog';
 import { getServerSession } from 'next-auth/next';
-import { authOptions } from '../../auth/[...nextauth]/route';
 
 
 const recruitmentStageSchema = z.object({
@@ -15,7 +14,7 @@ const recruitmentStageSchema = z.object({
 });
 
 export async function GET(request: NextRequest) {
-    const session = await getServerSession(authOptions);
+    const session = await getServerSession();
     if (!session?.user?.id) return new NextResponse('Unauthorized', { status: 401 });
 
     const client = await pool.connect();
@@ -32,7 +31,7 @@ export async function GET(request: NextRequest) {
 
 
 export async function POST(request: NextRequest) {
-    const session = await getServerSession(authOptions);
+    const session = await getServerSession();
     const actingUserId = session?.user?.id;
     if (!actingUserId) return new NextResponse('Unauthorized', { status: 401 });
 

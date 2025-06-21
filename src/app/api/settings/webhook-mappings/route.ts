@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { getServerSession } from 'next-auth/next';
 import type { WebhookFieldMapping } from '@/lib/types';
 import { logAudit } from '@/lib/auditLog';
+import { pool } from '@/lib/db';
 
 const webhookFieldMappingSchema = z.object({
   targetPath: z.string().min(1, "Target path is required"),

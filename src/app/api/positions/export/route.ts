@@ -2,6 +2,7 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { logAudit } from '@/lib/auditLog';
 import { getServerSession } from 'next-auth/next';
+import { pool } from '@/lib/db';
 // For actual Excel generation, you would use a library like 'xlsx'
 // import * as XLSX from 'xlsx';
 

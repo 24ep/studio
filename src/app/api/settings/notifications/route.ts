@@ -5,6 +5,7 @@ import { getServerSession } from 'next-auth/next';
 import type { NotificationEventWithSettings, NotificationSetting } from '@/lib/types';
 import { logAudit } from '@/lib/auditLog';
 import { v4 as uuidv4 } from 'uuid';
+import { pool } from '@/lib/db';
 
 export async function GET(request: NextRequest) {
   const session = await getServerSession();

@@ -5,6 +5,7 @@ import { logAudit } from '@/lib/auditLog';
 import { getServerSession } from 'next-auth/next';
 import type { PositionBulkActionPayload } from '@/lib/types';
 import { getRedisClient, CACHE_KEY_POSITIONS } from '@/lib/redis';
+import { pool } from '@/lib/db';
 
 const bulkPositionActionSchema = z.object({
   action: z.enum(['delete', 'change_status']),
@@ -62,7 +63,7 @@ export async function POST(request: NextRequest) {
 
       if (positionsToDelete.length > 0) {
         const deleteResult = await client.query('DELETE FROM "Position" WHERE id = ANY($1::uuid[]) RETURNING id', [positionsToDelete]);
-        successCount = deleteResult.rowCount;
+        successCount = deleteResult.rowCount ?? 0;
         if (successCount > 0) cacheInvalidated = true;
       }
       
@@ -75,7 +76,7 @@ export async function POST(request: NextRequest) {
         'UPDATE "Position" SET "isOpen" = $1, "updatedAt" = NOW() WHERE id = ANY($2::uuid[]) RETURNING id',
         [newIsOpenStatus, positionIds]
       );
-      successCount = updateResult.rowCount;
+      successCount = updateResult.rowCount ?? 0;
       if (successCount > 0) cacheInvalidated = true;
 
       const updatedIds = updateResult.rows.map(r => r.id);

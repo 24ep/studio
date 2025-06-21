@@ -1,7 +1,7 @@
 // src/app/api/system/initial-setup-check/route.ts
 import { NextResponse, type NextRequest } from 'next/server';
-import { pool } from '../../../../lib/db';
-
+// import { pool } from '../../../../lib/db';
+import { pool } from '@/lib/db';
 async function checkDatabaseConnection() {
     let client;
     try {
@@ -20,7 +20,7 @@ async function checkAdminUserExists() {
     try {
         client = await pool.connect();
         const result = await client.query(`SELECT 1 FROM "User" WHERE role = 'Admin' LIMIT 1`);
-        return { ok: result.rowCount > 0, error: null };
+        return { ok: (result.rowCount ?? 0) > 0, error: null };
     } catch (error: any) {
         if (error.code === '42P01') { // table "User" does not exist
             return { ok: false, error: 'User table not found. Schema might not be initialized.' };

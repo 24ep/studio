@@ -126,7 +126,11 @@ export default function PositionsPageClient({
       const data: Position[] = await response.json();
       setPositions(data);
 
-      const uniqueDepts = Array.from(new Set(data.map(p => p.department).filter(Boolean as (value: any) => value is string)));
+      const uniqueDepts = Array.from(
+        new Set(
+          data.map(p => p.department).filter((d): d is string => typeof d === 'string' && Boolean(d))
+        )
+      );
       setAvailableDepartments(uniqueDepts.sort());
 
     } catch (error) {
@@ -313,7 +317,7 @@ export default function PositionsPageClient({
         if (result.failCount > 0 && result.failedDetails) {
             result.failedDetails.forEach((detail: {positionId: string, reason: string}) => {
                 const pos = positions.find(p => p.id === detail.positionId);
-                toast({ title: `Action Failed for ${pos?.title || detail.positionId}`, description: detail.reason, variant: "warning" });
+                toast({ title: `Action Failed for ${pos?.title || detail.positionId}`, description: detail.reason, variant: "destructive" });
             });
         }
         setSelectedPositionIds(new Set());

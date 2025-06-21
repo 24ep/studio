@@ -8,6 +8,7 @@ import bcrypt from 'bcrypt';
 import { logAudit } from '@/lib/auditLog';
 import { getServerSession } from 'next-auth/next';
 import { getRedisClient, CACHE_KEY_USERS } from '@/lib/redis';
+import { pool } from '@/lib/db';
 
 
 const platformModuleIds = PLATFORM_MODULES.map(m => m.id) as [PlatformModuleId, ...PlatformModuleId[]];
@@ -109,11 +110,14 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   const session = await getServerSession();
-  if (session?.user?.role !== 'Admin') {
-    await logAudit('WARN', `Forbidden attempt to create user by ${session?.user?.email || 'Unknown'} (ID: ${session?.user?.id || 'N/A'}). Required role: Admin.`, 'API:Users:Create', session.user.id);
-    return NextResponse.json({ message: "Forbidden: You must be an Admin to create users." }, { status: 403 });
+  if (!session || session.user?.role !== 'Admin') {
+    await logAudit('WARN', `Forbidden attempt to create user by ${session?.user?.email || 'Unknown'} (ID: ${session?.user?.id || 'N/A'}). Required role: Admin.`, 'API:Users:Create', session?.user?.id);
+    return NextResponse.json(
+      { message: "Forbidden: You must be an Admin to create users." },
+      { status: 403 }
+    );
   }
-  
+
   let body;
   try {
     body = await request.json();

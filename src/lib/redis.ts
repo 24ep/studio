@@ -151,7 +151,7 @@ export async function updateUserPresence(userId: string, presence: Partial<UserP
       ...presence,
     };
 
-    await client.hSet(key, fullPresence);
+    await client.hSet(key, Object.fromEntries(Object.entries(fullPresence).map(([k, v]) => [k, String(v)])));
     await client.expire(key, 300); // Expire after 5 minutes of inactivity
   } catch (error) {
     console.error('Failed to update user presence:', error);

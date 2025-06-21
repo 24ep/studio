@@ -9,7 +9,13 @@ const moveStageSchema = z.object({
   newOrder: z.number().int().min(0, "Order must be a non-negative integer."),
 });
 
-export async function POST(request: NextRequest, { params }: { params: { id: string } }) {
+function extractIdFromUrl(request: NextRequest): string | null {
+  const match = request.nextUrl.pathname.match(/\/recruitment-stages\/([^/]+)\/move/);
+  return match ? match[1] : null;
+}
+
+export async function POST(request: NextRequest) {
+    const id = extractIdFromUrl(request);
     const session = await getServerSession();
     const actingUserId = session?.user?.id;
     if (!actingUserId) {
@@ -29,7 +35,7 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
     }
 
     const { newOrder } = validation.data;
-    const stageId = params.id;
+    const stageId = id;
     const client = await pool.connect();
 
     try {

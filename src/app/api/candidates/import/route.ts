@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { v4 as uuidv4 } from 'uuid';
 import type { CandidateStatus, CandidateDetails, PersonalInfo, ContactInfo } from '@/lib/types';
 import { logAudit } from '@/lib/auditLog';
+import { pool } from '@/lib/db';
 // For actual Excel parsing, you would uncomment and use a library like 'xlsx'
 // import * as XLSX from 'xlsx';
 

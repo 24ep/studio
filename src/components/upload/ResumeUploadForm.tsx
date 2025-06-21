@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useForm } from 'react-hook-form';
@@ -118,13 +117,13 @@ export function ResumeUploadForm({ candidateId, onUploadSuccess, currentResumePa
       form.setValue('resume', dataTransfer.files, { shouldValidate: true });
     } else {
       setSelectedFile(null);
-      form.setValue('resume', undefined, { shouldValidate: true });
+      form.setValue('resume', new DataTransfer().files, { shouldValidate: true });
     }
   };
 
   const removeFile = () => {
     setSelectedFile(null);
-    form.setValue('resume', undefined, { shouldValidate: true });
+    form.setValue('resume', new DataTransfer().files, { shouldValidate: true });
     const fileInput = document.getElementById(`resume-upload-${candidateId}`) as HTMLInputElement;
     if (fileInput) fileInput.value = ''; 
   };

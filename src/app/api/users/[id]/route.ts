@@ -1,7 +1,8 @@
 // src/app/api/users/[id]/route.ts
 import { NextResponse, type NextRequest } from 'next/server';
 import { z } from 'zod';
-import { pool } from '../../../../lib/db';
+// import { pool } from '../../../../lib/db';
+import { pool } from '@/lib/db';
 import { logAudit } from '@/lib/auditLog';
 import { getServerSession } from 'next-auth/next';
 import bcrypt from 'bcrypt';
@@ -13,7 +14,13 @@ const updateUserSchema = z.object({
   password: z.string().min(8, "Password must be at least 8 characters").optional(),
 });
 
-export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
+function extractIdFromUrl(request: NextRequest): string | null {
+  const match = request.nextUrl.pathname.match(/\/users\/([^/]+)/);
+  return match ? match[1] : null;
+}
+
+export async function GET(request: NextRequest) {
+    const id = extractIdFromUrl(request);
     const session = await getServerSession();
     if (!session?.user?.id) {
         return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
@@ -21,20 +28,21 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
 
     const client = await pool.connect();
     try {
-        const result = await client.query('SELECT id, name, email, role, image as "avatarUrl" FROM "User" WHERE id = $1', [params.id]);
+        const result = await client.query('SELECT id, name, email, role, image as "avatarUrl" FROM "User" WHERE id = $1', [id]);
         if (result.rows.length === 0) {
             return NextResponse.json({ message: "User not found" }, { status: 404 });
         }
         return NextResponse.json(result.rows[0], { status: 200 });
     } catch (error: any) {
-        console.error(`Failed to fetch user ${params.id}:`, error);
+        console.error(`Failed to fetch user ${id}:`, error);
         return NextResponse.json({ message: "Error fetching user", error: error.message }, { status: 500 });
     } finally {
         client.release();
     }
 }
 
-export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {
+export async function PUT(request: NextRequest) {
+    const id = extractIdFromUrl(request);
     const session = await getServerSession();
     const actingUserId = session?.user?.id;
     if (!actingUserId) {
@@ -77,25 +85,26 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
             RETURNING id, name, email, role;
         `;
 
-        const result = await client.query(updateQuery, [...queryParams, params.id]);
+        const result = await client.query(updateQuery, [...queryParams, id]);
 
         if (result.rowCount === 0) {
             return NextResponse.json({ message: "User not found" }, { status: 404 });
         }
         
-        await logAudit('AUDIT', `User '${result.rows[0].name}' (ID: ${params.id}) was updated.`, 'API:Users:Update', actingUserId, { targetUserId: params.id, changes: validationResult.data });
+        await logAudit('AUDIT', `User '${result.rows[0].name}' (ID: ${id}) was updated.`, 'API:Users:Update', actingUserId, { targetUserId: id, changes: validationResult.data });
         return NextResponse.json(result.rows[0], { status: 200 });
 
     } catch (error: any) {
-        console.error(`Failed to update user ${params.id}:`, error);
-        await logAudit('ERROR', `Failed to update user (ID: ${params.id}). Error: ${error.message}`, 'API:Users:Update', actingUserId, { targetUserId: params.id, input: body });
+        console.error(`Failed to update user ${id}:`, error);
+        await logAudit('ERROR', `Failed to update user (ID: ${id}). Error: ${error.message}`, 'API:Users:Update', actingUserId, { targetUserId: id, input: body });
         return NextResponse.json({ message: "Error updating user", error: error.message }, { status: 500 });
     } finally {
         client.release();
     }
 }
 
-export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(request: NextRequest) {
+    const id = extractIdFromUrl(request);
     const session = await getServerSession();
     const actingUserId = session?.user?.id;
      if (!actingUserId) {
@@ -104,15 +113,15 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
 
     const client = await pool.connect();
     try {
-        const result = await client.query('DELETE FROM "User" WHERE id = $1 RETURNING name', [params.id]);
+        const result = await client.query('DELETE FROM "User" WHERE id = $1 RETURNING name', [id]);
         if (result.rowCount === 0) {
             return NextResponse.json({ message: "User not found" }, { status: 404 });
         }
-        await logAudit('AUDIT', `User '${result.rows[0].name}' (ID: ${params.id}) was deleted.`, 'API:Users:Delete', actingUserId, { targetUserId: params.id });
+        await logAudit('AUDIT', `User '${result.rows[0].name}' (ID: ${id}) was deleted.`, 'API:Users:Delete', actingUserId, { targetUserId: id });
         return NextResponse.json({ message: "User deleted successfully" }, { status: 200 });
     } catch (error: any) {
-        console.error(`Failed to delete user ${params.id}:`, error);
-        await logAudit('ERROR', `Failed to delete user (ID: ${params.id}). Error: ${error.message}`, 'API:Users:Delete', actingUserId, { targetUserId: params.id });
+        console.error(`Failed to delete user ${id}:`, error);
+        await logAudit('ERROR', `Failed to delete user (ID: ${id}). Error: ${error.message}`, 'API:Users:Delete', actingUserId, { targetUserId: id });
         return NextResponse.json({ message: "Error deleting user", error: error.message }, { status: 500 });
     } finally {
         client.release();

@@ -2,11 +2,18 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { z } from 'zod';
 import { logAudit } from '@/lib/auditLog';
 import { getRedisClient, CACHE_KEY_POSITIONS } from '@/lib/redis';
+import { pool } from '@/lib/db';
 
-export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
+function extractIdFromUrl(request: NextRequest): string | null {
+  const match = request.nextUrl.pathname.match(/\/positions\/([^/]+)/);
+  return match ? match[1] : null;
+}
+
+export async function GET(request: NextRequest) {
+  const id = extractIdFromUrl(request);
   try {
     const query = 'SELECT id, title, department, description, "isOpen", position_level, custom_attributes, "createdAt", "updatedAt" FROM "Position" WHERE id = $1';
-    const result = await pool.query(query, [params.id]);
+    const result = await pool.query(query, [id]);
     if (result.rows.length === 0) {
       return NextResponse.json({ message: "Position not found" }, { status: 404 });
     }
@@ -16,8 +23,8 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
     };
     return NextResponse.json(position, { status: 200 });
   } catch (error) {
-    console.error(`Failed to fetch position ${params.id}:`, error);
-    await logAudit('ERROR', `Failed to fetch position ${params.id}. Error: ${(error as Error).message}`, 'API:Positions', null, { targetPositionId: params.id });
+    console.error(`Failed to fetch position ${id}:`, error);
+    await logAudit('ERROR', `Failed to fetch position ${id}. Error: ${(error as Error).message}`, 'API:Positions', null, { targetPositionId: id });
     return NextResponse.json({ message: "Error fetching position", error: (error as Error).message }, { status: 500 });
   }
 }
@@ -31,7 +38,8 @@ const updatePositionSchema = z.object({
   custom_attributes: z.record(z.any()).optional().nullable(), // New
 });
 
-export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {
+export async function PUT(request: NextRequest) {
+  const id = extractIdFromUrl(request);
   let body;
   try {
     body = await request.json();
@@ -52,7 +60,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
   
   try {
     const positionExistsQuery = 'SELECT id, custom_attributes FROM "Position" WHERE id = $1';
-    const positionResult = await pool.query(positionExistsQuery, [params.id]);
+    const positionResult = await pool.query(positionExistsQuery, [id]);
     if (positionResult.rows.length === 0) {
       return NextResponse.json({ message: "Position not found" }, { status: 404 });
     }
@@ -75,12 +83,12 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
     });
 
     if (updateFields.length === 0) {
-        const currentPosition = await pool.query('SELECT * FROM "Position" WHERE id = $1', [params.id]);
+        const currentPosition = await pool.query('SELECT * FROM "Position" WHERE id = $1', [id]);
         return NextResponse.json({ ...currentPosition.rows[0], custom_attributes: currentPosition.rows[0].custom_attributes || {} }, { status: 200 });
     }
 
     updateFields.push(`"updatedAt" = NOW()`);
-    updateValues.push(params.id);
+    updateValues.push(id);
 
     const updateQuery = `UPDATE "Position" SET ${updateFields.join(', ')} WHERE id = $${paramIndex} RETURNING *;`;
     const updatedResult = await pool.query(updateQuery, updateValues);
@@ -97,16 +105,17 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
     await logAudit('AUDIT', `Position '${updatedPosition.title}' (ID: ${updatedPosition.id}) updated.`, 'API:Positions', null, { targetPositionId: updatedPosition.id, changes: Object.keys(validatedData) });
     return NextResponse.json(updatedPosition, { status: 200 });
   } catch (error) {
-    console.error(`Failed to update position ${params.id}:`, error);
-    await logAudit('ERROR', `Failed to update position ${params.id}. Error: ${(error as Error).message}`, 'API:Positions', null, { targetPositionId: params.id });
+    console.error(`Failed to update position ${id}:`, error);
+    await logAudit('ERROR', `Failed to update position ${id}. Error: ${(error as Error).message}`, 'API:Positions', null, { targetPositionId: id });
     return NextResponse.json({ message: "Error updating position", error: (error as Error).message }, { status: 500 });
   }
 }
 
-export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(request: NextRequest) {
+  const id = extractIdFromUrl(request);
   try {
     const positionQuery = 'SELECT p.id, p.title, COUNT(c.id) as "candidateCount" FROM "Position" p LEFT JOIN "Candidate" c ON p.id = c."positionId" WHERE p.id = $1 GROUP BY p.id, p.title;';
-    const positionResult = await pool.query(positionQuery, [params.id]);
+    const positionResult = await pool.query(positionQuery, [id]);
 
     if (positionResult.rows.length === 0) {
       return NextResponse.json({ message: "Position not found" }, { status: 404 });
@@ -114,23 +123,23 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
     const positionTitle = positionResult.rows[0].title;
 
     if (parseInt(positionResult.rows[0].candidateCount, 10) > 0) {
-        await logAudit('WARN', `Attempt to delete position '${positionTitle}' (ID: ${params.id}) with associated candidates. Action denied.`, 'API:Positions', null, { targetPositionId: params.id });
+        await logAudit('WARN', `Attempt to delete position '${positionTitle}' (ID: ${id}) with associated candidates. Action denied.`, 'API:Positions', null, { targetPositionId: id });
         return NextResponse.json({ message: "Cannot delete position with associated candidates. Please reassign or delete candidates first." }, { status: 409 });
     }
     
     const deleteQuery = 'DELETE FROM "Position" WHERE id = $1';
-    await pool.query(deleteQuery, [params.id]);
+    await pool.query(deleteQuery, [id]);
 
     const redisClient = await getRedisClient();
     if (redisClient) {
         await redisClient.del(CACHE_KEY_POSITIONS);
     }
     
-    await logAudit('AUDIT', `Position '${positionTitle}' (ID: ${params.id}) deleted.`, 'API:Positions', null, { targetPositionId: params.id, deletedPositionTitle: positionTitle });
+    await logAudit('AUDIT', `Position '${positionTitle}' (ID: ${id}) deleted.`, 'API:Positions', null, { targetPositionId: id, deletedPositionTitle: positionTitle });
     return NextResponse.json({ message: "Position deleted successfully" }, { status: 200 });
   } catch (error: any) {
-     console.error(`Failed to delete position ${params.id}:`, error);
-     await logAudit('ERROR', `Failed to delete position ${params.id}. Error: ${(error as Error).message}`, 'API:Positions', null, { targetPositionId: params.id });
+     console.error(`Failed to delete position ${id}:`, error);
+     await logAudit('ERROR', `Failed to delete position ${id}. Error: ${(error as Error).message}`, 'API:Positions', null, { targetPositionId: id });
      if (error.code === '23503') {
         return NextResponse.json({ message: "Cannot delete this position as it is still referenced by other entities (e.g., candidates)." }, { status: 409 });
      }

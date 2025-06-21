@@ -22,10 +22,16 @@ const userGroupUpdateSchema = z.object({
   permissions: z.array(z.string()).optional(),
 });
 
-export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
+function extractIdFromUrl(request: NextRequest): string | null {
+  const match = request.nextUrl.pathname.match(/\/user-groups\/([^/]+)/);
+  return match ? match[1] : null;
+}
+
+export async function GET(request: NextRequest) {
+  const id = extractIdFromUrl(request);
   const session = await getServerSession();
   if (session?.user?.role !== 'Admin' && !session?.user?.modulePermissions?.includes('USER_GROUPS_MANAGE')) {
-    await logAudit('WARN', `Forbidden attempt to GET user group (ID: ${params.id}) by user ${session?.user?.email || 'Unknown'}.`, 'API:UserGroups:GetById', session?.user?.id, { targetGroupId: params.id });
+    await logAudit('WARN', `Forbidden attempt to GET user group (ID: ${id}) by user ${session?.user?.email || 'Unknown'}.`, 'API:UserGroups:GetById', session?.user?.id, { targetGroupId: id });
     return NextResponse.json({ message: "Forbidden: Insufficient permissions" }, { status: 403 });
   }
 
@@ -44,25 +50,26 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
       LEFT JOIN "User_UserGroup" uug ON ug.id = uug."groupId"
       WHERE ug.id = $1
       GROUP BY ug.id, ug.name, ug.description, ug."is_default", ug."is_system_role", ug."createdAt", ug."updatedAt"
-    `, [params.id]);
+    `, [id]);
 
     if (groupResult.rows.length === 0) {
       return NextResponse.json({ message: "User group (role) not found" }, { status: 404 });
     }
     const group: UserGroup = groupResult.rows[0];
 
-    const permissionsResult = await pool.query('SELECT permission_id FROM "UserGroup_PlatformModule" WHERE group_id = $1', [params.id]);
+    const permissionsResult = await pool.query('SELECT permission_id FROM "UserGroup_PlatformModule" WHERE group_id = $1', [id]);
     group.permissions = permissionsResult.rows.map(row => row.permission_id as PlatformModuleId);
 
     return NextResponse.json(group, { status: 200 });
   } catch (error) {
-    console.error(`Failed to fetch user group (role) ${params.id}:`, error);
-    await logAudit('ERROR', `Failed to fetch user group (role) (ID: ${params.id}) by ${session?.user?.name}. Error: ${(error as Error).message}`, 'API:UserGroups:GetById', session?.user?.id, { targetGroupId: params.id });
+    console.error(`Failed to fetch user group (role) ${id}:`, error);
+    await logAudit('ERROR', `Failed to fetch user group (role) (ID: ${id}) by ${session?.user?.name}. Error: ${(error as Error).message}`, 'API:UserGroups:GetById', session?.user?.id, { targetGroupId: id });
     return NextResponse.json({ message: "Error fetching user group (role)", error: (error as Error).message }, { status: 500 });
   }
 }
 
-export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {
+export async function PUT(request: NextRequest) {
+    const id = extractIdFromUrl(request);
     const session = await getServerSession();
     const actingUserId = session?.user?.id;
     if (!actingUserId) return new NextResponse('Unauthorized', { status: 401 });
@@ -95,24 +102,25 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
             WHERE id = $${queryParams.length + 1}
             RETURNING *;
         `;
-        const result = await client.query(query, [...queryParams, params.id]);
+        const result = await client.query(query, [...queryParams, id]);
 
         if (result.rowCount === 0) {
             return NextResponse.json({ message: "User group not found" }, { status: 404 });
         }
         
-        await logAudit('AUDIT', `User group '${result.rows[0].name}' updated.`, 'API:UserGroups:Update', actingUserId, { groupId: params.id, changes: fields });
+        await logAudit('AUDIT', `User group '${result.rows[0].name}' updated.`, 'API:UserGroups:Update', actingUserId, { groupId: id, changes: fields });
         return NextResponse.json(result.rows[0]);
     } catch (error: any) {
-        console.error(`Failed to update user group ${params.id}:`, error);
-        await logAudit('ERROR', `Failed to update user group (ID: ${params.id}). Error: ${error.message}`, 'API:UserGroups:Update', actingUserId, { groupId: params.id, input: body });
+        console.error(`Failed to update user group ${id}:`, error);
+        await logAudit('ERROR', `Failed to update user group (ID: ${id}). Error: ${error.message}`, 'API:UserGroups:Update', actingUserId, { groupId: id, input: body });
         return NextResponse.json({ message: "Error updating user group", error: error.message }, { status: 500 });
     } finally {
         client.release();
     }
 }
 
-export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(request: NextRequest) {
+    const id = extractIdFromUrl(request);
     const session = await getServerSession();
     const actingUserId = session?.user?.id;
     if (!actingUserId) return new NextResponse('Unauthorized', { status: 401 });
@@ -120,8 +128,8 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
     const client = await pool.connect();
     try {
         await client.query('BEGIN');
-        await client.query('DELETE FROM "User_UserGroup" WHERE "groupId" = $1', [params.id]);
-        const result = await client.query('DELETE FROM "UserGroup" WHERE id = $1 RETURNING name', [params.id]);
+        await client.query('DELETE FROM "User_UserGroup" WHERE "groupId" = $1', [id]);
+        const result = await client.query('DELETE FROM "UserGroup" WHERE id = $1 RETURNING name', [id]);
         
         if (result.rowCount === 0) {
             await client.query('ROLLBACK');
@@ -130,12 +138,12 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
         
         await client.query('COMMIT');
         
-        await logAudit('AUDIT', `User group '${result.rows[0].name}' deleted.`, 'API:UserGroups:Delete', actingUserId, { groupId: params.id });
+        await logAudit('AUDIT', `User group '${result.rows[0].name}' deleted.`, 'API:UserGroups:Delete', actingUserId, { groupId: id });
         return new NextResponse(null, { status: 204 });
     } catch (error: any) {
         await client.query('ROLLBACK');
-        console.error(`Failed to delete user group ${params.id}:`, error);
-        await logAudit('ERROR', `Failed to delete user group (ID: ${params.id}). Error: ${error.message}`, 'API:UserGroups:Delete', actingUserId, { groupId: params.id });
+        console.error(`Failed to delete user group ${id}:`, error);
+        await logAudit('ERROR', `Failed to delete user group (ID: ${id}). Error: ${error.message}`, 'API:UserGroups:Delete', actingUserId, { groupId: id });
         return NextResponse.json({ message: "Error deleting user group", error: error.message }, { status: 500 });
     } finally {
         client.release();

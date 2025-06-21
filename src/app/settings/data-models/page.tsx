@@ -41,9 +41,9 @@ import {
   Loader2,
   AlertCircle,
   Shield,
-  Badge,
 } from 'lucide-react';
 import { z } from 'zod';
+import { Badge } from '@/components/ui/badge';
 
 // Define the types matching the Prisma schema
 type FieldType = 'TEXT' | 'TEXTAREA' | 'NUMBER' | 'DATE' | 'BOOLEAN' | 'SELECT' | 'MULTISELECT';
@@ -276,7 +276,7 @@ export default function DataModelsPage() {
                                 <TableRow key={def.id}>
                                     <TableCell className="font-medium">{def.label}</TableCell>
                                     <TableCell>
-                                        <Badge variant="outline">{def.name}</Badge>
+                                        <span className="inline-block border rounded px-2 py-0.5 text-xs font-mono bg-muted">{def.name}</span>
                                     </TableCell>
                                     <TableCell>{def.type}</TableCell>
                                     <TableCell>{def.isRequired ? 'Yes' : 'No'}</TableCell>

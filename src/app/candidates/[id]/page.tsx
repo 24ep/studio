@@ -279,7 +279,21 @@ export default function CandidateDetailPage() {
             skills: (data.parsedData as CandidateDetails)?.skills?.map(s => ({
                 ...s,
                 skill_string: s.skill?.join(', ') || ''
-            })) || []
+            })) || [],
+            experience: ((data.parsedData as CandidateDetails)?.experience?.map(exp => ({
+                ...exp,
+                is_current_position: typeof exp.is_current_position === 'string'
+                    ? exp.is_current_position === 'true'
+                    : !!exp.is_current_position,
+            })) || []) as {
+                period?: string | null;
+                duration?: string | null;
+                company?: string | null;
+                position?: string | null;
+                description?: string | null;
+                is_current_position?: boolean;
+                postition_level?: string | null;
+            }[],
         }
       });
     } catch (error) {
@@ -420,7 +434,21 @@ export default function CandidateDetailPage() {
           skills: (updatedCandidate.parsedData as CandidateDetails)?.skills?.map(s => ({
             ...s,
             skill_string: s.skill?.join(', ') || ''
-          })) || []
+          })) || [],
+          experience: ((updatedCandidate.parsedData as CandidateDetails)?.experience?.map(exp => ({
+            ...exp,
+            is_current_position: typeof exp.is_current_position === 'string'
+              ? exp.is_current_position === 'true'
+              : !!exp.is_current_position,
+          })) || []) as {
+            period?: string | null;
+            duration?: string | null;
+            company?: string | null;
+            position?: string | null;
+            description?: string | null;
+            is_current_position?: boolean;
+            postition_level?: string | null;
+          }[],
         }
       });
       toast({ title: "Recruiter Assigned", description: `Candidate assigned to ${updatedCandidate.recruiter?.name || 'Unassigned'}.` });
@@ -504,8 +532,24 @@ export default function CandidateDetailPage() {
                 ...(candidate.parsedData as CandidateDetails),
                 skills: (candidate.parsedData as CandidateDetails)?.skills?.map(s => ({
                     ...s,
-                    skill_string: s.skill?.join(', ') || ''
-                })) || []
+                    skill_string: Array.isArray(s.skill)
+                        ? s.skill.filter((sk): sk is string => typeof sk === 'string').join(', ')
+                        : (typeof s.skill_string === 'string' ? s.skill_string : '')
+                })) || [],
+                experience: ((candidate.parsedData as CandidateDetails)?.experience?.map(exp => ({
+                    ...exp,
+                    is_current_position: typeof exp.is_current_position === 'string'
+                        ? exp.is_current_position === 'true'
+                        : !!exp.is_current_position,
+                })) || []) as {
+                    period?: string | null;
+                    duration?: string | null;
+                    company?: string | null;
+                    position?: string | null;
+                    description?: string | null;
+                    is_current_position?: boolean;
+                    postition_level?: string | null;
+                }[],
             }
         });
     }

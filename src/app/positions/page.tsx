@@ -27,7 +27,13 @@ export default async function PositionsPageServer() {
 
   try {
     initialPositions = await fetchAllPositionsDb();
-    const uniqueDepts = Array.from(new Set(initialPositions.map(p => p.department).filter(Boolean as (value: any) => value is string)));
+    const uniqueDepts = Array.from(
+      new Set(
+        initialPositions
+          .map(p => p.department)
+          .filter((d): d is string => typeof d === 'string' && Boolean(d))
+      )
+    );
     initialAvailableDepartments = uniqueDepts.sort();
   } catch (error) {
     console.error("Server-side fetch error for positions:", error);

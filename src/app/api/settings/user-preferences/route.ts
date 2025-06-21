@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { getServerSession } from 'next-auth/next';
 import type { UserDataModelPreference, UIDisplayPreference } from '@/lib/types';
 import { logAudit } from '@/lib/auditLog';
+import { pool } from '@/lib/db';
 
 const UI_DISPLAY_PREFERENCES_SERVER: [UIDisplayPreference, ...UIDisplayPreference[]] = ["Standard", "Emphasized", "Hidden"];
 
