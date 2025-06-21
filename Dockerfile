@@ -31,6 +31,13 @@ RUN npm install
 # Copy the rest of the application source code
 COPY . .
 
+# Copy environment files if present
+COPY .env .env
+COPY .env.local .env.local
+
+# Print environment variables for debugging
+RUN printenv
+
 # Build the Next.js application for production
 RUN npm run build
 
