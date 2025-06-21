@@ -3,8 +3,7 @@
 -- v2.1 - Added NextAuth Adapter Tables
 -- =====================================================
 
-\set ON_ERROR_STOP on
-\set VERBOSITY verbose
+-- These psql-specific commands are removed for better compatibility
 
 -- Create a log function for better debugging
 CREATE OR REPLACE FUNCTION log_init(message text) RETURNS void AS $$
@@ -34,31 +33,31 @@ BEGIN
     -- ENUMS FOR THE NEW DATA MODEL MANAGEMENT
     IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'modelname') THEN
         CREATE TYPE "ModelName" AS ENUM ('Candidate', 'Position');
-        SELECT log_init('Created ModelName enum');
+        PERFORM log_init('Created ModelName enum');
     ELSE
-        SELECT log_init('ModelName enum already exists');
+        PERFORM log_init('ModelName enum already exists');
     END IF;
 
     IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'fieldtype') THEN
         CREATE TYPE "FieldType" AS ENUM ('TEXT', 'TEXTAREA', 'NUMBER', 'DATE', 'BOOLEAN', 'SELECT', 'MULTISELECT');
-        SELECT log_init('Created FieldType enum');
+        PERFORM log_init('Created FieldType enum');
     ELSE
-        SELECT log_init('FieldType enum already exists');
+        PERFORM log_init('FieldType enum already exists');
     END IF;
 
     -- Legacy enums (retained for other parts of the app)
     IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'recruitment_stage') THEN
         CREATE TYPE recruitment_stage AS ENUM ('Applied', 'Screening', 'Interview', 'Technical Assessment', 'Reference Check', 'Offer', 'Hired', 'Rejected');
-        SELECT log_init('Created recruitment_stage enum');
+        PERFORM log_init('Created recruitment_stage enum');
     ELSE
-        SELECT log_init('recruitment_stage enum already exists');
+        PERFORM log_init('recruitment_stage enum already exists');
     END IF;
 
     IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'user_role') THEN
         CREATE TYPE user_role AS ENUM ('admin', 'recruiter', 'hiring_manager', 'interviewer');
-        SELECT log_init('Created user_role enum');
+        PERFORM log_init('Created user_role enum');
     ELSE
-        SELECT log_init('user_role enum already exists');
+        PERFORM log_init('user_role enum already exists');
     END IF;
 END $$;
 
@@ -237,8 +236,8 @@ SELECT log_init('Created update_updated_at_column function.');
 -- Note: Prisma will manage createdAt/updatedAt for the new tables, but we add this for consistency with any manual updates or other tables.
 DO $$
 BEGIN
-    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'users') THEN
-        CREATE TRIGGER update_users_updated_at BEFORE UPDATE ON users FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'User') THEN
+        CREATE TRIGGER update_users_updated_at BEFORE UPDATE ON "User" FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
     END IF;
     IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'positions') THEN
         CREATE TRIGGER update_positions_updated_at BEFORE UPDATE ON positions FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
@@ -258,10 +257,30 @@ SELECT log_init('Applied updated_at triggers.');
 -- Insert a default admin user with a password
 -- Default password is 'changeme'
 INSERT INTO "User" (id, name, email, "emailVerified", image, role, password) VALUES
-('a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11', 'Admin User', 'admin@example.com', NOW(), '', 'Admin', '$2a$10$3zR1yZ.F.XfTjL3zQ2xY9u/6l.3b6k9E/d9.z6w5b5o.z7X/m.w1m')
+('a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11', 'Admin User', 'admin@example.com', NOW(), '', 'Admin', '$2a$10$mGO/RYRe7.RcnGCN0g2vge1twaT8/QxdWiDJnk8mSJdRXjZVVAxQi')
 ON CONFLICT (email) DO NOTHING;
 
 SELECT log_init('Inserted default admin user.');
+
+-- System Settings Table
+CREATE TABLE IF NOT EXISTS "SystemSetting" (
+    "key" TEXT NOT NULL,
+    "value" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "SystemSetting_pkey" PRIMARY KEY ("key")
+);
+SELECT log_init('Created/Verified SystemSetting table.');
+
+-- Insert default system settings
+INSERT INTO "SystemSetting" ("key", "value", "updatedAt") VALUES
+('appName', 'CandiTrack', NOW()),
+('appThemePreference', 'system', NOW()),
+('primaryGradientStart', '179 67% 66%', NOW()),
+('primaryGradientEnd', '238 74% 61%', NOW())
+ON CONFLICT (key) DO NOTHING;
+SELECT log_init('Inserted default system settings.');
 
 SELECT log_init('CandiTrack database initialization script finished successfully.');
 -- =====================================================

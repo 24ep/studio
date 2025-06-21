@@ -62,19 +62,20 @@ export default function DashboardPageClient({
     const userId = session.user.id;
 
     try {
+      const fetchOptions = { credentials: 'include' as const };
       const promises = [];
       if (userRole === 'Admin' || userRole === 'Hiring Manager') {
-        promises.push(fetch('/api/candidates'));
-        promises.push(fetch('/api/users'));
+        promises.push(fetch('/api/candidates', fetchOptions));
+        promises.push(fetch('/api/users', fetchOptions));
         promises.push(Promise.resolve(null));
       } else if (userRole === 'Recruiter') {
-        promises.push(fetch(`/api/candidates?assignedRecruiterId=${userId}`));
+        promises.push(fetch(`/api/candidates?assignedRecruiterId=${userId}`, fetchOptions));
         promises.push(Promise.resolve(null));
-        promises.push(fetch(`/api/candidates?assignedRecruiterId=${userId}`));
+        promises.push(fetch(`/api/candidates?assignedRecruiterId=${userId}`, fetchOptions));
       } else {
         promises.push(Promise.resolve(null)); promises.push(Promise.resolve(null)); promises.push(Promise.resolve(null));
       }
-      promises.push(fetch('/api/positions'));
+      promises.push(fetch('/api/positions', fetchOptions));
 
       const [candidatesResOrNull, usersResOrNull, myBacklogCandidatesResOrNull, positionsRes] = await Promise.all(promises);
 
