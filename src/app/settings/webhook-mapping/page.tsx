@@ -254,6 +254,3 @@ export default function WebhookMappingPage() {
     </Card>
   );
 }
-
-    
-

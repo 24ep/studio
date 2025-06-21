@@ -384,9 +384,9 @@ export default function ApiDocumentationPage() {
               <TableRow>
                 <TableHead className="w-[80px]">Method</TableHead>
                 <TableHead className="w-[280px]">Path</TableHead>
-                <TableHead>Description</TableHead>
-                <TableHead className="min-w-[250px]">Request Body (Conceptual)</TableHead>
-                <TableHead className="min-w-[250px]">Response (Conceptual)</TableHead>
+                <TableHead className="hidden sm:table-cell">Description</TableHead>
+                <TableHead className="min-w-[250px] hidden md:table-cell">Request Body (Conceptual)</TableHead>
+                <TableHead className="min-w-[250px] hidden md:table-cell">Response (Conceptual)</TableHead>
                 <TableHead className="w-[100px] text-center">cURL</TableHead>
               </TableRow>
             </TableHeader>
@@ -401,11 +401,11 @@ export default function ApiDocumentationPage() {
                   <TableCell>
                     <code className="text-sm font-mono bg-muted px-1.5 py-0.5 rounded break-words">{endpoint.path}</code>
                   </TableCell>
-                  <TableCell className="text-sm text-muted-foreground">{endpoint.description}</TableCell>
-                  <TableCell className="text-xs text-muted-foreground font-mono break-words">
+                  <TableCell className="text-sm text-muted-foreground hidden sm:table-cell">{endpoint.description}</TableCell>
+                  <TableCell className="text-xs text-muted-foreground font-mono break-words hidden md:table-cell">
                     {endpoint.requestBody}
                   </TableCell>
-                  <TableCell className="text-xs text-muted-foreground font-mono break-words">
+                  <TableCell className="text-xs text-muted-foreground font-mono break-words hidden md:table-cell">
                     {endpoint.response}
                   </TableCell>
                   <TableCell className="text-center">

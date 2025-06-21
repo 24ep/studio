@@ -157,9 +157,9 @@ export function EditUserModal({ isOpen, onOpenChange, onEditUser, user, isSelfEd
           <DialogDescription>{dialogDescription}</DialogDescription>
         </DialogHeader>
 
-        <div className="flex flex-grow overflow-hidden p-6">
+        <div className="flex flex-col md:flex-row flex-grow overflow-hidden p-6 gap-6">
           {!isSelfEdit && (
-            <aside className="md:w-72 border-r pr-6 space-y-1">
+            <aside className="md:w-72 border-b md:border-b-0 md:border-r pb-6 md:pb-0 md:pr-6 space-y-1">
               {navItems.map(item => (
                 <Button
                   key={item.id}
@@ -176,7 +176,7 @@ export function EditUserModal({ isOpen, onOpenChange, onEditUser, user, isSelfEd
             </aside>
           )}
 
-          <main className={cn("flex-grow overflow-hidden", !isSelfEdit ? "flex-1 pl-6" : "w-full")}>
+          <main className={cn("flex-grow overflow-hidden flex-1")}>
             <ScrollArea className="h-full">
               <Form {...form}>
                 <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
