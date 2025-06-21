@@ -1,62 +1,47 @@
-# =================================================================
-# == Stage 1: Build Stage
-# =================================================================
-FROM node:20-alpine AS builder
+# Use official Node.js image
+FROM node:20-alpine
 
 # Set working directory
 WORKDIR /app
 
-# Declare build arguments
+# Declare build-time arguments to receive them from docker-compose
 ARG DATABASE_URL
 ARG NEXTAUTH_URL
 ARG NEXTAUTH_SECRET
 ARG AZURE_AD_CLIENT_ID
 ARG AZURE_AD_CLIENT_SECRET
 ARG AZURE_AD_TENANT_ID
+ARG GOOGLE_API_KEY
 
-# Set them as environment variables
+# Set them as environment variables for the build process
 ENV DATABASE_URL=$DATABASE_URL
 ENV NEXTAUTH_URL=$NEXTAUTH_URL
 ENV NEXTAUTH_SECRET=$NEXTAUTH_SECRET
 ENV AZURE_AD_CLIENT_ID=$AZURE_AD_CLIENT_ID
 ENV AZURE_AD_CLIENT_SECRET=$AZURE_AD_CLIENT_SECRET
 ENV AZURE_AD_TENANT_ID=$AZURE_AD_TENANT_ID
+ENV GOOGLE_API_KEY=$GOOGLE_API_KEY
 
-# Install dependencies to leverage Docker cache
-# Copy package.json and the prisma schema first.
-# This allows Prisma's install scripts to run correctly.
-COPY package.json ./
+# Copy package.json and package-lock.json
+COPY package.json package-lock.json ./
+
+# Install all dependencies (including devDependencies needed for build)
 RUN npm install
 
 # Copy the rest of the application source code
 COPY . .
 
 # Print environment variables for debugging
-RUN printenv
+RUN echo "--- Build-time Environment Variables ---" && printenv && echo "------------------------------------"
 
-# Build the Next.js application for production
+# Build the Next.js app
 RUN npm run build
 
-# =================================================================
-# == Stage 2: Production Stage
-# =================================================================
-FROM node:20-alpine
-
-# Set working directory
-WORKDIR /app
-
-# Copy production dependencies from builder stage
-COPY --from=builder /app/package.json ./
-RUN npm install --production
-
-# Copy built Next.js application from builder stage
-COPY --from=builder /app/.next ./.next
-
-# Copy public assets
-COPY --from=builder /app/public ./public
+# Remove development dependencies for a smaller final image
+RUN npm prune --production
 
 # Expose the port the app will run on
 EXPOSE 3000
 
-# Set the default command to start the app in production mode
+# Start the app
 CMD ["npm", "run", "start"]
