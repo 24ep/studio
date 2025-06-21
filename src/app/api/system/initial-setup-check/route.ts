@@ -1,37 +1,17 @@
 // src/app/api/system/initial-setup-check/route.ts
 import { NextResponse } from 'next/server';
+import { prisma } from '@/lib/prisma';
 
 export async function GET() {
-  const client = await pool.connect();
   try {
-    const essentialTables = [
-        'User', 'Position', 'Candidate', 'LogEntry', 'RecruitmentStage', 'TransitionRecord',
-        'UserGroup', 'User_UserGroup', 'UserGroup_PlatformModule',
-        'CustomFieldDefinition', 'SystemSetting', 'UserUIDisplayPreference',
-        'WebhookFieldMapping', 'NotificationEvent', 'NotificationChannel', 'NotificationSetting',
-        'ResumeHistory'
-    ];
+    // A simple query to check if a core table like 'User' exists.
+    // This is a proxy for checking if the schema has been initialized.
+    await prisma.$queryRaw`SELECT 1 FROM "User" LIMIT 1`;
 
-    // Single query to check for all tables
-    const queryText = `
-      SELECT table_name
-      FROM information_schema.tables
-      WHERE table_schema = 'public' AND table_name = ANY($1::text[]);
-    `;
-    const result = await client.query(queryText, [essentialTables]);
-    const foundTables = result.rows.map(row => row.table_name);
-
-    const missingTables = essentialTables.filter(tableName => !foundTables.includes(tableName));
-
-    if (missingTables.length === 0) {
-      return NextResponse.json({ schemaInitialized: true, message: "Essential tables found." });
-    } else {
-      return NextResponse.json({
-        schemaInitialized: false,
-        message: "One or more essential database tables are missing. The application may not function correctly.",
-        missingTables: missingTables
-      }, { status: 200 }); // Still 200, but with schemaInitialized: false
-    }
+    return NextResponse.json({
+      schemaInitialized: true,
+      message: "Database schema is initialized."
+    });
   } catch (error) {
     console.error("Error during initial setup check (database):", error);
     if (error instanceof Error && (error as any).code === '42P01') { // PostgreSQL error code for undefined_table
@@ -49,7 +29,5 @@ export async function GET() {
       message: "Error checking database schema. This could be due to a connection issue or misconfiguration.",
       error: (error as Error).message
     }, { status: 500 });
-  } finally {
-    client.release();
   }
 }

@@ -1,5 +1,5 @@
 // src/lib/apiUtils.ts
-// Removed: import pool from './db';
+import { prisma } from './prisma';
 import type { Position, RecruitmentStage, Candidate, UserProfile } from './types';
 import { getRedisClient, CACHE_KEY_POSITIONS, CACHE_EXPIRY_SECONDS_POSITIONS, CACHE_KEY_RECRUITMENT_STAGES, CACHE_EXPIRY_SECONDS_STAGES, CACHE_KEY_USERS, CACHE_EXPIRY_SECONDS_USERS } from './redis';
 
@@ -20,11 +20,11 @@ export async function fetchAllPositionsDb(): Promise<Position[]> {
 
   try {
     console.log('Fetching positions from DB...');
-    const result = await pool.query('SELECT id, title, department, description, "isOpen", position_level, custom_attributes, "createdAt", "updatedAt" FROM "Position" ORDER BY title ASC');
-    const positionsFromDb = result.rows.map(row => ({
-      ...row,
-      custom_attributes: row.custom_attributes || {},
-    }));
+    const positionsFromDb = await prisma.position.findMany({
+      orderBy: {
+        title: 'asc',
+      },
+    });
 
     if (redisClient) {
       try {
@@ -57,8 +57,12 @@ export async function fetchAllRecruitmentStagesDb(): Promise<RecruitmentStage[]>
   
   try {
     console.log('Fetching recruitment stages from DB...');
-    const result = await pool.query('SELECT * FROM "RecruitmentStage" ORDER BY sort_order ASC, name ASC');
-    const stagesFromDb = result.rows;
+    const stagesFromDb = await prisma.recruitmentStage.findMany({
+      orderBy: [
+        { sortOrder: 'asc' },
+        { name: 'asc' },
+      ],
+    });
 
     if (redisClient) {
       try {
@@ -94,19 +98,20 @@ export async function fetchAllUsersDb(filterRole?: UserProfile['role']): Promise
 
   try {
     console.log(`Fetching users from DB (Role filter: ${filterRole || 'None'})...`);
-    let query = 'SELECT id, name, email, role, "avatarUrl", "dataAiHint" FROM "User"';
-    const queryParams = [];
-    if (filterRole) {
-      query += ' WHERE role = $1';
-      queryParams.push(filterRole);
-    }
-    query += ' ORDER BY name ASC';
-    const result = await pool.query(query, queryParams);
-    const usersFromDb = result.rows.map(user => ({
-      ...user,
-      modulePermissions: user.modulePermissions || [],
-      groups: user.groups || [],
-    }));
+    const usersFromDb = await prisma.user.findMany({
+      where: filterRole ? { role: filterRole } : {},
+      orderBy: {
+        name: 'asc',
+      },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        role: true,
+        image: true,
+        // Ensure you add any other fields needed by UserProfile that exist on the User model
+      },
+    });
 
     if (shouldCache) {
        try {
@@ -117,7 +122,7 @@ export async function fetchAllUsersDb(filterRole?: UserProfile['role']): Promise
       }
     }
 
-    return usersFromDb;
+    return usersFromDb.map(u => ({ ...u, avatarUrl: u.image, dataAiHint: null, modulePermissions: [], groups: [] }));
   } catch (error) {
     console.error(`Error fetching users from DB (role: ${filterRole || 'all'}):`, error);
     throw error;
@@ -129,29 +134,19 @@ export async function fetchAllUsersDb(filterRole?: UserProfile['role']): Promise
 // This is a simplified version. For full filtering like in /api/candidates, more complex logic is needed.
 export async function fetchInitialDashboardCandidatesDb(limit: number = 10): Promise<Candidate[]> {
   try {
-    const query = `
-      SELECT
-        c.id, c.name, c.email, c.phone, c."avatarUrl", c."dataAiHint", c."resumePath", c."parsedData", c.custom_attributes,
-        c."positionId", c."fitScore", c.status, c."applicationDate",
-        c."recruiterId", c."createdAt", c."updatedAt",
-        p.title as "positionTitle", p.department as "positionDepartment", p.position_level as "positionLevel",
-        rec.name as "recruiterName"
-        -- Note: transitionHistory is omitted here for dashboard performance, fetch on detail page
-      FROM "Candidate" c
-      LEFT JOIN "Position" p ON c."positionId" = p.id
-      LEFT JOIN "User" rec ON c."recruiterId" = rec.id
-      ORDER BY c."applicationDate" DESC, c."createdAt" DESC
-      LIMIT $1;
-    `;
-    const result = await pool.query(query, [limit]);
-    return result.rows.map(row => ({
-      ...row,
-      parsedData: row.parsedData || { personal_info: {}, contact_info: {} },
-      custom_attributes: row.custom_attributes || {},
-      position: row.positionId ? { id: row.positionId, title: row.positionTitle, department: row.department, position_level: row.positionLevel } : null,
-      recruiter: row.recruiterId ? { id: row.recruiterId, name: row.recruiterName, email: null } : null,
-      transitionHistory: [], // Default to empty for dashboard list
-    }));
+    const candidates = await prisma.candidate.findMany({
+      take: limit,
+      orderBy: [
+        { applicationDate: 'desc' },
+        { createdAt: 'desc' },
+      ],
+      include: {
+        position: true,
+        recruiter: true,
+      },
+    });
+    
+    return candidates as Candidate[];
   } catch (error) {
     console.error("Error fetching initial dashboard candidates from DB:", error);
     throw error;
