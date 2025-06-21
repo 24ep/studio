@@ -24,7 +24,7 @@ ENV GOOGLE_API_KEY=$GOOGLE_API_KEY
 
 # Install dependencies - This layer is cached if yarn.lock doesn't change
 COPY package.json yarn.lock ./
-RUN yarn install --frozen-lockfile
+RUN yarn install --verbose
 
 # Copy source code - This layer is cached if your source code doesn't change
 COPY . .
