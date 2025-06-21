@@ -167,15 +167,26 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
         throw new Error("Candidate not found");
       }
       
+      const { positionId, ...restOfUpdateData } = updateData;
+      const dataToUpdate: any = { ...restOfUpdateData };
+
+      if (positionId !== undefined) {
+        if (positionId) {
+          dataToUpdate.position = { connect: { id: positionId } };
+        } else {
+          dataToUpdate.position = { disconnect: true };
+        }
+      }
+
       // If status is changing, create a transition record.
-      if (updateData.status && updateData.status !== existingCandidate.status) {
+      if (dataToUpdate.status && dataToUpdate.status !== existingCandidate.status) {
         await tx.transitionRecord.create({
           data: {
             id: uuidv4(),
             candidateId: params.id,
             positionId: existingCandidate.positionId,
-            stage: updateData.status,
-            notes: transitionNotes || `Status changed from ${existingCandidate.status} to ${updateData.status}.`,
+            stage: dataToUpdate.status,
+            notes: transitionNotes || `Status changed from ${existingCandidate.status} to ${dataToUpdate.status}.`,
             actingUserId: actingUserId,
             date: new Date(),
           },
@@ -184,7 +195,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
 
       const candidate = await tx.candidate.update({
         where: { id: params.id },
-        data: updateData,
+        data: dataToUpdate,
         include: {
           position: true,
           recruiter: true,
