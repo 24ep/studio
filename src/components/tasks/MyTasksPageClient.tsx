@@ -82,7 +82,7 @@ export function MyTasksPageClient({
         // Do not toast here as it might be redundant if initialRecruiters prop was fine
       }
     }
-  }, [session?.user?.role, allRecruitersForFilter.length]);
+  }, [session?.user?.role]);
 
 
   const fetchTaskBoardCandidates = useCallback(async (filtersToApply: CandidateFilterValues, currentRecruiterFilter: string) => {
