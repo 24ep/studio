@@ -1,10 +1,11 @@
-# Use official Node.js image
-FROM node:20-alpine
+# =================================================================
+# == Stage 1: Build Stage
+# =================================================================
+FROM node:20-alpine AS builder
 
-# Set working directory
 WORKDIR /app
 
-# Declare build-time arguments to receive them from docker-compose
+# Declare and set build-time environment variables
 ARG DATABASE_URL
 ARG NEXTAUTH_URL
 ARG NEXTAUTH_SECRET
@@ -13,7 +14,6 @@ ARG AZURE_AD_CLIENT_SECRET
 ARG AZURE_AD_TENANT_ID
 ARG GOOGLE_API_KEY
 
-# Set them as environment variables for the build process
 ENV DATABASE_URL=$DATABASE_URL
 ENV NEXTAUTH_URL=$NEXTAUTH_URL
 ENV NEXTAUTH_SECRET=$NEXTAUTH_SECRET
@@ -22,26 +22,36 @@ ENV AZURE_AD_CLIENT_SECRET=$AZURE_AD_CLIENT_SECRET
 ENV AZURE_AD_TENANT_ID=$AZURE_AD_TENANT_ID
 ENV GOOGLE_API_KEY=$GOOGLE_API_KEY
 
-# Copy package.json and package-lock.json
-COPY package.json package-lock.json ./
+# Install dependencies using yarn
+COPY package.json yarn.lock ./
+RUN yarn install --frozen-lockfile
 
-# Install all dependencies (including devDependencies needed for build)
-RUN npm install
-
-# Copy the rest of the application source code
+# Copy the rest of the source code
 COPY . .
 
 # Print environment variables for debugging
 RUN echo "--- Build-time Environment Variables ---" && printenv && echo "------------------------------------"
 
-# Build the Next.js app
-RUN npm run build
+# Build the Next.js application
+RUN yarn build
 
-# Remove development dependencies for a smaller final image
-RUN npm prune --production
+# =================================================================
+# == Stage 2: Production Stage
+# =================================================================
+FROM node:20-alpine
+
+WORKDIR /app
+
+# Install only production dependencies
+COPY package.json yarn.lock ./
+RUN yarn install --production --frozen-lockfile
+
+# Copy built Next.js application from builder stage
+COPY --from=builder /app/.next ./.next
+COPY --from=builder /app/public ./public
 
 # Expose the port the app will run on
 EXPOSE 3000
 
 # Start the app
-CMD ["npm", "run", "start"]
+CMD ["yarn", "start"]
