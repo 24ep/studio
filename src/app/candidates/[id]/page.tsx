@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect, useCallback } from 'react';
@@ -35,7 +34,7 @@ const PLACEHOLDER_VALUE_NONE = "___NOT_SPECIFIED___";
 const positionLevelOptions: PositionLevel[] = ['entry level', 'mid level', 'senior level', 'lead', 'manager', 'executive', 'officer', 'leader'];
 
 
-const getStatusBadgeVariant = (status: Candidate['status']): "default" | "secondary" | "destructive" | "outline" => {
+const getStatusBadgeVariant = (status: string): "default" | "secondary" | "destructive" | "outline" => {
   switch (status) {
     case 'Hired': case 'Offer Accepted': return 'default';
     case 'Interview Scheduled': case 'Interviewing': case 'Offer Extended': return 'secondary';
@@ -46,8 +45,8 @@ const getStatusBadgeVariant = (status: Candidate['status']): "default" | "second
 
 const personalInfoEditSchema = z.object({
   title_honorific: z.string().optional().nullable(),
-  firstname: z.string().min(1, "First name is required").optional(),
-  lastname: z.string().min(1, "Last name is required").optional(),
+  firstname: z.string().min(1, "First name is required"),
+  lastname: z.string().min(1, "Last name is required"),
   nickname: z.string().optional().nullable(),
   location: z.string().optional().nullable(),
   introduction_aboutme: z.string().optional().nullable(),
@@ -55,7 +54,7 @@ const personalInfoEditSchema = z.object({
 }).deepPartial();
 
 const contactInfoEditSchema = z.object({
-  email: z.string().email("Invalid email address").optional(),
+  email: z.string().email("Invalid email address"),
   phone: z.string().optional().nullable(),
 }).deepPartial();
 
@@ -108,7 +107,7 @@ const editCandidateDetailSchema = z.object({
   phone: z.string().optional().nullable(),
   positionId: z.string().uuid().nullable().optional(),
   recruiterId: z.string().uuid().nullable().optional(),
-  fitScore: z.number().min(0).max(100).optional(),
+  fitScore: z.number().min(0).max(100).nullable().optional(),
   status: z.string().min(1, "Status is required").optional(),
   parsedData: candidateDetailsEditSchema.optional(),
 });
@@ -122,7 +121,22 @@ interface RoleSuggestionSummaryProps {
 }
 
 const RoleSuggestionSummary: React.FC<RoleSuggestionSummaryProps> = ({ candidate, allDbPositions }) => {
-  if (!candidate || !candidate.parsedData || !(candidate.parsedData as CandidateDetails).job_matches || (candidate.parsedData as CandidateDetails).job_matches!.length === 0) {
+  if (!candidate || !candidate.parsedData) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center text-lg"><Lightbulb className="mr-2 h-5 w-5 text-yellow-500" />Role Suggestion</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-sm text-muted-foreground">No automated job match data to provide suggestions.</p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  const jobMatches = (candidate.parsedData as CandidateDetails)?.job_matches;
+
+  if (!jobMatches || jobMatches.length === 0) {
     return (
       <Card>
         <CardHeader>
@@ -144,7 +158,7 @@ const RoleSuggestionSummary: React.FC<RoleSuggestionSummaryProps> = ({ candidate
 
   const openPositionsMap = new Map(allDbPositions.filter(p => p.isOpen).map(p => [p.title.toLowerCase(), p]));
 
-  for (const jobMatch of (candidate.parsedData as CandidateDetails).job_matches!) {
+  for (const jobMatch of jobMatches) {
     const jobMatchTitleLower = jobMatch.job_title?.toLowerCase(); // job_title can be optional/null
     if (!jobMatchTitleLower) continue;
 
@@ -289,104 +303,92 @@ export default function CandidateDetailPage() {
     }
   }, [toast]);
 
-  const fetchAllPositions = useCallback(async () => {
+  const fetchPositionsAndStages = useCallback(async () => {
     try {
-      const response = await fetch('/api/positions?isOpen=true');
-      if (!response.ok) {
-        let errorDetails = `Failed to fetch positions. Status: ${response.status}`;
-        try {
-            const errorData = await response.json();
-            errorDetails = errorData.message || errorData.error || errorDetails;
-        } catch (e) {
-            errorDetails = `${errorDetails} - ${response.statusText || 'No further details from server.'}`;
-        }
-        throw new Error(errorDetails);
-      }
-      const data: Position[] = await response.json();
-      setAllDbPositions(data);
-    } catch (error) {
-      console.error("Error fetching all positions:", error);
-      // Optionally toast or set an error state for positions if critical for the page
-    }
-  }, []);
+      const [posResponse, stagesResponse] = await Promise.all([
+        fetch('/api/positions'),
+        fetch('/api/settings/recruitment-stages')
+      ]);
 
-  const fetchRecruitmentStages = useCallback(async () => {
-    try {
-      const response = await fetch('/api/settings/recruitment-stages');
-      if (!response.ok) {
-        let errorDetails = `Failed to fetch recruitment stages. Status: ${response.status}`;
-        try {
-            const errorData = await response.json();
-            errorDetails = errorData.message || errorData.error || errorDetails;
-        } catch (e) {
-            errorDetails = `${errorDetails} - ${response.statusText || 'No further details from server.'}`;
-        }
-        throw new Error(errorDetails);
+      if (posResponse.ok) {
+        const posData = await posResponse.json();
+        setAllDbPositions(posData.positions || []);
+      } else {
+        console.error("Failed to fetch positions");
+        toast({ title: "Error", description: "Could not load the list of available positions.", variant: "destructive" });
       }
-      const data: RecruitmentStage[] = await response.json();
-      setAvailableStages(data);
+
+      if (stagesResponse.ok) {
+        const stagesData = await stagesResponse.json();
+        setAvailableStages(stagesData.stages || []);
+      } else {
+        console.error("Failed to fetch recruitment stages");
+        toast({ title: "Error", description: "Could not load recruitment stages.", variant: "destructive" });
+      }
     } catch (error) {
-      console.error("Error fetching recruitment stages:", error);
-      toast({ title: "Error", description: "Could not load recruitment stages for status selection.", variant: "destructive" });
+      console.error("Error fetching positions or stages:", error);
+      toast({ title: "Error", description: "A network error occurred while fetching initial data.", variant: "destructive" });
     }
   }, [toast]);
 
-
   useEffect(() => {
-    if (candidateId) {
-        fetchCandidateDetails();
-        fetchAllPositions();
-        fetchRecruiters();
-        fetchRecruitmentStages();
+    if (sessionStatus === 'authenticated') {
+      fetchCandidateDetails();
+      fetchRecruiters();
+      fetchPositionsAndStages();
     }
-  }, [candidateId, fetchCandidateDetails, fetchRecruiters, fetchAllPositions, fetchRecruitmentStages]);
+  }, [candidateId, sessionStatus, fetchCandidateDetails, fetchRecruiters, fetchPositionsAndStages]);
 
   const handleUploadSuccess = (updatedCandidate: Candidate) => {
     setCandidate(updatedCandidate);
-    reset({
-        name: updatedCandidate.name,
-        email: updatedCandidate.email,
-        phone: updatedCandidate.phone,
-        positionId: updatedCandidate.positionId,
-        recruiterId: updatedCandidate.recruiterId,
-        fitScore: updatedCandidate.fitScore,
-        status: updatedCandidate.status,
-        parsedData: {
-          ...(updatedCandidate.parsedData as CandidateDetails),
-          skills: (updatedCandidate.parsedData as CandidateDetails)?.skills?.map(s => ({
-            ...s,
-            skill_string: s.skill?.join(', ') || ''
-          })) || []
-        }
-    });
     setIsUploadModalOpen(false);
-    toast({ title: "Resume Uploaded", description: "Resume successfully updated." });
+    toast({
+      title: "Success",
+      description: "Resume has been uploaded and candidate details updated.",
+      variant: "default",
+    });
+    fetchCandidateDetails(); // Re-fetch to ensure all data is fresh
   };
 
-  const handleUpdateCandidateStatus = async (id: string, newStatus: Candidate['status'], notes?: string) => {
+  const handleTransitionsUpdated = (updatedHistory: TransitionRecord[], newStatus: string) => {
+    if (candidate) {
+      setCandidate({ ...candidate, status: newStatus, transitionHistory: updatedHistory });
+    }
+    fetchCandidateDetails();
+  };
+
+  const handleUpdateCandidateStatus = async (id: string, newStatus: string, notes?: string) => {
+    setIsLoading(true);
     try {
-        const payload: { status: Candidate['status'], transitionNotes?: string } = { status: newStatus };
-        if (notes) {
-            payload.transitionNotes = notes;
-        }
-        const response = await fetch(`/api/candidates/${id}`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload),
-        });
-        if (!response.ok) {
-            const errorData = await response.json().catch(() => ({ message: "An unknown error occurred" }));
-            throw new Error(errorData.message || `Failed to update candidate status: ${response.statusText}`);
-        }
-        await fetchCandidateDetails(); 
-        toast({ title: "Status Updated", description: `Candidate status updated to ${newStatus}.` });
-    } catch (error) {
-        toast({
-            title: "Error Updating Status",
-            description: (error as Error).message || "Could not update candidate status.",
-            variant: "destructive",
-        });
-        throw error; 
+      const payload: { status: string; transitionNotes?: string } = { status: newStatus };
+      if (notes) {
+        payload.transitionNotes = notes;
+      }
+      const response = await fetch(`/api/candidates/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to update status.');
+      }
+
+      const updatedCandidate = await response.json();
+      setCandidate(updatedCandidate.candidate);
+      toast({
+        title: "Status Updated",
+        description: `Candidate status changed to ${newStatus}.`,
+      });
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -446,7 +448,7 @@ export default function CandidateDetailPage() {
   const handlePositionEdited = async () => {
     toast({ title: "Position Updated", description: "Position details have been saved." });
     setIsEditPositionModalOpen(false);
-    await fetchAllPositions();
+    await fetchPositionsAndStages();
     if (candidateId) {
         await fetchCandidateDetails();
     }

@@ -1,9 +1,7 @@
-
 // src/app/api/candidates/[id]/avatar/route.ts
 import { NextResponse, type NextRequest } from 'next/server';
 import { minioClient, MINIO_BUCKET_NAME } from '../../../../lib/minio'; // Assuming a common bucket for now
-import pool from '../../../../lib/db';
-import type { Candidate } from '@/lib/types';
+import prisma from '../../../../lib/prisma';
 import { logAudit } from '@/lib/auditLog';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/app/api/auth/[...nextauth]/route';
@@ -27,14 +25,16 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
     return NextResponse.json({ message: "Forbidden: Insufficient permissions." }, { status: 403 });
   }
 
-  let candidateDBRecord: Pick<Candidate, 'id' | 'name'> | null = null;
+  let candidateDBRecord: { id: string; name: string | null } | null = null;
   try {
-    const candidateQuery = 'SELECT id, name FROM "Candidate" WHERE id = $1';
-    const candidateResult = await pool.query(candidateQuery, [candidateId]);
-    if (candidateResult.rows.length === 0) {
+    candidateDBRecord = await prisma.candidate.findUnique({
+      where: { id: candidateId },
+      select: { id: true, name: true },
+    });
+
+    if (!candidateDBRecord) {
       return NextResponse.json({ message: 'Candidate not found' }, { status: 404 });
     }
-    candidateDBRecord = candidateResult.rows[0];
   } catch (dbError: any) {
     console.error('Database error fetching candidate for avatar upload:', dbError);
     await logAudit('ERROR', `Database error fetching candidate (ID: ${candidateId}) for avatar upload. Error: ${dbError.message}`, 'API:CandidateAvatar', actingUserId, { targetCandidateId: candidateId });
@@ -72,15 +72,24 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
     // but for avatars, a generic hint is usually fine or can be set manually.
     const dataAiHint = "profile person";
 
-    const updateQuery = 'UPDATE "Candidate" SET "avatarUrl" = $1, "dataAiHint" = $2, "updatedAt" = NOW() WHERE id = $3 RETURNING "avatarUrl", "dataAiHint";';
-    const updateResult = await pool.query(updateQuery, [avatarUrl, dataAiHint, candidateId]);
+    const updatedCandidate = await prisma.candidate.update({
+      where: { id: candidateId },
+      data: {
+        avatarUrl,
+        dataAiHint,
+      },
+      select: {
+        avatarUrl: true,
+        dataAiHint: true,
+      },
+    });
 
     await logAudit('AUDIT', `Avatar '${fileNameInMinio}' uploaded for candidate '${candidateDBRecord.name}' (ID: ${candidateId}) by ${actingUserName}.`, 'API:CandidateAvatar', actingUserId, { targetCandidateId: candidateId, avatarUrl: avatarUrl });
 
     return NextResponse.json({ 
       message: 'Avatar uploaded successfully.', 
-      avatarUrl: updateResult.rows[0].avatarUrl,
-      dataAiHint: updateResult.rows[0].dataAiHint
+      avatarUrl: updatedCandidate.avatarUrl,
+      dataAiHint: updatedCandidate.dataAiHint
     }, { status: 200 });
 
   } catch (error: any) {

@@ -1,8 +1,7 @@
-
 import { NextResponse, type NextRequest } from 'next/server';
 import { minioClient, MINIO_BUCKET_NAME } from '../../../../lib/minio';
-import pool, { getSystemSetting } from '../../../../lib/db'; // Import getSystemSetting
-import type { Candidate, ResumeHistoryEntry } from '@/lib/types';
+import prisma from '../../../../lib/prisma';
+import { getSystemSetting } from '../../../../lib/db';
 import { logAudit } from '@/lib/auditLog';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/app/api/auth/[...nextauth]/route';
@@ -71,18 +70,19 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ message: 'Candidate ID is required as a query parameter' }, { status: 400 });
   }
   
-  let candidateDBRecord: Pick<Candidate, 'id' | 'name'> | null = null;
+  let candidateDBRecord: { id: string; name: string | null; } | null = null;
   try {
-    const candidateQuery = 'SELECT id, name FROM "Candidate" WHERE id = $1'; 
-    const candidateResult = await pool.query(candidateQuery, [candidateId]);
-    if (candidateResult.rows.length === 0) {
+    candidateDBRecord = await prisma.candidate.findUnique({
+      where: { id: candidateId },
+      select: { id: true, name: true }
+    });
+    if (!candidateDBRecord) {
       return NextResponse.json({ message: 'Candidate not found' }, { status: 404 });
     }
-    candidateDBRecord = candidateResult.rows[0];
   } catch (dbError: any) {
      console.error('Database error fetching candidate:', dbError);
      await logAudit('ERROR', `Database error fetching candidate (ID: ${candidateId}) for resume upload. Error: ${dbError.message}`, 'API:Resumes', actingUserId, { targetCandidateId: candidateId });
-     return NextResponse.json({ message: dbError.message || 'Error verifying candidate', error: dbError.message || 'An unknown database error occurred while fetching candidate.' }, { status: 500 });
+     return NextResponse.json({ message: 'Error verifying candidate', error: dbError.message || 'An unknown database error occurred while fetching candidate.' }, { status: 500 });
   }
   
   try {
@@ -110,75 +110,49 @@ export async function POST(request: NextRequest) {
       'Content-Type': file.type,
     });
 
-    const client = await pool.connect();
     try {
-        await client.query('BEGIN');
-        // Update Candidate.resumePath to the new file
-        const updateCandidateQuery = 'UPDATE "Candidate" SET "resumePath" = $1, "updatedAt" = NOW() WHERE id = $2 RETURNING *;';
-        await client.query(updateCandidateQuery, [fileNameInMinio, candidateId]);
-
-        // Add entry to ResumeHistory
-        const insertHistoryQuery = `
-            INSERT INTO "ResumeHistory" ("id", "candidateId", "filePath", "originalFileName", "uploadedAt", "uploadedByUserId")
-            VALUES ($1, $2, $3, $4, NOW(), $5);
-        `;
-        await client.query(insertHistoryQuery, [
-            uuidv4(),
-            candidateId,
-            fileNameInMinio,
-            file.name,
-            actingUserId
-        ]);
-        await client.query('COMMIT');
+      await prisma.$transaction([
+        prisma.candidate.update({
+          where: { id: candidateId },
+          data: { resumePath: fileNameInMinio },
+        }),
+        prisma.resumeHistory.create({
+          data: {
+            id: uuidv4(),
+            candidateId: candidateId,
+            filePath: fileNameInMinio,
+            originalFileName: file.name,
+            uploadedByUserId: actingUserId,
+          },
+        }),
+      ]);
     } catch (error) {
-        await client.query('ROLLBACK');
+        console.error("Transaction failed:", error)
+        // No need to rollback, prisma handles it
         throw error; // Re-throw to be caught by outer catch
-    } finally {
-        client.release();
     }
 
 
     await logAudit('AUDIT', `Resume '${fileNameInMinio}' uploaded for candidate '${candidateDBRecord.name}' (ID: ${candidateId}) by ${actingUserName}.`, 'API:Resumes', actingUserId, { targetCandidateId: candidateId, filePath: fileNameInMinio, originalFileName: file.name });
 
-    const n8nResult = await sendToN8N(candidateId, candidateDBRecord.name, fileNameInMinio, file.name, file.type);
+    const n8nResult = await sendToN8N(candidateId, candidateDBRecord.name!, fileNameInMinio, file.name, file.type);
 
-    const finalQuery = `
-        SELECT
-            c.*,
-            p.title as "positionTitle", p.department as "positionDepartment", p.position_level as "positionLevel",
-            rec.name as "recruiterName",
-            COALESCE(
-              (SELECT json_agg(
-                json_build_object(
-                  'id', th.id, 'candidateId', th."candidateId", 'date', th.date, 'stage', th.stage, 'notes', th.notes,
-                  'actingUserId', th."actingUserId", 'actingUserName', u.name,
-                  'createdAt', th."createdAt", 'updatedAt', th."updatedAt"
-                ) ORDER BY th.date DESC
-               ) FROM "TransitionRecord" th LEFT JOIN "User" u ON th."actingUserId" = u.id WHERE th."candidateId" = c.id),
-              '[]'::json
-            ) as "transitionHistory"
-        FROM "Candidate" c
-        LEFT JOIN "Position" p ON c."positionId" = p.id
-        LEFT JOIN "User" rec ON c."recruiterId" = rec.id
-        WHERE c.id = $1;
-    `;
-    const finalResult = await pool.query(finalQuery, [candidateId]);
-    const updatedCandidateWithDetails = {
-        ...finalResult.rows[0],
-        parsedData: finalResult.rows[0].parsedData || { personal_info: {}, contact_info: {} },
-        position: finalResult.rows[0].positionId ? {
-            id: finalResult.rows[0].positionId,
-            title: finalResult.rows[0].positionTitle,
-            department: finalResult.rows[0].positionDepartment,
-            position_level: finalResult.rows[0].positionLevel,
-        } : null,
-        recruiter: finalResult.rows[0].recruiterId ? {
-            id: finalResult.rows[0].recruiterId,
-            name: finalResult.rows[0].recruiterName,
-            email: null
-        } : null,
-        transitionHistory: finalResult.rows[0].transitionHistory || [],
-    };
+    const updatedCandidateWithDetails = await prisma.candidate.findUnique({
+      where: { id: candidateId },
+      include: {
+        position: true,
+        recruiter: true,
+        transitionHistory: {
+          include: {
+            actingUser: true,
+          },
+          orderBy: {
+            date: 'desc',
+          },
+        },
+      },
+    });
+
 
     return NextResponse.json({ 
       message: 'Resume uploaded successfully.', 

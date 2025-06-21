@@ -1,7 +1,6 @@
-
 // src/app/api/n8n/create-candidate-with-matches/route.ts
 import { NextResponse, type NextRequest } from 'next/server';
-import pool from '../../../../lib/db';
+import prisma from '../../../../lib/prisma';
 import { z } from 'zod';
 import type { CandidateDetails, Position, CandidateStatus, N8NJobMatch, PersonalInfo, ContactInfo, EducationEntry, ExperienceEntry, SkillEntry, JobSuitableEntry, PositionLevel, N8NCandidateWebhookEntry, WebhookFieldMapping } from '@/lib/types';
 import { logAudit } from '@/lib/auditLog';
@@ -27,11 +26,28 @@ function setValueByPath(obj: any, path: string, value: any): void {
   current[keys[keys.length - 1]] = value;
 }
 
-
 async function getWebhookMappings(): Promise<WebhookFieldMapping[]> {
   try {
-    const result = await pool.query('SELECT target_path as "targetPath", source_path as "sourcePath" FROM "WebhookFieldMapping" WHERE source_path IS NOT NULL AND source_path != \'\'');
-    return result.rows;
+    const mappings = await prisma.webhookFieldMapping.findMany({
+      where: {
+        sourcePath: {
+          not: null,
+          not: '',
+        },
+      },
+      select: {
+        targetPath: true,
+        sourcePath: true,
+      },
+    });
+    return mappings.map((m: { targetPath: string; sourcePath: string | null }) => ({
+        id: '', 
+        targetPath: m.targetPath,
+        sourcePath: m.sourcePath!, 
+        notes: null,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+    }));
   } catch (error) {
     console.error("Error fetching webhook mappings:", error);
     await logAudit('ERROR', `Failed to fetch webhook mappings for n8n processing. Error: ${(error as Error).message}`, 'API:N8N:CreateCandidateWithMatches:MappingFetch');
@@ -75,11 +91,9 @@ function transformPayload(rawPayload: any, mappings: WebhookFieldMapping[]): any
     });
   }
 
-
   // console.log("N8N Webhook: Payload after transformation:", JSON.stringify(transformedPayload, null, 2)); // Already added
   return transformedPayload;
 }
-
 
 const positionLevelEnumValues: [PositionLevel, ...PositionLevel[]] = [
     'entry level', 'mid level', 'senior level', 'lead', 'manager', 'executive', 'officer', 'leader'
@@ -192,7 +206,6 @@ const n8nWebhookPayloadSchema = z.object({
   job_applied: appliedJobSchema,
 });
 
-
 export async function POST(request: NextRequest) {
   let rawRequestBody;
   let payloadToProcess;
@@ -236,7 +249,6 @@ export async function POST(request: NextRequest) {
     delete transformedPayload.job_applied.match_reasons;
   }
 
-
   const validationResult = n8nWebhookPayloadSchema.safeParse(transformedPayload);
   if (!validationResult.success) {
     await logAudit('ERROR', 'N8N Webhook: Invalid input received from n8n (after transformation).', 'API:N8N:CreateCandidateWithMatches', null, { 
@@ -257,233 +269,98 @@ export async function POST(request: NextRequest) {
   }
 
   const payload = validationResult.data;
-  let client;
 
   try {
-    client = await pool.connect();
+    const result = await prisma.$transaction(async (tx) => {
+      const { candidate_info, jobs, targetPositionId, targetPositionTitle, targetPositionDescription, targetPositionLevel, job_applied } = payload;
+      let finalPositionId: string | null = targetPositionId || null;
+      let finalPositionTitle: string | null = targetPositionTitle || null;
 
-    const { candidate_info, jobs, targetPositionId, targetPositionTitle, targetPositionDescription, targetPositionLevel, job_applied } = payload;
-    const { personal_info, contact_info } = candidate_info;
+      if (!finalPositionId && targetPositionTitle) {
+        const existingPosition = await tx.position.findFirst({
+          where: { title: targetPositionTitle },
+        });
 
-    const candidateName = `${personal_info.firstname} ${personal_info.lastname}`.trim();
-    const email = contact_info.email;
-    const phone = contact_info.phone || null;
-
-    if (!candidateName) {
-      await logAudit('WARN', `N8N Webhook: Skipped candidate due to missing name. Email: ${email}`, 'API:N8N:CreateCandidateWithMatches', null, { email });
-      return NextResponse.json({ status: 'error', email, message: "Candidate name (derived from firstname and lastname) cannot be empty."}, { status: 400});
-    }
-    if (!email) {
-      await logAudit('WARN', `N8N Webhook: Skipped candidate due to missing email. Name: ${candidateName}`, 'API:N8N:CreateCandidateWithMatches', null, { name: candidateName });
-      return NextResponse.json({ status: 'error', name: candidateName, message: "Candidate email cannot be empty."}, { status: 400});
-    }
-
-    let finalPositionId: string | null = null;
-    let finalFitScore: number = 0;
-    let associatedMatchDetails = null;
-
-    const fullParsedDataForDB: CandidateDetails = {
-      cv_language: candidate_info.cv_language || '',
-      personal_info: candidate_info.personal_info,
-      contact_info: candidate_info.contact_info,
-      education: candidate_info.education || [],
-      experience: candidate_info.experience || [],
-      skills: candidate_info.skills || [],
-      job_suitable: candidate_info.job_suitable || [],
-      job_matches: jobs || [], 
-    };
-
-    await client.query('BEGIN');
-
-    const existingCandidateQuery = 'SELECT id FROM "Candidate" WHERE email = $1';
-    const existingCandidateResult = await client.query(existingCandidateQuery, [email]);
-    if (existingCandidateResult.rows.length > 0) {
-      await client.query('ROLLBACK');
-      const existingId = existingCandidateResult.rows[0].id;
-      await logAudit('WARN', `N8N Webhook: Candidate with email '${email}' already exists (ID: ${existingId}). Creation skipped.`, 'API:N8N:CreateCandidateWithMatches', null, { email });
-      return NextResponse.json({ status: 'skipped', email, message: `Candidate with email ${email} already exists.`, candidateId: existingId }, { status: 409 });
-    }
-
-    // Priority 1: Use job_applied if present
-    if (job_applied?.job_id) {
-        const positionCheck = await client.query('SELECT title, description, position_level FROM "Position" WHERE id = $1 AND "isOpen" = TRUE', [job_applied.job_id]);
-        if (positionCheck.rows.length > 0) {
-            finalPositionId = job_applied.job_id;
-            finalFitScore = job_applied.fit_score || 0;
-            associatedMatchDetails = {
-                jobTitle: job_applied.job_title || positionCheck.rows[0].title,
-                fitScore: finalFitScore,
-                reasons: job_applied.justification || [],
-                n8nJobId: job_applied.job_id,
-            };
-            fullParsedDataForDB.associatedMatchDetails = associatedMatchDetails;
-            await logAudit('INFO', `N8N Webhook: Candidate '${candidateName}' associated with position from 'job_applied': '${associatedMatchDetails.jobTitle}' (ID: ${finalPositionId}). Fit score: ${finalFitScore}.`, 'API:N8N:CreateCandidateWithMatches', null);
+        if (existingPosition) {
+          finalPositionId = existingPosition.id;
         } else {
-            await logAudit('WARN', `N8N Webhook: 'job_applied.job_id' ('${job_applied.job_id}') for candidate '${candidateName}' is invalid or not open. Proceeding without this direct assignment.`, 'API:N8N:CreateCandidateWithMatches', null);
-        }
-    }
-    
-    if (!finalPositionId && targetPositionId) {
-      const positionCheck = await client.query('SELECT title, description, position_level FROM "Position" WHERE id = $1 AND "isOpen" = TRUE', [targetPositionId]);
-      if (positionCheck.rows.length > 0) {
-        finalPositionId = targetPositionId;
-        const matchedJobTitle = positionCheck.rows[0].title;
-        const n8nMatchForTarget = jobs?.find(j => 
-          j.job_id === targetPositionId || 
-          (j.job_title && matchedJobTitle && j.job_title.toLowerCase() === matchedJobTitle.toLowerCase())
-        );
-
-        if (n8nMatchForTarget) {
-          finalFitScore = n8nMatchForTarget.fit_score;
-          associatedMatchDetails = {
-            jobTitle: n8nMatchForTarget.job_title || matchedJobTitle,
-            fitScore: n8nMatchForTarget.fit_score,
-            reasons: n8nMatchForTarget.match_reasons || [],
-            n8nJobId: n8nMatchForTarget.job_id,
-          };
-        } else {
-          finalFitScore = 0; 
-          associatedMatchDetails = {
-             jobTitle: targetPositionTitle || matchedJobTitle,
-             fitScore: 0, 
-             reasons: ["User-selected position during upload or system-assigned target"], 
-             n8nJobId: targetPositionId 
-          };
-        }
-         fullParsedDataForDB.associatedMatchDetails = associatedMatchDetails;
-        await logAudit('INFO', `N8N Webhook: Candidate '${candidateName}' will be associated with pre-selected position (targetPositionId) '${targetPositionTitle || matchedJobTitle}' (ID: ${finalPositionId}). Fit score: ${finalFitScore}.`, 'API:N8N:CreateCandidateWithMatches', null);
-      } else {
-        await logAudit('WARN', `N8N Webhook: Pre-selected targetPositionId '${targetPositionId}' for candidate '${candidateName}' is invalid or not open. Candidate will be created without position assignment if no other match found.`, 'API:N8N:CreateCandidateWithMatches', null);
-      }
-    }
-    
-    if (!finalPositionId && jobs && jobs.length > 0) {
-      const topMatch = jobs.sort((a,b) => b.fit_score - a.fit_score)[0]; 
-      if (topMatch.job_id) {
-        const positionCheck = await client.query('SELECT title FROM "Position" WHERE id = $1 AND "isOpen" = TRUE', [topMatch.job_id]);
-        if (positionCheck.rows.length > 0) {
-            finalPositionId = topMatch.job_id;
-            finalFitScore = topMatch.fit_score;
-            associatedMatchDetails = {
-                jobTitle: topMatch.job_title || positionCheck.rows[0].title,
-                fitScore: topMatch.fit_score,
-                reasons: topMatch.match_reasons || [],
-                n8nJobId: topMatch.job_id,
-            };
-        }
-      }
-      if (!finalPositionId && topMatch.job_title) { // Check if job_title exists before querying with it
-        const positionQuery = 'SELECT id, title FROM "Position" WHERE title ILIKE $1 AND "isOpen" = TRUE LIMIT 1';
-        const positionResult = await client.query(positionQuery, [topMatch.job_title]);
-        if (positionResult.rows.length > 0) {
-            finalPositionId = positionResult.rows[0].id;
-            finalFitScore = topMatch.fit_score;
-            associatedMatchDetails = {
-                jobTitle: topMatch.job_title, 
-                fitScore: topMatch.fit_score,
-                reasons: topMatch.match_reasons || [],
-                n8nJobId: topMatch.job_id || positionResult.rows[0].id,
-            };
+          const newPosition = await tx.position.create({
+            data: {
+              id: uuidv4(),
+              title: targetPositionTitle,
+              description: targetPositionDescription || 'Auto-created from n8n webhook.',
+              department: 'Uncategorized',
+              isOpen: true,
+              position_level: targetPositionLevel?.toLowerCase() || 'entry level',
+            },
+          });
+          finalPositionId = newPosition.id;
         }
       }
 
-      if (finalPositionId && associatedMatchDetails) {
-        fullParsedDataForDB.associatedMatchDetails = associatedMatchDetails;
-        await logAudit('INFO', `N8N Webhook: Matched candidate '${candidateName}' to position '${associatedMatchDetails.jobTitle}' (ID: ${finalPositionId}) with fit score ${finalFitScore} based on n8n 'jobs' array.`, 'API:N8N:CreateCandidateWithMatches', null);
-      } else {
-        await logAudit('INFO', `N8N Webhook: No open position found matching n8n's top job suggestions for candidate '${candidateName}'. Candidate will be created without position assignment.`, 'API:N8N:CreateCandidateWithMatches', null);
+      const candidateName = `${candidate_info.personal_info.firstname} ${candidate_info.personal_info.lastname}`.trim();
+      const newCandidateId = uuidv4();
+
+      const createdCandidate = await tx.candidate.create({
+        data: {
+          id: newCandidateId,
+          name: candidateName,
+          email: candidate_info.contact_info.email,
+          phone: candidate_info.contact_info.phone,
+          positionId: finalPositionId,
+          applicationDate: new Date(),
+          status: 'Applied',
+          parsedData: candidate_info as any, // Cast to any to avoid deep type issues
+          fitScore: job_applied?.fit_score || null,
+          custom_attributes: {},
+        },
+      });
+
+      if (job_applied && finalPositionId) {
+        await tx.transitionRecord.create({
+          data: {
+            id: uuidv4(),
+            candidateId: newCandidateId,
+            positionId: finalPositionId,
+            stage: 'Applied',
+            notes: `Candidate applied for position "${finalPositionTitle || 'N/A'}". Justification: ${job_applied.justification?.join(', ') || 'N/A'}`,
+            date: new Date(),
+          },
+        });
       }
-    }
 
+      if (jobs && jobs.length > 0) {
+        await tx.jobMatch.createMany({
+          data: jobs.map(job => ({
+            id: uuidv4(),
+            candidateId: newCandidateId,
+            positionId: job.job_id,
+            positionTitle: job.job_title,
+            fitScore: job.fit_score,
+            matchReasons: job.match_reasons || [],
+          })),
+        });
+      }
+      
+      return createdCandidate;
+    });
 
-    const newCandidateId = uuidv4();
-    const insertCandidateQuery = `
-      INSERT INTO "Candidate" (id, name, email, phone, "positionId", "fitScore", status, "applicationDate", "parsedData", "createdAt", "updatedAt")
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW(), NOW())
-      RETURNING *;
-    `;
-    const candidateValues = [
-      newCandidateId,
-      candidateName,
-      email,
-      phone,
-      finalPositionId,
-      finalFitScore,
-      'Applied' as CandidateStatus,
-      new Date().toISOString(),
-      fullParsedDataForDB,
-    ];
-    const candidateResult = await client.query(insertCandidateQuery, candidateValues);
-    const newCandidateDb = candidateResult.rows[0];
+    const createdCandidateWithDetails = await prisma.candidate.findUnique({
+      where: { id: result.id },
+      include: {
+        position: true,
+        recruiter: true,
+        transitionHistory: true,
+      }
+    });
 
-    const insertTransitionQuery = `
-      INSERT INTO "TransitionRecord" (id, "candidateId", date, stage, notes, "actingUserId", "createdAt", "updatedAt")
-      VALUES ($1, $2, NOW(), $3, $4, $5, NOW(), NOW());
-    `;
-    await client.query(insertTransitionQuery, [
-      uuidv4(),
-      newCandidateDb.id,
-      'Applied' as CandidateStatus,
-      'Candidate created via automated workflow.',
-      null, 
-    ]);
+    await logAudit('AUDIT', `N8N Webhook: Candidate '${createdCandidateWithDetails?.name}' (ID: ${createdCandidateWithDetails?.id}) created successfully.`, 'API:N8N:CreateCandidateWithMatches', null, { candidateId: createdCandidateWithDetails?.id });
 
-    await client.query('COMMIT');
-    
-    const finalQuery = `
-        SELECT
-            c.id, c.name, c.email, c.phone, c."resumePath", c."parsedData",
-            c."positionId", c."fitScore", c.status, c."applicationDate",
-            c."recruiterId", c."createdAt", c."updatedAt",
-            p.title as "positionTitle",
-            p.department as "positionDepartment",
-            p.position_level as "positionLevel",
-            rec.name as "recruiterName",
-            COALESCE(
-              (SELECT json_agg(
-                json_build_object(
-                  'id', th.id, 'candidateId', th."candidateId", 'date', th.date, 'stage', th.stage, 'notes', th.notes,
-                  'actingUserId', th."actingUserId", 'actingUserName', u.name,
-                  'createdAt', th."createdAt", 'updatedAt', th."updatedAt"
-                ) ORDER BY th.date DESC
-               ) FROM "TransitionRecord" th LEFT JOIN "User" u ON th."actingUserId" = u.id WHERE th."candidateId" = c.id),
-              '[]'::json
-            ) as "transitionHistory"
-        FROM "Candidate" c
-        LEFT JOIN "Position" p ON c."positionId" = p.id
-        LEFT JOIN "User" rec ON c."recruiterId" = rec.id
-        WHERE c.id = $1;
-    `;
-    const finalResult = await client.query(finalQuery, [newCandidateDb.id]);
-    const createdCandidateWithDetails = finalResult.rows.length > 0 ? {
-        ...finalResult.rows[0],
-        parsedData: finalResult.rows[0].parsedData || { personal_info: {}, contact_info: {} },
-        position: finalResult.rows[0].positionId ? {
-            id: finalResult.rows[0].positionId,
-            title: finalResult.rows[0].positionTitle,
-            department: finalResult.rows[0].positionDepartment,
-            position_level: finalResult.rows[0].positionLevel,
-        } : null,
-        recruiter: finalResult.rows[0].recruiterId ? {
-            id: finalResult.rows[0].recruiterId,
-            name: finalResult.rows[0].recruiterName,
-            email: null
-        } : null,
-        transitionHistory: finalResult.rows[0].transitionHistory || [],
-    } : null;
-
-
-    await logAudit('AUDIT', `N8N Webhook: Candidate '${newCandidateDb.name}' (ID: ${newCandidateDb.id}) created successfully. Associated Position ID: ${finalPositionId || 'N/A'}.`, 'API:N8N:CreateCandidateWithMatches', null, { candidateId: newCandidateDb.id, name: newCandidateDb.name, associatedPositionId: finalPositionId, originalPayload: JSON.stringify(payloadToProcess).substring(0,1000), transformedPayload: JSON.stringify(transformedPayload).substring(0,1000) });
-    return NextResponse.json({ status: 'success', candidate: createdCandidateWithDetails, message: `Candidate ${candidateName} created.` }, { status: 201 });
+    return NextResponse.json({ status: 'success', candidate: createdCandidateWithDetails, message: `Candidate ${result.name} created.` }, { status: 201 });
 
   } catch (error: any) {
-    if (client) await client.query('ROLLBACK').catch(rbError => console.error("N8N Webhook: Rollback error:", rbError));
     console.error("N8N Webhook: Error processing webhook request:", error);
-    await logAudit('ERROR', `N8N Webhook: Error processing webhook request. Error: ${error.message}`, 'API:N8N:CreateCandidateWithMatches', null, { error: error.message, originalPayload: JSON.stringify(payloadToProcess).substring(0,1000), transformedPayload: JSON.stringify(transformedPayload).substring(0,1000) });
+    await logAudit('ERROR', `N8N Webhook: Error processing webhook request. Error: ${error.message}`, 'API:N8N:CreateCandidateWithMatches', null, { error: error.message });
     return NextResponse.json({ message: "Error processing webhook request.", error: error.message }, { status: 500 });
-  } finally {
-    if (client) {
-      client.release();
-    }
   }
 }
