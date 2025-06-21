@@ -14,30 +14,30 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'; 
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import { signIn, useSession } from 'next-auth/react';
 import { useRouter, usePathname } from 'next/navigation';
-import { Save, DatabaseZap, Info, ServerCrash, ShieldAlert, Loader2, RefreshCw } from 'lucide-react';
+import { Save, DatabaseZap, Info, ServerCrash, ShieldAlert, Loader2, RefreshCw, Type, List, Braces, ToggleRight, Calendar, Hash } from 'lucide-react';
 import type { UserDataModelPreference, UIDisplayPreference, ModelAttributeDefinition } from '@/lib/types';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { cn } from '@/lib/utils';
 
 const UI_DISPLAY_PREFERENCES: UIDisplayPreference[] = ["Standard", "Emphasized", "Hidden"];
 
 const CANDIDATE_ATTRIBUTES: ModelAttributeDefinition[] = [
-  { key: 'id', label: 'ID', type: 'string (UUID)', description: 'Unique identifier for the candidate.' },
-  { key: 'name', label: 'Full Name', type: 'string', description: 'Full name of the candidate.' },
-  { key: 'email', label: 'Email', type: 'string', description: 'Primary email address.' },
-  { key: 'phone', label: 'Phone', type: 'string', description: 'Contact phone number.' },
-  { key: 'avatarUrl', label: 'Avatar URL', type: 'string', description: 'URL to the candidate\'s profile picture.' },
-  { key: 'resumePath', label: 'Resume File Path', type: 'string', description: 'Path to the stored resume file in MinIO.' },
-  { key: 'positionId', label: 'Applied Position ID', type: 'string (UUID)', description: 'ID of the position the candidate applied for.' },
-  { key: 'fitScore', label: 'Fit Score', type: 'number', description: 'Calculated score indicating suitability for the applied position (0-100).' },
-  { key: 'status', label: 'Current Status', type: 'string', description: 'Current stage in the recruitment pipeline (e.g., Applied, Screening).' },
-  { key: 'applicationDate', label: 'Application Date', type: 'date', description: 'Date the candidate applied.' },
-  { key: 'recruiterId', label: 'Assigned Recruiter ID', type: 'string (UUID)', description: 'ID of the recruiter assigned to this candidate.' },
-  { key: 'parsedData', label: 'Parsed Resume Data', type: 'object', description: 'Structured data extracted from the resume.', subAttributes: [
+  { key: 'id', label: 'ID', type: 'string (UUID)', description: 'Unique identifier for the candidate.', icon: Hash },
+  { key: 'name', label: 'Full Name', type: 'string', description: 'Full name of the candidate.', icon: Type },
+  { key: 'email', label: 'Email', type: 'string', description: 'Primary email address.', icon: Type },
+  { key: 'phone', label: 'Phone', type: 'string', description: 'Contact phone number.', icon: Type },
+  { key: 'avatarUrl', label: 'Avatar URL', type: 'string', description: 'URL to the candidate\'s profile picture.', icon: Type },
+  { key: 'resumePath', label: 'Resume File Path', type: 'string', description: 'Path to the stored resume file in MinIO.', icon: Type },
+  { key: 'positionId', label: 'Applied Position ID', type: 'string (UUID)', description: 'ID of the position the candidate applied for.', icon: Hash },
+  { key: 'fitScore', label: 'Fit Score', type: 'number', description: 'Calculated score indicating suitability for the applied position (0-100).', icon: Hash },
+  { key: 'status', label: 'Current Status', type: 'string', description: 'Current stage in the recruitment pipeline (e.g., Applied, Screening).', icon: Type },
+  { key: 'applicationDate', label: 'Application Date', type: 'date', description: 'Date the candidate applied.', icon: Calendar },
+  { key: 'recruiterId', label: 'Assigned Recruiter ID', type: 'string (UUID)', description: 'ID of the recruiter assigned to this candidate.', icon: Hash },
+  { key: 'parsedData', label: 'Parsed Resume Data', type: 'object', description: 'Structured data extracted from the resume.', icon: Braces, subAttributes: [
     { key: 'parsedData.cv_language', label: 'CV Language', type: 'string', description: 'Language of the resume.'},
     { key: 'parsedData.personal_info', label: 'Personal Info', type: 'object', subAttributes: [
       { key: 'parsedData.personal_info.firstname', label: 'First Name', type: 'string'},
@@ -56,119 +56,28 @@ const CANDIDATE_ATTRIBUTES: ModelAttributeDefinition[] = [
     { key: 'parsedData.experience', label: 'Work Experience', type: 'array', arrayItemType: 'ExperienceEntry object', description: 'List of previous jobs.' },
     { key: 'parsedData.skills', label: 'Skills', type: 'array', arrayItemType: 'SkillEntry object', description: 'List of skills.' },
     { key: 'parsedData.job_suitable', label: 'Job Suitability', type: 'array', arrayItemType: 'JobSuitableEntry object', description: 'Information on suitable job types.' },
-    { 
-      key: 'parsedData.associatedMatchDetails', 
-      label: 'Primary Matched Job Details', 
-      type: 'object', 
-      description: 'Details of the job the candidate was primarily matched/applied to by automated processing.',
-      subAttributes: [
-        { key: 'parsedData.associatedMatchDetails.jobTitle', label: 'Matched Job Title', type: 'string', description: 'Title of the matched job.'},
-        { key: 'parsedData.associatedMatchDetails.fitScore', label: 'Matched Fit Score', type: 'number', description: 'Fit score for this specific match.'},
-        { key: 'parsedData.associatedMatchDetails.reasons', label: 'Match Reasons', type: 'array of strings', description: 'Reasons for this match.'},
-        { key: 'parsedData.associatedMatchDetails.n8nJobId', label: 'Matched Job n8n ID', type: 'string', description: 'ID of the job from the n8n matching process, if available.'},
-      ]
+    { key: 'parsedData.associatedMatchDetails', label: 'Primary Matched Job Details', type: 'object', description: 'Details of the job the candidate was primarily matched/applied to by automated processing.',
+      subAttributes: [ { key: 'parsedData.associatedMatchDetails.jobTitle', label: 'Matched Job Title', type: 'string', description: 'Title of the matched job.'}, { key: 'parsedData.associatedMatchDetails.fitScore', label: 'Matched Fit Score', type: 'number', description: 'Fit score for this specific match.'}, { key: 'parsedData.associatedMatchDetails.reasons', label: 'Match Reasons', type: 'array of strings', description: 'Reasons for this match.'}, { key: 'parsedData.associatedMatchDetails.n8nJobId', label: 'Matched Job n8n ID', type: 'string', description: 'ID of the job from the n8n matching process, if available.'}, ]
     },
     { key: 'parsedData.job_matches', label: 'All Suggested Job Matches', type: 'array', arrayItemType: 'N8NJobMatch object', description: 'Full list of job suggestions from automated processing.'},
   ]},
-  { key: 'transitionHistory', label: 'Transition History', type: 'array', arrayItemType: 'TransitionRecord object', description: 'Log of status changes.' },
-  { key: 'custom_attributes', label: 'Custom Attributes', type: 'object', description: 'User-defined custom fields and their values.'},
-  { key: 'createdAt', label: 'Created At', type: 'date', description: 'Timestamp of creation.' },
-  { key: 'updatedAt', label: 'Last Updated At', type: 'date', description: 'Timestamp of last update.' },
+  { key: 'transitionHistory', label: 'Transition History', type: 'array', arrayItemType: 'TransitionRecord object', description: 'Log of status changes.', icon: List },
+  { key: 'custom_attributes', label: 'Custom Attributes', type: 'object', description: 'User-defined custom fields and their values.', icon: Braces },
+  { key: 'createdAt', label: 'Created At', type: 'date', description: 'Timestamp of creation.', icon: Calendar },
+  { key: 'updatedAt', label: 'Last Updated At', type: 'date', description: 'Timestamp of last update.', icon: Calendar },
 ];
 
 const POSITION_ATTRIBUTES: ModelAttributeDefinition[] = [
-  { key: 'id', label: 'ID', type: 'string (UUID)', description: 'Unique identifier for the position.' },
-  { key: 'title', label: 'Title', type: 'string', description: 'Job title.' },
-  { key: 'department', label: 'Department', type: 'string', description: 'Department the position belongs to.' },
-  { key: 'description', label: 'Description', type: 'string (multiline)', description: 'Detailed job description.' },
-  { key: 'isOpen', label: 'Is Open', type: 'boolean', description: 'Whether the position is currently open for applications.' },
-  { key: 'position_level', label: 'Position Level', type: 'string', description: 'Seniority level (e.g., Senior, Mid-Level).' },
-  { key: 'custom_attributes', label: 'Custom Attributes', type: 'object', description: 'User-defined custom fields and their values.'},
-  { key: 'createdAt', label: 'Created At', type: 'date', description: 'Timestamp of creation.' },
-  { key: 'updatedAt', label: 'Last Updated At', type: 'date', description: 'Timestamp of last update.' },
+  { key: 'id', label: 'ID', type: 'string (UUID)', description: 'Unique identifier for the position.', icon: Hash },
+  { key: 'title', label: 'Title', type: 'string', description: 'Job title.', icon: Type },
+  { key: 'department', label: 'Department', type: 'string', description: 'Department the position belongs to.', icon: Type },
+  { key: 'description', label: 'Description', type: 'string (multiline)', description: 'Detailed job description.', icon: Type },
+  { key: 'isOpen', label: 'Is Open', type: 'boolean', description: 'Whether the position is currently open for applications.', icon: ToggleRight },
+  { key: 'position_level', label: 'Position Level', type: 'string', description: 'Seniority level (e.g., Senior, Mid-Level).', icon: Type },
+  { key: 'custom_attributes', label: 'Custom Attributes', type: 'object', description: 'User-defined custom fields and their values.', icon: Braces },
+  { key: 'createdAt', label: 'Created At', type: 'date', description: 'Timestamp of creation.', icon: Calendar },
+  { key: 'updatedAt', label: 'Last Updated At', type: 'date', description: 'Timestamp of last update.', icon: Calendar },
 ];
-
-const AttributeRow: React.FC<{
-  attr: ModelAttributeDefinition;
-  preferences: Record<string, Partial<Pick<UserDataModelPreference, 'uiPreference' | 'customNote'>>>;
-  onPreferenceChange: (attrKey: string, prefType: 'uiPreference' | 'customNote', value: string) => void;
-  level?: number;
-}> = ({ attr, preferences, onPreferenceChange, level = 0 }) => {
-  const currentPref = preferences[attr.key] || { uiPreference: 'Standard', customNote: '' };
-  const hasSubAttributes = attr.subAttributes && attr.subAttributes.length > 0;
-
-  return (
-    <>
-      <TableRow className={level > 0 ? 'bg-muted/30' : ''}>
-        <TableCell style={{ paddingLeft: `${level * 1.5 + 1}rem` }} className="py-3 align-top">
-          <div className="font-medium text-foreground">{attr.label}</div>
-          <div className="text-xs text-muted-foreground">{attr.key}</div>
-        </TableCell>
-        <TableCell className="text-xs text-muted-foreground py-3 align-top">{attr.type}{attr.arrayItemType ? ` of ${attr.arrayItemType}` : ''}</TableCell>
-        <TableCell className="text-xs text-muted-foreground py-3 align-top max-w-xs break-words">{attr.description}</TableCell>
-        <TableCell className="py-3 align-top w-40">
-          <Select
-            value={currentPref.uiPreference}
-            onValueChange={(value) => onPreferenceChange(attr.key, 'uiPreference', value)}
-          >
-            <SelectTrigger className="h-9 text-xs"><SelectValue /></SelectTrigger>
-            <SelectContent>{UI_DISPLAY_PREFERENCES.map(opt => (<SelectItem key={opt} value={opt} className="text-xs">{opt}</SelectItem>))}</SelectContent>
-          </Select>
-        </TableCell>
-        <TableCell className="py-3 align-top w-52">
-          <Input
-            value={currentPref.customNote || ''}
-            onChange={(e) => onPreferenceChange(attr.key, 'customNote', e.target.value)}
-            className="h-9 text-xs"
-            placeholder="E.g., Used for X..."
-          />
-        </TableCell>
-      </TableRow>
-      {hasSubAttributes && attr.subAttributes!.map(subAttr => (
-        <AttributeRow
-          key={subAttr.key}
-          attr={subAttr}
-          preferences={preferences}
-          onPreferenceChange={onPreferenceChange}
-          level={level + 1}
-        />
-      ))}
-    </>
-  );
-};
-
-const renderTable = (
-  modelType: 'Candidate' | 'Position',
-  attributes: ModelAttributeDefinition[],
-  prefs: Record<string, Partial<Pick<UserDataModelPreference, 'uiPreference' | 'customNote'>>>,
-  onPreferenceChange: (model: 'Candidate' | 'Position', attrKey: string, prefType: 'uiPreference' | 'customNote', value: string) => void
-) => (
-  <div className="border rounded-lg overflow-hidden">
-    <ScrollArea className="max-h-[60vh]"> {/* max-h constraint for scrollability */}
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead className="w-[25%]">Attribute Label / Key</TableHead>
-            <TableHead className="w-[15%]">Type</TableHead>
-            <TableHead className="w-[30%]">Description</TableHead>
-            <TableHead className="w-[15%]">UI Display</TableHead>
-            <TableHead className="w-[15%]">Custom Note</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {attributes.map(attr => (
-            <AttributeRow
-              key={attr.key}
-              attr={attr}
-              preferences={prefs}
-              onPreferenceChange={(key, type, val) => onPreferenceChange(modelType, key, type, val)}
-            />
-          ))}
-        </TableBody>
-      </Table>
-    </ScrollArea>
-  </div>
-);
 
 
 export default function DataModelsPage() {
@@ -184,6 +93,10 @@ export default function DataModelsPage() {
 
   const [candidatePrefs, setCandidatePrefs] = useState<Record<string, Partial<Pick<UserDataModelPreference, 'uiPreference' | 'customNote'>>>>({});
   const [positionPrefs, setPositionPrefs] = useState<Record<string, Partial<Pick<UserDataModelPreference, 'uiPreference' | 'customNote'>>>>({});
+  
+  const [activeCandidateSection, setActiveCandidateSection] = useState<string>(CANDIDATE_ATTRIBUTES[0].key);
+  const [activePositionSection, setActivePositionSection] = useState<string>(POSITION_ATTRIBUTES[0].key);
+
 
   const loadPreferencesFromServer = useCallback(async () => {
     if (!session?.user?.id) return;
@@ -213,14 +126,10 @@ export default function DataModelsPage() {
     } catch (error) {
       console.error("Error loading preferences from server:", error);
       setFetchError((error as Error).message);
-      if (Object.keys(candidatePrefs).length === 0 && Object.keys(positionPrefs).length === 0) {
-        setCandidatePrefs({});
-        setPositionPrefs({});
-      }
     } finally {
       setIsLoadingData(false);
     }
-  }, [session?.user?.id, candidatePrefs, positionPrefs]); 
+  }, [session?.user?.id]); 
 
   useEffect(() => {
     setIsClient(true);
@@ -234,7 +143,6 @@ export default function DataModelsPage() {
         loadPreferencesFromServer();
       }
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sessionStatus, session, pathname, signIn, loadPreferencesFromServer]); 
 
 
@@ -249,6 +157,7 @@ export default function DataModelsPage() {
       ...prev,
       [attrKey]: {
         ...prev[attrKey],
+        uiPreference: prefType === 'uiPreference' ? (value as UIDisplayPreference) : (prev[attrKey]?.uiPreference || 'Standard'),
         [prefType]: value,
       },
     }));
@@ -257,26 +166,28 @@ export default function DataModelsPage() {
   const handleSavePreferences = async () => {
     if (!isClient || !session?.user?.id) return;
     setIsSaving(true);
+    
+    // Combine all known attributes with their current preference state
+    const allKnownAttributes = [...CANDIDATE_ATTRIBUTES, ...POSITION_ATTRIBUTES];
     const prefsToSave: Omit<UserDataModelPreference, 'id' | 'createdAt' | 'updatedAt'>[] = [];
+    
+    const processAttributes = (attributes: ModelAttributeDefinition[], modelType: 'Candidate' | 'Position', prefs: typeof candidatePrefs) => {
+        attributes.forEach(attr => {
+            prefsToSave.push({
+                userId: session.user!.id,
+                modelType: modelType,
+                attributeKey: attr.key,
+                uiPreference: prefs[attr.key]?.uiPreference || 'Standard',
+                customNote: prefs[attr.key]?.customNote || null,
+            });
+            if (attr.subAttributes) {
+                processAttributes(attr.subAttributes, modelType, prefs);
+            }
+        });
+    };
 
-    Object.entries(candidatePrefs).forEach(([key, pref]) => {
-      prefsToSave.push({
-        userId: session.user.id,
-        modelType: 'Candidate',
-        attributeKey: key,
-        uiPreference: pref.uiPreference || 'Standard',
-        customNote: pref.customNote || null,
-      });
-    });
-    Object.entries(positionPrefs).forEach(([key, pref]) => {
-      prefsToSave.push({
-        userId: session.user.id,
-        modelType: 'Position',
-        attributeKey: key,
-        uiPreference: pref.uiPreference || 'Standard',
-        customNote: pref.customNote || null,
-      });
-    });
+    processAttributes(CANDIDATE_ATTRIBUTES, 'Candidate', candidatePrefs);
+    processAttributes(POSITION_ATTRIBUTES, 'Position', positionPrefs);
 
     try {
       const response = await fetch(`/api/settings/user-preferences`, {
@@ -297,8 +208,77 @@ export default function DataModelsPage() {
       setIsSaving(false);
     }
   };
+
+  const renderPreferenceControls = (
+    modelType: 'Candidate' | 'Position',
+    attr: ModelAttributeDefinition
+  ) => {
+    const prefs = modelType === 'Candidate' ? candidatePrefs : positionPrefs;
+    const currentPref = prefs[attr.key] || { uiPreference: 'Standard', customNote: '' };
+    
+    return (
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
+        <div>
+          <Label htmlFor={`ui-pref-${attr.key}`} className="text-xs">UI Display</Label>
+          <Select
+            value={currentPref.uiPreference}
+            onValueChange={(value) => handlePreferenceChange(modelType, attr.key, 'uiPreference', value)}
+          >
+            <SelectTrigger id={`ui-pref-${attr.key}`} className="h-9 mt-1"><SelectValue /></SelectTrigger>
+            <SelectContent>{UI_DISPLAY_PREFERENCES.map(opt => (<SelectItem key={opt} value={opt} className="text-sm">{opt}</SelectItem>))}</SelectContent>
+          </Select>
+        </div>
+        <div>
+           <Label htmlFor={`note-${attr.key}`} className="text-xs">Custom Note</Label>
+           <Input
+            id={`note-${attr.key}`}
+            value={currentPref.customNote || ''}
+            onChange={(e) => handlePreferenceChange(modelType, attr.key, 'customNote', e.target.value)}
+            className="h-9 mt-1"
+            placeholder="E.g., Used for X..."
+          />
+        </div>
+      </div>
+    );
+  }
   
-  if (sessionStatus === 'loading' || (isLoadingData && !fetchError && !isClient && Object.keys(candidatePrefs).length === 0 && Object.keys(positionPrefs).length === 0)) {
+  const renderAttributeSection = (
+    modelType: 'Candidate' | 'Position',
+    attributes: ModelAttributeDefinition[],
+    activeSection: string
+  ) => {
+    const selectedAttrGroup = attributes.find(attr => attr.key === activeSection);
+    if (!selectedAttrGroup) return <div className="p-6">Select an attribute from the list.</div>;
+    
+    const attributesToRender = selectedAttrGroup.subAttributes || [selectedAttrGroup];
+
+    return (
+        <div className="flex-1">
+            <ScrollArea className="h-full md:max-h-[calc(100vh-21rem)] p-6">
+                <CardHeader className="p-0 mb-4">
+                    <CardTitle className="flex items-center gap-2 text-xl">{selectedAttrGroup.icon && <selectedAttrGroup.icon className="h-5 w-5"/>}{selectedAttrGroup.label}</CardTitle>
+                    <CardDescription>{selectedAttrGroup.description}</CardDescription>
+                </CardHeader>
+                <CardContent className="p-0 space-y-4">
+                    {attributesToRender.map(attr => (
+                        <div key={attr.key} className="p-4 border rounded-lg bg-muted/30">
+                            <h4 className="font-semibold text-foreground">{attr.label}</h4>
+                            <div className="text-xs space-x-2 text-muted-foreground mt-0.5">
+                                <code className="text-xs bg-muted/80 px-1 py-0.5 rounded">{attr.key}</code>
+                                <span>-</span>
+                                <span>Type: {attr.type}{attr.arrayItemType ? ` of ${attr.arrayItemType}` : ''}</span>
+                            </div>
+                            {attr.description && <p className="text-sm text-muted-foreground mt-1">{attr.description}</p>}
+                            {renderPreferenceControls(modelType, attr)}
+                        </div>
+                    ))}
+                </CardContent>
+            </ScrollArea>
+        </div>
+    );
+  };
+  
+  if (sessionStatus === 'loading' || (isLoadingData && !fetchError && !isClient)) {
     return ( <div className="flex h-full items-center justify-center"><Loader2 className="h-16 w-16 animate-spin text-primary" /></div> );
   }
 
@@ -317,24 +297,51 @@ export default function DataModelsPage() {
   }
 
   return (
-    <Card className="shadow-lg">
+    <Card className="shadow-lg overflow-hidden">
       <CardHeader>
         <CardTitle className="flex items-center text-2xl"><DatabaseZap className="mr-3 h-6 w-6 text-primary"/>Data Model Preferences</CardTitle>
         <CardDescription>
-          View attributes of your core data models (Candidate, Position) and set your UI display preferences or custom notes. These settings are saved server-side for your user account.
+          View attributes of your core data models and set your UI display preferences or custom notes. These settings are saved server-side for your user account.
         </CardDescription>
       </CardHeader>
-      <CardContent>
+      <CardContent className="p-0">
         <Tabs defaultValue="candidate-model" className="w-full">
           <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="candidate-model">Candidate Model</TabsTrigger>
             <TabsTrigger value="position-model">Position Model</TabsTrigger>
           </TabsList>
-          <TabsContent value="candidate-model" className="mt-4">
-            {renderTable('Candidate', CANDIDATE_ATTRIBUTES, candidatePrefs, handlePreferenceChange)}
+          
+          <TabsContent value="candidate-model" className="mt-0 border-t">
+              <div className="flex flex-col md:flex-row min-h-[calc(100vh-21rem)]">
+                 <aside className="md:w-72 lg:w-80 border-b md:border-b-0 md:border-r bg-muted/30">
+                    <ScrollArea className="h-full md:max-h-[calc(100vh-21rem)] p-2">
+                        <nav className="space-y-1">
+                            {CANDIDATE_ATTRIBUTES.map(attr => (
+                                <Button key={attr.key} variant={activeCandidateSection === attr.key ? 'default' : 'ghost'} onClick={() => setActiveCandidateSection(attr.key)} className={cn("w-full justify-start text-sm", activeCandidateSection === attr.key && "btn-primary-gradient")}>
+                                    {attr.icon && <attr.icon className="h-4 w-4 mr-2"/>} {attr.label}
+                                </Button>
+                            ))}
+                        </nav>
+                    </ScrollArea>
+                 </aside>
+                {renderAttributeSection('Candidate', CANDIDATE_ATTRIBUTES, activeCandidateSection)}
+              </div>
           </TabsContent>
-          <TabsContent value="position-model" className="mt-4">
-            {renderTable('Position', POSITION_ATTRIBUTES, positionPrefs, handlePreferenceChange)}
+          <TabsContent value="position-model" className="mt-0 border-t">
+               <div className="flex flex-col md:flex-row min-h-[calc(100vh-21rem)]">
+                 <aside className="md:w-72 lg:w-80 border-b md:border-b-0 md:border-r bg-muted/30">
+                    <ScrollArea className="h-full md:max-h-[calc(100vh-21rem)] p-2">
+                        <nav className="space-y-1">
+                            {POSITION_ATTRIBUTES.map(attr => (
+                                <Button key={attr.key} variant={activePositionSection === attr.key ? 'default' : 'ghost'} onClick={() => setActivePositionSection(attr.key)} className={cn("w-full justify-start text-sm", activePositionSection === attr.key && "btn-primary-gradient")}>
+                                   {attr.icon && <attr.icon className="h-4 w-4 mr-2"/>} {attr.label}
+                                </Button>
+                            ))}
+                        </nav>
+                    </ScrollArea>
+                 </aside>
+                {renderAttributeSection('Position', POSITION_ATTRIBUTES, activePositionSection)}
+              </div>
           </TabsContent>
         </Tabs>
       </CardContent>
