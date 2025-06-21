@@ -1,6 +1,5 @@
 // src/app/api/system/initial-setup-check/route.ts
 import { NextResponse } from 'next/server';
-import pool from '@/lib/db';
 
 export async function GET() {
   const client = await pool.connect();

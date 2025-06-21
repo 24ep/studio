@@ -1,7 +1,5 @@
-
 // src/app/api/positions/export/route.ts
 import { NextResponse, type NextRequest } from 'next/server';
-import pool from '../../../../lib/db';
 import { logAudit } from '@/lib/auditLog';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/app/api/auth/[...nextauth]/route';

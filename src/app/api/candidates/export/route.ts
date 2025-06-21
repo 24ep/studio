@@ -1,7 +1,6 @@
-
 // src/app/api/candidates/export/route.ts
 import { NextResponse, type NextRequest } from 'next/server';
-import pool from '../../../../lib/db';
+// import pool from '../../../../lib/db';
 import type { Candidate, CandidateDetails, Position, UserProfile } from '@/lib/types';
 import { logAudit } from '@/lib/auditLog';
 import { getServerSession } from 'next-auth/next';

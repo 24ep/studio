@@ -1,5 +1,5 @@
 // src/lib/apiUtils.ts
-import pool from './db';
+// Removed: import pool from './db';
 import type { Position, RecruitmentStage, Candidate, UserProfile } from './types';
 import { getRedisClient, CACHE_KEY_POSITIONS, CACHE_EXPIRY_SECONDS_POSITIONS, CACHE_KEY_RECRUITMENT_STAGES, CACHE_EXPIRY_SECONDS_STAGES, CACHE_KEY_USERS, CACHE_EXPIRY_SECONDS_USERS } from './redis';
 

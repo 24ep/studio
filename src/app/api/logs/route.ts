@@ -1,7 +1,5 @@
-
 // src/app/api/logs/route.ts
 import { NextResponse, type NextRequest } from 'next/server';
-import pool from '../../../lib/db';
 import type { LogEntry, LogLevel } from '@/lib/types';
 import { z } from 'zod';
 

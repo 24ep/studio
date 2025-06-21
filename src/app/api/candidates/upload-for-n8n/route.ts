@@ -1,11 +1,10 @@
-
 // src/app/api/candidates/upload-for-n8n/route.ts
 import { NextResponse, type NextRequest } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 import type { UserProfile, Position } from '@/lib/types';
 import { logAudit } from '@/lib/auditLog';
-import pool, { getSystemSetting } from '../../../../lib/db'; // Import getSystemSetting
+import { getSystemSetting } from '../../../../lib/db'; // Import getSystemSetting
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 const ACCEPTED_FILE_TYPES = ['application/pdf'];

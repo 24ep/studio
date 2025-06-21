@@ -10,7 +10,7 @@
 import { genkit as globalGenkit } from 'genkit';
 import { googleAI } from '@genkit-ai/googleai';
 import { z } from 'genkit';
-import pool, { getSystemSetting } from '@/lib/db';
+import { getSystemSetting } from '@/lib/db';
 import type { Candidate, CandidateDetails, EducationEntry, ExperienceEntry, SkillEntry, JobSuitableEntry, TransitionRecord } from '@/lib/types';
 import { ai as globalAi } from '@/ai/genkit';
 

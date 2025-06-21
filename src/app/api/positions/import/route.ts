@@ -1,7 +1,5 @@
-
 // src/app/api/positions/import/route.ts
 import { NextResponse, type NextRequest } from 'next/server';
-import pool from '../../../../lib/db';
 import { z } from 'zod';
 import { v4 as uuidv4 } from 'uuid';
 import { logAudit } from '@/lib/auditLog';

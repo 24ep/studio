@@ -1,7 +1,5 @@
-
 // src/app/api/candidates/import/route.ts
 import { NextResponse, type NextRequest } from 'next/server';
-import pool from '../../../../lib/db';
 import { z } from 'zod';
 import { v4 as uuidv4 } from 'uuid';
 import type { CandidateStatus, CandidateDetails, PersonalInfo, ContactInfo } from '@/lib/types';

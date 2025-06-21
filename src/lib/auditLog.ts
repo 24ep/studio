@@ -1,6 +1,4 @@
-
 // src/lib/auditLog.ts
-import pool from './db';
 
 export async function logAudit(level: 'INFO' | 'WARN' | 'ERROR' | 'AUDIT', message: string, source: string, actingUserId: string | null = null, details: Record<string, any> | null = null) {
   try {

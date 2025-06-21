@@ -1,7 +1,5 @@
-
 // src/app/api/candidates/route.ts
 import { NextResponse, type NextRequest } from 'next/server';
-import pool from '../../../lib/db';
 import type { CandidateStatus, CandidateDetails, Position, UserProfile } from '@/lib/types';
 import { z } from 'zod';
 import { logAudit } from '@/lib/auditLog';

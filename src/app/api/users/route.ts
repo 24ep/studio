@@ -1,7 +1,6 @@
 // src/app/api/users/route.ts
 import { NextResponse, type NextRequest } from 'next/server';
 import { z } from 'zod';
-import pool from '../../../lib/db';
 import type { UserProfile, PlatformModuleId, UserGroup } from '@/lib/types';
 import { PLATFORM_MODULES } from '@/lib/types';
 import { v4 as uuidv4 } from 'uuid';
