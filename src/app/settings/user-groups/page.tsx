@@ -1,4 +1,3 @@
-
 // src/app/settings/user-groups/page.tsx -> Now Roles & Permissions
 "use client";
 
@@ -117,7 +116,7 @@ export default function RolesPermissionsPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [sessionStatus, pathname, signIn, selectedRole]); // Removed selectedRole to break potential loop
+  }, [sessionStatus, pathname, selectedRole]); // Added selectedRole to dependencies
 
   useEffect(() => {
     if (sessionStatus === 'unauthenticated') {
@@ -130,8 +129,7 @@ export default function RolesPermissionsPage() {
         fetchRolesAndSelect(selectedRoleIdRef.current); // Fetch with current ref ID if set
       }
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sessionStatus, session, pathname, signIn]); // fetchRolesAndSelect is memoized
+  }, [sessionStatus, session, pathname, fetchRolesAndSelect]); // Removed signIn from dependencies
 
   const handleSelectRole = (role: UserGroup) => {
     setSelectedRole(role);
@@ -292,7 +290,7 @@ export default function RolesPermissionsPage() {
                 <div className="flex justify-between items-center">
                   <div>
                     <CardTitle className="text-lg">{selectedRole.name} Permissions</CardTitle>
-                    <CardDescription className="text-xs">Configure what users with the "{selectedRole.name}" role can do.</CardDescription>
+                    <CardDescription className="text-xs">Configure what users with the &quot;{selectedRole.name}&quot; role can do.</CardDescription>
                   </div>
                   <div className="flex gap-2">
                     {!selectedRole.is_system_role && <Button variant="outline" size="sm" onClick={() => handleOpenModal(selectedRole)}><Edit3 className="mr-1.5 h-3.5 w-3.5"/> Edit Role</Button>}
@@ -341,7 +339,7 @@ export default function RolesPermissionsPage() {
           <DialogHeader>
             <DialogTitle>{editingRole ? 'Edit Role' : 'Create New Role'}</DialogTitle>
             <DialogDescription>
-              {editingRole ? `Update the details for the "${editingRole.name}" role.` : 'Define a new role. Permissions are managed on the main page after creation.'}
+              {editingRole ? `Update the details for the &quot;${editingRole.name}&quot; role.` : 'Define a new role. Permissions are managed on the main page after creation.'}
             </DialogDescription>
           </DialogHeader>
           <Form {...form}>
@@ -385,7 +383,7 @@ export default function RolesPermissionsPage() {
             <AlertDialogHeader>
               <AlertDialogTitle>Are you sure?</AlertDialogTitle>
               <AlertDialogDescription>
-                This will delete the role "<strong>{roleToDelete.name}</strong>". This action cannot be undone.
+                This will delete the role &quot;<strong>{roleToDelete.name}</strong>&quot;. This action cannot be undone.
                 Users will lose permissions granted by this role.
               </AlertDialogDescription>
             </AlertDialogHeader>

@@ -6,7 +6,7 @@ import { pool } from '@/lib/db';
 import bcrypt from 'bcrypt';
 import { logAudit } from '@/lib/auditLog';
 
-export const authOptions: NextAuthOptions = {
+const authOptions: NextAuthOptions = {
   providers: [
     AzureADProvider({
       clientId: process.env.AZURE_AD_CLIENT_ID!,

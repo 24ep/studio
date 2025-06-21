@@ -1,4 +1,3 @@
-
 "use client";
 import { useState, useEffect, type ChangeEvent, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
@@ -236,7 +235,7 @@ export default function PreferencesSettingsPage() {
         fetchSystemSettings();
       }
     }
-  }, [sessionStatus, session, pathname, signIn, fetchSystemSettings]);
+  }, [sessionStatus, session, pathname, fetchSystemSettings]);
 
   const handleLogoFileChange = (event: ChangeEvent<HTMLInputElement>, type: 'appLogo' | 'loginBg') => {
     const file = event.target.files?.[0];
@@ -480,7 +479,7 @@ export default function PreferencesSettingsPage() {
                             <Input id="primary-gradient-start" type="text" value={primaryGradientStart || ''} onChange={(e) => setPrimaryGradientStart(e.target.value)} placeholder="e.g., 179 67% 66%" className="flex-grow"/>
                             <Input type="color" value={convertHslStringToHex(primaryGradientStart)} onChange={(e) => setPrimaryGradientStart(hexToHslString(e.target.value))} className="w-10 h-10 p-1 flex-shrink-0 rounded-md border" title="Pick color"/>
                         </div>
-                        <p className="text-xs text-muted-foreground mt-0.5">Enter as HSL string (e.g., "179 67% 66%").</p>
+                        <p className="text-xs text-muted-foreground mt-0.5">Enter as HSL string (e.g., &quot;179 67% 66%&quot;).</p>
                     </div>
                     <div>
                         <Label htmlFor="primary-gradient-end" className="text-sm">Gradient End Color (HSL)</Label>
@@ -488,7 +487,7 @@ export default function PreferencesSettingsPage() {
                             <Input id="primary-gradient-end" type="text" value={primaryGradientEnd || ''} onChange={(e) => setPrimaryGradientEnd(e.target.value)} placeholder="e.g., 238 74% 61%" className="flex-grow"/>
                             <Input type="color" value={convertHslStringToHex(primaryGradientEnd)} onChange={(e) => setPrimaryGradientEnd(hexToHslString(e.target.value))} className="w-10 h-10 p-1 flex-shrink-0 rounded-md border" title="Pick color"/>
                         </div>
-                        <p className="text-xs text-muted-foreground mt-0.5">Enter as HSL string (e.g., "238 74% 61%").</p>
+                        <p className="text-xs text-muted-foreground mt-0.5">Enter as HSL string (e.g., &quot;238 74% 61%&quot;).</p>
                     </div>
                 </div>
                 <Button variant="outline" size="sm" onClick={resetPrimaryColors} disabled={isSaving}><RotateCcw className="mr-2 h-4 w-4"/>Reset Primary Colors</Button>
@@ -557,7 +556,7 @@ export default function PreferencesSettingsPage() {
                  className="w-10 h-9 p-1 flex-shrink-0 rounded-md border" title="Pick color"
               />
             </div>
-            <p className="text-xs text-muted-foreground mt-0.5">Enter HSL (e.g., "220 25% 97%")</p>
+            <p className="text-xs text-muted-foreground mt-0.5">Enter HSL (e.g., &quot;220 25% 97%&quot;)</p>
           </div>
         ))}
       </div>

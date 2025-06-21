@@ -1,12 +1,11 @@
 // src/app/page.tsx (Server Component)
 import { getServerSession } from 'next-auth/next';
-import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 import DashboardPageClient from '@/components/dashboard/DashboardPageClient';
 import { fetchInitialDashboardCandidatesDb, fetchAllPositionsDb, fetchAllUsersDb } from '@/lib/apiUtils';
 import type { Candidate, Position, UserProfile } from '@/lib/types';
 
 export default async function DashboardPageServer() {
-  const session = await getServerSession(authOptions);
+  const session = await getServerSession();
 
   if (!session?.user) {
     return <DashboardPageClient 

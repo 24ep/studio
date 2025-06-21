@@ -460,7 +460,7 @@ export function CandidateFilters({
                     <Badge variant="secondary">{aiSearchResults.totalFound} candidates</Badge>
                   </div>
                   <div className="text-xs text-muted-foreground">
-                    <strong>Query:</strong> "{aiSearchResults.searchQuery}"
+                    <strong>Query:</strong> &quot;{aiSearchResults.searchQuery}&quot;
                   </div>
                   <div className="text-xs text-muted-foreground">
                     <strong>Type:</strong> {aiSearchResults.searchType}

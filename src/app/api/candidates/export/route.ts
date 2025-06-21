@@ -1,10 +1,9 @@
 // src/app/api/candidates/export/route.ts
 import { NextResponse, type NextRequest } from 'next/server';
-// import pool from '../../../../lib/db';
+import { pool } from '../../../../lib/db';
 import type { Candidate, CandidateDetails, Position, UserProfile } from '@/lib/types';
 import { logAudit } from '@/lib/auditLog';
 import { getServerSession } from 'next-auth/next';
-import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 // For actual Excel generation, you would use a library like 'xlsx'
 // import * as XLSX from 'xlsx';
 
@@ -37,7 +36,7 @@ function convertToCsv(data: any[]): string {
 
 
 export async function GET(request: NextRequest) {
-  const session = await getServerSession(authOptions);
+  const session = await getServerSession();
   // Add permission check if needed, e.g., only Admins or Recruiters can export
   if (!session?.user?.id) {
     return NextResponse.json({ message: "Unauthorized" }, { status: 401 });

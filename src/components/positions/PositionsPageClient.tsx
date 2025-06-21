@@ -1,4 +1,3 @@
-
 // src/components/positions/PositionsPageClient.tsx
 "use client";
 
@@ -117,7 +116,7 @@ export default function PositionsPageClient({
         const errorData = await response.json().catch(() => ({ message: response.statusText || `Status: ${response.status}` }));
         const errorMessage = errorData.message || `Failed to fetch positions: ${response.statusText || `Status: ${response.status}`}`;
         if (response.status === 401) {
-            setAuthError(true); signIn(undefined, { callbackUrl: pathname }); return;
+            setAuthError(true); return;
         }
         if (response.status === 403) {
             setPermissionError(true); setFetchError(errorMessage); setPositions([]); return;
@@ -139,7 +138,7 @@ export default function PositionsPageClient({
     } finally {
       setIsLoading(false);
     }
-  }, [filters, sessionStatus, pathname, signIn]);
+  }, [filters, sessionStatus]);
 
   useEffect(() => {
     // Set initial state from props
@@ -153,7 +152,7 @@ export default function PositionsPageClient({
       signIn(undefined, { callbackUrl: pathname });
     }
     // Initial data is loaded by server component, client only fetches on filter change or action
-  }, [initialPositions, initialAvailableDepartments, initialFetchError, serverAuthError, serverPermissionError, sessionStatus, pathname, signIn]);
+  }, [initialPositions, initialAvailableDepartments, initialFetchError, serverAuthError, serverPermissionError, sessionStatus, pathname]);
 
 
   const handleFilterChange = (newFilters: PositionFilterValues) => {

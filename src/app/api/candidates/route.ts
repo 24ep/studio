@@ -1,11 +1,10 @@
 // src/app/api/candidates/route.ts
 import { NextResponse, type NextRequest } from 'next/server';
-import pool from '../../../lib/db';
+import { pool } from '../../../lib/db';
 import type { CandidateStatus, CandidateDetails, Position, UserProfile } from '@/lib/types';
 import { z } from 'zod';
 import { logAudit } from '@/lib/auditLog';
 import { getServerSession } from 'next-auth/next';
-import { authOptions } from '../auth/[...nextauth]/route';
 import { v4 as uuidv4 } from 'uuid';
 
 // Zod schemas for validation...
@@ -82,7 +81,7 @@ const createCandidateSchema = z.object({
 
 
 export async function POST(request: NextRequest) {
-    const session = await getServerSession(authOptions);
+    const session = await getServerSession();
     const actingUserId = session?.user?.id;
     const actingUserName = session?.user?.name || session?.user?.email || 'System';
 
@@ -147,7 +146,7 @@ export async function POST(request: NextRequest) {
 }
 
 export async function GET(request: NextRequest) {
-    const session = await getServerSession(authOptions);
+    const session = await getServerSession();
     if (!session?.user?.id) {
         return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }

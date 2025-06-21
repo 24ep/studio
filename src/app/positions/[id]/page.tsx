@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect, useCallback } from 'react';
@@ -67,7 +66,7 @@ export default function PositionDetailPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [positionId, sessionStatus, toast]); // Added toast here
+  }, [positionId, sessionStatus]);
 
   useEffect(() => {
     if (sessionStatus === 'loading') return;
@@ -78,7 +77,7 @@ export default function PositionDetailPage() {
     if (positionId) {
       fetchPositionAndCandidates();
     }
-  }, [positionId, sessionStatus, fetchPositionAndCandidates, signIn]);
+  }, [positionId, sessionStatus, fetchPositionAndCandidates]);
 
   const handleUpdateCandidateStatus = async (candidateId: string, status: Candidate['status']) => {
     toast({ title: "Action Not Available", description: "Candidate status updates should be done from the main Candidates page or Candidate Detail page.", variant: "default" });
@@ -198,7 +197,7 @@ export default function PositionDetailPage() {
             Candidates for this Position ({associatedCandidates.length})
           </CardTitle>
           <CardDescription>
-            List of candidates associated with "{position.title}", sorted by Fit Score (descending).
+            List of candidates associated with &quot;{position.title}&quot;, sorted by Fit Score (descending).
           </CardDescription>
         </CardHeader>
         <CardContent>

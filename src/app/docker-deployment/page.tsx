@@ -8,7 +8,7 @@ export default function DockerDeploymentPage() {
         This page has been removed.
       </h1>
       <p className="text-muted-foreground">
-        Docker setup information can be found in the project's README.md.
+        Docker setup information can be found in the project&apos;s README.md.
       </p>
     </div>
   );

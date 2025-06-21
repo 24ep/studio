@@ -4,7 +4,6 @@ import { pool } from '@/lib/db';
 import { z } from 'zod';
 import { logAudit } from '@/lib/auditLog';
 import { getServerSession } from 'next-auth/next';
-import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 import { v4 as uuidv4 } from 'uuid';
 
 // Define Zod schemas for validation...
@@ -24,7 +23,7 @@ const updateCandidateSchema = z.object({
 
 
 export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
-    const session = await getServerSession(authOptions);
+    const session = await getServerSession();
     if (!session?.user?.id) {
         return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
@@ -72,7 +71,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
 
 
 export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {
-    const session = await getServerSession(authOptions);
+    const session = await getServerSession();
     const actingUserId = session?.user?.id;
     const actingUserName = session?.user?.name || session?.user?.email || 'System (API Update)';
 
@@ -149,7 +148,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
 }
 
 export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
-    const session = await getServerSession(authOptions);
+    const session = await getServerSession();
     const actingUserId = session?.user?.id;
     const actingUserName = session?.user?.name || session?.user?.email || 'System';
     

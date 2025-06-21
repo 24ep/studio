@@ -4,14 +4,13 @@ import { pool } from '../../../../../../lib/db';
 import { z } from 'zod';
 import { logAudit } from '@/lib/auditLog';
 import { getServerSession } from 'next-auth/next';
-import { authOptions } from '../../../../auth/[...nextauth]/route';
 
 const moveStageSchema = z.object({
   newOrder: z.number().int().min(0, "Order must be a non-negative integer."),
 });
 
 export async function POST(request: NextRequest, { params }: { params: { id: string } }) {
-    const session = await getServerSession(authOptions);
+    const session = await getServerSession();
     const actingUserId = session?.user?.id;
     if (!actingUserId) {
         return NextResponse.json({ message: "Forbidden" }, { status: 403 });

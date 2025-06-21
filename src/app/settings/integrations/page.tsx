@@ -1,4 +1,3 @@
-
 "use client";
 import { useState, useEffect, type ChangeEvent, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
@@ -76,7 +75,7 @@ export default function IntegrationsSettingsPage() {
             fetchSystemSettings();
         }
     }
-  }, [sessionStatus, session, pathname, signIn, fetchSystemSettings]);
+  }, [sessionStatus, session, pathname, fetchSystemSettings]);
 
 
   const handleSaveSettings = async () => {
@@ -155,7 +154,7 @@ export default function IntegrationsSettingsPage() {
             <div>
               <Label htmlFor="gemini-api-key">Gemini API Key</Label>
               <Input id="gemini-api-key" type="password" placeholder="Enter your Gemini API Key" value={geminiApiKey} onChange={(e) => setGeminiApiKey(e.target.value)} className="mt-1" disabled={isSaving}/>
-              <p className="text-xs text-muted-foreground mt-1">This key is stored securely on the server. For Genkit to use this, ensure it's also available as the GOOGLE_API_KEY environment variable where your Next.js server runs, or ensure your Genkit flows dynamically fetch it.</p>
+              <p className="text-xs text-muted-foreground mt-1">This key is stored securely on the server. For Genkit to use this, ensure it&apos;s also available as the GOOGLE_API_KEY environment variable where your Next.js server runs, or ensure your Genkit flows dynamically fetch it.</p>
             </div>
         </CardContent>
          <CardFooter className="border-t pt-6">
@@ -183,7 +182,7 @@ export default function IntegrationsSettingsPage() {
             <div>
                 <Label htmlFor="n8n-generic-pdf-webhook">New Candidate PDF Webhook URL</Label>
                 <Input id="n8n-generic-pdf-webhook" type="url" placeholder="https://your-n8n-instance/webhook/new-candidate-pdf" value={n8nGenericPdfWebhookUrl} onChange={(e) => setN8nGenericPdfWebhookUrl(e.target.value)} className="mt-1" disabled={isSaving}/>
-                 <p className="text-xs text-muted-foreground mt-1">Used by "Create via Resume (Automated)" feature. The application sends the PDF file (as FormData) and optional target position info to this endpoint. This webhook should then call back to `/api/n8n/create-candidate-with-matches`.</p>
+                 <p className="text-xs text-muted-foreground mt-1">Used by &quot;Create via Resume (Automated)&quot; feature. The application sends the PDF file (as FormData) and optional target position info to this endpoint. This webhook should then call back to `/api/n8n/create-candidate-with-matches`.</p>
             </div>
         </CardContent>
          <CardFooter className="border-t pt-6">

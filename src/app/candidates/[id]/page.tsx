@@ -189,7 +189,7 @@ const RoleSuggestionSummary: React.FC<RoleSuggestionSummaryProps> = ({ candidate
             </p>
             {currentAppliedPosition ? (
               <p className="text-xs text-muted-foreground">
-                Currently applied for: "{currentAppliedPosition.title}" (Fit Score: {currentFitScore}%)
+                Currently applied for: &quot;{currentAppliedPosition.title}&quot; (Fit Score: {currentFitScore}%)
               </p>
             ) : (
                <p className="text-xs text-muted-foreground">Currently not formally applied to a specific position in our system (General Fit Score: {currentFitScore}%).</p>

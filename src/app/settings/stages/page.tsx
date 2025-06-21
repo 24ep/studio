@@ -1,4 +1,3 @@
-
 // src/app/settings/stages/page.tsx
 "use client";
 
@@ -112,7 +111,7 @@ export default function RecruitmentStagesPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [sessionStatus, pathname, signIn]);
+  }, [sessionStatus, pathname]);
 
   useEffect(() => {
     if (sessionStatus === 'unauthenticated') {
@@ -125,7 +124,7 @@ export default function RecruitmentStagesPage() {
         fetchStages();
       }
     }
-  }, [sessionStatus, session, fetchStages, pathname, signIn]);
+  }, [sessionStatus, session, fetchStages, pathname]);
 
   const handleOpenModal = (stage: RecruitmentStage | null = null) => {
     setEditingStage(stage);
@@ -242,7 +241,7 @@ export default function RecruitmentStagesPage() {
             <CardTitle className="flex items-center text-2xl"><KanbanSquare className="mr-3 h-6 w-6 text-primary"/>Recruitment Stages</CardTitle>
             <CardDescription>
               Manage the stages in your recruitment pipeline. System stages cannot be deleted or renamed.
-              Use the arrow buttons to reorder stages, or the 'Sort Order' field for specific placement.
+              Use the arrow buttons to reorder stages, or the &apos;Sort Order&apos; field for specific placement.
               If a custom stage is in use, you will be prompted to migrate candidates to another stage upon deletion.
             </CardDescription>
           </div>
@@ -327,7 +326,7 @@ export default function RecruitmentStagesPage() {
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center"><AlertCircle className="mr-2 h-5 w-5 text-amber-500"/>Stage In Use</AlertDialogTitle>
             <AlertDialogDescription>
-              The stage "<strong>{stageToDelete?.name}</strong>" is currently in use by candidates or in transition history.
+              The stage &quot;<strong>{stageToDelete?.name}</strong>&quot; is currently in use by candidates or in transition history.
               To delete it, please select a new stage to migrate all associated records to.
             </AlertDialogDescription>
           </AlertDialogHeader>

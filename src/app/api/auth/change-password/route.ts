@@ -1,7 +1,6 @@
 // src/app/api/auth/change-password/route.ts
 import { NextResponse, type NextRequest } from 'next/server';
 import { getServerSession } from 'next-auth/next';
-import { authOptions } from '../[...nextauth]/route';
 import { z } from 'zod';
 import bcrypt from 'bcrypt';
 import { pool } from '../../../../lib/db';
@@ -13,7 +12,7 @@ const changePasswordSchema = z.object({
 });
 
 export async function POST(request: NextRequest) {
-    const session = await getServerSession(authOptions);
+    const session = await getServerSession();
     if (!session?.user?.id) {
         return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }

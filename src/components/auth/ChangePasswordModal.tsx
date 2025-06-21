@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState } from 'react';
@@ -92,7 +91,7 @@ export function ChangePasswordModal({ isOpen, onOpenChange }: ChangePasswordModa
             <KeyRound className="mr-2 h-5 w-5 text-primary" /> Change Password
           </DialogTitle>
           <DialogDescription>
-            Update your account password. Make sure it's strong and memorable.
+            Update your account password. Make sure it&apos;s strong and memorable.
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>

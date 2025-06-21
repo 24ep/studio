@@ -82,7 +82,7 @@ export function MyTasksPageClient({
         // Do not toast here as it might be redundant if initialRecruiters prop was fine
       }
     }
-  }, [session?.user?.role]);
+  }, [session?.user?.role, allRecruitersForFilter.length]);
 
 
   const fetchTaskBoardCandidates = useCallback(async (filtersToApply: CandidateFilterValues, currentRecruiterFilter: string) => {
@@ -141,7 +141,7 @@ export function MyTasksPageClient({
     } finally {
       setIsLoading(false);
     }
-  }, [sessionStatus, session, pathname, signIn]);
+  }, [sessionStatus, session, pathname]);
 
   useEffect(() => {
     if (sessionStatus === 'unauthenticated' && !serverAuthError && !serverPermissionError) {
@@ -155,7 +155,7 @@ export function MyTasksPageClient({
        if (serverPermissionError) setPermissionError(true);
        if (initialCandidates.length > 0 || initialFetchError) setIsLoading(false); // Stop loading if we got data or an error
     }
-  }, [sessionStatus, serverAuthError, serverPermissionError, initialFetchError, initialCandidates.length, fetchRecruitersForAdminFilter, pathname, signIn]);
+  }, [sessionStatus, serverAuthError, serverPermissionError, initialFetchError, initialCandidates.length, fetchRecruitersForAdminFilter, pathname]);
   
   const handleRecruiterFilterChange = (newFilter: string) => {
     setSelectedRecruiterFilter(newFilter);

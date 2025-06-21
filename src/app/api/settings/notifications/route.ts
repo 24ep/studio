@@ -2,13 +2,12 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { z } from 'zod';
 import { getServerSession } from 'next-auth/next';
-import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 import type { NotificationEventWithSettings, NotificationSetting } from '@/lib/types';
 import { logAudit } from '@/lib/auditLog';
 import { v4 as uuidv4 } from 'uuid';
 
 export async function GET(request: NextRequest) {
-  const session = await getServerSession(authOptions);
+  const session = await getServerSession();
   if (session?.user?.role !== 'Admin' && !session?.user?.modulePermissions?.includes('NOTIFICATION_SETTINGS_MANAGE')) {
     await logAudit('WARN', `Forbidden attempt to GET notification settings by user ${session?.user?.email || 'Unknown'}.`, 'API:NotificationSettings:Get', session?.user?.id);
     return NextResponse.json({ message: "Forbidden: Insufficient permissions" }, { status: 403 });
@@ -61,7 +60,7 @@ const updateNotificationSettingsSchema = z.array(notificationEventSettingSchema)
 
 
 export async function POST(request: NextRequest) {
-  const session = await getServerSession(authOptions);
+  const session = await getServerSession();
   if (session?.user?.role !== 'Admin' && !session?.user?.modulePermissions?.includes('NOTIFICATION_SETTINGS_MANAGE')) {
     await logAudit('WARN', `Forbidden attempt to POST notification settings by user ${session?.user?.email || 'Unknown'}.`, 'API:NotificationSettings:Post', session?.user?.id);
     return NextResponse.json({ message: "Forbidden: Insufficient permissions" }, { status: 403 });

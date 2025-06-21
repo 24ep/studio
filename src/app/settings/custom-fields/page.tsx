@@ -1,4 +1,3 @@
-
 // src/app/settings/custom-fields/page.tsx
 "use client";
 
@@ -30,6 +29,7 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
+  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -127,7 +127,7 @@ export default function CustomFieldsPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [sessionStatus, pathname, signIn]);
+  }, [sessionStatus, pathname]);
 
   useEffect(() => {
     if (sessionStatus === 'unauthenticated') {
@@ -140,7 +140,7 @@ export default function CustomFieldsPage() {
         fetchDefinitions();
       }
     }
-  }, [sessionStatus, session, fetchDefinitions, pathname, signIn]);
+  }, [sessionStatus, session, fetchDefinitions, pathname]);
 
   const handleOpenModal = (definition: CustomFieldDefinition | null = null) => {
     setEditingDefinition(definition);
@@ -279,7 +279,7 @@ export default function CustomFieldsPage() {
                             <AlertDialogTrigger asChild><Button variant="ghost" size="icon" className="text-destructive hover:text-destructive h-8 w-8" onClick={() => confirmDelete(def)}><Trash2 className="h-4 w-4" /></Button></AlertDialogTrigger>
                             {definitionToDelete?.id === def.id && (
                                 <AlertDialogContent>
-                                    <AlertDialogHeader><AlertDialogTitle>Are you sure?</AlertDialogTitle><AlertDialogDescription>This will delete the custom field definition "<strong>{def.label}</strong>". This does not delete data already stored, but the definition will be removed.</AlertDialogDescription></AlertDialogHeader>
+                                    <AlertDialogHeader><AlertDialogTitle>Are you sure?</AlertDialogTitle><AlertDialogDescription>This will delete the custom field definition &quot;<strong>{def.label}</strong>&quot;. This does not delete data already stored, but the definition will be removed.</AlertDialogDescription></AlertDialogHeader>
                                     <AlertDialogFooter><AlertDialogCancel onClick={() => setDefinitionToDelete(null)}>Cancel</AlertDialogCancel><AlertDialogAction onClick={handleDelete} className={buttonVariants({ variant: "destructive" })}>Delete Definition</AlertDialogAction></AlertDialogFooter>
                                 </AlertDialogContent>
                             )}
@@ -299,7 +299,7 @@ export default function CustomFieldsPage() {
           <DialogHeader>
             <DialogTitle>{editingDefinition ? 'Edit' : 'Add New'} Custom Field Definition</DialogTitle>
             <DialogDescription>
-              Define a new custom field. The 'Field Key' should be unique for the selected model.
+              Define a new custom field. The &apos;Field Key&apos; should be unique for the selected model.
             </DialogDescription>
           </DialogHeader>
           <ScrollArea className="flex-grow pr-2">

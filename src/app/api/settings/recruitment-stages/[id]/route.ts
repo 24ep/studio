@@ -3,7 +3,6 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { pool } from '../../../../../lib/db';
 import { z } from 'zod';
 import { getServerSession } from 'next-auth/next';
-import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 import type { RecruitmentStage } from '@/lib/types';
 import { logAudit } from '@/lib/auditLog';
 import { getRedisClient, CACHE_KEY_RECRUITMENT_STAGES } from '@/lib/redis';
@@ -15,7 +14,7 @@ const updateRecruitmentStageSchema = z.object({
 });
 
 export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
-    const session = await getServerSession(authOptions);
+    const session = await getServerSession();
     if (!session?.user?.id) return new NextResponse('Unauthorized', { status: 401 });
 
     const client = await pool.connect();
@@ -34,7 +33,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
 }
 
 export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {
-    const session = await getServerSession(authOptions);
+    const session = await getServerSession();
     const actingUserId = session?.user?.id;
     if (!actingUserId) return new NextResponse('Unauthorized', { status: 401 });
 
@@ -90,7 +89,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
 }
 
 export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
-    const session = await getServerSession(authOptions);
+    const session = await getServerSession();
     const actingUserId = session?.user?.id;
     if (!actingUserId) return new NextResponse('Unauthorized', { status: 401 });
     

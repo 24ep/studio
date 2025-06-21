@@ -1,4 +1,3 @@
-
 // src/app/settings/notifications/page.tsx
 "use client";
 
@@ -10,7 +9,7 @@ import { Switch } from '@/components/ui/switch';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { useToast } from '@/hooks/use-toast';
-import { signIn, useSession } from 'next-auth/react';
+import { useSession } from 'next-auth/react';
 import { useRouter, usePathname } from 'next/navigation';
 import { Save, BellRing, Info, Loader2, ServerCrash, ShieldAlert, RefreshCw, Webhook, Mail } from 'lucide-react';
 import type { NotificationEventWithSettings, NotificationChannel, NotificationSetting } from '@/lib/types';
@@ -37,7 +36,6 @@ export default function NotificationSettingsPage() {
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({ message: 'Failed to fetch notification settings' }));
         if (response.status === 401 || response.status === 403) {
-          signIn(undefined, { callbackUrl: pathname });
           return;
         }
         throw new Error(errorData.message);
@@ -52,12 +50,12 @@ export default function NotificationSettingsPage() {
     } finally {
       setIsLoadingData(false);
     }
-  }, [sessionStatus, pathname, signIn, toast]);
+  }, [sessionStatus, toast]);
 
   useEffect(() => {
     setIsClient(true);
     if (sessionStatus === 'unauthenticated') {
-      signIn(undefined, { callbackUrl: pathname });
+      return;
     } else if (sessionStatus === 'authenticated') {
        if (session.user.role !== 'Admin' && !session.user.modulePermissions?.includes('NOTIFICATION_SETTINGS_MANAGE')) {
         setFetchError("You do not have permission to manage notification settings.");
@@ -66,7 +64,7 @@ export default function NotificationSettingsPage() {
       }
       fetchNotificationSettings();
     }
-  }, [sessionStatus, session, pathname, signIn, fetchNotificationSettings]);
+  }, [sessionStatus, session, fetchNotificationSettings]);
 
   const handleSettingChange = (
     eventId: string,

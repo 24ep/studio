@@ -6,7 +6,7 @@ import { useEffect, useState, type ReactNode, useCallback } from 'react';
 import { Loader2 } from 'lucide-react';
 
 // Paths that should bypass the setup check
-const BYPASS_PATHS = ['/auth/signin', '/setup-guidance'];
+const BYPASS_PATHS = ['/auth/signin'];
 
 export function SetupFlowHandler({ children }: { children: ReactNode }) {
   const pathname = usePathname();
@@ -28,34 +28,21 @@ export function SetupFlowHandler({ children }: { children: ReactNode }) {
         schemaInitialized = data.schemaInitialized === true;
       } else {
         console.error(`SetupFlowHandler: API request failed with status ${response.status}.`);
-        // Consider schema not initialized on API error to be safe or to show guidance
         schemaInitialized = false; 
       }
-
       if (!schemaInitialized) {
-        if (pathname !== '/setup-guidance') {
-          console.log("SetupFlowHandler: Schema not initialized, redirecting to /setup-guidance.");
-          router.replace('/setup-guidance');
-          // setIsLoading(false) will be handled by the finally block after redirection or in next effect run
-          return; 
-        }
-        // If already on setup-guidance and schema not init, let it stay.
-        console.log("SetupFlowHandler: Schema not initialized, but already on /setup-guidance.");
+        console.log("SetupFlowHandler: Schema not initialized.");
       } else {
         console.log("SetupFlowHandler: Schema initialized.");
       }
     } catch (networkError) {
       console.error('SetupFlowHandler: Network error during setup check API call:', networkError);
-      if (pathname !== '/setup-guidance') {
-        router.replace('/setup-guidance');
-        return; 
-      }
     } finally {
-      setIsLoading(false); // Hide loader after check completes or redirects
+      setIsLoading(false); // Hide loader after check completes
       setInitialCheckDone(true); // Mark that an initial check attempt has been made
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pathname, router]); // router is stable. pathname ensures it re-evaluates if needed (though gated by initialCheckDone).
+  }, [pathname, router]);
 
   // Main effect to decide if a setup check is needed or if bypass.
   useEffect(() => {

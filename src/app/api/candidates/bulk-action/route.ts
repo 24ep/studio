@@ -3,9 +3,9 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { z } from 'zod';
 import { logAudit } from '@/lib/auditLog';
 import { getServerSession } from 'next-auth/next';
-import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 import type { CandidateBulkActionPayload, CandidateStatus } from '@/lib/types';
 import { v4 as uuidv4 } from 'uuid';
+import { pool } from '@/lib/db';
 
 const bulkActionSchema = z.object({
   action: z.enum(['delete', 'change_status', 'assign_recruiter']),
@@ -16,7 +16,7 @@ const bulkActionSchema = z.object({
 });
 
 export async function POST(request: NextRequest) {
-  const session = await getServerSession(authOptions);
+  const session = await getServerSession();
   const actingUserId = session?.user?.id;
   const actingUserName = session?.user?.name || session?.user?.email || 'System (Bulk Action)';
 
@@ -54,7 +54,7 @@ export async function POST(request: NextRequest) {
       await client.query('DELETE FROM "TransitionRecord" WHERE "candidateId" = ANY($1::uuid[])', [candidateIds]);
       const deleteResult = await client.query('DELETE FROM "Candidate" WHERE id = ANY($1::uuid[]) RETURNING id', [candidateIds]);
       successCount = deleteResult.rowCount;
-      const deletedIds = deleteResult.rows.map(r => r.id);
+      const deletedIds = deleteResult.rows.map((r: { id: string }) => r.id);
       failCount = candidateIds.length - successCount;
       candidateIds.forEach(id => {
         if (!deletedIds.includes(id)) {
@@ -73,14 +73,14 @@ export async function POST(request: NextRequest) {
       }
 
       const oldStatusesResult = await client.query('SELECT id, status FROM "Candidate" WHERE id = ANY($1::uuid[])', [candidateIds]);
-      const oldStatusesMap = new Map(oldStatusesResult.rows.map(r => [r.id, r.status]));
+      const oldStatusesMap = new Map<string, string>(oldStatusesResult.rows.map((r: { id: string, status: string }) => [r.id, r.status]));
 
       const updateResult = await client.query(
         'UPDATE "Candidate" SET status = $1, "updatedAt" = NOW() WHERE id = ANY($2::uuid[]) RETURNING id, name',
         [newStatus, candidateIds]
       );
       successCount = updateResult.rowCount;
-      const updatedIds = updateResult.rows.map(r => r.id);
+      const updatedIds = updateResult.rows.map((r: { id: string }) => r.id);
       failCount = candidateIds.length - successCount;
       candidateIds.forEach(id => {
         if (!updatedIds.includes(id)) {
@@ -89,7 +89,7 @@ export async function POST(request: NextRequest) {
       });
 
       const transitionNotes = notes || `Bulk status change to ${newStatus} by ${actingUserName}.`;
-      for (const updatedRow of updateResult.rows) {
+      for (const updatedRow of updateResult.rows as { id: string }[]) {
         const oldStatusForCandidate = oldStatusesMap.get(updatedRow.id) || 'Unknown';
         if (newStatus !== oldStatusForCandidate) {
              await client.query(
@@ -111,7 +111,7 @@ export async function POST(request: NextRequest) {
         [newRecruiterId, candidateIds]
       );
       successCount = updateResult.rowCount;
-      const updatedIds = updateResult.rows.map(r => r.id);
+      const updatedIds = updateResult.rows.map((r: { id: string }) => r.id);
       failCount = candidateIds.length - successCount;
        candidateIds.forEach(id => {
         if (!updatedIds.includes(id)) {

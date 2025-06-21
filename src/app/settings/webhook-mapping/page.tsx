@@ -1,4 +1,3 @@
-
 // src/app/settings/webhook-mapping/page.tsx
 "use client";
 
@@ -10,7 +9,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { useToast } from '@/hooks/use-toast';
-import { signIn, useSession } from 'next-auth/react';
+import { useSession } from 'next-auth/react';
 import { useRouter, usePathname } from 'next/navigation';
 import { Save, SlidersHorizontal, Info, Loader2, ShieldAlert, ServerCrash, RefreshCw } from 'lucide-react';
 import type { WebhookFieldMapping } from '@/lib/types';
@@ -89,7 +88,6 @@ export default function WebhookMappingPage() {
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({ message: 'Failed to fetch mappings' }));
         if (response.status === 401 || response.status === 403) {
-          signIn(undefined, { callbackUrl: pathname });
           return;
         }
         throw new Error(errorData.message);
@@ -104,12 +102,12 @@ export default function WebhookMappingPage() {
     } finally {
       setIsLoadingData(false);
     }
-  }, [sessionStatus, pathname, signIn, toast, initializeMappings]);
+  }, [sessionStatus, toast, initializeMappings]);
 
   useEffect(() => {
     setIsClient(true);
     if (sessionStatus === 'unauthenticated') {
-      signIn(undefined, { callbackUrl: pathname });
+      return;
     } else if (sessionStatus === 'authenticated') {
        if (session.user.role !== 'Admin' && !session.user.modulePermissions?.includes('WEBHOOK_MAPPING_MANAGE')) {
         setFetchError("You do not have permission to manage webhook mappings.");
@@ -118,7 +116,7 @@ export default function WebhookMappingPage() {
       }
       fetchMappings();
     }
-  }, [sessionStatus, session, pathname, signIn, fetchMappings]);
+  }, [sessionStatus, session, fetchMappings]);
 
   const handleMappingChange = (targetPath: string, field: 'sourcePath' | 'notes', value: string) => {
     setMappings(prevMappings => 
@@ -215,7 +213,7 @@ export default function WebhookMappingPage() {
             <Info className="h-5 w-5 text-blue-600 dark:text-blue-400" />
             <AlertTitle className="font-semibold text-blue-700 dark:text-blue-300">How This Works</AlertTitle>
             <AlertDescription>
-              Enter the JSON path from your workflow's output (e.g., <code className="font-mono text-xs bg-blue-200 dark:bg-blue-800 px-1 rounded">data.profile.firstName</code>) into the "Source JSON Path" field.
+              Enter the JSON path from your workflow&#39;s output (e.g., <code className="font-mono text-xs bg-blue-200 dark:bg-blue-800 px-1 rounded">data.profile.firstName</code>) into the &quot;Source JSON Path&quot; field.
               If a source path is left empty, that CandiTrack attribute will not be populated. For array fields, ensure the source path points to an array of objects with a compatible structure.
             </AlertDescription>
           </Alert>

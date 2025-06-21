@@ -1,4 +1,3 @@
-
 // src/app/api-docs/page.tsx
 "use client";
 
@@ -26,9 +25,9 @@ const apiEndpoints: ApiEndpoint[] = [
     path: "/api/resumes/upload",
     description: "Upload a candidate resume. Requires candidateId as query param. Sends resume for automated processing if a resume webhook URL is set.",
     requestBody: "FormData: `resume`: File (PDF, DOC, DOCX)",
-    response: "JSON: `{ message: 'Resume uploaded successfully', filePath: '...', candidate: Candidate, n8nResponse?: {success: boolean, data?: any, error?: string} }` (n8nResponse field name is kept for API contract)",
+    response: "JSON: `{ message: &apos;Resume uploaded successfully&apos;, filePath: &apos;...&apos;, candidate: Candidate, n8nResponse?: {success: boolean, data?: any, error?: string} }` (n8nResponse field name is kept for API contract)",
     curlExample: `curl -X POST \\\n` +
-                 `  -F 'resume=@resume.pdf' \\\n` +
+                 `  -F \'resume=@resume.pdf\' \\\n` +
                  `  'http://localhost:9002/api/resumes/upload?candidateId=your-candidate-id'`,
   },
   {
@@ -64,18 +63,18 @@ const apiEndpoints: ApiEndpoint[] = [
     path: "/api/n8n/create-candidate-with-matches",
     description: "Webhook endpoint for an external system (e.g., an automation workflow) to create a candidate with job matching details. Expects a single candidate entry object in a specific nested structure.",
     requestBody: "JSON: `body[0].result_json[0].json = { candidate_info: CandidateDetails, jobs: N8NJobMatch[] }` (See `N8NCandidateWebhookEntry` type in `lib/types.ts`)",
-    response: "JSON: `{ status: 'success' | 'skipped' | 'error', candidate?: Candidate, email?: string, message?: string, candidateId?: string }`",
+    response: "JSON: `{ status: &apos;success&apos; | &apos;skipped&apos; | &apos;error&apos;, candidate?: Candidate, email?: string, message?: string, candidateId?: string }`",
     curlExample: `curl -X POST \\\n` +
                  `  -H 'Content-Type: application/json' \\\n` +
                  `  -d '[{ \\\n` +
                  `    "result_json": [{ \\\n` +
                  `      "json": { \\\n` +
                  `        "candidate_info": { \\\n` +
-                 `          "personal_info": { "firstname": "Jane", "lastname": "Parsed" }, \\\n` +
-                 `          "contact_info": { "email": "jane.parsed@example.com" } \\\n` +
+                 `          "personal_info": { \"firstname\": \"Jane\", \"lastname\": \"Parsed\" }, \\\n` +
+                 `          "contact_info": { \"email\": \"jane.parsed@example.com\" } \\\n` +
                  `        }, \\\n` +
                  `        "jobs": [ \\\n` +
-                 `          { "job_id": "MATCH_JOB_001", "job_title": "Software Engineer", "fit_score": 90, "match_reasons": ["Strong Python skill"] } \\\n` +
+                 `          { \"job_id\": \"MATCH_JOB_001\", \"job_title\": \"Software Engineer\", \"fit_score\": 90, \"match_reasons\": [\"Strong Python skill\"] } \\\n` +
                  `        ] \\\n` +
                  `      } \\\n` +
                  `    }] \\\n` +
@@ -108,7 +107,7 @@ const apiEndpoints: ApiEndpoint[] = [
     path: "/api/candidates/{id}",
     description: "Delete a candidate. Also deletes associated transition records.",
     requestBody: "N/A (Path parameter: `id`)",
-    response: "JSON: `{ message: 'Candidate deleted successfully' }`",
+    response: "JSON: `{ message: &apos;Candidate deleted successfully&apos; }`",
     curlExample: `curl -X DELETE http://localhost:9002/api/candidates/your-candidate-id`,
   },
   {
@@ -116,10 +115,10 @@ const apiEndpoints: ApiEndpoint[] = [
     path: "/api/candidates/upload-for-n8n",
     description: "Upload a PDF resume to be sent to an automated workflow for new candidate creation (workflow uses /api/n8n/create-candidate-with-matches to post back). Requires a Generic PDF Webhook URL set on server.",
     requestBody: "FormData: `pdfFile`: File (PDF), `positionId` (optional), `targetPositionDescription` (optional), `targetPositionLevel` (optional)",
-    response: "JSON: `{ message: 'PDF successfully sent to workflow for candidate creation.', n8nResponse?: any }`",
+    response: "JSON: `{ message: &apos;PDF successfully sent to workflow for candidate creation.&apos;, n8nResponse?: any }`",
     curlExample: `curl -X POST \\\n` +
-                 `  -F 'pdfFile=@new_candidate_resume.pdf' \\\n` +
-                 `  -F 'positionId=some-position-uuid' \\\n` +
+                 `  -F \'pdfFile=@new_candidate_resume.pdf\' \\\n` +
+                 `  -F \'positionId=some-position-uuid\' \\\n` +
                  `  http://localhost:9002/api/candidates/upload-for-n8n`,
   },
   {
@@ -173,7 +172,7 @@ const apiEndpoints: ApiEndpoint[] = [
     path: "/api/positions/{id}",
     description: "Delete a position. Denied if candidates are associated.",
     requestBody: "N/A (Path parameter: `id`)",
-    response: "JSON: `{ message: 'Position deleted successfully' }` (or 409 if candidates are associated)",
+    response: "JSON: `{ message: &apos;Position deleted successfully&apos; }` (or 409 if candidates are associated)",
     curlExample: `curl -X DELETE http://localhost:9002/api/positions/your-position-id`,
   },
   {
@@ -218,7 +217,7 @@ const apiEndpoints: ApiEndpoint[] = [
     path: "/api/users/{id}",
     description: "Delete an application user.",
     requestBody: "N/A (Path parameter: `id`)",
-    response: "JSON: `{ message: 'User deleted successfully' }`",
+    response: "JSON: `{ message: &apos;User deleted successfully&apos; }`",
     curlExample: `curl -X DELETE http://localhost:9002/api/users/user-id-to-delete`,
   },
   {
@@ -250,7 +249,7 @@ const apiEndpoints: ApiEndpoint[] = [
     path: "/api/auth/change-password",
     description: "Allows an authenticated user to change their own password. Passwords handled with bcrypt.",
     requestBody: "JSON: `{ currentPassword: string, newPassword: string }`",
-    response: "JSON: `{ message: 'Password changed successfully.' }` or error message.",
+    response: "JSON: `{ message: &apos;Password changed successfully.&apos; }` or error message.",
     curlExample: `curl -X POST \\\n` +
                  `  -H 'Content-Type: application/json' \\\n` +
                  `  -H 'Authorization: Bearer <YOUR_AUTH_TOKEN_OR_COOKIE>' \\\n` + 
@@ -287,7 +286,7 @@ const apiEndpoints: ApiEndpoint[] = [
     path: "/api/transitions/{id}",
     description: "Delete a specific transition record.",
     requestBody: "N/A (Path parameter: `id`)",
-    response: "JSON: `{ message: 'Transition record deleted successfully' }`",
+    response: "JSON: `{ message: &apos;Transition record deleted successfully&apos; }`",
     curlExample: `curl -X DELETE http://localhost:9002/api/transitions/transition-record-id`,
   },
   {
@@ -303,7 +302,7 @@ const apiEndpoints: ApiEndpoint[] = [
     path: "/api/n8n/webhook-proxy",
     description: "Client uploads FormData (with 'pdfFile'). API proxies this to a generic processing webhook (configured via N8N_GENERIC_PDF_WEBHOOK_URL), sending JSON with file as data URI.",
     requestBody: "Client: FormData (`pdfFile`). External system receives: JSON `{ fileName: string, mimeType: string, fileDataUri: string, ... }`",
-    response: "JSON: `{ message: 'PDF successfully sent to workflow.', n8nResponse?: any }`",
+    response: "JSON: `{ message: &apos;PDF successfully sent to workflow.&apos;, n8nResponse?: any }`",
     curlExample: `# To test /api/n8n/webhook-proxy (client-side call):\n` +
                  `curl -X POST \\\n` +
                  `  -F 'pdfFile=@generic_document.pdf' \\\n` +
@@ -421,9 +420,9 @@ export default function ApiDocumentationPage() {
 
         <div className="mt-6 text-sm text-muted-foreground space-y-2">
           <p><strong>Authentication:</strong> API endpoints are protected by NextAuth.js session authentication. Calls from external systems require proper authentication mechanisms (e.g., API tokens managed by an API Gateway), which are not implemented in this prototype.</p>
-          <p><strong>Base URL:</strong> All API paths are relative to the application's base URL (e.g., <code>http://localhost:9002</code> or your production domain).</p>
-          <p><strong>Error Handling:</strong> Standard HTTP status codes are used (e.g., 200 OK, 201 Created, 400 Bad Request, 401 Unauthorized, 403 Forbidden, 404 Not Found, 500 Internal Server Error). Error responses typically include a JSON body: <code>{`{ "message": "Error description", "errors?": { ... } }`}</code>.</p>
-          <p><strong>Content Type:</strong> For POST and PUT requests with a body, set <code>Content-Type: application/json</code>, unless it's a file upload (<code>multipart/form-data</code> for resume uploads).</p>
+          <p><strong>Base URL:</strong> All API paths are relative to the application&apos;s base URL (e.g., <code>http://localhost:9002</code> or your production domain).</p>
+          <p><strong>Error Handling:</strong> Standard HTTP status codes are used (e.g., 200 OK, 201 Created, 400 Bad Request, 401 Unauthorized, 403 Forbidden, 404 Not Found, 500 Internal Server Error). Error responses typically include a JSON body: <code>{`{ &quot;message&quot;: &quot;Error description&quot;, &quot;errors?&quot;: {{ ... }} }`}</code>.</p>
+          <p><strong>Content Type:</strong> For POST and PUT requests with a body, set <code>Content-Type: application/json</code>, unless it&apos;s a file upload (<code>multipart/form-data</code> for resume uploads).</p>
         </div>
       </CardContent>
 

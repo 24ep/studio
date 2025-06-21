@@ -7,7 +7,6 @@ import { v4 as uuidv4 } from 'uuid';
 import bcrypt from 'bcrypt';
 import { logAudit } from '@/lib/auditLog';
 import { getServerSession } from 'next-auth/next';
-import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 import { getRedisClient, CACHE_KEY_USERS } from '@/lib/redis';
 
 
@@ -25,7 +24,7 @@ const createUserSchema = z.object({
 });
 
 export async function GET(request: NextRequest) {
-  const session = await getServerSession(authOptions);
+  const session = await getServerSession();
   if (!session?.user?.id) {
     return NextResponse.json({ message: "Unauthorized: User session required." }, { status: 401 });
   }
@@ -109,7 +108,7 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  const session = await getServerSession(authOptions);
+  const session = await getServerSession();
   if (session?.user?.role !== 'Admin') {
     await logAudit('WARN', `Forbidden attempt to create user by ${session?.user?.email || 'Unknown'} (ID: ${session?.user?.id || 'N/A'}). Required role: Admin.`, 'API:Users:Create', session.user.id);
     return NextResponse.json({ message: "Forbidden: You must be an Admin to create users." }, { status: 403 });

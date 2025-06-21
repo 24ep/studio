@@ -3,7 +3,6 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { z } from 'zod';
 import { logAudit } from '@/lib/auditLog';
 import { getServerSession } from 'next-auth/next';
-import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 import type { PositionBulkActionPayload } from '@/lib/types';
 import { getRedisClient, CACHE_KEY_POSITIONS } from '@/lib/redis';
 
@@ -14,7 +13,7 @@ const bulkPositionActionSchema = z.object({
 });
 
 export async function POST(request: NextRequest) {
-  const session = await getServerSession(authOptions);
+  const session = await getServerSession();
   const actingUserId = session?.user?.id;
   const actingUserName = session?.user?.name || session?.user?.email || 'System (Bulk Action)';
 

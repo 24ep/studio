@@ -347,7 +347,7 @@ export default function DataModelsPage() {
                     <DialogHeader>
                         <DialogTitle>{editingField ? 'Edit Field' : 'Add New Field'}</DialogTitle>
                         <DialogDescription>
-                            Define the properties for this field. The "Name (Key)" is used programmatically and cannot be changed after creation.
+                            Define the properties for this field. The &quot;Name (Key)&quot; is used programmatically and cannot be changed after creation.
                         </DialogDescription>
                     </DialogHeader>
                     <form onSubmit={(e) => handleSubmit(e, 'Candidate')} className="space-y-4">

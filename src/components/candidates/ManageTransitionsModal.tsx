@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect } from 'react';
@@ -169,7 +168,7 @@ export function ManageTransitionsModal({
           <DialogHeader>
             <DialogTitle>Manage Transitions for {candidate.name}</DialogTitle>
             <DialogDescription>
-              Track and update the candidate's progress. Current status: <strong>{candidate.status}</strong>
+              Track and update the candidate&apos;s progress. Current status: <strong>{candidate.status}</strong>
             </DialogDescription>
           </DialogHeader>
 
@@ -177,7 +176,7 @@ export function ManageTransitionsModal({
             <div className="md:border-r md:pr-6">
               <h3 className="text-lg font-semibold mb-1 text-foreground">Add New Transition</h3>
               <p className="text-xs text-muted-foreground mb-3">
-                Select a new stage and add notes. This will update the candidate's current status and record the change.
+                Select a new stage and add notes. This will update the candidate&#39;s current status and record the change.
               </p>
               <form onSubmit={form.handleSubmit(handleAddTransitionSubmit)} className="space-y-4">
                 <div>
@@ -332,7 +331,7 @@ export function ManageTransitionsModal({
           <AlertDialogHeader>
             <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
             <AlertDialogDescription>
-              This action cannot be undone. Deleting this transition for stage "<strong>{transitionToDelete?.stage}</strong>" (dated {transitionToDelete ? format(parseISO(transitionToDelete.date), "MMM d, yyyy") : 'N/A'}) will permanently remove it.
+              This action cannot be undone. Deleting this transition for stage &quot;<strong>{transitionToDelete?.stage}</strong>&quot; (dated {transitionToDelete ? format(parseISO(transitionToDelete.date), "MMM d, yyyy") : 'N/A'}) will permanently remove it.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

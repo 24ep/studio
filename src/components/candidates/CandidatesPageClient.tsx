@@ -1,4 +1,3 @@
-
 // src/components/candidates/CandidatesPageClient.tsx
 "use client";
 
@@ -178,7 +177,6 @@ export function CandidatesPageClient({
 
         if (response.status === 401) {
             setAuthError(true);
-            signIn(undefined, { callbackUrl: pathname });
             return;
         }
         if (response.status === 403) {
@@ -202,7 +200,7 @@ export function CandidatesPageClient({
     } finally {
       setIsLoading(false);
     }
-  }, [sessionStatus, pathname, signIn]);
+  }, [sessionStatus]);
 
   const handleAiSearch = async (aiQuery: string) => {
     if (!aiQuery.trim()) {
@@ -247,15 +245,14 @@ export function CandidatesPageClient({
         fetchFilteredCandidatesOnClient(filters);
       }
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sessionStatus, serverAuthError, serverPermissionError, fetchRecruiters]);
+  }, [sessionStatus, serverAuthError, serverPermissionError, fetchRecruiters, fetchFilteredCandidatesOnClient, filters, initialCandidates.length, initialFetchError]);
 
 
-   useEffect(() => {
+  useEffect(() => {
     if (sessionStatus === 'unauthenticated' && !serverAuthError && !serverPermissionError) {
-        signIn(undefined, { callbackUrl: pathname });
+        return;
     }
-  }, [sessionStatus, pathname, serverAuthError, serverPermissionError, signIn]);
+  }, [sessionStatus, serverAuthError, serverPermissionError]);
 
   useEffect(() => { setAllCandidates(initialCandidates || []); }, [initialCandidates]);
   useEffect(() => { setAvailablePositions(initialAvailablePositions || []); }, [initialAvailablePositions]);
@@ -578,7 +575,7 @@ export function CandidatesPageClient({
         <ServerCrash className="w-16 h-16 text-destructive mb-4" />
         <h2 className="text-2xl font-semibold text-foreground mb-2">Error Loading Candidates</h2>
         <p className="text-muted-foreground mb-4 max-w-md">{fetchError}</p>
-        {isMissingTableError && ( <div className="mb-6 p-4 border border-destructive bg-destructive/10 rounded-md text-sm"> <p className="font-semibold">It looks like a required database table (e.g., "Candidate", "Position", "User", "RecruitmentStage") is missing or not accessible.</p> <p className="mt-1">This usually means the database initialization script (`pg-init-scripts/init-db.sql`) did not run correctly when the PostgreSQL Docker container started.</p> <p className="mt-2">Please refer to the troubleshooting steps in the `README.md` for guidance on how to resolve this, typically involving a clean Docker volume reset.</p> </div> )}
+        {isMissingTableError && ( <div className="mb-6 p-4 border border-destructive bg-destructive/10 rounded-md text-sm"> <p className="font-semibold">It looks like a required database table (e.g., &quot;Candidate&quot;, &quot;Position&quot;, &quot;User&quot;, &quot;RecruitmentStage&quot;) is missing or not accessible.</p> <p className="mt-1">This usually means the database initialization script (`pg-init-scripts/init-db.sql`) did not run correctly when the PostgreSQL Docker container started.</p> <p className="mt-2">Please refer to the troubleshooting steps in the `README.md` for guidance on how to resolve this, typically involving a clean Docker volume reset.</p> </div> )}
         <Button onClick={() => fetchFilteredCandidatesOnClient(filters)} className="btn-primary-gradient">Try Again</Button>
       </div>
     );

@@ -1,7 +1,6 @@
 // src/app/my-tasks/page.tsx (Server Component)
 import { getServerSession } from 'next-auth/next';
-import { authOptions } from '@/app/api/auth/[...nextauth]/route';
-import pool from '@/lib/db';
+import { pool } from '@/lib/db';
 import { MyTasksPageClient } from '@/components/tasks/MyTasksPageClient';
 import type { Candidate, Position, RecruitmentStage, UserProfile } from '@/lib/types';
 import { fetchAllPositionsDb, fetchAllRecruitmentStagesDb } from '@/lib/apiUtils';
@@ -114,7 +113,7 @@ async function getInitialTaskBoardData(session: any): Promise<{
 }
 
 export default async function MyTasksPageServer() {
-  const session = await getServerSession(authOptions);
+  const session = await getServerSession();
 
   if (!session?.user) {
     return <MyTasksPageClient

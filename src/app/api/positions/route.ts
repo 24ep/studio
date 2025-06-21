@@ -2,12 +2,11 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { z } from 'zod';
 import { logAudit } from '@/lib/auditLog';
 import { getServerSession } from 'next-auth/next';
-import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 import { v4 as uuidv4 } from 'uuid';
 import { getRedisClient, CACHE_KEY_POSITIONS } from '@/lib/redis';
 
 export async function GET(request: NextRequest) {
-  const session = await getServerSession(authOptions);
+  const session = await getServerSession();
   // Publicly viewable, but actions (POST, PUT, DELETE) might be restricted
   // if (!session?.user) {
   //   return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
@@ -73,7 +72,7 @@ const createPositionSchema = z.object({
 });
 
 export async function POST(request: NextRequest) {
-  const session = await getServerSession(authOptions);
+  const session = await getServerSession();
   const actingUserId = session?.user?.id || null;
   const actingUserName = session?.user?.name || session?.user?.email || 'System (API Create)';
 

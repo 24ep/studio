@@ -1,4 +1,3 @@
-
 import { withAuth, type NextRequestWithAuth } from "next-auth/middleware"
 import { NextResponse } from 'next/server'
 
@@ -57,11 +56,10 @@ export const config = {
      * - _next/image (image optimization files)
      * - favicon.ico (favicon file)
      * - auth/signin (the sign-in page itself)
-     * - setup-guidance (the database setup guidance page)
      * - Any other public static assets (e.g., images in /public might be matched by 'images/')
      * This regex aims to protect all application routes by default.
      */
-    '/((?!api|_next/static|_next/image|favicon.ico|auth/signin|setup-guidance|images).*)',
+    '/((?!api|_next/static|_next/image|favicon.ico|auth/signin|images).*)',
     // Explicitly list top-level routes if the regex proves too complex or misses cases.
     // e.g., "/", "/candidates/:path*", "/positions/:path*", "/my-tasks/:path*", "/settings/:path*"
     // However, the negative lookahead should cover these.

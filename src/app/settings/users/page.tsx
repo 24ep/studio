@@ -1,4 +1,3 @@
-
 // src/app/settings/users/page.tsx
 "use client";
 
@@ -92,7 +91,7 @@ export default function ManageUsersPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [sessionStatus, pathname, signIn]); 
+  }, [sessionStatus, pathname]); 
 
   useEffect(() => {
     if (sessionStatus === 'unauthenticated') {
@@ -106,7 +105,7 @@ export default function ManageUsersPage() {
         }
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sessionStatus, session, pathname, signIn, nameFilter, emailFilter, roleFilter]); 
+  }, [sessionStatus, session, pathname]); 
 
   const handleApplyFilters = () => {
     fetchUsers({name: nameFilter, email: emailFilter, role: roleFilter});
@@ -351,7 +350,7 @@ export default function ManageUsersPage() {
             <div className="mt-6 p-3 bg-secondary/30 border border-secondary/50 rounded-md flex items-start text-sm text-secondary-foreground">
             <ShieldAlert className="h-5 w-5 mr-2 mt-0.5 text-primary shrink-0" />
             <div>
-              <span className="font-semibold">Security Note:</span> User creation, deletion, and modification of roles/permissions are restricted to 'Admin' users. User passwords are securely hashed using bcrypt.
+              <span className="font-semibold">Security Note:</span> User creation, deletion, and modification of roles/permissions are restricted to &apos;Admin&apos; users. User passwords are securely hashed using bcrypt.
             </div>
           </div>
         </CardContent>
