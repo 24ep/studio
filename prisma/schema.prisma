@@ -174,7 +174,6 @@ model User {
   
   recruitedCandidates TransitionRecord[] @relation("UserTransitions")
   uploadedResumes     ResumeHistory[]    @relation("UserResumeUploads")
-  assignedCandidates  Candidate[]        @relation("RecruitedCandidates")
 }
 
 model VerificationToken {
