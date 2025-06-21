@@ -32,7 +32,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
     if (!candidate) {
       return NextResponse.json({ message: "Candidate not found" }, { status: 404 });
     }
-    
+
     return NextResponse.json(candidate, { status: 200 });
   } catch (error) {
     console.error(`Failed to fetch candidate ${params.id}:`, error);
@@ -73,7 +73,7 @@ const experienceEntrySchemaPartial = z.object({
     period: z.string().optional().nullable(),
     duration: z.string().optional().nullable(),
     is_current_position: z.union([z.boolean(), z.string()]).optional(),
-    postition_level: z.string().optional().nullable(), // Updated to allow null
+    position_level: z.string().optional().nullable(), // Updated to allow null
 }).deepPartial();
 
 const skillEntrySchemaPartial = z.object({

@@ -11,48 +11,90 @@ datasource db {
 }
 
 model Candidate {
-  id                String   @id @default(cuid())
+  id                String    @id @default(uuid())
   name              String
-  email             String   @unique
+  email             String    @unique
   phone             String?
-  positionId        String
-  position          Position @relation(fields: [positionId], references: [id], onDelete: Restrict) // Restrict delete if candidates exist
-  fitScore          Int
-  status            String // Corresponds to CandidateStatus type in lib/types.ts
-  applicationDate   DateTime @default(now())
-  lastUpdateDate    DateTime @updatedAt // Will be managed by Prisma
-  parsedData        Json // Storing as JSON, maps to ParsedResumeData type
-  resumePath        String? // Path/key of the resume file in MinIO
+  avatarUrl         String?
+  dataAiHint        String?
+
+  positionId        String?
+  position          Position? @relation(fields: [positionId], references: [id], onDelete: SetNull)
   
+  recruiterId       String?
+  recruiter         User?     @relation("RecruitedCandidates", fields: [recruiterId], references: [id], onDelete: SetNull)
+
+  fitScore          Int?
+  status            String
+  applicationDate   DateTime  @default(now())
+  
+  parsedData        Json?     
+  resumePath        String?
+  custom_attributes Json?     @default("{}")
+
   transitionHistory TransitionRecord[]
+  resumeHistory     ResumeHistory[]
+  jobMatches        CandidateJobMatch[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
 
 model Position {
-  id                String      @id @default(cuid())
-  title             String
-  department        String?
-  description       String?
-  isOpen            Boolean     @default(true)
-  candidates        Candidate[]
-  customAttributes  Json?       @default("{}") // To store values for custom fields
+  id               String      @id @default(uuid())
+  title            String
+  department       String?
+  description      String?
+  isOpen           Boolean     @default(true)
+  position_level   String?     
+  custom_attributes Json?       @default("{}")
+
+  candidates       Candidate[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
 
 model TransitionRecord {
-  id          String   @id @default(cuid())
+  id          String   @id @default(uuid())
   date        DateTime
-  stage       String // Corresponds to CandidateStatus type in lib/types.ts
+  stage       String
   notes       String?
   
   candidateId String
-  candidate   Candidate @relation(fields: [candidateId], references: [id], onDelete: Cascade) // Cascade delete if candidate is deleted
+  candidate   Candidate @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+
+  positionId  String? 
+
+  actingUserId String?
+  actingUser   User?   @relation("UserTransitions", fields: [actingUserId], references: [id], onDelete: SetNull)
 
   createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model ResumeHistory {
+  id                String   @id @default(uuid())
+  candidateId       String
+  candidate         Candidate @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  filePath          String
+  originalFileName  String
+  uploadedAt        DateTime @default(now())
+  uploadedByUserId  String?
+  uploadedByUser    User?    @relation("UserResumeUploads", fields: [uploadedByUserId], references: [id], onDelete: SetNull)
+}
+
+model CandidateJobMatch {
+  id            String   @id @default(uuid())
+  candidateId   String
+  candidate     Candidate @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  job_id        String?
+  job_title     String?
+  fit_score     Int
+  match_reasons String[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 enum ModelName {
@@ -126,8 +168,13 @@ model User {
   emailVerified DateTime?
   image         String?
   role          String?   @default("Recruiter")
+  
   accounts      Account[]
   sessions      Session[]
+  
+  recruitedCandidates TransitionRecord[] @relation("UserTransitions")
+  uploadedResumes     ResumeHistory[]    @relation("UserResumeUploads")
+  assignedCandidates  Candidate[]        @relation("RecruitedCandidates")
 }
 
 model VerificationToken {
