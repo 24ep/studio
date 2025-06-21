@@ -1,6 +1,6 @@
 -- =====================================================
 -- CandiTrack Database Initialization Script
--- v2.0 - Aligned with Prisma Schema for Custom Fields
+-- v2.1 - Added NextAuth Adapter Tables
 -- =====================================================
 
 \set ON_ERROR_STOP on
@@ -15,11 +15,17 @@ $$ LANGUAGE plpgsql;
 
 SELECT log_init('Starting CandiTrack database initialization...');
 
--- Drop old custom field tables if they exist to avoid conflicts
-SELECT log_init('Dropping legacy custom field tables...');
+-- Drop old tables if they exist to avoid conflicts
+SELECT log_init('Dropping legacy tables...');
 DROP TABLE IF EXISTS custom_field_values;
 DROP TABLE IF EXISTS custom_field_definitions;
+-- Drop auth tables if they exist to recreate them with correct schema
+DROP TABLE IF EXISTS "sessions";
+DROP TABLE IF EXISTS "accounts";
+DROP TABLE IF EXISTS "verification_tokens";
+DROP TABLE IF EXISTS "users";
 SELECT log_init('Legacy tables dropped.');
+
 
 -- Create custom types/enums
 SELECT log_init('Creating application enums...');
@@ -59,24 +65,65 @@ END $$;
 -- Create tables
 SELECT log_init('Creating tables...');
 
--- Users table (remains unchanged, assuming integer IDs for now)
-CREATE TABLE IF NOT EXISTS users (
-    id SERIAL PRIMARY KEY,
-    email VARCHAR(255) UNIQUE NOT NULL,
-    name VARCHAR(255) NOT NULL,
-    role user_role DEFAULT 'recruiter',
-    avatar_url TEXT,
-    is_active BOOLEAN DEFAULT true,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+-- Users table (Updated for NextAuth adapter)
+CREATE TABLE "users" (
+    "id" TEXT NOT NULL,
+    "name" TEXT,
+    "email" TEXT,
+    "emailVerified" TIMESTAMP(3),
+    "image" TEXT,
+    "role" TEXT DEFAULT 'Recruiter',
+    CONSTRAINT "users_pkey" PRIMARY KEY ("id")
 );
+CREATE UNIQUE INDEX IF NOT EXISTS "users_email_key" ON "users"("email");
 
--- Positions table (Updated to match Prisma Schema)
-CREATE TABLE IF NOT EXISTS positions (
-    id TEXT PRIMARY KEY,
-    title TEXT NOT NULL,
-    department TEXT,
-    description TEXT,
+-- Accounts table (for NextAuth)
+CREATE TABLE "accounts" (
+    "id" TEXT NOT NULL,
+    "userId" TEXT NOT NULL,
+    "type" TEXT NOT NULL,
+    "provider" TEXT NOT NULL,
+    "providerAccountId" TEXT NOT NULL,
+    "refresh_token" TEXT,
+    "access_token" TEXT,
+    "expires_at" INTEGER,
+    "token_type" TEXT,
+    "scope" TEXT,
+    "id_token" TEXT,
+    "session_state" TEXT,
+    CONSTRAINT "accounts_pkey" PRIMARY KEY ("id")
+);
+CREATE UNIQUE INDEX IF NOT EXISTS "accounts_provider_providerAccountId_key" ON "accounts"("provider", "providerAccountId");
+ALTER TABLE "accounts" ADD CONSTRAINT "accounts_userId_fkey" FOREIGN KEY ("userId") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- Sessions table (for NextAuth)
+CREATE TABLE "sessions" (
+    "id" TEXT NOT NULL,
+    "sessionToken" TEXT NOT NULL,
+    "userId" TEXT NOT NULL,
+    "expires" TIMESTAMP(3) NOT NULL,
+    CONSTRAINT "sessions_pkey" PRIMARY KEY ("id")
+);
+CREATE UNIQUE INDEX IF NOT EXISTS "sessions_sessionToken_key" ON "sessions"("sessionToken");
+ALTER TABLE "sessions" ADD CONSTRAINT "sessions_userId_fkey" FOREIGN KEY ("userId") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- Verification Tokens table (for NextAuth email provider)
+CREATE TABLE "verification_tokens" (
+    "identifier" TEXT NOT NULL,
+    "token" TEXT NOT NULL,
+    "expires" TIMESTAMP(3) NOT NULL
+);
+CREATE UNIQUE INDEX IF NOT EXISTS "verification_tokens_token_key" ON "verification_tokens"("token");
+CREATE UNIQUE INDEX IF NOT EXISTS "verification_tokens_identifier_token_key" ON "verification_tokens"("identifier", "token");
+
+SELECT log_init('Created NextAuth tables.');
+
+-- Positions table
+CREATE TABLE IF NOT EXISTS "positions" (
+    "id" TEXT PRIMARY KEY,
+    "title" TEXT NOT NULL,
+    "department" TEXT,
+    "description" TEXT,
     "isOpen" BOOLEAN NOT NULL DEFAULT true,
     "customAttributes" JSONB,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -84,15 +131,15 @@ CREATE TABLE IF NOT EXISTS positions (
 );
 SELECT log_init('Created/Verified positions table.');
 
--- Candidates table (Updated to match Prisma Schema)
-CREATE TABLE IF NOT EXISTS candidates (
-    id TEXT PRIMARY KEY,
-    name TEXT NOT NULL,
-    email TEXT UNIQUE NOT NULL,
-    phone TEXT,
-    "positionId" TEXT NOT NULL REFERENCES positions(id) ON DELETE RESTRICT,
-    "fitScore" INTEGER NOT NULL,
-    status TEXT NOT NULL,
+-- Candidates table
+CREATE TABLE IF NOT EXISTS "candidates" (
+    "id" TEXT PRIMARY KEY,
+    "name" TEXT NOT NULL,
+    "email" TEXT UNIQUE NOT NULL,
+    "phone" TEXT,
+    "positionId" TEXT NOT NULL REFERENCES "positions"("id") ON DELETE RESTRICT,
+    "fitScore" INTEGER,
+    "status" TEXT,
     "applicationDate" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "lastUpdateDate" TIMESTAMP(3) NOT NULL,
     "parsedData" JSONB,
@@ -104,12 +151,12 @@ CREATE TABLE IF NOT EXISTS candidates (
 SELECT log_init('Created/Verified candidates table.');
 
 -- Transition Records table (Updated to match Prisma Schema)
-CREATE TABLE IF NOT EXISTS transition_records (
-    id TEXT PRIMARY KEY,
-    date TIMESTAMP(3) NOT NULL,
-    stage TEXT NOT NULL,
-    notes TEXT,
-    "candidateId" TEXT NOT NULL REFERENCES candidates(id) ON DELETE CASCADE,
+CREATE TABLE IF NOT EXISTS "transition_records" (
+    "id" TEXT PRIMARY KEY,
+    "date" TIMESTAMP(3) NOT NULL,
+    "stage" TEXT NOT NULL,
+    "notes" TEXT,
+    "candidateId" TEXT NOT NULL REFERENCES "candidates"("id") ON DELETE CASCADE,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 SELECT log_init('Created/Verified transition_records table.');

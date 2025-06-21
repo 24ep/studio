@@ -7,7 +7,10 @@ FROM node:20-alpine AS builder
 WORKDIR /app
 
 # Install dependencies to leverage Docker cache
+# Copy package.json and the prisma schema first.
+# This allows Prisma's install scripts to run correctly.
 COPY package.json ./
+COPY prisma ./prisma
 RUN npm install
 
 # Copy the rest of the application source code
