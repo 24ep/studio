@@ -1,7 +1,7 @@
 // src/app/api/candidates/[id]/avatar/route.ts
 import { NextResponse, type NextRequest } from 'next/server';
-import { minioClient, MINIO_BUCKET_NAME } from '../../../../lib/minio'; // Assuming a common bucket for now
-import prisma from '../../../../lib/prisma';
+import { minioClient, MINIO_BUCKET_NAME } from '@/lib/minio';
+import prisma from '@/lib/prisma';
 import { logAudit } from '@/lib/auditLog';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/app/api/auth/[...nextauth]/route';
