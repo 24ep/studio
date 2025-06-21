@@ -66,16 +66,17 @@ END $$;
 SELECT log_init('Creating tables...');
 
 -- Users table (Updated for NextAuth adapter)
-CREATE TABLE "users" (
+CREATE TABLE "User" (
     "id" TEXT NOT NULL,
     "name" TEXT,
     "email" TEXT,
     "emailVerified" TIMESTAMP(3),
     "image" TEXT,
     "role" TEXT DEFAULT 'Recruiter',
-    CONSTRAINT "users_pkey" PRIMARY KEY ("id")
+    "password" TEXT, -- Added for CredentialsProvider
+    CONSTRAINT "User_pkey" PRIMARY KEY ("id")
 );
-CREATE UNIQUE INDEX IF NOT EXISTS "users_email_key" ON "users"("email");
+CREATE UNIQUE INDEX IF NOT EXISTS "User_email_key" ON "User"("email");
 
 -- Accounts table (for NextAuth)
 CREATE TABLE "accounts" (
@@ -94,7 +95,7 @@ CREATE TABLE "accounts" (
     CONSTRAINT "accounts_pkey" PRIMARY KEY ("id")
 );
 CREATE UNIQUE INDEX IF NOT EXISTS "accounts_provider_providerAccountId_key" ON "accounts"("provider", "providerAccountId");
-ALTER TABLE "accounts" ADD CONSTRAINT "accounts_userId_fkey" FOREIGN KEY ("userId") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "accounts" ADD CONSTRAINT "accounts_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- Sessions table (for NextAuth)
 CREATE TABLE "sessions" (
@@ -105,7 +106,7 @@ CREATE TABLE "sessions" (
     CONSTRAINT "sessions_pkey" PRIMARY KEY ("id")
 );
 CREATE UNIQUE INDEX IF NOT EXISTS "sessions_sessionToken_key" ON "sessions"("sessionToken");
-ALTER TABLE "sessions" ADD CONSTRAINT "sessions_userId_fkey" FOREIGN KEY ("userId") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "sessions" ADD CONSTRAINT "sessions_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- Verification Tokens table (for NextAuth email provider)
 CREATE TABLE "verification_tokens" (
@@ -254,6 +255,13 @@ BEGIN
 END $$;
 SELECT log_init('Applied updated_at triggers.');
 
+-- Insert a default admin user with a password
+-- Default password is 'changeme'
+INSERT INTO "User" (id, name, email, "emailVerified", image, role, password) VALUES
+('a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11', 'Admin User', 'admin@example.com', NOW(), '', 'Admin', '$2a$10$3zR1yZ.F.XfTjL3zQ2xY9u/6l.3b6k9E/d9.z6w5b5o.z7X/m.w1m')
+ON CONFLICT (email) DO NOTHING;
+
+SELECT log_init('Inserted default admin user.');
 
 SELECT log_init('CandiTrack database initialization script finished successfully.');
 -- =====================================================
