@@ -43,14 +43,13 @@ FROM node:20
 WORKDIR /app
 
 # Don't run production as root
-RUN addgroup -g 1001 -S nodejs
-RUN adduser -S nextjs -u 1001
-USER nextjs
+# The node:20 image comes with a non-root 'node' user, which we will use.
+USER node
 
 # Copy only the necessary production artifacts from the builder stage
-COPY --from=builder /app/node_modules ./node_modules
-COPY --from=builder /app/.next ./.next
-COPY --from=builder /app/package.json ./package.json
+COPY --chown=node:node --from=builder /app/node_modules ./node_modules
+COPY --chown=node:node --from=builder /app/.next ./.next
+COPY --chown=node:node --from=builder /app/package.json ./package.json
 
 # Expose the port the app will run on
 EXPOSE 3000
