@@ -2,6 +2,9 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import type { LogEntry, LogLevel } from '@/lib/types';
 import { z } from 'zod';
+import { pool } from '../../../lib/db';
+import { getServerSession } from 'next-auth/next';
+import { authOptions } from '../auth/[...nextauth]/route';
 
 const logLevelValues: [LogLevel, ...LogLevel[]] = ['INFO', 'WARN', 'ERROR', 'DEBUG', 'AUDIT'];
 
@@ -56,92 +59,56 @@ export async function POST(request: NextRequest) {
 }
 
 export async function GET(request: NextRequest) {
-  try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.id) {
+        return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+    }
+
     const { searchParams } = new URL(request.url);
-    const limitParam = searchParams.get('limit');
-    const offsetParam = searchParams.get('offset');
-    const levelFilter = searchParams.get('level');
-    const searchQuery = searchParams.get('search');
-    const startDateFilter = searchParams.get('startDate');
-    const endDateFilter = searchParams.get('endDate');
-    const actingUserIdFilter = searchParams.get('actingUserId');
-
-
-    let limit = 50; 
-    if (limitParam) {
-      const parsedLimit = parseInt(limitParam, 10);
-      if (!isNaN(parsedLimit) && parsedLimit > 0 && parsedLimit <= 200) { 
-        limit = parsedLimit;
-      }
-    }
-
-    let offset = 0; 
-    if (offsetParam) {
-      const parsedOffset = parseInt(offsetParam, 10);
-      if (!isNaN(parsedOffset) && parsedOffset >= 0) {
-        offset = parsedOffset;
-      }
-    }
+    const page = parseInt(searchParams.get('page') || '1', 10);
+    const limit = parseInt(searchParams.get('limit') || '10', 10);
+    const offset = (page - 1) * limit;
+    const level = searchParams.get('level') as LogLevel | null;
     
-    const queryParams: any[] = [];
-    const conditions = [];
+    let whereClauses: string[] = [];
+    let queryParams: any[] = [];
     let paramIndex = 1;
-    
-    if (levelFilter && logLevelValues.includes(levelFilter as LogLevel)) {
-        conditions.push(`level = $${paramIndex++}`);
-        queryParams.push(levelFilter);
+
+    if (level) {
+        whereClauses.push(`level = $${paramIndex++}`);
+        queryParams.push(level);
     }
 
-    if (searchQuery) {
-      // Search in message or source
-      conditions.push(`(message ILIKE $${paramIndex++} OR source ILIKE $${paramIndex++})`);
-      queryParams.push(`%${searchQuery}%`, `%${searchQuery}%`);
-    }
+    const whereString = whereClauses.length > 0 ? `WHERE ${whereClauses.join(' AND ')}` : '';
 
-    if (startDateFilter) {
-        conditions.push(`timestamp >= $${paramIndex++}`);
-        queryParams.push(new Date(startDateFilter).toISOString());
-    }
-    if (endDateFilter) {
-        const endDate = new Date(endDateFilter);
-        endDate.setHours(23, 59, 59, 999); // Include the whole end day
-        conditions.push(`timestamp <= $${paramIndex++}`);
-        queryParams.push(endDate.toISOString());
-    }
-    if (actingUserIdFilter) {
-        conditions.push(`"actingUserId" = $${paramIndex++}`);
-        queryParams.push(actingUserIdFilter);
-    }
-    
-    let query = `
-      SELECT l.id, l.timestamp, l.level, l.message, l.source, l."actingUserId", u.name as "actingUserName", l.details, l."createdAt" 
-      FROM "LogEntry" l
-      LEFT JOIN "User" u ON l."actingUserId" = u.id
-    `;
-    if (conditions.length > 0) {
-      query += ' WHERE ' + conditions.join(' AND ');
-    }
-    query += ` ORDER BY l.timestamp DESC LIMIT $${paramIndex++} OFFSET $${paramIndex++};`;
-    queryParams.push(limit, offset);
-    
-    const result = await pool.query(query, queryParams);
-    
-    let countQuery = `SELECT COUNT(*) FROM "LogEntry"`;
-    if (conditions.length > 0) {
-      // Adjust paramIndex for count query as limit/offset are not included
-      const countConditionsParams = queryParams.slice(0, paramIndex - 3); // Exclude limit, offset, and the $ for limit
-      const countConditionsSql = conditions.map((cond, i) => cond.replace(/\$(\d+)/g, (match, n) => `$${parseInt(n, 10)}`)).join(' AND ');
-      countQuery += ' WHERE ' + countConditionsSql;
-       const countResult = await pool.query(countQuery, countConditionsParams);
-       return NextResponse.json({ logs: result.rows, total: parseInt(countResult.rows[0].count, 10) }, { status: 200 });
-    } else {
-        const countResult = await pool.query(countQuery);
-        return NextResponse.json({ logs: result.rows, total: parseInt(countResult.rows[0].count, 10) }, { status: 200 });
-    }
+    const client = await pool.connect();
+    try {
+        const logsQuery = `
+            SELECT * FROM "AuditLog"
+            ${whereString}
+            ORDER BY timestamp DESC
+            LIMIT $${paramIndex} OFFSET $${paramIndex + 1};
+        `;
+        const logsResult = await client.query(logsQuery, [...queryParams, limit, offset]);
+        
+        const totalQuery = `SELECT COUNT(*) FROM "AuditLog" ${whereString};`;
+        const totalResult = await client.query(totalQuery, queryParams.slice(0, paramIndex - 1));
+        const total = parseInt(totalResult.rows[0].count, 10);
 
+        return NextResponse.json({
+            data: logsResult.rows,
+            pagination: {
+                page,
+                limit,
+                total,
+                totalPages: Math.ceil(total / limit),
+            },
+        });
 
-  } catch (error) {
-    console.error("Failed to fetch log entries:", error);
-    return NextResponse.json({ message: "Error fetching log entries", error: (error as Error).message }, { status: 500 });
-  }
+    } catch (error: any) {
+        console.error('Failed to fetch logs:', error);
+        return NextResponse.json({ message: 'Error fetching logs', error: error.message }, { status: 500 });
+    } finally {
+        client.release();
+    }
 }

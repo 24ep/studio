@@ -6,6 +6,7 @@ import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 import type { UserGroup, PlatformModuleId } from '@/lib/types';
 import { PLATFORM_MODULES } from '@/lib/types';
 import { logAudit } from '@/lib/auditLog';
+import { pool } from '../../../../../lib/db';
 
 const platformModuleIds = PLATFORM_MODULES.map(m => m.id) as [PlatformModuleId, ...PlatformModuleId[]];
 
@@ -14,6 +15,12 @@ const updateGroupFormSchema = z.object({
   description: z.string().optional().nullable(),
   permissions: z.array(z.enum(platformModuleIds)).optional(),
   is_default: z.boolean().optional(),
+});
+
+const userGroupUpdateSchema = z.object({
+  name: z.string().min(1, 'Group name cannot be empty.').optional(),
+  description: z.string().optional().nullable(),
+  permissions: z.array(z.string()).optional(),
 });
 
 export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
@@ -56,141 +63,82 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
   }
 }
 
-
 export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {
-  const session = await getServerSession(authOptions);
-  if (session?.user?.role !== 'Admin' && !session?.user?.modulePermissions?.includes('USER_GROUPS_MANAGE')) {
-     await logAudit('WARN', `Forbidden attempt to update user group (ID: ${params.id}) by user ${session?.user?.email || 'Unknown'}.`, 'API:UserGroups:Update', session?.user?.id, { targetGroupId: params.id });
-    return NextResponse.json({ message: "Forbidden: Insufficient permissions" }, { status: 403 });
-  }
+    const session = await getServerSession(authOptions);
+    const actingUserId = session?.user?.id;
+    if (!actingUserId) return new NextResponse('Unauthorized', { status: 401 });
 
-  let body;
-  try {
-    body = await request.json();
-  } catch (error) {
-    return NextResponse.json({ message: "Error parsing request body", error: (error as Error).message }, { status: 400 });
-  }
-
-  const validationResult = updateGroupFormSchema.safeParse(body);
-  if (!validationResult.success) {
-    return NextResponse.json(
-      { message: "Invalid input", errors: validationResult.error.flatten().fieldErrors },
-      { status: 400 }
-    );
-  }
-  
-  const { name, description, permissions, is_default } = validationResult.data;
-  const client = await pool.connect();
-
-  try {
-    await client.query('BEGIN');
-    const existingGroupResult = await client.query('SELECT * FROM "UserGroup" WHERE id = $1 FOR UPDATE', [params.id]);
-    if (existingGroupResult.rows.length === 0) {
-      await client.query('ROLLBACK');
-      return NextResponse.json({ message: "User group (role) not found" }, { status: 404 });
-    }
-    const existingGroup: UserGroup = existingGroupResult.rows[0];
-
-    if (existingGroup.is_system_role && name !== existingGroup.name) {
-        await client.query('ROLLBACK');
-        return NextResponse.json({ message: "System role names cannot be changed." }, { status: 400 });
+    let body;
+    try {
+        body = await request.json();
+    } catch (e) {
+        return NextResponse.json({ message: 'Invalid JSON body' }, { status: 400 });
     }
     
-    if (name !== existingGroup.name) {
-        const nameCheck = await client.query('SELECT id FROM "UserGroup" WHERE name = $1 AND id != $2', [name, params.id]);
-        if (nameCheck.rows.length > 0) {
-            await client.query('ROLLBACK');
-            return NextResponse.json({ message: "Another user group (role) with this name already exists." }, { status: 409 });
+    const validation = userGroupUpdateSchema.safeParse(body);
+    if (!validation.success) {
+        return NextResponse.json({ message: 'Invalid input', errors: validation.error.flatten().fieldErrors }, { status: 400 });
+    }
+    
+    const fields = validation.data;
+    if (Object.keys(fields).length === 0) {
+      return NextResponse.json({ message: "No fields to update provided." }, { status: 400 });
+    }
+
+    const setClauses = Object.keys(fields).map((key, index) => `"${key}" = $${index + 1}`);
+    const queryParams = Object.values(fields);
+    
+    const client = await pool.connect();
+    try {
+        const query = `
+            UPDATE "UserGroup" 
+            SET ${setClauses.join(', ')}, "updatedAt" = NOW() 
+            WHERE id = $${queryParams.length + 1}
+            RETURNING *;
+        `;
+        const result = await client.query(query, [...queryParams, params.id]);
+
+        if (result.rowCount === 0) {
+            return NextResponse.json({ message: "User group not found" }, { status: 404 });
         }
+        
+        await logAudit('AUDIT', `User group '${result.rows[0].name}' updated.`, 'API:UserGroups:Update', actingUserId, { groupId: params.id, changes: fields });
+        return NextResponse.json(result.rows[0]);
+    } catch (error: any) {
+        console.error(`Failed to update user group ${params.id}:`, error);
+        await logAudit('ERROR', `Failed to update user group (ID: ${params.id}). Error: ${error.message}`, 'API:UserGroups:Update', actingUserId, { groupId: params.id, input: body });
+        return NextResponse.json({ message: "Error updating user group", error: error.message }, { status: 500 });
+    } finally {
+        client.release();
     }
-
-    if (is_default === true) {
-      await client.query('UPDATE "UserGroup" SET "is_default" = FALSE WHERE "is_default" = TRUE AND id != $1', [params.id]);
-    }
-
-    const updateQuery = `
-      UPDATE "UserGroup" 
-      SET name = $1, description = $2, "is_default" = $3, "updatedAt" = NOW() 
-      WHERE id = $4 
-      RETURNING *;
-    `;
-    const groupUpdateResult = await client.query(updateQuery, [name, description, is_default, params.id]);
-    
-    if (permissions !== undefined) {
-        await client.query('DELETE FROM "UserGroup_PlatformModule" WHERE group_id = $1', [params.id]);
-        if (permissions.length > 0) {
-            const permissionInsertPromises = permissions.map(permissionId =>
-                client.query('INSERT INTO "UserGroup_PlatformModule" (group_id, permission_id) VALUES ($1, $2)', [params.id, permissionId])
-            );
-            await Promise.all(permissionInsertPromises);
-        }
-    }
-
-    await client.query('COMMIT');
-    
-    const finalGroupResult = await pool.query('SELECT id, name, description, "is_default", "is_system_role", "createdAt", "updatedAt", (SELECT COUNT(*)::int FROM "User_UserGroup" WHERE "groupId" = $1) as user_count FROM "UserGroup" WHERE id = $1', [params.id]);
-    const finalGroup: UserGroup = finalGroupResult.rows[0];
-    const finalPermissionsResult = await pool.query('SELECT permission_id FROM "UserGroup_PlatformModule" WHERE group_id = $1', [params.id]);
-    finalGroup.permissions = finalPermissionsResult.rows.map(row => row.permission_id as PlatformModuleId);
-    
-    await logAudit('AUDIT', `User group (Role) '${finalGroup.name}' (ID: ${finalGroup.id}) updated by ${session.user.name}.`, 'API:UserGroups:Update', session.user.id, { targetGroupId: finalGroup.id, changes: Object.keys(validationResult.data) });
-    return NextResponse.json(finalGroup, { status: 200 });
-
-  } catch (error: any) {
-    await client.query('ROLLBACK');
-    console.error(`Failed to update user group (role) ${params.id}:`, error);
-     if (error.code === '23505' && error.constraint === 'UserGroup_name_key') {
-      await logAudit('WARN', `Attempt to update user group (role) resulting in duplicate name for ID ${params.id} by ${session.user.name}.`, 'API:UserGroups:Update', session.user.id, { targetGroupId: params.id, attemptedName: name });
-      return NextResponse.json({ message: "A user group (role) with this name already exists." }, { status: 409 });
-    }
-    await logAudit('ERROR', `Failed to update user group (role) (ID: ${params.id}) by ${session.user.name}. Error: ${error.message}`, 'API:UserGroups:Update', session.user.id, { targetGroupId: params.id });
-    return NextResponse.json({ message: "Error updating user group (role)", error: error.message }, { status: 500 });
-  } finally {
-    client.release();
-  }
 }
 
 export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
-  const session = await getServerSession(authOptions);
-  if (session?.user?.role !== 'Admin' && !session?.user?.modulePermissions?.includes('USER_GROUPS_MANAGE')) {
-    await logAudit('WARN', `Forbidden attempt to delete user group (ID: ${params.id}) by user ${session?.user?.email || 'Unknown'}.`, 'API:UserGroups:Delete', session?.user?.id, { targetGroupId: params.id });
-    return NextResponse.json({ message: "Forbidden: Insufficient permissions" }, { status: 403 });
-  }
-
-  const client = await pool.connect();
-  try {
-    await client.query('BEGIN');
-    const groupResult = await client.query('SELECT name, is_system_role FROM "UserGroup" WHERE id = $1 FOR UPDATE', [params.id]);
-    if (groupResult.rows.length === 0) {
-      await client.query('ROLLBACK');
-      return NextResponse.json({ message: "User group (role) not found" }, { status: 404 });
-    }
-    const { name: groupName, is_system_role: isSystemRole } = groupResult.rows[0];
-
-    if (isSystemRole) {
-      await client.query('ROLLBACK');
-      return NextResponse.json({ message: "System roles cannot be deleted." }, { status: 400 });
-    }
-
-    await client.query('DELETE FROM "User_UserGroup" WHERE "groupId" = $1', [params.id]);
-    await client.query('DELETE FROM "UserGroup_PlatformModule" WHERE group_id = $1', [params.id]);
-    const deleteResult = await client.query('DELETE FROM "UserGroup" WHERE id = $1', [params.id]);
+    const session = await getServerSession(authOptions);
+    const actingUserId = session?.user?.id;
+    if (!actingUserId) return new NextResponse('Unauthorized', { status: 401 });
     
-    if (deleteResult.rowCount === 0) {
+    const client = await pool.connect();
+    try {
+        await client.query('BEGIN');
+        await client.query('DELETE FROM "User_UserGroup" WHERE "groupId" = $1', [params.id]);
+        const result = await client.query('DELETE FROM "UserGroup" WHERE id = $1 RETURNING name', [params.id]);
+        
+        if (result.rowCount === 0) {
+            await client.query('ROLLBACK');
+            return NextResponse.json({ message: "User group not found" }, { status: 404 });
+        }
+        
+        await client.query('COMMIT');
+        
+        await logAudit('AUDIT', `User group '${result.rows[0].name}' deleted.`, 'API:UserGroups:Delete', actingUserId, { groupId: params.id });
+        return new NextResponse(null, { status: 204 });
+    } catch (error: any) {
         await client.query('ROLLBACK');
-        return NextResponse.json({ message: "User group (role) not found or already deleted during transaction" }, { status: 404 });
+        console.error(`Failed to delete user group ${params.id}:`, error);
+        await logAudit('ERROR', `Failed to delete user group (ID: ${params.id}). Error: ${error.message}`, 'API:UserGroups:Delete', actingUserId, { groupId: params.id });
+        return NextResponse.json({ message: "Error deleting user group", error: error.message }, { status: 500 });
+    } finally {
+        client.release();
     }
-    await client.query('COMMIT');
-
-    await logAudit('AUDIT', `User group (Role) '${groupName}' (ID: ${params.id}) deleted by ${session.user.name}.`, 'API:UserGroups:Delete', session.user.id, { targetGroupId: params.id, deletedGroupName: groupName });
-    return NextResponse.json({ message: "User group (role) deleted successfully" }, { status: 200 });
-
-  } catch (error: any) {
-    await client.query('ROLLBACK');
-    console.error(`Failed to delete user group (role) ${params.id}:`, error);
-    await logAudit('ERROR', `Failed to delete user group (role) (ID: ${params.id}) by ${session.user.name}. Error: ${error.message}`, 'API:UserGroups:Delete', session.user.id, { targetGroupId: params.id });
-    return NextResponse.json({ message: "Error deleting user group (role)", error: error.message }, { status: 500 });
-  } finally {
-    client.release();
-  }
 }

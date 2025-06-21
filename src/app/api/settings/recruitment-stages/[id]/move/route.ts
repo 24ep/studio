@@ -1,117 +1,75 @@
 // src/app/api/settings/recruitment-stages/[id]/move/route.ts
 import { NextResponse, type NextRequest } from 'next/server';
+import { pool } from '../../../../../../lib/db';
 import { z } from 'zod';
-import { getServerSession } from 'next-auth/next';
-import { authOptions } from '@/app/api/auth/[...nextauth]/route';
-import type { RecruitmentStage } from '@/lib/types';
 import { logAudit } from '@/lib/auditLog';
-import { getRedisClient, CACHE_KEY_RECRUITMENT_STAGES } from '@/lib/redis';
-
+import { getServerSession } from 'next-auth/next';
+import { authOptions } from '../../../../auth/[...nextauth]/route';
 
 const moveStageSchema = z.object({
-  direction: z.enum(['up', 'down']),
+  newOrder: z.number().int().min(0, "Order must be a non-negative integer."),
 });
 
 export async function POST(request: NextRequest, { params }: { params: { id: string } }) {
-  const session = await getServerSession(authOptions);
-  if (session?.user?.role !== 'Admin' && !session?.user?.modulePermissions?.includes('RECRUITMENT_STAGES_MANAGE')) {
-    await logAudit('WARN', `Forbidden attempt to move recruitment stage (ID: ${params.id}) by user ${session?.user?.email || 'Unknown'}.`, 'API:RecruitmentStages:Move', session?.user?.id, { targetStageId: params.id });
-    return NextResponse.json({ message: "Forbidden: Insufficient permissions" }, { status: 403 });
-  }
-
-  let body;
-  try {
-    body = await request.json();
-  } catch (error) {
-    return NextResponse.json({ message: "Error parsing request body", error: (error as Error).message }, { status: 400 });
-  }
-
-  const validationResult = moveStageSchema.safeParse(body);
-  if (!validationResult.success) {
-    return NextResponse.json(
-      { message: "Invalid input", errors: validationResult.error.flatten().fieldErrors },
-      { status: 400 }
-    );
-  }
-
-  const { direction } = validationResult.data;
-  const stageIdToMove = params.id;
-  const client = await pool.connect();
-  const redisClient = await getRedisClient();
-
-  try {
-    await client.query('BEGIN');
-
-    const allStagesResult = await client.query<RecruitmentStage>(
-      'SELECT * FROM "RecruitmentStage" ORDER BY sort_order ASC, "createdAt" ASC FOR UPDATE'
-    );
-    const sortedStages = allStagesResult.rows;
-
-    const currentIndex = sortedStages.findIndex(s => s.id === stageIdToMove);
-    if (currentIndex === -1) {
-      await client.query('ROLLBACK');
-      return NextResponse.json({ message: "Stage to move not found" }, { status: 404 });
+    const session = await getServerSession(authOptions);
+    const actingUserId = session?.user?.id;
+    if (!actingUserId) {
+        return NextResponse.json({ message: "Forbidden" }, { status: 403 });
     }
 
-    const stageToMove = sortedStages[currentIndex];
-    let otherStage: RecruitmentStage | null = null;
+    let body;
+    try {
+        body = await request.json();
+    } catch (e) {
+        return NextResponse.json({ message: "Invalid JSON body" }, { status: 400 });
+    }
 
-    if (direction === 'up') {
-      if (currentIndex === 0) {
+    const validation = moveStageSchema.safeParse(body);
+    if (!validation.success) {
+        return NextResponse.json({ message: 'Invalid input', errors: validation.error.flatten().fieldErrors }, { status: 400 });
+    }
+
+    const { newOrder } = validation.data;
+    const stageId = params.id;
+    const client = await pool.connect();
+
+    try {
+        await client.query('BEGIN');
+
+        const stageToMoveResult = await client.query('SELECT "order", "positionId" FROM "RecruitmentStage" WHERE id = $1', [stageId]);
+        if (stageToMoveResult.rows.length === 0) {
+            await client.query('ROLLBACK');
+            return NextResponse.json({ message: "Stage not found" }, { status: 404 });
+        }
+        const { order: oldOrder, positionId } = stageToMoveResult.rows[0];
+
+        if (newOrder > oldOrder) {
+            // Moving down
+            await client.query(
+                'UPDATE "RecruitmentStage" SET "order" = "order" - 1 WHERE "order" > $1 AND "order" <= $2 AND "positionId" = $3',
+                [oldOrder, newOrder, positionId]
+            );
+        } else {
+            // Moving up
+            await client.query(
+                'UPDATE "RecruitmentStage" SET "order" = "order" + 1 WHERE "order" >= $1 AND "order" < $2 AND "positionId" = $3',
+                [newOrder, oldOrder, positionId]
+            );
+        }
+
+        await client.query('UPDATE "RecruitmentStage" SET "order" = $1 WHERE id = $2', [newOrder, stageId]);
+
+        await client.query('COMMIT');
+
+        await logAudit('AUDIT', `Recruitment stage (ID: ${stageId}) moved from order ${oldOrder} to ${newOrder}.`, 'API:RecruitmentStages:Move', actingUserId, { stageId, oldOrder, newOrder });
+        return NextResponse.json({ message: 'Stage order updated successfully' }, { status: 200 });
+
+    } catch (error: any) {
         await client.query('ROLLBACK');
-        return NextResponse.json({ message: "Stage is already at the top" }, { status: 400 });
-      }
-      otherStage = sortedStages[currentIndex - 1];
-    } else { // direction === 'down'
-      if (currentIndex === sortedStages.length - 1) {
-        await client.query('ROLLBACK');
-        return NextResponse.json({ message: "Stage is already at the bottom" }, { status: 400 });
-      }
-      otherStage = sortedStages[currentIndex + 1];
+        console.error(`Failed to move stage ${stageId}:`, error);
+        await logAudit('ERROR', `Failed to move stage (ID: ${stageId}). Error: ${error.message}`, 'API:RecruitmentStages:Move', actingUserId, { stageId });
+        return NextResponse.json({ message: 'Error updating stage order', error: error.message }, { status: 500 });
+    } finally {
+        client.release();
     }
-
-    if (!otherStage) {
-      await client.query('ROLLBACK');
-      return NextResponse.json({ message: "Cannot determine stage to swap with" }, { status: 500 });
-    }
-
-    const tempSortOrder = stageToMove.sort_order;
-    const newSortOrderForStageToMove = otherStage.sort_order;
-    const newSortOrderForOtherStage = tempSortOrder;
-
-    await client.query(
-      'UPDATE "RecruitmentStage" SET sort_order = $1, "updatedAt" = NOW() WHERE id = $2',
-      [newSortOrderForStageToMove, stageToMove.id]
-    );
-    await client.query(
-      'UPDATE "RecruitmentStage" SET sort_order = $1, "updatedAt" = NOW() WHERE id = $2',
-      [newSortOrderForOtherStage, otherStage.id]
-    );
-
-    await client.query('COMMIT');
-
-    if (redisClient) {
-      try {
-        await redisClient.del(CACHE_KEY_RECRUITMENT_STAGES);
-        console.log('Recruitment stages cache invalidated due to MOVE.');
-      } catch (cacheError) {
-        console.error('Error invalidating recruitment stages cache (MOVE):', cacheError);
-      }
-    }
-
-    await logAudit('AUDIT', `Recruitment stage '${stageToMove.name}' (ID: ${stageToMove.id}) moved ${direction} by ${session.user.name}.`, 'API:RecruitmentStages:Move', session.user.id, { targetStageId: stageToMove.id, direction });
-    
-    const finalStagesResult = await client.query<RecruitmentStage>(
-        'SELECT * FROM "RecruitmentStage" ORDER BY sort_order ASC, "createdAt" ASC'
-    );
-    return NextResponse.json(finalStagesResult.rows, { status: 200 });
-
-  } catch (error: any) {
-    await client.query('ROLLBACK');
-    console.error(`Failed to move recruitment stage ${stageIdToMove}:`, error);
-    await logAudit('ERROR', `Failed to move recruitment stage (ID: ${stageIdToMove}) by ${session.user.name}. Error: ${error.message}`, 'API:RecruitmentStages:Move', session.user.id, { targetStageId: stageIdToMove, direction });
-    return NextResponse.json({ message: "Error moving recruitment stage", error: error.message }, { status: 500 });
-  } finally {
-    client.release();
-  }
 }

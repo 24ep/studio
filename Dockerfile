@@ -26,14 +26,10 @@ ENV AZURE_AD_TENANT_ID=$AZURE_AD_TENANT_ID
 # Copy package.json and the prisma schema first.
 # This allows Prisma's install scripts to run correctly.
 COPY package.json ./
-COPY prisma ./prisma
 RUN npm install
 
 # Copy the rest of the application source code
 COPY . .
-
-# Generate Prisma Client (requires schema.prisma to be present)
-RUN npx prisma generate
 
 # Build the Next.js application for production
 RUN npm run build
