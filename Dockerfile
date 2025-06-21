@@ -6,6 +6,22 @@ FROM node:20-alpine AS builder
 # Set working directory
 WORKDIR /app
 
+# Declare build arguments
+ARG DATABASE_URL
+ARG NEXTAUTH_URL
+ARG NEXTAUTH_SECRET
+ARG AZURE_AD_CLIENT_ID
+ARG AZURE_AD_CLIENT_SECRET
+ARG AZURE_AD_TENANT_ID
+
+# Set them as environment variables
+ENV DATABASE_URL=$DATABASE_URL
+ENV NEXTAUTH_URL=$NEXTAUTH_URL
+ENV NEXTAUTH_SECRET=$NEXTAUTH_SECRET
+ENV AZURE_AD_CLIENT_ID=$AZURE_AD_CLIENT_ID
+ENV AZURE_AD_CLIENT_SECRET=$AZURE_AD_CLIENT_SECRET
+ENV AZURE_AD_TENANT_ID=$AZURE_AD_TENANT_ID
+
 # Install dependencies to leverage Docker cache
 # Copy package.json and the prisma schema first.
 # This allows Prisma's install scripts to run correctly.
