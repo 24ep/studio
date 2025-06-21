@@ -1,18 +1,17 @@
 // src/lib/db.ts
-import prisma from './prisma';
+import { Pool } from 'pg';
 
-export async function getSystemSetting(key: string): Promise<string | null> {
-  try {
-    const setting = await prisma.systemSetting.findUnique({
-      where: { key },
-    });
-    if (setting) {
-      return setting.value;
-    }
-    return null;
-  } catch (error) {
-    console.error(`Error fetching system setting for key "${key}":`, error);
-    return null; // Return null on error to avoid breaking flows, default to env var if calling code handles it
-  }
+if (!process.env.DATABASE_URL) {
+  throw new Error('FATAL: DATABASE_URL environment variable is not set.');
 }
 
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+});
+
+pool.on('error', (err, client) => {
+  console.error('Unexpected error on idle PostgreSQL client', err);
+  process.exit(-1);
+});
+
+export { pool };
