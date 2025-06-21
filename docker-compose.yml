@@ -7,14 +7,14 @@ services:
       dockerfile: Dockerfile
       args:
         DATABASE_URL: "postgresql://devuser:devpassword@postgres:5432/canditrack_db"
-        NEXTAUTH_URL: "http://localhost:9002"
+        NEXTAUTH_URL: "http://localhost:9846"
         NEXTAUTH_SECRET: "pMQcOKGO5zj/IDZxnu5ghHNLpmDc8+Ex+/qzieOM+zo="
         AZURE_AD_CLIENT_ID: "your_azure_ad_application_client_id"
         AZURE_AD_CLIENT_SECRET: "your_azure_ad_client_secret_value"
         AZURE_AD_TENANT_ID: "your_azure_ad_directory_tenant_id"
         GOOGLE_API_KEY: "AIzaSyDM4TTZmwef-A3TOB4KND_XVxtXtDvZlRs"
     ports:
-      - "9846:9002"
+      - "9846:3000"
     # For production deployments, you typically want the application code to be self-contained
     # within the Docker image. The volume mount `.:/app` is primarily for local development to
     # reflect code changes without rebuilding the image. It's commented out for production-like behavior.
@@ -39,7 +39,7 @@ services:
       MINIO_BUCKET_NAME: canditrack-resumes
       MINIO_USE_SSL: false
       REDIS_URL: redis://redis:6379
-      NEXTAUTH_URL: http://localhost:9002
+      NEXTAUTH_URL: http://localhost:9846
       NEXTAUTH_SECRET: pMQcOKGO5zj/IDZxnu5ghHNLpmDc8+Ex+/qzieOM+zo=
       AZURE_AD_CLIENT_ID: your_azure_ad_application_client_id
       AZURE_AD_CLIENT_SECRET: your_azure_ad_client_secret_value
