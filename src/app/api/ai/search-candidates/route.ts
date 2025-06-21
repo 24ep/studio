@@ -2,7 +2,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/app/api/auth/[...nextauth]/route';
-import pool from '@/lib/db';
+import prisma from '@/lib/prisma';
 import { logAudit } from '@/lib/auditLog';
 import { checkRateLimit } from '@/lib/redis';
 
@@ -236,131 +236,56 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Search query must be at least 2 characters long' }, { status: 400 });
     }
 
-    const client = await pool.connect();
-    
-    try {
-      // Build the base query
-      let sql = `
-        SELECT 
-          c.id,
-          c.name,
-          c.email,
-          c.phone,
-          c.current_stage,
-          c.fit_score,
-          c.application_date,
-          c.updated_at,
-          c.parsed_data,
-          p.id as position_id,
-          p.title as position_title,
-          p.department as position_department
-        FROM candidates c
-        LEFT JOIN positions p ON c.position_id = p.id
-        WHERE 1=1
-      `;
-      
-      const params: any[] = [];
-      let paramIndex = 1;
+    // Prisma query construction
+    const where: any = {
+      OR: [
+        { name: { contains: query, mode: 'insensitive' } },
+        { email: { contains: query, mode: 'insensitive' } },
+        { parsedData: { path: ['personal_info', 'location'], string_contains: query } },
+        { parsedData: { path: ['skills'], string_contains: query } },
+        { parsedData: { path: ['experience'], string_contains: query } },
+      ],
+    };
 
-      // Apply filters
-      if (filters?.positionIds?.length) {
-        sql += ` AND c.position_id = ANY($${paramIndex++})`;
-        params.push(filters.positionIds);
+    if (filters) {
+      if (filters.positionIds && filters.positionIds.length > 0) {
+        where.positionId = { in: filters.positionIds };
       }
-
-      if (filters?.statuses?.length) {
-        sql += ` AND c.current_stage = ANY($${paramIndex++})`;
-        params.push(filters.statuses);
+      if (filters.statuses && filters.statuses.length > 0) {
+        where.status = { in: filters.statuses };
       }
-
-      if (filters?.minFitScore !== undefined) {
-        sql += ` AND c.fit_score >= $${paramIndex++}`;
-        params.push(filters.minFitScore);
+      if (filters.minFitScore) {
+        where.fitScore = { gte: filters.minFitScore };
       }
-
-      if (filters?.maxFitScore !== undefined) {
-        sql += ` AND c.fit_score <= $${paramIndex++}`;
-        params.push(filters.maxFitScore);
+      if (filters.maxFitScore) {
+        where.fitScore = { ...where.fitScore, lte: filters.maxFitScore };
       }
-
-      if (filters?.dateRange?.start) {
-        sql += ` AND c.application_date >= $${paramIndex++}`;
-        params.push(filters.dateRange.start);
+      if (filters.dateRange?.start) {
+        where.applicationDate = { gte: new Date(filters.dateRange.start) };
       }
-
-      if (filters?.dateRange?.end) {
-        sql += ` AND c.application_date <= $${paramIndex++}`;
-        params.push(filters.dateRange.end);
+      if (filters.dateRange?.end) {
+        where.applicationDate = { ...where.applicationDate, lte: new Date(filters.dateRange.end) };
       }
-
-      sql += ` ORDER BY c.updated_at DESC LIMIT $${paramIndex++}`;
-      params.push(limit * 2); // Get more candidates for AI processing
-
-      const result = await client.query(sql, params);
-      const candidates = result.rows.map(row => ({
-        ...row,
-        position: row.position_id ? {
-          id: row.position_id,
-          title: row.position_title,
-          department: row.position_department,
-        } : null,
-        parsedData: row.parsed_data ? JSON.parse(row.parsed_data) : null,
-      }));
-
-      // Perform AI-powered search
-      const searchResults = await performAISearch(query, candidates, searchType);
-
-      // Log the search
-      await logAudit('INFO', `AI search performed: "${query}"`, 'AI:Search', session.user.id, {
-        query,
-        searchType,
-        resultsCount: searchResults.length,
-        totalCandidates: candidates.length,
-      });
-
-      // Create collaboration event
-      const { publishCollaborationEvent } = await import('@/lib/redis');
-      await publishCollaborationEvent({
-        type: 'candidate_update',
-        userId: session.user.id,
-        userName: session.user.name || 'Unknown',
-        entityId: 'search',
-        entityType: 'candidate_search',
-        data: {
-          query,
-          searchType,
-          resultsCount: searchResults.length,
-        },
-      });
-
-      return NextResponse.json({
-        results: searchResults.slice(0, limit),
-        totalFound: searchResults.length,
-        searchQuery: query,
-        searchType,
-        reasoning: `Found ${searchResults.length} candidates matching "${query}" using ${searchType} search`,
-        rateLimit: {
-          remaining: rateLimit.remaining,
-          resetTime: rateLimit.resetTime,
-        },
-      });
-
-    } finally {
-      client.release();
     }
 
-  } catch (error) {
-    console.error('AI search error:', error);
-    
-    await logAudit('ERROR', `AI search failed: ${(error as Error).message}`, 'AI:Search', session.user.id, {
-      query: body.query,
-      error: (error as Error).message,
+    const candidates = await prisma.candidate.findMany({
+      where,
+      include: {
+        position: true,
+      },
+      take: limit * 2, // Fetch more to allow for AI filtering
     });
 
-    return NextResponse.json({ 
-      error: 'Failed to perform AI search',
-      details: (error as Error).message 
-    }, { status: 500 });
+    const aiResults = await performAISearch(query, candidates, searchType);
+
+    await logAudit('AUDIT', `User performed an AI search. Query: "${query}"`, 'AI Search', session.user.id, { query, filters, resultCount: aiResults.length });
+
+    return NextResponse.json(aiResults.slice(0, limit));
+
+  } catch (error) {
+    console.error('AI Search Error:', error);
+    await logAudit('ERROR', 'An error occurred during AI search.', 'AI Search', session.user.id, { error: (error as Error).message });
+    return NextResponse.json({ error: 'An internal error occurred during the search.' }, { status: 500 });
   }
 }
 
