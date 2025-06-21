@@ -23,35 +23,23 @@ services:
       - app_node_modules:/app/node_modules
       - app_next:/app/.next
     environment:
-      # --- NextAuth & Azure AD Configuration ---
-      AZURE_AD_CLIENT_ID: "${AZURE_AD_CLIENT_ID:-your_azure_ad_application_client_id}"
-      AZURE_AD_CLIENT_SECRET: "${AZURE_AD_CLIENT_SECRET:-your_azure_ad_client_secret_value}"
-      AZURE_AD_TENANT_ID: "${AZURE_AD_TENANT_ID:-your_azure_ad_directory_tenant_id}"
-      # IMPORTANT: NEXTAUTH_URL must be the publicly accessible URL of your application.
-      # For default Docker setup, if you access the app via http://localhost:9846 in your browser,
-      # then NEXTAUTH_URL should be http://localhost:9846.
-      # If running `npm run dev` directly (port 9002), it would be http://localhost:9002.
-      # Incorrect NEXTAUTH_URL leads to auth errors (e.g., CLIENT_FETCH_ERROR or redirect loops).
-      NEXTAUTH_URL: "${NEXTAUTH_URL:-http://localhost:9002}" # Default for Docker, update if different in .env.local
-      NEXTAUTH_SECRET: "${NEXTAUTH_SECRET:-super-secret-nextauth-key-replace-this}" # Generate with: openssl rand -base64 32
-
-      # --- Genkit Configuration ---
-      # GOOGLE_API_KEY: "${GOOGLE_API_KEY:-your_google_api_key}"
-
-      # --- Backend Service Connection Configuration ---
-      DATABASE_URL: "${DATABASE_URL:-postgresql://devuser:devpassword@postgres:5432/canditrack_db}"
-      MINIO_ENDPOINT: "${MINIO_ENDPOINT:-minio}" # Service name for Docker internal communication
-      MINIO_PORT: "${MINIO_PORT:-9000}"
-      MINIO_ACCESS_KEY: "${MINIO_ACCESS_KEY:-minioadmin}"
-      MINIO_SECRET_KEY: "${MINIO_SECRET_KEY:-minio_secret_password}"
-      MINIO_BUCKET_NAME: "${MINIO_BUCKET_NAME:-canditrack-resumes}"
-      MINIO_USE_SSL: "${MINIO_USE_SSL:-false}"
-      REDIS_URL: "${REDIS_URL:-redis://redis:6379}" # Service name for Docker internal communication
-      N8N_RESUME_WEBHOOK_URL: "${N8N_RESUME_WEBHOOK_URL:-}" # Optional n8n webhook URL for candidate resumes
-      N8N_GENERIC_PDF_WEBHOOK_URL: "${N8N_GENERIC_PDF_WEBHOOK_URL:-}" # Optional n8n webhook URL for generic PDF uploads
-
-      # --- General Application Settings ---
-      NODE_ENV: production # Changed to production for Portainer deployment
+      DATABASE_URL: postgresql://devuser:devpassword@postgres:5432/canditrack_db
+      MINIO_ENDPOINT: minio
+      MINIO_PORT: 9000
+      MINIO_ACCESS_KEY: minioadmin
+      MINIO_SECRET_KEY: minio_secret_password
+      MINIO_BUCKET_NAME: canditrack-resumes
+      MINIO_USE_SSL: false
+      REDIS_URL: redis://redis:6379
+      NEXTAUTH_URL: http://localhost:9002
+      NEXTAUTH_SECRET: pMQcOKGO5zj/IDZxnu5ghHNLpmDc8+Ex+/qzieOM+zo=
+      AZURE_AD_CLIENT_ID: your_azure_ad_application_client_id
+      AZURE_AD_CLIENT_SECRET: your_azure_ad_client_secret_value
+      AZURE_AD_TENANT_ID: your_azure_ad_directory_tenant_id
+      N8N_RESUME_WEBHOOK_URL: https://n8n.bondarys.com/webhook/upload-cv
+      N8N_GENERIC_PDF_WEBHOOK_URL: https://n8n.bondarys.com/webhook/upload-cv
+      GOOGLE_API_KEY: AIzaSyDM4TTZmwef-A3TOB4KND_XVxtXtDvZlRs
+      NODE_ENV: development
     depends_on:
       postgres:
         condition: service_healthy
@@ -70,9 +58,9 @@ services:
     ports:
       - "5432:5432"
     environment:
-      POSTGRES_USER: "${POSTGRES_USER:-devuser}"
-      POSTGRES_PASSWORD: "${POSTGRES_PASSWORD:-devpassword}"
-      POSTGRES_DB: "${POSTGRES_DB:-canditrack_db}"
+      POSTGRES_USER: devuser
+      POSTGRES_PASSWORD: devpassword
+      POSTGRES_DB: canditrack_db
       # Ensure proper initialization
       POSTGRES_INITDB_ARGS: "--encoding=UTF-8 --lc-collate=C --lc-ctype=C"
     volumes:
@@ -83,7 +71,7 @@ services:
       - ./pg-init-scripts:/docker-entrypoint-initdb.d:ro
     restart: unless-stopped
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-devuser} -d ${POSTGRES_DB:-canditrack_db}"]
+      test: ["CMD-SHELL", "pg_isready -U devuser -d canditrack_db"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -95,8 +83,8 @@ services:
       - "9847:9000" # MinIO API port
       - "9848:9001" # MinIO Console port
     environment:
-      MINIO_ROOT_USER: "${MINIO_ROOT_USER:-minioadmin}"
-      MINIO_ROOT_PASSWORD: "${MINIO_ROOT_PASSWORD:-minio_secret_password}"
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minio_secret_password
     command: server /data --console-address ":9001"
     volumes:
       - minio_data:/data
