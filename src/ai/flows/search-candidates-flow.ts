@@ -10,7 +10,7 @@
 import { genkit as globalGenkit } from 'genkit';
 import { googleAI } from '@genkit-ai/googleai';
 import { z } from 'genkit';
-import { getSystemSetting } from '@/lib/db';
+import { pool } from '@/lib/db';
 import type { Candidate, CandidateDetails, EducationEntry, ExperienceEntry, SkillEntry, JobSuitableEntry, TransitionRecord } from '@/lib/types';
 import { ai as globalAi } from '@/ai/genkit';
 
@@ -136,6 +136,19 @@ function createCandidateSummary(candidate: Candidate): string {
 export async function searchCandidatesAIChat(input: SearchCandidatesInput): Promise<SearchCandidatesOutput> {
   let activeAi = globalAi;
 
+  async function getSystemSetting(key: string): Promise<string | null> {
+    const client = await pool.connect();
+    try {
+      const res = await client.query('SELECT value FROM "SystemSetting" WHERE key = $1', [key]);
+      if (res.rows.length > 0) {
+        return res.rows[0].value;
+      }
+      return null;
+    } finally {
+      client.release();
+    }
+  }
+
   const dbApiKey = await getSystemSetting('geminiApiKey');
 
   if (dbApiKey) {
@@ -226,7 +239,7 @@ If no candidate data is provided but a search query is present, indicate that no
       },
     });
 
-    const result = llmResponse.output();
+    const result = llmResponse.output;
     if (!result) {
       console.warn("AI Search: LLM response output is null or undefined.");
       return { matchedCandidateIds: [], aiReasoning: "The AI model returned an empty response." };
@@ -248,10 +261,10 @@ If no candidate data is provided but a search query is present, indicate that no
     };
 
   } catch (error) {
-    console.error("AI Search: An error occurred during AI generation:", error);
+    console.error('AI Search Flow Error:', error);
     return {
       matchedCandidateIds: [],
-      aiReasoning: `An error occurred while processing the AI search. Details: ${(error as Error).message}`
+      aiReasoning: `An unexpected error occurred during AI processing. Details: ${(error as Error).message}`
     };
   }
 }
