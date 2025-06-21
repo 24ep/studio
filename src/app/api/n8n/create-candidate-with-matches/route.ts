@@ -40,14 +40,18 @@ async function getWebhookMappings(): Promise<WebhookFieldMapping[]> {
         sourcePath: true,
       },
     });
-    return mappings.map((m: { targetPath: string; sourcePath: string | null }) => ({
-        id: '', 
+    // The select returns an array of objects with { targetPath: string, sourcePath: string | null }
+    // We need to map this to the WebhookFieldMapping type from lib/types.ts
+    return mappings.map((m: { targetPath: string, sourcePath: string | null }) => {
+      return {
+        id: '', // Not fetched and not needed by transformPayload
         targetPath: m.targetPath,
-        sourcePath: m.sourcePath!, 
-        notes: null,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-    }));
+        sourcePath: m.sourcePath!, // We selected for not null, so we can assert it's a string
+        notes: null, // Not fetched
+        createdAt: new Date().toISOString(), // Not fetched
+        updatedAt: new Date().toISOString(), // Not fetched
+      };
+    });
   } catch (error) {
     console.error("Error fetching webhook mappings:", error);
     await logAudit('ERROR', `Failed to fetch webhook mappings for n8n processing. Error: ${(error as Error).message}`, 'API:N8N:CreateCandidateWithMatches:MappingFetch');
@@ -107,12 +111,12 @@ const personalInfoSchema = z.object({
   location: z.string().optional().default(''),
   introduction_aboutme: z.string().optional().default(''),
   avatar_url: z.string().url().optional().nullable(),
-}).passthrough();
+});
 
 const contactInfoSchema = z.object({
   email: z.string().email("Invalid email address"),
   phone: z.string().optional().default(''),
-}).passthrough();
+});
 
 const educationEntrySchema = z.object({
   major: z.string().optional().default(''),
@@ -122,7 +126,7 @@ const educationEntrySchema = z.object({
   GPA: z.string().optional().default(''),
   university: z.string().optional().default(''),
   campus: z.string().optional().default(''),
-}).passthrough();
+});
 
 const experienceEntrySchema = z.object({
   company: z.string().optional().default(''),
@@ -158,19 +162,19 @@ const experienceEntrySchema = z.object({
     },
     z.string().optional().nullable()
   ),
-}).passthrough();
+});
 
 const skillEntrySchema = z.object({
   segment_skill: z.string().optional().default(''),
   skill: z.array(z.string()).optional().default([]),
-}).passthrough();
+});
 
 const jobSuitableEntrySchema = z.object({
   suitable_career: z.string().optional().default(''),
   suitable_job_position: z.string().optional().default(''),
   suitable_job_level: z.string().optional().default(''),
   suitable_salary_bath_month: z.string().optional().nullable(),
-}).passthrough();
+});
 
 const candidateDetailsSchemaForN8N = z.object({
   cv_language: z.string().optional().default(''),
@@ -180,21 +184,21 @@ const candidateDetailsSchemaForN8N = z.object({
   experience: z.array(experienceEntrySchema).optional().default([]),
   skills: z.array(skillEntrySchema).optional().default([]),
   job_suitable: z.array(jobSuitableEntrySchema).optional().default([]),
-}).passthrough();
+});
 
 const n8nJobMatchSchema = z.object({
   job_id: z.string().uuid().optional().nullable(),
   job_title: z.string().min(1, "Job title is required").optional(), // Made optional
   fit_score: z.number().min(0).max(100, "Fit score must be between 0 and 100"),
   match_reasons: z.array(z.string()).optional().default([]),
-}).passthrough();
+});
 
 const appliedJobSchema = z.object({
   job_id: z.string().uuid("Invalid Job ID in job_applied").optional().nullable(),
   job_title: z.string().optional().nullable(), 
   fit_score: z.number().min(0).max(100).optional().nullable(),
   justification: z.array(z.string()).optional().default([]),
-}).passthrough().optional().nullable();
+}).optional().nullable();
 
 const n8nWebhookPayloadSchema = z.object({
   candidate_info: candidateDetailsSchemaForN8N,
@@ -271,7 +275,7 @@ export async function POST(request: NextRequest) {
   const payload = validationResult.data;
 
   try {
-    const result = await prisma.$transaction(async (tx) => {
+    const result = await prisma.$transaction(async (tx: any) => {
       const { candidate_info, jobs, targetPositionId, targetPositionTitle, targetPositionDescription, targetPositionLevel, job_applied } = payload;
       let finalPositionId: string | null = targetPositionId || null;
       let finalPositionTitle: string | null = targetPositionTitle || null;
@@ -330,7 +334,7 @@ export async function POST(request: NextRequest) {
       }
 
       if (jobs && jobs.length > 0) {
-        await tx.jobMatch.createMany({
+        await tx.candidateJobMatch.createMany({
           data: jobs.map(job => ({
             id: uuidv4(),
             candidateId: newCandidateId,
