@@ -1,9 +1,11 @@
 // src/app/api/settings/recruitment-stages/[id]/move/route.ts
 import { NextResponse, type NextRequest } from 'next/server';
-import { pool } from '../../../../../../lib/db';
+import { getPool } from '../../../../../../lib/db';
 import { z } from 'zod';
 import { logAudit } from '@/lib/auditLog';
 import { getServerSession } from 'next-auth/next';
+
+export const dynamic = "force-dynamic";
 
 const moveStageSchema = z.object({
   newOrder: z.number().int().min(0, "Order must be a non-negative integer."),
@@ -36,7 +38,7 @@ export async function POST(request: NextRequest) {
 
     const { newOrder } = validation.data;
     const stageId = id;
-    const client = await pool.connect();
+    const client = await getPool().connect();
 
     try {
         await client.query('BEGIN');

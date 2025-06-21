@@ -1,6 +1,6 @@
 // src/app/api/settings/recruitment-stages/[id]/route.ts
 import { NextResponse, type NextRequest } from 'next/server';
-import { pool } from '../../../../../lib/db';
+import { getPool } from '../../../../../lib/db';
 import { z } from 'zod';
 import { getServerSession } from 'next-auth/next';
 import type { RecruitmentStage } from '@/lib/types';
@@ -18,12 +18,14 @@ function extractIdFromUrl(request: NextRequest): string | null {
   return match ? match[1] : null;
 }
 
+export const dynamic = "force-dynamic";
+
 export async function GET(request: NextRequest) {
     const id = extractIdFromUrl(request);
     const session = await getServerSession();
     if (!session?.user?.id) return new NextResponse('Unauthorized', { status: 401 });
 
-    const client = await pool.connect();
+    const client = await getPool().connect();
     try {
         const result = await client.query('SELECT * FROM "RecruitmentStage" WHERE id = $1', [id]);
         if (result.rows.length === 0) {
@@ -62,7 +64,7 @@ export async function PUT(request: NextRequest) {
 
     const { name, description, sortOrder } = validation.data;
     
-    const client = await pool.connect();
+    const client = await getPool().connect();
     try {
         const setClauses = Object.entries(validation.data).map(([key, value], index) => {
             const dbKey = key === 'sortOrder' ? '"sortOrder"' : key;
@@ -101,7 +103,7 @@ export async function DELETE(request: NextRequest) {
     const actingUserId = session?.user?.id;
     if (!actingUserId) return new NextResponse('Unauthorized', { status: 401 });
     
-    const client = await pool.connect();
+    const client = await getPool().connect();
     try {
         const result = await client.query('DELETE FROM "RecruitmentStage" WHERE id = $1 RETURNING name', [id]);
 

@@ -2,7 +2,9 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { z } from 'zod';
 import { logAudit } from '@/lib/auditLog';
 import { getRedisClient, CACHE_KEY_POSITIONS } from '@/lib/redis';
-import { pool } from '@/lib/db';
+import { getPool } from '@/lib/db';
+
+export const dynamic = "force-dynamic";
 
 function extractIdFromUrl(request: NextRequest): string | null {
   const match = request.nextUrl.pathname.match(/\/positions\/([^/]+)/);
@@ -13,7 +15,7 @@ export async function GET(request: NextRequest) {
   const id = extractIdFromUrl(request);
   try {
     const query = 'SELECT id, title, department, description, "isOpen", position_level, custom_attributes, "createdAt", "updatedAt" FROM "Position" WHERE id = $1';
-    const result = await pool.query(query, [id]);
+    const result = await getPool().query(query, [id]);
     if (result.rows.length === 0) {
       return NextResponse.json({ message: "Position not found" }, { status: 404 });
     }
@@ -60,7 +62,7 @@ export async function PUT(request: NextRequest) {
   
   try {
     const positionExistsQuery = 'SELECT id, custom_attributes FROM "Position" WHERE id = $1';
-    const positionResult = await pool.query(positionExistsQuery, [id]);
+    const positionResult = await getPool().query(positionExistsQuery, [id]);
     if (positionResult.rows.length === 0) {
       return NextResponse.json({ message: "Position not found" }, { status: 404 });
     }
@@ -83,7 +85,7 @@ export async function PUT(request: NextRequest) {
     });
 
     if (updateFields.length === 0) {
-        const currentPosition = await pool.query('SELECT * FROM "Position" WHERE id = $1', [id]);
+        const currentPosition = await getPool().query('SELECT * FROM "Position" WHERE id = $1', [id]);
         return NextResponse.json({ ...currentPosition.rows[0], custom_attributes: currentPosition.rows[0].custom_attributes || {} }, { status: 200 });
     }
 
@@ -91,7 +93,7 @@ export async function PUT(request: NextRequest) {
     updateValues.push(id);
 
     const updateQuery = `UPDATE "Position" SET ${updateFields.join(', ')} WHERE id = $${paramIndex} RETURNING *;`;
-    const updatedResult = await pool.query(updateQuery, updateValues);
+    const updatedResult = await getPool().query(updateQuery, updateValues);
     const updatedPosition = {
         ...updatedResult.rows[0],
         custom_attributes: updatedResult.rows[0].custom_attributes || {},
@@ -115,7 +117,7 @@ export async function DELETE(request: NextRequest) {
   const id = extractIdFromUrl(request);
   try {
     const positionQuery = 'SELECT p.id, p.title, COUNT(c.id) as "candidateCount" FROM "Position" p LEFT JOIN "Candidate" c ON p.id = c."positionId" WHERE p.id = $1 GROUP BY p.id, p.title;';
-    const positionResult = await pool.query(positionQuery, [id]);
+    const positionResult = await getPool().query(positionQuery, [id]);
 
     if (positionResult.rows.length === 0) {
       return NextResponse.json({ message: "Position not found" }, { status: 404 });
@@ -128,7 +130,7 @@ export async function DELETE(request: NextRequest) {
     }
     
     const deleteQuery = 'DELETE FROM "Position" WHERE id = $1';
-    await pool.query(deleteQuery, [id]);
+    await getPool().query(deleteQuery, [id]);
 
     const redisClient = await getRedisClient();
     if (redisClient) {

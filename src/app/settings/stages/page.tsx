@@ -126,6 +126,16 @@ export default function RecruitmentStagesPage() {
     }
   }, [sessionStatus, session, fetchStages, pathname]);
 
+  useEffect(() => {
+    if (fetchError) {
+      toast({
+        title: "Error",
+        description: fetchError,
+        variant: "destructive",
+      });
+    }
+  }, [fetchError, toast]);
+
   const handleOpenModal = (stage: RecruitmentStage | null = null) => {
     setEditingStage(stage);
     form.reset(stage ? { name: stage.name, description: stage.description || '', sort_order: stage.sort_order || 0 } : { name: '', description: '', sort_order: 0 });

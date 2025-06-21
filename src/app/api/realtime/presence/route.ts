@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 import { updateUserPresence, removeUserPresence, getOnlineUsers } from '@/lib/redis';
 
+export const dynamic = "force-dynamic";
+
 export async function POST(request: NextRequest) {
   const session = await getServerSession();
   

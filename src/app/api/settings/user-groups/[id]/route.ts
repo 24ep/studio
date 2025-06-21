@@ -5,7 +5,7 @@ import { getServerSession } from 'next-auth/next';
 import type { UserGroup, PlatformModuleId } from '@/lib/types';
 import { PLATFORM_MODULES } from '@/lib/types';
 import { logAudit } from '@/lib/auditLog';
-import { pool } from '../../../../../lib/db';
+import { getPool } from '../../../../../lib/db';
 
 const platformModuleIds = PLATFORM_MODULES.map(m => m.id) as [PlatformModuleId, ...PlatformModuleId[]];
 
@@ -27,6 +27,8 @@ function extractIdFromUrl(request: NextRequest): string | null {
   return match ? match[1] : null;
 }
 
+export const dynamic = "force-dynamic";
+
 export async function GET(request: NextRequest) {
   const id = extractIdFromUrl(request);
   const session = await getServerSession();
@@ -36,7 +38,7 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const groupResult = await pool.query(`
+    const groupResult = await getPool().query(`
       SELECT 
         ug.id, 
         ug.name, 
@@ -57,7 +59,7 @@ export async function GET(request: NextRequest) {
     }
     const group: UserGroup = groupResult.rows[0];
 
-    const permissionsResult = await pool.query('SELECT permission_id FROM "UserGroup_PlatformModule" WHERE group_id = $1', [id]);
+    const permissionsResult = await getPool().query('SELECT permission_id FROM "UserGroup_PlatformModule" WHERE group_id = $1', [id]);
     group.permissions = permissionsResult.rows.map(row => row.permission_id as PlatformModuleId);
 
     return NextResponse.json(group, { status: 200 });
@@ -94,7 +96,7 @@ export async function PUT(request: NextRequest) {
     const setClauses = Object.keys(fields).map((key, index) => `"${key}" = $${index + 1}`);
     const queryParams = Object.values(fields);
     
-    const client = await pool.connect();
+    const client = await getPool().connect();
     try {
         const query = `
             UPDATE "UserGroup" 
@@ -125,7 +127,7 @@ export async function DELETE(request: NextRequest) {
     const actingUserId = session?.user?.id;
     if (!actingUserId) return new NextResponse('Unauthorized', { status: 401 });
     
-    const client = await pool.connect();
+    const client = await getPool().connect();
     try {
         await client.query('BEGIN');
         await client.query('DELETE FROM "User_UserGroup" WHERE "groupId" = $1', [id]);

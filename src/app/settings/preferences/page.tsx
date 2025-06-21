@@ -237,6 +237,16 @@ export default function PreferencesSettingsPage() {
     }
   }, [sessionStatus, session, pathname, fetchSystemSettings]);
 
+  useEffect(() => {
+    if (fetchError) {
+      toast({
+        title: "Error",
+        description: fetchError,
+        variant: "destructive",
+      });
+    }
+  }, [fetchError, toast]);
+
   const handleLogoFileChange = (event: ChangeEvent<HTMLInputElement>, type: 'appLogo' | 'loginBg') => {
     const file = event.target.files?.[0];
     if (file) {

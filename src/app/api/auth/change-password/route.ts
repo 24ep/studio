@@ -3,7 +3,7 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 import { z } from 'zod';
 import bcrypt from 'bcrypt';
-import { pool } from '../../../../lib/db';
+import { getPool } from '../../../../lib/db';
 import { logAudit } from '@/lib/auditLog';
 
 const changePasswordSchema = z.object({
@@ -32,7 +32,7 @@ export async function POST(request: NextRequest) {
 
     const { currentPassword, newPassword } = validation.data;
     
-    const client = await pool.connect();
+    const client = await getPool().connect();
     try {
         const userResult = await client.query('SELECT password FROM "User" WHERE id = $1', [userId]);
         if (userResult.rowCount === 0) {

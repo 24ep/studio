@@ -5,7 +5,9 @@ import { getServerSession } from 'next-auth/next';
 import type { NotificationEventWithSettings, NotificationSetting } from '@/lib/types';
 import { logAudit } from '@/lib/auditLog';
 import { v4 as uuidv4 } from 'uuid';
-import { pool } from '@/lib/db';
+import { getPool } from '@/lib/db';
+
+export const dynamic = "force-dynamic";
 
 export async function GET(request: NextRequest) {
   const session = await getServerSession();
@@ -15,9 +17,9 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const eventsResult = await pool.query('SELECT id, event_key, label, description FROM "NotificationEvent" ORDER BY label ASC');
-    const channelsResult = await pool.query('SELECT id, channel_key, label FROM "NotificationChannel"');
-    const settingsResult = await pool.query('SELECT id, event_id, channel_id, is_enabled, configuration FROM "NotificationSetting"');
+    const eventsResult = await getPool().query('SELECT id, event_key, label, description FROM "NotificationEvent" ORDER BY label ASC');
+    const channelsResult = await getPool().query('SELECT id, channel_key, label FROM "NotificationChannel"');
+    const settingsResult = await getPool().query('SELECT id, event_id, channel_id, is_enabled, configuration FROM "NotificationSetting"');
 
     const eventsWithSettings: NotificationEventWithSettings[] = eventsResult.rows.map(event => {
       const channelsWithTheirSettings = channelsResult.rows.map(channel => {
@@ -83,7 +85,7 @@ export async function POST(request: NextRequest) {
   }
 
   const settingsToUpdate = validationResult.data;
-  const client = await pool.connect();
+  const client = await getPool().connect();
 
   try {
     await client.query('BEGIN');

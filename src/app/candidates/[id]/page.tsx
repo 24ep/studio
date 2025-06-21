@@ -1,4 +1,5 @@
 "use client";
+export const dynamic = "force-dynamic";
 
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
@@ -352,6 +353,16 @@ export default function CandidateDetailPage() {
       fetchPositionsAndStages();
     }
   }, [candidateId, sessionStatus, fetchCandidateDetails, fetchRecruiters, fetchPositionsAndStages]);
+
+  useEffect(() => {
+    if (fetchError) {
+      toast({
+        title: "Error",
+        description: fetchError,
+        variant: "destructive",
+      });
+    }
+  }, [fetchError, toast]);
 
   const handleUploadSuccess = (updatedCandidate: Candidate) => {
     setCandidate(updatedCandidate);

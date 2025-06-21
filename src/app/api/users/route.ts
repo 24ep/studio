@@ -8,8 +8,9 @@ import bcrypt from 'bcrypt';
 import { logAudit } from '@/lib/auditLog';
 import { getServerSession } from 'next-auth/next';
 import { getRedisClient, CACHE_KEY_USERS } from '@/lib/redis';
-import { pool } from '@/lib/db';
+import { getPool } from '@/lib/db';
 
+export const dynamic = "force-dynamic";
 
 const platformModuleIds = PLATFORM_MODULES.map(m => m.id) as [PlatformModuleId, ...PlatformModuleId[]];
 
@@ -89,7 +90,7 @@ export async function GET(request: NextRequest) {
   `;
 
   try {
-    const result = await pool.query(query, queryParams);
+    const result = await getPool().query(query, queryParams);
     const usersToReturn = result.rows.map(user => ({
       ...user,
       modulePermissions: user.modulePermissions || [],
@@ -146,13 +147,12 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ message: "Error processing user creation (hashing failed)." }, { status: 500 });
   }
   
-  const client = await pool.connect();
   try {
-    await client.query('BEGIN');
+    await getPool().query('BEGIN');
     const checkEmailQuery = 'SELECT id FROM "User" WHERE email = $1';
-    const emailCheckResult = await client.query(checkEmailQuery, [email]);
+    const emailCheckResult = await getPool().query(checkEmailQuery, [email]);
     if (emailCheckResult.rows.length > 0) {
-      await client.query('ROLLBACK');
+      await getPool().query('ROLLBACK');
       return NextResponse.json({ message: "User with this email already exists." }, { status: 409 });
     }
 
@@ -165,12 +165,12 @@ export async function POST(request: NextRequest) {
       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW(), NOW())
       RETURNING id, name, email, role, "avatarUrl", "dataAiHint", "modulePermissions", "createdAt", "updatedAt";
     `;
-    const userResult = await client.query(insertUserQuery, [newUserId, name, email, hashedPassword, role, defaultAvatarUrl, defaultDataAiHint, modulePermissions || []]);
+    const userResult = await getPool().query(insertUserQuery, [newUserId, name, email, hashedPassword, role, defaultAvatarUrl, defaultDataAiHint, modulePermissions || []]);
     let newUser = userResult.rows[0];
 
     if (groupIds && groupIds.length > 0) {
       const insertGroupPromises = groupIds.map(groupId => {
-        return client.query('INSERT INTO "User_UserGroup" ("userId", "groupId") VALUES ($1, $2)', [newUserId, groupId]);
+        return getPool().query('INSERT INTO "User_UserGroup" ("userId", "groupId") VALUES ($1, $2)', [newUserId, groupId]);
       });
       await Promise.all(insertGroupPromises);
     }
@@ -189,11 +189,11 @@ export async function POST(request: NextRequest) {
       WHERE u.id = $1
       GROUP BY u.id, u.name, u.email, u.role, u."avatarUrl", u."dataAiHint", u."modulePermissions", u."createdAt", u."updatedAt";
     `;
-    const finalUserResult = await client.query(finalUserQuery, [newUserId]);
+    const finalUserResult = await getPool().query(finalUserQuery, [newUserId]);
     newUser = { ...finalUserResult.rows[0], modulePermissions: finalUserResult.rows[0].modulePermissions || [], groups: finalUserResult.rows[0].groups || [] };
 
 
-    await client.query('COMMIT');
+    await getPool().query('COMMIT');
 
     const redisClient = await getRedisClient();
     if (redisClient) {
@@ -205,7 +205,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(newUser, { status: 201 });
 
   } catch (error: any) {
-    await client.query('ROLLBACK');
+    await getPool().query('ROLLBACK');
     console.error("Failed to create user:", error);
     const userNameForLog = session?.user?.name || session?.user?.email || 'Unknown User';
     await logAudit('ERROR', `Failed to create user ${email} by ${userNameForLog}. Error: ${error.message}. SQL State: ${error.code}, Constraint: ${error.constraint}`, 'API:Users:Create', session.user.id, {sqlState: error.code, constraint: error.constraint});
@@ -213,7 +213,5 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ message: "User with this email already exists." }, { status: 409 });
     }
     return NextResponse.json({ message: "Error creating user", error: error.message, code: error.code }, { status: 500 });
-  } finally {
-    client.release();
   }
 }

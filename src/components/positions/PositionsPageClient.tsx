@@ -155,8 +155,18 @@ export default function PositionsPageClient({
     if (sessionStatus === 'unauthenticated' && !serverAuthError) {
       signIn(undefined, { callbackUrl: pathname });
     }
+
+    // Show error as toast popup if present
+    if (initialFetchError) {
+      toast({
+        title: "Error",
+        description: initialFetchError,
+        variant: "destructive",
+      });
+    }
+
     // Initial data is loaded by server component, client only fetches on filter change or action
-  }, [initialPositions, initialAvailableDepartments, initialFetchError, serverAuthError, serverPermissionError, sessionStatus, pathname]);
+  }, [initialPositions, initialAvailableDepartments, initialFetchError, serverAuthError, serverPermissionError, sessionStatus, pathname, toast]);
 
 
   const handleFilterChange = (newFilters: PositionFilterValues) => {

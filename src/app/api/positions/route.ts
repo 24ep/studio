@@ -1,10 +1,12 @@
+export const dynamic = "force-dynamic";
+
 import { NextResponse, type NextRequest } from 'next/server';
 import { z } from 'zod';
 import { logAudit } from '@/lib/auditLog';
 import { getServerSession } from 'next-auth/next';
 import { v4 as uuidv4 } from 'uuid';
 import { getRedisClient, CACHE_KEY_POSITIONS } from '@/lib/redis';
-import { pool } from '@/lib/db';
+import { getPool } from '@/lib/db';
 
 export async function GET(request: NextRequest) {
   const session = await getServerSession();
@@ -50,7 +52,7 @@ export async function GET(request: NextRequest) {
     }
     query += ' ORDER BY "createdAt" DESC';
     
-    const result = await pool.query(query, queryParams);
+    const result = await getPool().query(query, queryParams);
     const positions = result.rows.map(row => ({
         ...row,
         custom_attributes: row.custom_attributes || {},
@@ -116,7 +118,7 @@ export async function POST(request: NextRequest) {
       validatedData.position_level || null,
       validatedData.custom_attributes || {},
     ];
-    const result = await pool.query(insertQuery, values);
+    const result = await getPool().query(insertQuery, values);
     const newPosition = {
         ...result.rows[0],
         custom_attributes: result.rows[0].custom_attributes || {},

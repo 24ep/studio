@@ -1,10 +1,11 @@
 // src/app/api/transitions/[id]/route.ts
 import { NextResponse, type NextRequest } from 'next/server';
-// import { pool } from '../../../../lib/db';
-import { pool } from '@/lib/db';
+import { getPool } from '@/lib/db';
 import { z } from 'zod';
 import { logAudit } from '@/lib/auditLog';
 import { getServerSession } from 'next-auth/next';
+
+export const dynamic = "force-dynamic";
 
 const updateTransitionSchema = z.object({
   notes: z.string().optional().nullable(),
@@ -35,7 +36,7 @@ export async function PUT(request: NextRequest) {
     return NextResponse.json({ message: "Invalid input", errors: validationResult.error.flatten().fieldErrors }, { status: 400 });
   }
   
-  const client = await pool.connect();
+  const client = await getPool().connect();
   try {
     const query = 'UPDATE "TransitionRecord" SET notes = $1, "updatedAt" = NOW() WHERE id = $2 RETURNING *';
     const result = await client.query(query, [validationResult.data.notes, id]);
@@ -63,7 +64,7 @@ export async function DELETE(request: NextRequest) {
     return NextResponse.json({ message: "Forbidden" }, { status: 403 });
   }
   
-  const client = await pool.connect();
+  const client = await getPool().connect();
   try {
     const result = await client.query('DELETE FROM "TransitionRecord" WHERE id = $1', [id]);
 

@@ -107,6 +107,16 @@ export default function ManageUsersPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sessionStatus, session, pathname]); 
 
+  useEffect(() => {
+    if (fetchError) {
+      toast({
+        title: "Error",
+        description: fetchError,
+        variant: "destructive",
+      });
+    }
+  }, [fetchError, toast]);
+
   const handleApplyFilters = () => {
     fetchUsers({name: nameFilter, email: emailFilter, role: roleFilter});
   };

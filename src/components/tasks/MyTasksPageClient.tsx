@@ -207,6 +207,16 @@ export function MyTasksPageClient({
       : candidates;
   }, [candidates, aiMatchedCandidateIds]);
 
+  useEffect(() => {
+    // Show error as toast popup if present
+    if (initialFetchError) {
+      toast({
+        title: "Error",
+        description: initialFetchError,
+        variant: "destructive",
+      });
+    }
+  }, [initialFetchError, toast]);
 
   if (sessionStatus === 'loading' || (isLoading && !fetchError && !authError && !permissionError && !pathname.startsWith('/auth/signin'))) {
     return (

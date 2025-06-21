@@ -3,13 +3,13 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 import type { UserProfile, Position } from '@/lib/types';
 import { logAudit } from '@/lib/auditLog';
-import { pool } from '../../../../lib/db';
+import { getPool } from '../../../../lib/db';
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 const ACCEPTED_FILE_TYPES = ['application/pdf'];
 
 async function getSystemSetting(key: string): Promise<string | null> {
-  const client = await pool.connect();
+  const client = await getPool().connect();
   try {
     const res = await client.query('SELECT value FROM "SystemSetting" WHERE key = $1', [key]);
     if (res.rows.length > 0) {
@@ -20,6 +20,8 @@ async function getSystemSetting(key: string): Promise<string | null> {
     client.release();
   }
 }
+
+export const dynamic = "force-dynamic";
 
 export async function POST(request: NextRequest) {
   const session = await getServerSession();
@@ -62,7 +64,7 @@ export async function POST(request: NextRequest) {
     let targetPositionTitle: string | null = null;
     if (targetPositionId) {
         try {
-            const positionRes = await pool.query('SELECT title FROM "Position" WHERE id = $1', [targetPositionId]);
+            const positionRes = await getPool().query('SELECT title FROM "Position" WHERE id = $1', [targetPositionId]);
             if (positionRes.rows.length > 0) {
                 targetPositionTitle = positionRes.rows[0].title;
             }

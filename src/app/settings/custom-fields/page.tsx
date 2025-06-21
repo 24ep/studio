@@ -142,6 +142,16 @@ export default function CustomFieldsPage() {
     }
   }, [sessionStatus, session, fetchDefinitions, pathname]);
 
+  useEffect(() => {
+    if (fetchError) {
+      toast({
+        title: "Error",
+        description: fetchError,
+        variant: "destructive",
+      });
+    }
+  }, [fetchError, toast]);
+
   const handleOpenModal = (definition: CustomFieldDefinition | null = null) => {
     setEditingDefinition(definition);
     if (definition) {

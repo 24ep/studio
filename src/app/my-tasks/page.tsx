@@ -1,6 +1,6 @@
 // src/app/my-tasks/page.tsx (Server Component)
 import { getServerSession } from 'next-auth/next';
-import { pool } from '@/lib/db';
+import { getPool } from '@/lib/db';
 import { MyTasksPageClient } from '@/components/tasks/MyTasksPageClient';
 import type { Candidate, Position, RecruitmentStage, UserProfile } from '@/lib/types';
 import { fetchAllPositionsDb, fetchAllRecruitmentStagesDb } from '@/lib/apiUtils';
@@ -32,7 +32,7 @@ async function getInitialTaskBoardData(session: any): Promise<{
 
   let recruitersPromise;
   if (userRole === 'Admin') {
-    recruitersPromise = pool.query('SELECT id, name FROM "User" WHERE role = $1 OR role = $2 ORDER BY name ASC', ['Recruiter', 'Admin']);
+    recruitersPromise = getPool().query('SELECT id, name FROM "User" WHERE role = $1 OR role = $2 ORDER BY name ASC', ['Recruiter', 'Admin']);
   } else {
     recruitersPromise = Promise.resolve({ rows: [{id: userId, name: session.user.name || 'My Tasks'}] });
   }
@@ -55,7 +55,7 @@ async function getInitialTaskBoardData(session: any): Promise<{
     WHERE c."recruiterId" = $1
     ORDER BY c."createdAt" DESC LIMIT 50;
   `;
-  const candidatesPromise = pool.query(candidateQuery, [defaultRecruiterIdFilter]);
+  const candidatesPromise = getPool().query(candidateQuery, [defaultRecruiterIdFilter]);
 
   // Await all promises
   const [

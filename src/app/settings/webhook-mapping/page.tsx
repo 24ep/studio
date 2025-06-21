@@ -118,6 +118,16 @@ export default function WebhookMappingPage() {
     }
   }, [sessionStatus, session, fetchMappings]);
 
+  useEffect(() => {
+    if (fetchError) {
+      toast({
+        title: "Error",
+        description: fetchError,
+        variant: "destructive",
+      });
+    }
+  }, [fetchError, toast]);
+
   const handleMappingChange = (targetPath: string, field: 'sourcePath' | 'notes', value: string) => {
     setMappings(prevMappings => 
       prevMappings.map(mapping => 

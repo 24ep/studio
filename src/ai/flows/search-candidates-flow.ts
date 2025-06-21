@@ -10,7 +10,7 @@
 import { genkit as globalGenkit } from 'genkit';
 import { googleAI } from '@genkit-ai/googleai';
 import { z } from 'genkit';
-import { pool } from '@/lib/db';
+import { getPool } from '@/lib/db';
 import type { Candidate, CandidateDetails, EducationEntry, ExperienceEntry, SkillEntry, JobSuitableEntry, TransitionRecord } from '@/lib/types';
 import { ai as globalAi } from '@/ai/genkit';
 
@@ -137,7 +137,7 @@ export async function searchCandidatesAIChat(input: SearchCandidatesInput): Prom
   let activeAi = globalAi;
 
   async function getSystemSetting(key: string): Promise<string | null> {
-    const client = await pool.connect();
+    const client = await getPool().connect();
     try {
       const res = await client.query('SELECT value FROM "SystemSetting" WHERE key = $1', [key]);
       if (res.rows.length > 0) {
@@ -164,7 +164,7 @@ export async function searchCandidatesAIChat(input: SearchCandidatesInput): Prom
 
   let allCandidates: Candidate[] = [];
   try {
-    const candidatesResult = await pool.query(`
+    const candidatesResult = await getPool().query(`
         SELECT 
             c.*, 
             p.title as "positionTitle",

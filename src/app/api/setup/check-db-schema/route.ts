@@ -1,4 +1,4 @@
-
+export const dynamic = "force-dynamic";
 // src/app/api/setup/check-db-schema/route.ts
 // This API route is deprecated. The functionality has been moved to /api/system/initial-setup-check.
 import { NextResponse } from 'next/server';

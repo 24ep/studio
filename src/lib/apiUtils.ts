@@ -1,5 +1,5 @@
 // src/lib/apiUtils.ts
-import { pool } from './db';
+import { getPool } from './db';
 import type { Position, RecruitmentStage, Candidate, UserProfile } from './types';
 import { getRedisClient, CACHE_KEY_POSITIONS, CACHE_EXPIRY_SECONDS_POSITIONS, CACHE_KEY_RECRUITMENT_STAGES, CACHE_EXPIRY_SECONDS_STAGES, CACHE_KEY_USERS, CACHE_EXPIRY_SECONDS_USERS } from './redis';
 
@@ -16,9 +16,9 @@ export async function fetchAllPositionsDb(): Promise<Position[]> {
     }
   }
 
-  const client = await pool.connect();
+  const pool = getPool();
   try {
-    const result = await client.query('SELECT * FROM "Position" ORDER BY title ASC');
+    const result = await pool.query('SELECT * FROM "Position" ORDER BY title ASC');
     const positionsFromDb = result.rows;
 
     if (redisClient) {
@@ -32,8 +32,6 @@ export async function fetchAllPositionsDb(): Promise<Position[]> {
   } catch (error) {
     console.error("Error fetching all positions from DB:", error);
     throw error;
-  } finally {
-    client.release();
   }
 }
 
@@ -50,9 +48,9 @@ export async function fetchAllRecruitmentStagesDb(): Promise<RecruitmentStage[]>
     }
   }
 
-  const client = await pool.connect();
+  const pool = getPool();
   try {
-    const result = await client.query('SELECT * FROM "RecruitmentStage" ORDER BY "sortOrder" ASC, name ASC');
+    const result = await pool.query('SELECT * FROM "RecruitmentStage" ORDER BY "sortOrder" ASC, name ASC');
     const stagesFromDb = result.rows;
 
     if (redisClient) {
@@ -66,8 +64,6 @@ export async function fetchAllRecruitmentStagesDb(): Promise<RecruitmentStage[]>
   } catch (error) {
     console.error("Error fetching all recruitment stages from DB:", error);
     throw error;
-  } finally {
-    client.release();
   }
 }
 
@@ -86,7 +82,7 @@ export async function fetchAllUsersDb(filterRole?: UserProfile['role']): Promise
     }
   }
 
-  const client = await pool.connect();
+  const pool = getPool();
   try {
     let query = 'SELECT id, name, email, role, image as "avatarUrl" FROM "User"';
     const queryParams = [];
@@ -95,7 +91,7 @@ export async function fetchAllUsersDb(filterRole?: UserProfile['role']): Promise
       queryParams.push(filterRole);
     }
     query += ' ORDER BY name ASC';
-    const result = await client.query(query, queryParams);
+    const result = await pool.query(query, queryParams);
     const usersFromDb = result.rows;
 
     if (shouldCache) {
@@ -109,37 +105,24 @@ export async function fetchAllUsersDb(filterRole?: UserProfile['role']): Promise
   } catch (error) {
     console.error(`Error fetching users from DB (role: ${filterRole || 'all'}):`, error);
     throw error;
-  } finally {
-    client.release();
   }
 }
 
 export async function fetchInitialDashboardCandidatesDb(limit: number = 10): Promise<Candidate[]> {
-  const client = await pool.connect();
+  const pool = getPool();
   try {
     const query = `
-      SELECT
-        c.id, c.name, c.email, c.phone, c."avatarUrl", c."resumePath", c."parsedData", c.custom_attributes,
-        c."positionId", c."fitScore", c.status, c."applicationDate",
-        c."recruiterId", c."createdAt", c."updatedAt",
-        p.title as "positionTitle",
-        rec.name as "recruiterName"
-      FROM "Candidate" c
-      LEFT JOIN "Position" p ON c."positionId" = p.id
-      LEFT JOIN "User" rec ON c."recruiterId" = rec.id
-      ORDER BY c."applicationDate" DESC, c."createdAt" DESC
+      SELECT id, name, email, stage, position, created_at, updated_at
+      FROM "Candidate"
+      ORDER BY created_at DESC
       LIMIT $1;
     `;
-    const result = await client.query(query, [limit]);
-    return result.rows.map(row => ({
+    const result = await pool.query(query, [limit]);
+    return result.rows.map((row: Candidate) => ({
       ...row,
-      position: row.positionId ? { id: row.positionId, title: row.positionTitle } : null,
-      recruiter: row.recruiterId ? { id: row.recruiterId, name: row.recruiterName } : null,
     }));
   } catch (error) {
     console.error("Error fetching initial dashboard candidates from DB:", error);
     throw error;
-  } finally {
-    client.release();
   }
 }

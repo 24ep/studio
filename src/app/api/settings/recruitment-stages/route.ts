@@ -1,11 +1,12 @@
 // src/app/api/settings/recruitment-stages/route.ts
 import { NextResponse, type NextRequest } from 'next/server';
-import { pool } from '../../../../lib/db';
+import { getPool } from '../../../../lib/db';
 import { z } from 'zod';
 import { v4 as uuidv4 } from 'uuid';
 import { logAudit } from '@/lib/auditLog';
 import { getServerSession } from 'next-auth/next';
 
+export const dynamic = "force-dynamic";
 
 const recruitmentStageSchema = z.object({
   name: z.string().min(1, 'Stage name cannot be empty.'),
@@ -17,7 +18,7 @@ export async function GET(request: NextRequest) {
     const session = await getServerSession();
     if (!session?.user?.id) return new NextResponse('Unauthorized', { status: 401 });
 
-    const client = await pool.connect();
+    const client = await getPool().connect();
     try {
         const result = await client.query('SELECT * FROM "RecruitmentStage" ORDER BY "sortOrder" ASC, name ASC');
         return NextResponse.json(result.rows);
@@ -50,7 +51,7 @@ export async function POST(request: NextRequest) {
     const { name, description, sortOrder } = validation.data;
     const newId = uuidv4();
     
-    const client = await pool.connect();
+    const client = await getPool().connect();
     try {
         const result = await client.query(
             'INSERT INTO "RecruitmentStage" (id, name, description, "sortOrder") VALUES ($1, $2, $3, $4) RETURNING *',

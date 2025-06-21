@@ -4,7 +4,9 @@ import { z } from 'zod';
 import { getServerSession } from 'next-auth/next';
 import type { SystemSetting, SystemSettingKey } from '@/lib/types';
 import { logAudit } from '@/lib/auditLog';
-import { pool } from '@/lib/db';
+import { getPool } from '@/lib/db';
+
+export const dynamic = "force-dynamic";
 
 const systemSettingKeyEnum = z.enum([
     'appName', 'appLogoDataUrl', 'appThemePreference',
@@ -34,7 +36,7 @@ const saveSystemSettingsSchema = z.array(systemSettingSchema);
 export async function GET(request: NextRequest) {
   // Publicly accessible or light auth check if needed for non-sensitive parts
   try {
-    const result = await pool.query('SELECT key, value, "updatedAt" FROM "SystemSetting"');
+    const result = await getPool().query('SELECT key, value, "updatedAt" FROM "SystemSetting"');
     return NextResponse.json(result.rows, { status: 200 });
   } catch (error) {
     console.error("Failed to fetch system settings:", error);
@@ -65,7 +67,7 @@ export async function POST(request: NextRequest) {
   }
 
   const settingsToSave = validationResult.data;
-  const client = await pool.connect();
+  const client = await getPool().connect();
 
   try {
     await client.query('BEGIN');

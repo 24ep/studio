@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { signIn, useSession } from "next-auth/react";
 import { CandidatesPerPositionChart } from '@/components/dashboard/CandidatesPerPositionChart';
 import { useRouter } from 'next/navigation';
+import { useToast } from "@/hooks/use-toast";
 
 interface DashboardPageClientProps {
   initialCandidates: Candidate[];
@@ -46,6 +47,7 @@ export default function DashboardPageClient({
 
   const { data: session, status: sessionStatus } = useSession();
   const router = useRouter();
+  const { toast } = useToast();
 
   // Function to re-fetch data on client if needed (e.g., after an action or for a refresh button)
   const fetchDataClientSide = useCallback(async () => {
@@ -124,9 +126,15 @@ export default function DashboardPageClient({
     if (sessionStatus === 'unauthenticated' && !serverAuthError) {
         signIn(undefined, { callbackUrl: window.location.pathname });
     }
-    // We no longer need to call fetchDataClientSide on initial mount if server provides data
-    // setIsLoading(false); // Handled by server component or if initial props exist
-  }, [initialCandidates, initialPositions, initialUsers, initialFetchError, serverAuthError, serverPermissionError, sessionStatus, session?.user?.role]);
+    // Show error as toast popup if present
+    if (initialFetchError) {
+      toast({
+        title: "Error",
+        description: initialFetchError,
+        variant: "destructive",
+      });
+    }
+  }, [initialCandidates, initialPositions, initialUsers, initialFetchError, serverAuthError, serverPermissionError, sessionStatus, session?.user?.role, toast]);
 
 
   const totalActiveCandidates = useMemo(() => allCandidates.filter(c => !BACKLOG_EXCLUSION_STATUSES.includes(c.status)).length, [allCandidates]);

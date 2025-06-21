@@ -121,6 +121,16 @@ export default function DataModelsPage() {
             signIn();
         }
     }, [status, fetchDefinitions]);
+
+    useEffect(() => {
+        if (error) {
+            toast({
+                title: "Error",
+                description: error,
+                variant: "destructive",
+            });
+        }
+    }, [error, toast]);
     
     const handleModalOpen = (field: CustomFieldDefinition | null = null) => {
         setEditingField(field);

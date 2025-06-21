@@ -147,6 +147,15 @@ export default function ApplicationLogsPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sessionStatus, session, currentPage, levelFilter, searchQuery, actingUserIdFilter, startDate, endDate, pathname, signIn, fetchLogUsers]);
 
+  useEffect(() => {
+    if (fetchError) {
+      toast({
+        title: "Error",
+        description: fetchError,
+        variant: "destructive",
+      });
+    }
+  }, [fetchError, toast]);
 
   const handleApplyFilters = () => {
     setCurrentPage(1);

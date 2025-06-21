@@ -2,10 +2,12 @@
 import NextAuth, { type NextAuthOptions } from 'next-auth';
 import AzureADProvider from 'next-auth/providers/azure-ad';
 import CredentialsProvider from 'next-auth/providers/credentials';
-import { pool } from '@/lib/db';
+import { getPool } from '@/lib/db';
 import bcrypt from 'bcrypt';
 import { logAudit } from '@/lib/auditLog';
 import type { UserProfile } from '@/lib/types';
+
+export const dynamic = "force-dynamic";
 
 const authOptions: NextAuthOptions = {
   providers: [
@@ -25,7 +27,7 @@ const authOptions: NextAuthOptions = {
           throw new Error("Please enter both email and password.");
         }
 
-        const client = await pool.connect();
+        const client = await getPool().connect();
         try {
           const result = await client.query('SELECT * FROM "User" WHERE email = $1', [credentials.email]);
           const user = result.rows[0];
@@ -74,7 +76,7 @@ const authOptions: NextAuthOptions = {
     },
     async signIn({ user, account, profile }) {
         if (account?.provider === 'azure-ad' && profile?.email) {
-            const client = await pool.connect();
+            const client = await getPool().connect();
             try {
                 // Use profile.sub as the unique user ID (OID) if oid is not present
                 const oid = (profile as any).oid ?? (profile as any).sub ?? profile.email;

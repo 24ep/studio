@@ -91,6 +91,16 @@ export default function PositionDetailPage() {
       .then(data => setAvailableStages(data.stages || []));
   }, []);
 
+  useEffect(() => {
+    if (fetchError) {
+      toast({
+        title: "Error",
+        description: fetchError,
+        variant: "destructive",
+      });
+    }
+  }, [fetchError, toast]);
+
   const handleUpdateCandidateStatus = async (candidateId: string, status: Candidate['status']) => {
     toast({ title: "Action Not Available", description: "Candidate status updates should be done from the main Candidates page or Candidate Detail page.", variant: "default" });
     // Re-fetch candidates for this position to reflect any external changes

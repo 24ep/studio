@@ -1,6 +1,6 @@
 // src/app/candidates/page.tsx - Server Component
 import { getServerSession } from 'next-auth/next';
-import { pool } from '@/lib/db';
+import { getPool } from '@/lib/db';
 import { CandidatesPageClient } from '@/components/candidates/CandidatesPageClient';
 import type { Candidate, Position, RecruitmentStage, UserProfile } from '@/lib/types';
 import { fetchAllPositionsDb, fetchAllRecruitmentStagesDb } from '@/lib/apiUtils';
@@ -56,7 +56,7 @@ async function getInitialCandidatesData(session: any): Promise<{ candidates: Can
   initialQuery += ' ORDER BY c."createdAt" DESC LIMIT 50;';
 
   try {
-    const result = await pool.query(initialQuery, queryParams);
+    const result = await getPool().query(initialQuery, queryParams);
     const candidates = result.rows.map(row => ({
       ...row,
       parsedData: row.parsedData || { personal_info: {}, contact_info: {} },

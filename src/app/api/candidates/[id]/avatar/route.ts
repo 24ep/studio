@@ -1,6 +1,8 @@
 // src/app/api/candidates/[id]/avatar/route.ts
 import { NextResponse, type NextRequest } from 'next/server';
 
+export const dynamic = "force-dynamic";
+
 function extractIdFromUrl(request: NextRequest): string | null {
   const match = request.url.match(/\/candidates\/([^/]+)/);
   return match ? match[1] : null;

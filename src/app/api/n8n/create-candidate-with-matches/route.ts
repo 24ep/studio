@@ -2,8 +2,9 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { z } from 'zod';
 import { v4 as uuidv4 } from 'uuid';
-import { pool } from '../../../../lib/db';
-import { logAudit } from '@/lib/auditLog';
+import { getPool } from '@/lib/db';
+
+export const dynamic = "force-dynamic";
 
 const jobMatchSchema = z.object({
   job_id: z.string().optional(),
@@ -32,11 +33,6 @@ const requestSchema = z.object({
 });
 
 export async function POST(request: NextRequest) {
-  const apiKey = request.headers.get('x-api-key');
-  if (apiKey !== process.env.N8N_API_KEY) {
-    return NextResponse.json({ message: 'Unauthorized: Invalid API Key' }, { status: 401 });
-  }
-
   let body;
   try {
     body = await request.json();
@@ -51,7 +47,7 @@ export async function POST(request: NextRequest) {
 
   const { candidate, job_matches } = validation.data;
   const newCandidateId = uuidv4();
-  const client = await pool.connect();
+  const client = await getPool().connect();
 
   try {
     await client.query('BEGIN');
@@ -87,38 +83,37 @@ export async function POST(request: NextRequest) {
     const newCandidate = newCandidateResult.rows[0];
 
     if (job_matches && job_matches.length > 0) {
-        for (const match of job_matches) {
-            const insertMatchQuery = `
-                INSERT INTO "JobMatch" (id, "candidateId", "jobId", "jobTitle", "fitScore", "matchReasons", "jobDescriptionSummary", "createdAt", "updatedAt")
-                VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), NOW());
-            `;
-            const matchParams = [
-                uuidv4(),
-                newCandidateId,
-                match.job_id,
-                match.job_title,
-                match.fit_score,
-                match.match_reasons,
-                match.job_description_summary
-            ];
-            await client.query(insertMatchQuery, matchParams);
-        }
+      for (const match of job_matches) {
+        const insertMatchQuery = `
+          INSERT INTO "JobMatch" (id, "candidateId", "jobId", "jobTitle", "fitScore", "matchReasons", "jobDescriptionSummary", "createdAt", "updatedAt")
+          VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), NOW());
+        `;
+        const matchParams = [
+          uuidv4(),
+          newCandidateId,
+          match.job_id,
+          match.job_title,
+          match.fit_score,
+          match.match_reasons,
+          match.job_description_summary
+        ];
+        await client.query(insertMatchQuery, matchParams);
+      }
     }
-    
-    await client.query('COMMIT');
-    
-    await logAudit('AUDIT', `New candidate '${candidate.name}' created via n8n workflow.`, 'API:n8n:CreateCandidate', 'n8n_workflow', { candidateId: newCandidateId });
-    return NextResponse.json({ message: 'Candidate and matches created successfully', candidate: newCandidate }, { status: 201 });
 
+    await client.query('COMMIT');
+    return NextResponse.json({ message: 'Candidate and matches created successfully', candidate: newCandidate }, { status: 201 });
   } catch (error: any) {
     await client.query('ROLLBACK');
-    console.error('Error in n8n/create-candidate-with-matches:', error);
     if (error.code === '23505' && error.constraint === 'Candidate_email_key') {
       return NextResponse.json({ message: `A candidate with email '${candidate.email}' already exists.` }, { status: 409 });
     }
-    await logAudit('ERROR', `Failed to create candidate via n8n. Error: ${error.message}`, 'API:n8n:CreateCandidate', 'n8n_workflow', { input: body });
     return NextResponse.json({ message: 'Error creating candidate', error: error.message }, { status: 500 });
   } finally {
     client.release();
   }
+}
+
+export async function GET() {
+  return NextResponse.json({ ok: true });
 }

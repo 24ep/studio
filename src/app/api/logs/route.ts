@@ -2,8 +2,10 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import type { LogEntry, LogLevel } from '@/lib/types';
 import { z } from 'zod';
-import { pool } from '../../../lib/db';
+import { getPool } from '../../../lib/db';
 import { getServerSession } from 'next-auth/next';
+
+export const dynamic = "force-dynamic";
 
 const logLevelValues: [LogLevel, ...LogLevel[]] = ['INFO', 'WARN', 'ERROR', 'DEBUG', 'AUDIT'];
 
@@ -49,7 +51,7 @@ export async function POST(request: NextRequest) {
       actingUserId || null,
       details || null,
     ];
-    const result = await pool.query(insertQuery, values);
+    const result = await getPool().query(insertQuery, values);
     return NextResponse.json(result.rows[0], { status: 201 });
   } catch (error) {
     console.error("Failed to create log entry:", error);
@@ -80,7 +82,7 @@ export async function GET(request: NextRequest) {
 
     const whereString = whereClauses.length > 0 ? `WHERE ${whereClauses.join(' AND ')}` : '';
 
-    const client = await pool.connect();
+    const client = await getPool().connect();
     try {
         const logsQuery = `
             SELECT * FROM "AuditLog"

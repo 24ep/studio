@@ -4,7 +4,9 @@ import { z } from 'zod';
 import { getServerSession } from 'next-auth/next';
 import type { UserDataModelPreference, UIDisplayPreference } from '@/lib/types';
 import { logAudit } from '@/lib/auditLog';
-import { pool } from '@/lib/db';
+import { getPool } from '@/lib/db';
+
+export const dynamic = "force-dynamic";
 
 const UI_DISPLAY_PREFERENCES_SERVER: [UIDisplayPreference, ...UIDisplayPreference[]] = ["Standard", "Emphasized", "Hidden"];
 
@@ -26,7 +28,7 @@ export async function GET(request: NextRequest) {
   const userId = session.user.id;
 
   try {
-    const result = await pool.query(
+    const result = await getPool().query(
       'SELECT id, "userId", model_type AS "modelType", attribute_key AS "attributeKey", ui_preference AS "uiPreference", custom_note AS "customNote", "createdAt", "updatedAt" FROM "UserUIDisplayPreference" WHERE "userId" = $1',
       [userId]
     );
@@ -64,7 +66,7 @@ export async function POST(request: NextRequest) {
   }
 
   const preferencesToSave = validationResult.data;
-  const client = await pool.connect();
+  const client = await getPool().connect();
 
   try {
     await client.query('BEGIN');

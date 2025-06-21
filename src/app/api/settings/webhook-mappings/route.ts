@@ -4,7 +4,9 @@ import { z } from 'zod';
 import { getServerSession } from 'next-auth/next';
 import type { WebhookFieldMapping } from '@/lib/types';
 import { logAudit } from '@/lib/auditLog';
-import { pool } from '@/lib/db';
+import { getPool } from '@/lib/db';
+
+export const dynamic = "force-dynamic";
 
 const webhookFieldMappingSchema = z.object({
   targetPath: z.string().min(1, "Target path is required"),
@@ -22,7 +24,7 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const result = await pool.query('SELECT id, target_path as "targetPath", source_path as "sourcePath", notes, "createdAt", "updatedAt" FROM "WebhookFieldMapping" ORDER BY target_path ASC');
+    const result = await getPool().query('SELECT id, target_path as "targetPath", source_path as "sourcePath", notes, "createdAt", "updatedAt" FROM "WebhookFieldMapping" ORDER BY target_path ASC');
     return NextResponse.json(result.rows, { status: 200 });
   } catch (error) {
     console.error("Failed to fetch webhook mappings:", error);
@@ -54,7 +56,7 @@ export async function POST(request: NextRequest) {
   }
 
   const mappingsToSave = validationResult.data;
-  const client = await pool.connect();
+  const client = await getPool().connect();
 
   try {
     await client.query('BEGIN');

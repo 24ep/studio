@@ -258,6 +258,17 @@ export function CandidatesPageClient({
   useEffect(() => { setAvailablePositions(initialAvailablePositions || []); }, [initialAvailablePositions]);
   useEffect(() => { setAvailableStages(initialAvailableStages || []); }, [initialAvailableStages]);
 
+  useEffect(() => {
+    // Show error as toast popup if present
+    if (initialFetchError) {
+      toast({
+        title: "Error",
+        description: initialFetchError,
+        variant: "destructive",
+      });
+    }
+  }, [initialFetchError, toast]);
+
 
   const handleFilterChange = (newFilters: CandidateFilterValues) => {
     const combinedFilters = { ...filters, ...newFilters, aiSearchQuery: undefined };

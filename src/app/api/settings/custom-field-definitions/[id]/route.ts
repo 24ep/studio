@@ -1,6 +1,8 @@
 // src/app/api/settings/custom-field-definitions/[id]/route.ts
 import { NextResponse, type NextRequest } from 'next/server';
 
+export const dynamic = "force-dynamic";
+
 function extractIdFromUrl(request: NextRequest): string | null {
   const match = request.nextUrl.pathname.match(/\/custom-field-definitions\/([^/]+)/);
   return match ? match[1] : null;

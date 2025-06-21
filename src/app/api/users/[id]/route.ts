@@ -1,8 +1,7 @@
 // src/app/api/users/[id]/route.ts
 import { NextResponse, type NextRequest } from 'next/server';
 import { z } from 'zod';
-// import { pool } from '../../../../lib/db';
-import { pool } from '@/lib/db';
+import { getPool } from '@/lib/db';
 import { logAudit } from '@/lib/auditLog';
 import { getServerSession } from 'next-auth/next';
 import bcrypt from 'bcrypt';
@@ -19,6 +18,8 @@ function extractIdFromUrl(request: NextRequest): string | null {
   return match ? match[1] : null;
 }
 
+export const dynamic = "force-dynamic";
+
 export async function GET(request: NextRequest) {
     const id = extractIdFromUrl(request);
     const session = await getServerSession();
@@ -26,7 +27,7 @@ export async function GET(request: NextRequest) {
         return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
 
-    const client = await pool.connect();
+    const client = await getPool().connect();
     try {
         const result = await client.query('SELECT id, name, email, role, image as "avatarUrl" FROM "User" WHERE id = $1', [id]);
         if (result.rows.length === 0) {
@@ -67,7 +68,7 @@ export async function PUT(request: NextRequest) {
         return NextResponse.json({ message: "No fields to update." }, { status: 400 });
     }
     
-    const client = await pool.connect();
+    const client = await getPool().connect();
     try {
         const updateFields: any = { ...fieldsToUpdate };
         if (password) {
@@ -111,7 +112,7 @@ export async function DELETE(request: NextRequest) {
         return NextResponse.json({ message: "Forbidden" }, { status: 403 });
     }
 
-    const client = await pool.connect();
+    const client = await getPool().connect();
     try {
         const result = await client.query('DELETE FROM "User" WHERE id = $1 RETURNING name', [id]);
         if (result.rowCount === 0) {

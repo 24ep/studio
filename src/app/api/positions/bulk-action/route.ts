@@ -5,7 +5,9 @@ import { logAudit } from '@/lib/auditLog';
 import { getServerSession } from 'next-auth/next';
 import type { PositionBulkActionPayload } from '@/lib/types';
 import { getRedisClient, CACHE_KEY_POSITIONS } from '@/lib/redis';
-import { pool } from '@/lib/db';
+import { getPool } from '@/lib/db';
+
+export const dynamic = "force-dynamic";
 
 const bulkPositionActionSchema = z.object({
   action: z.enum(['delete', 'change_status']),
@@ -39,7 +41,7 @@ export async function POST(request: NextRequest) {
   }
 
   const { action, positionIds, newIsOpenStatus } = validationResult.data;
-  const client = await pool.connect();
+  const client = await getPool().connect();
   let successCount = 0;
   let failCount = 0;
   const failedDetails: { positionId: string, reason: string }[] = [];

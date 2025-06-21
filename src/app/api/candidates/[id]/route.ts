@@ -1,10 +1,12 @@
 // src/app/api/candidates/[id]/route.ts
 import { NextResponse, type NextRequest } from 'next/server';
-import { pool } from '@/lib/db';
+import { getPool } from '@/lib/db';
 import { z } from 'zod';
 import { logAudit } from '@/lib/auditLog';
 import { getServerSession } from 'next-auth/next';
 import { v4 as uuidv4 } from 'uuid';
+
+export const dynamic = "force-dynamic";
 
 // Define Zod schemas for validation...
 const updateCandidateSchema = z.object({
@@ -32,7 +34,7 @@ export async function GET(request: NextRequest) {
   if (!session?.user?.id) {
     return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
   }
-  const client = await pool.connect();
+  const client = await getPool().connect();
   try {
     const query = `
       SELECT 
@@ -87,7 +89,7 @@ export async function PUT(request: NextRequest) {
     return NextResponse.json({ message: "Invalid input", errors: validationResult.error.flatten().fieldErrors }, { status: 400 });
   }
   const { transitionNotes, ...updateData } = validationResult.data;
-  const client = await pool.connect();
+  const client = await getPool().connect();
   try {
     await client.query('BEGIN');
     const existingResult = await client.query('SELECT * FROM "Candidate" WHERE id = $1', [id]);
@@ -138,7 +140,7 @@ export async function DELETE(request: NextRequest) {
   if (!actingUserId) {
     return NextResponse.json({ message: "Forbidden" }, { status: 403 });
   }
-  const client = await pool.connect();
+  const client = await getPool().connect();
   try {
     const result = await client.query('DELETE FROM "Candidate" WHERE id = $1 RETURNING name', [id]);
     if (result.rowCount === 0) {

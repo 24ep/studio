@@ -131,6 +131,16 @@ export default function RolesPermissionsPage() {
     }
   }, [sessionStatus, session, pathname, fetchRolesAndSelect]); // Removed signIn from dependencies
 
+  useEffect(() => {
+    if (fetchError) {
+      toast({
+        title: "Error",
+        description: fetchError,
+        variant: "destructive",
+      });
+    }
+  }, [fetchError, toast]);
+
   const handleSelectRole = (role: UserGroup) => {
     setSelectedRole(role);
     selectedRoleIdRef.current = role.id; // Update ref when user explicitly selects

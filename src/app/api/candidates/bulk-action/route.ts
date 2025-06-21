@@ -3,9 +3,10 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { z } from 'zod';
 import { logAudit } from '@/lib/auditLog';
 import { getServerSession } from 'next-auth/next';
-import type { CandidateBulkActionPayload, CandidateStatus } from '@/lib/types';
 import { v4 as uuidv4 } from 'uuid';
-import { pool } from '@/lib/db';
+import { getPool } from '@/lib/db';
+
+export const dynamic = "force-dynamic";
 
 const bulkActionSchema = z.object({
   action: z.enum(['delete', 'change_status', 'assign_recruiter']),
@@ -41,7 +42,7 @@ export async function POST(request: NextRequest) {
   }
 
   const { action, candidateIds, newStatus, newRecruiterId, notes } = validationResult.data;
-  const client = await pool.connect();
+  const client = await getPool().connect();
   let successCount = 0;
   let failCount = 0;
   const failedDetails: { candidateId: string, reason: string }[] = [];

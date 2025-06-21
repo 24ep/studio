@@ -1,11 +1,13 @@
 // src/app/api/system/initial-setup-check/route.ts
 import { NextResponse, type NextRequest } from 'next/server';
-// import { pool } from '../../../../lib/db';
-import { pool } from '@/lib/db';
+import { getPool } from '@/lib/db';
+
+export const dynamic = "force-dynamic";
+
 async function checkDatabaseConnection() {
     let client;
     try {
-        client = await pool.connect();
+        client = await getPool().connect();
         await client.query('SELECT 1');
         return { ok: true, error: null };
     } catch (error: any) {
@@ -18,7 +20,7 @@ async function checkDatabaseConnection() {
 async function checkAdminUserExists() {
     let client;
     try {
-        client = await pool.connect();
+        client = await getPool().connect();
         const result = await client.query(`SELECT 1 FROM "User" WHERE role = 'Admin' LIMIT 1`);
         return { ok: (result.rowCount ?? 0) > 0, error: null };
     } catch (error: any) {
