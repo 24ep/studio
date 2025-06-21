@@ -1,4 +1,3 @@
-
 version: '3.8'
 
 services:
@@ -52,11 +51,14 @@ services:
       N8N_GENERIC_PDF_WEBHOOK_URL: "${N8N_GENERIC_PDF_WEBHOOK_URL:-}" # Optional n8n webhook URL for generic PDF uploads
 
       # --- General Application Settings ---
-      NODE_ENV: development # Change to "production" for actual production builds
+      NODE_ENV: production # Changed to production for Portainer deployment
     depends_on:
-      - postgres
-      - minio
-      - redis
+      postgres:
+        condition: service_healthy
+      minio:
+        condition: service_started
+      redis:
+        condition: service_started
     restart: unless-stopped
     # The command to run the application is typically defined in the Dockerfile's CMD instruction.
     # For Next.js, this is often `npm run start` (which runs `next start`).
@@ -71,19 +73,21 @@ services:
       POSTGRES_USER: "${POSTGRES_USER:-devuser}"
       POSTGRES_PASSWORD: "${POSTGRES_PASSWORD:-devpassword}"
       POSTGRES_DB: "${POSTGRES_DB:-canditrack_db}"
+      # Ensure proper initialization
+      POSTGRES_INITDB_ARGS: "--encoding=UTF-8 --lc-collate=C --lc-ctype=C"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      # Mount the entire pg-init-scripts directory.
+      # Mount the initialization scripts directory
       # PostgreSQL will execute all .sql and .sh files found in /docker-entrypoint-initdb.d/ on first startup
       # when the postgres_data volume is empty or being newly created.
-      # Ensure your init-db.sql file is inside a 'pg-init-scripts' directory in your project root.
-      # The path './pg-init-scripts' is relative to the directory where 'docker-compose' is executed.
-      # If using Portainer with a Git repository, this path is relative to the root of the checked-out repository.
-      # If Docker cannot find the source directory, it may create an empty directory in the container,
-      # leading to the "psql: ... Is a directory" error if it then tries to execute a file that isn't there
-      # or if it expects a file but finds a directory.
-      - ./pg-init-scripts:/docker-entrypoint-initdb.d
+      - ./pg-init-scripts:/docker-entrypoint-initdb.d:ro
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-devuser} -d ${POSTGRES_DB:-canditrack_db}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
 
   minio:
     image: minio/minio:latest

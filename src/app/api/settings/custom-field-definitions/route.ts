@@ -1,116 +1,83 @@
 // src/app/api/settings/custom-field-definitions/route.ts
-import { NextResponse, type NextRequest } from 'next/server';
-import pool from '../../../../lib/db';
+import { NextResponse } from 'next/server';
+import prisma from '@/lib/prisma';
 import { z } from 'zod';
-import { v4 as uuidv4 } from 'uuid';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/app/api/auth/[...nextauth]/route';
-import type { CustomFieldDefinition, CustomFieldType } from '@/lib/types';
-import { CUSTOM_FIELD_TYPES } from '@/lib/types';
 import { logAudit } from '@/lib/auditLog';
 
-const customFieldOptionSchema = z.object({
-  value: z.string().min(1),
-  label: z.string().min(1),
+const fieldDefinitionSchema = z.object({
+  model: z.enum(['Candidate', 'Position']),
+  name: z.string().min(3, 'Name must be at least 3 characters').regex(/^[a-zA-Z0-9_]+$/, 'Name can only contain letters, numbers, and underscores'),
+  label: z.string().min(3, 'Label must be at least 3 characters'),
+  type: z.enum(['TEXT', 'TEXTAREA', 'NUMBER', 'DATE', 'BOOLEAN', 'SELECT', 'MULTISELECT']),
+  options: z.array(z.string()).optional(),
+  placeholder: z.string().optional(),
+  defaultValue: z.string().optional(),
+  isRequired: z.boolean().default(false),
+  isFilterable: z.boolean().default(false),
 });
 
-const createCustomFieldDefinitionSchema = z.object({
-  model_name: z.enum(['Candidate', 'Position']),
-  field_key: z.string().min(1, "Field key is required").regex(/^[a-z0-9_]+$/, "Field key must be lowercase alphanumeric with underscores."),
-  label: z.string().min(1, "Label is required"),
-  field_type: z.enum(CUSTOM_FIELD_TYPES as [CustomFieldType, ...CustomFieldType[]]),
-  options: z.array(customFieldOptionSchema).optional().nullable(),
-  is_required: z.boolean().optional().default(false),
-  sort_order: z.number().int().optional().default(0),
-});
-
-export async function GET(request: NextRequest) {
+// GET all custom field definitions
+export async function GET() {
   const session = await getServerSession(authOptions);
-   if (session?.user?.role !== 'Admin' && !session?.user?.modulePermissions?.includes('CUSTOM_FIELDS_MANAGE')) {
-    return NextResponse.json({ message: "Forbidden: Insufficient permissions" }, { status: 403 });
+  if (!session || session.user.role !== 'Admin') {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 
   try {
-    const { searchParams } = new URL(request.url);
-    const modelName = searchParams.get('model_name');
-
-    let query = 'SELECT * FROM "CustomFieldDefinition"';
-    const queryParams = [];
-    if (modelName && ['Candidate', 'Position'].includes(modelName)) {
-      query += ' WHERE model_name = $1';
-      queryParams.push(modelName);
-    }
-    query += ' ORDER BY model_name ASC, sort_order ASC, label ASC';
-    
-    const result = await pool.query(query, queryParams);
-    return NextResponse.json(result.rows, { status: 200 });
+    const definitions = await prisma.customFieldDefinition.findMany({
+      orderBy: {
+        order: 'asc',
+      },
+    });
+    return NextResponse.json(definitions);
   } catch (error) {
-    console.error("Failed to fetch custom field definitions:", error);
-    await logAudit('ERROR', `Failed to fetch custom field definitions. Error: ${(error as Error).message}`, 'API:CustomFields:Get', session?.user?.id);
-    return NextResponse.json({ message: "Error fetching custom field definitions", error: (error as Error).message }, { status: 500 });
+    console.error('Error fetching custom field definitions:', error);
+    return NextResponse.json({ error: 'Failed to fetch custom field definitions' }, { status: 500 });
   }
 }
 
-export async function POST(request: NextRequest) {
+// POST a new custom field definition
+export async function POST(request: Request) {
   const session = await getServerSession(authOptions);
-  if (session?.user?.role !== 'Admin' && !session?.user?.modulePermissions?.includes('CUSTOM_FIELDS_MANAGE')) {
-    await logAudit('WARN', `Forbidden attempt to create custom field definition by user ${session?.user?.email || 'Unknown'}.`, 'API:CustomFields:Create', session?.user?.id);
-    return NextResponse.json({ message: "Forbidden: Insufficient permissions" }, { status: 403 });
+  if (!session || session.user.role !== 'Admin') {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
-
-  let body;
-  try {
-    body = await request.json();
-  } catch (error) {
-    return NextResponse.json({ message: "Error parsing request body", error: (error as Error).message }, { status: 400 });
-  }
-
-  const validationResult = createCustomFieldDefinitionSchema.safeParse(body);
-  if (!validationResult.success) {
-    return NextResponse.json(
-      { message: "Invalid input", errors: validationResult.error.flatten().fieldErrors },
-      { status: 400 }
-    );
-  }
-
-  const { model_name, field_key, label, field_type, options, is_required, sort_order } = validationResult.data;
-
-  if (['select_single', 'select_multiple'].includes(field_type) && (!options || options.length === 0)) {
-    return NextResponse.json({ message: "Options are required for select field types." }, { status: 400 });
-  }
-  if (!['select_single', 'select_multiple'].includes(field_type) && options && options.length > 0) {
-    return NextResponse.json({ message: "Options should only be provided for select field types." }, { status: 400 });
-  }
-
 
   try {
-    const newFieldId = uuidv4();
-    const insertQuery = `
-      INSERT INTO "CustomFieldDefinition" (id, model_name, field_key, label, field_type, options, is_required, sort_order, "createdAt", "updatedAt")
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW(), NOW())
-      RETURNING *;
-    `;
-    const result = await pool.query(insertQuery, [
-      newFieldId,
-      model_name,
-      field_key,
-      label,
-      field_type,
-      options ? JSON.stringify(options) : null,
-      is_required,
-      sort_order
-    ]);
-    const newField = result.rows[0];
+    const body = await request.json();
+    const validation = fieldDefinitionSchema.safeParse(body);
 
-    await logAudit('AUDIT', `Custom field definition '${label}' (Key: ${field_key}) for model '${model_name}' created by ${session.user.name}.`, 'API:CustomFields:Create', session.user.id, { fieldId: newField.id, model: model_name, key: field_key });
-    return NextResponse.json(newField, { status: 201 });
-  } catch (error: any) {
-    console.error("Failed to create custom field definition:", error);
-    if (error.code === '23505' && error.constraint === 'CustomFieldDefinition_model_name_field_key_key') { // Constraint name from DB
-      await logAudit('WARN', `Attempt to create custom field with duplicate key '${field_key}' for model '${model_name}' by ${session.user.name}.`, 'API:CustomFields:Create', session.user.id, { model: model_name, key: field_key });
-      return NextResponse.json({ message: `A custom field with key "${field_key}" already exists for model "${model_name}".` }, { status: 409 });
+    if (!validation.success) {
+      return NextResponse.json({ error: 'Invalid input', details: validation.error.errors }, { status: 400 });
     }
-    await logAudit('ERROR', `Failed to create custom field definition '${label}' by ${session.user.name}. Error: ${error.message}`, 'API:CustomFields:Create', session.user.id, { model: model_name, key: field_key, label });
-    return NextResponse.json({ message: "Error creating custom field definition", error: error.message }, { status: 500 });
+
+    const { model, name, label, type, options, placeholder, defaultValue, isRequired, isFilterable } = validation.data;
+
+    const newDefinition = await prisma.customFieldDefinition.create({
+      data: {
+        model,
+        name,
+        label,
+        type,
+        options: options || [],
+        placeholder,
+        defaultValue,
+        isRequired,
+        isFilterable,
+        isSystemField: false, // Can only create non-system fields
+      },
+    });
+
+    await logAudit('CREATE', `Created custom field '${label}' for ${model}`, 'CustomFieldDefinition', session.user.id);
+
+    return NextResponse.json(newDefinition, { status: 201 });
+  } catch (error: any) {
+    console.error('Error creating custom field definition:', error);
+    if (error.code === 'P2002') { // Unique constraint violation
+        return NextResponse.json({ error: `A field with the name "${body.name}" already exists for the ${body.model} model.` }, { status: 409 });
+    }
+    return NextResponse.json({ error: 'Failed to create custom field definition' }, { status: 500 });
   }
 }

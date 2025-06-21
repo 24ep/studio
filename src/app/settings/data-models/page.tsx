@@ -1,9 +1,16 @@
-
-// src/app/settings/data-models/page.tsx
 "use client";
 
 import { useState, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
@@ -13,345 +20,397 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
+import { Switch } from '@/components/ui/switch';
+import { Textarea } from '@/components/ui/textarea';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import { signIn, useSession } from 'next-auth/react';
-import { useRouter, usePathname } from 'next/navigation';
-import { Save, DatabaseZap, Info, ServerCrash, ShieldAlert, Loader2, RefreshCw, Type, List, Braces, ToggleRight, Calendar, Hash } from 'lucide-react';
-import type { UserDataModelPreference, UIDisplayPreference, ModelAttributeDefinition } from '@/lib/types';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { cn } from '@/lib/utils';
+import {
+  PlusCircle,
+  Edit,
+  Trash2,
+  DatabaseZap,
+  Loader2,
+  AlertCircle,
+  Shield,
+  Badge,
+} from 'lucide-react';
+import { z } from 'zod';
 
-const UI_DISPLAY_PREFERENCES: UIDisplayPreference[] = ["Standard", "Emphasized", "Hidden"];
+// Define the types matching the Prisma schema
+type FieldType = 'TEXT' | 'TEXTAREA' | 'NUMBER' | 'DATE' | 'BOOLEAN' | 'SELECT' | 'MULTISELECT';
 
-const CANDIDATE_ATTRIBUTES: ModelAttributeDefinition[] = [
-  { key: 'id', label: 'ID', type: 'string (UUID)', description: 'Unique identifier for the candidate.', icon: Hash },
-  { key: 'name', label: 'Full Name', type: 'string', description: 'Full name of the candidate.', icon: Type },
-  { key: 'email', label: 'Email', type: 'string', description: 'Primary email address.', icon: Type },
-  { key: 'phone', label: 'Phone', type: 'string', description: 'Contact phone number.', icon: Type },
-  { key: 'avatarUrl', label: 'Avatar URL', type: 'string', description: 'URL to the candidate\'s profile picture.', icon: Type },
-  { key: 'resumePath', label: 'Resume File Path', type: 'string', description: 'Path to the stored resume file in MinIO.', icon: Type },
-  { key: 'positionId', label: 'Applied Position ID', type: 'string (UUID)', description: 'ID of the position the candidate applied for.', icon: Hash },
-  { key: 'fitScore', label: 'Fit Score', type: 'number', description: 'Calculated score indicating suitability for the applied position (0-100).', icon: Hash },
-  { key: 'status', label: 'Current Status', type: 'string', description: 'Current stage in the recruitment pipeline (e.g., Applied, Screening).', icon: Type },
-  { key: 'applicationDate', label: 'Application Date', type: 'date', description: 'Date the candidate applied.', icon: Calendar },
-  { key: 'recruiterId', label: 'Assigned Recruiter ID', type: 'string (UUID)', description: 'ID of the recruiter assigned to this candidate.', icon: Hash },
-  { key: 'parsedData', label: 'Parsed Resume Data', type: 'object', description: 'Structured data extracted from the resume.', icon: Braces, subAttributes: [
-    { key: 'parsedData.cv_language', label: 'CV Language', type: 'string', description: 'Language of the resume.'},
-    { key: 'parsedData.personal_info', label: 'Personal Info', type: 'object', subAttributes: [
-      { key: 'parsedData.personal_info.firstname', label: 'First Name', type: 'string'},
-      { key: 'parsedData.personal_info.lastname', label: 'Last Name', type: 'string'},
-      { key: 'parsedData.personal_info.title_honorific', label: 'Title/Honorific', type: 'string'},
-      { key: 'parsedData.personal_info.nickname', label: 'Nickname', type: 'string'},
-      { key: 'parsedData.personal_info.location', label: 'Location', type: 'string'},
-      { key: 'parsedData.personal_info.introduction_aboutme', label: 'About Me', type: 'string (multiline)'},
-      { key: 'parsedData.personal_info.avatar_url', label: 'Avatar URL (from CV)', type: 'string (url)'},
-    ]},
-    { key: 'parsedData.contact_info', label: 'Contact Info (from CV)', type: 'object', subAttributes: [
-      { key: 'parsedData.contact_info.email', label: 'Email (from CV)', type: 'string'},
-      { key: 'parsedData.contact_info.phone', label: 'Phone (from CV)', type: 'string'},
-    ]},
-    { key: 'parsedData.education', label: 'Education History', type: 'array', arrayItemType: 'EducationEntry object', description: 'List of educational qualifications.' },
-    { key: 'parsedData.experience', label: 'Work Experience', type: 'array', arrayItemType: 'ExperienceEntry object', description: 'List of previous jobs.' },
-    { key: 'parsedData.skills', label: 'Skills', type: 'array', arrayItemType: 'SkillEntry object', description: 'List of skills.' },
-    { key: 'parsedData.job_suitable', label: 'Job Suitability', type: 'array', arrayItemType: 'JobSuitableEntry object', description: 'Information on suitable job types.' },
-    { key: 'parsedData.associatedMatchDetails', label: 'Primary Matched Job Details', type: 'object', description: 'Details of the job the candidate was primarily matched/applied to by automated processing.',
-      subAttributes: [ { key: 'parsedData.associatedMatchDetails.jobTitle', label: 'Matched Job Title', type: 'string', description: 'Title of the matched job.'}, { key: 'parsedData.associatedMatchDetails.fitScore', label: 'Matched Fit Score', type: 'number', description: 'Fit score for this specific match.'}, { key: 'parsedData.associatedMatchDetails.reasons', label: 'Match Reasons', type: 'array of strings', description: 'Reasons for this match.'}, { key: 'parsedData.associatedMatchDetails.n8nJobId', label: 'Matched Job n8n ID', type: 'string', description: 'ID of the job from the n8n matching process, if available.'}, ]
-    },
-    { key: 'parsedData.job_matches', label: 'All Suggested Job Matches', type: 'array', arrayItemType: 'N8NJobMatch object', description: 'Full list of job suggestions from automated processing.'},
-  ]},
-  { key: 'transitionHistory', label: 'Transition History', type: 'array', arrayItemType: 'TransitionRecord object', description: 'Log of status changes.', icon: List },
-  { key: 'custom_attributes', label: 'Custom Attributes', type: 'object', description: 'User-defined custom fields and their values.', icon: Braces },
-  { key: 'createdAt', label: 'Created At', type: 'date', description: 'Timestamp of creation.', icon: Calendar },
-  { key: 'updatedAt', label: 'Last Updated At', type: 'date', description: 'Timestamp of last update.', icon: Calendar },
-];
+interface CustomFieldDefinition {
+  id: string;
+  model: 'Candidate' | 'Position';
+  name: string;
+  label: string;
+  type: FieldType;
+  options: string[];
+  placeholder?: string | null;
+  defaultValue?: string | null;
+  isRequired: boolean;
+  isFilterable: boolean;
+  isSystemField: boolean;
+  order: number;
+}
 
-const POSITION_ATTRIBUTES: ModelAttributeDefinition[] = [
-  { key: 'id', label: 'ID', type: 'string (UUID)', description: 'Unique identifier for the position.', icon: Hash },
-  { key: 'title', label: 'Title', type: 'string', description: 'Job title.', icon: Type },
-  { key: 'department', label: 'Department', type: 'string', description: 'Department the position belongs to.', icon: Type },
-  { key: 'description', label: 'Description', type: 'string (multiline)', description: 'Detailed job description.', icon: Type },
-  { key: 'isOpen', label: 'Is Open', type: 'boolean', description: 'Whether the position is currently open for applications.', icon: ToggleRight },
-  { key: 'position_level', label: 'Position Level', type: 'string', description: 'Seniority level (e.g., Senior, Mid-Level).', icon: Type },
-  { key: 'custom_attributes', label: 'Custom Attributes', type: 'object', description: 'User-defined custom fields and their values.', icon: Braces },
-  { key: 'createdAt', label: 'Created At', type: 'date', description: 'Timestamp of creation.', icon: Calendar },
-  { key: 'updatedAt', label: 'Last Updated At', type: 'date', description: 'Timestamp of last update.', icon: Calendar },
-];
+const fieldSchema = z.object({
+    name: z.string().min(3, 'Name must be at least 3 characters').regex(/^[a-z0-9_]+$/, 'Name must be lowercase alphanumeric with underscores.'),
+    label: z.string().min(3, 'Label is required'),
+    type: z.enum(['TEXT', 'TEXTAREA', 'NUMBER', 'DATE', 'BOOLEAN', 'SELECT', 'MULTISELECT']),
+    options: z.string().optional(),
+    placeholder: z.string().optional(),
+    defaultValue: z.string().optional(),
+    isRequired: z.boolean().default(false),
+    isFilterable: z.boolean().default(false),
+});
 
 
 export default function DataModelsPage() {
-  const { data: session, status: sessionStatus } = useSession();
-  const router = useRouter();
-  const pathname = usePathname();
-  const { toast } = useToast();
-  
-  const [isClient, setIsClient] = useState(false);
-  const [isLoadingData, setIsLoadingData] = useState(true);
-  const [isSaving, setIsSaving] = useState(false);
-  const [fetchError, setFetchError] = useState<string | null>(null);
+    const { data: session, status } = useSession();
+    const { toast } = useToast();
+    const [definitions, setDefinitions] = useState<CustomFieldDefinition[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+    const [isSaving, setIsSaving] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [editingField, setEditingField] = useState<CustomFieldDefinition | null>(null);
+    const [formData, setFormData] = useState<z.infer<typeof fieldSchema>>({
+        name: '',
+        label: '',
+        type: 'TEXT',
+        isRequired: false,
+        isFilterable: false,
+    });
+    const [formErrors, setFormErrors] = useState<z.ZodError | null>(null);
 
-  const [candidatePrefs, setCandidatePrefs] = useState<Record<string, Partial<Pick<UserDataModelPreference, 'uiPreference' | 'customNote'>>>>({});
-  const [positionPrefs, setPositionPrefs] = useState<Record<string, Partial<Pick<UserDataModelPreference, 'uiPreference' | 'customNote'>>>>({});
-  
-  const [activeCandidateSection, setActiveCandidateSection] = useState<string>(CANDIDATE_ATTRIBUTES[0].key);
-  const [activePositionSection, setActivePositionSection] = useState<string>(POSITION_ATTRIBUTES[0].key);
-
-
-  const loadPreferencesFromServer = useCallback(async () => {
-    if (!session?.user?.id) return;
-    setIsLoadingData(true);
-    setFetchError(null);
-    try {
-      const response = await fetch(`/api/settings/user-preferences`);
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ message: 'Failed to load preferences' }));
-        throw new Error(errorData.message);
-      }
-      const serverPrefs: UserDataModelPreference[] = await response.json();
-      
-      const newCandidatePrefs: typeof candidatePrefs = {};
-      const newPositionPrefs: typeof positionPrefs = {};
-
-      serverPrefs.forEach(pref => {
-        if (pref.modelType === 'Candidate') {
-          newCandidatePrefs[pref.attributeKey] = { uiPreference: pref.uiPreference, customNote: pref.customNote || '' };
-        } else if (pref.modelType === 'Position') {
-          newPositionPrefs[pref.attributeKey] = { uiPreference: pref.uiPreference, customNote: pref.customNote || '' };
-        }
-      });
-      setCandidatePrefs(newCandidatePrefs);
-      setPositionPrefs(newPositionPrefs);
-
-    } catch (error) {
-      console.error("Error loading preferences from server:", error);
-      setFetchError((error as Error).message);
-    } finally {
-      setIsLoadingData(false);
-    }
-  }, [session?.user?.id]); 
-
-  useEffect(() => {
-    setIsClient(true);
-    if (sessionStatus === 'unauthenticated') {
-      signIn(undefined, { callbackUrl: pathname });
-    } else if (sessionStatus === 'authenticated') {
-      if (session.user.role !== 'Admin' && !session.user.modulePermissions?.includes('USER_PREFERENCES_MANAGE')) {
-        setFetchError("You do not have permission to manage data model preferences.");
-        setIsLoadingData(false); 
-      } else {
-        loadPreferencesFromServer();
-      }
-    }
-  }, [sessionStatus, session, pathname, signIn, loadPreferencesFromServer]); 
-
-
-  const handlePreferenceChange = (
-    model: 'Candidate' | 'Position',
-    attrKey: string,
-    prefType: 'uiPreference' | 'customNote',
-    value: string
-  ) => {
-    const setter = model === 'Candidate' ? setCandidatePrefs : setPositionPrefs;
-    setter(prev => ({
-      ...prev,
-      [attrKey]: {
-        ...prev[attrKey],
-        uiPreference: prefType === 'uiPreference' ? (value as UIDisplayPreference) : (prev[attrKey]?.uiPreference || 'Standard'),
-        [prefType]: value,
-      },
-    }));
-  };
-
-  const handleSavePreferences = async () => {
-    if (!isClient || !session?.user?.id) return;
-    setIsSaving(true);
-    
-    // Combine all known attributes with their current preference state
-    const allKnownAttributes = [...CANDIDATE_ATTRIBUTES, ...POSITION_ATTRIBUTES];
-    const prefsToSave: Omit<UserDataModelPreference, 'id' | 'createdAt' | 'updatedAt'>[] = [];
-    
-    const processAttributes = (attributes: ModelAttributeDefinition[], modelType: 'Candidate' | 'Position', prefs: typeof candidatePrefs) => {
-        attributes.forEach(attr => {
-            prefsToSave.push({
-                userId: session.user!.id,
-                modelType: modelType,
-                attributeKey: attr.key,
-                uiPreference: prefs[attr.key]?.uiPreference || 'Standard',
-                customNote: prefs[attr.key]?.customNote || null,
-            });
-            if (attr.subAttributes) {
-                processAttributes(attr.subAttributes, modelType, prefs);
+    const fetchDefinitions = useCallback(async () => {
+        setIsLoading(true);
+        try {
+            const response = await fetch('/api/settings/custom-field-definitions');
+            if (!response.ok) {
+                throw new Error('Failed to fetch data models');
             }
-        });
+            const data = await response.json();
+            setDefinitions(data);
+        } catch (e: any) {
+            setError(e.message);
+            toast({
+                title: 'Error',
+                description: e.message,
+                variant: 'destructive',
+            });
+        } finally {
+            setIsLoading(false);
+        }
+    }, [toast]);
+
+    useEffect(() => {
+        if (status === 'authenticated') {
+            fetchDefinitions();
+        } else if (status === 'unauthenticated') {
+            signIn();
+        }
+    }, [status, fetchDefinitions]);
+    
+    const handleModalOpen = (field: CustomFieldDefinition | null = null) => {
+        setEditingField(field);
+        if (field) {
+            setFormData({
+                name: field.name,
+                label: field.label,
+                type: field.type,
+                options: field.options?.join(', '),
+                placeholder: field.placeholder || '',
+                defaultValue: field.defaultValue || '',
+                isRequired: field.isRequired,
+                isFilterable: field.isFilterable,
+            });
+        } else {
+            setFormData({
+                name: '',
+                label: '',
+                type: 'TEXT',
+                isRequired: false,
+                isFilterable: false,
+                options: '',
+                placeholder: '',
+                defaultValue: '',
+            });
+        }
+        setFormErrors(null);
+        setIsModalOpen(true);
     };
 
-    processAttributes(CANDIDATE_ATTRIBUTES, 'Candidate', candidatePrefs);
-    processAttributes(POSITION_ATTRIBUTES, 'Position', positionPrefs);
-
-    try {
-      const response = await fetch(`/api/settings/user-preferences`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(prefsToSave),
-      });
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ message: 'Failed to save preferences to server' }));
-        throw new Error(errorData.message);
-      }
-      toast({ title: 'Preferences Saved', description: 'Your data model display preferences have been saved.' });
-      loadPreferencesFromServer(); 
-    } catch (error) {
-      console.error("Error saving preferences to server:", error);
-      toast({title: "Error Saving", description: (error as Error).message, variant: "destructive"});
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
-  const renderPreferenceControls = (
-    modelType: 'Candidate' | 'Position',
-    attr: ModelAttributeDefinition
-  ) => {
-    const prefs = modelType === 'Candidate' ? candidatePrefs : positionPrefs;
-    const currentPref = prefs[attr.key] || { uiPreference: 'Standard', customNote: '' };
+    const handleModalClose = () => {
+        setIsModalOpen(false);
+        setEditingField(null);
+    };
     
-    return (
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
-        <div>
-          <Label htmlFor={`ui-pref-${attr.key}`} className="text-xs">UI Display</Label>
-          <Select
-            value={currentPref.uiPreference}
-            onValueChange={(value) => handlePreferenceChange(modelType, attr.key, 'uiPreference', value)}
-          >
-            <SelectTrigger id={`ui-pref-${attr.key}`} className="h-9 mt-1"><SelectValue /></SelectTrigger>
-            <SelectContent>{UI_DISPLAY_PREFERENCES.map(opt => (<SelectItem key={opt} value={opt} className="text-sm">{opt}</SelectItem>))}</SelectContent>
-          </Select>
-        </div>
-        <div>
-           <Label htmlFor={`note-${attr.key}`} className="text-xs">Custom Note</Label>
-           <Input
-            id={`note-${attr.key}`}
-            value={currentPref.customNote || ''}
-            onChange={(e) => handlePreferenceChange(modelType, attr.key, 'customNote', e.target.value)}
-            className="h-9 mt-1"
-            placeholder="E.g., Used for X..."
-          />
-        </div>
-      </div>
-    );
-  }
-  
-  const renderAttributeSection = (
-    modelType: 'Candidate' | 'Position',
-    attributes: ModelAttributeDefinition[],
-    activeSection: string
-  ) => {
-    const selectedAttrGroup = attributes.find(attr => attr.key === activeSection);
-    if (!selectedAttrGroup) return <div className="p-6">Select an attribute from the list.</div>;
+    const handleSubmit = async (e: React.FormEvent, model: 'Candidate' | 'Position') => {
+        e.preventDefault();
+        setFormErrors(null);
+        setIsSaving(true);
     
-    const attributesToRender = selectedAttrGroup.subAttributes || [selectedAttrGroup];
-
-    return (
-        <div className="flex-1">
-            <ScrollArea className="h-full md:max-h-[calc(100vh-21rem)] p-6">
-                <CardHeader className="p-0 mb-4">
-                    <CardTitle className="flex items-center gap-2 text-xl">{selectedAttrGroup.icon && <selectedAttrGroup.icon className="h-5 w-5"/>}{selectedAttrGroup.label}</CardTitle>
-                    <CardDescription>{selectedAttrGroup.description}</CardDescription>
-                </CardHeader>
-                <CardContent className="p-0 space-y-4">
-                    {attributesToRender.map(attr => (
-                        <div key={attr.key} className="p-4 border rounded-lg bg-muted/30">
-                            <h4 className="font-semibold text-foreground">{attr.label}</h4>
-                            <div className="text-xs space-x-2 text-muted-foreground mt-0.5">
-                                <code className="text-xs bg-muted/80 px-1 py-0.5 rounded">{attr.key}</code>
-                                <span>-</span>
-                                <span>Type: {attr.type}{attr.arrayItemType ? ` of ${attr.arrayItemType}` : ''}</span>
-                            </div>
-                            {attr.description && <p className="text-sm text-muted-foreground mt-1">{attr.description}</p>}
-                            {renderPreferenceControls(modelType, attr)}
-                        </div>
-                    ))}
-                </CardContent>
-            </ScrollArea>
-        </div>
-    );
-  };
-  
-  if (sessionStatus === 'loading' || (isLoadingData && !fetchError && !isClient)) {
-    return ( <div className="flex h-full items-center justify-center"><Loader2 className="h-16 w-16 animate-spin text-primary" /></div> );
-  }
-
-  if (fetchError && !isLoadingData) {
-    return (
-      <div className="flex flex-col items-center justify-center h-full text-center p-4">
-        <ServerCrash className="w-16 h-16 text-destructive mb-4" />
-        <h2 className="text-2xl font-semibold text-foreground mb-2">Access Denied or Error</h2>
-        <p className="text-muted-foreground mb-4 max-w-md">{fetchError}</p>
-        <Button onClick={() => router.push('/')} className="btn-hover-primary-gradient mr-2">Go to Dashboard</Button>
-         {fetchError !== "You do not have permission to manage data model preferences." && 
-            <Button onClick={loadPreferencesFromServer} variant="outline"><RefreshCw className="mr-2 h-4 w-4"/>Try Again</Button>
+        const validation = fieldSchema.safeParse(formData);
+        if (!validation.success) {
+            setFormErrors(validation.error);
+            setIsSaving(false);
+            return;
         }
-      </div>
-    );
-  }
 
-  return (
-    <Card className="shadow-lg overflow-hidden">
-      <CardHeader>
-        <CardTitle className="flex items-center text-2xl"><DatabaseZap className="mr-3 h-6 w-6 text-primary"/>Data Model Preferences</CardTitle>
-        <CardDescription>
-          View attributes of your core data models and set your UI display preferences or custom notes. These settings are saved server-side for your user account.
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="p-0">
-        <Tabs defaultValue="candidate-model" className="w-full">
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="candidate-model">Candidate Model</TabsTrigger>
-            <TabsTrigger value="position-model">Position Model</TabsTrigger>
-          </TabsList>
-          
-          <TabsContent value="candidate-model" className="mt-0 border-t">
-              <div className="flex flex-col md:flex-row min-h-[calc(100vh-21rem)]">
-                 <aside className="md:w-72 lg:w-80 border-b md:border-b-0 md:border-r bg-muted/30">
-                    <ScrollArea className="h-full md:max-h-[calc(100vh-21rem)] p-2">
-                        <nav className="space-y-1">
-                            {CANDIDATE_ATTRIBUTES.map(attr => (
-                                <Button key={attr.key} variant={activeCandidateSection === attr.key ? 'default' : 'ghost'} onClick={() => setActiveCandidateSection(attr.key)} className={cn("w-full justify-start text-sm", activeCandidateSection === attr.key && "btn-primary-gradient")}>
-                                    {attr.icon && <attr.icon className="h-4 w-4 mr-2"/>} {attr.label}
-                                </Button>
+        const payload: any = {
+            ...validation.data,
+            model,
+        };
+
+        if (payload.options) {
+            payload.options = payload.options.split(',').map((opt: string) => opt.trim());
+        }
+
+        const url = editingField
+            ? `/api/settings/custom-field-definitions/${editingField.id}`
+            : '/api/settings/custom-field-definitions';
+        const method = editingField ? 'PUT' : 'POST';
+
+        try {
+            const response = await fetch(url, {
+                method,
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(payload),
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || 'Failed to save field');
+            }
+
+            toast({
+                title: 'Success',
+                description: `Field has been ${editingField ? 'updated' : 'created'}.`,
+            });
+            
+            handleModalClose();
+            fetchDefinitions(); // Refresh data
+        } catch (e: any) {
+            toast({
+                title: 'Error',
+                description: e.message,
+                variant: 'destructive',
+            });
+        } finally {
+            setIsSaving(false);
+        }
+    };
+    
+    const handleDelete = async (fieldId: string) => {
+        if (!confirm('Are you sure you want to delete this field? This action cannot be undone.')) {
+            return;
+        }
+
+        try {
+            const response = await fetch(`/api/settings/custom-field-definitions/${fieldId}`, {
+                method: 'DELETE',
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || 'Failed to delete field');
+            }
+
+            toast({
+                title: 'Success',
+                description: 'Field has been deleted.',
+            });
+            fetchDefinitions(); // Refresh data
+        } catch (e: any) {
+            toast({
+                title: 'Error',
+                description: e.message,
+                variant: 'destructive',
+            });
+        }
+    };
+
+    const renderTable = (model: 'Candidate' | 'Position') => {
+        const filteredDefs = definitions.filter(def => def.model === model);
+
+        return (
+            <div>
+                <div className="flex justify-end mb-4">
+                    <Button onClick={() => handleModalOpen()}>
+                        <PlusCircle className="mr-2 h-4 w-4" /> Add New Field
+                    </Button>
+                </div>
+                <div className="border rounded-md">
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead>Label</TableHead>
+                                <TableHead>Name (Key)</TableHead>
+                                <TableHead>Type</TableHead>
+                                <TableHead>Required</TableHead>
+                                <TableHead>System</TableHead>
+                                <TableHead>Actions</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {isLoading ? (
+                                <TableRow>
+                                    <TableCell colSpan={6} className="text-center">
+                                        <Loader2 className="inline-block animate-spin mr-2" /> Loading...
+                                    </TableCell>
+                                </TableRow>
+                            ) : filteredDefs.map(def => (
+                                <TableRow key={def.id}>
+                                    <TableCell className="font-medium">{def.label}</TableCell>
+                                    <TableCell>
+                                        <Badge variant="outline">{def.name}</Badge>
+                                    </TableCell>
+                                    <TableCell>{def.type}</TableCell>
+                                    <TableCell>{def.isRequired ? 'Yes' : 'No'}</TableCell>
+                                    <TableCell>
+                                        {def.isSystemField ? (
+                                            <Shield className="h-5 w-5 text-blue-500" />
+                                        ) : (
+                                            <span className="text-gray-400">-</span>
+                                        )}
+                                    </TableCell>
+                                    <TableCell>
+                                        <Button variant="ghost" size="icon" onClick={() => handleModalOpen(def)} disabled={def.isSystemField}>
+                                            <Edit className="h-4 w-4" />
+                                        </Button>
+                                        <Button variant="ghost" size="icon" onClick={() => handleDelete(def.id)} disabled={def.isSystemField}>
+                                            <Trash2 className="h-4 w-4 text-red-500" />
+                                        </Button>
+                                    </TableCell>
+                                </TableRow>
                             ))}
-                        </nav>
-                    </ScrollArea>
-                 </aside>
-                {renderAttributeSection('Candidate', CANDIDATE_ATTRIBUTES, activeCandidateSection)}
-              </div>
-          </TabsContent>
-          <TabsContent value="position-model" className="mt-0 border-t">
-               <div className="flex flex-col md:flex-row min-h-[calc(100vh-21rem)]">
-                 <aside className="md:w-72 lg:w-80 border-b md:border-b-0 md:border-r bg-muted/30">
-                    <ScrollArea className="h-full md:max-h-[calc(100vh-21rem)] p-2">
-                        <nav className="space-y-1">
-                            {POSITION_ATTRIBUTES.map(attr => (
-                                <Button key={attr.key} variant={activePositionSection === attr.key ? 'default' : 'ghost'} onClick={() => setActivePositionSection(attr.key)} className={cn("w-full justify-start text-sm", activePositionSection === attr.key && "btn-primary-gradient")}>
-                                   {attr.icon && <attr.icon className="h-4 w-4 mr-2"/>} {attr.label}
-                                </Button>
-                            ))}
-                        </nav>
-                    </ScrollArea>
-                 </aside>
-                {renderAttributeSection('Position', POSITION_ATTRIBUTES, activePositionSection)}
-              </div>
-          </TabsContent>
-        </Tabs>
-      </CardContent>
-      <CardFooter className="border-t pt-6 flex justify-end">
-        <Button onClick={handleSavePreferences} size="lg" className="btn-primary-gradient" disabled={isSaving || isLoadingData}>
-          {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-          {isSaving ? 'Saving...' : 'Save My Preferences'}
-        </Button>
-      </CardFooter>
-    </Card>
-  );
+                        </TableBody>
+                    </Table>
+                </div>
+            </div>
+        );
+    };
+
+    if (status !== 'authenticated') {
+        return <div className="flex items-center justify-center h-full"><Loader2 className="h-8 w-8 animate-spin" /></div>;
+    }
+
+    if (session.user.role !== 'Admin') {
+        return (
+            <div className="flex items-center justify-center h-full text-red-500">
+                <AlertCircle className="mr-2" />
+                You do not have permission to access this page.
+            </div>
+        );
+    }
+    
+    return (
+        <div className="p-4 md:p-8">
+            <header className="mb-8">
+                <h1 className="text-3xl font-bold flex items-center">
+                    <DatabaseZap className="mr-3 text-blue-500" />
+                    Data Model Management
+                </h1>
+                <p className="text-muted-foreground mt-1">
+                    Define and manage the data attributes for your Candidates and Positions.
+                </p>
+            </header>
+
+            <Tabs defaultValue="candidates">
+                <TabsList>
+                    <TabsTrigger value="candidates">Candidates</TabsTrigger>
+                    <TabsTrigger value="positions">Positions</TabsTrigger>
+                </TabsList>
+                <TabsContent value="candidates" className="mt-4">
+                    {renderTable('Candidate')}
+                </TabsContent>
+                <TabsContent value="positions" className="mt-4">
+                    {renderTable('Position')}
+                </TabsContent>
+            </Tabs>
+            
+            <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>{editingField ? 'Edit Field' : 'Add New Field'}</DialogTitle>
+                        <DialogDescription>
+                            Define the properties for this field. The "Name (Key)" is used programmatically and cannot be changed after creation.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <form onSubmit={(e) => handleSubmit(e, 'Candidate')} className="space-y-4">
+                        <div>
+                            <Label htmlFor="label">Label</Label>
+                            <Input id="label" value={formData.label} onChange={e => setFormData({...formData, label: e.target.value})} />
+                            {formErrors?.flatten().fieldErrors.label && <p className="text-red-500 text-sm mt-1">{formErrors.flatten().fieldErrors.label}</p>}
+                        </div>
+                        <div>
+                            <Label htmlFor="name">Name (Key)</Label>
+                            <Input id="name" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} disabled={!!editingField} />
+                             {formErrors?.flatten().fieldErrors.name && <p className="text-red-500 text-sm mt-1">{formErrors.flatten().fieldErrors.name}</p>}
+                        </div>
+                        <div>
+                            <Label htmlFor="type">Field Type</Label>
+                            <Select value={formData.type} onValueChange={(value: FieldType) => setFormData({...formData, type: value})}>
+                                <SelectTrigger>
+                                    <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="TEXT">Text</SelectItem>
+                                    <SelectItem value="TEXTAREA">Text Area</SelectItem>
+                                    <SelectItem value="NUMBER">Number</SelectItem>
+                                    <SelectItem value="DATE">Date</SelectItem>
+                                    <SelectItem value="BOOLEAN">Yes/No (Boolean)</SelectItem>
+                                    <SelectItem value="SELECT">Select</SelectItem>
+                                    <SelectItem value="MULTISELECT">Multi-Select</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        {(formData.type === 'SELECT' || formData.type === 'MULTISELECT') && (
+                            <div>
+                                <Label htmlFor="options">Options (comma-separated)</Label>
+                                <Input id="options" value={formData.options} onChange={e => setFormData({...formData, options: e.target.value})} />
+                            </div>
+                        )}
+                        <div>
+                            <Label htmlFor="placeholder">Placeholder</Label>
+                            <Input id="placeholder" value={formData.placeholder} onChange={e => setFormData({...formData, placeholder: e.target.value})} />
+                        </div>
+                        <div>
+                            <Label htmlFor="defaultValue">Default Value</Label>
+                            <Input id="defaultValue" value={formData.defaultValue} onChange={e => setFormData({...formData, defaultValue: e.target.value})} />
+                        </div>
+                        <div className="flex items-center space-x-2">
+                            <Switch id="isRequired" checked={formData.isRequired} onCheckedChange={checked => setFormData({...formData, isRequired: checked})} />
+                            <Label htmlFor="isRequired">Is Required?</Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                            <Switch id="isFilterable" checked={formData.isFilterable} onCheckedChange={checked => setFormData({...formData, isFilterable: checked})} />
+                            <Label htmlFor="isFilterable">Is Filterable?</Label>
+                        </div>
+                        <DialogFooter>
+                            <Button type="button" variant="outline" onClick={handleModalClose}>Cancel</Button>
+                            <Button type="submit" disabled={isSaving}>
+                                {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                {editingField ? 'Save Changes' : 'Create Field'}
+                            </Button>
+                        </DialogFooter>
+                    </form>
+                </DialogContent>
+            </Dialog>
+        </div>
+    );
 }
 

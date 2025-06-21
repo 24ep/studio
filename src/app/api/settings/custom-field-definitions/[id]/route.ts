@@ -1,152 +1,118 @@
-
 // src/app/api/settings/custom-field-definitions/[id]/route.ts
-import { NextResponse, type NextRequest } from 'next/server';
-import pool from '../../../../../lib/db';
+import { NextResponse } from 'next/server';
+import prisma from '@/lib/prisma';
 import { z } from 'zod';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/app/api/auth/[...nextauth]/route';
-import type { CustomFieldDefinition, CustomFieldType } from '@/lib/types';
-import { CUSTOM_FIELD_TYPES } from '@/lib/types';
 import { logAudit } from '@/lib/auditLog';
 
-const customFieldOptionSchema = z.object({
-  value: z.string().min(1),
-  label: z.string().min(1),
+const fieldDefinitionSchema = z.object({
+  label: z.string().min(3, 'Label must be at least 3 characters').optional(),
+  type: z.enum(['TEXT', 'TEXTAREA', 'NUMBER', 'DATE', 'BOOLEAN', 'SELECT', 'MULTISELECT']).optional(),
+  options: z.array(z.string()).optional(),
+  placeholder: z.string().optional(),
+  defaultValue: z.string().optional(),
+  isRequired: z.boolean().optional(),
+  isFilterable: z.boolean().optional(),
+  order: z.number().int().optional(),
 });
 
-const updateCustomFieldDefinitionSchema = z.object({
-  // model_name and field_key are generally not updatable to avoid complex data migrations
-  label: z.string().min(1, "Label is required").optional(),
-  field_type: z.enum(CUSTOM_FIELD_TYPES as [CustomFieldType, ...CustomFieldType[]]).optional(),
-  options: z.array(customFieldOptionSchema).optional().nullable(),
-  is_required: z.boolean().optional(),
-  sort_order: z.number().int().optional(),
-});
-
-export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {
+// GET a single custom field definition by ID
+export async function GET(request: Request, { params }: { params: { id: string } }) {
   const session = await getServerSession(authOptions);
-  if (session?.user?.role !== 'Admin' && !session?.user?.modulePermissions?.includes('CUSTOM_FIELDS_MANAGE')) {
-     await logAudit('WARN', `Forbidden attempt to update custom field definition (ID: ${params.id}) by user ${session?.user?.email || 'Unknown'}.`, 'API:CustomFields:Update', session?.user?.id, { targetFieldId: params.id });
-    return NextResponse.json({ message: "Forbidden: Insufficient permissions" }, { status: 403 });
+  if (!session || session.user.role !== 'Admin') {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
-
-  let body;
-  try {
-    body = await request.json();
-  } catch (error) {
-    return NextResponse.json({ message: "Error parsing request body", error: (error as Error).message }, { status: 400 });
-  }
-
-  const validationResult = updateCustomFieldDefinitionSchema.safeParse(body);
-  if (!validationResult.success) {
-    return NextResponse.json(
-      { message: "Invalid input", errors: validationResult.error.flatten().fieldErrors },
-      { status: 400 }
-    );
-  }
-  
-  const updates = validationResult.data;
-  const client = await pool.connect();
 
   try {
-    await client.query('BEGIN');
-    const existingFieldResult = await client.query('SELECT * FROM "CustomFieldDefinition" WHERE id = $1 FOR UPDATE', [params.id]);
-    if (existingFieldResult.rows.length === 0) {
-      await client.query('ROLLBACK');
-      return NextResponse.json({ message: "Custom field definition not found" }, { status: 404 });
-    }
-    const existingField: CustomFieldDefinition = existingFieldResult.rows[0];
-
-    // Validation for options based on field_type
-    const finalFieldType = updates.field_type || existingField.field_type;
-    const finalOptions = updates.options === undefined ? existingField.options : updates.options;
-
-    if (['select_single', 'select_multiple'].includes(finalFieldType) && (!finalOptions || finalOptions.length === 0)) {
-      await client.query('ROLLBACK');
-      return NextResponse.json({ message: "Options are required for select field types." }, { status: 400 });
-    }
-    if (!['select_single', 'select_multiple'].includes(finalFieldType) && finalOptions && finalOptions.length > 0) {
-       await client.query('ROLLBACK');
-      return NextResponse.json({ message: "Options should only be provided for select field types. Clear options or change field type." }, { status: 400 });
-    }
-
-    const updateFields: string[] = [];
-    const updateValues: any[] = [];
-    let paramIndex = 1;
-
-    Object.entries(updates).forEach(([key, value]) => {
-      if (value !== undefined) {
-        if (key === 'options') {
-          updateFields.push(`${key} = $${paramIndex++}`);
-          updateValues.push(value ? JSON.stringify(value) : null);
-        } else {
-          updateFields.push(`${key} = $${paramIndex++}`);
-          updateValues.push(value);
-        }
-      }
+    const definition = await prisma.customFieldDefinition.findUnique({
+      where: { id: params.id },
     });
 
-    if (updateFields.length === 0) {
-      await client.query('ROLLBACK');
-      return NextResponse.json(existingField, { status: 200 }); // No actual changes
+    if (!definition) {
+      return NextResponse.json({ error: 'Custom field definition not found' }, { status: 404 });
     }
 
-    updateFields.push(`"updatedAt" = NOW()`);
-    updateValues.push(params.id);
-
-    const updateQuery = `UPDATE "CustomFieldDefinition" SET ${updateFields.join(', ')} WHERE id = $${paramIndex} RETURNING *;`;
-    const result = await client.query(updateQuery, updateValues);
-    const updatedField = result.rows[0];
-
-    await client.query('COMMIT');
-    await logAudit('AUDIT', `Custom field definition '${updatedField.label}' (ID: ${updatedField.id}) for model '${updatedField.model_name}' updated by ${session.user.name}.`, 'API:CustomFields:Update', session.user.id, { targetFieldId: updatedField.id, changes: Object.keys(updates) });
-    return NextResponse.json(updatedField, { status: 200 });
-
-  } catch (error: any) {
-    await client.query('ROLLBACK');
-    console.error(`Failed to update custom field definition ${params.id}:`, error);
-    await logAudit('ERROR', `Failed to update custom field definition (ID: ${params.id}) by ${session.user.name}. Error: ${error.message}`, 'API:CustomFields:Update', session.user.id, { targetFieldId: params.id });
-    return NextResponse.json({ message: "Error updating custom field definition", error: error.message }, { status: 500 });
-  } finally {
-    client.release();
+    return NextResponse.json(definition);
+  } catch (error) {
+    console.error(`Error fetching custom field definition ${params.id}:`, error);
+    return NextResponse.json({ error: 'Failed to fetch custom field definition' }, { status: 500 });
   }
 }
 
-export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
+// PUT (update) a custom field definition
+export async function PUT(request: Request, { params }: { params: { id: string } }) {
   const session = await getServerSession(authOptions);
-  if (session?.user?.role !== 'Admin' && !session?.user?.modulePermissions?.includes('CUSTOM_FIELDS_MANAGE')) {
-    await logAudit('WARN', `Forbidden attempt to delete custom field definition (ID: ${params.id}) by user ${session?.user?.email || 'Unknown'}.`, 'API:CustomFields:Delete', session?.user?.id, { targetFieldId: params.id });
-    return NextResponse.json({ message: "Forbidden: Insufficient permissions" }, { status: 403 });
+  if (!session || session.user.role !== 'Admin') {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 
   try {
-    // Note: Deleting a definition does not automatically clean up data from JSONB columns in Candidate/Position tables.
-    // This might be desired to avoid data loss, or a cleanup mechanism could be added if strict data removal is needed.
-    const deleteResult = await pool.query('DELETE FROM "CustomFieldDefinition" WHERE id = $1 RETURNING label, field_key, model_name', [params.id]);
-    
-    if (deleteResult.rowCount === 0) {
-      return NextResponse.json({ message: "Custom field definition not found" }, { status: 404 });
-    }
-    const deletedField = deleteResult.rows[0];
-    await logAudit(
-        'AUDIT', 
-        `Custom field definition '${deletedField.label}' (Key: ${deletedField.field_key}, Model: ${deletedField.model_name}) deleted by ${session.user.name}.`, 
-        'API:CustomFields:Delete', 
-        session.user.id, 
-        { 
-            deletedFieldId: params.id, 
-            deletedFieldLabel: deletedField.label,
-            deletedFieldKey: deletedField.field_key,
-            deletedFieldModel: deletedField.model_name
-        }
-    );
-    return NextResponse.json({ message: "Custom field definition deleted successfully" }, { status: 200 });
+    const body = await request.json();
+    const validation = fieldDefinitionSchema.safeParse(body);
 
-  } catch (error: any) {
-    console.error(`Failed to delete custom field definition ${params.id}:`, error);
-    // Check for foreign key constraints if definitions were linked elsewhere, though not in current schema.
-    // if (error.code === '23503') { /* foreign_key_violation */ }
-    await logAudit('ERROR', `Failed to delete custom field definition (ID: ${params.id}) by ${session.user.name}. Error: ${error.message}`, 'API:CustomFields:Delete', session.user.id, { targetFieldId: params.id });
-    return NextResponse.json({ message: "Error deleting custom field definition", error: error.message }, { status: 500 });
+    if (!validation.success) {
+      return NextResponse.json({ error: 'Invalid input', details: validation.error.errors }, { status: 400 });
+    }
+
+    const fieldToUpdate = await prisma.customFieldDefinition.findUnique({
+        where: { id: params.id },
+    });
+
+    if (!fieldToUpdate) {
+        return NextResponse.json({ error: 'Custom field definition not found' }, { status: 404 });
+    }
+
+    if (fieldToUpdate.isSystemField) {
+        return NextResponse.json({ error: 'System fields cannot be fully updated.' }, { status: 400 });
+    }
+
+    const updatedDefinition = await prisma.customFieldDefinition.update({
+      where: { id: params.id },
+      data: validation.data,
+    });
+
+    await logAudit('UPDATE', `Updated custom field '${updatedDefinition.label}' for ${updatedDefinition.model}`, 'CustomFieldDefinition', session.user.id);
+
+    return NextResponse.json(updatedDefinition);
+  } catch (error) {
+    console.error(`Error updating custom field definition ${params.id}:`, error);
+    return NextResponse.json({ error: 'Failed to update custom field definition' }, { status: 500 });
+  }
+}
+
+// DELETE a custom field definition
+export async function DELETE(request: Request, { params }: { params: { id: string } }) {
+  const session = await getServerSession(authOptions);
+  if (!session || session.user.role !== 'Admin') {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  }
+
+  try {
+    const fieldToDelete = await prisma.customFieldDefinition.findUnique({
+        where: { id: params.id },
+    });
+
+    if (!fieldToDelete) {
+        return NextResponse.json({ error: 'Custom field definition not found' }, { status: 404 });
+    }
+
+    if (fieldToDelete.isSystemField) {
+        return NextResponse.json({ error: 'System fields cannot be deleted.' }, { status: 400 });
+    }
+
+    // Note: Deleting a definition does not automatically remove the data from the customAttributes JSON blobs.
+    // A cleanup job could be implemented for that if needed.
+
+    const deletedDefinition = await prisma.customFieldDefinition.delete({
+      where: { id: params.id },
+    });
+
+    await logAudit('DELETE', `Deleted custom field '${deletedDefinition.label}' from ${deletedDefinition.model}`, 'CustomFieldDefinition', session.user.id);
+
+    return NextResponse.json({ message: 'Custom field definition deleted successfully' }, { status: 200 });
+  } catch (error) {
+    console.error(`Error deleting custom field definition ${params.id}:`, error);
+    return NextResponse.json({ error: 'Failed to delete custom field definition' }, { status: 500 });
   }
 }

@@ -1,276 +1,214 @@
--- Use uuid-ossp extension for uuid_generate_v4()
-CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+-- =====================================================
+-- CandiTrack Database Initialization Script
+-- v2.0 - Aligned with Prisma Schema for Custom Fields
+-- =====================================================
 
--- Define custom enum types for consistency and validation
-CREATE TYPE "UserRole" AS ENUM ('Admin', 'Recruiter', 'Hiring Manager');
-CREATE TYPE "LogLevel" AS ENUM ('INFO', 'WARN', 'ERROR', 'DEBUG', 'AUDIT');
-CREATE TYPE "CustomFieldModel" AS ENUM ('Candidate', 'Position');
-CREATE TYPE "CustomFieldType" AS ENUM ('text', 'textarea', 'number', 'boolean', 'date', 'select_single', 'select_multiple');
-CREATE TYPE "NotificationChannelKey" AS ENUM ('email', 'webhook');
+\set ON_ERROR_STOP on
+\set VERBOSITY verbose
 
--- UserGroup table (for Roles)
-CREATE TABLE "UserGroup" (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    name VARCHAR(100) UNIQUE NOT NULL,
-    description TEXT,
-    is_default BOOLEAN DEFAULT FALSE,
-    is_system_role BOOLEAN DEFAULT FALSE,
-    "createdAt" TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-);
+-- Create a log function for better debugging
+CREATE OR REPLACE FUNCTION log_init(message text) RETURNS void AS $$
+BEGIN
+    RAISE NOTICE 'INIT: %', message;
+END;
+$$ LANGUAGE plpgsql;
 
--- User table
-CREATE TABLE "User" (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    name VARCHAR(255),
+SELECT log_init('Starting CandiTrack database initialization...');
+
+-- Drop old custom field tables if they exist to avoid conflicts
+SELECT log_init('Dropping legacy custom field tables...');
+DROP TABLE IF EXISTS custom_field_values;
+DROP TABLE IF EXISTS custom_field_definitions;
+SELECT log_init('Legacy tables dropped.');
+
+-- Create custom types/enums
+SELECT log_init('Creating application enums...');
+DO $$ 
+BEGIN
+    -- ENUMS FOR THE NEW DATA MODEL MANAGEMENT
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'modelname') THEN
+        CREATE TYPE "ModelName" AS ENUM ('Candidate', 'Position');
+        SELECT log_init('Created ModelName enum');
+    ELSE
+        SELECT log_init('ModelName enum already exists');
+    END IF;
+
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'fieldtype') THEN
+        CREATE TYPE "FieldType" AS ENUM ('TEXT', 'TEXTAREA', 'NUMBER', 'DATE', 'BOOLEAN', 'SELECT', 'MULTISELECT');
+        SELECT log_init('Created FieldType enum');
+    ELSE
+        SELECT log_init('FieldType enum already exists');
+    END IF;
+
+    -- Legacy enums (retained for other parts of the app)
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'recruitment_stage') THEN
+        CREATE TYPE recruitment_stage AS ENUM ('Applied', 'Screening', 'Interview', 'Technical Assessment', 'Reference Check', 'Offer', 'Hired', 'Rejected');
+        SELECT log_init('Created recruitment_stage enum');
+    ELSE
+        SELECT log_init('recruitment_stage enum already exists');
+    END IF;
+
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'user_role') THEN
+        CREATE TYPE user_role AS ENUM ('admin', 'recruiter', 'hiring_manager', 'interviewer');
+        SELECT log_init('Created user_role enum');
+    ELSE
+        SELECT log_init('user_role enum already exists');
+    END IF;
+END $$;
+
+-- Create tables
+SELECT log_init('Creating tables...');
+
+-- Users table (remains unchanged, assuming integer IDs for now)
+CREATE TABLE IF NOT EXISTS users (
+    id SERIAL PRIMARY KEY,
     email VARCHAR(255) UNIQUE NOT NULL,
-    password TEXT NOT NULL,
-    role "UserRole" NOT NULL,
-    "avatarUrl" TEXT,
-    "dataAiHint" TEXT,
-    "modulePermissions" TEXT[], -- Array of PlatformModuleId strings
-    "createdAt" TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-);
-
--- User <-> UserGroup many-to-many join table
-CREATE TABLE "User_UserGroup" (
-    "userId" UUID NOT NULL REFERENCES "User"(id) ON DELETE CASCADE,
-    "groupId" UUID NOT NULL REFERENCES "UserGroup"(id) ON DELETE CASCADE,
-    PRIMARY KEY ("userId", "groupId")
-);
-
--- PlatformModule table (virtual, permissions are hardcoded in types.ts)
--- UserGroup <-> PlatformModule many-to-many join table for permissions
-CREATE TABLE "UserGroup_PlatformModule" (
-    group_id UUID NOT NULL REFERENCES "UserGroup"(id) ON DELETE CASCADE,
-    permission_id VARCHAR(100) NOT NULL, -- Corresponds to PlatformModuleId
-    PRIMARY KEY (group_id, permission_id)
-);
-
-
--- Position table
-CREATE TABLE "Position" (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    title VARCHAR(255) NOT NULL,
-    department VARCHAR(255) NOT NULL,
-    description TEXT,
-    "isOpen" BOOLEAN DEFAULT TRUE,
-    position_level VARCHAR(100),
-    custom_attributes JSONB,
-    "createdAt" TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-);
-
--- Candidate table
-CREATE TABLE "Candidate" (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     name VARCHAR(255) NOT NULL,
-    email VARCHAR(255) UNIQUE NOT NULL,
-    phone VARCHAR(50),
-    "avatarUrl" TEXT,
-    "dataAiHint" TEXT,
-    "resumePath" TEXT,
+    role user_role DEFAULT 'recruiter',
+    avatar_url TEXT,
+    is_active BOOLEAN DEFAULT true,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Positions table (Updated to match Prisma Schema)
+CREATE TABLE IF NOT EXISTS positions (
+    id TEXT PRIMARY KEY,
+    title TEXT NOT NULL,
+    department TEXT,
+    description TEXT,
+    "isOpen" BOOLEAN NOT NULL DEFAULT true,
+    "customAttributes" JSONB,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL
+);
+SELECT log_init('Created/Verified positions table.');
+
+-- Candidates table (Updated to match Prisma Schema)
+CREATE TABLE IF NOT EXISTS candidates (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    email TEXT UNIQUE NOT NULL,
+    phone TEXT,
+    "positionId" TEXT NOT NULL REFERENCES positions(id) ON DELETE RESTRICT,
+    "fitScore" INTEGER NOT NULL,
+    status TEXT NOT NULL,
+    "applicationDate" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "lastUpdateDate" TIMESTAMP(3) NOT NULL,
     "parsedData" JSONB,
-    custom_attributes JSONB,
-    "positionId" UUID REFERENCES "Position"(id) ON DELETE SET NULL,
-    "fitScore" INTEGER DEFAULT 0,
-    status VARCHAR(100) NOT NULL,
-    "applicationDate" TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    "recruiterId" UUID REFERENCES "User"(id) ON DELETE SET NULL,
-    "createdAt" TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+    "resumePath" TEXT,
+    "customAttributes" JSONB,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL
 );
+SELECT log_init('Created/Verified candidates table.');
 
--- ResumeHistory table
-CREATE TABLE "ResumeHistory" (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    "candidateId" UUID NOT NULL REFERENCES "Candidate"(id) ON DELETE CASCADE,
-    "filePath" TEXT NOT NULL,
-    "originalFileName" TEXT NOT NULL,
-    "uploadedAt" TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    "uploadedByUserId" UUID REFERENCES "User"(id) ON DELETE SET NULL
-);
-
-
--- RecruitmentStage table
-CREATE TABLE "RecruitmentStage" (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    name VARCHAR(100) UNIQUE NOT NULL,
-    description TEXT,
-    is_system BOOLEAN NOT NULL DEFAULT FALSE,
-    sort_order INTEGER DEFAULT 0,
-    "createdAt" TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-);
-
--- TransitionRecord table
-CREATE TABLE "TransitionRecord" (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    "candidateId" UUID NOT NULL REFERENCES "Candidate"(id) ON DELETE CASCADE,
-    date TIMESTAMP WITH TIME ZONE NOT NULL,
-    stage VARCHAR(100) NOT NULL,
+-- Transition Records table (Updated to match Prisma Schema)
+CREATE TABLE IF NOT EXISTS transition_records (
+    id TEXT PRIMARY KEY,
+    date TIMESTAMP(3) NOT NULL,
+    stage TEXT NOT NULL,
     notes TEXT,
-    "actingUserId" UUID REFERENCES "User"(id) ON DELETE SET NULL,
-    "createdAt" TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+    "candidateId" TEXT NOT NULL REFERENCES candidates(id) ON DELETE CASCADE,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+SELECT log_init('Created/Verified transition_records table.');
+
+
+-- NEW Custom Field Definition table
+CREATE TABLE IF NOT EXISTS "CustomFieldDefinition" (
+    "id" TEXT NOT NULL,
+    "model" "ModelName" NOT NULL,
+    "name" TEXT NOT NULL,
+    "label" TEXT NOT NULL,
+    "type" "FieldType" NOT NULL,
+    "options" TEXT[],
+    "placeholder" TEXT,
+    "defaultValue" TEXT,
+    "isRequired" BOOLEAN NOT NULL DEFAULT false,
+    "isFilterable" BOOLEAN NOT NULL DEFAULT false,
+    "isSystemField" BOOLEAN NOT NULL DEFAULT false,
+    "order" INTEGER NOT NULL DEFAULT 0,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "CustomFieldDefinition_pkey" PRIMARY KEY ("id")
+);
+SELECT log_init('Created/Verified CustomFieldDefinition table.');
+
+
+-- Other existing tables (retained for compatibility)
+CREATE TABLE IF NOT EXISTS user_groups (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    description TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+CREATE TABLE IF NOT EXISTS user_group_members (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+    group_id INTEGER REFERENCES user_groups(id) ON DELETE CASCADE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(user_id, group_id)
+);
 
--- LogEntry table
-CREATE TABLE "LogEntry" (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    timestamp TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    level "LogLevel" NOT NULL,
+CREATE TABLE IF NOT EXISTS audit_logs (
+    id SERIAL PRIMARY KEY,
+    "timestamp" TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    level TEXT NOT NULL,
     message TEXT NOT NULL,
-    source VARCHAR(255),
-    "actingUserId" UUID REFERENCES "User"(id) ON DELETE SET NULL,
-    details JSONB,
-    "createdAt" TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+    context TEXT,
+    user_id TEXT,
+    entity_type TEXT,
+    entity_id TEXT,
+    ip_address INET
 );
+SELECT log_init('Verified other standard tables.');
 
--- CustomFieldDefinition table
-CREATE TABLE "CustomFieldDefinition" (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    model_name "CustomFieldModel" NOT NULL,
-    field_key VARCHAR(100) NOT NULL,
-    label VARCHAR(255) NOT NULL,
-    field_type "CustomFieldType" NOT NULL,
-    options JSONB, -- For select types
-    is_required BOOLEAN DEFAULT FALSE,
-    sort_order INTEGER DEFAULT 0,
-    "createdAt" TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE(model_name, field_key)
-);
+-- Create Indexes
+SELECT log_init('Creating indexes...');
+CREATE UNIQUE INDEX IF NOT EXISTS "CustomFieldDefinition_model_name_key" ON "CustomFieldDefinition"("model", "name");
+CREATE INDEX IF NOT EXISTS idx_candidates_position_id ON candidates("positionId");
+CREATE INDEX IF NOT EXISTS idx_candidates_email ON candidates(email);
+CREATE INDEX IF NOT EXISTS idx_audit_logs_user_id ON audit_logs(user_id);
+CREATE INDEX IF NOT EXISTS idx_audit_logs_entity_type_id ON audit_logs(entity_type, entity_id);
 
--- SystemSetting table
-CREATE TABLE "SystemSetting" (
-    key VARCHAR(255) PRIMARY KEY,
-    value TEXT,
-    "updatedAt" TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-);
+-- Create a function to update the 'updated_at' column
+CREATE OR REPLACE FUNCTION update_updated_at_column()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = NOW();
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+SELECT log_init('Created update_updated_at_column function.');
 
--- UserUIDisplayPreference table
-CREATE TABLE "UserUIDisplayPreference" (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    "userId" UUID NOT NULL REFERENCES "User"(id) ON DELETE CASCADE,
-    model_type "CustomFieldModel" NOT NULL,
-    attribute_key VARCHAR(255) NOT NULL,
-    ui_preference VARCHAR(50) NOT NULL,
-    custom_note TEXT,
-    "createdAt" TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE("userId", model_type, attribute_key)
-);
-
-
--- NotificationEvent table
-CREATE TABLE "NotificationEvent" (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    event_key VARCHAR(100) UNIQUE NOT NULL,
-    label VARCHAR(255) NOT NULL,
-    description TEXT,
-    "createdAt" TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-);
-
--- NotificationChannel table
-CREATE TABLE "NotificationChannel" (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    channel_key "NotificationChannelKey" UNIQUE NOT NULL,
-    label VARCHAR(255) NOT NULL,
-    "createdAt" TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-);
-
--- NotificationSetting table
-CREATE TABLE "NotificationSetting" (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    event_id UUID NOT NULL REFERENCES "NotificationEvent"(id) ON DELETE CASCADE,
-    channel_id UUID NOT NULL REFERENCES "NotificationChannel"(id) ON DELETE CASCADE,
-    is_enabled BOOLEAN DEFAULT FALSE,
-    configuration JSONB, -- For webhook URL, etc.
-    "createdAt" TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE(event_id, channel_id)
-);
+-- Apply the trigger to tables that have an 'updated_at' column
+-- Note: Prisma will manage createdAt/updatedAt for the new tables, but we add this for consistency with any manual updates or other tables.
+DO $$
+BEGIN
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'users') THEN
+        CREATE TRIGGER update_users_updated_at BEFORE UPDATE ON users FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+    END IF;
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'positions') THEN
+        CREATE TRIGGER update_positions_updated_at BEFORE UPDATE ON positions FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+    END IF;
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'candidates') THEN
+        CREATE TRIGGER update_candidates_updated_at BEFORE UPDATE ON candidates FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+    END IF;
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'user_groups') THEN
+        CREATE TRIGGER update_user_groups_updated_at BEFORE UPDATE ON user_groups FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+    END IF;
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'CustomFieldDefinition') THEN
+        CREATE TRIGGER update_custom_fields_updated_at BEFORE UPDATE ON "CustomFieldDefinition" FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+    END IF;
+END $$;
+SELECT log_init('Applied updated_at triggers.');
 
 
--- WebhookFieldMapping table
-CREATE TABLE "WebhookFieldMapping" (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    target_path VARCHAR(255) UNIQUE NOT NULL,
-    source_path TEXT,
-    notes TEXT,
-    "createdAt" TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-);
-
--- --- SEED DATA ---
-
--- Seed System User Roles (as Groups)
-INSERT INTO "UserGroup" (id, name, description, is_system_role, is_default) VALUES
-('a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11', 'Admin', 'Administrators have full access to all system features.', TRUE, FALSE),
-('a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a12', 'Recruiter', 'Recruiters manage candidates and positions.', TRUE, TRUE),
-('a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a13', 'Hiring Manager', 'Hiring Managers review assigned candidates.', TRUE, FALSE);
-
--- Seed Default Admin User
--- The password is 'nccadmin'. This hash was generated using bcrypt with cost 10.
-INSERT INTO "User" (id, name, email, password, role) VALUES
-('a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a10', 'NCC Admin', 'admin@ncc.com', '$2a$10$Ifg1vJk3Ncvk2zG8aV.AzuX/JgaqF.u6uI8d9vG4bB4c2X9a7G5Ea', 'Admin');
-
--- Assign Admin user to Admin group
-INSERT INTO "User_UserGroup" ("userId", "groupId") VALUES
-('a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a10', 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11');
-
--- Seed System Default Recruitment Stages
-INSERT INTO "RecruitmentStage" (name, description, is_system, sort_order) VALUES
-('Applied', 'Candidate has applied for a position.', TRUE, 10),
-('Screening', 'Initial screening of the candidate''s resume and profile.', TRUE, 20),
-('Shortlisted', 'Candidate has been shortlisted for further consideration.', TRUE, 30),
-('Interview Scheduled', 'An interview has been scheduled with the candidate.', TRUE, 40),
-('Interviewing', 'Candidate is currently in the interview process.', TRUE, 50),
-('Offer Extended', 'A job offer has been extended to the candidate.', TRUE, 60),
-('Offer Accepted', 'Candidate has accepted the job offer.', TRUE, 70),
-('Hired', 'Candidate has been hired.', TRUE, 80),
-('Rejected', 'Candidate has been rejected.', TRUE, 90),
-('On Hold', 'Candidate application is currently on hold.', TRUE, 100);
-
--- Seed Notification Events and Channels
-INSERT INTO "NotificationEvent" (event_key, label, description) VALUES
-('candidate_created', 'Candidate Created', 'Triggered when a new candidate profile is created.'),
-('status_updated', 'Candidate Status Updated', 'Triggered when a candidate''s status is changed.'),
-('note_added', 'Note Added to Candidate', 'Triggered when a new note is added to a candidate''s transition history.'),
-('recruiter_assigned', 'Recruiter Assigned', 'Triggered when a candidate is assigned to a recruiter.');
-
-INSERT INTO "NotificationChannel" (channel_key, label) VALUES
-('email', 'Email'),
-('webhook', 'Webhook');
-
--- Seed initial System Settings with defaults
-INSERT INTO "SystemSetting" (key, value) VALUES
-('appName', 'CandiTrack'),
-('appThemePreference', 'system'),
-('primaryGradientStart', '179 67% 66%'),
-('primaryGradientEnd', '238 74% 61%'),
-('loginPageBackgroundType', 'default'),
-('loginPageBackgroundColor1', '#F0F4F7'),
-('loginPageBackgroundColor2', '#3F51B5'),
-('sidebarBgStartL', '220 25% 97%'),
-('sidebarBgEndL', '220 20% 94%'),
-('sidebarTextL', '220 25% 30%'),
-('sidebarActiveBgStartL', '179 67% 66%'),
-('sidebarActiveBgEndL', '238 74% 61%'),
-('sidebarActiveTextL', '0 0% 100%'),
-('sidebarHoverBgL', '220 10% 92%'),
-('sidebarHoverTextL', '220 25% 25%'),
-('sidebarBorderL', '220 15% 85%'),
-('sidebarBgStartD', '220 15% 12%'),
-('sidebarBgEndD', '220 15% 9%'),
-('sidebarTextD', '210 30% 85%'),
-('sidebarActiveBgStartD', '179 67% 66%'),
-('sidebarActiveBgEndD', '238 74% 61%'),
-('sidebarActiveTextD', '0 0% 100%'),
-('sidebarHoverBgD', '220 15% 20%'),
-('sidebarHoverTextD', '210 30% 90%'),
-('sidebarBorderD', '220 15% 18%')
-ON CONFLICT (key) DO NOTHING;
+SELECT log_init('CandiTrack database initialization script finished successfully.');
+-- =====================================================
+-- End of Script
+-- =====================================================

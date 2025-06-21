@@ -31,12 +31,13 @@ model Candidate {
 }
 
 model Position {
-  id          String      @id @default(cuid())
-  title       String
-  department  String
-  description String?
-  isOpen      Boolean
-  candidates  Candidate[]
+  id                String      @id @default(cuid())
+  title             String
+  department        String?
+  description       String?
+  isOpen            Boolean     @default(true)
+  candidates        Candidate[]
+  customAttributes  Json?       @default("{}") // To store values for custom fields
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -52,4 +53,40 @@ model TransitionRecord {
   candidate   Candidate @relation(fields: [candidateId], references: [id], onDelete: Cascade) // Cascade delete if candidate is deleted
 
   createdAt DateTime @default(now())
+}
+
+enum ModelName {
+  Candidate
+  Position
+}
+
+enum FieldType {
+  TEXT
+  TEXTAREA
+  NUMBER
+  DATE
+  BOOLEAN
+  SELECT
+  MULTISELECT
+}
+
+// Defines custom fields that can be added to models like Candidate or Position
+model CustomFieldDefinition {
+  id            String    @id @default(cuid())
+  model         ModelName // e.g., Candidate or Position
+  name          String // The programmatic name, e.g., "yearsOfExperience"
+  label         String // The human-readable label, e.g., "Years of Experience"
+  type          FieldType
+  options       String[] // For SELECT or MULTISELECT types
+  placeholder   String?
+  defaultValue  String?
+  isRequired    Boolean   @default(false)
+  isFilterable  Boolean   @default(false) // Can be used in table filters
+  isSystemField Boolean   @default(false) // True for core fields like 'name', 'email'
+  order         Int       @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([model, name]) // Ensure field names are unique per model
 }

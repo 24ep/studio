@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState, useEffect } from 'react';
@@ -8,7 +7,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Command, CommandEmpty, CommandInput, CommandList, CommandItem } from '@/components/ui/command';
 import { Slider } from '@/components/ui/slider';
 import { Label } from '@/components/ui/label';
-import { Search, FilterX, Check, ChevronsUpDown, Loader2, CalendarIcon, Brain, Users, Briefcase, Tag, Star, Building, ListFilter } from 'lucide-react';
+import { Search, FilterX, Check, ChevronsUpDown, Loader2, CalendarIcon, Brain, Users, Briefcase, Tag, Star, Building, ListFilter, Zap, Target, Lightbulb, Sparkles } from 'lucide-react';
 import type { Position, CandidateStatus, RecruitmentStage, UserProfile } from '@/lib/types';
 import { cn } from "@/lib/utils";
 import { ScrollArea } from '../ui/scroll-area';
@@ -17,7 +16,10 @@ import { format, parseISO } from 'date-fns';
 import type { DateRange } from "react-day-picker";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Textarea } from '@/components/ui/textarea';
-
+import { Badge } from '@/components/ui/badge';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 export interface CandidateFilterValues {
   name?: string;
@@ -32,17 +34,34 @@ export interface CandidateFilterValues {
   applicationDateEnd?: Date;
   selectedRecruiterIds?: string[];
   aiSearchQuery?: string;
+  aiSearchType?: 'semantic' | 'exact' | 'hybrid';
+  aiSearchFilters?: {
+    positionIds?: string[];
+    statuses?: string[];
+    minFitScore?: number;
+    maxFitScore?: number;
+    dateRange?: {
+      start: string;
+      end: string;
+    };
+  };
 }
 
 interface CandidateFiltersProps {
   initialFilters?: CandidateFilterValues;
   onFilterChange: (filters: CandidateFilterValues) => void;
-  onAiSearch: (aiQuery: string) => void;
+  onAiSearch: (aiQuery: string, searchType?: string, filters?: any) => void;
   availablePositions: Position[];
   availableStages: RecruitmentStage[];
   availableRecruiters: Pick<UserProfile, 'id' | 'name'>[];
   isLoading?: boolean;
   isAiSearching?: boolean;
+  aiSearchResults?: {
+    totalFound: number;
+    searchQuery: string;
+    searchType: string;
+    reasoning: string;
+  };
 }
 
 export function CandidateFilters({
@@ -53,7 +72,8 @@ export function CandidateFilters({
     availableStages,
     availableRecruiters,
     isLoading,
-    isAiSearching
+    isAiSearching,
+    aiSearchResults
 }: CandidateFiltersProps) {
   const [name, setName] = useState(initialFilters.name || '');
   const [email, setEmail] = useState(initialFilters.email || '');
@@ -74,6 +94,8 @@ export function CandidateFilters({
 
   const [selectedRecruiterIds, setSelectedRecruiterIds] = useState<Set<string>>(new Set(initialFilters.selectedRecruiterIds || []));
   const [aiSearchQueryInput, setAiSearchQueryInput] = useState(initialFilters.aiSearchQuery || '');
+  const [aiSearchType, setAiSearchType] = useState<'semantic' | 'exact' | 'hybrid'>(initialFilters.aiSearchType || 'hybrid');
+  const [aiSearchFilters, setAiSearchFilters] = useState(initialFilters.aiSearchFilters || {});
 
   const [positionSearch, setPositionSearch] = useState('');
   const [statusSearch, setStatusSearch] = useState('');
@@ -83,6 +105,17 @@ export function CandidateFilters({
   const [statusPopoverOpen, setStatusPopoverOpen] = useState(false);
   const [recruiterPopoverOpen, setRecruiterPopoverOpen] = useState(false);
 
+  // AI Search examples
+  const aiSearchExamples = [
+    "React developers with 5+ years experience",
+    "Python developers who worked at Google or Microsoft",
+    "Marketing managers with MBA from top universities",
+    "Senior engineers with machine learning experience",
+    "Sales professionals with SaaS background",
+    "Designers with portfolio in fintech",
+    "Product managers with agile experience",
+    "Data scientists with PhD in statistics",
+  ];
 
   const currentYear = new Date().getFullYear();
   const fromYear = currentYear - 10;
@@ -105,8 +138,9 @@ export function CandidateFilters({
     );
     setSelectedRecruiterIds(new Set(initialFilters.selectedRecruiterIds || []));
     setAiSearchQueryInput(initialFilters.aiSearchQuery || '');
+    setAiSearchType(initialFilters.aiSearchType || 'hybrid');
+    setAiSearchFilters(initialFilters.aiSearchFilters || {});
   }, [initialFilters]);
-
 
   const handleApplyStandardFilters = () => {
     onFilterChange({
@@ -127,8 +161,19 @@ export function CandidateFilters({
 
   const handleAiSearchClick = () => {
     if (aiSearchQueryInput.trim()) {
-      onAiSearch(aiSearchQueryInput.trim());
+      const filters = {
+        positionIds: aiSearchFilters.positionIds,
+        statuses: aiSearchFilters.statuses,
+        minFitScore: aiSearchFilters.minFitScore,
+        maxFitScore: aiSearchFilters.maxFitScore,
+        dateRange: aiSearchFilters.dateRange,
+      };
+      onAiSearch(aiSearchQueryInput.trim(), aiSearchType, filters);
     }
+  };
+
+  const handleAiSearchExample = (example: string) => {
+    setAiSearchQueryInput(example);
   };
 
   const handleResetFilters = () => {
@@ -142,6 +187,8 @@ export function CandidateFilters({
     setApplicationDateRange(undefined);
     setSelectedRecruiterIds(new Set());
     setAiSearchQueryInput('');
+    setAiSearchType('hybrid');
+    setAiSearchFilters({});
     onFilterChange({
       minFitScore: 0,
       maxFitScore: 100,
@@ -175,7 +222,6 @@ export function CandidateFilters({
   const filteredStages = availableStages.filter(stage => stage.name.toLowerCase().includes(statusSearch.toLowerCase()));
   const filteredRecruiters = availableRecruiters.filter(rec => rec.name.toLowerCase().includes(recruiterSearch.toLowerCase()));
 
-
   const filterGroups = [
     {
       title: "Basic Info",
@@ -198,244 +244,418 @@ export function CandidateFilters({
           <div>
             <Label htmlFor="position-select" className="text-xs">Position(s)</Label>
             <Popover open={positionPopoverOpen} onOpenChange={setPositionPopoverOpen}>
-                <PopoverTrigger asChild>
-                    <Button variant="outline" role="combobox" aria-expanded={positionPopoverOpen} className="w-full mt-1 justify-between text-xs font-normal">
-                        {renderMultiSelectTrigger("Select position(s)...", selectedPositionIds, availablePositions, 'position')}
-                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                    </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-[--trigger-width] p-0 dropdown-content-height">
-                    <Command>
-                        <CommandInput placeholder="Search positions..." value={positionSearch} onValueChange={setPositionSearch} className="h-9 text-xs" />
-                        <CommandList>
-                            <CommandEmpty>{positionSearch ? 'No positions found.' : 'Type to search positions.'}</CommandEmpty>
-                            <ScrollArea className="max-h-48">
-                            {filteredPositions.map((pos) => (
-                                <CommandItem
-                                    key={pos.id}
-                                    value={pos.title}
-                                    onSelect={() => {
-                                        setSelectedPositionIds(prev => {
-                                            const newSet = new Set(prev);
-                                            if (newSet.has(pos.id)) newSet.delete(pos.id);
-                                            else newSet.add(pos.id);
-                                            return newSet;
-                                        });
-                                        // setPositionPopoverOpen(false); // Keep open for multi-select
-                                    }}
-                                    className="text-xs"
-                                >
-                                    <Check className={cn("mr-2 h-4 w-4", selectedPositionIds.has(pos.id) ? "opacity-100" : "opacity-0")}/>
-                                    {pos.title}
-                                </CommandItem>
-                            ))}
-                            </ScrollArea>
-                        </CommandList>
-                    </Command>
-                </PopoverContent>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  role="combobox"
+                  aria-expanded={positionPopoverOpen}
+                  className="w-full justify-between mt-1"
+                  disabled={isLoading || isAiSearching}
+                >
+                  {renderMultiSelectTrigger("Select positions...", selectedPositionIds, availablePositions, 'position')}
+                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-full p-0">
+                <Command>
+                  <CommandInput placeholder="Search positions..." value={positionSearch} onValueChange={setPositionSearch} />
+                  <CommandList>
+                    <CommandEmpty>No position found.</CommandEmpty>
+                    {filteredPositions.map((position) => (
+                      <CommandItem
+                        key={position.id}
+                        onSelect={() => {
+                          const newSelected = new Set(selectedPositionIds);
+                          if (newSelected.has(position.id)) {
+                            newSelected.delete(position.id);
+                          } else {
+                            newSelected.add(position.id);
+                          }
+                          setSelectedPositionIds(newSelected);
+                        }}
+                      >
+                        <Check
+                          className={cn(
+                            "mr-2 h-4 w-4",
+                            selectedPositionIds.has(position.id) ? "opacity-100" : "opacity-0"
+                          )}
+                        />
+                        {position.title}
+                      </CommandItem>
+                    ))}
+                  </CommandList>
+                </Command>
+              </PopoverContent>
             </Popover>
           </div>
           <div>
             <Label htmlFor="status-select" className="text-xs">Status(es)</Label>
             <Popover open={statusPopoverOpen} onOpenChange={setStatusPopoverOpen}>
-                <PopoverTrigger asChild>
-                    <Button variant="outline" role="combobox" aria-expanded={statusPopoverOpen} className="w-full mt-1 justify-between text-xs font-normal">
-                        {renderMultiSelectTrigger("Select status(es)...", selectedStatuses, availableStages, 'status')}
-                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                    </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-[--trigger-width] p-0 dropdown-content-height">
-                    <Command>
-                        <CommandInput placeholder="Search statuses..." value={statusSearch} onValueChange={setStatusSearch} className="h-9 text-xs" />
-                        <CommandList>
-                            <CommandEmpty>{statusSearch ? 'No statuses found.' : 'Type to search statuses.'}</CommandEmpty>
-                            <ScrollArea className="max-h-48">
-                            {filteredStages.map((stage) => (
-                                <CommandItem
-                                    key={stage.id}
-                                    value={stage.name}
-                                    onSelect={() => {
-                                        setSelectedStatuses(prev => {
-                                            const newSet = new Set(prev);
-                                            if (newSet.has(stage.name)) newSet.delete(stage.name);
-                                            else newSet.add(stage.name);
-                                            return newSet;
-                                        });
-                                    }}
-                                    className="text-xs"
-                                >
-                                    <Check className={cn("mr-2 h-4 w-4", selectedStatuses.has(stage.name) ? "opacity-100" : "opacity-0")}/>
-                                    {stage.name}
-                                </CommandItem>
-                            ))}
-                            </ScrollArea>
-                        </CommandList>
-                    </Command>
-                </PopoverContent>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  role="combobox"
+                  aria-expanded={statusPopoverOpen}
+                  className="w-full justify-between mt-1"
+                  disabled={isLoading || isAiSearching}
+                >
+                  {renderMultiSelectTrigger("Select statuses...", selectedStatuses, availableStages, 'status')}
+                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-full p-0">
+                <Command>
+                  <CommandInput placeholder="Search statuses..." value={statusSearch} onValueChange={setStatusSearch} />
+                  <CommandList>
+                    <CommandEmpty>No status found.</CommandEmpty>
+                    {filteredStages.map((stage) => (
+                      <CommandItem
+                        key={stage.name}
+                        onSelect={() => {
+                          const newSelected = new Set(selectedStatuses);
+                          if (newSelected.has(stage.name)) {
+                            newSelected.delete(stage.name);
+                          } else {
+                            newSelected.add(stage.name);
+                          }
+                          setSelectedStatuses(newSelected);
+                        }}
+                      >
+                        <Check
+                          className={cn(
+                            "mr-2 h-4 w-4",
+                            selectedStatuses.has(stage.name) ? "opacity-100" : "opacity-0"
+                          )}
+                        />
+                        {stage.name}
+                      </CommandItem>
+                    ))}
+                  </CommandList>
+                </Command>
+              </PopoverContent>
+            </Popover>
+          </div>
+        </>
+      )
+    },
+    {
+      title: "AI-Powered Search",
+      icon: Brain,
+      defaultOpen: false,
+      fields: (
+        <div className="space-y-4">
+          {/* AI Search Query */}
+          <div>
+            <Label htmlFor="ai-search" className="text-xs flex items-center gap-2">
+              <Brain className="w-3 h-3" />
+              AI Search Query
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger>
+                    <Lightbulb className="w-3 h-3 text-muted-foreground" />
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p className="max-w-xs">
+                      Use natural language to search across all candidate attributes including skills, experience, education, and parsed resume data.
+                    </p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </Label>
+            <Textarea
+              id="ai-search"
+              placeholder="e.g., 'React developers with 5+ years experience at tech companies'"
+              value={aiSearchQueryInput}
+              onChange={(e) => setAiSearchQueryInput(e.target.value)}
+              className="mt-1 min-h-[80px]"
+              disabled={isLoading || isAiSearching}
+            />
+          </div>
+
+          {/* AI Search Type */}
+          <div>
+            <Label htmlFor="ai-search-type" className="text-xs">Search Type</Label>
+            <Select value={aiSearchType} onValueChange={(value: 'semantic' | 'exact' | 'hybrid') => setAiSearchType(value)}>
+              <SelectTrigger className="mt-1">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="hybrid">
+                  <div className="flex items-center gap-2">
+                    <Sparkles className="w-3 h-3" />
+                    Hybrid (Recommended)
+                  </div>
+                </SelectItem>
+                <SelectItem value="semantic">
+                  <div className="flex items-center gap-2">
+                    <Target className="w-3 h-3" />
+                    Semantic (Skills & Experience)
+                  </div>
+                </SelectItem>
+                <SelectItem value="exact">
+                  <div className="flex items-center gap-2">
+                    <Search className="w-3 h-3" />
+                    Exact (Text Match)
+                  </div>
+                </SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* AI Search Examples */}
+          <div>
+            <Label className="text-xs">Search Examples</Label>
+            <div className="mt-1 space-y-1">
+              {aiSearchExamples.slice(0, 4).map((example, index) => (
+                <Button
+                  key={index}
+                  variant="ghost"
+                  size="sm"
+                  className="h-auto p-2 text-left text-xs"
+                  onClick={() => handleAiSearchExample(example)}
+                  disabled={isLoading || isAiSearching}
+                >
+                  {example}
+                </Button>
+              ))}
+            </div>
+          </div>
+
+          {/* AI Search Filters */}
+          <div>
+            <Label className="text-xs">AI Search Filters</Label>
+            <div className="mt-1 space-y-2">
+              <div>
+                <Label className="text-xs text-muted-foreground">Fit Score Range</Label>
+                <div className="flex items-center gap-2">
+                  <Slider
+                    value={[aiSearchFilters.minFitScore || 0, aiSearchFilters.maxFitScore || 100]}
+                    onValueChange={([min, max]) => setAiSearchFilters(prev => ({ ...prev, minFitScore: min, maxFitScore: max }))}
+                    max={100}
+                    step={1}
+                    className="flex-1"
+                    disabled={isLoading || isAiSearching}
+                  />
+                  <span className="text-xs w-16">
+                    {aiSearchFilters.minFitScore || 0}-{aiSearchFilters.maxFitScore || 100}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* AI Search Results */}
+          {aiSearchResults && (
+            <Card className="bg-muted/50">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm flex items-center gap-2">
+                  <Brain className="w-4 h-4" />
+                  AI Search Results
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="pt-0">
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs">Found:</span>
+                    <Badge variant="secondary">{aiSearchResults.totalFound} candidates</Badge>
+                  </div>
+                  <div className="text-xs text-muted-foreground">
+                    <strong>Query:</strong> "{aiSearchResults.searchQuery}"
+                  </div>
+                  <div className="text-xs text-muted-foreground">
+                    <strong>Type:</strong> {aiSearchResults.searchType}
+                  </div>
+                  <div className="text-xs text-muted-foreground">
+                    <strong>Reasoning:</strong> {aiSearchResults.reasoning}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* AI Search Button */}
+          <Button
+            onClick={handleAiSearchClick}
+            disabled={!aiSearchQueryInput.trim() || isLoading || isAiSearching}
+            className="w-full"
+          >
+            {isAiSearching ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Searching...
+              </>
+            ) : (
+              <>
+                <Brain className="mr-2 h-4 w-4" />
+                AI Search
+              </>
+            )}
+          </Button>
+        </div>
+      )
+    },
+    {
+      title: "Advanced Filters",
+      icon: ListFilter,
+      defaultOpen: false,
+      fields: (
+        <>
+          <div><Label htmlFor="education-search" className="text-xs">Education Keywords</Label><Input id="education-search" placeholder="e.g., MBA, Computer Science..." value={education} onChange={(e) => setEducation(e.target.value)} className="mt-1" disabled={isLoading || isAiSearching}/></div>
+          <div>
+            <Label className="text-xs">Fit Score Range</Label>
+            <div className="flex items-center gap-2">
+              <Slider
+                value={fitScoreRange}
+                onValueChange={setFitScoreRange}
+                max={100}
+                step={1}
+                className="flex-1"
+                disabled={isLoading || isAiSearching}
+              />
+              <span className="text-xs w-16">
+                {fitScoreRange[0]}-{fitScoreRange[1]}
+              </span>
+            </div>
+          </div>
+          <div>
+            <Label className="text-xs">Application Date Range</Label>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  className={cn(
+                    "w-full justify-start text-left font-normal mt-1",
+                    !applicationDateRange && "text-muted-foreground"
+                  )}
+                  disabled={isLoading || isAiSearching}
+                >
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {applicationDateRange?.from ? (
+                    applicationDateRange.to ? (
+                      <>
+                        {format(applicationDateRange.from, "LLL dd, y")} -{" "}
+                        {format(applicationDateRange.to, "LLL dd, y")}
+                      </>
+                    ) : (
+                      format(applicationDateRange.from, "LLL dd, y")
+                    )
+                  ) : (
+                    <span>Pick a date range</span>
+                  )}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar
+                  initialFocus
+                  mode="range"
+                  defaultMonth={applicationDateRange?.from}
+                  selected={applicationDateRange}
+                  onSelect={setApplicationDateRange}
+                  numberOfMonths={2}
+                  disabled={(date) =>
+                    date > new Date() || date < new Date("1900-01-01")
+                  }
+                />
+              </PopoverContent>
             </Popover>
           </div>
           <div>
             <Label htmlFor="recruiter-select" className="text-xs">Assigned Recruiter(s)</Label>
             <Popover open={recruiterPopoverOpen} onOpenChange={setRecruiterPopoverOpen}>
-                <PopoverTrigger asChild>
-                    <Button variant="outline" role="combobox" aria-expanded={recruiterPopoverOpen} className="w-full mt-1 justify-between text-xs font-normal">
-                        {renderMultiSelectTrigger("Select recruiter(s)...", selectedRecruiterIds, availableRecruiters, 'recruiter')}
-                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                    </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-[--trigger-width] p-0 dropdown-content-height">
-                    <Command>
-                        <CommandInput placeholder="Search recruiters..." value={recruiterSearch} onValueChange={setRecruiterSearch} className="h-9 text-xs" />
-                         <CommandList>
-                           <CommandEmpty>{recruiterSearch ? 'No recruiters found.' : 'Type to search recruiters.'}</CommandEmpty>
-                            <ScrollArea className="max-h-48">
-                            {filteredRecruiters.map((rec) => (
-                                <CommandItem
-                                    key={rec.id}
-                                    value={rec.name}
-                                    onSelect={() => {
-                                        setSelectedRecruiterIds(prev => {
-                                            const newSet = new Set(prev);
-                                            if (newSet.has(rec.id)) newSet.delete(rec.id);
-                                            else newSet.add(rec.id);
-                                            return newSet;
-                                        });
-                                    }}
-                                    className="text-xs"
-                                >
-                                    <Check className={cn("mr-2 h-4 w-4", selectedRecruiterIds.has(rec.id) ? "opacity-100" : "opacity-0")}/>
-                                    {rec.name}
-                                </CommandItem>
-                            ))}
-                            </ScrollArea>
-                        </CommandList>
-                    </Command>
-                </PopoverContent>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  role="combobox"
+                  aria-expanded={recruiterPopoverOpen}
+                  className="w-full justify-between mt-1"
+                  disabled={isLoading || isAiSearching}
+                >
+                  {renderMultiSelectTrigger("Select recruiters...", selectedRecruiterIds, availableRecruiters, 'recruiter')}
+                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-full p-0">
+                <Command>
+                  <CommandInput placeholder="Search recruiters..." value={recruiterSearch} onValueChange={setRecruiterSearch} />
+                  <CommandList>
+                    <CommandEmpty>No recruiter found.</CommandEmpty>
+                    {filteredRecruiters.map((recruiter) => (
+                      <CommandItem
+                        key={recruiter.id}
+                        onSelect={() => {
+                          const newSelected = new Set(selectedRecruiterIds);
+                          if (newSelected.has(recruiter.id)) {
+                            newSelected.delete(recruiter.id);
+                          } else {
+                            newSelected.add(recruiter.id);
+                          }
+                          setSelectedRecruiterIds(newSelected);
+                        }}
+                      >
+                        <Check
+                          className={cn(
+                            "mr-2 h-4 w-4",
+                            selectedRecruiterIds.has(recruiter.id) ? "opacity-100" : "opacity-0"
+                          )}
+                        />
+                        {recruiter.name}
+                      </CommandItem>
+                    ))}
+                  </CommandList>
+                </Command>
+              </PopoverContent>
             </Popover>
           </div>
         </>
-      )
-    },
-    {
-      title: "Profile Attributes",
-      icon: Tag,
-      defaultOpen: false,
-      fields: (
-        <>
-          <div><Label htmlFor="education-search" className="text-xs">Education Keywords</Label><Input id="education-search" placeholder="e.g., BSc, CompSci..." value={education} onChange={(e) => setEducation(e.target.value)} className="mt-1" disabled={isLoading || isAiSearching}/></div>
-          <div>
-              <Label className="text-xs">Fit Score ({fitScoreRange[0]}% - {fitScoreRange[1]}%)</Label>
-              <Popover>
-                  <PopoverTrigger asChild><Button variant="outline" className="w-full mt-1 justify-start text-left font-normal text-xs" disabled={isLoading || isAiSearching}><span>{fitScoreRange[0]} - {fitScoreRange[1]}%</span><ListFilter className="ml-auto h-4 w-4 opacity-50" /></Button></PopoverTrigger>
-                  <PopoverContent className="w-64 p-4" align="start"><Slider min={0} max={100} step={1} value={[fitScoreRange[0], fitScoreRange[1]]} onValueChange={(newRange) => setFitScoreRange(newRange as [number, number])} className="my-4" disabled={isLoading || isAiSearching}/>
-                  <div className="flex justify-between text-xs text-muted-foreground"><span>{fitScoreRange[0]}%</span><span>{fitScoreRange[1]}%</span></div></PopoverContent>
-              </Popover>
-          </div>
-        </>
-      )
-    },
-    {
-      title: "Application Dates",
-      icon: CalendarIcon,
-      defaultOpen: false,
-      fields: (
-         <div className="flex flex-col gap-2">
-            <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    id="date"
-                    variant={"outline"}
-                    className={cn(
-                      "w-full justify-start text-left font-normal text-xs",
-                      !applicationDateRange && "text-muted-foreground"
-                    )}
-                    disabled={isLoading || isAiSearching}
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {applicationDateRange?.from ? (
-                      applicationDateRange.to ? (
-                        <>
-                          {format(applicationDateRange.from, "LLL dd, y")} -{" "}
-                          {format(applicationDateRange.to, "LLL dd, y")}
-                        </>
-                      ) : (
-                        format(applicationDateRange.from, "LLL dd, y")
-                      )
-                    ) : (
-                      <span>Pick a date range</span>
-                    )}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                  <Calendar
-                    initialFocus
-                    mode="range"
-                    defaultMonth={applicationDateRange?.from}
-                    selected={applicationDateRange}
-                    onSelect={setApplicationDateRange}
-                    numberOfMonths={2}
-                    captionLayout="dropdown-buttons" 
-                    fromYear={fromYear} 
-                    toYear={toYear}
-                  />
-                </PopoverContent>
-              </Popover>
-         </div>
       )
     }
   ];
 
   return (
-    <div className="space-y-4 p-1">
-        <div>
-            <Label htmlFor="ai-search-query" className="text-sm font-medium">AI Powered Search</Label>
-            <Textarea
-                id="ai-search-query"
-                placeholder="e.g., 'Java developer with React skills and 5 years experience in fintech...'"
-                value={aiSearchQueryInput}
-                onChange={(e) => setAiSearchQueryInput(e.target.value)}
-                disabled={isLoading || isAiSearching}
-                className="mt-1 min-h-[80px]"
-                rows={3}
-            />
-            <Button onClick={handleAiSearchClick} disabled={isLoading || isAiSearching || !aiSearchQueryInput.trim()} className="mt-2 w-full sm:w-auto btn-primary-gradient">
-                {isAiSearching ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Brain className="mr-2 h-4 w-4" />}
-                AI Search
-            </Button>
-        </div>
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <h3 className="text-lg font-semibold flex items-center gap-2">
+          <FilterX className="w-5 h-5" />
+          Filters
+        </h3>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={handleResetFilters}
+          disabled={isLoading || isAiSearching}
+        >
+          Reset All
+        </Button>
+      </div>
 
-        <div className="flex items-center my-3">
-          <span className="flex-grow border-t"></span>
-          <span className="mx-2 text-xs text-muted-foreground uppercase">Or</span>
-          <span className="flex-grow border-t"></span>
-        </div>
+      <Accordion type="multiple" className="w-full">
+        {filterGroups.map((group, index) => (
+          <AccordionItem key={index} value={`item-${index}`} className="border rounded-lg">
+            <AccordionTrigger className="px-4 hover:no-underline">
+              <div className="flex items-center gap-2">
+                <group.icon className="w-4 h-4" />
+                <span className="font-medium">{group.title}</span>
+              </div>
+            </AccordionTrigger>
+            <AccordionContent className="px-4 pb-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {group.fields}
+              </div>
+            </AccordionContent>
+          </AccordionItem>
+        ))}
+      </Accordion>
 
-        <Label className="text-sm font-medium text-muted-foreground mb-2 block">Standard Filters</Label>
-        <Accordion type="multiple" defaultValue={filterGroups.filter(g => g.defaultOpen).map(g => g.title)} className="w-full">
-          {filterGroups.map(group => (
-            <AccordionItem value={group.title} key={group.title}>
-              <AccordionTrigger className="py-2 text-sm hover:no-underline">
-                <div className="flex items-center">
-                  <group.icon className="mr-2 h-4 w-4 text-primary/80" />
-                  {group.title}
-                </div>
-              </AccordionTrigger>
-              <AccordionContent>
-                <div className="space-y-3 p-1">{group.fields}</div>
-              </AccordionContent>
-            </AccordionItem>
-          ))}
-        </Accordion>
-
-        <div className="mt-6 flex flex-col sm:flex-row justify-end gap-2 pt-4 border-t">
-            <Button variant="outline" onClick={handleResetFilters} disabled={isLoading || isAiSearching} className="w-full sm:w-auto">
-                <FilterX className="mr-2 h-4 w-4" /> Reset All Filters
-            </Button>
-            <Button onClick={handleApplyStandardFilters} disabled={isLoading || isAiSearching} className="w-full sm:w-auto">
-                {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Search className="mr-2 h-4 w-4" />}
-                Apply Standard Filters
-            </Button>
-        </div>
+      <div className="flex gap-2">
+        <Button
+          onClick={handleApplyStandardFilters}
+          disabled={isLoading || isAiSearching}
+          className="flex-1"
+        >
+          <Search className="mr-2 h-4 w-4" />
+          Apply Filters
+        </Button>
+      </div>
     </div>
   );
 }
