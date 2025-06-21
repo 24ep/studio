@@ -70,13 +70,14 @@ export async function POST(request: Request) {
       },
     });
 
-    await logAudit('CREATE', `Created custom field '${label}' for ${model}`, 'CustomFieldDefinition', session.user.id);
+    await logAudit('AUDIT', `Created custom field '${label}' for ${model}`, 'CustomFieldDefinition', session.user.id);
 
     return NextResponse.json(newDefinition, { status: 201 });
   } catch (error: any) {
     console.error('Error creating custom field definition:', error);
     if (error.code === 'P2002') { // Unique constraint violation
-        return NextResponse.json({ error: `A field with the name "${body.name}" already exists for the ${body.model} model.` }, { status: 409 });
+        const { name, model } = fieldDefinitionSchema.parse(await request.json());
+        return NextResponse.json({ error: `A field with the name "${name}" already exists for the ${model} model.` }, { status: 409 });
     }
     return NextResponse.json({ error: 'Failed to create custom field definition' }, { status: 500 });
   }

@@ -72,7 +72,7 @@ export async function PUT(request: Request, { params }: { params: { id: string }
       data: validation.data,
     });
 
-    await logAudit('UPDATE', `Updated custom field '${updatedDefinition.label}' for ${updatedDefinition.model}`, 'CustomFieldDefinition', session.user.id);
+    await logAudit('AUDIT', `Updated custom field '${updatedDefinition.label}' for ${updatedDefinition.model}`, 'CustomFieldDefinition', session.user.id);
 
     return NextResponse.json(updatedDefinition);
   } catch (error) {
@@ -108,7 +108,7 @@ export async function DELETE(request: Request, { params }: { params: { id: strin
       where: { id: params.id },
     });
 
-    await logAudit('DELETE', `Deleted custom field '${deletedDefinition.label}' from ${deletedDefinition.model}`, 'CustomFieldDefinition', session.user.id);
+    await logAudit('AUDIT', `Deleted custom field '${deletedDefinition.label}' from ${deletedDefinition.model}`, 'CustomFieldDefinition', session.user.id);
 
     return NextResponse.json({ message: 'Custom field definition deleted successfully' }, { status: 200 });
   } catch (error) {

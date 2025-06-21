@@ -4,8 +4,6 @@ import { PrismaAdapter } from '@next-auth/prisma-adapter';
 import AzureADProvider from 'next-auth/providers/azure-ad';
 import CredentialsProvider from 'next-auth/providers/credentials';
 import prisma from '@/lib/prisma';
-import bcrypt from 'bcrypt';
-import { User } from '@prisma/client';
 import { logAudit } from '@/lib/auditLog';
 
 export const authOptions: NextAuthOptions = {
@@ -51,8 +49,7 @@ export const authOptions: NextAuthOptions = {
       await logAudit('AUDIT', `User '${user.name || user.email}' (ID: ${user.id}) signed in.`, 'Auth', user.id, { provider: account?.provider, isNewUser: isNewUser });
     },
     async signOut({ token, session }) {
-      // Token might be more reliable here if session is already cleared
-      const userId = token?.id || (session?.user as any)?.id;
+      const userId = token?.sub || (session?.user as any)?.id;
       const userName = token?.name || token?.email || session?.user?.name || session?.user?.email || 'Unknown User';
       if (userId) {
         await logAudit('AUDIT', `User '${userName}' (ID: ${userId}) signed out.`, 'Auth', userId);
@@ -64,15 +61,14 @@ export const authOptions: NextAuthOptions = {
   callbacks: {
     async session({ session, token }) {
       if (token && session.user) {
-        session.user.id = token.sub!; // The user id is in the 'sub' claim from the JWT
-        session.user.role = (token as any).role;
+        session.user.id = token.sub as string;
+        session.user.role = token.role as 'Admin' | 'Recruiter' | 'Hiring Manager';
       }
       return session;
     },
-    async jwt({ token, user, account, profile }) {
+    async jwt({ token, user }) {
       if (user) {
-        // On sign-in, persist the user's role to the token
-        token.role = (user as User).role;
+        token.role = (user as any).role;
       }
       return token;
     },
