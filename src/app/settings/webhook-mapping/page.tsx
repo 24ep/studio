@@ -2,7 +2,7 @@
 // src/app/settings/webhook-mapping/page.tsx
 "use client";
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -12,10 +12,15 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { useToast } from '@/hooks/use-toast';
 import { signIn, useSession } from 'next-auth/react';
 import { useRouter, usePathname } from 'next/navigation';
-import { Save, SlidersHorizontal, Info, Trash2, PlusCircle, Loader2, ShieldAlert, ServerCrash, RefreshCw } from 'lucide-react';
-import type { WebhookFieldMapping } from '@/lib/types'; 
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Save, SlidersHorizontal, Info, Loader2, ShieldAlert, ServerCrash, RefreshCw } from 'lucide-react';
+import type { WebhookFieldMapping } from '@/lib/types';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 
 const TARGET_CANDIDATE_ATTRIBUTES_CONFIG: { path: string; label: string; type: string; example?: string, defaultNotes?: string }[] = [
   { path: 'candidate_info.cv_language', label: 'CV Language', type: 'string', example: 'payload.language', defaultNotes: 'Language code of the resume (e.g., EN, TH).' },
@@ -41,6 +46,12 @@ const TARGET_CANDIDATE_ATTRIBUTES_CONFIG: { path: string; label: string; type: s
   { path: 'targetPositionDescription', label: 'Target Position Description (Hint)', type: 'string', example: 'payload.initialTarget.description', defaultNotes: 'Hint from uploader about target position description.' },
   { path: 'targetPositionLevel', label: 'Target Position Level (Hint)', type: 'string', example: 'payload.initialTarget.level', defaultNotes: 'Hint from uploader about target position level.' },
 ];
+
+interface GroupedMapping {
+    groupName: string;
+    description: string;
+    attributes: WebhookFieldMapping[];
+}
 
 export default function WebhookMappingPage() {
   const { data: session, status: sessionStatus } = useSession();
@@ -109,14 +120,14 @@ export default function WebhookMappingPage() {
     }
   }, [sessionStatus, session, pathname, signIn, fetchMappings]);
 
-  const handleMappingChange = (index: number, field: 'sourcePath' | 'notes', value: string) => {
-    const newMappings = [...mappings];
-    if (!newMappings[index]) {
-        console.error(`Attempted to update non-existent mapping at index ${index}`);
-        return;
-    }
-    newMappings[index] = { ...newMappings[index], [field]: value };
-    setMappings(newMappings);
+  const handleMappingChange = (targetPath: string, field: 'sourcePath' | 'notes', value: string) => {
+    setMappings(prevMappings => 
+      prevMappings.map(mapping => 
+        mapping.targetPath === targetPath 
+          ? { ...mapping, [field]: value } 
+          : mapping
+      )
+    );
   };
   
   const handleSaveConfiguration = async () => {
@@ -147,13 +158,33 @@ export default function WebhookMappingPage() {
       setIsSaving(false);
     }
   };
+
+  const groupedMappings: GroupedMapping[] = useMemo(() => {
+    const groups: Record<string, GroupedMapping> = {
+        'general': { groupName: 'General Information', description: "Core candidate identification and personal details.", attributes: [] },
+        'resume_content': { groupName: 'Resume Content (Arrays)', description: "Fields that expect an array of objects, like education or work history.", attributes: [] },
+        'job_matching': { groupName: 'Job Matching & Application', description: "Fields related to specific job matches or the applied-for job.", attributes: [] },
+        'upload_context': { groupName: 'Upload Context (Hints)', description: "Optional hints provided by the uploader about the target position.", attributes: [] },
+    };
+
+    mappings.forEach(mapping => {
+        const path = mapping.targetPath;
+        if (path.startsWith('candidate_info.personal_info') || path.startsWith('candidate_info.contact_info') || path === 'candidate_info.cv_language') {
+            groups['general'].attributes.push(mapping);
+        } else if (['candidate_info.education', 'candidate_info.experience', 'candidate_info.skills', 'candidate_info.job_suitable'].includes(path)) {
+            groups['resume_content'].attributes.push(mapping);
+        } else if (path.startsWith('job_applied') || path === 'jobs') {
+            groups['job_matching'].attributes.push(mapping);
+        } else if (path.startsWith('targetPosition')) {
+            groups['upload_context'].attributes.push(mapping);
+        }
+    });
+
+    return Object.values(groups).filter(g => g.attributes.length > 0);
+  }, [mappings]);
   
   if (sessionStatus === 'loading' || (isLoadingData && !fetchError && !isClient && mappings.length === 0)) {
-    return (
-        <div className="flex h-full items-center justify-center">
-            <Loader2 className="h-16 w-16 animate-spin text-primary" />
-        </div>
-    );
+    return ( <div className="flex h-full items-center justify-center"><Loader2 className="h-16 w-16 animate-spin text-primary" /></div> );
   }
 
   if (fetchError && !isLoadingData) {
@@ -184,9 +215,8 @@ export default function WebhookMappingPage() {
             <Info className="h-5 w-5 text-blue-600 dark:text-blue-400" />
             <AlertTitle className="font-semibold text-blue-700 dark:text-blue-300">How This Works</AlertTitle>
             <AlertDescription>
-              The CandiTrack API (<code>/api/n8n/create-candidate-with-matches</code>) will use these server-side mappings to transform the JSON payload it receives from your workflow.
-              Enter the JSON path from your workflow's output (e.g., <code className="font-mono text-xs bg-blue-200 dark:bg-blue-800 px-1 rounded">data.profile.firstName</code>) into the "Source JSON Path" field for each corresponding CandiTrack attribute.
-              If a "Source JSON Path" is left empty, that CandiTrack attribute will not be populated from the webhook for that field. For array fields, ensure the source path points to an array of objects with a compatible structure.
+              Enter the JSON path from your workflow's output (e.g., <code className="font-mono text-xs bg-blue-200 dark:bg-blue-800 px-1 rounded">data.profile.firstName</code>) into the "Source JSON Path" field.
+              If a source path is left empty, that CandiTrack attribute will not be populated. For array fields, ensure the source path points to an array of objects with a compatible structure.
             </AlertDescription>
           </Alert>
           
@@ -203,46 +233,49 @@ export default function WebhookMappingPage() {
                   <Button onClick={fetchMappings} variant="outline"><RefreshCw className="mr-2 h-4 w-4"/>Reload Configuration</Button>
               </div>
           ) : (
-            <div className="border rounded-lg overflow-hidden">
-              <ScrollArea className="max-h-[60vh]">
-                <Table>
-                  <TableHeader><TableRow><TableHead className="w-[30%]">Target CandiTrack Attribute</TableHead><TableHead className="w-[30%]">Source JSON Path (from Workflow)</TableHead><TableHead className="w-[40%] hidden md:table-cell">Notes / Details</TableHead></TableRow></TableHeader>
-                  <TableBody>
-                    {mappings.map((mapping, index) => {
-                      const targetAttrInfo = TARGET_CANDIDATE_ATTRIBUTES_CONFIG.find(attr => attr.path === mapping.targetPath);
-                      return (
-                        <TableRow key={mapping.targetPath}>
-                          <TableCell>
-                            <div className="font-medium">{targetAttrInfo?.label || mapping.targetPath}</div>
-                            <div className="text-xs text-muted-foreground">Path: <code className="text-xs bg-muted/50 px-1 rounded">{mapping.targetPath}</code></div>
-                            <div className="text-xs text-muted-foreground">Type: {targetAttrInfo?.type || 'unknown'}</div>
-                          </TableCell>
-                          <TableCell>
-                            <Input 
-                                id={`sourcePath-${index}`} 
-                                value={mapping.sourcePath || ''} 
-                                onChange={(e) => handleMappingChange(index, 'sourcePath', e.target.value)}
-                                placeholder={targetAttrInfo?.example || "e.g., data.profile.firstName"}
-                                className="text-sm"
-                            />
-                          </TableCell>
-                          <TableCell className="hidden md:table-cell">
-                            <Textarea
-                                id={`notes-${index}`}
-                                value={mapping.notes || ''}
-                                onChange={(e) => handleMappingChange(index, 'notes', e.target.value)}
-                                placeholder="Optional notes or details about this mapping"
-                                className="text-sm min-h-[60px]"
-                                rows={2}
-                            />
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })}
-                  </TableBody>
-                </Table>
-              </ScrollArea>
-            </div>
+            <Accordion type="multiple" defaultValue={groupedMappings.map(g => g.groupName)} className="w-full">
+              {groupedMappings.map(group => (
+                <AccordionItem value={group.groupName} key={group.groupName}>
+                  <AccordionTrigger className="text-lg font-semibold hover:no-underline">{group.groupName}</AccordionTrigger>
+                  <AccordionContent>
+                    <p className="text-sm text-muted-foreground mb-4">{group.description}</p>
+                    <div className="space-y-4">
+                      {group.attributes.map((mapping, index) => {
+                         const targetAttrInfo = TARGET_CANDIDATE_ATTRIBUTES_CONFIG.find(attr => attr.path === mapping.targetPath);
+                         return (
+                          <div key={mapping.targetPath} className="p-4 border rounded-md bg-muted/20">
+                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-x-6 gap-y-2">
+                                <div>
+                                  <Label htmlFor={`sourcePath-${mapping.targetPath}`}>Target: <span className="font-semibold text-foreground">{targetAttrInfo?.label || mapping.targetPath}</span></Label>
+                                  <div className="text-xs text-muted-foreground mb-1">Path: <code className="text-xs bg-muted/50 px-1 rounded">{mapping.targetPath}</code></div>
+                                  <Input 
+                                      id={`sourcePath-${mapping.targetPath}`} 
+                                      value={mapping.sourcePath || ''} 
+                                      onChange={(e) => handleMappingChange(mapping.targetPath, 'sourcePath', e.target.value)}
+                                      placeholder={targetAttrInfo?.example || "e.g., data.profile.firstName"}
+                                      className="text-sm"
+                                  />
+                                </div>
+                                <div>
+                                  <Label htmlFor={`notes-${mapping.targetPath}`}>Notes</Label>
+                                  <Textarea
+                                      id={`notes-${mapping.targetPath}`}
+                                      value={mapping.notes || ''}
+                                      onChange={(e) => handleMappingChange(mapping.targetPath, 'notes', e.target.value)}
+                                      placeholder="Optional notes or details about this mapping"
+                                      className="text-sm min-h-[60px] mt-1"
+                                      rows={2}
+                                  />
+                                </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </AccordionContent>
+                </AccordionItem>
+              ))}
+            </Accordion>
           )}
       </CardContent>
       <CardFooter className="border-t pt-6 flex justify-end">
