@@ -175,6 +175,7 @@ model User {
   recruitedCandidates TransitionRecord[] @relation("UserTransitions")
   uploadedResumes     ResumeHistory[]    @relation("UserResumeUploads")
   assignedCandidates  Candidate[]        @relation("RecruitedCandidates")
+  userGroups          UserGroup[]        @relation("UserUserGroups")
 }
 
 model VerificationToken {
@@ -183,4 +184,47 @@ model VerificationToken {
   expires    DateTime
 
   @@unique([identifier, token])
+}
+
+model AuditLog {
+  id           String   @id @default(cuid())
+  timestamp    DateTime @default(now())
+  level        String
+  message      String
+  source       String?
+  actingUserId String?
+  details      Json?
+
+  @@index([timestamp])
+  @@index([level])
+  @@index([source])
+}
+
+model RecruitmentStage {
+  id          String @id @default(cuid())
+  name        String @unique
+  description String?
+  sortOrder   Int    @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model SystemSetting {
+  key   String @id @unique
+  value String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model UserGroup {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  description String?
+  users       User[]   @relation("UserUserGroups")
+  permissions String[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
