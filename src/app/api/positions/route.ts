@@ -1,4 +1,3 @@
-
 import { NextResponse, type NextRequest } from 'next/server';
 import pool from '../../../lib/db';
 import { z } from 'zod';
@@ -6,6 +5,7 @@ import { logAudit } from '@/lib/auditLog';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 import { v4 as uuidv4 } from 'uuid';
+import { getRedisClient, CACHE_KEY_POSITIONS } from '@/lib/redis';
 
 export async function GET(request: NextRequest) {
   const session = await getServerSession(authOptions);
@@ -122,6 +122,13 @@ export async function POST(request: NextRequest) {
         ...result.rows[0],
         custom_attributes: result.rows[0].custom_attributes || {},
     };
+
+    // Invalidate cache
+    const redisClient = await getRedisClient();
+    if (redisClient) {
+        await redisClient.del(CACHE_KEY_POSITIONS);
+        console.log('Positions cache invalidated due to new position creation.');
+    }
 
     await logAudit('AUDIT', `Position '${newPosition.title}' (ID: ${newPosition.id}) created by ${actingUserName}.`, 'API:Positions:Create', actingUserId, { targetPositionId: newPosition.id, title: newPosition.title, department: newPosition.department, position_level: newPosition.position_level });
     return NextResponse.json(newPosition, { status: 201 });

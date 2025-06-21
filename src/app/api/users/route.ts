@@ -1,4 +1,3 @@
-
 // src/app/api/users/route.ts
 import { NextResponse, type NextRequest } from 'next/server';
 import { z } from 'zod';
@@ -10,6 +9,7 @@ import bcrypt from 'bcrypt';
 import { logAudit } from '@/lib/auditLog';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/app/api/auth/[...nextauth]/route';
+import { getRedisClient, CACHE_KEY_USERS } from '@/lib/redis';
 
 
 const platformModuleIds = PLATFORM_MODULES.map(m => m.id) as [PlatformModuleId, ...PlatformModuleId[]];
@@ -192,6 +192,12 @@ export async function POST(request: NextRequest) {
 
 
     await client.query('COMMIT');
+
+    const redisClient = await getRedisClient();
+    if (redisClient) {
+        await redisClient.del(CACHE_KEY_USERS);
+        console.log('Users cache invalidated due to new user creation.');
+    }
     
     await logAudit('AUDIT', `User account '${newUser.name}' (ID: ${newUser.id}) created by ${session.user.name}.`, 'API:Users:Create', session.user.id, { targetUserId: newUser.id, role: newUser.role, permissions: newUser.modulePermissions, groups: groupIds });
     return NextResponse.json(newUser, { status: 201 });
@@ -209,5 +215,3 @@ export async function POST(request: NextRequest) {
     client.release();
   }
 }
-
-    

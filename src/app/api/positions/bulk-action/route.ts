@@ -1,4 +1,3 @@
-
 // src/app/api/positions/bulk-action/route.ts
 import { NextResponse, type NextRequest } from 'next/server';
 import pool from '../../../../lib/db';
@@ -7,6 +6,7 @@ import { logAudit } from '@/lib/auditLog';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 import type { PositionBulkActionPayload } from '@/lib/types';
+import { getRedisClient, CACHE_KEY_POSITIONS } from '@/lib/redis';
 
 const bulkPositionActionSchema = z.object({
   action: z.enum(['delete', 'change_status']),
@@ -44,6 +44,7 @@ export async function POST(request: NextRequest) {
   let successCount = 0;
   let failCount = 0;
   const failedDetails: { positionId: string, reason: string }[] = [];
+  let cacheInvalidated = false;
 
   try {
     await client.query('BEGIN');
@@ -64,6 +65,7 @@ export async function POST(request: NextRequest) {
       if (positionsToDelete.length > 0) {
         const deleteResult = await client.query('DELETE FROM "Position" WHERE id = ANY($1::uuid[]) RETURNING id', [positionsToDelete]);
         successCount = deleteResult.rowCount;
+        if (successCount > 0) cacheInvalidated = true;
       }
       
     } else if (action === 'change_status') {
@@ -76,6 +78,8 @@ export async function POST(request: NextRequest) {
         [newIsOpenStatus, positionIds]
       );
       successCount = updateResult.rowCount;
+      if (successCount > 0) cacheInvalidated = true;
+
       const updatedIds = updateResult.rows.map(r => r.id);
       failCount = positionIds.length - successCount;
       positionIds.forEach(id => {
@@ -86,6 +90,15 @@ export async function POST(request: NextRequest) {
     }
 
     await client.query('COMMIT');
+
+    if (cacheInvalidated) {
+        const redisClient = await getRedisClient();
+        if (redisClient) {
+            await redisClient.del(CACHE_KEY_POSITIONS);
+            console.log('Positions cache invalidated due to bulk action.');
+        }
+    }
+
     await logAudit('AUDIT', `Bulk position action '${action}' performed by ${actingUserName}. Success: ${successCount}, Fail: ${failCount}. Target IDs: ${positionIds.join(', ')}.`, 'API:Positions:BulkAction', actingUserId, { action, successCount, failCount, positionIds, newIsOpenStatus: newIsOpenStatus, failedDetails: failCount > 0 ? failedDetails : undefined });
     
     return NextResponse.json({ 

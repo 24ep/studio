@@ -1,4 +1,3 @@
-
 // src/lib/redis.ts
 import { createClient, type RedisClientType } from 'redis';
 
@@ -90,3 +89,8 @@ export default getRedisClient; // Default export for convenience
 export const CACHE_KEY_RECRUITMENT_STAGES = 'cache:recruitment_stages';
 export const CACHE_EXPIRY_SECONDS_STAGES = 3600; // 1 hour
 
+export const CACHE_KEY_POSITIONS = 'cache:positions';
+export const CACHE_EXPIRY_SECONDS_POSITIONS = 3600; // 1 hour
+
+export const CACHE_KEY_USERS = 'cache:users';
+export const CACHE_EXPIRY_SECONDS_USERS = 1800; // 30 minutes

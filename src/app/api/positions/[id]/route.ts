@@ -1,8 +1,8 @@
-
 import { NextResponse, type NextRequest } from 'next/server';
 import pool from '../../../../lib/db';
 import { z } from 'zod';
 import { logAudit } from '@/lib/auditLog';
+import { getRedisClient, CACHE_KEY_POSITIONS } from '@/lib/redis';
 
 export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
   try {
@@ -90,6 +90,11 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
         custom_attributes: updatedResult.rows[0].custom_attributes || {},
     };
 
+    const redisClient = await getRedisClient();
+    if (redisClient) {
+        await redisClient.del(CACHE_KEY_POSITIONS);
+    }
+
     await logAudit('AUDIT', `Position '${updatedPosition.title}' (ID: ${updatedPosition.id}) updated.`, 'API:Positions', null, { targetPositionId: updatedPosition.id, changes: Object.keys(validatedData) });
     return NextResponse.json(updatedPosition, { status: 200 });
   } catch (error) {
@@ -116,6 +121,11 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
     
     const deleteQuery = 'DELETE FROM "Position" WHERE id = $1';
     await pool.query(deleteQuery, [params.id]);
+
+    const redisClient = await getRedisClient();
+    if (redisClient) {
+        await redisClient.del(CACHE_KEY_POSITIONS);
+    }
     
     await logAudit('AUDIT', `Position '${positionTitle}' (ID: ${params.id}) deleted.`, 'API:Positions', null, { targetPositionId: params.id, deletedPositionTitle: positionTitle });
     return NextResponse.json({ message: "Position deleted successfully" }, { status: 200 });

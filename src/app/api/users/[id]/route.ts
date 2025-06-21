@@ -1,4 +1,3 @@
-
 // src/app/api/users/[id]/route.ts
 import { NextResponse, type NextRequest } from 'next/server';
 import { z } from 'zod';
@@ -9,6 +8,7 @@ import { logAudit } from '@/lib/auditLog';
 import bcrypt from 'bcrypt';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/app/api/auth/[...nextauth]/route';
+import { getRedisClient, CACHE_KEY_USERS } from '@/lib/redis';
 
 const platformModuleIds = PLATFORM_MODULES.map(m => m.id) as [PlatformModuleId, ...PlatformModuleId[]];
 const userRoleEnum = z.enum(['Admin', 'Recruiter', 'Hiring Manager']);
@@ -72,7 +72,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
 
   if (!session?.user?.id || (!isAdmin && !isSelfEdit)) {
     // If not admin and not editing self, deny
-    await logAudit('WARN', `Forbidden attempt to update user ${params.id} by ${session?.user?.email || 'Unknown'}.`, 'API:Users:Update', session?.user?.id, { targetUserId: params.id });
+    await logAudit('WARN', `Forbidden attempt to update user ${params.id} by ${session?.user?.email || 'Unknown'}.`, 'API:Users:Update', session.user.id, { targetUserId: params.id });
     return NextResponse.json({ message: "Forbidden: Insufficient permissions." }, { status: 403 });
   }
 
@@ -194,6 +194,12 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
 
 
     await client.query('COMMIT');
+
+    const redisClient = await getRedisClient();
+    if (redisClient) {
+        await redisClient.del(CACHE_KEY_USERS);
+        console.log('Users cache invalidated due to user update.');
+    }
     
     const finalUserQuery = `
       SELECT 
@@ -235,7 +241,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
 export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
   const session = await getServerSession(authOptions);
   if (session?.user?.role !== 'Admin') {
-    await logAudit('WARN', `Forbidden attempt to delete user ${params.id} by ${session?.user?.email || 'Unknown'}. Admin role required.`, 'API:Users:Delete', session?.user?.id, { targetUserId: params.id });
+    await logAudit('WARN', `Forbidden attempt to delete user ${params.id} by ${session?.user?.email || 'Unknown'}. Admin role required.`, 'API:Users:Delete', session.user.id, { targetUserId: params.id });
     return NextResponse.json({ message: "Forbidden: Admin role required to delete users." }, { status: 403 });
   }
 
@@ -257,6 +263,13 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
       return NextResponse.json({ message: "User not found" }, { status: 404 });
     }
     await client.query('COMMIT');
+
+    const redisClient = await getRedisClient();
+    if (redisClient) {
+        await redisClient.del(CACHE_KEY_USERS);
+        console.log('Users cache invalidated due to user deletion.');
+    }
+    
     const deletedUserName = result.rows[0].name;
     await logAudit('AUDIT', `User account '${deletedUserName}' (ID: ${params.id}) deleted by ${session.user.name}.`, 'API:Users:Delete', session.user.id, { targetUserId: params.id, deletedUserName });
     return NextResponse.json({ message: "User deleted successfully" }, { status: 200 });
@@ -269,5 +282,3 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
     client.release();
   }
 }
-
-    
