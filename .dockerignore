@@ -1,6 +1,15 @@
-# Git
+# Ignore local dependencies and build artifacts
+node_modules
+.next
+
+# Ignore Docker and git files
+Dockerfile
+.dockerignore
 .git
 .gitignore
+
+# Ignore documentation
+*.md
 
 # Node modules
 node_modules

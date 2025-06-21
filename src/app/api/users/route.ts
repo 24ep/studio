@@ -9,7 +9,7 @@ import { logAudit } from '@/lib/auditLog';
 import { getServerSession } from 'next-auth/next';
 import { getRedisClient, CACHE_KEY_USERS } from '@/lib/redis';
 import { getPool } from '@/lib/db';
-import { authOptions } from '../auth/[...nextauth]/route';
+import { authOptions } from '@/lib/auth';
 
 export const dynamic = "force-dynamic";
 
