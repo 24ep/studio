@@ -4,7 +4,7 @@ import { z } from 'zod';
 import { getPool } from '@/lib/db';
 import { logAudit } from '@/lib/auditLog';
 import { getServerSession } from 'next-auth/next';
-import bcrypt from 'bcrypt';
+import bcrypt from 'bcryptjs';
 
 const updateUserSchema = z.object({
   name: z.string().min(1, "Name is required").optional(),

@@ -4,11 +4,12 @@ import { z } from 'zod';
 import type { UserProfile, PlatformModuleId, UserGroup } from '@/lib/types';
 import { PLATFORM_MODULES } from '@/lib/types';
 import { v4 as uuidv4 } from 'uuid';
-import bcrypt from 'bcrypt';
+import bcrypt from 'bcryptjs';
 import { logAudit } from '@/lib/auditLog';
 import { getServerSession } from 'next-auth/next';
 import { getRedisClient, CACHE_KEY_USERS } from '@/lib/redis';
 import { getPool } from '@/lib/db';
+import { authOptions } from '../auth/[...nextauth]/route';
 
 export const dynamic = "force-dynamic";
 

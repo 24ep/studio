@@ -1,7 +1,7 @@
 # =================================================================
 # == Stage 1: Build Stage
 # =================================================================
-FROM node:20-slim AS builder
+FROM node:20-alpine AS builder
 
 WORKDIR /app
 
@@ -24,7 +24,7 @@ ENV GOOGLE_API_KEY=$GOOGLE_API_KEY
 
 # Install dependencies - This layer is cached if yarn.lock doesn't change
 COPY package.json yarn.lock ./
-RUN yarn install --verbose
+RUN yarn install --frozen-lockfile
 
 # Copy source code - This layer is cached if your source code doesn't change
 COPY . .
@@ -38,13 +38,13 @@ RUN npm prune --production
 # =================================================================
 # == Stage 2: Production Stage
 # =================================================================
-FROM node:20-slim
+FROM node:20-alpine
 
 WORKDIR /app
 
 # Don't run production as root
-RUN groupadd -r -g 1001 nodejs
-RUN useradd -r -u 1001 -g nodejs nextjs
+RUN addgroup -g 1001 -S nodejs
+RUN adduser -S nextjs -u 1001
 USER nextjs
 
 # Copy only the necessary production artifacts from the builder stage
