@@ -7,7 +7,7 @@ services:
       context: .
       dockerfile: Dockerfile
     ports:
-      - "9846:9002" # Next.js dev server port (from package.json's dev script, or 3000 for `next start` if not overridden)
+      - "9846:9002"
     # For production deployments, you typically want the application code to be self-contained
     # within the Docker image. The volume mount `.:/app` is primarily for local development to
     # reflect code changes without rebuilding the image. It's commented out for production-like behavior.
@@ -112,4 +112,3 @@ volumes:
   redis_data:
   app_node_modules:
   app_next:
-```
