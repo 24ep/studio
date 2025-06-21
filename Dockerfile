@@ -48,7 +48,6 @@ RUN yarn install --production --frozen-lockfile
 
 # Copy built Next.js application from builder stage
 COPY --from=builder /app/.next ./.next
-COPY --from=builder /app/public ./public
 
 # Expose the port the app will run on
 EXPOSE 3000
