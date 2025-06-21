@@ -1,4 +1,3 @@
-
 'use server';
 /**
  * @fileOverview Genkit flow for AI-powered candidate search.
@@ -198,20 +197,18 @@ export async function searchCandidatesAIChat(input: SearchCandidatesInput): Prom
       console.warn("AI Search: Candidate summaries text is empty even though candidates were fetched. This might indicate an issue with createCandidateSummary or empty candidate details.");
   }
 
+  const effectiveCandidateData = candidateSummariesText.trim() ? candidateSummariesText : "No candidate details available for processing.";
 
-  const searchPrompt = activeAi.definePrompt(
-    {
-      name: 'candidateSearcherPrompt',
-      input: { schema: z.object({ searchQuery: z.string(), candidateData: z.string() }) },
-      output: { schema: SearchCandidatesOutputSchema },
+  try {
+    const llmResponse = await activeAi.generate({
       prompt: `You are an expert HR assistant. Your task is to analyze a list of candidate summaries based on a user's search query.
 Identify the candidates that best match the query.
 
 User Search Query:
-{{{searchQuery}}}
+${input.query}
 
 Candidate Data (each candidate is between CANDIDATE_START and CANDIDATE_END):
-{{{candidateData}}}
+${effectiveCandidateData}
 
 Based *only* on the provided candidate summaries and the user's query, return a list of candidate IDs that are strong matches.
 If no candidates seem to match, return an empty list for matchedCandidateIds.
@@ -219,74 +216,42 @@ Provide a brief reasoning for your selection or if no matches are found.
 Ensure your output is in the specified JSON format.
 If no candidate data is provided but a search query is present, indicate that no data was available to search.
 `,
-    },
-    async (params) => { // params here is of type { prompt: string, history?: ..., config?: ..., input?: {searchQuery, candidateData} }
-      console.log("AI Search (Custom Renderer): Received input for Handlebars rendering (params.input):", JSON.stringify(params.input).substring(0,500) + (JSON.stringify(params.input).length > 500 ? "..." : ""));
-      console.log("AI Search (Custom Renderer): Rendered prompt string (params.prompt) length:", params.prompt?.length);
-      if (params.prompt && params.prompt.length < 500) { // Log snippet of rendered prompt if short
-          console.log("AI Search (Custom Renderer): Rendered prompt snippet:", params.prompt);
-      } else if (params.prompt) {
-          console.log("AI Search (Custom Renderer): Rendered prompt snippet (first 500 chars):", params.prompt.substring(0,500) + "...");
-      }
+      output: {
+        format: 'json',
+        schema: SearchCandidatesOutputSchema,
+      },
+      config: {
+        // Optional: add temperature or other settings if needed
+        // temperature: 0.2,
+      },
+    });
 
-
-      if (!params.prompt || params.prompt.trim() === "") {
-        console.error("AI Search Error: The prompt text to be sent to the LLM is empty (params.prompt was empty). This will cause an 'at least one message is required' error.");
-        console.error("AI Search (Custom Renderer): Debug - params.input.searchQuery (original):", params.input?.searchQuery);
-        console.error("AI Search (Custom Renderer): Debug - params.input.candidateData (original) length:", params.input?.candidateData?.length);
-        throw new Error("Internal error: Compiled prompt for AI is empty.");
-      }
-      
-      const llmResponse = await activeAi.generate({
-        prompt: params.prompt, 
-        history: params.history, 
-        config: params.config,
-        output: {
-          format: 'json',
-          schema: SearchCandidatesOutputSchema,
-        },
-      });
-      if (!llmResponse.output) {
-        console.warn("AI Search: LLM generated a response, but the 'output' field is missing or null. Check LLM logs and schema compliance.");
-        return { matchedCandidateIds: [], aiReasoning: "AI model did not return structured output. Check model logs or schema compliance." };
-      }
-      return llmResponse.output;
-    }
-  );
-  
-  try {
-    const effectiveCandidateData = candidateSummariesText.trim() ? candidateSummariesText : "No candidate details available for processing.";
-    
-    console.log("AI Search: Calling searchPrompt with actual input:", { searchQuery: input.query, candidateDataLength: effectiveCandidateData.length });
-    if (effectiveCandidateData.length < 500) {
-      console.log("AI Search: candidateData content snippet (effectiveCandidateData):", effectiveCandidateData.substring(0, 500));
-    } else {
-      console.log("AI Search: candidateData content snippet (first 500 chars of effectiveCandidateData):", effectiveCandidateData.substring(0,500) + "...");
+    const result = llmResponse.output();
+    if (!result) {
+      console.warn("AI Search: LLM response output is null or undefined.");
+      return { matchedCandidateIds: [], aiReasoning: "The AI model returned an empty response." };
     }
 
-    const result = await searchPrompt({ searchQuery: input.query, candidateData: effectiveCandidateData });
-    let finalReasoning = result?.aiReasoning;
-
-    if (allCandidates.length > 100) {
-        const perfWarning = "Note: Search may be slow due to the large number of candidate profiles being analyzed.";
-        if (finalReasoning && finalReasoning.trim().length > 0) {
-            finalReasoning = `${finalReasoning} ${perfWarning}`;
-        } else {
-            finalReasoning = perfWarning;
-        }
+    let finalReasoning = result.aiReasoning;
+    // Handle cases where the model returns matches but no reasoning text
+    if ((result.matchedCandidateIds || []).length > 0 && (!finalReasoning || finalReasoning.trim() === '')) {
+      finalReasoning = "The AI model identified matching candidates based on the query but did not provide specific reasoning.";
     }
-    if (input.query && effectiveCandidateData !== "No candidate details available for processing." && (result?.matchedCandidateIds || []).length === 0 && (!finalReasoning || finalReasoning.trim() === '')) {
-        finalReasoning = (finalReasoning || "") + " No strong matches found for your query based on the available candidate data.";
+    // Handle cases where model returns no matches and no reasoning
+    if (input.query && effectiveCandidateData !== "No candidate details available for processing." && (result.matchedCandidateIds || []).length === 0 && (!finalReasoning || finalReasoning.trim() === '')) {
+        finalReasoning = "The AI model reviewed the candidate data and found no strong matches for the specified query.";
     }
-
 
     return {
-        matchedCandidateIds: result?.matchedCandidateIds || [],
-        aiReasoning: finalReasoning,
+      matchedCandidateIds: result.matchedCandidateIds || [],
+      aiReasoning: finalReasoning || "No reasoning provided by the AI.",
     };
 
-  } catch (flowError) {
-    console.error("AI Search: Error executing Genkit flow:", flowError);
-    return { matchedCandidateIds: [], aiReasoning: `AI search failed: ${(flowError as Error).message}` };
+  } catch (error) {
+    console.error("AI Search: An error occurred during AI generation:", error);
+    return {
+      matchedCandidateIds: [],
+      aiReasoning: `An error occurred while processing the AI search. Details: ${(error as Error).message}`
+    };
   }
 }
