@@ -1,86 +1,84 @@
+
 // src/lib/redis.ts
 import { createClient, type RedisClientType } from 'redis';
 
 const redisUrl = process.env.REDIS_URL || 'redis://redis:6379'; // Default to service name from docker-compose
 
 let redisClient: RedisClientType | null = null;
-let isConnecting = false;
 let connectionPromise: Promise<RedisClientType | null> | null = null;
 
-async function initializeRedisClient(): Promise<RedisClientType | null> {
-  if (redisClient && redisClient.isOpen) {
-    return redisClient;
-  }
-
-  if (isConnecting && connectionPromise) {
+function initializeRedisClient(): Promise<RedisClientType | null> {
+  // If we're already connected or connecting, return the existing promise/client
+  if (connectionPromise) {
     return connectionPromise;
   }
 
-  isConnecting = true;
   console.log('Attempting to connect to Redis...');
-  
   const client = createClient({
     url: redisUrl,
     socket: {
-      connectTimeout: 10000, // 10 seconds
+      connectTimeout: 5000, // 5 seconds
       reconnectStrategy: (retries) => Math.min(retries * 500, 3000), // Exponential backoff
     },
   });
 
   client.on('error', (err) => {
     console.error('Redis Client Error:', err);
-    // Potentially set redisClient to null or handle reconnection state more explicitly
-    // For now, rely on reconnectStrategy. If critical, app might need to stop.
+    // When a persistent error occurs, reset the connection promise to allow for a fresh reconnect attempt
+    if (redisClient?.isOpen === false) {
+      redisClient = null;
+      connectionPromise = null;
+    }
   });
 
-  client.on('connect', () => {
-    console.log('Successfully connected to Redis server.');
-  });
-
-  client.on('reconnecting', () => {
-    console.log('Reconnecting to Redis server...');
-  });
-
+  client.on('connect', () => console.log('Connecting to Redis server...'));
+  client.on('ready', () => console.log('Redis client is ready.'));
+  client.on('reconnecting', () => console.log('Reconnecting to Redis server...'));
   client.on('end', () => {
     console.log('Redis connection closed.');
-    redisClient = null; // Mark client as null when connection ends
+    redisClient = null;
     connectionPromise = null;
   });
   
   connectionPromise = client.connect()
     .then(() => {
-      console.log('Redis client connection established and ready.');
+      console.log('Redis client connection established.');
       redisClient = client as RedisClientType; // Cast after successful connect
-      isConnecting = false;
       return redisClient;
     })
     .catch((err) => {
       console.error('Failed to connect to Redis during initialization:', err);
-      isConnecting = false;
-      // redisClient will remain null or its previous state
+      connectionPromise = null; // Reset promise on failure to allow retry
       return null; 
     });
 
   return connectionPromise;
 }
 
-// Initialize on module load, but don't block server startup
-initializeRedisClient().catch(err => {
-  console.error("Initial Redis connection attempt failed in background:", err);
-});
 
+// getRedisClient is the single entry point to get a connected client.
+// It will lazily initialize the connection on the first call.
 export async function getRedisClient(): Promise<RedisClientType | null> {
   if (redisClient && redisClient.isOpen) {
     return redisClient;
   }
-  // If client is not ready, try to re-initialize/await connection
   return initializeRedisClient();
 }
 
 // Optional: Export a ready check or a function to ensure connection before critical ops
 export async function isRedisReady(): Promise<boolean> {
-  const client = await getRedisClient();
-  return client?.isOpen || false;
+  try {
+    const client = await getRedisClient();
+    // A more robust check than just isOpen, PING is a lightweight command.
+    if (client && client.isOpen) {
+      const pong = await client.ping();
+      return pong === 'PONG';
+    }
+    return false;
+  } catch (error) {
+    console.warn("Redis readiness check failed:", error);
+    return false;
+  }
 }
 
 export default getRedisClient; // Default export for convenience

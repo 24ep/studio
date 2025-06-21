@@ -47,6 +47,6 @@ export async function ensureBucketExists(bucketName: string = MINIO_BUCKET_NAME,
   }
 }
 
-// Perform the bucket check when this module is loaded.
-// This will run when the application starts and imports this module.
-ensureBucketExists();
+// Startup check is now handled on-demand by the application logic (e.g., in /api/resumes/upload)
+// This prevents blocking the server startup for faster initial load times.
+// ensureBucketExists(); // This blocking call was removed.

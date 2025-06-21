@@ -157,7 +157,7 @@ This method runs the Next.js app, PostgreSQL, MinIO, and Redis in Docker contain
     *   **Check PostgreSQL container logs** for script execution messages or errors: `docker logs <your_postgres_container_name>` (find name with `docker ps`).
 
 4.  **MinIO Bucket Creation:**
-    *   The MinIO bucket (default: `canditrack-resumes`) is attempted to be created automatically by the application on startup (`src/lib/minio.ts`).
+    *   The MinIO bucket (default: `canditrack-resumes`) is attempted to be created automatically by the application on startup (`src/lib/minio.ts`). For faster server startup, the blocking check has been removed. The bucket will be created on-demand when first needed.
 
 5.  **Start Services:**
     *   Use the provided script (ensure it's executable: `chmod +x start.sh`):
@@ -209,5 +209,3 @@ This method runs the Next.js app, PostgreSQL, MinIO, and Redis in Docker contain
 *   **MinIO:** Check Next.js app logs for "Successfully connected to MinIO server..." or "MinIO: Bucket ... already exists/created..."
 *   **Redis:** Check Next.js app logs for "Successfully connected to Redis server." or "Redis client connection established and ready."
 If connection errors occur, verify your `.env.local` settings, Docker networking, and ensure backend services are running correctly.
-
-```
