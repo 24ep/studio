@@ -74,9 +74,9 @@ export default async function DashboardPageServer() {
 
   return (
     <DashboardPageClient
-      initialCandidates={initialCandidates}
-      initialPositions={initialPositions}
-      initialUsers={initialUsers}
+      initialCandidates={Array.isArray(initialCandidates) ? initialCandidates : []}
+      initialPositions={Array.isArray(initialPositions) ? initialPositions : []}
+      initialUsers={Array.isArray(initialUsers) ? initialUsers : []}
       initialFetchError={fetchError?.trim()}
     />
   );
