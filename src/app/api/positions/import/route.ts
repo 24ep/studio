@@ -62,6 +62,7 @@ export async function POST(request: NextRequest) {
     await client.query('COMMIT');
     return NextResponse.json({ message: "Import completed", results }, { status: 201 });
   } catch (error: any) {
+    console.error('Error in /api/positions/import:', error);
     await client.query('ROLLBACK');
     return NextResponse.json({ message: 'Error importing positions', error: error.message }, { status: 500 });
   } finally {
@@ -86,6 +87,7 @@ export async function GET(request: NextRequest) {
       data: positionsResult.rows
     }, { status: 200 });
   } catch (error: any) {
+    console.error('Error in /api/positions/import:', error);
     return NextResponse.json({ message: 'Error fetching positions', error: error.message }, { status: 500 });
   } finally {
     client.release();

@@ -110,8 +110,8 @@ export default function ApplicationLogsPage() {
         catch (e) { errorMessageFromServer = `Failed to fetch logs: ${response.statusText || `Status ${response.status}`}`; }
 
         if (response.status === 401 || response.status === 403) {
-            signIn(undefined, { callbackUrl: pathname });
-            return;
+            setFetchError(errorMessageFromServer || `You do not have permission to view logs.`);
+            setLogs([]); setTotalLogs(0); return;
         }
         setFetchError(errorMessageFromServer || `An unknown error occurred. Status: ${response.status}`);
         setLogs([]); setTotalLogs(0); return;
@@ -145,7 +145,7 @@ export default function ApplicationLogsPage() {
       }
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sessionStatus, session, currentPage, levelFilter, searchQuery, actingUserIdFilter, startDate, endDate, pathname, signIn, fetchLogUsers]);
+  }, [sessionStatus, session, currentPage, levelFilter, searchQuery, actingUserIdFilter, startDate, endDate, pathname, fetchLogUsers]);
 
   useEffect(() => {
     if (fetchError) {

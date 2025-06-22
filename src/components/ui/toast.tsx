@@ -1,4 +1,3 @@
-
 "use client"
 
 import * as React from "react"
@@ -51,7 +50,7 @@ const Toast = React.forwardRef<
   return (
     <ToastPrimitives.Root
       ref={ref}
-      className={cn(toastVariants({ variant }), className)}
+      className={cn(toastVariants({ variant }), "!bg-white", className)}
       {...props}
     />
   )

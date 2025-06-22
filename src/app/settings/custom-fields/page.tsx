@@ -123,6 +123,7 @@ export default function CustomFieldsPage() {
       const data: CustomFieldDefinition[] = await response.json();
       setDefinitions(data);
     } catch (error) {
+      console.error('Error in settings/custom-fields:', error);
       setFetchError((error as Error).message);
     } finally {
       setIsLoading(false);
@@ -197,6 +198,7 @@ export default function CustomFieldsPage() {
       setIsModalOpen(false);
       fetchDefinitions();
     } catch (error) {
+      console.error('Error in settings/custom-fields:', error);
       toast({ title: `Error ${editingDefinition ? 'Updating' : 'Creating'} Definition`, description: (error as Error).message, variant: "destructive" });
     }
   };
@@ -216,6 +218,7 @@ export default function CustomFieldsPage() {
       toast({ title: "Definition Deleted", description: `Definition "${definitionToDelete.label}" has been deleted.` });
       fetchDefinitions();
     } catch (error) {
+      console.error('Error in settings/custom-fields:', error);
       toast({ title: "Error Deleting Definition", description: (error as Error).message, variant: "destructive" });
     } finally {
       setDefinitionToDelete(null);

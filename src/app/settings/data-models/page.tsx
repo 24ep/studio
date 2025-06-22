@@ -214,6 +214,7 @@ export default function DataModelsPage() {
             handleModalClose();
             fetchDefinitions(); // Refresh data
         } catch (e: any) {
+            console.error('Error in settings/data-models:', e);
             toast({
                 title: 'Error',
                 description: e.message,
@@ -245,6 +246,7 @@ export default function DataModelsPage() {
             });
             fetchDefinitions(); // Refresh data
         } catch (e: any) {
+            console.error('Error in settings/data-models:', e);
             toast({
                 title: 'Error',
                 description: e.message,

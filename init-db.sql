@@ -26,41 +26,54 @@ INSERT INTO "User" (id, name, email, password, role, "modulePermissions") VALUES
 ('213d289f-31ef-47cb-bf13-8e7207295b42', 'Admin User', 'admin@ncc.com', '$2b$10$2BYzu2nUAp8IxK/SUReOd.yONfsS0IThoukn8zjvOFlamKvr58Rly', 'Admin', ARRAY['CANDIDATES_VIEW', 'CANDIDATES_MANAGE', 'POSITIONS_VIEW', 'POSITIONS_MANAGE', 'USERS_MANAGE', 'SETTINGS_ACCESS', 'LOGS_VIEW']::TEXT[])
 ON CONFLICT (email) DO NOTHING;
 
+-- MIGRATION: Rename old tables if they exist
+DO $$ BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'Position') THEN
+    ALTER TABLE "Position" RENAME TO "positions";
+  END IF;
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'Candidate') THEN
+    ALTER TABLE "Candidate" RENAME TO "candidates";
+  END IF;
+END $$;
 
-CREATE TABLE IF NOT EXISTS "Position" (
+-- Create positions table
+CREATE TABLE IF NOT EXISTS "positions" (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     title VARCHAR(255) NOT NULL,
     department VARCHAR(255) NOT NULL,
     description TEXT,
     "isOpen" BOOLEAN NOT NULL DEFAULT TRUE,
     position_level VARCHAR(100),
+    "customAttributes" JSONB DEFAULT '{}',
     "createdAt" TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
-CREATE INDEX IF NOT EXISTS idx_position_title ON "Position"(title);
+CREATE INDEX IF NOT EXISTS idx_positions_title ON "positions"(title);
 
-CREATE TABLE IF NOT EXISTS "Candidate" (
+-- Create candidates table
+CREATE TABLE IF NOT EXISTS "candidates" (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     name VARCHAR(255) NOT NULL,
     email VARCHAR(255) UNIQUE NOT NULL,
     phone VARCHAR(50),
-    "positionId" UUID REFERENCES "Position"(id) ON DELETE SET NULL,
-    "recruiterId" UUID REFERENCES "User"(id) ON DELETE SET NULL, -- Recruiter assignment
+    "positionId" UUID REFERENCES "positions"(id) ON DELETE SET NULL,
+    "recruiterId" UUID REFERENCES "User"(id) ON DELETE SET NULL,
     "fitScore" INTEGER DEFAULT 0,
     status VARCHAR(50) NOT NULL DEFAULT 'Applied',
     "applicationDate" TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     "parsedData" JSONB,
+    "customAttributes" JSONB DEFAULT '{}',
     "resumePath" VARCHAR(1024),
     "createdAt" TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
-CREATE INDEX IF NOT EXISTS idx_candidate_email ON "Candidate"(email);
-CREATE INDEX IF NOT EXISTS idx_candidate_position_id ON "Candidate"("positionId");
-CREATE INDEX IF NOT EXISTS idx_candidate_recruiter_id ON "Candidate"("recruiterId"); -- Index for recruiterId
+CREATE INDEX IF NOT EXISTS idx_candidates_email ON "candidates"(email);
+CREATE INDEX IF NOT EXISTS idx_candidates_position_id ON "candidates"("positionId");
+CREATE INDEX IF NOT EXISTS idx_candidates_recruiter_id ON "candidates"("recruiterId");
 
 CREATE TABLE IF NOT EXISTS "TransitionRecord" (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    "candidateId" UUID NOT NULL REFERENCES "Candidate"(id) ON DELETE CASCADE,
+    "candidateId" UUID NOT NULL REFERENCES "candidates"(id) ON DELETE CASCADE,
     date TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     stage VARCHAR(50) NOT NULL,
     notes TEXT,
@@ -82,3 +95,25 @@ CREATE TABLE IF NOT EXISTS "LogEntry" (
 );
 CREATE INDEX IF NOT EXISTS idx_log_level ON "LogEntry"(level);
 CREATE INDEX IF NOT EXISTS idx_log_timestamp ON "LogEntry"(timestamp);
+
+-- Create UserGroup table
+CREATE TABLE IF NOT EXISTS "UserGroup" (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    name VARCHAR(100) NOT NULL,
+    description TEXT,
+    permissions TEXT[] DEFAULT ARRAY[]::TEXT[],
+    is_default BOOLEAN DEFAULT FALSE,
+    is_system_role BOOLEAN DEFAULT FALSE,
+    "createdAt" TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_usergroup_name ON "UserGroup"(name);
+
+-- Create User_UserGroup join table
+CREATE TABLE IF NOT EXISTS "User_UserGroup" (
+    "userId" UUID NOT NULL REFERENCES "User"(id) ON DELETE CASCADE,
+    "groupId" UUID NOT NULL REFERENCES "UserGroup"(id) ON DELETE CASCADE,
+    PRIMARY KEY ("userId", "groupId")
+);
+CREATE INDEX IF NOT EXISTS idx_user_usergroup_userid ON "User_UserGroup"("userId");
+CREATE INDEX IF NOT EXISTS idx_user_usergroup_groupid ON "User_UserGroup"("groupId");

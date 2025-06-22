@@ -129,7 +129,7 @@ export default function RolesPermissionsPage() {
         fetchRolesAndSelect(selectedRoleIdRef.current); // Fetch with current ref ID if set
       }
     }
-  }, [sessionStatus, session, pathname, fetchRolesAndSelect]); // Removed signIn from dependencies
+  }, [sessionStatus, session, pathname, fetchRolesAndSelect]);
 
   useEffect(() => {
     if (fetchError) {

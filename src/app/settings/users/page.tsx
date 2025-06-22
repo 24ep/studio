@@ -95,14 +95,14 @@ export default function ManageUsersPage() {
 
   useEffect(() => {
     if (sessionStatus === 'unauthenticated') {
-      signIn(undefined, { callbackUrl: pathname }); 
+      signIn(undefined, { callbackUrl: pathname });
     } else if (sessionStatus === 'authenticated') {
-        if (session.user.role !== 'Admin' && !session.user.modulePermissions?.includes('USERS_MANAGE')) {
-            setFetchError("You do not have permission to manage users.");
-            setIsLoading(false);
-        } else {
-            fetchUsers({name: nameFilter, email: emailFilter, role: roleFilter});
-        }
+      if (session.user.role !== 'Admin' && !session.user.modulePermissions?.includes('USERS_MANAGE')) {
+        setFetchError("You do not have permission to manage users.");
+        setIsLoading(false);
+      } else {
+        fetchUsers({name: nameFilter, email: emailFilter, role: roleFilter});
+      }
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sessionStatus, session, pathname]); 

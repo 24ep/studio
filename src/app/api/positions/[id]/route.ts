@@ -27,7 +27,7 @@ export async function GET(request: NextRequest) {
     };
     return NextResponse.json(position, { status: 200 });
   } catch (error) {
-    console.error(`Failed to fetch position ${id}:`, error);
+    console.error('Error in /api/positions/[id]:', error);
     await logAudit('ERROR', `Failed to fetch position ${id}. Error: ${(error as Error).message}`, 'API:Positions', null, { targetPositionId: id });
     return NextResponse.json({ message: "Error fetching position", error: (error as Error).message }, { status: 500 });
   }
@@ -110,7 +110,7 @@ export async function PUT(request: NextRequest) {
     await logAudit('AUDIT', `Position '${updatedPosition.title}' (ID: ${updatedPosition.id}) updated.`, 'API:Positions', null, { targetPositionId: updatedPosition.id, changes: Object.keys(validatedData) });
     return NextResponse.json(updatedPosition, { status: 200 });
   } catch (error) {
-    console.error(`Failed to update position ${id}:`, error);
+    console.error('Error in /api/positions/[id]:', error);
     await logAudit('ERROR', `Failed to update position ${id}. Error: ${(error as Error).message}`, 'API:Positions', null, { targetPositionId: id });
     return NextResponse.json({ message: "Error updating position", error: (error as Error).message }, { status: 500 });
   }
@@ -143,7 +143,7 @@ export async function DELETE(request: NextRequest) {
     await logAudit('AUDIT', `Position '${positionTitle}' (ID: ${id}) deleted.`, 'API:Positions', null, { targetPositionId: id, deletedPositionTitle: positionTitle });
     return NextResponse.json({ message: "Position deleted successfully" }, { status: 200 });
   } catch (error: any) {
-     console.error(`Failed to delete position ${id}:`, error);
+     console.error('Error in /api/positions/[id]:', error);
      await logAudit('ERROR', `Failed to delete position ${id}. Error: ${(error as Error).message}`, 'API:Positions', null, { targetPositionId: id });
      if (error.code === '23503') {
         return NextResponse.json({ message: "Cannot delete this position as it is still referenced by other entities (e.g., candidates)." }, { status: 409 });

@@ -6,7 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useToast } from '@/hooks/use-toast';
-import { Save, Palette, ImageUp, Trash2, Loader2, XCircle, PenSquare, ServerCrash, ShieldAlert, Settings2, Wallpaper, Droplets, Type, Sidebar as SidebarIcon, RotateCcw, Eye, EyeOff, Monitor, Sun, Moon, Zap } from 'lucide-react';
+import { Save, Palette, ImageUp, Trash2, Loader2, XCircle, PenSquare, ServerCrash, ShieldAlert, Settings2, Wallpaper, Droplets, Type, Sidebar as SidebarIcon, RotateCcw, Eye, EyeOff, Monitor, Sun, Moon, Zap, StickyNote, Paintbrush, LayoutDashboard, Sidebar as SidebarMenuIcon, LogIn } from 'lucide-react';
 import Image from 'next/image';
 import { signIn, useSession } from 'next-auth/react';
 import { useRouter, usePathname } from 'next/navigation';
@@ -148,11 +148,11 @@ function convertHslStringToHex(hslString: string | null | undefined): string {
 }
 
 const PREFERENCE_SECTIONS = [
-  { id: 'branding', label: 'Branding & Identity' },
-  { id: 'theme', label: 'Theme' },
-  { id: 'primaryColors', label: 'Primary Colors' },
-  { id: 'loginAppearance', label: 'Login Page' },
-  { id: 'sidebarAppearance', label: 'Sidebar Colors' },
+  { id: 'branding', label: 'Branding & Identity', icon: StickyNote },
+  { id: 'theme', label: 'Theme', icon: Paintbrush },
+  { id: 'primaryColors', label: 'Primary Colors', icon: LayoutDashboard },
+  { id: 'loginAppearance', label: 'Login Page', icon: LogIn },
+  { id: 'sidebarAppearance', label: 'Sidebar Colors', icon: SidebarMenuIcon },
 ];
 
 export default function PreferencesSettingsPage() {
@@ -464,27 +464,40 @@ export default function PreferencesSettingsPage() {
   }
 
   return (
-    <div className="flex gap-8">
+    <div className="flex gap-8 relative">
       {/* Left menu */}
-      <nav className="w-56 flex-shrink-0 pt-8">
+      <nav className="w-56 flex-shrink-0 pt-8 sticky top-8 self-start hidden md:block">
         <ul className="space-y-2">
           {PREFERENCE_SECTIONS.map(section => (
             <li key={section.id}>
               <button
                 className={cn(
-                  'w-full text-left px-4 py-2 rounded transition font-medium',
-                  activeSection === section.id ? 'bg-primary/10 text-primary' : 'hover:bg-muted text-muted-foreground'
+                  'w-full flex items-center gap-3 text-left px-4 py-2 rounded transition font-medium',
+                  activeSection === section.id ? 'bg-primary/10 text-primary shadow' : 'hover:bg-muted text-muted-foreground'
                 )}
                 onClick={() => handleMenuClick(section.id)}
               >
+                <section.icon className="h-5 w-5" />
                 {section.label}
               </button>
             </li>
           ))}
         </ul>
       </nav>
+      {/* Mobile menu */}
+      <nav className="md:hidden w-full mb-4">
+        <select
+          className="w-full p-2 rounded border text-base"
+          value={activeSection}
+          onChange={e => handleMenuClick(e.target.value)}
+        >
+          {PREFERENCE_SECTIONS.map(section => (
+            <option key={section.id} value={section.id}>{section.label}</option>
+          ))}
+        </select>
+      </nav>
       {/* Right content */}
-      <div className="flex-1 space-y-12">
+      <div className="flex-1 space-y-12 pb-32">
         <div ref={sectionRefs.branding} id="branding">
           {/* Branding section content */}
           <div className="space-y-6">
@@ -877,6 +890,15 @@ export default function PreferencesSettingsPage() {
             </CardContent>
           </Card>
         </div>
+      </div>
+      {/* Floating Save/Reset Bar */}
+      <div className="fixed bottom-0 left-0 w-full z-30 bg-background/95 border-t flex justify-center items-center gap-4 py-3 px-4 shadow-lg md:ml-56" style={{boxShadow: '0 -2px 16px 0 rgba(0,0,0,0.04)'}}>
+        <Button onClick={handleSavePreferences} disabled={isSaving} className="btn-primary-gradient flex items-center gap-2">
+          {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />} Save All
+        </Button>
+        <Button variant="outline" onClick={fetchSystemSettings} disabled={isSaving} className="flex items-center gap-2">
+          <RotateCcw className="h-4 w-4" /> Reset
+        </Button>
       </div>
     </div>
   );
