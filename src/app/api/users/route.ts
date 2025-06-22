@@ -94,7 +94,7 @@ export async function GET(request: NextRequest) {
     const result = await getPool().query(query, queryParams);
     const usersToReturn = result.rows.map(user => ({
       ...user,
-      modulePermissions: user.modulePermissions || [],
+      modulePermissions: Array.isArray(user.modulePermissions) ? user.modulePermissions : (user.modulePermissions ? JSON.parse(user.modulePermissions) : []),
       groups: user.groups || [], 
     }));
     return NextResponse.json(usersToReturn, { status: 200 });
