@@ -8,7 +8,6 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { useToast } from '@/hooks/use-toast';
 import { useSession } from 'next-auth/react';
 import { useRouter, usePathname } from 'next/navigation';
 import { Save, SlidersHorizontal, Info, Loader2, ShieldAlert, ServerCrash, RefreshCw } from 'lucide-react';
@@ -20,6 +19,7 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
+import { toast } from 'react-hot-toast';
 
 const TARGET_CANDIDATE_ATTRIBUTES_CONFIG: { path: string; label: string; type: string; example?: string, defaultNotes?: string }[] = [
   { path: 'candidate_info.cv_language', label: 'CV Language', type: 'string', example: 'payload.language', defaultNotes: 'Language code of the resume (e.g., EN, TH).' },
@@ -56,7 +56,6 @@ export default function WebhookMappingPage() {
   const { data: session, status: sessionStatus } = useSession();
   const router = useRouter();
   const pathname = usePathname();
-  const { toast } = useToast();
   
   const [isClient, setIsClient] = useState(false);
   const [isLoadingData, setIsLoadingData] = useState(true);
@@ -98,7 +97,7 @@ export default function WebhookMappingPage() {
       console.error("Error fetching webhook mappings:", error);
       setFetchError((error as Error).message);
       initializeMappings([]); 
-      toast({title: "Error Loading Mappings", description: (error as Error).message, variant: "destructive"});
+      toast.error((error as Error).message);
     } finally {
       setIsLoadingData(false);
     }
@@ -120,11 +119,7 @@ export default function WebhookMappingPage() {
 
   useEffect(() => {
     if (fetchError) {
-      toast({
-        title: "Error",
-        description: fetchError,
-        variant: "destructive",
-      });
+      toast.error(fetchError);
     }
   }, [fetchError, toast]);
 
@@ -158,10 +153,10 @@ export default function WebhookMappingPage() {
         throw new Error(result.message || 'Failed to save mappings');
       }
       initializeMappings(result); 
-      toast({ title: 'Configuration Saved', description: 'Webhook payload mapping configuration saved to the server.' });
+      toast.success('Configuration Saved');
     } catch (error) {
       console.error("Error saving webhook mapping to server:", error);
-      toast({title: "Error Saving", description: (error as Error).message, variant: "destructive"});
+      toast.error((error as Error).message);
     } finally {
       setIsSaving(false);
     }

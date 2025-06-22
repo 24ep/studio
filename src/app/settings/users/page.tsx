@@ -12,7 +12,6 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import React, { useState, useEffect, useCallback } from 'react'; 
-import { useToast } from "@/hooks/use-toast";
 import { AddUserModal, type AddUserFormValues } from '@/components/users/AddUserModal';
 import { EditUserModal, type EditUserFormValues } from '@/components/users/EditUserModal';
 import { useRouter, usePathname } from 'next/navigation'; 
@@ -34,6 +33,7 @@ import {
   DropdownMenuSeparator
 } from "@/components/ui/dropdown-menu";
 import { signIn, useSession } from "next-auth/react";
+import { toast } from 'react-hot-toast';
 
 const userRoleOptionsFilter: (UserProfile['role'] | "ALL_ROLES")[] = ['ALL_ROLES', 'Admin', 'Recruiter', 'Hiring Manager'];
 
@@ -41,7 +41,6 @@ const userRoleOptionsFilter: (UserProfile['role'] | "ALL_ROLES")[] = ['ALL_ROLES
 export default function ManageUsersPage() {
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const { toast } = useToast();
   const { data: session, status: sessionStatus } = useSession();
   const router = useRouter();
   const pathname = usePathname(); 
@@ -109,13 +108,9 @@ export default function ManageUsersPage() {
 
   useEffect(() => {
     if (fetchError) {
-      toast({
-        title: "Error",
-        description: fetchError,
-        variant: "destructive",
-      });
+      toast.error(fetchError);
     }
-  }, [fetchError, toast]);
+  }, [fetchError]);
 
   const handleApplyFilters = () => {
     fetchUsers({name: nameFilter, email: emailFilter, role: roleFilter});
@@ -145,10 +140,10 @@ export default function ManageUsersPage() {
         throw new Error(result.message || 'Failed to add user');
       }
       fetchUsers({name: nameFilter, email: emailFilter, role: roleFilter}); 
-      toast({ title: "Success", description: `User ${result.name} added successfully.` });
+      toast.success(`User ${result.name} added successfully.`);
       setIsAddUserModalOpen(false);
     } catch (error) {
-      toast({ title: "Error Adding User", description: (error as Error).message, variant: "destructive" });
+      toast.error((error as Error).message);
     }
   };
 
@@ -168,11 +163,11 @@ export default function ManageUsersPage() {
         throw new Error(result.message || 'Failed to update user');
       }
       fetchUsers({name: nameFilter, email: emailFilter, role: roleFilter}); 
-      toast({ title: "Success", description: `User ${result.name} updated successfully.` });
+      toast.success(`User ${result.name} updated successfully.`);
       setIsEditUserModalOpen(false);
       setSelectedUserForEdit(null);
     } catch (error) {
-      toast({ title: "Error Updating User", description: (error as Error).message, variant: "destructive" });
+      toast.error((error as Error).message);
     }
   };
   
@@ -198,9 +193,9 @@ export default function ManageUsersPage() {
         throw new Error(errorData.message || 'Failed to delete user');
       }
       fetchUsers({name: nameFilter, email: emailFilter, role: roleFilter}); 
-      toast({ title: "Success", description: `User ${userToDelete.name} deleted.` });
+      toast.success(`User ${userToDelete.name} deleted.`);
     } catch (error) {
-      toast({ title: "Error Deleting User", description: (error as Error).message, variant: "destructive" });
+      toast.error((error as Error).message);
     } finally {
       setUserToDelete(null); 
     }

@@ -13,12 +13,13 @@ import { Command, CommandEmpty, CommandInput, CommandList, CommandItem } from '@
 import { format, parseISO } from 'date-fns';
 import { ListOrdered, ServerCrash, ShieldAlert, Info, RefreshCw, ChevronsLeft, ChevronLeft, ChevronRight, ChevronsRight, AlertTriangle, Loader2, Search, CalendarIcon, UserCircle, FilterX, ChevronsUpDown, Check } from "lucide-react";
 import type { LogEntry, LogLevel, UserProfile } from '@/lib/types';
-import { useToast } from "@/hooks/use-toast";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { signIn, useSession } from "next-auth/react";
+import { useSession } from "next-auth/react";
 import { useRouter, usePathname } from 'next/navigation';
 import { cn } from "@/lib/utils";
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { toast } from 'react-hot-toast';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { signIn } from "next-auth/react";
 
 const getLogLevelBadgeVariant = (level: LogLevel): "default" | "secondary" | "destructive" | "outline" => {
   switch (level) {
@@ -48,7 +49,6 @@ export default function ApplicationLogsPage() {
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [fetchError, setFetchError] = useState<string | null>(null);
-  const { toast } = useToast();
   const [isClient, setIsClient] = useState(false);
 
   const [currentPage, setCurrentPage] = useState(1);
@@ -124,7 +124,7 @@ export default function ApplicationLogsPage() {
       const errorMessage = (err as Error).message;
       setFetchError(errorMessage); setLogs([]); setTotalLogs(0);
       if (!(errorMessage && errorMessage.toLowerCase().includes("unauthorized"))) {
-        toast({ title: "Error Fetching Logs", description: errorMessage || "Could not load log data.", variant: "destructive" });
+        // toast.error(errorMessage || "Could not load log data.");
       }
     } finally {
       setIsLoading(false);
@@ -149,11 +149,7 @@ export default function ApplicationLogsPage() {
 
   useEffect(() => {
     if (fetchError) {
-      toast({
-        title: "Error",
-        description: fetchError,
-        variant: "destructive",
-      });
+      // toast.error(fetchError);
     }
   }, [fetchError, toast]);
 

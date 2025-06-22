@@ -35,7 +35,6 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
-import { useToast } from '@/hooks/use-toast';
 import { useSession, signIn } from 'next-auth/react';
 import { useRouter, usePathname } from 'next/navigation';
 import type { RecruitmentStage } from '@/lib/types';
@@ -51,6 +50,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
+import { toast } from 'react-hot-toast';
 
 
 const stageFormSchema = z.object({
@@ -64,7 +64,6 @@ export default function RecruitmentStagesPage() {
   const { data: session, status: sessionStatus } = useSession();
   const router = useRouter();
   const pathname = usePathname();
-  const { toast } = useToast();
 
   const [stages, setStages] = useState<RecruitmentStage[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -129,13 +128,9 @@ export default function RecruitmentStagesPage() {
 
   useEffect(() => {
     if (fetchError) {
-      toast({
-        title: "Error",
-        description: fetchError,
-        variant: "destructive",
-      });
+      toast.error(fetchError);
     }
-  }, [fetchError, toast]);
+  }, [fetchError]);
 
   const handleOpenModal = (stage: RecruitmentStage | null = null) => {
     setEditingStage(stage);
@@ -161,12 +156,12 @@ export default function RecruitmentStagesPage() {
       const result = await response.json();
       if (!response.ok) throw new Error(result.message || `Failed to ${editingStage ? 'update' : 'create'} stage`);
       
-      toast({ title: `Stage ${editingStage ? 'Updated' : 'Created'}`, description: `Stage "${result.name}" was successfully ${editingStage ? 'updated' : 'created'}.` });
+      toast.success(`Stage ${editingStage ? 'Updated' : 'Created'}`);
       setIsModalOpen(false);
       fetchStages(); 
     } catch (error) {
       console.error('Error creating or updating stage:', error);
-      toast({ title: `Error ${editingStage ? 'Updating' : 'Creating'} Stage`, description: (error as Error).message, variant: "destructive" });
+      toast.error((error as Error).message);
     }
   };
 
@@ -185,11 +180,11 @@ export default function RecruitmentStagesPage() {
         }
         throw new Error(result.message || `Failed to delete stage. Status: ${response.status}`);
       }
-      toast({ title: "Stage Deleted", description: `Stage "${stage.name}" has been deleted.${replacement ? ` Candidates migrated to "${replacement}".` : ''}` });
+      toast.success(`Stage "${stage.name}" has been deleted.${replacement ? ` Candidates migrated to "${replacement}".` : ''}`);
       fetchStages();
     } catch (error) {
       console.error('Error deleting stage:', error);
-      toast({ title: "Error Deleting Stage", description: (error as Error).message, variant: "destructive" });
+      toast.error((error as Error).message);
     } finally {
       if (!isReplacementModalOpen) { 
           setStageToDelete(null);
@@ -204,7 +199,7 @@ export default function RecruitmentStagesPage() {
       setStageToDelete(null); 
       setReplacementStageName('');
     } else {
-      toast({ title: "Invalid Selection", description: "Please select a replacement stage.", variant: "destructive" });
+      toast.error("Please select a replacement stage.");
     }
   };
 
@@ -220,11 +215,11 @@ export default function RecruitmentStagesPage() {
         const errorData = await response.json().catch(() => ({}));
         throw new Error(errorData.message || 'Failed to move stage');
       }
-      toast({ title: 'Stage Moved', description: 'Recruitment stage order updated.' });
+      toast.success('Recruitment stage order updated.');
       fetchStages(); // Refresh the list to show new order
     } catch (error) {
       console.error('Error moving stage:', error);
-      toast({ title: 'Error Moving Stage', description: (error as Error).message, variant: 'destructive' });
+      toast.error((error as Error).message);
     } finally {
       setIsMoving(null);
     }

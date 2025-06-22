@@ -5,17 +5,15 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
-import { useToast } from '@/hooks/use-toast';
 import { Save, Settings, Mail, Zap, UploadCloud, FileText, XCircle, Loader2, AlertTriangle, ServerCrash, ShieldAlert, Info, BrainCircuit, StickyNote, RefreshCw } from 'lucide-react';
 import { signIn, useSession } from 'next-auth/react';
 import { useRouter, usePathname } from 'next/navigation';
 import type { SystemSetting } from '@/lib/types';
 import { Separator } from '@/components/ui/separator';
+import { toast } from 'react-hot-toast';
 
 
 export default function IntegrationsSettingsPage() {
-  const { toast } = useToast();
-  const [isClient, setIsClient] = useState(false);
   const { data: session, status: sessionStatus } = useSession();
   const router = useRouter();
   const pathname = usePathname();
@@ -64,7 +62,6 @@ export default function IntegrationsSettingsPage() {
 
 
   useEffect(() => {
-    setIsClient(true);
     if (sessionStatus === 'unauthenticated') {
       signIn(undefined, { callbackUrl: pathname });
     } else if (sessionStatus === 'authenticated') {
@@ -79,7 +76,7 @@ export default function IntegrationsSettingsPage() {
 
 
   const handleSaveSettings = async () => {
-    if (!isClient) return;
+    if (sessionStatus === 'loading') return;
     setIsSaving(true);
 
     const settingsToUpdate: SystemSetting[] = [
@@ -108,20 +105,17 @@ export default function IntegrationsSettingsPage() {
         throw new Error(errorData.message);
       }
 
-      toast({
-        title: 'Settings Saved',
-        description: 'Your integration settings have been updated on the server.',
-      });
+      toast.success('Settings Saved');
       fetchSystemSettings();
     } catch (error) {
       console.error("Error saving settings:", error);
-      toast({ title: "Error Saving Settings", description: (error as Error).message, variant: "destructive" });
+      toast.error((error as Error).message);
     } finally {
       setIsSaving(false);
     }
   };
 
-  if (sessionStatus === 'loading' || (isLoading && !fetchError && !isClient)) {
+  if (sessionStatus === 'loading' || (isLoading && !fetchError)) {
     return (
         <div className="flex h-full items-center justify-center">
             <Loader2 className="h-16 w-16 animate-spin text-primary" />

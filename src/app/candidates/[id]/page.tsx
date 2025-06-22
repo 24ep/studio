@@ -4,7 +4,6 @@ export const dynamic = "force-dynamic";
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import type { Candidate, CandidateDetails, TransitionRecord, EducationEntry, ExperienceEntry, SkillEntry, JobSuitableEntry, PersonalInfo, N8NJobMatch, UserProfile, Position, PositionLevel, RecruitmentStage } from '@/lib/types';
-import { useToast } from "@/hooks/use-toast";
 import { useSession, signIn } from 'next-auth/react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -27,6 +26,7 @@ import { useForm, Controller, useFieldArray, FormProvider } from 'react-hook-for
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Checkbox } from '@/components/ui/checkbox';
+import { toast } from 'react-hot-toast';
 
 const MINIO_PUBLIC_BASE_URL = process.env.NEXT_PUBLIC_MINIO_URL || `http://localhost:9847`;
 const MINIO_BUCKET = process.env.NEXT_PUBLIC_MINIO_BUCKET_NAME || "canditrack-resumes";
@@ -226,7 +226,6 @@ export default function CandidateDetailPage() {
   const [isAssigningRecruiter, setIsAssigningRecruiter] = useState(false);
 
   const { data: session, status: sessionStatus } = useSession();
-  const { toast } = useToast();
 
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
   const [isTransitionsModalOpen, setIsTransitionsModalOpen] = useState(false);
@@ -314,9 +313,9 @@ export default function CandidateDetailPage() {
       setRecruiters(data.map(r => ({ id: r.id, name: r.name })));
     } catch (error) {
       console.error("Error fetching recruiters:", error);
-      toast({ title: "Error", description: "Could not load recruiters for assignment.", variant: "destructive" });
+      toast("Could not load recruiters for assignment.");
     }
-  }, [toast]);
+  }, []);
 
   const fetchPositionsAndStages = useCallback(async () => {
     try {
@@ -330,7 +329,7 @@ export default function CandidateDetailPage() {
         setAllDbPositions(posData.positions || []);
       } else {
         console.error("Failed to fetch positions");
-        toast({ title: "Error", description: "Could not load the list of available positions.", variant: "destructive" });
+        toast("Could not load the list of available positions.");
       }
 
       if (stagesResponse.ok) {
@@ -338,13 +337,13 @@ export default function CandidateDetailPage() {
         setAvailableStages(stagesData.stages || []);
       } else {
         console.error("Failed to fetch recruitment stages");
-        toast({ title: "Error", description: "Could not load recruitment stages.", variant: "destructive" });
+        toast("Could not load recruitment stages.");
       }
     } catch (error) {
       console.error("Error fetching positions or stages:", error);
-      toast({ title: "Error", description: "A network error occurred while fetching initial data.", variant: "destructive" });
+      toast("A network error occurred while fetching initial data.");
     }
-  }, [toast]);
+  }, []);
 
   useEffect(() => {
     if (sessionStatus === 'authenticated') {
@@ -356,22 +355,14 @@ export default function CandidateDetailPage() {
 
   useEffect(() => {
     if (fetchError) {
-      toast({
-        title: "Error",
-        description: fetchError,
-        variant: "destructive",
-      });
+      toast(fetchError);
     }
-  }, [fetchError, toast]);
+  }, [fetchError]);
 
   const handleUploadSuccess = (updatedCandidate: Candidate) => {
     setCandidate(updatedCandidate);
     setIsUploadModalOpen(false);
-    toast({
-      title: "Success",
-      description: "Resume has been uploaded and candidate details updated.",
-      variant: "default",
-    });
+    toast("Resume has been uploaded and candidate details updated.");
     fetchCandidateDetails(); // Re-fetch to ensure all data is fresh
   };
 
@@ -396,22 +387,14 @@ export default function CandidateDetailPage() {
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to update status.');
+        throw new Error('Failed to update status.');
       }
 
       const updatedCandidate = await response.json();
       setCandidate(updatedCandidate.candidate);
-      toast({
-        title: "Status Updated",
-        description: `Candidate status changed to ${newStatus}.`,
-      });
+      toast(`Candidate status changed to ${newStatus}.`);
     } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message,
-        variant: "destructive",
-      });
+      toast(error.message);
     } finally {
       setIsLoading(false);
     }
@@ -427,8 +410,7 @@ export default function CandidateDetailPage() {
         body: JSON.stringify({ recruiterId: newRecruiterId }),
       });
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ message: "An unknown error occurred" }));
-        throw new Error(errorData.message || `Failed to assign recruiter: ${response.statusText}`);
+        throw new Error(`Failed to assign recruiter: ${response.statusText}`);
       }
       const updatedCandidate: Candidate = await response.json();
       setCandidate(updatedCandidate);
@@ -462,9 +444,9 @@ export default function CandidateDetailPage() {
           }[],
         }
       });
-      toast({ title: "Recruiter Assigned", description: `Candidate assigned to ${updatedCandidate.recruiter?.name || 'Unassigned'}.` });
+      toast(`Candidate assigned to ${updatedCandidate.recruiter?.name || 'Unassigned'}.`);
     } catch (error) {
-      toast({ title: "Error Assigning Recruiter", description: (error as Error).message, variant: "destructive" });
+      toast((error as Error).message);
     } finally {
       setIsAssigningRecruiter(false);
     }
@@ -472,7 +454,7 @@ export default function CandidateDetailPage() {
 
   const handleJobMatchClick = (jobMatchTitle: string | null | undefined) => {
     if (!jobMatchTitle) {
-        toast({ title: "Position Title Missing", description: `Job match data is incomplete.`, variant: "default" });
+        toast("Job match data is incomplete.");
         return;
     }
     const matchedPosition = allDbPositions.find(p => p.title.toLowerCase() === jobMatchTitle.toLowerCase());
@@ -480,12 +462,12 @@ export default function CandidateDetailPage() {
       setSelectedPositionForEdit(matchedPosition);
       setIsEditPositionModalOpen(true);
     } else {
-      toast({ title: "Position Not Found", description: `Position "${jobMatchTitle}" not found in the system.`, variant: "default" });
+      toast(`Position "${jobMatchTitle}" not found in the system.`);
     }
   };
 
   const handlePositionEdited = async () => {
-    toast({ title: "Position Updated", description: "Position details have been saved." });
+    toast("Position details have been saved.");
     setIsEditPositionModalOpen(false);
     await fetchPositionsAndStages();
     if (candidateId) {
@@ -518,14 +500,13 @@ export default function CandidateDetailPage() {
             body: JSON.stringify(processedData),
         });
         if (!response.ok) {
-            const errorData = await response.json().catch(() => ({ message: "An unknown error occurred" }));
-            throw new Error(errorData.message || `Failed to update candidate: ${response.statusText}`);
+            throw new Error(`Failed to update candidate: ${response.statusText}`);
         }
         await fetchCandidateDetails();
         setIsEditing(false);
-        toast({ title: "Details Saved", description: "Candidate details updated successfully." });
+        toast("Candidate details updated successfully.");
     } catch (error) {
-        toast({ title: "Error Saving Details", description: (error as Error).message, variant: "destructive" });
+        toast((error as Error).message);
     }
   };
 

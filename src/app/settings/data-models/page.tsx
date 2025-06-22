@@ -31,7 +31,6 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { useToast } from '@/hooks/use-toast';
 import { signIn, useSession } from 'next-auth/react';
 import {
   PlusCircle,
@@ -44,6 +43,7 @@ import {
 } from 'lucide-react';
 import { z } from 'zod';
 import { Badge } from '@/components/ui/badge';
+import { toast } from 'react-hot-toast';
 
 // Define the types matching the Prisma schema
 type FieldType = 'TEXT' | 'TEXTAREA' | 'NUMBER' | 'DATE' | 'BOOLEAN' | 'SELECT' | 'MULTISELECT';
@@ -77,7 +77,6 @@ const fieldSchema = z.object({
 
 export default function DataModelsPage() {
     const { data: session, status } = useSession();
-    const { toast } = useToast();
     const [definitions, setDefinitions] = useState<CustomFieldDefinition[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isSaving, setIsSaving] = useState(false);
@@ -104,15 +103,11 @@ export default function DataModelsPage() {
             setDefinitions(data);
         } catch (e: any) {
             setError(e.message);
-            toast({
-                title: 'Error',
-                description: e.message,
-                variant: 'destructive',
-            });
+            toast.error(e.message);
         } finally {
             setIsLoading(false);
         }
-    }, [toast]);
+    }, []);
 
     useEffect(() => {
         if (status === 'authenticated') {
@@ -124,13 +119,9 @@ export default function DataModelsPage() {
 
     useEffect(() => {
         if (error) {
-            toast({
-                title: "Error",
-                description: error,
-                variant: "destructive",
-            });
+            toast.error(error);
         }
-    }, [error, toast]);
+    }, [error]);
     
     const handleModalOpen = (field: CustomFieldDefinition | null = null) => {
         setEditingField(field);
@@ -206,20 +197,13 @@ export default function DataModelsPage() {
                 throw new Error(errorData.error || 'Failed to save field');
             }
 
-            toast({
-                title: 'Success',
-                description: `Field has been ${editingField ? 'updated' : 'created'}.`,
-            });
+            toast.success(`Field has been ${editingField ? 'updated' : 'created'}.`);
             
             handleModalClose();
             fetchDefinitions(); // Refresh data
         } catch (e: any) {
             console.error('Error in settings/data-models:', e);
-            toast({
-                title: 'Error',
-                description: e.message,
-                variant: 'destructive',
-            });
+            toast.error(e.message);
         } finally {
             setIsSaving(false);
         }
@@ -240,18 +224,11 @@ export default function DataModelsPage() {
                 throw new Error(errorData.error || 'Failed to delete field');
             }
 
-            toast({
-                title: 'Success',
-                description: 'Field has been deleted.',
-            });
+            toast.success('Field has been deleted.');
             fetchDefinitions(); // Refresh data
         } catch (e: any) {
             console.error('Error in settings/data-models:', e);
-            toast({
-                title: 'Error',
-                description: e.message,
-                variant: 'destructive',
-            });
+            toast.error(e.message);
         }
     };
 

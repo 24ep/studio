@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/button";
 import { signIn, useSession } from "next-auth/react";
 import { CandidatesPerPositionChart } from '@/components/dashboard/CandidatesPerPositionChart';
 import { useRouter } from 'next/navigation';
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "react-hot-toast";
 
 interface DashboardPageClientProps {
   initialCandidates: Candidate[];
@@ -47,7 +47,6 @@ export default function DashboardPageClient({
 
   const { data: session, status: sessionStatus } = useSession();
   const router = useRouter();
-  const { toast } = useToast();
 
   // Function to re-fetch data on client if needed (e.g., after an action or for a refresh button)
   const fetchDataClientSide = useCallback(async () => {
@@ -129,11 +128,7 @@ export default function DashboardPageClient({
     }
     // Show error as toast popup if present
     if (initialFetchError) {
-      toast({
-        title: "Error",
-        description: initialFetchError,
-        variant: "destructive",
-      });
+      toast.error(initialFetchError);
     }
   }, [initialCandidates, initialPositions, initialUsers, initialFetchError, serverAuthError, serverPermissionError, sessionStatus, session?.user?.role, toast]);
 

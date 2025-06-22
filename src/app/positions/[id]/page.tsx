@@ -3,7 +3,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import type { Position, Candidate } from '@/lib/types';
-import { useToast } from "@/hooks/use-toast";
 import { signIn, useSession } from 'next-auth/react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -12,6 +11,7 @@ import { ArrowLeft, Briefcase, Building, CalendarDays, CheckCircle2, Info, ListF
 import { format, parseISO } from 'date-fns';
 import Link from 'next/link';
 import { CandidateTable } from '@/components/candidates/CandidateTable'; 
+import { toast } from 'react-hot-toast';
 
 export default function PositionDetailPage() {
   const params = useParams();
@@ -28,7 +28,6 @@ export default function PositionDetailPage() {
   const [selectedCandidateIds, setSelectedCandidateIds] = useState<Set<string>>(new Set());
 
   const { data: session, status: sessionStatus } = useSession();
-  const { toast } = useToast();
 
   const fetchPositionAndCandidates = useCallback(async () => {
     if (!positionId || sessionStatus !== 'authenticated') return;
@@ -93,16 +92,12 @@ export default function PositionDetailPage() {
 
   useEffect(() => {
     if (fetchError) {
-      toast({
-        title: "Error",
-        description: fetchError,
-        variant: "destructive",
-      });
+      toast.error(fetchError);
     }
-  }, [fetchError, toast]);
+  }, [fetchError]);
 
   const handleUpdateCandidateStatus = async (candidateId: string, status: Candidate['status']) => {
-    toast({ title: "Action Not Available", description: "Candidate status updates should be done from the main Candidates page or Candidate Detail page.", variant: "default" });
+    toast.success("Candidate status updates should be done from the main Candidates page or Candidate Detail page.");
     // Re-fetch candidates for this position to reflect any external changes
     if (positionId) {
         try {
@@ -118,10 +113,10 @@ export default function PositionDetailPage() {
     }
   };
   const handleDeleteCandidate = async (candidateId: string) => {
-     toast({ title: "Action Not Available", description: "Candidate deletion should be done from the main Candidates page.", variant: "default" });
+     toast.success("Candidate deletion should be done from the main Candidates page.");
   };
   const handleOpenUploadModal = (candidate: Candidate) => {
-    toast({ title: "Action Not Available", description: "Resume uploads should be done from the main Candidates page or Candidate Detail page.", variant: "default" });
+    toast.success("Resume uploads should be done from the main Candidates page or Candidate Detail page.");
   };
    const refreshCandidateInList = async (candidateId: string) => {
     await fetchPositionAndCandidates();
@@ -145,7 +140,7 @@ export default function PositionDetailPage() {
   const isAllCandidatesSelected = selectedCandidateIds.size === associatedCandidates.length && associatedCandidates.length > 0;
 
   const handleEditPosition = (position: Position) => {
-    toast({ title: "Action Not Available", description: "Edit position is not available on this page.", variant: "default" });
+    toast.success("Edit position is not available on this page.");
   };
 
   if (isLoading) {

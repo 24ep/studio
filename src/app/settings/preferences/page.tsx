@@ -5,7 +5,6 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { useToast } from '@/hooks/use-toast';
 import { Save, Palette, ImageUp, Trash2, Loader2, XCircle, PenSquare, ServerCrash, ShieldAlert, Settings2, Wallpaper, Droplets, Type, Sidebar as SidebarIcon, RotateCcw, Eye, EyeOff, Monitor, Sun, Moon, Zap, StickyNote, Paintbrush, LayoutDashboard, Sidebar as SidebarMenuIcon, LogIn } from 'lucide-react';
 import Image from 'next/image';
 import { signIn, useSession } from 'next-auth/react';
@@ -17,6 +16,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { toast } from 'react-hot-toast';
 
 type ThemePreference = "light" | "dark" | "system";
 const DEFAULT_APP_NAME = "CandiTrack";
@@ -64,6 +64,7 @@ interface SidebarColors {
   sidebarActiveBgStartD: string; sidebarActiveBgEndD: string; 
   sidebarActiveTextD: string;
   sidebarHoverBgD: string; sidebarHoverTextD: string; sidebarBorderD: string;
+  [key: string]: string;
 }
 
 const createInitialSidebarColors = (): SidebarColors => ({
@@ -198,8 +199,6 @@ function setSidebarCSSVars(settings: Record<string, string>) {
 }
 
 export default function PreferencesSettingsPage() {
-  const { toast } = useToast();
-  const [isClient, setIsClient] = useState(false);
   const { data: session, status: sessionStatus } = useSession();
   const router = useRouter();
   const pathname = usePathname();
@@ -239,6 +238,10 @@ export default function PreferencesSettingsPage() {
     sidebarAppearance: useRef<HTMLDivElement>(null),
   };
   const [activeSection, setActiveSection] = useState<string>('branding');
+
+  // Add at the top of the PreferencesSettingsPage component
+  const [isClient, setIsClient] = useState(false);
+  useEffect(() => { setIsClient(true); }, []);
 
   // Fetch system settings
   const fetchSystemSettings = useCallback(async () => {
@@ -289,7 +292,6 @@ export default function PreferencesSettingsPage() {
   }, []);
 
   useEffect(() => {
-    setIsClient(true);
     if (sessionStatus === 'authenticated') {
         fetchSystemSettings();
     }
@@ -305,11 +307,7 @@ export default function PreferencesSettingsPage() {
     if (!file) return;
 
         if (file.size > 500 * 1024) {
-      toast({
-        title: "File too large",
-        description: "Please select an image smaller than 500KB.",
-        variant: "destructive",
-      });
+       toast.error("Please select an image smaller than 500KB.");
             return;
         }
 
@@ -410,17 +408,10 @@ export default function PreferencesSettingsPage() {
         setLoginBgImagePreviewUrl(bgDataUrl);
       }
 
-      toast({
-        title: "Preferences Saved",
-        description: "Your application preferences have been saved successfully.",
-      });
+      toast.success("Your application preferences have been saved successfully.");
     } catch (error: any) {
       console.error('Failed to save preferences:', error);
-      toast({
-        title: "Save Failed",
-        description: error.message || "Failed to save preferences. Please try again.",
-        variant: "destructive",
-      });
+      toast.error(error.message || "Failed to save preferences. Please try again.");
     } finally {
       setIsSaving(false);
     }
@@ -430,7 +421,7 @@ export default function PreferencesSettingsPage() {
   const resetPrimaryColors = () => {
     setPrimaryGradientStart(DEFAULT_PRIMARY_GRADIENT_START);
     setPrimaryGradientEnd(DEFAULT_PRIMARY_GRADIENT_END);
-    toast({ title: "Primary Colors Reset", description: "Primary colors reset to default. Click 'Save All' to persist." });
+    toast.success("Primary colors reset to default. Click 'Save All' to persist.");
   };
 
   const resetLoginBackground = () => {
@@ -439,7 +430,7 @@ export default function PreferencesSettingsPage() {
     setLoginBgColor2(DEFAULT_LOGIN_BG_COLOR2_HEX);
     setSelectedLoginBgFile(null);
     setLoginBgImagePreviewUrl(null); 
-    toast({ title: "Login Background Reset", description: "Login background reset to default. Click 'Save All' to persist." });
+    toast.success("Login background reset to default. Click 'Save All' to persist.");
   };
 
   const resetSidebarColors = (themeType: 'Light' | 'Dark') => {
@@ -472,7 +463,7 @@ export default function PreferencesSettingsPage() {
       setSidebarCSSVars(updated);
       return updated;
     });
-    toast({ title: `${themeType} Sidebar Colors Reset`, description: `${themeType} sidebar colors reset to default. Click 'Save All' to persist.` });
+    toast.success(`${themeType} sidebar colors reset to default. Click 'Save All' to persist.`);
   };
 
   // Scroll to section on menu click
@@ -1080,12 +1071,12 @@ export default function PreferencesSettingsPage() {
 
     return keys.map(key => (
       <div key={key} className="space-y-2">
-        <Label htmlFor={key} className="text-sm font-medium">
-          {labels[key]}
+        <Label htmlFor={String(key)} className="text-sm font-medium">
+          {labels[String(key)]}
         </Label>
         <div className="flex items-center gap-2">
           <Input 
-            id={key} 
+            id={String(key)} 
             type="text" 
             value={sidebarColors[key] || ''} 
             onChange={(e) => handleSidebarColorChange(key as keyof SidebarColors, e.target.value)} 

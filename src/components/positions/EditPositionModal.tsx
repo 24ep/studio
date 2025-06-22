@@ -22,7 +22,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Edit3, Users, Loader2, Save } from 'lucide-react';
 import type { Position, Candidate } from '@/lib/types';
-import { useToast } from '@/hooks/use-toast';
+import { toast } from 'react-hot-toast';
 import Link from 'next/link';
 
 const editPositionFormSchema = z.object({
@@ -43,7 +43,6 @@ interface EditPositionModalProps {
 }
 
 export function EditPositionModal({ isOpen, onOpenChange, onEditPosition, position }: EditPositionModalProps) {
-  const { toast } = useToast();
   const [associatedCandidates, setAssociatedCandidates] = useState<Candidate[]>([]);
   const [isLoadingCandidates, setIsLoadingCandidates] = useState(false);
 
@@ -81,7 +80,7 @@ export function EditPositionModal({ isOpen, onOpenChange, onEditPosition, positi
           setAssociatedCandidates(data.sort((a, b) => (b.fitScore || 0) - (a.fitScore || 0)));
         } catch (error) {
           console.error("Error fetching associated candidates:", error);
-          toast({ title: "Error", description: (error as Error).message || "Could not load candidates for this position.", variant: "destructive" });
+          toast.error((error as Error).message || "Could not load candidates for this position.");
           setAssociatedCandidates([]);
         } finally {
           setIsLoadingCandidates(false);
@@ -93,7 +92,7 @@ export function EditPositionModal({ isOpen, onOpenChange, onEditPosition, positi
         form.reset({ title: '', department: '', description: '', isOpen: true, position_level: '' });
         setAssociatedCandidates([]);
     }
-  }, [position, isOpen, form, toast]);
+  }, [position, isOpen, form]);
 
   const onSubmit = async (data: EditPositionFormValues) => {
     if (!position) return;
