@@ -208,8 +208,8 @@ export default function PreferencesSettingsPage() {
   const [fontValidationWarning, setFontValidationWarning] = useState<string | null>(null);
   const [fontOptions, setFontOptions] = useState<{label: string, value: string}[]>(FONT_OPTIONS);
   const [isFontListLoading, setIsFontListLoading] = useState(false);
-  const fontValidationTimeout = useRef<number | null>(null);
-  const GOOGLE_FONTS_API_KEY = typeof window !== 'undefined' ? (window.env?.NEXT_PUBLIC_GOOGLE_FONTS_API_KEY || '') : '';
+  const fontValidationTimeout = useRef<any>(null);
+  const GOOGLE_FONTS_API_KEY = process.env.NEXT_PUBLIC_GOOGLE_FONTS_API_KEY || '';
 
   const sectionRefs = {
     branding: useRef<HTMLDivElement>(null),

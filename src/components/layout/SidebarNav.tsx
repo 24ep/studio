@@ -28,25 +28,25 @@ import { settingsNavItems } from '@/app/settings/layout';
 
 
 const mainNavItems = [
-  { href: "/", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/candidates", label: "Candidates", icon: Users },
-  { href: "/positions", label: "Positions", icon: Briefcase },
-  { href: "/settings", label: "Settings", icon: Settings },
+  { href: "/", label: "Dashboard", icon: LayoutDashboard, description: "Main dashboard overview" },
+  { href: "/candidates", label: "Candidates", icon: Users, description: "View and manage candidates" },
+  { href: "/positions", label: "Positions", icon: Briefcase, description: "View and manage positions" },
+  { href: "/settings", label: "Settings", icon: Settings, description: "Application settings" },
 ];
 
-const myTaskBoardNavItem = { href: "/my-tasks", label: "My Task Board", icon: ListTodo };
+const myTaskBoardNavItem = { href: "/my-tasks", label: "My Task Board", icon: ListTodo, description: "Your personal task board" };
 
 const baseSettingsSubItems = [
-  { href: "/settings/preferences", label: "Preferences", icon: Palette },
-  { href: "/settings/integrations", label: "Integrations", icon: Zap },
-  { href: "/settings/stages", label: "Recruitment Stages", icon: KanbanSquare, permissionId: 'RECRUITMENT_STAGES_MANAGE' as PlatformModuleId },
-  { href: "/settings/data-models", label: "Data Models (Client)", icon: DatabaseZap, permissionId: 'DATA_MODELS_MANAGE' as PlatformModuleId },
-  { href: "/settings/custom-fields", label: "Custom Fields (Server)", icon: Settings2, permissionId: 'CUSTOM_FIELDS_MANAGE' as PlatformModuleId },
-  { href: "/settings/webhook-mapping", label: "Webhook Payload Mapping", icon: SlidersHorizontal, permissionId: 'WEBHOOK_MAPPING_MANAGE' as PlatformModuleId },
-  { href: "/users", label: "Manage Users", icon: UsersRound, adminOnly: true },
-  { href: "/settings/user-groups", label: "Manage User Groups", icon: UserCog, permissionId: 'USER_GROUPS_MANAGE' as PlatformModuleId, adminOnlyOrPermission: true }, // New item
-  { href: "/api-docs", label: "API Docs", icon: Code2 },
-  { href: "/logs", label: "Logs", icon: ListOrdered, adminOnly: true },
+  { href: "/settings/preferences", label: "Preferences", icon: Palette, description: "Application preferences and appearance" },
+  { href: "/settings/integrations", label: "Integrations", icon: Zap, description: "Third-party integrations" },
+  { href: "/settings/stages", label: "Recruitment Stages", icon: KanbanSquare, permissionId: 'RECRUITMENT_STAGES_MANAGE' as PlatformModuleId, description: "Manage recruitment stages" },
+  { href: "/settings/data-models", label: "Data Models (Client)", icon: DatabaseZap, permissionId: 'DATA_MODELS_MANAGE' as PlatformModuleId, description: "Client-side data models" },
+  { href: "/settings/custom-fields", label: "Custom Fields (Server)", icon: Settings2, permissionId: 'CUSTOM_FIELDS_MANAGE' as PlatformModuleId, description: "Server-side custom fields" },
+  { href: "/settings/webhook-mapping", label: "Webhook Payload Mapping", icon: SlidersHorizontal, permissionId: 'WEBHOOK_MAPPING_MANAGE' as PlatformModuleId, description: "Configure webhook payloads" },
+  { href: "/users", label: "Manage Users", icon: UsersRound, adminOnly: true, description: "User management" },
+  { href: "/settings/user-groups", label: "Manage User Groups", icon: UserCog, permissionId: 'USER_GROUPS_MANAGE' as PlatformModuleId, adminOnlyOrPermission: true, description: "User group management" }, // New item
+  { href: "/api-docs", label: "API Docs", icon: Code2, description: "API documentation" },
+  { href: "/logs", label: "Logs", icon: ListOrdered, adminOnly: true, description: "System logs" },
 ];
 
 // Memoize SidebarNav to prevent unnecessary re-renders

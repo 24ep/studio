@@ -121,7 +121,7 @@ export default function SettingsLayout({ children }: { children: ReactNode }) {
                   <span className={cn(
                      "text-xs",
                      pathname === item.href || pathname.startsWith(item.href + '/') ? "text-primary/80" : "text-muted-foreground/80"
-                    )}>{item.description}</span>
+                    )}>{item.description || ''}</span>
                 </div>
               </Link>
             ))}

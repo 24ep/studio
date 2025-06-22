@@ -15,19 +15,20 @@ const poppins = Poppins({
   subsets: ['latin'],
   variable: '--font-poppins',
   display: 'swap',
+  weight: ['100', '200', '300', '400', '500', '600', '700', '800', '900'],
 });
 
 const openSans = Open_Sans({ subsets: ['latin'], variable: '--font-open-sans', display: 'swap' });
-const roboto = Roboto({ subsets: ['latin'], variable: '--font-roboto', display: 'swap' });
+const roboto = Roboto({ subsets: ['latin'], variable: '--font-roboto', display: 'swap', weight: ['100', '300', '400', '500', '700', '900'] });
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter', display: 'swap' });
 const montserrat = Montserrat({ subsets: ['latin'], variable: '--font-montserrat', display: 'swap' });
-const lato = Lato({ subsets: ['latin'], variable: '--font-lato', display: 'swap' });
+const lato = Lato({ subsets: ['latin'], variable: '--font-lato', display: 'swap', weight: ['100', '300', '400', '700', '900'] });
 const nunito = Nunito({ subsets: ['latin'], variable: '--font-nunito', display: 'swap' });
 const sourceSans3 = Source_Sans_3({ subsets: ['latin'], variable: '--font-source-sans-3', display: 'swap' });
 const raleway = Raleway({ subsets: ['latin'], variable: '--font-raleway', display: 'swap' });
-const ubuntu = Ubuntu({ subsets: ['latin'], variable: '--font-ubuntu', display: 'swap' });
+const ubuntu = Ubuntu({ subsets: ['latin'], variable: '--font-ubuntu', display: 'swap', weight: ['300', '400', '500', '700'] });
 const quicksand = Quicksand({ subsets: ['latin'], variable: '--font-quicksand', display: 'swap' });
-const ptSans = PT_Sans({ subsets: ['latin'], variable: '--font-pt-sans', display: 'swap' });
+const ptSans = PT_Sans({ subsets: ['latin'], variable: '--font-pt-sans', display: 'swap', weight: ['400', '700'] });
 
 export const metadata: Metadata = {
   title: 'Candidate Matching - Applicant Tracking System',
