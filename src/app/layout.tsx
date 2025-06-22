@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { Open_Sans } from 'next/font/google';
+import { Poppins, Open_Sans, Roboto, Inter, Montserrat, Lato, Nunito, Source_Sans_3, Raleway, Ubuntu, Quicksand, PT_Sans } from 'next/font/google';
 import './globals.css';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Toaster } from "@/components/ui/toaster";
@@ -11,11 +11,23 @@ import { authOptions } from "@/lib/auth"
 // import { authOptions } from "@/app/api/auth/[...nextauth]/route"
 
 
-const openSans = Open_Sans({
+const poppins = Poppins({
   subsets: ['latin'],
-  variable: '--font-open-sans',
+  variable: '--font-poppins',
   display: 'swap',
 });
+
+const openSans = Open_Sans({ subsets: ['latin'], variable: '--font-open-sans', display: 'swap' });
+const roboto = Roboto({ subsets: ['latin'], variable: '--font-roboto', display: 'swap' });
+const inter = Inter({ subsets: ['latin'], variable: '--font-inter', display: 'swap' });
+const montserrat = Montserrat({ subsets: ['latin'], variable: '--font-montserrat', display: 'swap' });
+const lato = Lato({ subsets: ['latin'], variable: '--font-lato', display: 'swap' });
+const nunito = Nunito({ subsets: ['latin'], variable: '--font-nunito', display: 'swap' });
+const sourceSans3 = Source_Sans_3({ subsets: ['latin'], variable: '--font-source-sans-3', display: 'swap' });
+const raleway = Raleway({ subsets: ['latin'], variable: '--font-raleway', display: 'swap' });
+const ubuntu = Ubuntu({ subsets: ['latin'], variable: '--font-ubuntu', display: 'swap' });
+const quicksand = Quicksand({ subsets: ['latin'], variable: '--font-quicksand', display: 'swap' });
+const ptSans = PT_Sans({ subsets: ['latin'], variable: '--font-pt-sans', display: 'swap' });
 
 export const metadata: Metadata = {
   title: 'Candidate Matching - Applicant Tracking System',
@@ -30,9 +42,33 @@ export default async function RootLayout({ // Note: 'async' if using getServerSe
   // To pass server-side session to SessionProvider for faster initial loads (optional):
   const session = await getServerSession(authOptions); 
 
+  // Fetch system settings for font
+  let appFontFamily = 'Poppins';
+  try {
+    const res = await fetch(process.env.NEXT_PUBLIC_BASE_URL + '/api/settings/system-settings', { cache: 'no-store' });
+    if (res.ok) {
+      const settings = await res.json();
+      const fontSetting = settings.find((s: any) => s.key === 'appFontFamily');
+      if (fontSetting && fontSetting.value) appFontFamily = fontSetting.value;
+    }
+  } catch {}
+
+  let fontVar = poppins.variable;
+  if (appFontFamily === 'Open Sans') fontVar = openSans.variable;
+  else if (appFontFamily === 'Roboto') fontVar = roboto.variable;
+  else if (appFontFamily === 'Inter') fontVar = inter.variable;
+  else if (appFontFamily === 'Montserrat') fontVar = montserrat.variable;
+  else if (appFontFamily === 'Lato') fontVar = lato.variable;
+  else if (appFontFamily === 'Nunito') fontVar = nunito.variable;
+  else if (appFontFamily === 'Source Sans 3') fontVar = sourceSans3.variable;
+  else if (appFontFamily === 'Raleway') fontVar = raleway.variable;
+  else if (appFontFamily === 'Ubuntu') fontVar = ubuntu.variable;
+  else if (appFontFamily === 'Quicksand') fontVar = quicksand.variable;
+  else if (appFontFamily === 'PT Sans') fontVar = ptSans.variable;
+
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={`${openSans.variable} font-sans antialiased`}>
+      <body className={`${fontVar} font-sans antialiased`}>
         <AuthProvider session={session}> {/* Pass session={session} if using getServerSession */}
           <AppLayout>
             {children}

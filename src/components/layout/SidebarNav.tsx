@@ -22,8 +22,9 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { useSession } from "next-auth/react";
-import type { PlatformModuleId } from '@/lib/types';
+import type { PlatformModuleId, SettingsNavigationItem } from '@/lib/types';
 import { Separator } from '@/components/ui/separator';
+import { settingsNavItems } from '@/app/settings/layout';
 
 
 const mainNavItems = [
@@ -77,10 +78,10 @@ const SidebarNavComponent = function SidebarNav() {
     router.push(href);
   };
 
-  const canAccess = (item: { adminOnly?: boolean, permissionId?: PlatformModuleId, adminOnlyOrPermission?: boolean }) => {
-    if (!isClient || sessionStatus !== 'authenticated') return false;
+  const canAccess = (item: SettingsNavigationItem) => {
+    if (!isClient || sessionStatus !== 'authenticated' || !session?.user) return false;
     if (item.adminOnly && userRole !== 'Admin') return false;
-    if (item.adminOnlyOrPermission) { // If true, user needs to be Admin OR have the permission
+    if (item.adminOnlyOrPermission) {
       if (userRole === 'Admin') return true;
       if (item.permissionId && modulePermissions.includes(item.permissionId)) return true;
       return false;
@@ -88,6 +89,8 @@ const SidebarNavComponent = function SidebarNav() {
     if (item.permissionId && userRole !== 'Admin' && !modulePermissions.includes(item.permissionId)) return false;
     return true;
   };
+
+  const visibleNavItems = React.useMemo(() => settingsNavItems.filter(canAccess), [isClient, session, sessionStatus]);
 
   const initialIsSettingsSectionActive = React.useMemo(() => {
     return baseSettingsSubItems.some(item => {

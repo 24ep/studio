@@ -16,6 +16,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 type ThemePreference = "light" | "dark" | "system";
 const DEFAULT_APP_NAME = "CandiTrack";
@@ -155,6 +156,27 @@ const PREFERENCE_SECTIONS = [
   { id: 'sidebarAppearance', label: 'Sidebar Colors', icon: SidebarMenuIcon },
 ];
 
+const FONT_OPTIONS = [
+  { label: 'Poppins', value: 'Poppins' },
+  { label: 'Open Sans', value: 'Open Sans' },
+  { label: 'Roboto', value: 'Roboto' },
+  { label: 'Inter', value: 'Inter' },
+  { label: 'Montserrat', value: 'Montserrat' },
+  { label: 'Lato', value: 'Lato' },
+  { label: 'Nunito', value: 'Nunito' },
+  { label: 'Source Sans 3', value: 'Source Sans 3' },
+  { label: 'Raleway', value: 'Raleway' },
+  { label: 'Ubuntu', value: 'Ubuntu' },
+  { label: 'Quicksand', value: 'Quicksand' },
+  { label: 'PT Sans', value: 'PT Sans' },
+];
+
+// Add this helper for filtering font options
+function filterFontOptions(options: {label: string, value: string}[], input: string) {
+  if (!input) return options;
+  return options.filter((opt: {label: string, value: string}) => opt.label.toLowerCase().includes(input.toLowerCase()));
+}
+
 export default function PreferencesSettingsPage() {
   const { toast } = useToast();
   const [isClient, setIsClient] = useState(false);
@@ -181,6 +203,13 @@ export default function PreferencesSettingsPage() {
   const [loginBgColor2, setLoginBgColor2] = useState<string>(DEFAULT_LOGIN_BG_COLOR2_HEX);
   const [sidebarColors, setSidebarColors] = useState<SidebarColors>(createInitialSidebarColors());
   const [loginLayoutType, setLoginLayoutType] = useState('center');
+  const [appFontFamily, setAppFontFamily] = useState<string>('Poppins');
+  const [isFontLoading, setIsFontLoading] = useState(false);
+  const [fontValidationWarning, setFontValidationWarning] = useState<string | null>(null);
+  const [fontOptions, setFontOptions] = useState<{label: string, value: string}[]>(FONT_OPTIONS);
+  const [isFontListLoading, setIsFontListLoading] = useState(false);
+  const fontValidationTimeout = useRef<number | null>(null);
+  const GOOGLE_FONTS_API_KEY = typeof window !== 'undefined' ? (window.env?.NEXT_PUBLIC_GOOGLE_FONTS_API_KEY || '') : '';
 
   const sectionRefs = {
     branding: useRef<HTMLDivElement>(null),
@@ -218,6 +247,7 @@ export default function PreferencesSettingsPage() {
       setLoginBgColor1(settingsMap.get('loginPageBackgroundColor1') || DEFAULT_LOGIN_BG_COLOR1_HEX);
       setLoginBgColor2(settingsMap.get('loginPageBackgroundColor2') || DEFAULT_LOGIN_BG_COLOR2_HEX);
       setLoginLayoutType(settingsMap.get('loginPageLayoutType') || DEFAULT_LOGIN_LAYOUT_TYPE);
+      setAppFontFamily(settingsMap.get('appFontFamily') || 'Poppins');
 
       // Load sidebar colors
       const newSidebarColors = createInitialSidebarColors();
@@ -240,7 +270,7 @@ export default function PreferencesSettingsPage() {
   useEffect(() => {
     setIsClient(true);
     if (sessionStatus === 'authenticated') {
-      fetchSystemSettings();
+        fetchSystemSettings();
     }
   }, [sessionStatus, fetchSystemSettings]);
 
@@ -253,27 +283,27 @@ export default function PreferencesSettingsPage() {
     const file = event.target.files?.[0];
     if (!file) return;
 
-    if (file.size > 500 * 1024) {
+        if (file.size > 500 * 1024) {
       toast({
         title: "File too large",
         description: "Please select an image smaller than 500KB.",
         variant: "destructive",
       });
-      return;
-    }
+            return;
+        }
 
-    const reader = new FileReader();
+        const reader = new FileReader();
     reader.onload = (e) => {
       const dataUrl = e.target?.result as string;
-      if (type === 'appLogo') {
-        setSelectedLogoFile(file);
+          if (type === 'appLogo') {
+            setSelectedLogoFile(file);
         setLogoPreviewUrl(dataUrl);
-      } else {
-        setSelectedLoginBgFile(file);
+          } else {
+            setSelectedLoginBgFile(file);
         setLoginBgImagePreviewUrl(dataUrl);
-      }
-    };
-    reader.readAsDataURL(file);
+          }
+        };
+        reader.readAsDataURL(file);
   };
 
   const removeSelectedImage = async (type: 'appLogo' | 'loginBg', clearSaved: boolean = false) => {
@@ -320,6 +350,7 @@ export default function PreferencesSettingsPage() {
         { key: 'loginPageBackgroundColor1' as SystemSettingKey, value: loginBgColor1 },
         { key: 'loginPageBackgroundColor2' as SystemSettingKey, value: loginBgColor2 },
         { key: 'loginPageLayoutType' as SystemSettingKey, value: loginLayoutType },
+        { key: 'appFontFamily' as SystemSettingKey, value: appFontFamily },
       ];
 
       // Add sidebar colors
@@ -386,7 +417,7 @@ export default function PreferencesSettingsPage() {
     setLoginBgColor1(DEFAULT_LOGIN_BG_COLOR1_HEX);
     setLoginBgColor2(DEFAULT_LOGIN_BG_COLOR2_HEX);
     setSelectedLoginBgFile(null);
-    setLoginBgImagePreviewUrl(null);
+    setLoginBgImagePreviewUrl(null); 
     toast({ title: "Login Background Reset", description: "Login background reset to default. Click 'Save All' to persist." });
   };
 
@@ -441,6 +472,54 @@ export default function PreferencesSettingsPage() {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
+  // Fetch full Google Fonts list on page load
+  useEffect(() => {
+    if (!GOOGLE_FONTS_API_KEY) return;
+    setIsFontListLoading(true);
+    fetch(`https://www.googleapis.com/webfonts/v1/webfonts?key=${GOOGLE_FONTS_API_KEY}&sort=alpha`)
+      .then(res => res.ok ? res.json() : Promise.reject('Failed to fetch Google Fonts list'))
+      .then(data => {
+        if (data.items && Array.isArray(data.items)) {
+          setFontOptions(data.items.map((item: any) => ({ label: item.family, value: item.family })));
+        }
+      })
+      .catch(() => setFontOptions(FONT_OPTIONS))
+      .finally(() => setIsFontListLoading(false));
+  }, [GOOGLE_FONTS_API_KEY]);
+
+  // Validate font name (debounced)
+  useEffect(() => {
+    if (!appFontFamily) {
+      setFontValidationWarning(null);
+      return;
+    }
+    // If it's in the loaded list, it's valid
+    if (fontOptions.some(opt => opt.value.toLowerCase() === appFontFamily.toLowerCase())) {
+      setFontValidationWarning(null);
+      return;
+    }
+    // Debounce API call
+    if (fontValidationTimeout.current) clearTimeout(fontValidationTimeout.current);
+    fontValidationTimeout.current = setTimeout(async () => {
+      if (!GOOGLE_FONTS_API_KEY) {
+        setFontValidationWarning(null);
+        return;
+      }
+      try {
+        const res = await fetch(`https://www.googleapis.com/webfonts/v1/webfonts?key=${GOOGLE_FONTS_API_KEY}&sort=alpha`);
+        if (!res.ok) throw new Error('Failed to fetch Google Fonts list');
+        const data = await res.json();
+        const found = data.items.some((item: any) => item.family.toLowerCase() === appFontFamily.toLowerCase());
+        setFontValidationWarning(found ? null : 'Font not found on Google Fonts.');
+      } catch {
+        setFontValidationWarning(null); // Fail silently
+      }
+    }, 500);
+    return () => {
+      if (fontValidationTimeout.current) clearTimeout(fontValidationTimeout.current);
+    };
+  }, [appFontFamily, GOOGLE_FONTS_API_KEY, fontOptions]);
+
   // Loading and error states
   if (sessionStatus === 'loading' || (isLoading && !fetchError && !isClient)) {
     return (
@@ -463,7 +542,7 @@ export default function PreferencesSettingsPage() {
     );
   }
 
-  return (
+        return (
     <div className="flex gap-8 relative">
       {/* Left menu */}
       <nav className="w-56 flex-shrink-0 pt-8 sticky top-8 self-start hidden md:block">
@@ -770,7 +849,7 @@ export default function PreferencesSettingsPage() {
                       className="max-w-[120px]"
                     />
                   </div>
-                </div>
+                        </div>
               )}
 
               {loginBgType === 'gradient' && (
@@ -795,7 +874,7 @@ export default function PreferencesSettingsPage() {
                         className="max-w-[120px]"
                       />
                     </div>
-                  </div>
+                        </div>
                   <div className="space-y-2">
                     <Label htmlFor="login-bg-gradient-color2" className="text-sm font-medium">
                       Gradient Color 2
@@ -816,7 +895,7 @@ export default function PreferencesSettingsPage() {
                         className="max-w-[120px]"
                       />
                     </div>
-                  </div>
+                    </div>
                 </div>
               )}
 
@@ -833,7 +912,7 @@ export default function PreferencesSettingsPage() {
                   </div>
                 </RadioGroup>
                 <p className="text-xs text-muted-foreground mt-1">Choose how the login form is displayed: centered box or 2-column with login as a left menu.</p>
-              </div>
+            </div>
 
               <Button variant="outline" size="sm" onClick={resetLoginBackground}>
                 <RotateCcw className="mr-2 h-4 w-4" />
@@ -841,7 +920,7 @@ export default function PreferencesSettingsPage() {
               </Button>
             </CardContent>
           </Card>
-        </div>
+            </div>
         <div ref={sectionRefs.sidebarAppearance} id="sidebarAppearance">
           {/* Sidebar Colors section content */}
           <Card className="lg:col-span-3">
@@ -855,7 +934,7 @@ export default function PreferencesSettingsPage() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <Tabs defaultValue="light-sidebar" className="w-full">
+            <Tabs defaultValue="light-sidebar" className="w-full">
                 <TabsList className="grid w-full grid-cols-2 mb-6">
                   <TabsTrigger value="light-sidebar" className="flex items-center gap-2">
                     <Sun className="h-4 w-4" />
@@ -886,10 +965,50 @@ export default function PreferencesSettingsPage() {
                     Reset Dark Theme Colors
                   </Button>
                 </TabsContent>
-              </Tabs>
+            </Tabs>
             </CardContent>
           </Card>
         </div>
+        <Card className="shadow-lg border-2 border-primary/10">
+          <CardHeader>
+            <CardTitle className="flex items-center text-2xl gap-2">
+              <Type className="h-7 w-7 text-primary" />
+              Application Font
+            </CardTitle>
+            <CardDescription className="text-base text-muted-foreground">
+              Choose the font family for the entire application UI.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {/* Combobox/Autocomplete for font selection */}
+            <div className="relative w-64">
+              <Input
+                type="text"
+                value={appFontFamily}
+                onChange={e => setAppFontFamily(e.target.value)}
+                placeholder="Type or select a Google Font"
+                className="pr-8"
+                list="font-family-list"
+                autoComplete="off"
+              />
+              {(isFontLoading || isFontListLoading) && (
+                <div className="absolute right-2 top-2 text-xs text-muted-foreground flex items-center gap-1">
+                  <span className="animate-spin inline-block w-4 h-4 border-2 border-primary border-t-transparent rounded-full"></span>
+                  {isFontListLoading ? 'Loading fonts...' : 'Loading font...'}
+                </div>
+              )}
+              <datalist id="font-family-list">
+                {filterFontOptions(fontOptions, appFontFamily).map(opt => (
+                  <option key={opt.value} value={opt.value}>{opt.label}</option>
+                ))}
+              </datalist>
+              <div className="text-xs text-muted-foreground mt-1">You can type any Google Font name, or pick from the list.</div>
+              {fontValidationWarning && (
+                <div className="text-xs text-red-600 mt-1">{fontValidationWarning}</div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
       </div>
       {/* Floating Save/Reset Bar */}
       <div className="fixed bottom-0 left-0 w-full z-30 bg-background/95 border-t flex justify-center items-center gap-4 py-3 px-4 shadow-lg md:ml-56" style={{boxShadow: '0 -2px 16px 0 rgba(0,0,0,0.04)'}}>
@@ -946,10 +1065,10 @@ export default function PreferencesSettingsPage() {
           <Input 
             type="color" 
             value={convertHslStringToHex(sidebarColors[key])} 
-            onChange={(e) => handleSidebarColorChange(key as keyof SidebarColors, hexToHslString(e.target.value))} 
+                 onChange={(e) => handleSidebarColorChange(key as keyof SidebarColors, hexToHslString(e.target.value))} 
             className="w-10 h-9 p-1 rounded-md border"
-          />
-        </div>
+              />
+            </div>
       </div>
     ));
   }

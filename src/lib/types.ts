@@ -364,8 +364,8 @@ export type SystemSettingKey =
   | 'appName'
   | 'appLogoDataUrl'
   | 'appThemePreference'
-  | 'primaryGradientStart' 
-  | 'primaryGradientEnd'   
+  | 'primaryGradientStart'
+  | 'primaryGradientEnd'
   | 'smtpHost'
   | 'smtpPort'
   | 'smtpUser'
@@ -398,7 +398,8 @@ export type SystemSettingKey =
   | 'sidebarActiveTextD'
   | 'sidebarHoverBgD'
   | 'sidebarHoverTextD'
-  | 'sidebarBorderD';
+  | 'sidebarBorderD'
+  | 'appFontFamily';
 
 
 export interface SystemSetting {

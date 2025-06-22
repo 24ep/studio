@@ -15,6 +15,7 @@ const systemSettingKeyEnum = z.enum([
     'n8nResumeWebhookUrl', 'n8nGenericPdfWebhookUrl', 'geminiApiKey',
     'loginPageBackgroundType', 'loginPageBackgroundImageUrl', 
     'loginPageBackgroundColor1', 'loginPageBackgroundColor2',
+    'loginPageLayoutType',
     // Sidebar Light Theme
     'sidebarBgStartL', 'sidebarBgEndL', 'sidebarTextL',
     'sidebarActiveBgStartL', 'sidebarActiveBgEndL', 'sidebarActiveTextL',
@@ -22,7 +23,8 @@ const systemSettingKeyEnum = z.enum([
     // Sidebar Dark Theme
     'sidebarBgStartD', 'sidebarBgEndD', 'sidebarTextD',
     'sidebarActiveBgStartD', 'sidebarActiveBgEndD', 'sidebarActiveTextD',
-    'sidebarHoverBgD', 'sidebarHoverTextD', 'sidebarBorderD'
+    'sidebarHoverBgD', 'sidebarHoverTextD', 'sidebarBorderD',
+    'appFontFamily',
 ]);
 
 

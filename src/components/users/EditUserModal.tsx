@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useEffect, useState } from 'react';
@@ -8,6 +7,22 @@ import * as z from 'zod';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { useToast } from '@/hooks/use-toast';
+import { Save, Palette, ImageUp, Trash2, Loader2, XCircle, PenSquare, ServerCrash, ShieldAlert, Settings2, Wallpaper, Droplets, Type, Sidebar as SidebarIcon, RotateCcw, Eye, EyeOff, Monitor, Sun, Moon, Zap, StickyNote, Paintbrush, LayoutDashboard, Sidebar as SidebarMenuIcon, LogIn, Edit3, Users, ShieldCheck, ChevronsUpDown } from 'lucide-react';
+import Image from 'next/image';
+import { signIn, useSession } from 'next-auth/react';
+import { useRouter, usePathname } from 'next/navigation';
+import type { SystemSetting, LoginPageBackgroundType, SystemSettingKey, LoginPageLayoutType } from '@/lib/types';
+import { cn } from '@/lib/utils';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Separator } from '@/components/ui/separator';
+import { Badge } from '@/components/ui/badge';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Switch } from '@/components/ui/switch';
 import {
   Dialog,
   DialogContent,
@@ -17,23 +32,10 @@ import {
   DialogFooter,
   DialogClose,
 } from '@/components/ui/dialog';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { Checkbox } from "@/components/ui/checkbox";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { Edit3, ShieldCheck, Users, Filter, ChevronsUpDown, Check as CheckIcon, Loader2, UserCog, Settings, KeyRound, UserCircle, Palette, Save } from 'lucide-react';
 import type { UserProfile, PlatformModuleId, UserGroup, PlatformModuleCategory } from '@/lib/types';
 import { PLATFORM_MODULES, PLATFORM_MODULE_CATEGORIES } from '@/lib/types';
-import { ScrollArea } from '../ui/scroll-area';
-import { useToast } from '@/hooks/use-toast';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { cn } from '@/lib/utils';
-import { Separator } from '../ui/separator';
 
 const userRoleOptions: UserProfile['role'][] = ['Admin', 'Recruiter', 'Hiring Manager'];
 const platformModuleIds = PLATFORM_MODULES.map(m => m.id) as [PlatformModuleId, ...PlatformModuleId[]];
@@ -135,7 +137,7 @@ export function EditUserModal({ isOpen, onOpenChange, onEditUser, user, isSelfEd
     : "Update user details, assign roles, groups, and permissions.";
 
   const navItems = [
-    { id: 'general', label: 'General Information', icon: UserCircle },
+    { id: 'general', label: 'General Information', icon: Users },
     ...(!isSelfEdit ? [{ id: 'permissions', label: 'Groups & Permissions', icon: ShieldCheck }] : [])
   ];
 
@@ -240,18 +242,26 @@ export function EditUserModal({ isOpen, onOpenChange, onEditUser, user, isSelfEd
                               <h4 className="font-medium text-sm text-muted-foreground mb-1.5">{group.category}</h4>
                               {group.permissions.map((module) => (
                                 <FormField key={module.id} control={form.control} name="modulePermissions"
-                                  render={({ field }) => (
-                                    <FormItem className="flex flex-row items-start space-x-3 space-y-0 mb-2">
-                                      <FormControl><Checkbox className="checkbox-green mt-1" checked={field.value?.includes(module.id)}
-                                        onCheckedChange={(checked) => checked ? field.onChange([...(field.value || []), module.id]) : field.onChange((field.value || []).filter(v => v !== module.id))}
-                                      /></FormControl>
-                                      <div className="space-y-0.5">
-                                        <FormLabel className="text-sm font-normal">{module.label}</FormLabel>
-                                        <p className="text-xs text-muted-foreground">{module.description}</p>
-                                      </div>
-                                    </FormItem>
-                                  )}
-                                />))}
+                                  render={({ field }) => {
+                                    const checked = field.value?.includes(module.id);
+                                    return (
+                                      <FormItem className="flex flex-row items-center space-x-4 mb-3">
+                                        <FormControl>
+                                          <Switch
+                                            checked={checked}
+                                            onCheckedChange={(checked) => checked ? field.onChange([...(field.value || []), module.id]) : field.onChange((field.value || []).filter(v => v !== module.id))}
+                                            className="switch-green"
+                                          />
+                                        </FormControl>
+                                        <div className="flex flex-col">
+                                          <FormLabel className="text-sm font-medium">{module.label}</FormLabel>
+                                          <span className="text-xs text-muted-foreground">{module.description}</span>
+                                        </div>
+                                      </FormItem>
+                                    );
+                                  }}
+                                />
+                              ))}
                             </div>
                           ))}
                         </div>

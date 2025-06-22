@@ -23,7 +23,7 @@ CREATE INDEX IF NOT EXISTS idx_user_email ON "User"(email);
 -- bcrypt.hash(plaintextPassword, saltRounds, function(err, hash) { console.log(hash); });
 -- Example hash for 'nccadmin': $2b$10$2BYzu2nUAp8IxK/SUReOd.yONfsS0IThoukn8zjvOFlamKvr58Rly (this is just an example, generate your own if needed)
 INSERT INTO "User" (id, name, email, password, role, "modulePermissions") VALUES 
-('213d289f-31ef-47cb-bf13-8e7207295b42', 'Admin User', 'admin@ncc.com', '$2b$10$2BYzu2nUAp8IxK/SUReOd.yONfsS0IThoukn8zjvOFlamKvr58Rly', 'Admin', ARRAY['CANDIDATES_VIEW', 'CANDIDATES_MANAGE', 'POSITIONS_VIEW', 'POSITIONS_MANAGE', 'USERS_MANAGE', 'SETTINGS_ACCESS', 'LOGS_VIEW']::TEXT[])
+('213d289f-31ef-47cb-bf13-8e7207295b42', 'Admin User', 'admin@ncc.com', '$2b$10$2BYzu2nUAp8IxK/SUReOd.yONfsS0IThoukn8zjvOFlamKvr58Rly', 'Admin', ARRAY['CANDIDATES_VIEW','CANDIDATES_MANAGE','CANDIDATES_IMPORT','CANDIDATES_EXPORT','POSITIONS_VIEW','POSITIONS_MANAGE','POSITIONS_IMPORT','POSITIONS_EXPORT','USERS_MANAGE','USER_GROUPS_MANAGE','SYSTEM_SETTINGS_MANAGE','USER_PREFERENCES_MANAGE','RECRUITMENT_STAGES_MANAGE','CUSTOM_FIELDS_MANAGE','WEBHOOK_MAPPING_MANAGE','NOTIFICATION_SETTINGS_MANAGE','LOGS_VIEW']::TEXT[])
 ON CONFLICT (email) DO NOTHING;
 
 -- MIGRATION: Rename old tables if they exist
@@ -117,3 +117,11 @@ CREATE TABLE IF NOT EXISTS "User_UserGroup" (
 );
 CREATE INDEX IF NOT EXISTS idx_user_usergroup_userid ON "User_UserGroup"("userId");
 CREATE INDEX IF NOT EXISTS idx_user_usergroup_groupid ON "User_UserGroup"("groupId");
+
+-- Create SystemSetting table for global app/system settings
+CREATE TABLE IF NOT EXISTS "SystemSetting" (
+    key VARCHAR(100) PRIMARY KEY,
+    value TEXT,
+    "updatedAt" TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_systemsetting_key ON "SystemSetting"(key);

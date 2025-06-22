@@ -24,6 +24,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Checkbox } from "@/components/ui/checkbox";
+import { Switch } from '@/components/ui/switch';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { UserPlus, ShieldCheck, Users, Loader2 } from 'lucide-react';
 import type { UserProfile, PlatformModuleId, UserGroup, PlatformModuleCategory } from '@/lib/types';
@@ -192,18 +193,26 @@ export function AddUserModal({ isOpen, onOpenChange, onAddUser }: AddUserModalPr
                               <h4 className="font-medium text-sm text-muted-foreground mb-1.5">{group.category}</h4>
                               {group.permissions.map((module) => (
                                 <FormField key={module.id} control={form.control} name="modulePermissions"
-                                  render={({ field }) => (
-                                    <FormItem className="flex flex-row items-start space-x-3 space-y-0 mb-2">
-                                      <FormControl><Checkbox className="checkbox-green mt-1" checked={field.value?.includes(module.id)}
-                                        onCheckedChange={(checked) => checked ? field.onChange([...(field.value || []), module.id]) : field.onChange((field.value || []).filter(v => v !== module.id))}
-                                      /></FormControl>
-                                      <div className="space-y-0.5">
-                                        <FormLabel className="text-sm font-normal">{module.label}</FormLabel>
-                                        <p className="text-xs text-muted-foreground">{module.description}</p>
-                                      </div>
-                                    </FormItem>
-                                  )}
-                                />))}
+                                  render={({ field }) => {
+                                    const checked = field.value?.includes(module.id);
+                                    return (
+                                      <FormItem className="flex flex-row items-center space-x-4 mb-3">
+                                        <FormControl>
+                                          <Switch
+                                            checked={checked}
+                                            onCheckedChange={(checked) => checked ? field.onChange([...(field.value || []), module.id]) : field.onChange((field.value || []).filter(v => v !== module.id))}
+                                            className="switch-green"
+                                          />
+                                        </FormControl>
+                                        <div className="flex flex-col">
+                                          <FormLabel className="text-sm font-medium">{module.label}</FormLabel>
+                                          <span className="text-xs text-muted-foreground">{module.description}</span>
+                                        </div>
+                                      </FormItem>
+                                    );
+                                  }}
+                                />
+                              ))}
                             </div>
                           ))}
                         </div>
