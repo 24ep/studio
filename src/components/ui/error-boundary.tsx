@@ -95,7 +95,7 @@ function ErrorFallback({ error }: ErrorFallbackProps) {
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
-          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-destructive/10">
+          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-md bg-destructive/10">
             <AlertTriangle className="h-8 w-8 text-destructive" />
           </div>
           <CardTitle className="text-xl">Something went wrong</CardTitle>

@@ -125,3 +125,14 @@ CREATE TABLE IF NOT EXISTS "SystemSetting" (
     "updatedAt" TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 CREATE INDEX IF NOT EXISTS idx_systemsetting_key ON "SystemSetting"(key);
+
+-- Create WebhookFieldMapping table for webhook payload mappings
+CREATE TABLE IF NOT EXISTS "WebhookFieldMapping" (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  target_path VARCHAR(255) NOT NULL,
+  source_path VARCHAR(255),
+  notes TEXT,
+  "createdAt" TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+  "updatedAt" TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_webhook_target_path ON "WebhookFieldMapping"(target_path);

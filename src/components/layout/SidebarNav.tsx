@@ -185,7 +185,7 @@ const SidebarNavComponent = function SidebarNav() {
                   asChild
                   isActive={isActive}
                   className={cn(
-                    "w-full justify-start rounded-full px-4 py-2 my-1 transition-all flex items-center gap-3 text-base",
+                    "w-full justify-start rounded-md px-4 py-2 my-1 transition-all flex items-center gap-3 text-base",
                     isActive
                       ? "bg-primary/90 text-white font-bold shadow-lg scale-105"
                       : "hover:bg-primary/10 hover:text-primary text-muted-foreground"
@@ -225,7 +225,7 @@ const SidebarNavComponent = function SidebarNav() {
                 asChild
                 isActive={isMyTaskBoardActive}
                 className={cn(
-                  "w-full justify-start rounded-full px-4 py-2 my-1 transition-all flex items-center gap-3 text-base",
+                  "w-full justify-start rounded-md px-4 py-2 my-1 transition-all flex items-center gap-3 text-base",
                   isMyTaskBoardActive
                     ? "bg-primary/90 text-white font-bold shadow-lg scale-105"
                     : "hover:bg-primary/10 hover:text-primary text-muted-foreground"

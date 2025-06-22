@@ -53,7 +53,7 @@ export async function POST(request: NextRequest) {
     if (action === 'delete') {
       await client.query('DELETE FROM "ResumeHistory" WHERE "candidateId" = ANY($1::uuid[])', [candidateIds]);
       await client.query('DELETE FROM "TransitionRecord" WHERE "candidateId" = ANY($1::uuid[])', [candidateIds]);
-      const deleteResult = await client.query('DELETE FROM "Candidate" WHERE id = ANY($1::uuid[]) RETURNING id', [candidateIds]);
+      const deleteResult = await client.query('DELETE FROM "candidates" WHERE id = ANY($1::uuid[]) RETURNING id', [candidateIds]);
       successCount = deleteResult.rowCount ?? 0;
       const deletedIds = deleteResult.rows.map((r: { id: string }) => r.id);
       failCount = candidateIds.length - successCount;
@@ -73,11 +73,11 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ message: `Invalid new status: '${newStatus}'. Stage not found.` }, { status: 400 });
       }
 
-      const oldStatusesResult = await client.query('SELECT id, status FROM "Candidate" WHERE id = ANY($1::uuid[])', [candidateIds]);
+      const oldStatusesResult = await client.query('SELECT id, status FROM "candidates" WHERE id = ANY($1::uuid[])', [candidateIds]);
       const oldStatusesMap = new Map<string, string>(oldStatusesResult.rows.map((r: { id: string, status: string }) => [r.id, r.status]));
 
       const updateResult = await client.query(
-        'UPDATE "Candidate" SET status = $1, "updatedAt" = NOW() WHERE id = ANY($2::uuid[]) RETURNING id, name',
+        'UPDATE "candidates" SET status = $1, "updatedAt" = NOW() WHERE id = ANY($2::uuid[]) RETURNING id, name',
         [newStatus, candidateIds]
       );
       successCount = updateResult.rowCount ?? 0;
@@ -108,7 +108,7 @@ export async function POST(request: NextRequest) {
          }
       }
       const updateResult = await client.query(
-        'UPDATE "Candidate" SET "recruiterId" = $1, "updatedAt" = NOW() WHERE id = ANY($2::uuid[]) RETURNING id',
+        'UPDATE "candidates" SET "recruiterId" = $1, "updatedAt" = NOW() WHERE id = ANY($2::uuid[]) RETURNING id',
         [newRecruiterId, candidateIds]
       );
       successCount = updateResult.rowCount ?? 0;

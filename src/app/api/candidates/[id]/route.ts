@@ -42,8 +42,8 @@ export async function GET(request: NextRequest) {
         c.*, 
         p.title as "positionTitle", 
         r.name as "recruiterName"
-      FROM "Candidate" c
-      LEFT JOIN "Position" p ON c."positionId" = p.id
+      FROM "candidates" c
+      LEFT JOIN "positions" p ON c."positionId" = p.id
       LEFT JOIN "User" r ON c."recruiterId" = r.id
       WHERE c.id = $1;
     `;
@@ -94,7 +94,7 @@ export async function PUT(request: NextRequest) {
   const client = await getPool().connect();
   try {
     await client.query('BEGIN');
-    const existingResult = await client.query('SELECT * FROM "Candidate" WHERE id = $1', [id]);
+    const existingResult = await client.query('SELECT * FROM "candidates" WHERE id = $1', [id]);
     if (existingResult.rows.length === 0) {
       return NextResponse.json({ message: "Candidate not found" }, { status: 404 });
     }
@@ -120,7 +120,7 @@ export async function PUT(request: NextRequest) {
     });
     const queryParams = fieldsToUpdate.map(key => (updateData as any)[key]);
     const updateQuery = `
-      UPDATE "Candidate"
+      UPDATE "candidates"
       SET ${setClauses.join(', ')}, "updatedAt" = NOW()
       WHERE id = $${fieldsToUpdate.length + 1}
       RETURNING *;
@@ -153,7 +153,7 @@ export async function DELETE(request: NextRequest) {
   }
   const client = await getPool().connect();
   try {
-    const result = await client.query('DELETE FROM "Candidate" WHERE id = $1 RETURNING name', [id]);
+    const result = await client.query('DELETE FROM "candidates" WHERE id = $1 RETURNING name', [id]);
     if (result.rowCount === 0) {
       return NextResponse.json({ message: "Candidate not found" }, { status: 404 });
     }

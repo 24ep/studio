@@ -201,7 +201,7 @@ export default function SignInClient() {
             alt="Application Logo"
             width={80}
             height={80}
-            className="rounded-full"
+            className="rounded-md"
           />
         )}
         <CardTitle className="mt-2 text-2xl font-bold">{currentAppName}</CardTitle>

@@ -88,8 +88,8 @@ export function Header({ pageTitle: initialPageTitle }: { pageTitle: string }) {
           <div className="h-6 w-32 rounded bg-muted animate-pulse" />
         </div>
         <div className="flex items-center gap-3">
-          <div className="h-8 w-8 rounded-full bg-muted animate-pulse" />
-          <div className="h-10 w-10 rounded-full bg-muted animate-pulse" />
+          <div className="h-8 w-8 rounded-md bg-muted animate-pulse" />
+          <div className="h-10 w-10 rounded-md bg-muted animate-pulse" />
         </div>
       </header>
     );
@@ -112,7 +112,7 @@ export function Header({ pageTitle: initialPageTitle }: { pageTitle: string }) {
           {user ? (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className="relative h-10 w-10 rounded-full">
+                <Button variant="ghost" className="relative h-10 w-10 rounded-md">
                   <Avatar className="h-9 w-9">
                     <AvatarImage src={user.image || undefined} alt={user.name || "User"} data-ai-hint={user.image ? undefined : "profile person"} />
                     <AvatarFallback>{user.name ? user.name.charAt(0).toUpperCase() : <UserCircle className="h-5 w-5"/>}</AvatarFallback>

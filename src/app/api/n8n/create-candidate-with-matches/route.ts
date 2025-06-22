@@ -61,7 +61,7 @@ export async function POST(request: NextRequest) {
     }
 
     const insertCandidateQuery = `
-      INSERT INTO "Candidate" (id, name, email, phone, status, "avatarUrl", "positionId", "recruiterId", "parsedData", "fitScore", "dataAiHint", "createdAt", "updatedAt")
+      INSERT INTO "candidates" (id, name, email, phone, status, "avatarUrl", "positionId", "recruiterId", "parsedData", "fitScore", "dataAiHint", "createdAt", "updatedAt")
       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, NOW(), NOW())
       RETURNING *;
     `;

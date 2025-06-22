@@ -47,7 +47,7 @@ export async function POST(request: NextRequest) {
       const newPositionId = uuidv4();
       try {
         const insertQuery = `
-          INSERT INTO "Position" (id, title, department, description, "isOpen", position_level, "createdAt", "updatedAt")
+          INSERT INTO "positions" (id, title, department, description, "isOpen", position_level, "createdAt", "updatedAt")
           VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW())
           RETURNING *;
         `;
@@ -79,7 +79,7 @@ export async function GET(request: NextRequest) {
   const client = await getPool().connect();
   try {
     const positionsQuery = `
-      SELECT * FROM "Position"
+      SELECT * FROM "positions"
       ORDER BY "createdAt" DESC;
     `;
     const positionsResult = await client.query(positionsQuery);

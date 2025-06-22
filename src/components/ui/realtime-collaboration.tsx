@@ -232,7 +232,7 @@ export function RealtimeCollaboration({
           variant="outline"
           size="sm"
           onClick={() => setIsVisible(true)}
-          className="rounded-full w-12 h-12 p-0"
+          className="rounded-md w-12 h-12 p-0"
         >
           <Eye className="w-4 h-4" />
         </Button>
@@ -399,7 +399,7 @@ export function RealtimeCollaboration({
                         </div>
                       </div>
                       {!notification.read && (
-                        <div className="w-2 h-2 bg-blue-500 rounded-full mt-1" />
+                        <div className="w-2 h-2 bg-blue-500 rounded-md mt-1" />
                       )}
                     </div>
                   ))}

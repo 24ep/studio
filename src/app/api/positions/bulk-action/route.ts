@@ -51,7 +51,7 @@ export async function POST(request: NextRequest) {
     await client.query('BEGIN');
 
     if (action === 'delete') {
-      const candidateCheckQuery = 'SELECT DISTINCT "positionId" FROM "Candidate" WHERE "positionId" = ANY($1::uuid[])';
+      const candidateCheckQuery = 'SELECT DISTINCT "positionId" FROM "candidates" WHERE "positionId" = ANY($1::uuid[])';
       const candidateCheckResult = await client.query(candidateCheckQuery, [positionIds]);
       const positionsWithCandidates = new Set(candidateCheckResult.rows.map(r => r.positionId));
 
@@ -64,7 +64,7 @@ export async function POST(request: NextRequest) {
       });
 
       if (positionsToDelete.length > 0) {
-        const deleteResult = await client.query('DELETE FROM "Position" WHERE id = ANY($1::uuid[]) RETURNING id', [positionsToDelete]);
+        const deleteResult = await client.query('DELETE FROM "positions" WHERE id = ANY($1::uuid[]) RETURNING id', [positionsToDelete]);
         successCount = deleteResult.rowCount ?? 0;
         if (successCount > 0) cacheInvalidated = true;
       }
@@ -75,7 +75,7 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ message: "New 'isOpen' status is required for 'change_status' action." }, { status: 400 });
       }
       const updateResult = await client.query(
-        'UPDATE "Position" SET "isOpen" = $1, "updatedAt" = NOW() WHERE id = ANY($2::uuid[]) RETURNING id',
+        'UPDATE "positions" SET "isOpen" = $1, "updatedAt" = NOW() WHERE id = ANY($2::uuid[]) RETURNING id',
         [newIsOpenStatus, positionIds]
       );
       successCount = updateResult.rowCount ?? 0;

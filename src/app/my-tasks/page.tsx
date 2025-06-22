@@ -46,8 +46,8 @@ async function getInitialTaskBoardData(session: any): Promise<{
       p.title as "positionTitle", p.department as "positionDepartment", p.position_level as "positionLevel",
       rec_user.name as "recruiterName",
       COALESCE(th_data.history, '[]'::json) as "transitionHistory"
-    FROM "Candidate" c
-    LEFT JOIN "Position" p ON c."positionId" = p.id
+    FROM "candidates" c
+    LEFT JOIN "positions" p ON c."positionId" = p.id
     LEFT JOIN "User" rec_user ON c."recruiterId" = rec_user.id
     LEFT JOIN LATERAL (
       SELECT json_agg(json_build_object('id', th.id, 'candidateId', th."candidateId", 'date', th.date, 'stage', th.stage, 'notes', th.notes, 'actingUserId', th."actingUserId", 'actingUserName', u_th.name, 'createdAt', th."createdAt", 'updatedAt', th."updatedAt")) AS history FROM "TransitionRecord" th LEFT JOIN "User" u_th ON th."actingUserId" = u_th.id WHERE th."candidateId" = c.id

@@ -123,7 +123,7 @@ export function CredentialsSignInForm() {
         />
         <Button type="submit" className="w-full btn-primary-gradient" disabled={isLoading}>
           {isLoading ? (
-            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-primary-foreground"></div>
+            <div className="animate-spin rounded-md h-5 w-5 border-b-2 border-primary-foreground"></div>
           ) : (
             <>
               <KeyRound className="mr-2 h-4 w-4" /> Sign In with Credentials

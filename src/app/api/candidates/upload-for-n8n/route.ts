@@ -64,7 +64,7 @@ export async function POST(request: NextRequest) {
     let targetPositionTitle: string | null = null;
     if (targetPositionId) {
         try {
-            const positionRes = await getPool().query('SELECT title FROM "Position" WHERE id = $1', [targetPositionId]);
+            const positionRes = await getPool().query('SELECT title FROM "positions" WHERE id = $1', [targetPositionId]);
             if (positionRes.rows.length > 0) {
                 targetPositionTitle = positionRes.rows[0].title;
             }

@@ -990,7 +990,7 @@ export default function PreferencesSettingsPage() {
             </CardContent>
           </Card>
         </div>
-        <Card className="shadow-lg border-2 border-primary/10">
+        <Card className="shadow-lg ">
           <CardHeader>
             <CardTitle className="flex items-center text-2xl gap-2">
               <Type className="h-7 w-7 text-primary" />
@@ -1014,7 +1014,7 @@ export default function PreferencesSettingsPage() {
               />
               {(isFontLoading || isFontListLoading) && (
                 <div className="absolute right-2 top-2 text-xs text-muted-foreground flex items-center gap-1">
-                  <span className="animate-spin inline-block w-4 h-4 border-2 border-primary border-t-transparent rounded-full"></span>
+                  <span className="animate-spin inline-block w-4 h-4 border-2 border-primary border-t-transparent rounded-md"></span>
                   {isFontListLoading ? 'Loading fonts...' : 'Loading font...'}
                 </div>
               )}

@@ -138,7 +138,7 @@ export default function IntegrationsSettingsPage() {
   return (
     <div className="space-y-12 pb-32 p-6">
       {/* AI Configuration */}
-      <Card className="shadow-lg border-2 border-primary/10">
+      <Card className="shadow-lg ">
         <CardHeader>
           <CardTitle className="flex items-center text-2xl gap-2">
             <BrainCircuit className="h-7 w-7 text-primary" />
@@ -158,7 +158,7 @@ export default function IntegrationsSettingsPage() {
       </Card>
 
       {/* Webhook Automation */}
-      <Card className="shadow-lg border-2 border-primary/10">
+      <Card className="shadow-lg ">
         <CardHeader>
           <CardTitle className="flex items-center text-2xl gap-2">
             <Zap className="h-7 w-7 text-primary" />
@@ -184,7 +184,7 @@ export default function IntegrationsSettingsPage() {
       </Card>
 
       {/* SMTP Configuration */}
-      <Card className="shadow-lg border-2 border-primary/10">
+      <Card className="shadow-lg ">
         <CardHeader>
           <CardTitle className="flex items-center text-2xl gap-2">
             <Mail className="h-7 w-7 text-primary" />

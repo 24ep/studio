@@ -60,7 +60,7 @@ export async function POST(request: NextRequest) {
       const newCandidateId = uuidv4();
       try {
         const insertQuery = `
-          INSERT INTO "Candidate" (id, name, email, phone, "positionId", "recruiterId", "fitScore", status, "applicationDate", "updatedAt")
+          INSERT INTO "candidates" (id, name, email, phone, "positionId", "recruiterId", "fitScore", status, "applicationDate", "updatedAt")
           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW(), NOW())
           RETURNING *;
         `;
@@ -93,7 +93,7 @@ export async function GET(request: NextRequest) {
   const client = await getPool().connect();
   try {
     const candidatesQuery = `
-      SELECT * FROM "Candidate"
+      SELECT * FROM "candidates"
       ORDER BY "applicationDate" DESC;
     `;
     const candidatesResult = await client.query(candidatesQuery);
