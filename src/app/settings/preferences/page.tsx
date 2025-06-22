@@ -10,7 +10,7 @@ import { Save, Palette, ImageUp, Trash2, Loader2, XCircle, PenSquare, ServerCras
 import Image from 'next/image';
 import { signIn, useSession } from 'next-auth/react';
 import { useRouter, usePathname } from 'next/navigation';
-import type { SystemSetting, LoginPageBackgroundType, SystemSettingKey } from '@/lib/types';
+import type { SystemSetting, LoginPageBackgroundType, SystemSettingKey, LoginPageLayoutType } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -24,7 +24,7 @@ const DEFAULT_PRIMARY_GRADIENT_END = "238 74% 61%";
 const DEFAULT_LOGIN_BG_TYPE: LoginPageBackgroundType = "default";
 const DEFAULT_LOGIN_BG_COLOR1_HEX = "#F0F4F7"; 
 const DEFAULT_LOGIN_BG_COLOR2_HEX = "#3F51B5"; 
-const DEFAULT_LOGIN_LAYOUT_TYPE = 'center';
+const DEFAULT_LOGIN_LAYOUT_TYPE: LoginPageLayoutType = 'center';
 
 type SidebarColorKey =
   | 'sidebarBgStartL'
@@ -205,7 +205,7 @@ export default function PreferencesSettingsPage() {
       // Load sidebar colors
       const newSidebarColors = createInitialSidebarColors();
       Object.keys(newSidebarColors).forEach(key => {
-        const value = settingsMap.get(key);
+        const value = settingsMap.get(key as SystemSettingKey);
         if (value) {
           (newSidebarColors as any)[key] = value;
         }
@@ -307,7 +307,10 @@ export default function PreferencesSettingsPage() {
 
       // Add sidebar colors
       Object.entries(sidebarColors).forEach(([key, value]) => {
-        settingsToSave.push({ key: key as SystemSettingKey, value });
+        // Since SidebarColorKey is a subset of SystemSettingKey, we can safely cast
+        if (key in sidebarColors) {
+          settingsToSave.push({ key: key as SystemSettingKey, value });
+        }
       });
 
       // Save all settings
