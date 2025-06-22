@@ -541,6 +541,28 @@ export default function PreferencesSettingsPage() {
     setSidebarCSSVars(sidebarColors);
   }, [sidebarColors]);
 
+  // Live update --font-dynamic CSS variable for font preview
+  useEffect(() => {
+    if (typeof window !== 'undefined' && appFontFamily) {
+      let fontVar = '';
+      switch (appFontFamily) {
+        case 'Open Sans': fontVar = 'var(--font-open-sans)'; break;
+        case 'Roboto': fontVar = 'var(--font-roboto)'; break;
+        case 'Inter': fontVar = 'var(--font-inter)'; break;
+        case 'Montserrat': fontVar = 'var(--font-montserrat)'; break;
+        case 'Lato': fontVar = 'var(--font-lato)'; break;
+        case 'Nunito': fontVar = 'var(--font-nunito)'; break;
+        case 'Source Sans 3': fontVar = 'var(--font-source-sans-3)'; break;
+        case 'Raleway': fontVar = 'var(--font-raleway)'; break;
+        case 'Ubuntu': fontVar = 'var(--font-ubuntu)'; break;
+        case 'Quicksand': fontVar = 'var(--font-quicksand)'; break;
+        case 'PT Sans': fontVar = 'var(--font-pt-sans)'; break;
+        default: fontVar = 'var(--font-poppins)';
+      }
+      document.documentElement.style.setProperty('--font-dynamic', fontVar);
+    }
+  }, [appFontFamily]);
+
   // Loading and error states
   if (sessionStatus === 'loading' || (isLoading && !fetchError && !isClient)) {
     return (
