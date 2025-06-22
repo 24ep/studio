@@ -9,7 +9,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AlertTriangle, Loader2 } from "lucide-react";
 import Image from 'next/image';
 import { CredentialsSignInForm } from "@/components/auth/CredentialsSignInForm";
-import type { SystemSetting, LoginPageBackgroundType } from '@/lib/types';
+import type { SystemSetting, LoginPageBackgroundType, LoginPageLayoutType } from '@/lib/types';
 
 const APP_LOGO_DATA_URL_KEY = 'appLogoDataUrl';
 const APP_CONFIG_APP_NAME_KEY = 'appConfigAppName';
@@ -18,6 +18,7 @@ const DEFAULT_LOGIN_BG_GRADIENT = "linear-gradient(90deg, rgba(255, 255, 255, 1)
 const DEFAULT_LOGIN_BG_GRADIENT_DARK = "linear-gradient(90deg, hsl(220, 15%, 9%) 0%, hsl(220, 15%, 11%) 100%, hsl(220, 15%, 10%) 55%)";
 const DEFAULT_PRIMARY_GRADIENT_START_SIGNIN = "179 67% 66%";
 const DEFAULT_PRIMARY_GRADIENT_END_SIGNIN = "238 74% 61%";
+const DEFAULT_LOGIN_LAYOUT_TYPE: LoginPageLayoutType = 'center';
 
 export default function SignInClient() {
   const { data: session, status } = useSession();
@@ -28,6 +29,7 @@ export default function SignInClient() {
   const [isClient, setIsClient] = useState(false);
   const [loginPageStyle, setLoginPageStyle] = useState<React.CSSProperties>({});
   const [isThemeDark, setIsThemeDark] = useState(false);
+  const [loginLayoutType, setLoginLayoutType] = useState<LoginPageLayoutType>(DEFAULT_LOGIN_LAYOUT_TYPE);
 
   const callbackUrl = nextSearchParams.get('callbackUrl') || "/";
 
@@ -53,6 +55,7 @@ export default function SignInClient() {
       let loginBgColor2: string | null = null;
       let primaryStart = DEFAULT_PRIMARY_GRADIENT_START_SIGNIN;
       let primaryEnd = DEFAULT_PRIMARY_GRADIENT_END_SIGNIN;
+      let loginLayoutTypeSetting: LoginPageLayoutType = DEFAULT_LOGIN_LAYOUT_TYPE;
 
 
       try {
@@ -65,6 +68,7 @@ export default function SignInClient() {
           loginBgImageUrl = settings.find(s => s.key === 'loginPageBackgroundImageUrl')?.value || null;
           loginBgColor1 = settings.find(s => s.key === 'loginPageBackgroundColor1')?.value || null;
           loginBgColor2 = settings.find(s => s.key === 'loginPageBackgroundColor2')?.value || null;
+          loginLayoutTypeSetting = settings.find(s => s.key === 'loginPageLayoutType')?.value as LoginPageLayoutType || DEFAULT_LOGIN_LAYOUT_TYPE;
           
           primaryStart = settings.find(s => s.key === 'primaryGradientStart')?.value || DEFAULT_PRIMARY_GRADIENT_START_SIGNIN;
           primaryEnd = settings.find(s => s.key === 'primaryGradientEnd')?.value || DEFAULT_PRIMARY_GRADIENT_END_SIGNIN;
@@ -79,6 +83,7 @@ export default function SignInClient() {
       
       setCurrentAppName(appName);
       setAppLogoUrl(logoUrl);
+      setLoginLayoutType(loginLayoutTypeSetting);
 
       // Apply primary colors dynamically for login page
       if (typeof document !== 'undefined') {
@@ -94,7 +99,7 @@ export default function SignInClient() {
       const newStyle: React.CSSProperties = {
         minHeight: '100vh',
         display: 'flex',
-        flexDirection: 'column',
+        flexDirection: loginLayoutTypeSetting === '2column' ? 'row' : 'column',
         alignItems: 'center',
         justifyContent: 'center',
         padding: '1rem',
@@ -186,30 +191,57 @@ export default function SignInClient() {
     );
   }
 
+  // Render login form based on layout type
+  const renderLoginForm = () => (
+    <Card className="w-full max-w-md bg-card dark:bg-card border border-border shadow-2xl">
+      <CardHeader className="text-center">
+        {isClient && appLogoUrl && (
+          <Image
+            src={appLogoUrl}
+            alt="Application Logo"
+            width={80}
+            height={80}
+            className="rounded-full"
+          />
+        )}
+        <CardTitle className="mt-2 text-2xl font-bold">{currentAppName}</CardTitle>
+        <CardDescription>Sign in to your account</CardDescription>
+      </CardHeader>
+      <CardContent>
+        {errorMessage && (
+          <Alert variant="destructive" className="mb-4">
+            <AlertTriangle className="h-4 w-4" />
+            <AlertTitle>Error</AlertTitle>
+            <AlertDescription>{errorMessage}</AlertDescription>
+          </Alert>
+        )}
+        {isAzureAdConfigured && <AzureAdSignInButton />}
+        <CredentialsSignInForm />
+      </CardContent>
+    </Card>
+  );
+
+  if (loginLayoutType === '2column') {
+    return (
+      <div style={loginPageStyle} className="min-h-screen flex flex-row">
+        <div className="w-full max-w-md flex flex-col justify-center items-center bg-card/80 dark:bg-card/80 border-r border-border shadow-2xl p-8">
+          {renderLoginForm()}
+        </div>
+        <div className="flex-1 hidden md:flex flex-col items-center justify-center relative">
+          {/* Right column content - can be customized with background image, illustration, or marketing content */}
+          <div className="text-center text-muted-foreground">
+            <h2 className="text-3xl font-bold mb-4">Welcome to {currentAppName}</h2>
+            <p className="text-lg">Your comprehensive recruitment management solution</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Default: center box layout
   return (
     <div style={loginPageStyle}>
-      <Card className="w-full max-w-md bg-card dark:bg-card border border-border shadow-2xl">
-        <CardHeader className="text-center">
-          {isClient && appLogoUrl && (
-            <Image
-              src={appLogoUrl}
-              alt="Application Logo"
-              width={80}
-              height={80}
-              className="rounded-full"
-            />
-          )}
-        </CardHeader>
-        <CardContent>
-          <CardDescription className="text-center">
-            {currentAppName}
-          </CardDescription>
-          <CredentialsSignInForm />
-          {isAzureAdConfigured && (
-            <AzureAdSignInButton />
-          )}
-        </CardContent>
-      </Card>
+      {renderLoginForm()}
     </div>
   );
 } 
