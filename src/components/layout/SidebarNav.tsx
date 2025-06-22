@@ -25,6 +25,7 @@ import { useSession } from "next-auth/react";
 import type { PlatformModuleId, SettingsNavigationItem } from '@/lib/types';
 import { Separator } from '@/components/ui/separator';
 import { settingsNavItems } from '@/app/settings/layout';
+import { useEffect } from "react";
 
 
 const mainNavItems = [
@@ -48,6 +49,26 @@ const baseSettingsSubItems = [
   { href: "/api-docs", label: "API Docs", icon: Code2, description: "API documentation" },
   { href: "/logs", label: "Logs", icon: ListOrdered, adminOnly: true, description: "System logs" },
 ];
+
+const SIDEBAR_COLOR_KEYS = [
+  'sidebarBgStartL', 'sidebarBgEndL', 'sidebarTextL',
+  'sidebarActiveBgStartL', 'sidebarActiveBgEndL', 'sidebarActiveTextL',
+  'sidebarHoverBgL', 'sidebarHoverTextL', 'sidebarBorderL',
+  'sidebarBgStartD', 'sidebarBgEndD', 'sidebarTextD',
+  'sidebarActiveBgStartD', 'sidebarActiveBgEndD', 'sidebarActiveTextD',
+  'sidebarHoverBgD', 'sidebarHoverTextD', 'sidebarBorderD',
+];
+
+function setSidebarCSSVars(settings: Record<string, string>) {
+  if (typeof window === 'undefined') return;
+  const root = document.documentElement;
+  SIDEBAR_COLOR_KEYS.forEach(key => {
+    const cssVar = key.replace(/([A-Z])/g, "-$1").toLowerCase();
+    if (settings[key]) {
+      root.style.setProperty(`--${cssVar}`, settings[key]);
+    }
+  });
+}
 
 // Memoize SidebarNav to prevent unnecessary re-renders
 const SidebarNavComponent = function SidebarNav() {
@@ -132,6 +153,23 @@ const SidebarNavComponent = function SidebarNav() {
     }
   }, [pathname, currentClientIsSettingsSectionActive, isAnyMainNavItemActive, isMyTaskBoardActive, isClient, accordionValue]);
 
+  useEffect(() => {
+    async function fetchSidebarColors() {
+      try {
+        const res = await fetch('/api/settings/system-settings');
+        if (!res.ok) return;
+        const settingsArr: any[] = await res.json();
+        const settings: Record<string, string> = {};
+        settingsArr.forEach((s: any) => { settings[s.key] = s.value; });
+        setSidebarCSSVars(settings);
+      } catch {}
+    }
+    fetchSidebarColors();
+    // Listen for appConfigChanged event to update sidebar colors live
+    const handler = () => fetchSidebarColors();
+    window.addEventListener('appConfigChanged', handler);
+    return () => window.removeEventListener('appConfigChanged', handler);
+  }, []);
 
   return (
       <SidebarMenu className="bg-background border-r border-border min-h-screen py-6 px-2 flex flex-col gap-2 shadow-md">

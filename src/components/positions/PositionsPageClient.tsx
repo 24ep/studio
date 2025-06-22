@@ -353,7 +353,7 @@ export default function PositionsPageClient({
 
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 p-6">
       <div className="flex flex-col sm:flex-row justify-between items-center gap-2">
          <div className="w-full flex flex-col sm:flex-row gap-2 items-center sm:justify-start">
            {selectedPositionIds.size > 0 && canManagePositions && (

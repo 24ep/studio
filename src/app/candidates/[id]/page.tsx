@@ -636,7 +636,7 @@ export default function CandidateDetailPage() {
 
   return (
     <FormProvider {...form}>
-    <div className="space-y-6">
+    <div className="space-y-6 p-6">
       <div className="flex justify-between items-center mb-4">
         <Button variant="outline" onClick={() => router.push('/candidates')}>
           <ArrowLeft className="mr-2 h-4 w-4" /> Back to All Candidates

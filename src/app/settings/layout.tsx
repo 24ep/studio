@@ -128,7 +128,7 @@ export default function SettingsLayout({ children }: { children: ReactNode }) {
           </nav>
         </ScrollArea>
       </aside>
-      <div className="flex-1 overflow-y-auto relative">
+      <div className="flex-1 overflow-y-auto relative p-6">
         {/* Main content of the specific settings page will be rendered here */}
         {children}
       </div>

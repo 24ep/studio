@@ -251,7 +251,7 @@ export default function RolesPermissionsPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 p-6">
       <div className="grid md:grid-cols-3 gap-6">
         {/* Left Panel: Roles List */}
         <Card className="md:col-span-1 shadow-sm">

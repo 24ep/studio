@@ -42,8 +42,8 @@ export async function GET(request: NextRequest) {
         c.*, 
         p.title as "positionTitle", 
         r.name as "recruiterName"
-      FROM "candidates" c
-      LEFT JOIN "positions" p ON c."positionId" = p.id
+      FROM "Candidate" c
+      LEFT JOIN "Position" p ON c."positionId" = p.id
       LEFT JOIN "User" r ON c."recruiterId" = r.id
       WHERE c.id = $1;
     `;
@@ -54,7 +54,7 @@ export async function GET(request: NextRequest) {
     const candidate = result.rows[0];
     const historyQuery = `
       SELECT th.*, u.name as "actingUserName"
-      FROM "transition_records" th
+      FROM "TransitionRecord" th
       LEFT JOIN "User" u ON th."actingUserId" = u.id
       WHERE th."candidateId" = $1
       ORDER BY th.date DESC;
@@ -94,14 +94,14 @@ export async function PUT(request: NextRequest) {
   const client = await getPool().connect();
   try {
     await client.query('BEGIN');
-    const existingResult = await client.query('SELECT * FROM "candidates" WHERE id = $1', [id]);
+    const existingResult = await client.query('SELECT * FROM "Candidate" WHERE id = $1', [id]);
     if (existingResult.rows.length === 0) {
       return NextResponse.json({ message: "Candidate not found" }, { status: 404 });
     }
     const existingCandidate = existingResult.rows[0];
     if (updateData.status && updateData.status !== existingCandidate.status) {
       const insertTransitionQuery = `
-        INSERT INTO "transition_records" (id, "candidateId", "positionId", stage, notes, "actingUserId", date)
+        INSERT INTO "TransitionRecord" (id, "candidateId", "positionId", stage, notes, "actingUserId", date)
         VALUES ($1, $2, $3, $4, $5, $6, NOW());
       `;
       await client.query(insertTransitionQuery, [
@@ -120,7 +120,7 @@ export async function PUT(request: NextRequest) {
     });
     const queryParams = fieldsToUpdate.map(key => (updateData as any)[key]);
     const updateQuery = `
-      UPDATE "candidates"
+      UPDATE "Candidate"
       SET ${setClauses.join(', ')}, "updatedAt" = NOW()
       WHERE id = $${fieldsToUpdate.length + 1}
       RETURNING *;
@@ -153,7 +153,7 @@ export async function DELETE(request: NextRequest) {
   }
   const client = await getPool().connect();
   try {
-    const result = await client.query('DELETE FROM "candidates" WHERE id = $1 RETURNING name', [id]);
+    const result = await client.query('DELETE FROM "Candidate" WHERE id = $1 RETURNING name', [id]);
     if (result.rowCount === 0) {
       return NextResponse.json({ message: "Candidate not found" }, { status: 404 });
     }

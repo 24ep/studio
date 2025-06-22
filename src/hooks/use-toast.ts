@@ -2,6 +2,7 @@
 
 // Inspired by react-hot-toast library
 import * as React from "react"
+import { toast } from 'react-hot-toast';
 
 import type {
   ToastActionElement,
@@ -195,4 +196,4 @@ function useToast() {
   }
 }
 
-export { useToast, toast }
+export { toast }

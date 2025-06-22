@@ -192,7 +192,7 @@ export default function PositionDetailPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 p-6">
       <Button variant="outline" onClick={() => router.push('/positions')} className="mb-4">
         <ArrowLeft className="mr-2 h-4 w-4" /> Back to All Positions
       </Button>

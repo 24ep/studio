@@ -1,3 +1,5 @@
+// DEPRECATED: Use react-hot-toast's toast instead of this file.
+
 "use client"
 
 import * as React from "react"

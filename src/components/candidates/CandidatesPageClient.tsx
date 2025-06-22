@@ -62,9 +62,13 @@ export function CandidatesPageClient({
     selectedStatuses: [] 
   });
 
-  const [allCandidates, setAllCandidates] = useState<Candidate[]>(initialCandidates || []);
-  const [availablePositions, setAvailablePositions] = useState<Position[]>(initialAvailablePositions || []);
-  const [availableStages, setAvailableStages] = useState<RecruitmentStage[]>(initialAvailableStages || []);
+  const safeInitialCandidates = Array.isArray(initialCandidates) ? initialCandidates : [];
+  const safeInitialAvailablePositions = Array.isArray(initialAvailablePositions) ? initialAvailablePositions : [];
+  const safeInitialAvailableStages = Array.isArray(initialAvailableStages) ? initialAvailableStages : [];
+
+  const [allCandidates, setAllCandidates] = useState<Candidate[]>(safeInitialCandidates || []);
+  const [availablePositions, setAvailablePositions] = useState<Position[]>(safeInitialAvailablePositions || []);
+  const [availableStages, setAvailableStages] = useState<RecruitmentStage[]>(safeInitialAvailableStages || []);
   const [availableRecruiters, setAvailableRecruiters] = useState<Pick<UserProfile, 'id' | 'name'>[]>([]);
 
   const [isLoading, setIsLoading] = useState(true);
@@ -238,14 +242,14 @@ export function CandidatesPageClient({
   };
 
   useEffect(() => {
-    setIsLoading(initialCandidates.length === 0 && !initialFetchError); // Only set loading if initial data wasn't provided or there was an error
+    setIsLoading(safeInitialCandidates.length === 0 && !initialFetchError); // Only set loading if initial data wasn't provided or there was an error
     if (sessionStatus === 'authenticated' && !serverAuthError && !serverPermissionError) {
       fetchRecruiters(); // Fetch recruiters on client side
-      if (initialCandidates.length === 0 && !initialFetchError) { // Fetch candidates if not pre-loaded
+      if (safeInitialCandidates.length === 0 && !initialFetchError) { // Fetch candidates if not pre-loaded
         fetchFilteredCandidatesOnClient(filters);
       }
     }
-  }, [sessionStatus, serverAuthError, serverPermissionError, fetchRecruiters, fetchFilteredCandidatesOnClient, filters, initialCandidates.length, initialFetchError]);
+  }, [sessionStatus, serverAuthError, serverPermissionError, fetchRecruiters, fetchFilteredCandidatesOnClient, filters, safeInitialCandidates.length, initialFetchError]);
 
 
   useEffect(() => {
@@ -254,9 +258,9 @@ export function CandidatesPageClient({
     }
   }, [sessionStatus, serverAuthError, serverPermissionError]);
 
-  useEffect(() => { setAllCandidates(initialCandidates || []); }, [initialCandidates]);
-  useEffect(() => { setAvailablePositions(initialAvailablePositions || []); }, [initialAvailablePositions]);
-  useEffect(() => { setAvailableStages(initialAvailableStages || []); }, [initialAvailableStages]);
+  useEffect(() => { setAllCandidates(safeInitialCandidates || []); }, [safeInitialCandidates]);
+  useEffect(() => { setAvailablePositions(safeInitialAvailablePositions || []); }, [safeInitialAvailablePositions]);
+  useEffect(() => { setAvailableStages(safeInitialAvailableStages || []); }, [safeInitialAvailableStages]);
 
   useEffect(() => {
     // Show error as toast popup if present

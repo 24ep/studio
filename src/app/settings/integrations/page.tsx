@@ -142,7 +142,7 @@ export default function IntegrationsSettingsPage() {
 
 
   return (
-    <div className="space-y-12 pb-32">
+    <div className="space-y-12 pb-32 p-6">
       {/* AI Configuration */}
       <Card className="shadow-lg border-2 border-primary/10">
         <CardHeader>

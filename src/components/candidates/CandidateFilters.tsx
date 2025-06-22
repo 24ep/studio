@@ -218,9 +218,14 @@ export function CandidateFilters({
     return `${selectedItems.size} selected`;
   };
 
-  const filteredPositions = availablePositions.filter(pos => pos.title.toLowerCase().includes(positionSearch.toLowerCase()));
-  const filteredStages = availableStages.filter(stage => stage.name.toLowerCase().includes(statusSearch.toLowerCase()));
-  const filteredRecruiters = availableRecruiters.filter(rec => rec.name.toLowerCase().includes(recruiterSearch.toLowerCase()));
+  // Defensive defaults for arrays
+  const safeAvailablePositions = Array.isArray(availablePositions) ? availablePositions : [];
+  const safeAvailableStages = Array.isArray(availableStages) ? availableStages : [];
+  const safeAvailableRecruiters = Array.isArray(availableRecruiters) ? availableRecruiters : [];
+
+  const filteredPositions = safeAvailablePositions.filter(pos => pos.title.toLowerCase().includes(positionSearch.toLowerCase()));
+  const filteredStages = safeAvailableStages.filter(stage => stage.name.toLowerCase().includes(statusSearch.toLowerCase()));
+  const filteredRecruiters = safeAvailableRecruiters.filter(rec => rec.name.toLowerCase().includes(recruiterSearch.toLowerCase()));
 
   const filterGroups = [
     {
@@ -252,7 +257,7 @@ export function CandidateFilters({
                   className="w-full justify-between mt-1"
                   disabled={isLoading || isAiSearching}
                 >
-                  {renderMultiSelectTrigger("Select positions...", selectedPositionIds, availablePositions, 'position')}
+                  {renderMultiSelectTrigger("Select positions...", selectedPositionIds, safeAvailablePositions, 'position')}
                   <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                 </Button>
               </PopoverTrigger>
@@ -299,7 +304,7 @@ export function CandidateFilters({
                   className="w-full justify-between mt-1"
                   disabled={isLoading || isAiSearching}
                 >
-                  {renderMultiSelectTrigger("Select statuses...", selectedStatuses, availableStages, 'status')}
+                  {renderMultiSelectTrigger("Select statuses...", selectedStatuses, safeAvailableStages, 'status')}
                   <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                 </Button>
               </PopoverTrigger>
@@ -570,7 +575,7 @@ export function CandidateFilters({
                   className="w-full justify-between mt-1"
                   disabled={isLoading || isAiSearching}
                 >
-                  {renderMultiSelectTrigger("Select recruiters...", selectedRecruiterIds, availableRecruiters, 'recruiter')}
+                  {renderMultiSelectTrigger("Select recruiters...", selectedRecruiterIds, safeAvailableRecruiters, 'recruiter')}
                   <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                 </Button>
               </PopoverTrigger>

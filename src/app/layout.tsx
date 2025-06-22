@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import { Poppins, Open_Sans, Roboto, Inter, Montserrat, Lato, Nunito, Source_Sans_3, Raleway, Ubuntu, Quicksand, PT_Sans } from 'next/font/google';
 import './globals.css';
 import { AppLayout } from '@/components/layout/AppLayout';
-import { Toaster } from "@/components/ui/toaster";
+import { Toaster } from 'react-hot-toast';
 import { AuthProvider } from '@/components/auth/AuthProvider';
 import { getServerSession } from "next-auth/next"
 import { authOptions } from "@/lib/auth"
@@ -71,10 +71,10 @@ export default async function RootLayout({ // Note: 'async' if using getServerSe
     <html lang="en" suppressHydrationWarning>
       <body className={`${fontVar} font-sans antialiased`}>
         <AuthProvider session={session}> {/* Pass session={session} if using getServerSession */}
+          <Toaster position="top-center" />
           <AppLayout>
             {children}
           </AppLayout>
-          <Toaster />
         </AuthProvider>
       </body>
     </html>

@@ -1,3 +1,5 @@
+// DEPRECATED: Use react-hot-toast's <Toaster /> instead of this file.
+
 "use client"
 
 import { useToast } from "@/hooks/use-toast"

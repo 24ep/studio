@@ -165,7 +165,7 @@ export default function NotificationSettingsPage() {
             </AlertDescription>
           </Alert>
           
-          <div className="space-y-6">
+          <div className="space-y-6 p-6">
             {isLoadingData && eventsWithSettings.length === 0 ? (
                 <div className="flex justify-center items-center py-10">
                   <Loader2 className="h-8 w-8 animate-spin text-primary" />

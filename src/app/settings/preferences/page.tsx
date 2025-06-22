@@ -177,6 +177,26 @@ function filterFontOptions(options: {label: string, value: string}[], input: str
   return options.filter((opt: {label: string, value: string}) => opt.label.toLowerCase().includes(input.toLowerCase()));
 }
 
+// Helper to update sidebar CSS variables for live preview
+const SIDEBAR_COLOR_KEYS = [
+  'sidebarBgStartL', 'sidebarBgEndL', 'sidebarTextL',
+  'sidebarActiveBgStartL', 'sidebarActiveBgEndL', 'sidebarActiveTextL',
+  'sidebarHoverBgL', 'sidebarHoverTextL', 'sidebarBorderL',
+  'sidebarBgStartD', 'sidebarBgEndD', 'sidebarTextD',
+  'sidebarActiveBgStartD', 'sidebarActiveBgEndD', 'sidebarActiveTextD',
+  'sidebarHoverBgD', 'sidebarHoverTextD', 'sidebarBorderD',
+];
+function setSidebarCSSVars(settings: Record<string, string>) {
+  if (typeof window === 'undefined') return;
+  const root = document.documentElement;
+  SIDEBAR_COLOR_KEYS.forEach(key => {
+    const cssVar = key.replace(/([A-Z])/g, "-$1").toLowerCase();
+    if (settings[key]) {
+      root.style.setProperty(`--${cssVar}`, settings[key]);
+    }
+  });
+}
+
 export default function PreferencesSettingsPage() {
   const { toast } = useToast();
   const [isClient, setIsClient] = useState(false);
@@ -258,6 +278,7 @@ export default function PreferencesSettingsPage() {
         }
       });
       setSidebarColors(newSidebarColors);
+      setSidebarCSSVars(newSidebarColors);
 
     } catch (error: any) {
       console.error('Failed to fetch system settings:', error);
@@ -435,18 +456,22 @@ export default function PreferencesSettingsPage() {
       [`sidebarBorder${suffix}`]: DEFAULT_SIDEBAR_COLORS_BASE[`sidebarBorder${suffix}` as SidebarColorKey],
     };
 
-    setSidebarColors(prev => ({
-      ...prev,
-      [`sidebarBgStart${suffix}`]: defaultColorsForTheme[`sidebarBgStart${suffix}` as keyof SidebarColors],
-      [`sidebarBgEnd${suffix}`]: defaultColorsForTheme[`sidebarBgEnd${suffix}` as keyof SidebarColors],
-      [`sidebarText${suffix}`]: defaultColorsForTheme[`sidebarText${suffix}` as keyof SidebarColors],
-      [`sidebarActiveBgStart${suffix}`]: defaultColorsForTheme[`sidebarActiveBgStart${suffix}` as keyof SidebarColors],
-      [`sidebarActiveBgEnd${suffix}`]: defaultColorsForTheme[`sidebarActiveBgEnd${suffix}` as keyof SidebarColors],
-      [`sidebarActiveText${suffix}`]: defaultColorsForTheme[`sidebarActiveText${suffix}` as keyof SidebarColors],
-      [`sidebarHoverBg${suffix}`]: defaultColorsForTheme[`sidebarHoverBg${suffix}` as keyof SidebarColors],
-      [`sidebarHoverText${suffix}`]: defaultColorsForTheme[`sidebarHoverText${suffix}` as keyof SidebarColors],
-      [`sidebarBorder${suffix}`]: defaultColorsForTheme[`sidebarBorder${suffix}` as keyof SidebarColors],
-    }));
+    setSidebarColors(prev => {
+      const updated = {
+        ...prev,
+        [`sidebarBgStart${suffix}`]: defaultColorsForTheme[`sidebarBgStart${suffix}` as keyof SidebarColors],
+        [`sidebarBgEnd${suffix}`]: defaultColorsForTheme[`sidebarBgEnd${suffix}` as keyof SidebarColors],
+        [`sidebarText${suffix}`]: defaultColorsForTheme[`sidebarText${suffix}` as keyof SidebarColors],
+        [`sidebarActiveBgStart${suffix}`]: defaultColorsForTheme[`sidebarActiveBgStart${suffix}` as keyof SidebarColors],
+        [`sidebarActiveBgEnd${suffix}`]: defaultColorsForTheme[`sidebarActiveBgEnd${suffix}` as keyof SidebarColors],
+        [`sidebarActiveText${suffix}`]: defaultColorsForTheme[`sidebarActiveText${suffix}` as keyof SidebarColors],
+        [`sidebarHoverBg${suffix}`]: defaultColorsForTheme[`sidebarHoverBg${suffix}` as keyof SidebarColors],
+        [`sidebarHoverText${suffix}`]: defaultColorsForTheme[`sidebarHoverText${suffix}` as keyof SidebarColors],
+        [`sidebarBorder${suffix}`]: defaultColorsForTheme[`sidebarBorder${suffix}` as keyof SidebarColors],
+      };
+      setSidebarCSSVars(updated);
+      return updated;
+    });
     toast({ title: `${themeType} Sidebar Colors Reset`, description: `${themeType} sidebar colors reset to default. Click 'Save All' to persist.` });
   };
 
@@ -520,6 +545,11 @@ export default function PreferencesSettingsPage() {
     };
   }, [appFontFamily, GOOGLE_FONTS_API_KEY, fontOptions]);
 
+  // On sidebarColors change, update CSS vars for live preview
+  useEffect(() => {
+    setSidebarCSSVars(sidebarColors);
+  }, [sidebarColors]);
+
   // Loading and error states
   if (sessionStatus === 'loading' || (isLoading && !fetchError && !isClient)) {
     return (
@@ -576,10 +606,10 @@ export default function PreferencesSettingsPage() {
         </select>
       </nav>
       {/* Right content */}
-      <div className="flex-1 space-y-12 pb-32">
+      <div className="flex-1 space-y-12 pb-32 p-6">
         <div ref={sectionRefs.branding} id="branding">
           {/* Branding section content */}
-          <div className="space-y-6">
+          <div className="space-y-6 p-6">
             <div className="space-y-2">
               <Label htmlFor="app-name-input" className="text-sm font-medium">
                 Application Name
