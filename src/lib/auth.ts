@@ -65,6 +65,7 @@ export const authOptions: NextAuthOptions = {
     },
     callbacks: {
       async jwt({ token, user, account }) {
+        console.log('[AUTH DEBUG] JWT callback input:', { token, user, account });
         if (account && user) {
           token.accessToken = account.access_token;
           token.id = user.id;
@@ -79,14 +80,17 @@ export const authOptions: NextAuthOptions = {
             token.modulePermissions = [];
           }
         }
+        console.log('[AUTH DEBUG] JWT callback output:', token);
         return token;
       },
       async session({ session, token }) {
+        console.log('[AUTH DEBUG] Session callback input:', { session, token });
         if (session.user) {
           session.user.id = token.id as string;
           session.user.role = token.role as UserProfile['role'];
           session.user.modulePermissions = token.modulePermissions as PlatformModuleId[];
         }
+        console.log('[AUTH DEBUG] Session callback output:', session);
         return session;
       },
       async signIn({ user, account, profile }) {
