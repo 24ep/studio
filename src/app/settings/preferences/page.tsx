@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect, type ChangeEvent, useCallback } from 'react';
+import { useState, useEffect, type ChangeEvent, useCallback, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -147,6 +147,14 @@ function convertHslStringToHex(hslString: string | null | undefined): string {
     return hslToHex(hslObj.h, hslObj.s, hslObj.l);
 }
 
+const PREFERENCE_SECTIONS = [
+  { id: 'branding', label: 'Branding & Identity' },
+  { id: 'theme', label: 'Theme' },
+  { id: 'primaryColors', label: 'Primary Colors' },
+  { id: 'loginAppearance', label: 'Login Page' },
+  { id: 'sidebarAppearance', label: 'Sidebar Colors' },
+];
+
 export default function PreferencesSettingsPage() {
   const { toast } = useToast();
   const [isClient, setIsClient] = useState(false);
@@ -173,6 +181,15 @@ export default function PreferencesSettingsPage() {
   const [loginBgColor2, setLoginBgColor2] = useState<string>(DEFAULT_LOGIN_BG_COLOR2_HEX);
   const [sidebarColors, setSidebarColors] = useState<SidebarColors>(createInitialSidebarColors());
   const [loginLayoutType, setLoginLayoutType] = useState('center');
+
+  const sectionRefs = {
+    branding: useRef<HTMLDivElement>(null),
+    theme: useRef<HTMLDivElement>(null),
+    primaryColors: useRef<HTMLDivElement>(null),
+    loginAppearance: useRef<HTMLDivElement>(null),
+    sidebarAppearance: useRef<HTMLDivElement>(null),
+  };
+  const [activeSection, setActiveSection] = useState<string>('branding');
 
   // Fetch system settings
   const fetchSystemSettings = useCallback(async () => {
@@ -402,6 +419,28 @@ export default function PreferencesSettingsPage() {
     toast({ title: `${themeType} Sidebar Colors Reset`, description: `${themeType} sidebar colors reset to default. Click 'Save All' to persist.` });
   };
 
+  // Scroll to section on menu click
+  const handleMenuClick = (id: string) => {
+    setActiveSection(id);
+    sectionRefs[id as keyof typeof sectionRefs]?.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
+
+  // Track scroll to highlight active section
+  useEffect(() => {
+    const handleScroll = () => {
+      const offsets = Object.entries(sectionRefs).map(([id, ref]) => ({
+        id,
+        top: ref.current ? ref.current.getBoundingClientRect().top : Infinity
+      }));
+      const visible = offsets.filter(o => o.top < window.innerHeight / 2 && o.top > 0);
+      if (visible.length > 0) {
+        setActiveSection(visible[0].id);
+      }
+    };
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
   // Loading and error states
   if (sessionStatus === 'loading' || (isLoading && !fetchError && !isClient)) {
     return (
@@ -425,46 +464,30 @@ export default function PreferencesSettingsPage() {
   }
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Application Preferences</h1>
-          <p className="text-muted-foreground">
-            Customize your application's appearance and behavior
-          </p>
-        </div>
-        <Button 
-          onClick={handleSavePreferences} 
-          className="btn-primary-gradient" 
-          disabled={isSaving || isLoading}
-        >
-          {isSaving ? (
-            <>
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Saving...
-            </>
-          ) : (
-            <>
-              <Save className="mr-2 h-4 w-4" />
-              Save All Changes
-            </>
-          )}
-        </Button>
-      </div>
-
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-        {/* Branding Section */}
-        <Card className="lg:col-span-2">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              Branding & Identity
-            </CardTitle>
-            <CardDescription>
-              Customize your application's name and logo
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-6">
+    <div className="flex gap-8">
+      {/* Left menu */}
+      <nav className="w-56 flex-shrink-0 pt-8">
+        <ul className="space-y-2">
+          {PREFERENCE_SECTIONS.map(section => (
+            <li key={section.id}>
+              <button
+                className={cn(
+                  'w-full text-left px-4 py-2 rounded transition font-medium',
+                  activeSection === section.id ? 'bg-primary/10 text-primary' : 'hover:bg-muted text-muted-foreground'
+                )}
+                onClick={() => handleMenuClick(section.id)}
+              >
+                {section.label}
+              </button>
+            </li>
+          ))}
+        </ul>
+      </nav>
+      {/* Right content */}
+      <div className="flex-1 space-y-12">
+        <div ref={sectionRefs.branding} id="branding">
+          {/* Branding section content */}
+          <div className="space-y-6">
             <div className="space-y-2">
               <Label htmlFor="app-name-input" className="text-sm font-medium">
                 Application Name
@@ -522,334 +545,338 @@ export default function PreferencesSettingsPage() {
                 </Button>
               )}
             </div>
-          </CardContent>
-        </Card>
-
-        {/* Theme Section */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Palette className="h-5 w-5 text-primary" />
-              Theme
-            </CardTitle>
-            <CardDescription>
-              Choose your preferred theme
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <RadioGroup 
-              value={themePreference} 
-              onValueChange={(value) => setThemePreference(value as ThemePreference)}
-            >
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="light" id="theme-light" />
-                <Label htmlFor="theme-light" className="flex items-center gap-2">
-                  <Sun className="h-4 w-4" />
-                  Light
-                </Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="dark" id="theme-dark" />
-                <Label htmlFor="theme-dark" className="flex items-center gap-2">
-                  <Moon className="h-4 w-4" />
-                  Dark
-                </Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="system" id="theme-system" />
-                <Label htmlFor="theme-system" className="flex items-center gap-2">
-                  <Monitor className="h-4 w-4" />
-                  System
-                </Label>
-              </div>
-            </RadioGroup>
-          </CardContent>
-        </Card>
-
-        {/* Primary Colors Section */}
-        <Card className="lg:col-span-2">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Droplets className="h-5 w-5 text-primary" />
-              Primary Color Theme
-            </CardTitle>
-            <CardDescription>
-              Customize the primary gradient colors used throughout the application
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="primary-gradient-start" className="text-sm font-medium">
-                  Gradient Start Color
-                </Label>
-                <div className="flex items-center gap-2">
-                  <Input 
-                    id="primary-gradient-start" 
-                    type="text" 
-                    value={primaryGradientStart || ''} 
-                    onChange={(e) => setPrimaryGradientStart(e.target.value)} 
-                    placeholder="179 67% 66%"
-                  />
-                  <Input 
-                    type="color" 
-                    value={convertHslStringToHex(primaryGradientStart)} 
-                    onChange={(e) => setPrimaryGradientStart(hexToHslString(e.target.value))} 
-                    className="w-12 h-10 p-1 rounded-md border"
-                  />
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="primary-gradient-end" className="text-sm font-medium">
-                  Gradient End Color
-                </Label>
-                <div className="flex items-center gap-2">
-                  <Input 
-                    id="primary-gradient-end" 
-                    type="text" 
-                    value={primaryGradientEnd || ''} 
-                    onChange={(e) => setPrimaryGradientEnd(e.target.value)} 
-                    placeholder="238 74% 61%"
-                  />
-                  <Input 
-                    type="color" 
-                    value={convertHslStringToHex(primaryGradientEnd)} 
-                    onChange={(e) => setPrimaryGradientEnd(hexToHslString(e.target.value))} 
-                    className="w-12 h-10 p-1 rounded-md border"
-                  />
-                </div>
-              </div>
-            </div>
-            <Button variant="outline" size="sm" onClick={resetPrimaryColors}>
-              <RotateCcw className="mr-2 h-4 w-4" />
-              Reset to Default
-            </Button>
-          </CardContent>
-        </Card>
-
-        {/* Login Page Section */}
-        <Card className="lg:col-span-2">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Wallpaper className="h-5 w-5 text-primary" />
-              Login Page Appearance
-            </CardTitle>
-            <CardDescription>
-              Customize the background of the login page
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label className="text-sm font-medium">Background Type</Label>
+          </div>
+        </div>
+        <div ref={sectionRefs.theme} id="theme">
+          {/* Theme section content */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Palette className="h-5 w-5 text-primary" />
+                Theme
+              </CardTitle>
+              <CardDescription>
+                Choose your preferred theme
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
               <RadioGroup 
-                value={loginBgType} 
-                onValueChange={(value) => setLoginBgType(value as LoginPageBackgroundType)}
+                value={themePreference} 
+                onValueChange={(value) => setThemePreference(value as ThemePreference)}
               >
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="default" id="loginbg-default" />
-                    <Label htmlFor="loginbg-default" className="text-sm">Default</Label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="image" id="loginbg-image" />
-                    <Label htmlFor="loginbg-image" className="text-sm">Image</Label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="color" id="loginbg-color" />
-                    <Label htmlFor="loginbg-color" className="text-sm">Color</Label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="gradient" id="loginbg-gradient" />
-                    <Label htmlFor="loginbg-gradient" className="text-sm">Gradient</Label>
-                  </div>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="light" id="theme-light" />
+                  <Label htmlFor="theme-light" className="flex items-center gap-2">
+                    <Sun className="h-4 w-4" />
+                    Light
+                  </Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="dark" id="theme-dark" />
+                  <Label htmlFor="theme-dark" className="flex items-center gap-2">
+                    <Moon className="h-4 w-4" />
+                    Dark
+                  </Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="system" id="theme-system" />
+                  <Label htmlFor="theme-system" className="flex items-center gap-2">
+                    <Monitor className="h-4 w-4" />
+                    System
+                  </Label>
                 </div>
               </RadioGroup>
-            </div>
-
-            {loginBgType === 'image' && (
-              <div className="space-y-2">
-                <Label htmlFor="login-bg-image-upload" className="text-sm font-medium">
-                  Background Image
-                </Label>
-                <div className="flex items-center gap-4">
-                  <Input 
-                    id="login-bg-image-upload" 
-                    type="file" 
-                    accept="image/*" 
-                    onChange={(e) => handleLogoFileChange(e, 'loginBg')} 
-                  />
-                  {loginBgImagePreviewUrl && (
-                    <div className="flex items-center gap-2 p-2 border rounded-md">
-                      <Image 
-                        src={loginBgImagePreviewUrl} 
-                        alt="Background preview" 
-                        width={48} 
-                        height={27} 
-                        className="h-6 w-10 object-cover rounded"
-                      />
-                      <Button 
-                        variant="ghost" 
-                        size="sm" 
-                        onClick={() => removeSelectedImage('loginBg', false)}
-                      >
-                        <XCircle className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  )}
-                </div>
-                {savedLoginBgImageUrl && (
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    onClick={() => removeSelectedImage('loginBg', true)} 
-                    disabled={isSaving}
-                  >
-                    <Trash2 className="mr-2 h-4 w-4" />
-                    Remove Saved Image
-                  </Button>
-                )}
-              </div>
-            )}
-
-            {loginBgType === 'color' && (
-              <div className="space-y-2">
-                <Label htmlFor="login-bg-color1" className="text-sm font-medium">
-                  Background Color
-                </Label>
-                <div className="flex items-center gap-2">
-                  <Input 
-                    id="login-bg-color1" 
-                    type="color" 
-                    value={loginBgColor1 || ''} 
-                    onChange={(e) => setLoginBgColor1(e.target.value)} 
-                    className="w-20 h-10 p-1 rounded-md border"
-                  />
-                  <Input 
-                    type="text" 
-                    value={loginBgColor1 || ''} 
-                    onChange={(e) => setLoginBgColor1(e.target.value)} 
-                    placeholder="#RRGGBB"
-                    className="max-w-[120px]"
-                  />
-                </div>
-              </div>
-            )}
-
-            {loginBgType === 'gradient' && (
+            </CardContent>
+          </Card>
+        </div>
+        <div ref={sectionRefs.primaryColors} id="primaryColors">
+          {/* Primary Colors section content */}
+          <Card className="lg:col-span-2">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Droplets className="h-5 w-5 text-primary" />
+                Primary Color Theme
+              </CardTitle>
+              <CardDescription>
+                Customize the primary gradient colors used throughout the application
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="login-bg-gradient-color1" className="text-sm font-medium">
-                    Gradient Color 1
+                  <Label htmlFor="primary-gradient-start" className="text-sm font-medium">
+                    Gradient Start Color
                   </Label>
                   <div className="flex items-center gap-2">
                     <Input 
-                      id="login-bg-gradient-color1" 
-                      type="color" 
-                      value={loginBgColor1 || ''} 
-                      onChange={(e) => setLoginBgColor1(e.target.value)} 
-                      className="w-20 h-10 p-1 rounded-md border"
+                      id="primary-gradient-start" 
+                      type="text" 
+                      value={primaryGradientStart || ''} 
+                      onChange={(e) => setPrimaryGradientStart(e.target.value)} 
+                      placeholder="179 67% 66%"
                     />
                     <Input 
-                      type="text" 
-                      value={loginBgColor1 || ''} 
-                      onChange={(e) => setLoginBgColor1(e.target.value)} 
-                      placeholder="#RRGGBB"
-                      className="max-w-[120px]"
+                      type="color" 
+                      value={convertHslStringToHex(primaryGradientStart)} 
+                      onChange={(e) => setPrimaryGradientStart(hexToHslString(e.target.value))} 
+                      className="w-12 h-10 p-1 rounded-md border"
                     />
                   </div>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="login-bg-gradient-color2" className="text-sm font-medium">
-                    Gradient Color 2
+                  <Label htmlFor="primary-gradient-end" className="text-sm font-medium">
+                    Gradient End Color
                   </Label>
                   <div className="flex items-center gap-2">
                     <Input 
-                      id="login-bg-gradient-color2" 
+                      id="primary-gradient-end" 
+                      type="text" 
+                      value={primaryGradientEnd || ''} 
+                      onChange={(e) => setPrimaryGradientEnd(e.target.value)} 
+                      placeholder="238 74% 61%"
+                    />
+                    <Input 
                       type="color" 
-                      value={loginBgColor2 || ''} 
-                      onChange={(e) => setLoginBgColor2(e.target.value)} 
+                      value={convertHslStringToHex(primaryGradientEnd)} 
+                      onChange={(e) => setPrimaryGradientEnd(hexToHslString(e.target.value))} 
+                      className="w-12 h-10 p-1 rounded-md border"
+                    />
+                  </div>
+                </div>
+              </div>
+              <Button variant="outline" size="sm" onClick={resetPrimaryColors}>
+                <RotateCcw className="mr-2 h-4 w-4" />
+                Reset to Default
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+        <div ref={sectionRefs.loginAppearance} id="loginAppearance">
+          {/* Login Page section content */}
+          <Card className="lg:col-span-2">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Wallpaper className="h-5 w-5 text-primary" />
+                Login Page Appearance
+              </CardTitle>
+              <CardDescription>
+                Customize the background of the login page
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label className="text-sm font-medium">Background Type</Label>
+                <RadioGroup 
+                  value={loginBgType} 
+                  onValueChange={(value) => setLoginBgType(value as LoginPageBackgroundType)}
+                >
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="default" id="loginbg-default" />
+                      <Label htmlFor="loginbg-default" className="text-sm">Default</Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="image" id="loginbg-image" />
+                      <Label htmlFor="loginbg-image" className="text-sm">Image</Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="color" id="loginbg-color" />
+                      <Label htmlFor="loginbg-color" className="text-sm">Color</Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="gradient" id="loginbg-gradient" />
+                      <Label htmlFor="loginbg-gradient" className="text-sm">Gradient</Label>
+                    </div>
+                  </div>
+                </RadioGroup>
+              </div>
+
+              {loginBgType === 'image' && (
+                <div className="space-y-2">
+                  <Label htmlFor="login-bg-image-upload" className="text-sm font-medium">
+                    Background Image
+                  </Label>
+                  <div className="flex items-center gap-4">
+                    <Input 
+                      id="login-bg-image-upload" 
+                      type="file" 
+                      accept="image/*" 
+                      onChange={(e) => handleLogoFileChange(e, 'loginBg')} 
+                    />
+                    {loginBgImagePreviewUrl && (
+                      <div className="flex items-center gap-2 p-2 border rounded-md">
+                        <Image 
+                          src={loginBgImagePreviewUrl} 
+                          alt="Background preview" 
+                          width={48} 
+                          height={27} 
+                          className="h-6 w-10 object-cover rounded"
+                        />
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          onClick={() => removeSelectedImage('loginBg', false)}
+                        >
+                          <XCircle className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                  {savedLoginBgImageUrl && (
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={() => removeSelectedImage('loginBg', true)} 
+                      disabled={isSaving}
+                    >
+                      <Trash2 className="mr-2 h-4 w-4" />
+                      Remove Saved Image
+                    </Button>
+                  )}
+                </div>
+              )}
+
+              {loginBgType === 'color' && (
+                <div className="space-y-2">
+                  <Label htmlFor="login-bg-color1" className="text-sm font-medium">
+                    Background Color
+                  </Label>
+                  <div className="flex items-center gap-2">
+                    <Input 
+                      id="login-bg-color1" 
+                      type="color" 
+                      value={loginBgColor1 || ''} 
+                      onChange={(e) => setLoginBgColor1(e.target.value)} 
                       className="w-20 h-10 p-1 rounded-md border"
                     />
                     <Input 
                       type="text" 
-                      value={loginBgColor2 || ''} 
-                      onChange={(e) => setLoginBgColor2(e.target.value)} 
+                      value={loginBgColor1 || ''} 
+                      onChange={(e) => setLoginBgColor1(e.target.value)} 
                       placeholder="#RRGGBB"
                       className="max-w-[120px]"
                     />
                   </div>
                 </div>
+              )}
+
+              {loginBgType === 'gradient' && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="login-bg-gradient-color1" className="text-sm font-medium">
+                      Gradient Color 1
+                    </Label>
+                    <div className="flex items-center gap-2">
+                      <Input 
+                        id="login-bg-gradient-color1" 
+                        type="color" 
+                        value={loginBgColor1 || ''} 
+                        onChange={(e) => setLoginBgColor1(e.target.value)} 
+                        className="w-20 h-10 p-1 rounded-md border"
+                      />
+                      <Input 
+                        type="text" 
+                        value={loginBgColor1 || ''} 
+                        onChange={(e) => setLoginBgColor1(e.target.value)} 
+                        placeholder="#RRGGBB"
+                        className="max-w-[120px]"
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="login-bg-gradient-color2" className="text-sm font-medium">
+                      Gradient Color 2
+                    </Label>
+                    <div className="flex items-center gap-2">
+                      <Input 
+                        id="login-bg-gradient-color2" 
+                        type="color" 
+                        value={loginBgColor2 || ''} 
+                        onChange={(e) => setLoginBgColor2(e.target.value)} 
+                        className="w-20 h-10 p-1 rounded-md border"
+                      />
+                      <Input 
+                        type="text" 
+                        value={loginBgColor2 || ''} 
+                        onChange={(e) => setLoginBgColor2(e.target.value)} 
+                        placeholder="#RRGGBB"
+                        className="max-w-[120px]"
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              <div className="space-y-2">
+                <Label className="text-sm font-medium">Login Layout</Label>
+                <RadioGroup value={loginLayoutType} onValueChange={setLoginLayoutType} className="flex flex-row gap-4 mt-1">
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="center" id="loginlayout-center" />
+                    <Label htmlFor="loginlayout-center" className="text-sm">Center Box</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="2column" id="loginlayout-2column" />
+                    <Label htmlFor="loginlayout-2column" className="text-sm">2-Column (Login as Left Menu)</Label>
+                  </div>
+                </RadioGroup>
+                <p className="text-xs text-muted-foreground mt-1">Choose how the login form is displayed: centered box or 2-column with login as a left menu.</p>
               </div>
-            )}
 
-            <div className="space-y-2">
-              <Label className="text-sm font-medium">Login Layout</Label>
-              <RadioGroup value={loginLayoutType} onValueChange={setLoginLayoutType} className="flex flex-row gap-4 mt-1">
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="center" id="loginlayout-center" />
-                  <Label htmlFor="loginlayout-center" className="text-sm">Center Box</Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="2column" id="loginlayout-2column" />
-                  <Label htmlFor="loginlayout-2column" className="text-sm">2-Column (Login as Left Menu)</Label>
-                </div>
-              </RadioGroup>
-              <p className="text-xs text-muted-foreground mt-1">Choose how the login form is displayed: centered box or 2-column with login as a left menu.</p>
-            </div>
-
-            <Button variant="outline" size="sm" onClick={resetLoginBackground}>
-              <RotateCcw className="mr-2 h-4 w-4" />
-              Reset to Default
-            </Button>
-          </CardContent>
-        </Card>
-
-        {/* Sidebar Colors Section */}
-        <Card className="lg:col-span-3">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <SidebarIcon className="h-5 w-5 text-primary" />
-              Sidebar Colors
-            </CardTitle>
-            <CardDescription>
-              Customize the sidebar appearance for light and dark themes
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Tabs defaultValue="light-sidebar" className="w-full">
-              <TabsList className="grid w-full grid-cols-2 mb-6">
-                <TabsTrigger value="light-sidebar" className="flex items-center gap-2">
-                  <Sun className="h-4 w-4" />
-                  Light Theme
-                </TabsTrigger>
-                <TabsTrigger value="dark-sidebar" className="flex items-center gap-2">
-                  <Moon className="h-4 w-4" />
-                  Dark Theme
-                </TabsTrigger>
-              </TabsList>
-              
-              <TabsContent value="light-sidebar" className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {renderSidebarColorInputs('Light')}
-                </div>
-                <Button variant="outline" size="sm" onClick={() => resetSidebarColors('Light')}>
-                  <RotateCcw className="mr-2 h-4 w-4" />
-                  Reset Light Theme Colors
-                </Button>
-              </TabsContent>
-              
-              <TabsContent value="dark-sidebar" className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {renderSidebarColorInputs('Dark')}
-                </div>
-                <Button variant="outline" size="sm" onClick={() => resetSidebarColors('Dark')}>
-                  <RotateCcw className="mr-2 h-4 w-4" />
-                  Reset Dark Theme Colors
-                </Button>
-              </TabsContent>
-            </Tabs>
-          </CardContent>
-        </Card>
+              <Button variant="outline" size="sm" onClick={resetLoginBackground}>
+                <RotateCcw className="mr-2 h-4 w-4" />
+                Reset to Default
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+        <div ref={sectionRefs.sidebarAppearance} id="sidebarAppearance">
+          {/* Sidebar Colors section content */}
+          <Card className="lg:col-span-3">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <SidebarIcon className="h-5 w-5 text-primary" />
+                Sidebar Colors
+              </CardTitle>
+              <CardDescription>
+                Customize the sidebar appearance for light and dark themes
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Tabs defaultValue="light-sidebar" className="w-full">
+                <TabsList className="grid w-full grid-cols-2 mb-6">
+                  <TabsTrigger value="light-sidebar" className="flex items-center gap-2">
+                    <Sun className="h-4 w-4" />
+                    Light Theme
+                  </TabsTrigger>
+                  <TabsTrigger value="dark-sidebar" className="flex items-center gap-2">
+                    <Moon className="h-4 w-4" />
+                    Dark Theme
+                  </TabsTrigger>
+                </TabsList>
+                
+                <TabsContent value="light-sidebar" className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {renderSidebarColorInputs('Light')}
+                  </div>
+                  <Button variant="outline" size="sm" onClick={() => resetSidebarColors('Light')}>
+                    <RotateCcw className="mr-2 h-4 w-4" />
+                    Reset Light Theme Colors
+                  </Button>
+                </TabsContent>
+                
+                <TabsContent value="dark-sidebar" className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {renderSidebarColorInputs('Dark')}
+                  </div>
+                  <Button variant="outline" size="sm" onClick={() => resetSidebarColors('Dark')}>
+                    <RotateCcw className="mr-2 h-4 w-4" />
+                    Reset Dark Theme Colors
+                  </Button>
+                </TabsContent>
+              </Tabs>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     </div>
   );

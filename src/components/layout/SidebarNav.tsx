@@ -140,7 +140,10 @@ const SidebarNavComponent = function SidebarNav() {
               <SidebarMenuButton
                 asChild
                 isActive={isActive}
-                className="w-full justify-start"
+                className={cn(
+                  "w-full justify-start",
+                  isActive ? "bg-primary/10 text-primary font-semibold" : "hover:bg-muted text-muted-foreground"
+                )}
                 tooltip={item.label}
                 onClick={() => {
                   if (accordionValue === "settings-group" && !currentClientIsSettingsSectionActive) {

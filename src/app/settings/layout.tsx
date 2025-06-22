@@ -1,4 +1,3 @@
-
 // src/app/settings/layout.tsx
 "use client";
 
@@ -130,7 +129,7 @@ export default function SettingsLayout({ children }: { children: ReactNode }) {
           </nav>
         </ScrollArea>
       </aside>
-      <div className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8">
+      <div className="flex-1 overflow-y-auto relative">
         {/* Main content of the specific settings page will be rendered here */}
         {children}
       </div>

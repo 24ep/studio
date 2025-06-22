@@ -97,10 +97,10 @@ export default function RecruitmentStagesPage() {
         } catch (e) {
           messageFromServer = response.statusText || messageFromServer;
         }
-
         if (response.status === 401 || response.status === 403) {
-            signIn(undefined, { callbackUrl: pathname });
-            return;
+          setFetchError("You do not have permission to manage recruitment stages.");
+          setIsLoading(false);
+          return;
         }
         throw new Error(messageFromServer);
       }

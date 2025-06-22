@@ -28,17 +28,15 @@ SELECT log_init('Legacy tables dropped.');
 
 -- Create custom types/enums
 SELECT log_init('Creating application enums...');
-DO $$ 
-BEGIN
-    -- ENUMS FOR THE NEW DATA MODEL MANAGEMENT
-    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'modelname') THEN
+DO $$ BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'ModelName') THEN
         CREATE TYPE "ModelName" AS ENUM ('Candidate', 'Position');
         PERFORM log_init('Created ModelName enum');
     ELSE
         PERFORM log_init('ModelName enum already exists');
     END IF;
 
-    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'fieldtype') THEN
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'FieldType') THEN
         CREATE TYPE "FieldType" AS ENUM ('TEXT', 'TEXTAREA', 'NUMBER', 'DATE', 'BOOLEAN', 'SELECT', 'MULTISELECT');
         PERFORM log_init('Created FieldType enum');
     ELSE
