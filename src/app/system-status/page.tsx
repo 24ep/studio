@@ -144,6 +144,7 @@ export default function SystemStatusPage() {
         toast({ title: "MinIO Check Complete", description: data.message });
       }
     } catch (error) {
+      console.error('Error during MinIO bucket check:', error);
       const errorMsg = (error as Error).message;
       updateStatusItem('minio_bucket_check', { status: 'error', message: `API Error: ${errorMsg}`, isLoading: false });
       toast({ title: "MinIO Check Error", description: `Could not connect to API: ${errorMsg}`, variant: "destructive"});

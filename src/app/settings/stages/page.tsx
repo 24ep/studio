@@ -107,6 +107,7 @@ export default function RecruitmentStagesPage() {
       const data: RecruitmentStage[] = await response.json();
       setStages(data.sort((a, b) => (a.sort_order ?? Infinity) - (b.sort_order ?? Infinity) || a.name.localeCompare(b.name)));
     } catch (error) {
+      console.error('Error fetching recruitment stages:', error);
       setFetchError((error as Error).message);
     } finally {
       setIsLoading(false);
@@ -164,6 +165,7 @@ export default function RecruitmentStagesPage() {
       setIsModalOpen(false);
       fetchStages(); 
     } catch (error) {
+      console.error('Error creating or updating stage:', error);
       toast({ title: `Error ${editingStage ? 'Updating' : 'Creating'} Stage`, description: (error as Error).message, variant: "destructive" });
     }
   };
@@ -186,6 +188,7 @@ export default function RecruitmentStagesPage() {
       toast({ title: "Stage Deleted", description: `Stage "${stage.name}" has been deleted.${replacement ? ` Candidates migrated to "${replacement}".` : ''}` });
       fetchStages();
     } catch (error) {
+      console.error('Error deleting stage:', error);
       toast({ title: "Error Deleting Stage", description: (error as Error).message, variant: "destructive" });
     } finally {
       if (!isReplacementModalOpen) { 
@@ -220,6 +223,7 @@ export default function RecruitmentStagesPage() {
       toast({ title: 'Stage Moved', description: 'Recruitment stage order updated.' });
       fetchStages(); // Refresh the list to show new order
     } catch (error) {
+      console.error('Error moving stage:', error);
       toast({ title: 'Error Moving Stage', description: (error as Error).message, variant: 'destructive' });
     } finally {
       setIsMoving(null);
