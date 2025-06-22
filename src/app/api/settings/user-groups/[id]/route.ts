@@ -32,6 +32,11 @@ export const dynamic = "force-dynamic";
 export async function GET(request: NextRequest) {
   const id = extractIdFromUrl(request);
   const session = await getServerSession();
+  console.log('[API DEBUG] Session:', session);
+  if (session && session.user) {
+    console.log('[API DEBUG] User role:', session.user.role);
+    console.log('[API DEBUG] User modulePermissions:', session.user.modulePermissions);
+  }
   if (session?.user?.role !== 'Admin' && !session?.user?.modulePermissions?.includes('USER_GROUPS_MANAGE')) {
     await logAudit('WARN', `Forbidden attempt to GET user group (ID: ${id}) by user ${session?.user?.email || 'Unknown'}.`, 'API:UserGroups:GetById', session?.user?.id, { targetGroupId: id });
     return NextResponse.json({ message: "Forbidden: Insufficient permissions" }, { status: 403 });

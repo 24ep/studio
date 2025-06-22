@@ -119,7 +119,7 @@ export async function PUT(request: NextRequest) {
 export async function DELETE(request: NextRequest) {
   const id = extractIdFromUrl(request);
   try {
-    const positionQuery = 'SELECT p.id, p.title, COUNT(c.id) as "candidateCount" FROM "positions" p LEFT JOIN "Candidate" c ON p.id = c."positionId" WHERE p.id = $1 GROUP BY p.id, p.title;';
+    const positionQuery = 'SELECT p.id, p.title, COUNT(c.id) as "candidateCount" FROM "positions" p LEFT JOIN "candidates" c ON p.id = c."positionId" WHERE p.id = $1 GROUP BY p.id, p.title;';
     const positionResult = await getPool().query(positionQuery, [id]);
 
     if (positionResult.rows.length === 0) {

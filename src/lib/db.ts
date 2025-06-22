@@ -18,3 +18,27 @@ export function getPool() {
   }
   return pool;
 }
+
+// Returns a deduplicated array of all permissions for a user (direct + group)
+export async function getMergedUserPermissions(userId: string): Promise<string[]> {
+  const client = await getPool().connect();
+  try {
+    // Get direct permissions
+    const userRes = await client.query('SELECT "modulePermissions" FROM "User" WHERE id = $1', [userId]);
+    const direct = (userRes.rows[0]?.modulePermissions || []) as string[];
+
+    // Get group permissions
+    const groupRes = await client.query(`
+      SELECT array_agg(DISTINCT unnest(permissions)) AS group_permissions
+      FROM "UserGroup" ug
+      JOIN "User_UserGroup" uug ON ug.id = uug."groupId"
+      WHERE uug."userId" = $1
+    `, [userId]);
+    const group = (groupRes.rows[0]?.group_permissions || []) as string[];
+
+    // Merge and deduplicate
+    return Array.from(new Set([...(direct || []), ...(group || [])]));
+  } finally {
+    client.release();
+  }
+}

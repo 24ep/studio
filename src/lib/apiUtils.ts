@@ -18,7 +18,7 @@ export async function fetchAllPositionsDb(): Promise<Position[]> {
 
   const pool = getPool();
   try {
-    const result = await pool.query('SELECT * FROM "Position" ORDER BY title ASC');
+    const result = await pool.query('SELECT * FROM "positions" ORDER BY title ASC');
     const positionsFromDb = result.rows;
 
     if (redisClient) {
@@ -112,9 +112,9 @@ export async function fetchInitialDashboardCandidatesDb(limit: number = 10): Pro
   const pool = getPool();
   try {
     const query = `
-      SELECT id, name, email, stage, position, created_at, updated_at
-      FROM "Candidate"
-      ORDER BY created_at DESC
+      SELECT id, name, email, phone, "positionId", "recruiterId", "fitScore", status, "applicationDate", "parsedData", "customAttributes", "resumePath", "createdAt", "updatedAt"
+      FROM "candidates"
+      ORDER BY "createdAt" DESC
       LIMIT $1;
     `;
     const result = await pool.query(query, [limit]);

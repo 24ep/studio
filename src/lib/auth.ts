@@ -1,7 +1,7 @@
 import { type NextAuthOptions } from 'next-auth';
 import AzureADProvider from 'next-auth/providers/azure-ad';
 import CredentialsProvider from 'next-auth/providers/credentials';
-import { getPool } from '@/lib/db';
+import { getPool, getMergedUserPermissions } from '@/lib/db';
 import bcrypt from 'bcryptjs';
 import { logAudit } from '@/lib/auditLog';
 import type { UserProfile, PlatformModuleId } from '@/lib/types';
@@ -32,6 +32,8 @@ export const authOptions: NextAuthOptions = {
             if (user && user.password) {
               const isValid = await bcrypt.compare(credentials.password, user.password);
               if (isValid) {
+                // Fetch merged permissions (direct + group)
+                const mergedPermissions = await getMergedUserPermissions(user.id) as PlatformModuleId[];
                 // Return a user object, omitting the password
                 return {
                   id: user.id,
@@ -39,6 +41,7 @@ export const authOptions: NextAuthOptions = {
                   email: user.email,
                   role: user.role,
                   image: user.image,
+                  modulePermissions: mergedPermissions,
                 };
               }
             }
@@ -63,7 +66,15 @@ export const authOptions: NextAuthOptions = {
           token.accessToken = account.access_token;
           token.id = user.id;
           token.role = user.role;
-          token.modulePermissions = user.modulePermissions;
+          token.modulePermissions = user.modulePermissions as PlatformModuleId[];
+        }
+        // If token.id exists but modulePermissions is missing, fetch merged permissions (for session refreshes)
+        if (token.id && !token.modulePermissions) {
+          try {
+            token.modulePermissions = await getMergedUserPermissions(token.id as string) as PlatformModuleId[];
+          } catch (e) {
+            token.modulePermissions = [];
+          }
         }
         return token;
       },
