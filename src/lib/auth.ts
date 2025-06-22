@@ -28,9 +28,11 @@ export const authOptions: NextAuthOptions = {
           try {
             const result = await client.query('SELECT * FROM "User" WHERE email = $1', [credentials.email]);
             const user = result.rows[0];
+            console.log('[AUTH DEBUG] User lookup result:', user);
   
             if (user && user.password) {
               const isValid = await bcrypt.compare(credentials.password, user.password);
+              console.log('[AUTH DEBUG] bcrypt.compare result:', isValid);
               if (isValid) {
                 // Fetch merged permissions (direct + group)
                 const mergedPermissions = await getMergedUserPermissions(user.id) as PlatformModuleId[];
@@ -47,6 +49,7 @@ export const authOptions: NextAuthOptions = {
             }
             return null;
           } catch (error) {
+              console.error('[AUTH DEBUG] Authorize error:', error);
               console.error("Authorize error:", error);
               return null;
           } finally {

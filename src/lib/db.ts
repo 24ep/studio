@@ -29,10 +29,13 @@ export async function getMergedUserPermissions(userId: string): Promise<string[]
 
     // Get group permissions
     const groupRes = await client.query(`
-      SELECT array_agg(DISTINCT unnest(permissions)) AS group_permissions
-      FROM "UserGroup" ug
-      JOIN "User_UserGroup" uug ON ug.id = uug."groupId"
-      WHERE uug."userId" = $1
+      SELECT array_agg(DISTINCT perm) AS group_permissions
+      FROM (
+        SELECT unnest(permissions) AS perm
+        FROM "UserGroup" ug
+        JOIN "User_UserGroup" uug ON ug.id = uug."groupId"
+        WHERE uug."userId" = $1
+      ) AS perms
     `, [userId]);
     const group = (groupRes.rows[0]?.group_permissions || []) as string[];
 
