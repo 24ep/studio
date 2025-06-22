@@ -19,7 +19,7 @@ import {
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { KeyRound, AlertTriangle, Loader2 } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
+import { toast } from 'react-hot-toast';
 
 const changePasswordFormSchema = z.object({
   currentPassword: z.string().min(1, "Current password is required"),
@@ -38,7 +38,6 @@ interface ChangePasswordModalProps {
 }
 
 export function ChangePasswordModal({ isOpen, onOpenChange }: ChangePasswordModalProps) {
-  const { toast } = useToast();
   const [apiError, setApiError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -67,7 +66,7 @@ export function ChangePasswordModal({ isOpen, onOpenChange }: ChangePasswordModa
       if (!response.ok) {
         throw new Error(result.message || "Failed to change password.");
       }
-      toast({ title: "Password Changed", description: "Your password has been successfully updated." });
+      toast.success('Your password has been successfully updated.');
       onOpenChange(false); // Close modal on success
       form.reset();
     } catch (error) {

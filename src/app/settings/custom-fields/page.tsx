@@ -36,7 +36,6 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
-import { useToast } from '@/hooks/use-toast';
 import { useSession, signIn } from 'next-auth/react';
 import { useRouter, usePathname } from 'next/navigation';
 import type { CustomFieldDefinition, CustomFieldType, CustomFieldOption } from '@/lib/types';
@@ -62,6 +61,7 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
+import { toast } from 'react-hot-toast';
 
 const customFieldOptionSchemaClient = z.object({
   value: z.string().min(1, "Option value is required"),
@@ -84,7 +84,6 @@ export default function CustomFieldsPage() {
   const { data: session, status: sessionStatus } = useSession();
   const router = useRouter();
   const pathname = usePathname();
-  const { toast } = useToast();
 
   const [definitions, setDefinitions] = useState<CustomFieldDefinition[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -145,13 +144,9 @@ export default function CustomFieldsPage() {
 
   useEffect(() => {
     if (fetchError) {
-      toast({
-        title: "Error",
-        description: fetchError,
-        variant: "destructive",
-      });
+      toast.error(fetchError);
     }
-  }, [fetchError, toast]);
+  }, [fetchError]);
 
   const handleOpenModal = (definition: CustomFieldDefinition | null = null) => {
     setEditingDefinition(definition);
@@ -194,12 +189,12 @@ export default function CustomFieldsPage() {
       const result = await response.json();
       if (!response.ok) throw new Error(result.message || `Failed to ${editingDefinition ? 'update' : 'create'} definition`);
       
-      toast({ title: `Definition ${editingDefinition ? 'Updated' : 'Created'}`, description: `Definition "${result.label}" was successfully ${editingDefinition ? 'updated' : 'created'}.` });
+      toast.success(`Definition "${result.label}" was successfully ${editingDefinition ? 'updated' : 'created'}.`);
       setIsModalOpen(false);
       fetchDefinitions();
     } catch (error) {
       console.error('Error in settings/custom-fields:', error);
-      toast({ title: `Error ${editingDefinition ? 'Updating' : 'Creating'} Definition`, description: (error as Error).message, variant: "destructive" });
+      toast.error((error as Error).message);
     }
   };
 
@@ -215,11 +210,11 @@ export default function CustomFieldsPage() {
         const errorData = await response.json().catch(() => ({}));
         throw new Error(errorData.message || 'Failed to delete definition');
       }
-      toast({ title: "Definition Deleted", description: `Definition "${definitionToDelete.label}" has been deleted.` });
+      toast.success('Custom field deleted successfully.');
       fetchDefinitions();
     } catch (error) {
       console.error('Error in settings/custom-fields:', error);
-      toast({ title: "Error Deleting Definition", description: (error as Error).message, variant: "destructive" });
+      toast.error((error as Error).message);
     } finally {
       setDefinitionToDelete(null);
     }

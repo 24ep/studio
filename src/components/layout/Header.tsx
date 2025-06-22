@@ -1,4 +1,3 @@
-
 "use client";
 import { SidebarTrigger, useSidebar } from "@/components/ui/sidebar";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -16,7 +15,7 @@ import { useSession, signIn, signOut } from "next-auth/react";
 import { useEffect, useState } from "react";
 import { ChangePasswordModal } from '@/components/auth/ChangePasswordModal';
 import { EditUserModal, type EditUserFormValues } from '@/components/users/EditUserModal';
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "react-hot-toast";
 import type { UserProfile } from "@/lib/types";
 
 
@@ -31,7 +30,6 @@ export function Header({ pageTitle: initialPageTitle }: { pageTitle: string }) {
   const [effectivePageTitle, setEffectivePageTitle] = useState(initialPageTitle);
   const [isChangePasswordModalOpen, setIsChangePasswordModalOpen] = useState(false);
   const [isEditProfileModalOpen, setIsEditProfileModalOpen] = useState(false);
-  const { toast } = useToast();
 
   useEffect(() => setMounted(true), []);
 
@@ -66,7 +64,7 @@ export function Header({ pageTitle: initialPageTitle }: { pageTitle: string }) {
       if (!response.ok) {
         throw new Error(result.message || 'Failed to update profile');
       }
-      toast({ title: "Profile Updated", description: `Your profile has been updated successfully.` });
+      toast.success("Profile Updated");
       
       // Trigger session update if name or email changed
       if (session.user.name !== result.name || session.user.email !== result.email) {
@@ -77,7 +75,7 @@ export function Header({ pageTitle: initialPageTitle }: { pageTitle: string }) {
       }
       setIsEditProfileModalOpen(false);
     } catch (error) {
-      toast({ title: "Error Updating Profile", description: (error as Error).message, variant: "destructive" });
+      toast.error((error as Error).message);
     }
   };
 

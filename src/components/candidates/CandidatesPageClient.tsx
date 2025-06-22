@@ -8,7 +8,7 @@ import type { Candidate, CandidateStatus, Position, RecruitmentStage, UserProfil
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuLabel, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 import { PlusCircle, Users, ServerCrash, Zap, Loader2, FileDown, FileUp, ChevronDown, FileSpreadsheet, ShieldAlert, Brain, Trash2 as BulkTrashIcon, Edit as BulkEditIcon } from 'lucide-react';
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "react-hot-toast";
 import { AddCandidateModal, type AddCandidateFormValues } from '@/components/candidates/AddCandidateModal';
 import { UploadResumeModal } from '@/components/candidates/UploadResumeModal';
 import { CreateCandidateViaN8nModal } from '@/components/candidates/CreateCandidateViaN8nModal';
@@ -81,7 +81,6 @@ export function CandidatesPageClient({
   const [isCreateViaN8nModalOpen, setIsCreateViaN8nModalOpen] = useState(false);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [selectedCandidateForUpload, setSelectedCandidateForUpload] = useState<Candidate | null>(null);
-  const { toast } = useToast();
   const router = useRouter();
   const pathname = usePathname();
   const [fetchError, setFetchError] = useState<string | null>(initialFetchError || null);
@@ -132,9 +131,9 @@ export function CandidatesPageClient({
       setAvailableRecruiters(recruitersData.map(r => ({ id: r.id, name: r.name })));
     } catch (error) {
       console.error("Error fetching recruiters:", error);
-      toast({ title: "Error", description: `Could not load recruiters: ${(error as Error).message}`, variant: "destructive" });
+      toast.error(`Could not load recruiters: ${(error as Error).message}`);
     }
-  }, [sessionStatus, toast]);
+  }, [sessionStatus]);
 
 
   const fetchFilteredCandidatesOnClient = useCallback(async (currentFilters: CandidateFilterValues) => {
@@ -208,7 +207,7 @@ export function CandidatesPageClient({
 
   const handleAiSearch = async (aiQuery: string) => {
     if (!aiQuery.trim()) {
-      toast({ title: "Empty Query", description: "Please enter a search query for AI search.", variant: "default" });
+      toast("Please enter a search query for AI search.");
       return;
     }
     setIsAiSearching(true);
@@ -228,13 +227,13 @@ export function CandidatesPageClient({
       setAiMatchedCandidateIds(result.matchedCandidateIds || []);
       setAiSearchReasoning(result.aiReasoning || "AI search complete.");
       if (result.matchedCandidateIds?.length > 0) {
-        toast({ title: "AI Search Complete", description: `Found ${result.matchedCandidateIds.length} potential match(es). ${result.aiReasoning || ''}` });
+        toast.success(`Found ${result.matchedCandidateIds.length} potential match(es). ${result.aiReasoning || ''}`);
       } else {
-        toast({ title: "AI Search Complete", description: result.aiReasoning || "No strong matches found by AI for your query.", variant: "default" });
+        toast.success(result.aiReasoning || "No strong matches found by AI for your query.");
       }
     } catch (error) {
       console.error("AI Search Error:", error);
-      toast({ title: "AI Search Error", description: (error as Error).message, variant: "destructive" });
+      toast.error((error as Error).message);
       setAiMatchedCandidateIds([]);
     } finally {
       setIsAiSearching(false);
@@ -265,13 +264,9 @@ export function CandidatesPageClient({
   useEffect(() => {
     // Show error as toast popup if present
     if (initialFetchError) {
-      toast({
-        title: "Error",
-        description: initialFetchError,
-        variant: "destructive",
-      });
+      toast.error(initialFetchError);
     }
-  }, [initialFetchError, toast]);
+  }, [initialFetchError]);
 
 
   const handleFilterChange = (newFilters: CandidateFilterValues) => {
@@ -299,7 +294,7 @@ export function CandidatesPageClient({
 
   const refreshCandidateInList = useCallback(async (candidateId: string) => {
     if (aiMatchedCandidateIds !== null) {
-        toast({title: "AI Search Active", description: "Please clear AI search or re-run it to see specific updates.", variant: "default" });
+        toast('AI Search Active: Please clear AI search or re-run it to see specific updates.');
         return;
     }
 
@@ -307,7 +302,7 @@ export function CandidatesPageClient({
     if (updatedCandidate) {
       setAllCandidates(prev => prev.map(c => c.id === candidateId ? updatedCandidate : c));
     } else {
-      toast({ title: "Refresh Error", description: `Could not refresh data for candidate ${candidateId}. Attempting full list refresh.`, variant: "destructive"});
+      toast.error('Could not refresh data for candidate. Attempting full list refresh.');
       fetchFilteredCandidatesOnClient(filters);
     }
   }, [fetchCandidateById, toast, fetchFilteredCandidatesOnClient, filters, aiMatchedCandidateIds]);
@@ -330,10 +325,10 @@ export function CandidatesPageClient({
       }
       const updatedCandidateFromServer: Candidate = await response.json();
       setAllCandidates(prev => prev.map(c => (c.id === updatedCandidateFromServer.id ? updatedCandidateFromServer : c)));
-      toast({ title: "Candidate Updated", description: `${updatedCandidateFromServer.name}'s status set to ${updatedCandidateFromServer.status}.` });
+      toast.success(`${updatedCandidateFromServer.name}'s status set to ${updatedCandidateFromServer.status}.`);
     } catch (error) {
       console.error("Error updating candidate:", error);
-      toast({ title: "Error Updating Candidate", description: (error as Error).message, variant: "destructive" });
+      toast.error((error as Error).message);
       throw error; // Re-throw for ManageTransitionsModal or other callers to handle
     }
   };
@@ -347,10 +342,10 @@ export function CandidatesPageClient({
       }
       setAllCandidates(prev => prev.filter(c => c.id !== candidateId));
       setSelectedCandidateIds(prev => { const newSet = new Set(prev); newSet.delete(candidateId); return newSet; });
-      toast({ title: "Candidate Deleted", description: `Candidate successfully deleted.` });
+      toast.success(`Candidate successfully deleted.`);
     } catch (error) {
       console.error("Error deleting candidate:", error);
-      toast({ title: "Error Deleting Candidate", description: (error as Error).message, variant: "destructive" });
+      toast.error((error as Error).message);
       throw error; // Re-throw for table to handle
     }
   };
@@ -393,10 +388,10 @@ export function CandidatesPageClient({
       const newCandidate: Candidate = await response.json();
       setAllCandidates(prev => [newCandidate, ...prev].sort((a,b) => new Date(b.createdAt!).getTime() - new Date(a.createdAt!).getTime()));
       setIsAddModalOpen(false);
-      toast({ title: "Candidate Added", description: `${newCandidate.name} has been successfully added.` });
+      toast.success(`${newCandidate.name} has been successfully added.`);
     } catch (error) {
         console.error("Error adding candidate:", error);
-        toast({ title: "Error Adding Candidate", description: (error as Error).message, variant: "destructive" });
+        toast.error((error as Error).message);
     } finally { setIsLoading(false); }
   };
 
@@ -407,11 +402,11 @@ export function CandidatesPageClient({
 
   const handleUploadSuccess = (updatedCandidate: Candidate) => {
     refreshCandidateInList(updatedCandidate.id);
-    toast({ title: "Resume Uploaded", description: `Resume for ${updatedCandidate.name} successfully updated.`});
+    toast.success(`Resume for ${updatedCandidate.name} successfully updated.`);
   };
 
   const handleAutomatedProcessingStart = () => {
-    toast({ title: "Processing Started", description: "Resume sent for automated processing. Candidate list will refresh if successful." });
+    toast('Processing Started: Resume sent for automated processing. Candidate list will refresh if successful.');
     setTimeout(() => { fetchFilteredCandidatesOnClient(filters); }, 15000); // Optimistic refresh after 15s
   };
 
@@ -444,7 +439,7 @@ export function CandidatesPageClient({
     csvContent += "\nNOTE: For array fields, provide a valid JSON string representation of the array of objects, or leave blank (e.g., []).";
 
     downloadFile(csvContent, 'candidates_template.csv', 'text/csv;charset=utf-8;');
-    toast({ title: "Template Guide Downloaded", description: "A CSV template for candidates has been downloaded." });
+    toast.success('A CSV template for candidates has been downloaded.');
   };
 
   const handleExportToCsv = async () => {
@@ -473,9 +468,9 @@ export function CandidatesPageClient({
       const filename = response.headers.get('content-disposition')?.split('filename=')[1]?.replace(/"/g, '') || 'candidates_export.csv';
       downloadFile(await blob.text(), filename, blob.type);
 
-      toast({ title: "Export Successful", description: "Candidates exported as CSV." });
+      toast.success('Candidates exported as CSV.');
     } catch (error) {
-      toast({ title: "Export Failed", description: (error as Error).message, variant: "destructive" });
+      toast.error((error as Error).message);
     } finally { setIsLoading(false); }
   };
 
@@ -485,7 +480,7 @@ export function CandidatesPageClient({
   };
 
   const handlePositionEdited = async () => {
-    toast({ title: "Position Updated", description: "Position details have been saved." });
+    toast.success('Position details have been saved.');
     setIsEditPositionModalOpen(false);
     if (sessionStatus === 'authenticated') {
         const posResponse = await fetch('/api/positions'); // Re-fetch all positions
@@ -560,11 +555,11 @@ export function CandidatesPageClient({
       const result = await response.json();
       if (!response.ok) throw new Error(result.message || 'Bulk action failed');
 
-      toast({ title: "Bulk Action Successful", description: `${result.successCount} candidate(s) affected. ${result.failCount > 0 ? `${result.failCount} failed.` : ''}`});
+      toast.success(`${result.successCount} candidate(s) affected. ${result.failCount > 0 ? `${result.failCount} failed.` : ''}`);
       setSelectedCandidateIds(new Set()); // Clear selection
       fetchFilteredCandidatesOnClient(filters); // Refresh list
     } catch (error) {
-      toast({ title: "Bulk Action Error", description: (error as Error).message, variant: "destructive" });
+      toast.error((error as Error).message);
     } finally {
       setIsLoading(false);
       setIsBulkActionConfirmOpen(false);

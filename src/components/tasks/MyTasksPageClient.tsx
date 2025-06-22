@@ -10,7 +10,6 @@ import { CandidateKanbanView } from '@/components/candidates/CandidateKanbanView
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Loader2, ServerCrash, ShieldAlert, ListTodo, Users, Filter, LayoutGrid, List, Search, FilterX, Brain } from 'lucide-react';
-import { useToast } from "@/hooks/use-toast";
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
@@ -19,6 +18,7 @@ import { ChevronsUpDown, Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { CandidateFilters, type CandidateFilterValues } from '@/components/candidates/CandidateFilters';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { toast } from "react-hot-toast";
 
 const ALL_CANDIDATES_ADMIN_VALUE = "ALL_CANDIDATES_ADMIN";
 const MY_ASSIGNED_VALUE = "me";
@@ -46,7 +46,6 @@ export function MyTasksPageClient({
   const { data: session, status: sessionStatus } = useSession();
   const router = useRouter();
   const pathname = usePathname();
-  const { toast } = useToast();
 
   const [candidates, setCandidates] = useState<Candidate[]>(initialCandidates || []);
   const [allRecruitersForFilter, setAllRecruitersForFilter] = useState<Pick<UserProfile, 'id' | 'name'>[]>(initialRecruiters || []);
@@ -172,7 +171,7 @@ export function MyTasksPageClient({
 
   const handleAiSearch = async (query: string) => {
     if (!query.trim()) {
-      toast({ title: "Empty AI Query", description: "Please enter a search term.", variant: "default" });
+      toast('Please enter a search term.');
       return;
     }
     setIsAiSearching(true);
@@ -191,10 +190,10 @@ export function MyTasksPageClient({
       
       setAiMatchedCandidateIds(result.matchedCandidateIds || []);
       setAiSearchReasoning(result.aiReasoning || "AI search complete.");
-      toast({ title: "AI Search Complete", description: result.aiReasoning || "AI processing finished."});
+      toast.success(result.aiReasoning || "AI processing finished.");
 
     } catch (error) {
-      toast({ title: "AI Search Error", description: (error as Error).message, variant: "destructive" });
+      toast.error((error as Error).message);
       setAiMatchedCandidateIds([]); 
     } finally {
       setIsAiSearching(false);
@@ -210,11 +209,7 @@ export function MyTasksPageClient({
   useEffect(() => {
     // Show error as toast popup if present
     if (initialFetchError) {
-      toast({
-        title: "Error",
-        description: initialFetchError,
-        variant: "destructive",
-      });
+      toast.error(initialFetchError);
     }
   }, [initialFetchError, toast]);
 

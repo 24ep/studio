@@ -30,11 +30,11 @@ import { UserPlus, ShieldCheck, Users, Loader2 } from 'lucide-react';
 import type { UserProfile, PlatformModuleId, UserGroup, PlatformModuleCategory } from '@/lib/types';
 import { PLATFORM_MODULES, PLATFORM_MODULE_CATEGORIES } from '@/lib/types';
 import { ScrollArea } from '../ui/scroll-area';
-import { useToast } from '@/hooks/use-toast';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { cn } from '@/lib/utils';
 import { ChevronsUpDown, Check as CheckIcon } from 'lucide-react';
 import { Separator } from '../ui/separator';
+import { toast } from 'react-hot-toast';
 
 
 const userRoleOptions: UserProfile['role'][] = ['Admin', 'Recruiter', 'Hiring Manager'];
@@ -63,7 +63,6 @@ const groupedPermissions = Object.values(PLATFORM_MODULE_CATEGORIES).map(categor
 }));
 
 export function AddUserModal({ isOpen, onOpenChange, onAddUser }: AddUserModalProps) {
-  const { toast } = useToast();
   const [availableGroups, setAvailableGroups] = useState<UserGroup[]>([]);
   const [groupSearchOpen, setGroupSearchOpen] = useState(false);
   const [groupSearchQuery, setGroupSearchQuery] = useState('');
@@ -101,7 +100,7 @@ export function AddUserModal({ isOpen, onOpenChange, onAddUser }: AddUserModalPr
           setAvailableGroups(data);
         } catch (error) {
           console.error("Error fetching groups:", error);
-          toast({ title: "Error", description: "Could not load user groups for selection.", variant: "destructive" });
+          toast.error("Could not load user groups for selection.");
         }
       };
       fetchGroups();

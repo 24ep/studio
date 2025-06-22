@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from "@/components/ui/dialog";
 import { Code2, Terminal, Copy } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "react-hot-toast";
 
 interface ApiEndpoint {
   method: string;
@@ -328,7 +328,6 @@ const getMethodBadgeVariant = (method: string) => {
 export default function ApiDocumentationPage() {
   const [selectedCurlEndpoint, setSelectedCurlEndpoint] = useState<ApiEndpoint | null>(null);
   const [isCurlDialogOpen, setIsCurlDialogOpen] = useState(false);
-  const { toast } = useToast();
 
   const openCurlDialog = (endpoint: ApiEndpoint) => {
     setSelectedCurlEndpoint(endpoint);
@@ -337,23 +336,15 @@ export default function ApiDocumentationPage() {
 
   const copyToClipboard = async (text: string) => {
     if (!navigator.clipboard) {
-      toast({
-        title: "Clipboard API Not Available",
-        description: "Copying to clipboard is not supported in this browser or context (e.g., non-HTTPS or sandboxed iframes). Please select the text manually.",
-        variant: "destructive",
-      });
+      toast.error("Copying to clipboard is not supported in this browser or context (e.g., non-HTTPS or sandboxed iframes). Please select the text manually.");
       return;
     }
     try {
       await navigator.clipboard.writeText(text);
-      toast({ title: "Copied!", description: "cURL command copied to clipboard." });
+      toast.success("Copied!");
     } catch (err) {
       console.error("Failed to copy cURL command:", err);
-      toast({
-        title: "Failed to copy",
-        description: "Could not copy cURL command. This might be due to browser permissions or if the page is not served over HTTPS. Please select the text manually.",
-        variant: "destructive",
-      });
+      toast.error("Could not copy cURL command. This might be due to browser permissions or if the page is not served over HTTPS. Please select the text manually.");
     }
   };
 

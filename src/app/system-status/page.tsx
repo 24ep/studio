@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { CheckCircle2, AlertTriangle, XCircle, Settings, Database, HardDrive, Zap, KeyRound, Info, ListChecks, ToggleLeft, ToggleRight, Loader2 } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "react-hot-toast";
 import { useSession, signIn } from 'next-auth/react';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
@@ -27,7 +27,6 @@ const AZURE_AD_SSO_CONCEPTUAL_KEY = 'azureAdSsoConceptualEnabled';
 export default function SystemStatusPage() {
   const [isClient, setIsClient] = useState(false);
   const [statuses, setStatuses] = useState<StatusItem[]>([]);
-  const { toast } = useToast();
   const { data: session, status: sessionStatus } = useSession();
   const pathname = usePathname();
 
@@ -124,7 +123,7 @@ export default function SystemStatusPage() {
 
   const handleCheckMinioBucket = useCallback(async () => {
     if (sessionStatus !== 'authenticated' || session?.user?.role !== 'Admin') {
-      toast({ title: "Unauthorized", description: "You must be an Admin to perform this check.", variant: "destructive" });
+      toast.error('You must be an Admin to perform this check.');
       return;
     }
     updateStatusItem('minio_bucket_check', { isLoading: true, status: 'checking' });
@@ -138,18 +137,18 @@ export default function SystemStatusPage() {
             return;
         }
         updateStatusItem('minio_bucket_check', { status: 'error', message: data.message || `Error: ${response.status}`, isLoading: false });
-        toast({ title: "MinIO Check Failed", description: data.message || "Could not verify bucket status.", variant: "destructive"});
+        toast.error(data.message || 'Could not verify bucket status.');
       } else {
         updateStatusItem('minio_bucket_check', { status: data.status as StatusItem['status'], message: data.message, isLoading: false });
-        toast({ title: "MinIO Check Complete", description: data.message });
+        toast.success(data.message);
       }
     } catch (error) {
       console.error('Error during MinIO bucket check:', error);
       const errorMsg = (error as Error).message;
       updateStatusItem('minio_bucket_check', { status: 'error', message: `API Error: ${errorMsg}`, isLoading: false });
-      toast({ title: "MinIO Check Error", description: `Could not connect to API: ${errorMsg}`, variant: "destructive"});
+      toast.error(`Could not connect to API: ${errorMsg}`);
     }
-  }, [session, sessionStatus, toast]);
+  }, [session, sessionStatus]);
 
   const handleToggleAzureAdSsoConceptual = useCallback(() => {
     const currentSetting = localStorage.getItem(AZURE_AD_SSO_CONCEPTUAL_KEY) === 'true';
@@ -161,8 +160,8 @@ export default function SystemStatusPage() {
       message: `Conceptual SSO is currently ${newStatus}. Actual SSO depends on server ENV VARS.`,
       actionLabel: newSetting ? "Conceptually Disable SSO" : "Conceptually Enable SSO"
     });
-    toast({ title: "Azure AD SSO (Conceptual)", description: `Conceptual toggle set to ${newStatus}.` });
-  }, [toast]);
+    toast.success(`Conceptual toggle set to ${newStatus}.`);
+  }, []);
 
   useEffect(() => {
     setIsClient(true);

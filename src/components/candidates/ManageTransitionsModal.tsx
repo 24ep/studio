@@ -33,7 +33,7 @@ import * as z from 'zod';
 import type { Candidate, TransitionRecord, CandidateStatus, RecruitmentStage } from '@/lib/types';
 import { PlusCircle, CalendarDays, Edit3, Trash2, Save, X, User, ChevronsUpDown, Check } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "react-hot-toast";
 import { cn } from "@/lib/utils";
 
 const transitionFormSchema = z.object({
@@ -60,7 +60,6 @@ export function ManageTransitionsModal({
   onRefreshCandidateData,
   availableStages,
 }: ManageTransitionsModalProps) {
-  const { toast } = useToast();
   const [editingTransitionId, setEditingTransitionId] = useState<string | null>(null);
   const [editingNotes, setEditingNotes] = useState<string>('');
   const [transitionToDelete, setTransitionToDelete] = useState<TransitionRecord | null>(null);
@@ -92,7 +91,7 @@ export function ManageTransitionsModal({
     const noChangeCondition = data.newStatus === candidate.status && !data.notes?.trim();
     
     if (noChangeCondition) {
-        toast({ title: "No Change", description: "Please select a new status or add notes to create a transition.", variant: "default" });
+        toast("Please select a new status or add notes to create a transition.");
         return;
     }
     try {
@@ -120,11 +119,18 @@ export function ManageTransitionsModal({
         const errorData = await response.json().catch(() => ({ message: "An unknown error occurred" }));
         throw new Error(errorData.message || `Failed to update notes: ${response.statusText}`);
       }
-      toast({ title: "Notes Updated", description: "Transition notes have been successfully updated." });
+      toast("Transition notes have been successfully updated.");
       setEditingTransitionId(null);
       await onRefreshCandidateData(candidate.id);
     } catch (error) {
-      toast({ title: "Error Updating Notes", description: (error as Error).message, variant: "destructive" });
+      toast("Error Updating Notes", {
+        icon: "❌",
+        duration: 5000,
+        style: {
+          background: "#ff0000",
+          color: "#fff",
+        },
+      });
     }
   };
 
@@ -142,10 +148,17 @@ export function ManageTransitionsModal({
         const errorData = await response.json().catch(() => ({ message: "An unknown error occurred" }));
         throw new Error(errorData.message || `Failed to delete transition: ${response.statusText}`);
       }
-      toast({ title: "Transition Deleted", description: "The transition record has been successfully deleted." });
+      toast("The transition record has been successfully deleted.");
       await onRefreshCandidateData(candidate.id);
     } catch (error) {
-      toast({ title: "Error Deleting Transition", description: (error as Error).message, variant: "destructive" });
+      toast("Error Deleting Transition", {
+        icon: "❌",
+        duration: 5000,
+        style: {
+          background: "#ff0000",
+          color: "#fff",
+        },
+      });
     } finally {
       setTransitionToDelete(null);
     }

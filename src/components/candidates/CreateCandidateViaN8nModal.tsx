@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, type ChangeEvent, useEffect } from 'react';
@@ -21,7 +20,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { useToast } from '@/hooks/use-toast';
+import { toast } from 'react-hot-toast';
 import { UploadCloud, FileText, XCircle, Loader2, Zap } from 'lucide-react';
 import type { Position } from '@/lib/types';
 
@@ -35,7 +34,6 @@ interface CreateCandidateViaN8nModalProps {
 }
 
 export function CreateCandidateViaN8nModal({ isOpen, onOpenChange, onProcessingStart }: CreateCandidateViaN8nModalProps) {
-  const { toast } = useToast();
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [availablePositions, setAvailablePositions] = useState<Position[]>([]);
@@ -53,7 +51,7 @@ export function CreateCandidateViaN8nModal({ isOpen, onOpenChange, onProcessingS
           setAvailablePositions(data);
         } catch (error) {
           console.error("Error fetching positions for modal:", error);
-          toast({ title: "Error", description: "Could not load positions for selection.", variant: "destructive" });
+          toast.error("Could not load positions for selection.");
         }
       };
       fetchPositions();
@@ -64,21 +62,21 @@ export function CreateCandidateViaN8nModal({ isOpen, onOpenChange, onProcessingS
       const fileInput = document.getElementById('automated-candidate-pdf-upload') as HTMLInputElement;
       if (fileInput) fileInput.value = '';
     }
-  }, [isOpen, toast]);
+  }, [isOpen]);
 
   const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
       if (file.type === 'application/pdf') {
         if (file.size > MAX_FILE_SIZE) {
-            toast({ title: "File Too Large", description: `PDF file size should not exceed ${MAX_FILE_SIZE / (1024*1024)}MB.`, variant: "destructive" });
+            toast.error(`PDF file size should not exceed ${MAX_FILE_SIZE / (1024*1024)}MB.`);
             setSelectedFile(null);
             event.target.value = '';
             return;
         }
         setSelectedFile(file);
       } else {
-        toast({ title: "Invalid File Type", description: "Please select a PDF file.", variant: "destructive" });
+        toast.error("Please select a PDF file.");
         setSelectedFile(null);
         event.target.value = '';
       }
@@ -95,7 +93,7 @@ export function CreateCandidateViaN8nModal({ isOpen, onOpenChange, onProcessingS
 
   const handleUploadForProcessing = async () => {
     if (!selectedFile) {
-      toast({ title: "No PDF Selected", description: "Please select a PDF file to upload.", variant: "destructive" });
+      toast.error("Please select a PDF file to upload.");
       return;
     }
     
@@ -151,19 +149,12 @@ export function CreateCandidateViaN8nModal({ isOpen, onOpenChange, onProcessingS
         throw new Error(description);
       }
 
-      toast({
-        title: "Resume Sent for Processing",
-        description: result.message || `Resume "${selectedFile.name}" sent for automated processing. A new candidate will be created if parsing is successful.`,
-      });
+      toast.success(result.message || `Resume "${selectedFile.name}" sent for automated processing. A new candidate will be created if parsing is successful.`);
       onProcessingStart();
       onOpenChange(false); // Close modal on success
     } catch (error) {
       console.error("Error sending PDF for automated candidate creation:", error);
-      toast({
-        title: "Upload Failed",
-        description: (error as Error).message,
-        variant: "destructive",
-      });
+      toast.error((error as Error).message);
     } finally {
       setIsUploading(false);
     }

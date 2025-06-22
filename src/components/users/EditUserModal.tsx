@@ -9,7 +9,6 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { useToast } from '@/hooks/use-toast';
 import { Save, Palette, ImageUp, Trash2, Loader2, XCircle, PenSquare, ServerCrash, ShieldAlert, Settings2, Wallpaper, Droplets, Type, Sidebar as SidebarIcon, RotateCcw, Eye, EyeOff, Monitor, Sun, Moon, Zap, StickyNote, Paintbrush, LayoutDashboard, Sidebar as SidebarMenuIcon, LogIn, Edit3, Users, ShieldCheck, ChevronsUpDown } from 'lucide-react';
 import Image from 'next/image';
 import { signIn, useSession } from 'next-auth/react';
@@ -36,6 +35,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import type { UserProfile, PlatformModuleId, UserGroup, PlatformModuleCategory } from '@/lib/types';
 import { PLATFORM_MODULES, PLATFORM_MODULE_CATEGORIES } from '@/lib/types';
+import { toast } from 'react-hot-toast';
 
 const userRoleOptions: UserProfile['role'][] = ['Admin', 'Recruiter', 'Hiring Manager'];
 const platformModuleIds = PLATFORM_MODULES.map(m => m.id) as [PlatformModuleId, ...PlatformModuleId[]];
@@ -66,7 +66,6 @@ const groupedPermissions = Object.values(PLATFORM_MODULE_CATEGORIES).map(categor
 
 
 export function EditUserModal({ isOpen, onOpenChange, onEditUser, user, isSelfEdit = false }: EditUserModalProps) {
-  const { toast } = useToast();
   const [activeTab, setActiveTab] = useState<'general' | 'permissions'>(isSelfEdit ? 'general' : 'general');
   const [availableGroups, setAvailableGroups] = useState<UserGroup[]>([]);
   const [groupSearchOpen, setGroupSearchOpen] = useState(false);
@@ -98,7 +97,7 @@ export function EditUserModal({ isOpen, onOpenChange, onEditUser, user, isSelfEd
             setAvailableGroups(data);
           } catch (error) {
             console.error("Error fetching groups:", error);
-            toast({ title: "Error", description: "Could not load user groups for selection.", variant: "destructive" });
+            toast.error("Could not load user groups for selection.");
           }
         };
         fetchGroups();

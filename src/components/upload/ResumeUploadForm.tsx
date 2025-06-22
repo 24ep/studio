@@ -10,7 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter }
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { UploadCloud, FileText, XCircle, Loader2 } from 'lucide-react';
 import { useState, useEffect } from 'react';
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "react-hot-toast";
 import type { Candidate } from '@/lib/types';
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
@@ -34,7 +34,6 @@ interface ResumeUploadFormProps {
 }
 
 export function ResumeUploadForm({ candidateId, onUploadSuccess, currentResumePath, cardMode = true }: ResumeUploadFormProps) {
-  const { toast } = useToast();
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -52,7 +51,7 @@ export function ResumeUploadForm({ candidateId, onUploadSuccess, currentResumePa
 
   const onSubmit = async (data: ResumeUploadFormValues) => {
     if (!candidateId || !data.resume?.[0]) {
-      toast({ title: "Error", description: "Candidate ID and resume file are required.", variant: "destructive" });
+      toast.error("Candidate ID and resume file are required.");
       return;
     }
     // console.log("ResumeUploadForm: Submitting form data:", data); // Added for debugging auto-save
@@ -84,10 +83,7 @@ export function ResumeUploadForm({ candidateId, onUploadSuccess, currentResumePa
         }
       }
 
-      toast({
-        title: "Resume Uploaded",
-        description: toastDescription,
-      });
+      toast.success(toastDescription);
 
       if (onUploadSuccess && result.candidate) {
         onUploadSuccess(result.candidate, result.n8nResponse);
@@ -98,11 +94,7 @@ export function ResumeUploadForm({ candidateId, onUploadSuccess, currentResumePa
       if (fileInput) fileInput.value = '';
     } catch (error) {
       console.error("Error uploading resume:", error);
-      toast({
-        title: "Upload Failed",
-        description: (error as Error).message,
-        variant: "destructive",
-      });
+      toast.error((error as Error).message);
     } finally {
       setIsSubmitting(false);
     }

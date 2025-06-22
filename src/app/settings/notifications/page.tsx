@@ -8,17 +8,16 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { useToast } from '@/hooks/use-toast';
 import { useSession } from 'next-auth/react';
 import { useRouter, usePathname } from 'next/navigation';
 import { Save, BellRing, Info, Loader2, ServerCrash, ShieldAlert, RefreshCw, Webhook, Mail } from 'lucide-react';
 import type { NotificationEventWithSettings, NotificationChannel, NotificationSetting } from '@/lib/types';
+import { toast } from 'react-hot-toast';
 
 export default function NotificationSettingsPage() {
   const { data: session, status: sessionStatus } = useSession();
   const router = useRouter();
   const pathname = usePathname();
-  const { toast } = useToast();
   
   const [isClient, setIsClient] = useState(false);
   const [isLoadingData, setIsLoadingData] = useState(true);
@@ -46,11 +45,11 @@ export default function NotificationSettingsPage() {
       console.error("Error fetching notification settings:", error);
       setFetchError((error as Error).message);
       setEventsWithSettings([]);
-      toast({title: "Error Loading Settings", description: (error as Error).message, variant: "destructive"});
+      toast.error((error as Error).message);
     } finally {
       setIsLoadingData(false);
     }
-  }, [sessionStatus, toast]);
+  }, [sessionStatus]);
 
   useEffect(() => {
     setIsClient(true);
@@ -117,10 +116,10 @@ export default function NotificationSettingsPage() {
         throw new Error(result.message || 'Failed to save notification settings');
       }
       setEventsWithSettings(result); // Update state with response from server (might include new IDs, etc.)
-      toast({ title: 'Settings Saved', description: 'Notification settings have been saved successfully.' });
+      toast.success('Notification settings have been saved successfully.');
     } catch (error) {
       console.error("Error saving notification settings:", error);
-      toast({title: "Error Saving Settings", description: (error as Error).message, variant: "destructive"});
+      toast.error((error as Error).message);
     } finally {
       setIsSaving(false);
     }

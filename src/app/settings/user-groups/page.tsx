@@ -28,7 +28,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { useToast } from '@/hooks/use-toast';
+import { toast } from 'react-hot-toast';
 import { useSession, signIn } from 'next-auth/react';
 import { useRouter, usePathname } from 'next/navigation';
 import type { UserGroup, PlatformModule, PlatformModuleId } from '@/lib/types';
@@ -63,7 +63,6 @@ export default function RolesPermissionsPage() {
   const { data: session, status: sessionStatus } = useSession();
   const router = useRouter();
   const pathname = usePathname();
-  const { toast } = useToast();
 
   const [roles, setRoles] = useState<UserGroup[]>([]); // UserGroups are now "Roles"
   const [selectedRole, setSelectedRole] = useState<UserGroup | null>(null);
@@ -139,13 +138,9 @@ export default function RolesPermissionsPage() {
 
   useEffect(() => {
     if (fetchError) {
-      toast({
-        title: "Error",
-        description: fetchError,
-        variant: "destructive",
-      });
+      toast.error(fetchError);
     }
-  }, [fetchError, toast]);
+  }, [fetchError]);
 
   const handleSelectRole = (role: UserGroup) => {
     setSelectedRole(role);
@@ -171,18 +166,18 @@ export default function RolesPermissionsPage() {
       const result = await response.json();
       if (!response.ok) throw new Error(result.message || `Failed to ${editingRole ? 'update' : 'create'} role`);
       
-      toast({ title: `Role ${editingRole ? 'Updated' : 'Created'}`, description: `Role "${result.name}" was successfully ${editingRole ? 'updated' : 'created'}.` });
+      toast.success(`Role "${result.name}" was successfully ${editingRole ? 'updated' : 'created'}.`);
       setIsModalOpen(false);
       fetchRolesAndSelect(result.id); // Refresh list and attempt to select the created/edited role
 
     } catch (error) {
-      toast({ title: `Error ${editingRole ? 'Updating' : 'Creating'} Role`, description: (error as Error).message, variant: "destructive" });
+      toast.error((error as Error).message);
     }
   };
   
   const handlePermissionToggle = async (permissionId: PlatformModuleId, role: UserGroup) => {
     if (role.is_system_role) {
-      toast({ title: "System Role", description: "Permissions for system roles cannot be changed.", variant: "default" });
+      toast.error("Permissions for system roles cannot be changed.");
       return;
     }
     const currentPermissions = role.permissions || [];
@@ -199,12 +194,12 @@ export default function RolesPermissionsPage() {
       const result = await response.json();
       if (!response.ok) throw new Error(result.message || "Failed to update role permissions.");
       
-      toast({ title: "Permissions Updated", description: `Permissions for role "${role.name}" updated.` });
+      toast.success(`Permissions for role "${role.name}" updated.`);
       // Update local state for immediate UI feedback
       setSelectedRole(prev => prev ? { ...prev, permissions: newPermissions } : null);
       setRoles(prevRoles => prevRoles.map(r => r.id === role.id ? { ...r, permissions: newPermissions } : r));
     } catch (error) {
-      toast({ title: "Error Updating Permissions", description: (error as Error).message, variant: "destructive" });
+      toast.error((error as Error).message);
     }
   };
 
@@ -215,7 +210,7 @@ export default function RolesPermissionsPage() {
   const handleDelete = async () => {
     if (!roleToDelete) return;
     if (roleToDelete.is_system_role) {
-      toast({ title: "Cannot Delete", description: "System roles cannot be deleted.", variant: "destructive" });
+      toast.error("System roles cannot be deleted.");
       setRoleToDelete(null);
       return;
     }
@@ -225,10 +220,10 @@ export default function RolesPermissionsPage() {
         const errorData = await response.json().catch(() => ({}));
         throw new Error(errorData.message || 'Failed to delete role');
       }
-      toast({ title: "Role Deleted", description: `Role "${roleToDelete.name}" has been deleted.` });
+      toast.success('Role deleted successfully.');
       fetchRolesAndSelect(null); // Refresh and select first item or nothing
     } catch (error) {
-      toast({ title: "Error Deleting Role", description: (error as Error).message, variant: "destructive" });
+      toast.error((error as Error).message);
     } finally {
       setRoleToDelete(null);
     }

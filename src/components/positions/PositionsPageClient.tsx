@@ -9,7 +9,7 @@ import { PlusCircle, Briefcase, Edit, Trash2, ServerCrash, Loader2, FileDown, Fi
 import type { Position } from "@/lib/types";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "react-hot-toast";
 import { AddPositionModal, type AddPositionFormValues } from '@/components/positions/AddPositionModal';
 import { EditPositionModal, type EditPositionFormValues } from '@/components/positions/EditPositionModal';
 import { PositionFilters, type PositionFilterValues } from '@/components/positions/PositionFilters';
@@ -68,7 +68,6 @@ export default function PositionsPageClient({
   const [positions, setPositions] = useState<Position[]>(initialPositions || []);
   const [isLoading, setIsLoading] = useState(false); // Only for client-side actions/refreshes
   const [filters, setFilters] = useState<PositionFilterValues>({ isOpen: "all" });
-  const { toast } = useToast();
   const router = useRouter();
   const pathname = usePathname();
   const [fetchError, setFetchError] = useState<string | null>(initialFetchError || null);
@@ -158,15 +157,11 @@ export default function PositionsPageClient({
 
     // Show error as toast popup if present
     if (initialFetchError) {
-      toast({
-        title: "Error",
-        description: initialFetchError,
-        variant: "destructive",
-      });
+      toast.error(initialFetchError);
     }
 
     // Initial data is loaded by server component, client only fetches on filter change or action
-  }, [initialPositions, initialAvailableDepartments, initialFetchError, serverAuthError, serverPermissionError, sessionStatus, pathname, toast]);
+  }, [initialPositions, initialAvailableDepartments, initialFetchError, serverAuthError, serverPermissionError, sessionStatus, pathname]);
 
 
   const handleFilterChange = (newFilters: PositionFilterValues) => {
@@ -188,10 +183,10 @@ export default function PositionsPageClient({
         const newPosition: Position = await response.json();
         fetchPositionsClientSide(filters);
         setIsAddModalOpen(false);
-        toast({ title: "Position Added", description: `${newPosition.title} has been successfully added.` });
+        toast.success(`${newPosition.title} has been successfully added.`);
     } catch (error) {
         console.error("Error adding position:", error);
-          toast({ title: "Error Adding Position", description: (error as Error).message, variant: "destructive" });
+          toast.error((error as Error).message);
     }
   };
 
@@ -215,10 +210,10 @@ export default function PositionsPageClient({
       fetchPositionsClientSide(filters);
       setIsEditModalOpen(false);
       setSelectedPositionForEdit(null);
-      toast({ title: "Position Updated", description: `Position "${updatedPosition.title}" has been updated.` });
+      toast.success(`Position "${updatedPosition.title}" has been updated.`);
     } catch (error) {
       console.error("Error updating position:", error);
-        toast({ title: "Error Updating Position", description: (error as Error).message, variant: "destructive" });
+        toast.error((error as Error).message);
     }
   };
 
@@ -235,10 +230,10 @@ export default function PositionsPageClient({
         throw new Error(errorData.message || `Failed to delete position: ${response.statusText}`);
       }
       fetchPositionsClientSide(filters);
-      toast({ title: "Position Deleted", description: `Position "${positionToDelete.title}" has been deleted.` });
+      toast.success(`Position "${positionToDelete.title}" has been deleted.`);
     } catch (error) {
       console.error("Error deleting position:", error);
-        toast({ title: "Error Deleting Position", description: (error as Error).message, variant: "destructive" });
+        toast.error((error as Error).message);
     } finally {
       setPositionToDelete(null);
     }
@@ -256,7 +251,7 @@ export default function PositionsPageClient({
         csvContent += row.map(val => `"${String(val || '').replace(/"/g, '""')}"`).join(',') + '\n';
     });
     downloadFile(csvContent, 'positions_template.csv', 'text/csv;charset=utf-8;');
-    toast({ title: "Template Downloaded", description: "A CSV template for positions has been downloaded." }); };
+    toast.success("A CSV template for positions has been downloaded."); };
 
   const handleExportToCsv = async () => { /* ... (existing unchanged) ... */ setIsLoading(true);
     try {
@@ -276,11 +271,11 @@ export default function PositionsPageClient({
       const filename = response.headers.get('content-disposition')?.split('filename=')[1]?.replace(/"/g, '') || 'positions_export.csv';
       downloadFile(await blob.text(), filename, blob.type);
 
-      toast({ title: "Export Successful", description: "Positions exported as CSV." });
+      toast.success("Positions exported as CSV.");
 
     } catch (error) {
       console.error("Error exporting positions:", error);
-      toast({ title: "Export Failed", description: (error as Error).message, variant: "destructive" });
+      toast.error((error as Error).message);
     } finally {
       setIsLoading(false);
     } };
@@ -323,17 +318,17 @@ export default function PositionsPageClient({
         const result = await response.json();
         if (!response.ok) throw new Error(result.message || 'Bulk position action failed');
 
-        toast({ title: "Bulk Action Successful", description: `${result.successCount} position(s) affected. ${result.failCount > 0 ? `${result.failCount} failed.` : ''}`});
+        toast.success(`${result.successCount} position(s) affected. ${result.failCount > 0 ? `${result.failCount} failed.` : ''}`);
         if (result.failCount > 0 && result.failedDetails) {
             result.failedDetails.forEach((detail: {positionId: string, reason: string}) => {
                 const pos = positions.find(p => p.id === detail.positionId);
-                toast({ title: `Action Failed for ${pos?.title || detail.positionId}`, description: detail.reason, variant: "destructive" });
+                toast.error(`Action Failed for ${pos?.title || detail.positionId}: ${detail.reason}`);
             });
         }
         setSelectedPositionIds(new Set());
         fetchPositionsClientSide(filters);
     } catch (error) {
-        toast({ title: "Bulk Action Error", description: (error as Error).message, variant: "destructive" });
+        toast.error((error as Error).message);
     } finally {
         setIsLoading(false);
         setIsBulkConfirmOpen(false);
