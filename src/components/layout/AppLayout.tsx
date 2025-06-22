@@ -16,6 +16,7 @@ import { Separator } from "@/components/ui/separator";
 import { Package2, Loader2 } from "lucide-react";
 import { usePathname } from "next/navigation";
 import Image from 'next/image';
+import packageJson from '../../../package.json';
 
 const APP_LOGO_DATA_URL_KEY = 'appLogoDataUrl';
 const APP_CONFIG_APP_NAME_KEY = 'appConfigAppName';
@@ -140,6 +141,9 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
         </SidebarContent>
         <SidebarFooter className="p-4 border-t group-data-[collapsible=icon]:hidden">
           <p className="text-xs text-muted-foreground">© {new Date().getFullYear()} {currentAppName}</p>
+          <div className="text-xs text-muted-foreground text-center w-full py-2">
+            Version {packageJson.version}
+          </div>
         </SidebarFooter>
       </Sidebar>
       <SidebarInset className="flex flex-col bg-background">
