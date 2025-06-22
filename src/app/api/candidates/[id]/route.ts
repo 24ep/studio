@@ -4,6 +4,7 @@ import { getPool } from '@/lib/db';
 import { z } from 'zod';
 import { logAudit } from '@/lib/auditLog';
 import { getServerSession } from 'next-auth/next';
+import { authOptions } from '@/lib/auth';
 import { v4 as uuidv4 } from 'uuid';
 
 export const dynamic = "force-dynamic";
@@ -30,7 +31,7 @@ function extractIdFromUrl(request: NextRequest): string | null {
 
 export async function GET(request: NextRequest) {
   const id = extractIdFromUrl(request);
-  const session = await getServerSession();
+  const session = await getServerSession(authOptions);
   if (!session?.user?.id) {
     return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
   }
@@ -41,8 +42,8 @@ export async function GET(request: NextRequest) {
         c.*, 
         p.title as "positionTitle", 
         r.name as "recruiterName"
-      FROM "Candidate" c
-      LEFT JOIN "Position" p ON c."positionId" = p.id
+      FROM "candidates" c
+      LEFT JOIN "positions" p ON c."positionId" = p.id
       LEFT JOIN "User" r ON c."recruiterId" = r.id
       WHERE c.id = $1;
     `;
@@ -53,13 +54,14 @@ export async function GET(request: NextRequest) {
     const candidate = result.rows[0];
     const historyQuery = `
       SELECT th.*, u.name as "actingUserName"
-      FROM "TransitionRecord" th
+      FROM "transition_records" th
       LEFT JOIN "User" u ON th."actingUserId" = u.id
       WHERE th."candidateId" = $1
       ORDER BY th.date DESC;
     `;
     const historyResult = await client.query(historyQuery, [id]);
     candidate.transitionHistory = historyResult.rows;
+    candidate.custom_attributes = candidate.customAttributes || {};
     return NextResponse.json(candidate, { status: 200 });
   } catch (error: any) {
     console.error(`Failed to fetch candidate ${id}:`, error);
@@ -72,7 +74,7 @@ export async function GET(request: NextRequest) {
 
 export async function PUT(request: NextRequest) {
   const id = extractIdFromUrl(request);
-  const session = await getServerSession();
+  const session = await getServerSession(authOptions);
   const actingUserId = session?.user?.id;
   const actingUserName = session?.user?.name || session?.user?.email || 'System (API Update)';
   if (!actingUserId) {
@@ -92,14 +94,14 @@ export async function PUT(request: NextRequest) {
   const client = await getPool().connect();
   try {
     await client.query('BEGIN');
-    const existingResult = await client.query('SELECT * FROM "Candidate" WHERE id = $1', [id]);
+    const existingResult = await client.query('SELECT * FROM "candidates" WHERE id = $1', [id]);
     if (existingResult.rows.length === 0) {
       return NextResponse.json({ message: "Candidate not found" }, { status: 404 });
     }
     const existingCandidate = existingResult.rows[0];
     if (updateData.status && updateData.status !== existingCandidate.status) {
       const insertTransitionQuery = `
-        INSERT INTO "TransitionRecord" (id, "candidateId", "positionId", stage, notes, "actingUserId", date)
+        INSERT INTO "transition_records" (id, "candidateId", "positionId", stage, notes, "actingUserId", date)
         VALUES ($1, $2, $3, $4, $5, $6, NOW());
       `;
       await client.query(insertTransitionQuery, [
@@ -110,18 +112,27 @@ export async function PUT(request: NextRequest) {
     if (fieldsToUpdate.length === 0) {
       return NextResponse.json({ message: "No fields to update." }, { status: 400 });
     }
-    const setClauses = fieldsToUpdate.map((key, index) => `"${key}" = $${index + 1}`);
+    const setClauses = fieldsToUpdate.map((key, index) => {
+      if (key === 'custom_attributes') {
+        return `"customAttributes" = $${index + 1}`;
+      }
+      return `"${key}" = $${index + 1}`;
+    });
     const queryParams = fieldsToUpdate.map(key => (updateData as any)[key]);
     const updateQuery = `
-      UPDATE "Candidate"
+      UPDATE "candidates"
       SET ${setClauses.join(', ')}, "updatedAt" = NOW()
       WHERE id = $${fieldsToUpdate.length + 1}
       RETURNING *;
     `;
     const updatedResult = await client.query(updateQuery, [...queryParams, id]);
+    const updatedCandidate = {
+      ...updatedResult.rows[0],
+      custom_attributes: updatedResult.rows[0].customAttributes || {},
+    };
     await client.query('COMMIT');
-    await logAudit('AUDIT', `Candidate '${updatedResult.rows[0].name}' (ID: ${id}) was updated by ${actingUserName}.`, 'API:Candidates:Update', actingUserId, { targetCandidateId: id, changes: updateData });
-    return NextResponse.json({ message: "Candidate updated successfully", candidate: updatedResult.rows[0] }, { status: 200 });
+    await logAudit('AUDIT', `Candidate '${updatedCandidate.name}' (ID: ${id}) was updated by ${actingUserName}.`, 'API:Candidates:Update', actingUserId, { targetCandidateId: id, changes: updateData });
+    return NextResponse.json({ message: "Candidate updated successfully", candidate: updatedCandidate }, { status: 200 });
   } catch (error: any) {
     await client.query('ROLLBACK');
     console.error(`Failed to update candidate ${id}:`, error);
@@ -134,7 +145,7 @@ export async function PUT(request: NextRequest) {
 
 export async function DELETE(request: NextRequest) {
   const id = extractIdFromUrl(request);
-  const session = await getServerSession();
+  const session = await getServerSession(authOptions);
   const actingUserId = session?.user?.id;
   const actingUserName = session?.user?.name || session?.user?.email || 'System';
   if (!actingUserId) {
@@ -142,7 +153,7 @@ export async function DELETE(request: NextRequest) {
   }
   const client = await getPool().connect();
   try {
-    const result = await client.query('DELETE FROM "Candidate" WHERE id = $1 RETURNING name', [id]);
+    const result = await client.query('DELETE FROM "candidates" WHERE id = $1 RETURNING name', [id]);
     if (result.rowCount === 0) {
       return NextResponse.json({ message: "Candidate not found" }, { status: 404 });
     }

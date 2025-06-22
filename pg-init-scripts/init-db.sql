@@ -195,7 +195,7 @@ CREATE TABLE IF NOT EXISTS user_groups (
 
 CREATE TABLE IF NOT EXISTS user_group_members (
     id SERIAL PRIMARY KEY,
-    user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+    user_id TEXT REFERENCES "User"("id") ON DELETE CASCADE,
     group_id INTEGER REFERENCES user_groups(id) ON DELETE CASCADE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     UNIQUE(user_id, group_id)

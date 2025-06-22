@@ -27,7 +27,7 @@ const createUserSchema = z.object({
 });
 
 export async function GET(request: NextRequest) {
-  const session = await getServerSession();
+  const session = await getServerSession(authOptions);
   if (!session?.user?.id) {
     return NextResponse.json({ message: "Unauthorized: User session required." }, { status: 401 });
   }
@@ -111,7 +111,7 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  const session = await getServerSession();
+  const session = await getServerSession(authOptions);
   if (!session || session.user?.role !== 'Admin') {
     await logAudit('WARN', `Forbidden attempt to create user by ${session?.user?.email || 'Unknown'} (ID: ${session?.user?.id || 'N/A'}). Required role: Admin.`, 'API:Users:Create', session?.user?.id);
     return NextResponse.json(

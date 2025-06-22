@@ -3,10 +3,10 @@ import { useState, useEffect, type ChangeEvent, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useToast } from '@/hooks/use-toast';
-import { Save, Palette, ImageUp, Trash2, Loader2, XCircle, PenSquare, ServerCrash, ShieldAlert, Settings2, Wallpaper, Droplets, Type, Sidebar as SidebarIcon, RotateCcw } from 'lucide-react';
+import { Save, Palette, ImageUp, Trash2, Loader2, XCircle, PenSquare, ServerCrash, ShieldAlert, Settings2, Wallpaper, Droplets, Type, Sidebar as SidebarIcon, RotateCcw, Eye, EyeOff, Monitor, Sun, Moon, Zap } from 'lucide-react';
 import Image from 'next/image';
 import { signIn, useSession } from 'next-auth/react';
 import { useRouter, usePathname } from 'next/navigation';
@@ -14,42 +14,46 @@ import type { SystemSetting, LoginPageBackgroundType, SystemSettingKey } from '@
 import { cn } from '@/lib/utils';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Separator } from '@/components/ui/separator';
+import { Badge } from '@/components/ui/badge';
 
 type ThemePreference = "light" | "dark" | "system";
 const DEFAULT_APP_NAME = "CandiTrack";
-
 const DEFAULT_PRIMARY_GRADIENT_START = "179 67% 66%";
 const DEFAULT_PRIMARY_GRADIENT_END = "238 74% 61%";
-
 const DEFAULT_LOGIN_BG_TYPE: LoginPageBackgroundType = "default";
 const DEFAULT_LOGIN_BG_COLOR1_HEX = "#F0F4F7"; 
 const DEFAULT_LOGIN_BG_COLOR2_HEX = "#3F51B5"; 
+const DEFAULT_LOGIN_LAYOUT_TYPE = 'center';
 
-// Default Sidebar colors (HSL strings) - using the NEW primary gradient defaults
-const DEFAULT_SIDEBAR_COLORS_BASE: Record<SystemSettingKey, string> = {
+type SidebarColorKey =
+  | 'sidebarBgStartL'
+  | 'sidebarBgEndL'
+  | 'sidebarTextL'
+  | 'sidebarActiveBgStartL'
+  | 'sidebarActiveBgEndL'
+  | 'sidebarActiveTextL'
+  | 'sidebarHoverBgL'
+  | 'sidebarHoverTextL'
+  | 'sidebarBorderL'
+  | 'sidebarBgStartD'
+  | 'sidebarBgEndD'
+  | 'sidebarTextD'
+  | 'sidebarActiveBgStartD'
+  | 'sidebarActiveBgEndD'
+  | 'sidebarActiveTextD'
+  | 'sidebarHoverBgD'
+  | 'sidebarHoverTextD'
+  | 'sidebarBorderD';
+
+const DEFAULT_SIDEBAR_COLORS_BASE: Record<SidebarColorKey, string> = {
   sidebarBgStartL: "220 25% 97%", sidebarBgEndL: "220 20% 94%", sidebarTextL: "220 25% 30%",
   sidebarActiveBgStartL: DEFAULT_PRIMARY_GRADIENT_START, sidebarActiveBgEndL: DEFAULT_PRIMARY_GRADIENT_END, sidebarActiveTextL: "0 0% 100%",      
   sidebarHoverBgL: "220 10% 92%", sidebarHoverTextL: "220 25% 25%", sidebarBorderL: "220 15% 85%",
   sidebarBgStartD: "220 15% 12%", sidebarBgEndD: "220 15% 9%", sidebarTextD: "210 30% 85%",
   sidebarActiveBgStartD: DEFAULT_PRIMARY_GRADIENT_START, sidebarActiveBgEndD: DEFAULT_PRIMARY_GRADIENT_END, sidebarActiveTextD: "0 0% 100%",      
-  sidebarHoverBgD: "220 15% 20%", sidebarHoverTextD: "210 30% 90%", sidebarBorderD: "220 15% 18%",
-  appName: DEFAULT_APP_NAME, appLogoDataUrl: '', appThemePreference: 'system', 
-  primaryGradientStart: DEFAULT_PRIMARY_GRADIENT_START, primaryGradientEnd: DEFAULT_PRIMARY_GRADIENT_END,
-  smtpHost: '', smtpPort: '', smtpUser: '', smtpSecure: 'true', smtpFromEmail: '',
-  n8nResumeWebhookUrl: '', n8nGenericPdfWebhookUrl: '', geminiApiKey: '',
-  loginPageBackgroundType: 'default', loginPageBackgroundImageUrl: '', 
-  loginPageBackgroundColor1: '#F0F4F7', loginPageBackgroundColor2: '#3F51B5'
+  sidebarHoverBgD: "220 15% 20%", sidebarHoverTextD: "210 30% 90%", sidebarBorderD: "220 15% 18%"
 };
-
-
-const PREFERENCE_SECTIONS = [
-  { id: 'appName', label: 'App Name', icon: Type, description: "Set the global name for the application." },
-  { id: 'logo', label: 'Application Logo', icon: ImageUp, description: "Upload or manage the application's logo." },
-  { id: 'theme', label: 'Theme Preference', icon: Palette, description: "Choose your preferred application theme." },
-  { id: 'primaryColors', label: 'Primary Color Theme', icon: Droplets, description: "Customize the primary gradient colors." },
-  { id: 'loginAppearance', label: 'Login Page Appearance', icon: Wallpaper, description: "Customize the background of the login page." },
-  { id: 'sidebarAppearance', label: 'Sidebar Colors', icon: SidebarIcon, description: "Customize the sidebar appearance for light and dark themes." },
-];
 
 interface SidebarColors {
   sidebarBgStartL: string; sidebarBgEndL: string; sidebarTextL: string;
@@ -61,7 +65,6 @@ interface SidebarColors {
   sidebarHoverBgD: string; sidebarHoverTextD: string; sidebarBorderD: string;
 }
 
-// Helper to create a fully typed initial state for SidebarColors
 const createInitialSidebarColors = (): SidebarColors => ({
   sidebarBgStartL: DEFAULT_SIDEBAR_COLORS_BASE.sidebarBgStartL,
   sidebarBgEndL: DEFAULT_SIDEBAR_COLORS_BASE.sidebarBgEndL,
@@ -83,7 +86,7 @@ const createInitialSidebarColors = (): SidebarColors => ({
   sidebarBorderD: DEFAULT_SIDEBAR_COLORS_BASE.sidebarBorderD,
 });
 
-
+// Color conversion utilities
 function parseHslString(hslString: string): { h: number; s: number; l: number } | null {
   const match = hslString?.match(/^(\d+)\s+(\d+)%\s+(\d+)%$/);
   if (!match) return null;
@@ -144,7 +147,6 @@ function convertHslStringToHex(hslString: string | null | undefined): string {
     return hslToHex(hslObj.h, hslObj.s, hslObj.l);
 }
 
-
 export default function PreferencesSettingsPage() {
   const { toast } = useToast();
   const [isClient, setIsClient] = useState(false);
@@ -155,31 +157,24 @@ export default function PreferencesSettingsPage() {
   const [fetchError, setFetchError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
 
+  // State management
   const [themePreference, setThemePreference] = useState<ThemePreference>('system');
   const [appName, setAppName] = useState<string>(DEFAULT_APP_NAME);
   const [selectedLogoFile, setSelectedLogoFile] = useState<File | null>(null);
   const [logoPreviewUrl, setLogoPreviewUrl] = useState<string | null>(null);
   const [savedLogoDataUrl, setSavedLogoDataUrl] = useState<string | null>(null);
-
   const [primaryGradientStart, setPrimaryGradientStart] = useState<string>(DEFAULT_PRIMARY_GRADIENT_START);
   const [primaryGradientEnd, setPrimaryGradientEnd] = useState<string>(DEFAULT_PRIMARY_GRADIENT_END);
-
   const [loginBgType, setLoginBgType] = useState<LoginPageBackgroundType>(DEFAULT_LOGIN_BG_TYPE);
   const [selectedLoginBgFile, setSelectedLoginBgFile] = useState<File | null>(null);
   const [loginBgImagePreviewUrl, setLoginBgImagePreviewUrl] = useState<string | null>(null);
   const [savedLoginBgImageUrl, setSavedLoginBgImageUrl] = useState<string | null>(null);
   const [loginBgColor1, setLoginBgColor1] = useState<string>(DEFAULT_LOGIN_BG_COLOR1_HEX);
   const [loginBgColor2, setLoginBgColor2] = useState<string>(DEFAULT_LOGIN_BG_COLOR2_HEX);
-
   const [sidebarColors, setSidebarColors] = useState<SidebarColors>(createInitialSidebarColors());
-  
-  const [activeSection, setActiveSection] = useState<string>(PREFERENCE_SECTIONS[0].id);
+  const [loginLayoutType, setLoginLayoutType] = useState('center');
 
-
-  const handleSidebarColorChange = (key: keyof SidebarColors, value: string) => {
-    setSidebarColors(prev => ({ ...prev, [key]: value }));
-  };
-
+  // Fetch system settings
   const fetchSystemSettings = useCallback(async () => {
     setIsLoading(true);
     setFetchError(null);
@@ -200,24 +195,26 @@ export default function PreferencesSettingsPage() {
       setPrimaryGradientStart(settingsMap.get('primaryGradientStart') || DEFAULT_PRIMARY_GRADIENT_START);
       setPrimaryGradientEnd(settingsMap.get('primaryGradientEnd') || DEFAULT_PRIMARY_GRADIENT_END);
       setLoginBgType((settingsMap.get('loginPageBackgroundType') as LoginPageBackgroundType) || DEFAULT_LOGIN_BG_TYPE);
-      const loginImgUrl = settingsMap.get('loginPageBackgroundImageUrl') || null;
-      setSavedLoginBgImageUrl(loginImgUrl);
-      setLoginBgImagePreviewUrl(loginImgUrl);
+      const loginBgUrl = settingsMap.get('loginPageBackgroundImageUrl') || null;
+      setSavedLoginBgImageUrl(loginBgUrl);
+      setLoginBgImagePreviewUrl(loginBgUrl);
       setLoginBgColor1(settingsMap.get('loginPageBackgroundColor1') || DEFAULT_LOGIN_BG_COLOR1_HEX);
       setLoginBgColor2(settingsMap.get('loginPageBackgroundColor2') || DEFAULT_LOGIN_BG_COLOR2_HEX);
-      
-      const newSidebarColorsData: SidebarColors = { ...createInitialSidebarColors() };
-      (Object.keys(newSidebarColorsData) as Array<keyof SidebarColors>).forEach(key => {
-        const dbValue = settingsMap.get(key as SystemSettingKey);
-        if (dbValue !== null && dbValue !== undefined) {
-          newSidebarColorsData[key] = dbValue;
+      setLoginLayoutType(settingsMap.get('loginPageLayoutType') || DEFAULT_LOGIN_LAYOUT_TYPE);
+
+      // Load sidebar colors
+      const newSidebarColors = createInitialSidebarColors();
+      Object.keys(newSidebarColors).forEach(key => {
+        const value = settingsMap.get(key);
+        if (value) {
+          (newSidebarColors as any)[key] = value;
         }
       });
-      setSidebarColors(newSidebarColorsData);
+      setSidebarColors(newSidebarColors);
 
-    } catch (error) {
-      console.error("Error fetching system settings:", error);
-      setFetchError((error as Error).message);
+    } catch (error: any) {
+      console.error('Failed to fetch system settings:', error);
+      setFetchError(error.message || 'Failed to load system settings');
     } finally {
       setIsLoading(false);
     }
@@ -225,186 +222,139 @@ export default function PreferencesSettingsPage() {
 
   useEffect(() => {
     setIsClient(true);
-    if (sessionStatus === 'unauthenticated') {
-      signIn(undefined, { callbackUrl: pathname });
-    } else if (sessionStatus === 'authenticated') {
-      if (session.user.role !== 'Admin' && !session.user.modulePermissions?.includes('SYSTEM_SETTINGS_MANAGE')) {
-        setFetchError("You do not have permission to manage application preferences.");
-        setIsLoading(false);
-      } else {
-        fetchSystemSettings();
-      }
+    if (sessionStatus === 'authenticated') {
+      fetchSystemSettings();
     }
-  }, [sessionStatus, session, pathname, fetchSystemSettings]);
+  }, [sessionStatus, fetchSystemSettings]);
 
-  useEffect(() => {
-    if (fetchError) {
-      toast({
-        title: "Error",
-        description: fetchError,
-        variant: "destructive",
-      });
-    }
-  }, [fetchError, toast]);
+  // Event handlers
+  const handleSidebarColorChange = (key: keyof SidebarColors, value: string) => {
+    setSidebarColors(prev => ({ ...prev, [key]: value }));
+  };
 
   const handleLogoFileChange = (event: ChangeEvent<HTMLInputElement>, type: 'appLogo' | 'loginBg') => {
     const file = event.target.files?.[0];
-    if (file) {
-      if (file.type.startsWith('image/')) {
-        if (file.size > 500 * 1024) {
-            toast({ title: "Image Too Large", description: "Please select an image smaller than 500KB.", variant: "destructive" });
-            if (type === 'appLogo') { setSelectedLogoFile(null); setLogoPreviewUrl(savedLogoDataUrl); }
-            else { setSelectedLoginBgFile(null); setLoginBgImagePreviewUrl(savedLoginBgImageUrl); }
-            event.target.value = '';
-            return;
-        }
-        const reader = new FileReader();
-        reader.onloadend = () => {
-          if (type === 'appLogo') {
-            setSelectedLogoFile(file);
-            setLogoPreviewUrl(reader.result as string);
-          } else {
-            setSelectedLoginBgFile(file);
-            setLoginBgImagePreviewUrl(reader.result as string);
-          }
-        };
-        reader.readAsDataURL(file);
-      } else {
-        toast({ title: "Invalid File Type", description: "Please select an image file (e.g., PNG, JPG, SVG, WEBP).", variant: "destructive" });
-      }
+    if (!file) return;
+
+    if (file.size > 500 * 1024) {
+      toast({
+        title: "File too large",
+        description: "Please select an image smaller than 500KB.",
+        variant: "destructive",
+      });
+      return;
     }
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const dataUrl = e.target?.result as string;
+      if (type === 'appLogo') {
+        setSelectedLogoFile(file);
+        setLogoPreviewUrl(dataUrl);
+      } else {
+        setSelectedLoginBgFile(file);
+        setLoginBgImagePreviewUrl(dataUrl);
+      }
+    };
+    reader.readAsDataURL(file);
   };
 
   const removeSelectedImage = async (type: 'appLogo' | 'loginBg', clearSaved: boolean = false) => {
-    const fileInputId = type === 'appLogo' ? 'app-logo-upload' : 'login-bg-image-upload';
-    const fileInput = document.getElementById(fileInputId) as HTMLInputElement;
-    if (fileInput) fileInput.value = '';
-
     if (type === 'appLogo') {
       setSelectedLogoFile(null);
+      setLogoPreviewUrl(null);
       if (clearSaved) {
-        await saveSpecificSetting('appLogoDataUrl', null);
         setSavedLogoDataUrl(null);
-        setLogoPreviewUrl(null);
-        toast({ title: "App Logo Cleared", description: "The application logo has been reset." });
-        window.dispatchEvent(new CustomEvent('appConfigChanged', { detail: { logoUrl: null } }));
-      } else {
-        setLogoPreviewUrl(savedLogoDataUrl);
+        await saveSpecificSetting('appLogoDataUrl', null);
       }
     } else {
       setSelectedLoginBgFile(null);
+      setLoginBgImagePreviewUrl(null);
       if (clearSaved) {
-        await saveSpecificSetting('loginPageBackgroundImageUrl', null);
         setSavedLoginBgImageUrl(null);
-        setLoginBgImagePreviewUrl(null);
-        toast({ title: "Login Background Image Cleared", description: "The login page background image has been reset." });
-      } else {
-        setLoginBgImagePreviewUrl(savedLoginBgImageUrl);
+        await saveSpecificSetting('loginPageBackgroundImageUrl', null);
       }
     }
   };
 
   const saveSpecificSetting = async (key: SystemSettingKey, value: string | null) => {
-    setIsSaving(true);
     try {
       const response = await fetch('/api/settings/system-settings', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify([{ key, value }]),
+        body: JSON.stringify({ key, value }),
       });
-      if (!response.ok) throw new Error(`Failed to save ${key} on server.`);
+      if (!response.ok) throw new Error('Failed to save setting');
     } catch (error) {
-      toast({ title: `Error Saving ${key}`, description: (error as Error).message, variant: "destructive" });
-    } finally {
-      setIsSaving(false);
+      console.error(`Failed to save ${key}:`, error);
+      throw error;
     }
   };
 
   const handleSavePreferences = async () => {
-    if (!isClient) return;
     setIsSaving(true);
-    const settingsToUpdate: SystemSetting[] = [
-      { key: 'appName', value: appName || DEFAULT_APP_NAME },
-      { key: 'appThemePreference', value: themePreference },
-      { key: 'primaryGradientStart', value: primaryGradientStart },
-      { key: 'primaryGradientEnd', value: primaryGradientEnd },
-      { key: 'loginPageBackgroundType', value: loginBgType },
-      { key: 'loginPageBackgroundColor1', value: loginBgColor1 },
-      { key: 'loginPageBackgroundColor2', value: loginBgColor2 },
-      // Serialize sidebarColors correctly
-      ...(Object.keys(sidebarColors) as Array<keyof SidebarColors>).map(key => ({
-        key: key as SystemSettingKey, // Cast here, ensure SidebarColors keys are subset of SystemSettingKey
-        value: sidebarColors[key]
-      })),
-    ];
-    if (selectedLogoFile && logoPreviewUrl) {
-      settingsToUpdate.push({ key: 'appLogoDataUrl', value: logoPreviewUrl });
-    }
-    if (selectedLoginBgFile && loginBgImagePreviewUrl && loginBgType === 'image') {
-      settingsToUpdate.push({ key: 'loginPageBackgroundImageUrl', value: loginBgImagePreviewUrl });
-    } else if (loginBgType !== 'image' && savedLoginBgImageUrl !== null) {
-      settingsToUpdate.push({ key: 'loginPageBackgroundImageUrl', value: null });
-    }
-
     try {
-      const response = await fetch('/api/settings/system-settings', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(settingsToUpdate),
-      });
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ message: 'Failed to save preferences to server' }));
-        throw new Error(errorData.message);
-      }
-      const updatedSettingsList: SystemSetting[] = await response.json();
-      const updatedSettingsMap = new Map(updatedSettingsList.map(s => [s.key, s.value]));
-      
-      // Re-populate states from the server response to ensure consistency
-      setAppName(updatedSettingsMap.get('appName') || DEFAULT_APP_NAME);
-      setThemePreference((updatedSettingsMap.get('appThemePreference') as ThemePreference) || 'system');
-      const updatedLogoUrl = updatedSettingsMap.get('appLogoDataUrl') || null;
-      setSavedLogoDataUrl(updatedLogoUrl);
-      setLogoPreviewUrl(updatedLogoUrl);
-      setPrimaryGradientStart(updatedSettingsMap.get('primaryGradientStart') || DEFAULT_PRIMARY_GRADIENT_START);
-      setPrimaryGradientEnd(updatedSettingsMap.get('primaryGradientEnd') || DEFAULT_PRIMARY_GRADIENT_END);
-      
-      const updatedLoginBgTypeVal = (updatedSettingsMap.get('loginPageBackgroundType') as LoginPageBackgroundType) || DEFAULT_LOGIN_BG_TYPE;
-      const updatedLoginBgImageVal = updatedSettingsMap.get('loginPageBackgroundImageUrl') || null;
-      setLoginBgType(updatedLoginBgTypeVal);
-      setSavedLoginBgImageUrl(updatedLoginBgImageVal);
-      setLoginBgImagePreviewUrl(updatedLoginBgTypeVal === 'image' ? updatedLoginBgImageVal : null);
-      setLoginBgColor1(updatedSettingsMap.get('loginPageBackgroundColor1') || DEFAULT_LOGIN_BG_COLOR1_HEX);
-      setLoginBgColor2(updatedSettingsMap.get('loginPageBackgroundColor2') || DEFAULT_LOGIN_BG_COLOR2_HEX);
-      
-      const newSidebarColorsData: SidebarColors = { ...createInitialSidebarColors() };
-      (Object.keys(newSidebarColorsData) as Array<keyof SidebarColors>).forEach(key => {
-        const dbValue = updatedSettingsMap.get(key as SystemSettingKey);
-        // Ensure we only assign if dbValue is string, otherwise default from createInitialSidebarColors is used
-        if (typeof dbValue === 'string') {
-          newSidebarColorsData[key] = dbValue;
-        }
-      });
-      setSidebarColors(newSidebarColorsData);
+      const settingsToSave = [
+        { key: 'appName' as SystemSettingKey, value: appName },
+        { key: 'appThemePreference' as SystemSettingKey, value: themePreference },
+        { key: 'primaryGradientStart' as SystemSettingKey, value: primaryGradientStart },
+        { key: 'primaryGradientEnd' as SystemSettingKey, value: primaryGradientEnd },
+        { key: 'loginPageBackgroundType' as SystemSettingKey, value: loginBgType },
+        { key: 'loginPageBackgroundColor1' as SystemSettingKey, value: loginBgColor1 },
+        { key: 'loginPageBackgroundColor2' as SystemSettingKey, value: loginBgColor2 },
+        { key: 'loginPageLayoutType' as SystemSettingKey, value: loginLayoutType },
+      ];
 
-      toast({ title: 'Preferences Saved', description: 'Your application preferences have been saved to the server.', variant: 'success' });
-      window.dispatchEvent(new CustomEvent('appConfigChanged', {
-        detail: {
-          appName: updatedSettingsMap.get('appName') || DEFAULT_APP_NAME,
-          logoUrl: updatedLogoUrl,
-          primaryGradientStart: updatedSettingsMap.get('primaryGradientStart') || DEFAULT_PRIMARY_GRADIENT_START,
-          primaryGradientEnd: updatedSettingsMap.get('primaryGradientEnd') || DEFAULT_PRIMARY_GRADIENT_END,
-        }
-      }));
-    } catch (error) {
-      console.error("Error saving preferences to server:", error);
-      toast({ title: "Error Saving Preferences", description: (error as Error).message, variant: "destructive" });
+      // Add sidebar colors
+      Object.entries(sidebarColors).forEach(([key, value]) => {
+        settingsToSave.push({ key: key as SystemSettingKey, value });
+      });
+
+      // Save all settings
+      await Promise.all(settingsToSave.map(setting => saveSpecificSetting(setting.key, setting.value)));
+
+      // Handle file uploads
+      if (selectedLogoFile) {
+        const logoDataUrl = await new Promise<string>((resolve) => {
+          const reader = new FileReader();
+          reader.onload = (e) => resolve(e.target?.result as string);
+          reader.readAsDataURL(selectedLogoFile);
+        });
+        await saveSpecificSetting('appLogoDataUrl', logoDataUrl);
+        setSelectedLogoFile(null);
+        setSavedLogoDataUrl(logoDataUrl);
+        setLogoPreviewUrl(logoDataUrl);
+      }
+
+      if (selectedLoginBgFile) {
+        const bgDataUrl = await new Promise<string>((resolve) => {
+          const reader = new FileReader();
+          reader.onload = (e) => resolve(e.target?.result as string);
+          reader.readAsDataURL(selectedLoginBgFile);
+        });
+        await saveSpecificSetting('loginPageBackgroundImageUrl', bgDataUrl);
+        setSelectedLoginBgFile(null);
+        setSavedLoginBgImageUrl(bgDataUrl);
+        setLoginBgImagePreviewUrl(bgDataUrl);
+      }
+
+      toast({
+        title: "Preferences Saved",
+        description: "Your application preferences have been saved successfully.",
+      });
+    } catch (error: any) {
+      console.error('Failed to save preferences:', error);
+      toast({
+        title: "Save Failed",
+        description: error.message || "Failed to save preferences. Please try again.",
+        variant: "destructive",
+      });
     } finally {
       setIsSaving(false);
-      setSelectedLogoFile(null);
-      setSelectedLoginBgFile(null);
     }
   };
 
+  // Reset functions
   const resetPrimaryColors = () => {
     setPrimaryGradientStart(DEFAULT_PRIMARY_GRADIENT_START);
     setPrimaryGradientEnd(DEFAULT_PRIMARY_GRADIENT_END);
@@ -416,13 +366,24 @@ export default function PreferencesSettingsPage() {
     setLoginBgColor1(DEFAULT_LOGIN_BG_COLOR1_HEX);
     setLoginBgColor2(DEFAULT_LOGIN_BG_COLOR2_HEX);
     setSelectedLoginBgFile(null);
-    setLoginBgImagePreviewUrl(null); 
-    toast({ title: "Login Background Reset", description: "Login page background reset to default. Click 'Save All' to persist." });
+    setLoginBgImagePreviewUrl(null);
+    toast({ title: "Login Background Reset", description: "Login background reset to default. Click 'Save All' to persist." });
   };
 
   const resetSidebarColors = (themeType: 'Light' | 'Dark') => {
-    const defaultColorsForTheme = createInitialSidebarColors();
     const suffix = themeType === 'Light' ? 'L' : 'D';
+    const defaultColorsForTheme = {
+      [`sidebarBgStart${suffix}`]: DEFAULT_SIDEBAR_COLORS_BASE[`sidebarBgStart${suffix}` as SidebarColorKey],
+      [`sidebarBgEnd${suffix}`]: DEFAULT_SIDEBAR_COLORS_BASE[`sidebarBgEnd${suffix}` as SidebarColorKey],
+      [`sidebarText${suffix}`]: DEFAULT_SIDEBAR_COLORS_BASE[`sidebarText${suffix}` as SidebarColorKey],
+      [`sidebarActiveBgStart${suffix}`]: DEFAULT_SIDEBAR_COLORS_BASE[`sidebarActiveBgStart${suffix}` as SidebarColorKey],
+      [`sidebarActiveBgEnd${suffix}`]: DEFAULT_SIDEBAR_COLORS_BASE[`sidebarActiveBgEnd${suffix}` as SidebarColorKey],
+      [`sidebarActiveText${suffix}`]: DEFAULT_SIDEBAR_COLORS_BASE[`sidebarActiveText${suffix}` as SidebarColorKey],
+      [`sidebarHoverBg${suffix}`]: DEFAULT_SIDEBAR_COLORS_BASE[`sidebarHoverBg${suffix}` as SidebarColorKey],
+      [`sidebarHoverText${suffix}`]: DEFAULT_SIDEBAR_COLORS_BASE[`sidebarHoverText${suffix}` as SidebarColorKey],
+      [`sidebarBorder${suffix}`]: DEFAULT_SIDEBAR_COLORS_BASE[`sidebarBorder${suffix}` as SidebarColorKey],
+    };
+
     setSidebarColors(prev => ({
       ...prev,
       [`sidebarBgStart${suffix}`]: defaultColorsForTheme[`sidebarBgStart${suffix}` as keyof SidebarColors],
@@ -438,9 +399,13 @@ export default function PreferencesSettingsPage() {
     toast({ title: `${themeType} Sidebar Colors Reset`, description: `${themeType} sidebar colors reset to default. Click 'Save All' to persist.` });
   };
 
-
+  // Loading and error states
   if (sessionStatus === 'loading' || (isLoading && !fetchError && !isClient)) {
-    return ( <div className="flex h-full items-center justify-center"><Loader2 className="h-16 w-16 animate-spin text-primary" /></div> );
+    return (
+      <div className="flex h-full items-center justify-center">
+        <Loader2 className="h-16 w-16 animate-spin text-primary" />
+      </div>
+    );
   }
 
   if (fetchError && !isLoading) {
@@ -449,93 +414,444 @@ export default function PreferencesSettingsPage() {
         <ServerCrash className="w-16 h-16 text-destructive mb-4" />
         <h2 className="text-2xl font-semibold text-foreground mb-2">Access Denied or Error</h2>
         <p className="text-muted-foreground mb-4 max-w-md">{fetchError}</p>
-        <Button onClick={() => router.push('/')} className="btn-hover-primary-gradient">Go to Dashboard</Button>
+        <Button onClick={() => router.push('/')} className="btn-hover-primary-gradient">
+          Go to Dashboard
+        </Button>
       </div>
     );
   }
 
-  const renderSectionContent = (sectionId: string) => {
-    switch (sectionId) {
-      case 'appName':
-        return (<div className="space-y-2"><Label htmlFor="app-name-input" className="text-sm">Application Name</Label><Input id="app-name-input" type="text" value={appName || ''} onChange={(e) => setAppName(e.target.value)} className="mt-1" placeholder="e.g., My ATS" /></div>);
-      case 'theme':
-        return (
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Application Preferences</h1>
+          <p className="text-muted-foreground">
+            Customize your application's appearance and behavior
+          </p>
+        </div>
+        <Button 
+          onClick={handleSavePreferences} 
+          className="btn-primary-gradient" 
+          disabled={isSaving || isLoading}
+        >
+          {isSaving ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Saving...
+            </>
+          ) : (
+            <>
+              <Save className="mr-2 h-4 w-4" />
+              Save All Changes
+            </>
+          )}
+        </Button>
+      </div>
+
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+        {/* Branding Section */}
+        <Card className="lg:col-span-2">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              Branding & Identity
+            </CardTitle>
+            <CardDescription>
+              Customize your application's name and logo
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
             <div className="space-y-2">
-                <Label className="text-sm">Theme Preference</Label>
-                <RadioGroup value={themePreference} onValueChange={(value) => setThemePreference(value as ThemePreference)} className="flex flex-col sm:flex-row sm:space-x-6 space-y-2 sm:space-y-0 mt-1">
-                    <div className="flex items-center space-x-2"><RadioGroupItem value="light" id="theme-light" /><Label htmlFor="theme-light" className="font-normal">Light</Label></div>
-                    <div className="flex items-center space-x-2"><RadioGroupItem value="dark" id="theme-dark" /><Label htmlFor="theme-dark" className="font-normal">Dark</Label></div>
-                    <div className="flex items-center space-x-2"><RadioGroupItem value="system" id="theme-system" /><Label htmlFor="theme-system" className="font-normal">System Default</Label></div>
-                </RadioGroup>
-                <p className="text-xs text-muted-foreground mt-2">This sets your preferred theme. Actual theme switching is handled by the header toggle using browser settings.</p>
+              <Label htmlFor="app-name-input" className="text-sm font-medium">
+                Application Name
+              </Label>
+              <Input 
+                id="app-name-input" 
+                type="text" 
+                value={appName || ''} 
+                onChange={(e) => setAppName(e.target.value)} 
+                placeholder="Enter application name"
+                className="max-w-md"
+              />
             </div>
-        );
-      case 'logo':
-        return (
+
             <div className="space-y-2">
-                <Label htmlFor="app-logo-upload" className="text-sm">App Logo <span className="text-xs text-muted-foreground">(Recommended: square, max 500KB)</span></Label>
-                <Input id="app-logo-upload" type="file" accept="image/*" onChange={(e) => handleLogoFileChange(e, 'appLogo')} className="mt-1" />
-                {logoPreviewUrl && (<div className="mt-3 p-2 border rounded-md inline-flex items-center gap-3"><Image src={logoPreviewUrl} alt="Logo preview" width={48} height={48} className="h-12 w-12 object-contain rounded" data-ai-hint="company logo"/><Button variant="ghost" size="icon" onClick={() => removeSelectedImage('appLogo', false)} className="h-7 w-7"> <XCircle className="h-4 w-4 text-muted-foreground hover:text-destructive"/> </Button></div>)}
-                {savedLogoDataUrl && ( <div className="mt-2"> <Button variant="outline" size="sm" onClick={() => removeSelectedImage('appLogo', true)} disabled={isSaving}> {isSaving && savedLogoDataUrl === null ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Trash2 className="mr-2 h-4 w-4"/>} Reset to Default Logo </Button> </div> )}
+              <Label htmlFor="app-logo-upload" className="text-sm font-medium">
+                Application Logo
+              </Label>
+              <div className="flex items-center gap-4">
+                <Input 
+                  id="app-logo-upload" 
+                  type="file" 
+                  accept="image/*" 
+                  onChange={(e) => handleLogoFileChange(e, 'appLogo')} 
+                  className="max-w-md"
+                />
+                {logoPreviewUrl && (
+                  <div className="flex items-center gap-2 p-2 border rounded-md">
+                    <Image 
+                      src={logoPreviewUrl} 
+                      alt="Logo preview" 
+                      width={32} 
+                      height={32} 
+                      className="h-8 w-8 object-contain rounded"
+                    />
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      onClick={() => removeSelectedImage('appLogo', false)}
+                    >
+                      <XCircle className="h-4 w-4" />
+                    </Button>
+                  </div>
+                )}
+              </div>
+              {savedLogoDataUrl && (
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => removeSelectedImage('appLogo', true)} 
+                  disabled={isSaving}
+                >
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  Remove Saved Logo
+                </Button>
+              )}
             </div>
-        );
-      case 'primaryColors':
-        return (
-            <div className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div>
-                        <Label htmlFor="primary-gradient-start" className="text-sm">Gradient Start Color (HSL)</Label>
-                        <div className="flex items-center gap-2 mt-1">
-                            <Input id="primary-gradient-start" type="text" value={primaryGradientStart || ''} onChange={(e) => setPrimaryGradientStart(e.target.value)} placeholder="e.g., 179 67% 66%" className="flex-grow"/>
-                            <Input type="color" value={convertHslStringToHex(primaryGradientStart)} onChange={(e) => setPrimaryGradientStart(hexToHslString(e.target.value))} className="w-10 h-10 p-1 flex-shrink-0 rounded-md border" title="Pick color"/>
-                        </div>
-                        <p className="text-xs text-muted-foreground mt-0.5">Enter as HSL string (e.g., &quot;179 67% 66%&quot;).</p>
-                    </div>
-                    <div>
-                        <Label htmlFor="primary-gradient-end" className="text-sm">Gradient End Color (HSL)</Label>
-                        <div className="flex items-center gap-2 mt-1">
-                            <Input id="primary-gradient-end" type="text" value={primaryGradientEnd || ''} onChange={(e) => setPrimaryGradientEnd(e.target.value)} placeholder="e.g., 238 74% 61%" className="flex-grow"/>
-                            <Input type="color" value={convertHslStringToHex(primaryGradientEnd)} onChange={(e) => setPrimaryGradientEnd(hexToHslString(e.target.value))} className="w-10 h-10 p-1 flex-shrink-0 rounded-md border" title="Pick color"/>
-                        </div>
-                        <p className="text-xs text-muted-foreground mt-0.5">Enter as HSL string (e.g., &quot;238 74% 61%&quot;).</p>
-                    </div>
+          </CardContent>
+        </Card>
+
+        {/* Theme Section */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Palette className="h-5 w-5 text-primary" />
+              Theme
+            </CardTitle>
+            <CardDescription>
+              Choose your preferred theme
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <RadioGroup 
+              value={themePreference} 
+              onValueChange={(value) => setThemePreference(value as ThemePreference)}
+            >
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="light" id="theme-light" />
+                <Label htmlFor="theme-light" className="flex items-center gap-2">
+                  <Sun className="h-4 w-4" />
+                  Light
+                </Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="dark" id="theme-dark" />
+                <Label htmlFor="theme-dark" className="flex items-center gap-2">
+                  <Moon className="h-4 w-4" />
+                  Dark
+                </Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="system" id="theme-system" />
+                <Label htmlFor="theme-system" className="flex items-center gap-2">
+                  <Monitor className="h-4 w-4" />
+                  System
+                </Label>
+              </div>
+            </RadioGroup>
+          </CardContent>
+        </Card>
+
+        {/* Primary Colors Section */}
+        <Card className="lg:col-span-2">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Droplets className="h-5 w-5 text-primary" />
+              Primary Color Theme
+            </CardTitle>
+            <CardDescription>
+              Customize the primary gradient colors used throughout the application
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="primary-gradient-start" className="text-sm font-medium">
+                  Gradient Start Color
+                </Label>
+                <div className="flex items-center gap-2">
+                  <Input 
+                    id="primary-gradient-start" 
+                    type="text" 
+                    value={primaryGradientStart || ''} 
+                    onChange={(e) => setPrimaryGradientStart(e.target.value)} 
+                    placeholder="179 67% 66%"
+                  />
+                  <Input 
+                    type="color" 
+                    value={convertHslStringToHex(primaryGradientStart)} 
+                    onChange={(e) => setPrimaryGradientStart(hexToHslString(e.target.value))} 
+                    className="w-12 h-10 p-1 rounded-md border"
+                  />
                 </div>
-                <Button variant="outline" size="sm" onClick={resetPrimaryColors} disabled={isSaving}><RotateCcw className="mr-2 h-4 w-4"/>Reset Primary Colors</Button>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="primary-gradient-end" className="text-sm font-medium">
+                  Gradient End Color
+                </Label>
+                <div className="flex items-center gap-2">
+                  <Input 
+                    id="primary-gradient-end" 
+                    type="text" 
+                    value={primaryGradientEnd || ''} 
+                    onChange={(e) => setPrimaryGradientEnd(e.target.value)} 
+                    placeholder="238 74% 61%"
+                  />
+                  <Input 
+                    type="color" 
+                    value={convertHslStringToHex(primaryGradientEnd)} 
+                    onChange={(e) => setPrimaryGradientEnd(hexToHslString(e.target.value))} 
+                    className="w-12 h-10 p-1 rounded-md border"
+                  />
+                </div>
+              </div>
             </div>
-        );
-      case 'loginAppearance':
-        return (
-            <div className="space-y-4">
-                <div><Label className="text-sm">Background Type</Label><RadioGroup value={loginBgType} onValueChange={(value) => setLoginBgType(value as LoginPageBackgroundType)} className="flex flex-col sm:flex-row sm:space-x-4 space-y-2 sm:space-y-0 mt-1"><div className="flex items-center space-x-2"><RadioGroupItem value="default" id="loginbg-default" /><Label htmlFor="loginbg-default" className="font-normal">Default</Label></div><div className="flex items-center space-x-2"><RadioGroupItem value="image" id="loginbg-image" /><Label htmlFor="loginbg-image" className="font-normal">Image</Label></div><div className="flex items-center space-x-2"><RadioGroupItem value="color" id="loginbg-color" /><Label htmlFor="loginbg-color" className="font-normal">Single Color</Label></div><div className="flex items-center space-x-2"><RadioGroupItem value="gradient" id="loginbg-gradient" /><Label htmlFor="loginbg-gradient" className="font-normal">Gradient</Label></div></RadioGroup></div>
-                {loginBgType === 'image' && (<div><Label htmlFor="login-bg-image-upload" className="text-sm">Login Background Image <span className="text-xs text-muted-foreground">(Max 500KB)</span></Label><Input id="login-bg-image-upload" type="file" accept="image/*" onChange={(e) => handleLogoFileChange(e, 'loginBg')} className="mt-1" />{loginBgImagePreviewUrl && (<div className="mt-3 p-2 border rounded-md inline-flex items-center gap-3"><Image src={loginBgImagePreviewUrl} alt="Login background preview" width={96} height={54} className="h-12 w-20 object-cover rounded" data-ai-hint="abstract background"/><Button variant="ghost" size="icon" onClick={() => removeSelectedImage('loginBg', false)} className="h-7 w-7"> <XCircle className="h-4 w-4 text-muted-foreground hover:text-destructive"/> </Button></div>)}{savedLoginBgImageUrl && ( <div className="mt-2"> <Button variant="outline" size="sm" onClick={() => removeSelectedImage('loginBg', true)} disabled={isSaving}> {isSaving && savedLoginBgImageUrl === null ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Trash2 className="mr-2 h-4 w-4"/>} Clear Saved Image </Button> </div> )}</div>)}
-                {loginBgType === 'color' && (<div><Label htmlFor="login-bg-color1" className="text-sm">Background Color</Label><div className="flex items-center gap-2 mt-1"><Input id="login-bg-color1" type="color" value={loginBgColor1 || ''} onChange={(e) => setLoginBgColor1(e.target.value)} className="w-20 h-10 p-1 rounded-md border" /><Input type="text" value={loginBgColor1 || ''} onChange={(e) => setLoginBgColor1(e.target.value)} placeholder="#RRGGBB" className="max-w-[100px]" /></div></div>)}
-                {loginBgType === 'gradient' && (<div className="space-y-2"><div><Label htmlFor="login-bg-gradient-color1" className="text-sm">Gradient Color 1</Label><div className="flex items-center gap-2 mt-1"><Input id="login-bg-gradient-color1" type="color" value={loginBgColor1 || ''} onChange={(e) => setLoginBgColor1(e.target.value)} className="w-20 h-10 p-1 rounded-md border" /><Input type="text" value={loginBgColor1 || ''} onChange={(e) => setLoginBgColor1(e.target.value)} placeholder="#RRGGBB" className="max-w-[100px]" /></div></div><div><Label htmlFor="login-bg-gradient-color2" className="text-sm">Gradient Color 2</Label><div className="flex items-center gap-2 mt-1"><Input id="login-bg-gradient-color2" type="color" value={loginBgColor2 || ''} onChange={(e) => setLoginBgColor2(e.target.value)} className="w-20 h-10 p-1 rounded-md border" /><Input type="text" value={loginBgColor2 || ''} onChange={(e) => setLoginBgColor2(e.target.value)} placeholder="#RRGGBB" className="max-w-[100px]" /></div></div></div>)}
-                <Button variant="outline" size="sm" onClick={resetLoginBackground} disabled={isSaving}><RotateCcw className="mr-2 h-4 w-4"/>Reset Login Background</Button>
+            <Button variant="outline" size="sm" onClick={resetPrimaryColors}>
+              <RotateCcw className="mr-2 h-4 w-4" />
+              Reset to Default
+            </Button>
+          </CardContent>
+        </Card>
+
+        {/* Login Page Section */}
+        <Card className="lg:col-span-2">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Wallpaper className="h-5 w-5 text-primary" />
+              Login Page Appearance
+            </CardTitle>
+            <CardDescription>
+              Customize the background of the login page
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Label className="text-sm font-medium">Background Type</Label>
+              <RadioGroup 
+                value={loginBgType} 
+                onValueChange={(value) => setLoginBgType(value as LoginPageBackgroundType)}
+              >
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="default" id="loginbg-default" />
+                    <Label htmlFor="loginbg-default" className="text-sm">Default</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="image" id="loginbg-image" />
+                    <Label htmlFor="loginbg-image" className="text-sm">Image</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="color" id="loginbg-color" />
+                    <Label htmlFor="loginbg-color" className="text-sm">Color</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="gradient" id="loginbg-gradient" />
+                    <Label htmlFor="loginbg-gradient" className="text-sm">Gradient</Label>
+                  </div>
+                </div>
+              </RadioGroup>
             </div>
-        );
-       case 'sidebarAppearance':
-        return (
+
+            {loginBgType === 'image' && (
+              <div className="space-y-2">
+                <Label htmlFor="login-bg-image-upload" className="text-sm font-medium">
+                  Background Image
+                </Label>
+                <div className="flex items-center gap-4">
+                  <Input 
+                    id="login-bg-image-upload" 
+                    type="file" 
+                    accept="image/*" 
+                    onChange={(e) => handleLogoFileChange(e, 'loginBg')} 
+                  />
+                  {loginBgImagePreviewUrl && (
+                    <div className="flex items-center gap-2 p-2 border rounded-md">
+                      <Image 
+                        src={loginBgImagePreviewUrl} 
+                        alt="Background preview" 
+                        width={48} 
+                        height={27} 
+                        className="h-6 w-10 object-cover rounded"
+                      />
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        onClick={() => removeSelectedImage('loginBg', false)}
+                      >
+                        <XCircle className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  )}
+                </div>
+                {savedLoginBgImageUrl && (
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => removeSelectedImage('loginBg', true)} 
+                    disabled={isSaving}
+                  >
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    Remove Saved Image
+                  </Button>
+                )}
+              </div>
+            )}
+
+            {loginBgType === 'color' && (
+              <div className="space-y-2">
+                <Label htmlFor="login-bg-color1" className="text-sm font-medium">
+                  Background Color
+                </Label>
+                <div className="flex items-center gap-2">
+                  <Input 
+                    id="login-bg-color1" 
+                    type="color" 
+                    value={loginBgColor1 || ''} 
+                    onChange={(e) => setLoginBgColor1(e.target.value)} 
+                    className="w-20 h-10 p-1 rounded-md border"
+                  />
+                  <Input 
+                    type="text" 
+                    value={loginBgColor1 || ''} 
+                    onChange={(e) => setLoginBgColor1(e.target.value)} 
+                    placeholder="#RRGGBB"
+                    className="max-w-[120px]"
+                  />
+                </div>
+              </div>
+            )}
+
+            {loginBgType === 'gradient' && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="login-bg-gradient-color1" className="text-sm font-medium">
+                    Gradient Color 1
+                  </Label>
+                  <div className="flex items-center gap-2">
+                    <Input 
+                      id="login-bg-gradient-color1" 
+                      type="color" 
+                      value={loginBgColor1 || ''} 
+                      onChange={(e) => setLoginBgColor1(e.target.value)} 
+                      className="w-20 h-10 p-1 rounded-md border"
+                    />
+                    <Input 
+                      type="text" 
+                      value={loginBgColor1 || ''} 
+                      onChange={(e) => setLoginBgColor1(e.target.value)} 
+                      placeholder="#RRGGBB"
+                      className="max-w-[120px]"
+                    />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="login-bg-gradient-color2" className="text-sm font-medium">
+                    Gradient Color 2
+                  </Label>
+                  <div className="flex items-center gap-2">
+                    <Input 
+                      id="login-bg-gradient-color2" 
+                      type="color" 
+                      value={loginBgColor2 || ''} 
+                      onChange={(e) => setLoginBgColor2(e.target.value)} 
+                      className="w-20 h-10 p-1 rounded-md border"
+                    />
+                    <Input 
+                      type="text" 
+                      value={loginBgColor2 || ''} 
+                      onChange={(e) => setLoginBgColor2(e.target.value)} 
+                      placeholder="#RRGGBB"
+                      className="max-w-[120px]"
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <div className="space-y-2">
+              <Label className="text-sm font-medium">Login Layout</Label>
+              <RadioGroup value={loginLayoutType} onValueChange={setLoginLayoutType} className="flex flex-row gap-4 mt-1">
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="center" id="loginlayout-center" />
+                  <Label htmlFor="loginlayout-center" className="text-sm">Center Box</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="2column" id="loginlayout-2column" />
+                  <Label htmlFor="loginlayout-2column" className="text-sm">2-Column (Login as Left Menu)</Label>
+                </div>
+              </RadioGroup>
+              <p className="text-xs text-muted-foreground mt-1">Choose how the login form is displayed: centered box or 2-column with login as a left menu.</p>
+            </div>
+
+            <Button variant="outline" size="sm" onClick={resetLoginBackground}>
+              <RotateCcw className="mr-2 h-4 w-4" />
+              Reset to Default
+            </Button>
+          </CardContent>
+        </Card>
+
+        {/* Sidebar Colors Section */}
+        <Card className="lg:col-span-3">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <SidebarIcon className="h-5 w-5 text-primary" />
+              Sidebar Colors
+            </CardTitle>
+            <CardDescription>
+              Customize the sidebar appearance for light and dark themes
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
             <Tabs defaultValue="light-sidebar" className="w-full">
-                <TabsList className="grid w-full grid-cols-2 mb-4">
-                    <TabsTrigger value="light-sidebar">Light Theme Sidebar</TabsTrigger>
-                    <TabsTrigger value="dark-sidebar">Dark Theme Sidebar</TabsTrigger>
-                </TabsList>
-                <TabsContent value="light-sidebar">
-                    {renderSidebarColorInputs('Light')}
-                     <Button variant="outline" size="sm" onClick={() => resetSidebarColors('Light')} disabled={isSaving} className="mt-4"><RotateCcw className="mr-2 h-4 w-4"/>Reset Light Sidebar Colors</Button>
-                </TabsContent>
-                <TabsContent value="dark-sidebar">
-                    {renderSidebarColorInputs('Dark')}
-                    <Button variant="outline" size="sm" onClick={() => resetSidebarColors('Dark')} disabled={isSaving} className="mt-4"><RotateCcw className="mr-2 h-4 w-4"/>Reset Dark Sidebar Colors</Button>
-                </TabsContent>
+              <TabsList className="grid w-full grid-cols-2 mb-6">
+                <TabsTrigger value="light-sidebar" className="flex items-center gap-2">
+                  <Sun className="h-4 w-4" />
+                  Light Theme
+                </TabsTrigger>
+                <TabsTrigger value="dark-sidebar" className="flex items-center gap-2">
+                  <Moon className="h-4 w-4" />
+                  Dark Theme
+                </TabsTrigger>
+              </TabsList>
+              
+              <TabsContent value="light-sidebar" className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {renderSidebarColorInputs('Light')}
+                </div>
+                <Button variant="outline" size="sm" onClick={() => resetSidebarColors('Light')}>
+                  <RotateCcw className="mr-2 h-4 w-4" />
+                  Reset Light Theme Colors
+                </Button>
+              </TabsContent>
+              
+              <TabsContent value="dark-sidebar" className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {renderSidebarColorInputs('Dark')}
+                </div>
+                <Button variant="outline" size="sm" onClick={() => resetSidebarColors('Dark')}>
+                  <RotateCcw className="mr-2 h-4 w-4" />
+                  Reset Dark Theme Colors
+                </Button>
+              </TabsContent>
             </Tabs>
-         );
-      default:
-        return null;
-    }
-  };
-  
-  const renderSidebarColorInputs = (theme: 'Light' | 'Dark') => {
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  );
+
+  function renderSidebarColorInputs(theme: 'Light' | 'Dark') {
     const suffix = theme === 'Light' ? 'L' : 'D';
     const keys: (keyof SidebarColors)[] = [
       `sidebarBgStart${suffix}` as keyof SidebarColors, 
@@ -548,80 +864,43 @@ export default function PreferencesSettingsPage() {
       `sidebarHoverText${suffix}` as keyof SidebarColors, 
       `sidebarBorder${suffix}` as keyof SidebarColors
     ];
+    
     const labels: Record<string, string> = { 
-      [`sidebarBgStart${suffix}`]: "Background Start", [`sidebarBgEnd${suffix}`]: "Background End", [`sidebarText${suffix}`]: "Text Color",
-      [`sidebarActiveBgStart${suffix}`]: "Active BG Start", [`sidebarActiveBgEnd${suffix}`]: "Active BG End", [`sidebarActiveText${suffix}`]: "Active Text",
-      [`sidebarHoverBg${suffix}`]: "Hover Background", [`sidebarHoverText${suffix}`]: "Hover Text", [`sidebarBorder${suffix}`]: "Border Color",
+      [`sidebarBgStart${suffix}`]: "Background Start", 
+      [`sidebarBgEnd${suffix}`]: "Background End", 
+      [`sidebarText${suffix}`]: "Text Color",
+      [`sidebarActiveBgStart${suffix}`]: "Active BG Start", 
+      [`sidebarActiveBgEnd${suffix}`]: "Active BG End", 
+      [`sidebarActiveText${suffix}`]: "Active Text",
+      [`sidebarHoverBg${suffix}`]: "Hover Background", 
+      [`sidebarHoverText${suffix}`]: "Hover Text", 
+      [`sidebarBorder${suffix}`]: "Border Color",
     };
 
-    return (
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {keys.map(key => (
-          <div key={key}>
-            <Label htmlFor={key} className="text-xs">{labels[key]}</Label>
-            <div className="flex items-center gap-2 mt-1">
-              <Input id={key} type="text" value={sidebarColors[key] || ''} onChange={(e) => handleSidebarColorChange(key as keyof SidebarColors, e.target.value)} placeholder="e.g., 220 25% 97% or #aabbcc" className="h-9 text-xs flex-grow"/>
-              <Input type="color" value={convertHslStringToHex(sidebarColors[key])} 
-                 onChange={(e) => handleSidebarColorChange(key as keyof SidebarColors, hexToHslString(e.target.value))} 
-                 className="w-10 h-9 p-1 flex-shrink-0 rounded-md border" title="Pick color"
-              />
-            </div>
-            <p className="text-xs text-muted-foreground mt-0.5">Enter HSL (e.g., &quot;220 25% 97%&quot;)</p>
-          </div>
-        ))}
-      </div>
-    );
-  };
-
-  return (
-    <Card className="shadow-lg overflow-hidden">
-      <CardHeader className="border-b">
-        <CardTitle className="flex items-center text-2xl"><Settings2 className="mr-3 h-6 w-6 text-primary"/>Application Preferences</CardTitle>
-        <CardDescription>Manage global application settings. These settings are saved on the server.</CardDescription>
-      </CardHeader>
-      <CardContent className="p-0">
-        <div className="flex flex-col md:flex-row min-h-[calc(100vh-18rem)]">
-          <aside className="md:w-72 lg:w-80 border-r bg-muted/30">
-            <ScrollArea className="h-full md:max-h-[calc(100vh-18rem)] p-4">
-              <nav className="space-y-1">
-                {PREFERENCE_SECTIONS.map((section) => (
-                  <Button
-                    key={section.id}
-                    variant={activeSection === section.id ? "default" : "ghost"}
-                    onClick={() => setActiveSection(section.id)}
-                    className={cn(
-                        "w-full justify-start text-left h-auto py-2.5 px-3",
-                        activeSection === section.id && "btn-primary-gradient text-primary-foreground"
-                    )}
-                  >
-                    <section.icon className="mr-3 h-5 w-5" />
-                    <div className="flex flex-col">
-                        <span className="text-sm font-medium">{section.label}</span>
-                        <span className={cn("text-xs opacity-80", activeSection === section.id ? "text-primary-foreground/80" : "text-muted-foreground")}>{section.description}</span>
-                    </div>
-                  </Button>
-                ))}
-              </nav>
-            </ScrollArea>
-          </aside>
-
-          <main className="flex-1">
-            <ScrollArea className="h-full md:max-h-[calc(100vh-18rem)] p-6">
-              <div className="space-y-6">
-                {renderSectionContent(activeSection)}
-              </div>
-            </ScrollArea>
-          </main>
+    return keys.map(key => (
+      <div key={key} className="space-y-2">
+        <Label htmlFor={key} className="text-sm font-medium">
+          {labels[key]}
+        </Label>
+        <div className="flex items-center gap-2">
+          <Input 
+            id={key} 
+            type="text" 
+            value={sidebarColors[key] || ''} 
+            onChange={(e) => handleSidebarColorChange(key as keyof SidebarColors, e.target.value)} 
+            placeholder="220 25% 97%"
+            className="text-sm"
+          />
+          <Input 
+            type="color" 
+            value={convertHslStringToHex(sidebarColors[key])} 
+            onChange={(e) => handleSidebarColorChange(key as keyof SidebarColors, hexToHslString(e.target.value))} 
+            className="w-10 h-9 p-1 rounded-md border"
+          />
         </div>
-      </CardContent>
-      <CardFooter className="border-t pt-6 flex justify-end p-6">
-        <Button onClick={handleSavePreferences} className="w-full sm:w-auto btn-primary-gradient" disabled={isSaving || isLoading}>
-          {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-          {isSaving ? 'Saving...' : 'Save All Preferences'}
-        </Button>
-      </CardFooter>
-    </Card>
-  );
+      </div>
+    ));
+  }
 }
 
     

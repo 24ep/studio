@@ -1,4 +1,3 @@
-
 // src/app/api-docs/page.tsx
 "use client";
 
@@ -289,14 +288,6 @@ const apiEndpoints: ApiEndpoint[] = [
     requestBody: "N/A (Path parameter: `id`)",
     response: "JSON: `{ message: &apos;Transition record deleted successfully&apos; }`",
     curlExample: `curl -X DELETE http://localhost:9002/api/transitions/transition-record-id`,
-  },
-  {
-    method: "GET",
-    path: "/api/system/initial-setup-check",
-    description: "Checks if essential database tables exist.",
-    requestBody: "N/A",
-    response: "JSON: `{ schemaInitialized: boolean, message: string, missingTables?: string[], error?: string }`",
-    curlExample: `curl http://localhost:9002/api/system/initial-setup-check`,
   },
   {
     method: "POST",

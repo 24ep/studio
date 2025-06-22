@@ -16,8 +16,6 @@ import { Separator } from "@/components/ui/separator";
 import { Package2, Loader2 } from "lucide-react";
 import { usePathname } from "next/navigation";
 import Image from 'next/image';
-import { SetupFlowHandler } from './SetupFlowHandler';
-
 
 const APP_LOGO_DATA_URL_KEY = 'appLogoDataUrl';
 const APP_CONFIG_APP_NAME_KEY = 'appConfigAppName';
@@ -54,7 +52,6 @@ function getPageTitle(pathname: string): string {
   if (pathname.startsWith("/auth/signin")) return "Sign In";
   return DEFAULT_APP_NAME; // Use dynamic app name as fallback for unknown paths
 }
-
 
 export function AppLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -123,44 +120,42 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <SetupFlowHandler>
-      <SidebarProvider defaultOpen>
-        <Sidebar collapsible="icon" variant="sidebar" className="border-r" data-sidebar="sidebar">
-          <SidebarHeader className="p-4 flex items-center justify-center h-16">
-            <Link href="/" className="flex items-center gap-2 font-semibold text-primary group-data-[collapsible=icon]:hidden">
-              {renderLogo(false)}
-              <span className="ml-1">{currentAppName}</span>
+    <SidebarProvider defaultOpen>
+      <Sidebar collapsible="icon" variant="sidebar" className="border-r" data-sidebar="sidebar">
+        <SidebarHeader className="p-4 flex items-center justify-center h-16">
+          <Link href="/" className="flex items-center gap-2 font-semibold text-primary group-data-[collapsible=icon]:hidden">
+            {renderLogo(false)}
+            <span className="ml-1">{currentAppName}</span>
+          </Link>
+          <div className="hidden items-center justify-center group-data-[collapsible=icon]:flex group-data-[collapsible=icon]:w-full">
+            <Link href="/" className="flex items-center gap-2 font-semibold text-primary">
+               {renderLogo(true)}
             </Link>
-            <div className="hidden items-center justify-center group-data-[collapsible=icon]:flex group-data-[collapsible=icon]:w-full">
-              <Link href="/" className="flex items-center gap-2 font-semibold text-primary">
-                 {renderLogo(true)}
-              </Link>
-            </div>
-            <SidebarTrigger className="hidden md:group-data-[collapsible=icon]:hidden" />
-          </SidebarHeader>
-          <Separator className="my-0" />
-          <SidebarContent className="p-2 pr-1">
-            <SidebarNav />
-          </SidebarContent>
-          <SidebarFooter className="p-4 border-t group-data-[collapsible=icon]:hidden">
-            <p className="text-xs text-muted-foreground">© {new Date().getFullYear()} {currentAppName}</p>
-          </SidebarFooter>
-        </Sidebar>
-        <SidebarInset className="flex flex-col bg-background">
-          <Header pageTitle={pageTitle} />
-          <main className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8 relative">
-            {isPageLoading && (
-              <div className="absolute inset-0 flex items-center justify-center bg-background/50 backdrop-blur-sm z-10">
-                <div className="flex flex-col items-center gap-4 p-6 rounded-lg bg-card border shadow-lg">
-                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                  <p className="text-sm font-medium text-foreground">Loading page...</p>
-                </div>
+          </div>
+          <SidebarTrigger className="hidden md:group-data-[collapsible=icon]:hidden" />
+        </SidebarHeader>
+        <Separator className="my-0" />
+        <SidebarContent className="p-2 pr-1">
+          <SidebarNav />
+        </SidebarContent>
+        <SidebarFooter className="p-4 border-t group-data-[collapsible=icon]:hidden">
+          <p className="text-xs text-muted-foreground">© {new Date().getFullYear()} {currentAppName}</p>
+        </SidebarFooter>
+      </Sidebar>
+      <SidebarInset className="flex flex-col bg-background">
+        <Header pageTitle={pageTitle} />
+        <main className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8 relative">
+          {isPageLoading && (
+            <div className="absolute inset-0 flex items-center justify-center bg-background/50 backdrop-blur-sm z-10">
+              <div className="flex flex-col items-center gap-4 p-6 rounded-lg bg-card border shadow-lg">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                <p className="text-sm font-medium text-foreground">Loading page...</p>
               </div>
-            )}
-            {children}
-          </main>
-        </SidebarInset>
-      </SidebarProvider>
-    </SetupFlowHandler>
+            </div>
+          )}
+          {children}
+        </main>
+      </SidebarInset>
+    </SidebarProvider>
   );
 }

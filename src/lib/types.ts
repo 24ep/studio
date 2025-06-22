@@ -1,4 +1,3 @@
-
 // This declares the shape of the user object returned by the session callback
 // and available in useSession() or getServerSession()
 // It needs to be augmented if you add custom properties to the session token
@@ -379,6 +378,7 @@ export type SystemSettingKey =
   | 'loginPageBackgroundImageUrl'
   | 'loginPageBackgroundColor1'
   | 'loginPageBackgroundColor2'
+  | 'loginPageLayoutType'
   // Sidebar Light Theme
   | 'sidebarBgStartL'
   | 'sidebarBgEndL'
@@ -408,6 +408,7 @@ export interface SystemSetting {
 }
 
 export type LoginPageBackgroundType = "default" | "image" | "color" | "gradient";
+export type LoginPageLayoutType = 'center' | '2column';
 
 
 // Notification System Types

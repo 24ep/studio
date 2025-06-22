@@ -4,7 +4,7 @@ import CredentialsProvider from 'next-auth/providers/credentials';
 import { getPool } from '@/lib/db';
 import bcrypt from 'bcryptjs';
 import { logAudit } from '@/lib/auditLog';
-import type { UserProfile } from '@/lib/types';
+import type { UserProfile, PlatformModuleId } from '@/lib/types';
 
 export const authOptions: NextAuthOptions = {
     providers: [
@@ -54,6 +54,8 @@ export const authOptions: NextAuthOptions = {
     ],
     session: {
       strategy: "jwt",
+      maxAge: 30 * 24 * 60 * 60, // 30 days
+      updateAge: 24 * 60 * 60, // 24 hours
     },
     callbacks: {
       async jwt({ token, user, account }) {
@@ -61,6 +63,7 @@ export const authOptions: NextAuthOptions = {
           token.accessToken = account.access_token;
           token.id = user.id;
           token.role = user.role;
+          token.modulePermissions = user.modulePermissions;
         }
         return token;
       },
@@ -68,6 +71,7 @@ export const authOptions: NextAuthOptions = {
         if (session.user) {
           session.user.id = token.id as string;
           session.user.role = token.role as UserProfile['role'];
+          session.user.modulePermissions = token.modulePermissions as PlatformModuleId[];
         }
         return session;
       },

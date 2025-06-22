@@ -4,6 +4,7 @@ import { getPool } from '../../../lib/db';
 import { z } from 'zod';
 import { logAudit } from '@/lib/auditLog';
 import { getServerSession } from 'next-auth/next';
+import { authOptions } from '@/lib/auth';
 import { v4 as uuidv4 } from 'uuid';
 
 export const dynamic = "force-dynamic";
@@ -45,7 +46,7 @@ const createCandidateSchema = z.object({
 });
 
 export async function POST(request: NextRequest) {
-  const session = await getServerSession();
+  const session = await getServerSession(authOptions);
   const actingUserId = session?.user?.id;
   const actingUserName = session?.user?.name || session?.user?.email || 'System';
 
@@ -72,7 +73,7 @@ export async function POST(request: NextRequest) {
   try {
     await client.query('BEGIN');
     const insertCandidateQuery = `
-      INSERT INTO "Candidate" (id, name, email, phone, "positionId", "recruiterId", "fitScore", status, "parsedData", custom_attributes, "resumePath", "applicationDate", "updatedAt")
+      INSERT INTO "candidates" (id, name, email, phone, "positionId", "recruiterId", "fitScore", status, "parsedData", "customAttributes", "resumePath", "applicationDate", "updatedAt")
       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, NOW(), NOW())
       RETURNING *;
     `;
@@ -82,7 +83,7 @@ export async function POST(request: NextRequest) {
     const newCandidate = candidateResult.rows[0];
     // Create initial transition record
     const insertTransitionQuery = `
-      INSERT INTO "TransitionRecord" (id, "candidateId", "positionId", stage, notes, "actingUserId", date)
+      INSERT INTO "transition_records" (id, "candidateId", "positionId", stage, notes, "actingUserId", date)
       VALUES ($1, $2, $3, $4, $5, $6, NOW());
     `;
     await client.query(insertTransitionQuery, [
@@ -104,8 +105,13 @@ export async function POST(request: NextRequest) {
 }
 
 export async function GET(request: NextRequest) {
-  const session = await getServerSession();
+  const session = await getServerSession(authOptions);
   if (!session?.user?.id) {
+    console.error('Candidates API: No session or user ID found', { 
+      hasSession: !!session, 
+      hasUser: !!session?.user, 
+      userId: session?.user?.id 
+    });
     return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
   }
 
@@ -154,19 +160,20 @@ export async function GET(request: NextRequest) {
   try {
     const candidatesQuery = `
       SELECT c.*, p.title as "positionTitle", r.name as "recruiterName"
-      FROM "Candidate" c
-      LEFT JOIN "Position" p ON c."positionId" = p.id
+      FROM "candidates" c
+      LEFT JOIN "positions" p ON c."positionId" = p.id
       LEFT JOIN "User" r ON c."recruiterId" = r.id
       ${whereString}
       ORDER BY c."applicationDate" DESC
       LIMIT $${paramIndex} OFFSET $${paramIndex + 1};
     `;
     const candidatesResult = await client.query(candidatesQuery, [...queryParams, limit, offset]);
-    const totalQuery = `SELECT COUNT(*) FROM "Candidate" c ${whereString};`;
+    const totalQuery = `SELECT COUNT(*) FROM "candidates" c ${whereString};`;
     const totalResult = await client.query(totalQuery, queryParams.slice(0, paramIndex - 1));
     const total = parseInt(totalResult.rows[0].count, 10);
     const candidates = candidatesResult.rows.map(row => ({
       ...row,
+      custom_attributes: row.customAttributes || {}, // Note: column name is customAttributes in DB
       position: row.positionId ? { title: row.positionTitle } : null,
       recruiter: row.recruiterId ? { name: row.recruiterName } : null,
     }));

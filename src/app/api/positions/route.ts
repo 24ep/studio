@@ -4,26 +4,29 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { z } from 'zod';
 import { logAudit } from '@/lib/auditLog';
 import { getServerSession } from 'next-auth/next';
+import { authOptions } from '@/lib/auth';
 import { v4 as uuidv4 } from 'uuid';
 import { getRedisClient, CACHE_KEY_POSITIONS } from '@/lib/redis';
 import { getPool } from '@/lib/db';
 
 export async function GET(request: NextRequest) {
-  const session = await getServerSession();
+  const session = await getServerSession(authOptions);
   // Publicly viewable, but actions (POST, PUT, DELETE) might be restricted
   // if (!session?.user) {
   //   return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
   // }
 
   try {
+    console.log('Positions API: Starting to fetch positions');
     const { searchParams } = new URL(request.url);
     const titleFilter = searchParams.get('title');
     const departmentFilter = searchParams.get('department'); // Expects comma-separated strings
     const isOpenFilter = searchParams.get('isOpen');
     const positionLevelFilter = searchParams.get('position_level');
 
+    console.log('Positions API: Filters:', { titleFilter, departmentFilter, isOpenFilter, positionLevelFilter });
 
-    let query = 'SELECT id, title, department, description, "isOpen", position_level, custom_attributes, "createdAt", "updatedAt" FROM "Position"';
+    let query = 'SELECT id, title, department, description, "isOpen", position_level, custom_attributes, "createdAt", "updatedAt" FROM "positions"';
     const conditions = [];
     const queryParams = [];
     let paramIndex = 1;
@@ -46,17 +49,23 @@ export async function GET(request: NextRequest) {
       queryParams.push(`%${positionLevelFilter}%`);
     }
 
-
     if (conditions.length > 0) {
       query += ' WHERE ' + conditions.join(' AND ');
     }
     query += ' ORDER BY "createdAt" DESC';
     
+    console.log('Positions API: Executing query:', query);
+    console.log('Positions API: Query params:', queryParams);
+    
     const result = await getPool().query(query, queryParams);
+    console.log('Positions API: Query result rows:', result.rows.length);
+    
     const positions = result.rows.map(row => ({
         ...row,
-        custom_attributes: row.custom_attributes || {},
+        custom_attributes: row.customAttributes || {},
     }));
+    
+    console.log('Positions API: Returning positions:', positions.length);
     return NextResponse.json(positions, { status: 200 });
   } catch (error) {
     console.error("Failed to fetch positions:", error);
@@ -75,7 +84,7 @@ const createPositionSchema = z.object({
 });
 
 export async function POST(request: NextRequest) {
-  const session = await getServerSession();
+  const session = await getServerSession(authOptions);
   const actingUserId = session?.user?.id || null;
   const actingUserName = session?.user?.name || session?.user?.email || 'System (API Create)';
 
@@ -105,7 +114,7 @@ export async function POST(request: NextRequest) {
   try {
     const newPositionId = uuidv4();
     const insertQuery = `
-      INSERT INTO "Position" (id, title, department, description, "isOpen", position_level, custom_attributes, "createdAt", "updatedAt")
+      INSERT INTO "positions" (id, title, department, description, "isOpen", position_level, "customAttributes", "createdAt", "updatedAt")
       VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), NOW())
       RETURNING *;
     `;
@@ -121,7 +130,7 @@ export async function POST(request: NextRequest) {
     const result = await getPool().query(insertQuery, values);
     const newPosition = {
         ...result.rows[0],
-        custom_attributes: result.rows[0].custom_attributes || {},
+        custom_attributes: result.rows[0].customAttributes || {},
     };
 
     // Invalidate cache
