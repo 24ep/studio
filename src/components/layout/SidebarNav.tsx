@@ -29,6 +29,7 @@ const mainNavItems = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
   { href: "/candidates", label: "Candidates", icon: Users },
   { href: "/positions", label: "Positions", icon: Briefcase },
+  { href: "/settings", label: "Settings", icon: Settings },
 ];
 
 const myTaskBoardNavItem = { href: "/my-tasks", label: "My Task Board", icon: ListTodo };

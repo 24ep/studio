@@ -1,6 +1,7 @@
 export const dynamic = "force-dynamic";
 // src/app/page.tsx (Server Component)
 import { getServerSession } from 'next-auth/next';
+import { authOptions } from '@/lib/auth';
 import DashboardPageClient from '@/components/dashboard/DashboardPageClient';
 import { fetchInitialDashboardCandidatesDb, fetchAllPositionsDb, fetchAllUsersDb } from '@/lib/apiUtils';
 import type { Candidate, Position, UserProfile } from '@/lib/types';
@@ -13,7 +14,7 @@ export default async function DashboardPageServer() {
   let fetchError: string | undefined = undefined;
 
   try {
-    session = await getServerSession();
+    session = await getServerSession(authOptions);
     if (!session?.user) {
       return <DashboardPageClient 
                initialCandidates={[]} 
