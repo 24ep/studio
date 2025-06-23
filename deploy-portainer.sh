@@ -319,7 +319,7 @@ services:
       context: .
       dockerfile: Dockerfile
     ports:
-      - "9846:9002"
+      - "9846:9846"
     environment:
       # Database
       DATABASE_URL: \${DATABASE_URL}

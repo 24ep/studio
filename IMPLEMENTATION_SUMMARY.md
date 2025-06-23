@@ -174,7 +174,7 @@ REDIS_HOST=redis
 REDIS_PORT=6379
 
 # Application Configuration
-NEXTAUTH_URL=http://localhost:9002
+NEXTAUTH_URL=http://localhost:9846
 NEXTAUTH_SECRET=your-secret-key
 ```
 

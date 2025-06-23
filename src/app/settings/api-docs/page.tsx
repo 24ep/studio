@@ -28,7 +28,7 @@ const apiEndpoints: ApiEndpoint[] = [
     response: "JSON: `{ message: &apos;Resume uploaded successfully&apos;, filePath: &apos;...&apos;, candidate: Candidate, n8nResponse?: {success: boolean, data?: any, error?: string} }` (n8nResponse field name is kept for API contract)",
     curlExample: `curl -X POST \\\n` +
                  `  -F \'resume=@resume.pdf\' \\\n` +
-                 `  'http://localhost:9002/api/resumes/upload?candidateId=your-candidate-id'`,
+                 `  'http://localhost:9846/api/resumes/upload?candidateId=your-candidate-id'`,
   },
   {
     method: "GET",
@@ -36,7 +36,7 @@ const apiEndpoints: ApiEndpoint[] = [
     description: "Retrieve a list of candidates. Supports filtering by name, position, fit score, education.",
     requestBody: "N/A (Query params: `name`, `positionId`, `minFitScore`, `maxFitScore`, `education`, `email`, `phone`, `applicationDateStart`, `applicationDateEnd`, `recruiterId`, `keywords`)",
     response: "JSON: `Candidate[]` (Array of candidate objects)",
-    curlExample: `curl 'http://localhost:9002/api/candidates?positionId=your-position-id'`,
+    curlExample: `curl 'http://localhost:9846/api/candidates?positionId=your-position-id'`,
   },
   {
     method: "POST",
@@ -56,7 +56,7 @@ const apiEndpoints: ApiEndpoint[] = [
                  `    }, \\\n` +
                  `    "positionId": null \\\n` +
                  `  }' \\\n` +
-                 `  http://localhost:9002/api/candidates`,
+                 `  http://localhost:9846/api/candidates`,
   },
   {
     method: "POST",
@@ -79,7 +79,7 @@ const apiEndpoints: ApiEndpoint[] = [
                  `      } \\\n` +
                  `    }] \\\n` +
                  `  }]' \\\n` +
-                 `  http://localhost:9002/api/n8n/create-candidate-with-matches`,
+                 `  http://localhost:9846/api/n8n/create-candidate-with-matches`,
   },
   {
     method: "GET",
@@ -87,7 +87,7 @@ const apiEndpoints: ApiEndpoint[] = [
     description: "Retrieve details for a specific candidate, including transition history.",
     requestBody: "N/A (Path parameter: `id`)",
     response: "JSON: `Candidate` (Single candidate object with transition history)",
-    curlExample: `curl http://localhost:9002/api/candidates/your-candidate-id`,
+    curlExample: `curl http://localhost:9846/api/candidates/your-candidate-id`,
   },
   {
     method: "PUT",
@@ -100,7 +100,7 @@ const apiEndpoints: ApiEndpoint[] = [
                  `  -d '{ \\\n` +
                  `    "status": "Interviewing" \\\n` +
                  `  }' \\\n` +
-                 `  http://localhost:9002/api/candidates/your-candidate-id`,
+                 `  http://localhost:9846/api/candidates/your-candidate-id`,
   },
   {
     method: "DELETE",
@@ -108,7 +108,7 @@ const apiEndpoints: ApiEndpoint[] = [
     description: "Delete a candidate. Also deletes associated transition records.",
     requestBody: "N/A (Path parameter: `id`)",
     response: "JSON: `{ message: &apos;Candidate deleted successfully&apos; }`",
-    curlExample: `curl -X DELETE http://localhost:9002/api/candidates/your-candidate-id`,
+    curlExample: `curl -X DELETE http://localhost:9846/api/candidates/your-candidate-id`,
   },
   {
     method: "POST",
@@ -119,7 +119,7 @@ const apiEndpoints: ApiEndpoint[] = [
     curlExample: `curl -X POST \\\n` +
                  `  -F \'pdfFile=@new_candidate_resume.pdf\' \\\n` +
                  `  -F \'positionId=some-position-uuid\' \\\n` +
-                 `  http://localhost:9002/api/candidates/upload-for-n8n`,
+                 `  http://localhost:9846/api/candidates/upload-for-n8n`,
   },
   {
     method: "GET",
@@ -127,7 +127,7 @@ const apiEndpoints: ApiEndpoint[] = [
     description: "Retrieve a list of job positions.",
     requestBody: "N/A",
     response: "JSON: `Position[]` (Array of position objects)",
-    curlExample: `curl http://localhost:9002/api/positions`,
+    curlExample: `curl http://localhost:9846/api/positions`,
   },
   {
     method: "POST",
@@ -143,7 +143,7 @@ const apiEndpoints: ApiEndpoint[] = [
                  `    "isOpen": true, \\\n` +
                  `    "position_level": "Senior" \\\n` +
                  `  }' \\\n` +
-                 `  http://localhost:9002/api/positions`,
+                 `  http://localhost:9846/api/positions`,
   },
   {
     method: "GET",
@@ -151,7 +151,7 @@ const apiEndpoints: ApiEndpoint[] = [
     description: "Retrieve details for a specific position.",
     requestBody: "N/A (Path parameter: `id`)",
     response: "JSON: `Position` (Single position object)",
-    curlExample: `curl http://localhost:9002/api/positions/your-position-id`,
+    curlExample: `curl http://localhost:9846/api/positions/your-position-id`,
   },
   {
     method: "PUT",
@@ -165,7 +165,7 @@ const apiEndpoints: ApiEndpoint[] = [
                  `    "isOpen": false, \\\n` +
                  `    "position_level": "Lead" \\\n` +
                  `  }' \\\n` +
-                 `  http://localhost:9002/api/positions/your-position-id`,
+                 `  http://localhost:9846/api/positions/your-position-id`,
   },
   {
     method: "DELETE",
@@ -173,7 +173,7 @@ const apiEndpoints: ApiEndpoint[] = [
     description: "Delete a position. Denied if candidates are associated.",
     requestBody: "N/A (Path parameter: `id`)",
     response: "JSON: `{ message: &apos;Position deleted successfully&apos; }` (or 409 if candidates are associated)",
-    curlExample: `curl -X DELETE http://localhost:9002/api/positions/your-position-id`,
+    curlExample: `curl -X DELETE http://localhost:9846/api/positions/your-position-id`,
   },
   {
     method: "GET",
@@ -181,7 +181,7 @@ const apiEndpoints: ApiEndpoint[] = [
     description: "Retrieve a list of application users.",
     requestBody: "N/A",
     response: "JSON: `UserProfile[]` (Array of user profile objects)",
-    curlExample: `curl http://localhost:9002/api/users`,
+    curlExample: `curl http://localhost:9846/api/users`,
   },
   {
     method: "POST",
@@ -197,7 +197,7 @@ const apiEndpoints: ApiEndpoint[] = [
                  `    "password": "strongpassword123", \\\n` +
                  `    "role": "Recruiter" \\\n` +
                  `  }' \\\n` +
-                 `  http://localhost:9002/api/users`,
+                 `  http://localhost:9846/api/users`,
   },
   {
     method: "PUT",
@@ -210,7 +210,7 @@ const apiEndpoints: ApiEndpoint[] = [
                  `  -d '{ \\\n` +
                  `    "role": "Admin" \\\n` +
                  `  }' \\\n` +
-                 `  http://localhost:9002/api/users/user-id-to-update`,
+                 `  http://localhost:9846/api/users/user-id-to-update`,
   },
   {
     method: "DELETE",
@@ -218,7 +218,7 @@ const apiEndpoints: ApiEndpoint[] = [
     description: "Delete an application user.",
     requestBody: "N/A (Path parameter: `id`)",
     response: "JSON: `{ message: &apos;User deleted successfully&apos; }`",
-    curlExample: `curl -X DELETE http://localhost:9002/api/users/user-id-to-delete`,
+    curlExample: `curl -X DELETE http://localhost:9846/api/users/user-id-to-delete`,
   },
   {
     method: "POST",
@@ -234,7 +234,7 @@ const apiEndpoints: ApiEndpoint[] = [
                  `    "source": "AuthAPI", \\\n` +
                  `    "actingUserId": "user-id-123" \\\n` +
                  `  }' \\\n` +
-                 `  http://localhost:9002/api/logs`,
+                 `  http://localhost:9846/api/logs`,
   },
   {
     method: "GET",
@@ -242,7 +242,7 @@ const apiEndpoints: ApiEndpoint[] = [
     description: "Retrieve a list of log entries. Supports pagination and filtering by level, date range, user, and search query.",
     requestBody: "N/A (Query params: `limit`, `offset`, `level`, `search`, `startDate`, `endDate`, `actingUserId`)",
     response: "JSON: `{ logs: LogEntry[], total: number }`",
-    curlExample: `curl 'http://localhost:9002/api/logs?level=ERROR&limit=10'`,
+    curlExample: `curl 'http://localhost:9846/api/logs?level=ERROR&limit=10'`,
   },
   {
     method: "POST",
@@ -257,7 +257,7 @@ const apiEndpoints: ApiEndpoint[] = [
                  `    "currentPassword": "oldPassword123", \\\n` +
                  `    "newPassword": "newStrongPassword456" \\\n` +
                  `  }' \\\n` +
-                 `  http://localhost:9002/api/auth/change-password`,
+                 `  http://localhost:9846/api/auth/change-password`,
   },
   {
     method: "GET",
@@ -265,7 +265,7 @@ const apiEndpoints: ApiEndpoint[] = [
     description: "Get the current user's session information (provided by NextAuth.js).",
     requestBody: "N/A",
     response: "JSON: Session object or null.",
-    curlExample: `curl http://localhost:9002/api/auth/session \\\n` +
+    curlExample: `curl http://localhost:9846/api/auth/session \\\n` +
                  `  -H 'Cookie: next-auth.session-token=your-session-token-here'`, 
   },
   {
@@ -279,7 +279,7 @@ const apiEndpoints: ApiEndpoint[] = [
                  `  -d '{ \\\n` +
                  `    "notes": "Updated notes for this stage." \\\n` +
                  `  }' \\\n` +
-                 `  http://localhost:9002/api/transitions/transition-record-id`,
+                 `  http://localhost:9846/api/transitions/transition-record-id`,
   },
   {
     method: "DELETE",
@@ -287,7 +287,7 @@ const apiEndpoints: ApiEndpoint[] = [
     description: "Delete a specific transition record.",
     requestBody: "N/A (Path parameter: `id`)",
     response: "JSON: `{ message: &apos;Transition record deleted successfully&apos; }`",
-    curlExample: `curl -X DELETE http://localhost:9002/api/transitions/transition-record-id`,
+    curlExample: `curl -X DELETE http://localhost:9846/api/transitions/transition-record-id`,
   },
   {
     method: "POST",
@@ -298,7 +298,7 @@ const apiEndpoints: ApiEndpoint[] = [
     curlExample: `# To test /api/n8n/webhook-proxy (client-side call):\n` +
                  `curl -X POST \\\n` +
                  `  -F 'pdfFile=@generic_document.pdf' \\\n` +
-                 `  http://localhost:9002/api/n8n/webhook-proxy\n\n`+
+                 `  http://localhost:9846/api/n8n/webhook-proxy\n\n`+
                  `# Example of what the external system receives from this proxy:\n` +
                  `# POST <YOUR_GENERIC_PROCESSING_WEBHOOK_URL>\n`+
                  `# Content-Type: application/json\n`+
@@ -356,7 +356,7 @@ export default function ApiDocumentationPage() {
         </CardTitle>
         <CardDescription>
           Overview of available API endpoints for Candidate Management.
-          The base URL is <code>http://localhost:9002</code> for these examples (or your production URL).
+          The base URL is <code>http://localhost:9846</code> for these examples (or your production URL).
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
@@ -403,7 +403,7 @@ export default function ApiDocumentationPage() {
 
         <div className="mt-6 text-sm text-muted-foreground space-y-2">
           <p><strong>Authentication:</strong> API endpoints are protected by NextAuth.js session authentication. Calls from external systems require proper authentication mechanisms (e.g., API tokens managed by an API Gateway), which are not implemented in this prototype.</p>
-          <p><strong>Base URL:</strong> All API paths are relative to the application&apos;s base URL (e.g., <code>http://localhost:9002</code> or your production domain).</p>
+          <p><strong>Base URL:</strong> All API paths are relative to the application&apos;s base URL (e.g., <code>http://localhost:9846</code> or your production domain).</p>
           <p><strong>Error Handling:</strong> Standard HTTP status codes are used (e.g., 200 OK, 201 Created, 400 Bad Request, 401 Unauthorized, 403 Forbidden, 404 Not Found, 500 Internal Server Error). Error responses typically include a JSON body: <code>{`{ &quot;message&quot;: &quot;Error description&quot;, &quot;errors?&quot;: {{ ... }} }`}</code>.</p>
           <p><strong>Content Type:</strong> For POST and PUT requests with a body, set <code>Content-Type: application/json</code>, unless it&apos;s a file upload (<code>multipart/form-data</code> for resume uploads).</p>
         </div>

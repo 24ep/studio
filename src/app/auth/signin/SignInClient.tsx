@@ -288,15 +288,16 @@ export default function SignInClient({ initialSettings }: SignInClientProps) {
   if (loginLayoutType === '2column') {
     return (
       <div style={loginPageStyle} className="min-h-screen flex flex-row">
-        <div className="w-full max-w-md flex flex-col justify-center items-center bg-card/80 dark:bg-card/80 border-r border-border shadow-2xl p-8">
-          {renderLoginForm()}
-        </div>
-        <div className="flex-1 hidden md:flex flex-col items-center justify-center relative">
-          {/* Right column content - can be customized with background image, illustration, or marketing content */}
+        {/* Left column: Welcome/marketing content (70%) */}
+        <div className="hidden md:flex flex-col items-center justify-center relative basis-[70%] max-w-[70%]">
           <div className="text-center text-muted-foreground">
             <h2 className="text-3xl font-bold mb-4">Welcome to {currentAppName}</h2>
             <p className="text-lg">Your comprehensive recruitment management solution</p>
           </div>
+        </div>
+        {/* Right column: Login panel (30%) */}
+        <div className="w-full md:basis-[30%] md:max-w-[30%] flex flex-col justify-center items-center bg-card/80 dark:bg-card/80 border-l border-border shadow-2xl p-8">
+          {renderLoginForm()}
         </div>
       </div>
     );

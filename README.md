@@ -1,4 +1,3 @@
-
 # Candidate Matching - Applicant Tracking System (Next.js Prototype)
 
 This is a Next.js application prototype for an Applicant Tracking System, built with Firebase Studio. It provides features for managing candidates, positions, users, and includes integrations for automated workflows.
@@ -95,7 +94,7 @@ This is a Next.js application prototype for an Applicant Tracking System, built 
     *   Open `.env.local` and fill in your actual credentials and configurations. **Crucial variables include:**
         *   `NEXTAUTH_URL`: **ESSENTIAL FOR AUTHENTICATION TO WORK CORRECTLY.** This **must** be the publicly accessible URL of your application.
             *   If using default Docker Compose setup (app on host port 9846): `NEXTAUTH_URL=http://localhost:9846`
-            *   If running `npm run dev` directly (app on port 9002 by default): `NEXTAUTH_URL=http://localhost:9002`
+            *   If running `npm run dev` directly (app on port 9846 by default): `NEXTAUTH_URL=http://localhost:9846`
             *   **Important:** If you expose your app on a different port or domain, update this URL accordingly. Mismatches will lead to authentication errors (e.g., "CLIENT_FETCH_ERROR" or infinite redirects).
         *   `NEXTAUTH_SECRET`: Generate a strong secret (e.g., `openssl rand -base64 32`).
         *   `DATABASE_URL`: Connection string for PostgreSQL.
@@ -185,7 +184,7 @@ This method runs the Next.js app, PostgreSQL, MinIO, and Redis in Docker contain
 
 ## Available Scripts (for local development outside Docker, or for use inside Docker container)
 
-*   `npm run dev`: Starts Next.js development server (default `http://localhost:9002`).
+*   `npm run dev`: Starts Next.js development server (default `http://localhost:9846`).
 *   `npm run build`: Builds for production.
 *   `npm run start`: Starts Next.js production server.
 *   `npm run lint`: Lints code.

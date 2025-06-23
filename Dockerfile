@@ -52,7 +52,7 @@ COPY --chown=node:node --from=builder /app/.next ./.next
 COPY --chown=node:node --from=builder /app/package.json ./package.json
 
 # Expose the port the app will run on
-EXPOSE 3000
+EXPOSE 9846
 
 # Set this to disable Next.js telemetry
 ENV NEXT_TELEMETRY_DISABLED 1
