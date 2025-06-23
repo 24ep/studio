@@ -24,7 +24,7 @@ import { toast } from 'react-hot-toast';
 import { UploadCloud, FileText, XCircle, Loader2, Zap } from 'lucide-react';
 import type { Position } from '@/lib/types';
 
-const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+const MAX_FILE_SIZE = 500 * 1024 * 1024; // 500MB
 const NONE_POSITION_VALUE = "___NONE_POSITION___"; // Placeholder for SelectItem value
 
 interface CreateCandidateViaN8nModalProps {

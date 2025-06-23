@@ -9,8 +9,9 @@ import Link from "next/link";
 import { CandidateQueueProvider, CandidateImportUploadQueue, useCandidateQueue } from "@/components/candidates/CandidateImportUploadQueue";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogClose, DialogFooter } from "@/components/ui/dialog";
 import { v4 as uuidv4 } from 'uuid';
+import { useToast } from "@/src/hooks/use-toast";
 
-const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+const MAX_FILE_SIZE = 500 * 1024 * 1024; // 500MB
 const ACCEPTED_FILE_TYPES = ["application/pdf"];
 
 function formatBytes(bytes: number) {
@@ -23,9 +24,11 @@ function formatBytes(bytes: number) {
 
 function UploadPageContent() {
   const { addJob } = useCandidateQueue();
+  const { toast } = useToast ? useToast() : { toast: (opts: any) => alert(opts.description) };
   const [dialogOpen, setDialogOpen] = useState(false);
   const [dragActive, setDragActive] = useState(false);
   const [stagedFiles, setStagedFiles] = useState<File[]>([]);
+  const [invalidFiles, setInvalidFiles] = useState<{ name: string; reason: string }[]>([]);
   const [uploadBatchId, setUploadBatchId] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
 
@@ -33,17 +36,24 @@ function UploadPageContent() {
   const handleFiles = (files: FileList | null) => {
     if (!files) return;
     const newFiles: File[] = [];
+    const newInvalidFiles: { name: string; reason: string }[] = [];
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
-      if (
-        file.type === "application/pdf" &&
-        file.size <= 10 * 1024 * 1024 &&
-        !stagedFiles.some(f => f.name === file.name && f.size === file.size)
-      ) {
+      if (file.type !== "application/pdf") {
+        newInvalidFiles.push({ name: file.name, reason: "Invalid file type" });
+        toast({ title: "Invalid file", description: `${file.name}: Invalid file type`, variant: "destructive" });
+      } else if (file.size > 500 * 1024 * 1024) {
+        newInvalidFiles.push({ name: file.name, reason: "File too large (max 500MB)" });
+        toast({ title: "Invalid file", description: `${file.name}: File too large (max 500MB)`, variant: "destructive" });
+      } else if (stagedFiles.some(f => f.name === file.name && f.size === file.size)) {
+        newInvalidFiles.push({ name: file.name, reason: "Duplicate file" });
+        toast({ title: "Invalid file", description: `${file.name}: Duplicate file`, variant: "destructive" });
+      } else {
         newFiles.push(file);
       }
     }
     setStagedFiles(prev => [...prev, ...newFiles]);
+    setInvalidFiles(newInvalidFiles);
   };
 
   // Drag-and-drop handlers
@@ -147,6 +157,19 @@ function UploadPageContent() {
             />
             <p className="text-muted-foreground">Drop PDF files here or click to select</p>
           </div>
+          {invalidFiles.length > 0 && (
+            <div className="mt-4">
+              <h4 className="font-semibold mb-2 text-destructive">Invalid files:</h4>
+              <ul className="space-y-1">
+                {invalidFiles.map((file, idx) => (
+                  <li key={file.name + idx} className="flex items-center text-destructive text-sm">
+                    <XCircle className="mr-2 w-4 h-4" />
+                    <span>{file.name} - {file.reason}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
           {stagedFiles.length > 0 && (
             <div className="mt-4">
               <h4 className="font-semibold mb-2">Files to upload:</h4>
