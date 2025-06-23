@@ -230,7 +230,7 @@ export function CandidateFilters({
   return (
     <div className="space-y-6">
       {/* AI Search Section */}
-      <div className="bg-muted/50 rounded-lg p-6 shadow flex flex-col gap-4 border border-primary/20">
+      <div className="rounded-lg shadow flex flex-col gap-4  border-primary/20">
         <div className="flex items-center gap-2 mb-2">
           <Brain className="w-5 h-5 text-primary" />
           <h3 className="text-xl font-bold">AI Candidate Search</h3>

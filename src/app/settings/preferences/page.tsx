@@ -330,7 +330,7 @@ export default function PreferencesSettingsPage() {
       const response = await fetch('/api/settings/system-settings', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ key, value }),
+        body: JSON.stringify([{ key, value }]),
       });
       if (!response.ok) throw new Error('Failed to save setting');
     } catch (error) {

@@ -30,10 +30,27 @@ const ubuntu = Ubuntu({ subsets: ['latin'], variable: '--font-ubuntu', display: 
 const quicksand = Quicksand({ subsets: ['latin'], variable: '--font-quicksand', display: 'swap' });
 const ptSans = PT_Sans({ subsets: ['latin'], variable: '--font-pt-sans', display: 'swap', weight: ['400', '700'] });
 
-export const metadata: Metadata = {
-  title: 'Candidate Matching - Applicant Tracking System',
-  description: 'Streamline your hiring process with Candidate Matching.',
-};
+const DEFAULT_APP_NAME = 'CandiTrack';
+const DEFAULT_DESCRIPTION = 'Streamline your hiring process with Candidate Matching.';
+
+export async function generateMetadata(): Promise<Metadata> {
+  let appName = DEFAULT_APP_NAME;
+  let description = DEFAULT_DESCRIPTION;
+  try {
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || '';
+    const res = await fetch(baseUrl + '/api/settings/system-settings', { cache: 'no-store' });
+    if (res.ok) {
+      const settings = await res.json();
+      const appNameSetting = settings.find((s: any) => s.key === 'appName');
+      if (appNameSetting && appNameSetting.value) appName = appNameSetting.value;
+      // Optionally, you could add a description setting as well
+    }
+  } catch {}
+  return {
+    title: appName,
+    description,
+  };
+}
 
 export default async function RootLayout({ // Note: 'async' if using getServerSession
   children,

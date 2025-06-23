@@ -136,6 +136,13 @@ export default function SignInClient() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isThemeDark]); // Added isThemeDark dependency to re-evaluate default background
 
+  // Set browser tab title to currentAppName
+  useEffect(() => {
+    if (typeof document !== 'undefined' && currentAppName) {
+      document.title = currentAppName;
+    }
+  }, [currentAppName]);
+
   useEffect(() => {
     if (status === "authenticated" && session) {
       router.replace(callbackUrl);

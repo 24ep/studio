@@ -86,14 +86,14 @@ export async function GET(request: NextRequest) {
     const client = await getPool().connect();
     try {
         const logsQuery = `
-            SELECT * FROM "AuditLog"
+            SELECT * FROM "LogEntry"
             ${whereString}
             ORDER BY timestamp DESC
             LIMIT $${paramIndex} OFFSET $${paramIndex + 1};
         `;
         const logsResult = await client.query(logsQuery, [...queryParams, limit, offset]);
         
-        const totalQuery = `SELECT COUNT(*) FROM "AuditLog" ${whereString};`;
+        const totalQuery = `SELECT COUNT(*) FROM "LogEntry" ${whereString};`;
         const totalResult = await client.query(totalQuery, queryParams.slice(0, paramIndex - 1));
         const total = parseInt(totalResult.rows[0].count, 10);
 

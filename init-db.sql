@@ -244,7 +244,7 @@ BEGIN
   -- Remove duplicates, keep the row with the lowest id for each name
   DELETE FROM "UserGroup"
   WHERE id NOT IN (
-    SELECT min(id) FROM "UserGroup" GROUP BY name
+    SELECT min(id::text)::uuid FROM "UserGroup" GROUP BY name
   );
   -- Add unique constraint if it does not exist
   BEGIN
