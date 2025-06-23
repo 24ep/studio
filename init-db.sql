@@ -95,7 +95,8 @@ CREATE TABLE IF NOT EXISTS "candidates" (
     "resumePath" VARCHAR(1024),
     "createdAt" TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    "avatarUrl" VARCHAR(1024)
+    "avatarUrl" VARCHAR(1024),
+    "dataAiHint" VARCHAR(255)
 );
 CREATE INDEX IF NOT EXISTS idx_candidates_email ON "candidates"(email);
 CREATE INDEX IF NOT EXISTS idx_candidates_position_id ON "candidates"("positionId");

@@ -146,7 +146,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
       </Sidebar>
       <SidebarInset className="flex flex-col bg-background">
         <Header pageTitle={pageTitle} />
-        <main className="flex-1 overflow-y-auto relative">
+        <main className="flex-1 overflow-y-auto relative p-6">
           {isPageLoading && (
             <div className="absolute inset-0 flex items-center justify-center bg-background/50 backdrop-blur-sm z-10">
               <div className="flex flex-col items-center gap-4 p-6 rounded-lg bg-card border shadow-lg">

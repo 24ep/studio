@@ -25,4 +25,14 @@ INSERT INTO "RecruitmentStage" (id, name, description, is_system, sort_order) VA
 ('550e8400-e29b-41d4-a716-446655440008', 'Hired', 'Candidate has been hired and started employment', true, 8),
 ('550e8400-e29b-41d4-a716-446655440009', 'Rejected', 'Candidate has been rejected from the process', true, 9),
 ('550e8400-e29b-41d4-a716-446655440010', 'On Hold', 'Candidate application is temporarily on hold', true, 10)
-ON CONFLICT (name) DO NOTHING; 
+ON CONFLICT (name) DO NOTHING;
+
+-- Add dataAiHint column to candidates table if it does not exist
+DO $$ BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns 
+        WHERE table_name='candidates' AND column_name='dataAiHint'
+    ) THEN
+        ALTER TABLE "candidates" ADD COLUMN "dataAiHint" VARCHAR(255);
+    END IF;
+END $$; 

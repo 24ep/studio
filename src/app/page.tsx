@@ -12,6 +12,7 @@ export default async function DashboardPageServer() {
   let initialPositions: Position[] = [];
   let initialUsers: UserProfile[] = [];
   let fetchError: string | undefined = undefined;
+  let usersFetchFailed = false;
 
   try {
     session = await getServerSession(authOptions);
@@ -65,7 +66,9 @@ export default async function DashboardPageServer() {
       initialUsers = usersResult.value;
     } else if (usersResult.status === 'rejected') {
       console.error("Dashboard server fetch error (users):", usersResult.reason);
-      fetchError = (fetchError || "") + "Failed to load users. ";
+      // Do not set fetchError for users fetch failure, just let client fetch users
+      usersFetchFailed = true;
+      initialUsers = [];
     }
   } catch (error) {
     console.error("Server-side fetch error for dashboard:", error);
@@ -78,6 +81,7 @@ export default async function DashboardPageServer() {
       initialPositions={Array.isArray(initialPositions) ? initialPositions : []}
       initialUsers={Array.isArray(initialUsers) ? initialUsers : []}
       initialFetchError={fetchError?.trim()}
+      // Optionally, you could pass a flag like usersFetchFailed={usersFetchFailed} if you want the client to auto-fetch users
     />
   );
 }

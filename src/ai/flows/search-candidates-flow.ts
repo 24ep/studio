@@ -223,7 +223,23 @@ ${input.query}
 Candidate Data (each candidate is between CANDIDATE_START and CANDIDATE_END):
 ${effectiveCandidateData}
 
-Based *only* on the provided candidate summaries and the user's query, return a list of candidate IDs that are strong matches.
+When matching candidates to the user's query, you must consider ALL available candidate attributes, including (but not limited to):
+- Name
+- Contact information (email, phone)
+- Education history (university, major, GPA, etc.)
+- Work experience (companies, positions, durations, descriptions)
+- Skills
+- Fit score
+- Position applied for
+- Application date
+- Recruiter
+- Status and transition history
+- Job suitability preferences
+- Automated job matches
+- Custom fields/attributes
+- Any other data provided in the summary
+
+Base your decision strictly on the provided candidate summaries and the user's query. Return a list of candidate IDs that are strong matches.
 If no candidates seem to match, return an empty list for matchedCandidateIds.
 Provide a brief reasoning for your selection or if no matches are found.
 Ensure your output is in the specified JSON format.
