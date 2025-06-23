@@ -6,7 +6,7 @@ import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Loader2, XCircle, CheckCircle, FileText, RotateCcw, ExternalLink, AlertCircle, Eye } from "lucide-react";
 import Link from "next/link";
-import { CandidateImportUploadQueue, useCandidateQueue } from "@/components/candidates/CandidateImportUploadQueue";
+import { CandidateQueueProvider, CandidateImportUploadQueue, useCandidateQueue } from "@/components/candidates/CandidateImportUploadQueue";
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 const ACCEPTED_FILE_TYPES = ["application/pdf"];
@@ -19,7 +19,7 @@ function formatBytes(bytes: number) {
   return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
 }
 
-export default function MultiCandidateUploadPage() {
+function UploadPageContent() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { addJob } = useCandidateQueue();
 
@@ -59,5 +59,13 @@ export default function MultiCandidateUploadPage() {
       </div>
       <CandidateImportUploadQueue />
     </div>
+  );
+}
+
+export default function MultiCandidateUploadPage() {
+  return (
+    <CandidateQueueProvider>
+      <UploadPageContent />
+    </CandidateQueueProvider>
   );
 } 
