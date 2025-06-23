@@ -8,6 +8,7 @@ import { Loader2, XCircle, CheckCircle, FileText, RotateCcw, ExternalLink, Alert
 import Link from "next/link";
 import { CandidateQueueProvider, CandidateImportUploadQueue, useCandidateQueue } from "@/components/candidates/CandidateImportUploadQueue";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogClose, DialogFooter } from "@/components/ui/dialog";
+import { v4 as uuidv4 } from 'uuid';
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 const ACCEPTED_FILE_TYPES = ["application/pdf"];
@@ -25,6 +26,8 @@ function UploadPageContent() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [dragActive, setDragActive] = useState(false);
   const [stagedFiles, setStagedFiles] = useState<File[]>([]);
+  const [uploadBatchId, setUploadBatchId] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
 
   // Handle file selection (from input or drop)
   const handleFiles = (files: FileList | null) => {
@@ -67,17 +70,42 @@ function UploadPageContent() {
   };
 
   // Confirm upload
-  const handleConfirmUpload = () => {
-    stagedFiles.forEach(file => {
-      addJob({
-        id: `${file.name}-${file.size}-${Date.now()}-${Math.random()}`,
-        file,
-        type: "upload",
-        status: "queued"
-      });
-    });
-    setStagedFiles([]);
-    setDialogOpen(false);
+  const handleConfirmUpload = async () => {
+    setUploading(true);
+    const batchId = uuidv4();
+    const now = new Date().toISOString();
+    try {
+      await Promise.all(stagedFiles.map(async (file) => {
+        // 1. Upload file to MinIO
+        const formData = new FormData();
+        formData.append('file', file);
+        const uploadRes = await fetch('/api/upload-queue/upload-file', {
+          method: 'POST',
+          body: formData
+        });
+        if (!uploadRes.ok) throw new Error('File upload failed');
+        const { file_path } = await uploadRes.json();
+        // 2. POST metadata to queue
+        await fetch('/api/upload-queue', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            file_name: file.name,
+            file_size: file.size,
+            status: 'queued',
+            source: 'bulk',
+            upload_id: batchId,
+            upload_date: now,
+            file_path
+          })
+        });
+      }));
+      setStagedFiles([]);
+      setDialogOpen(false);
+      setUploadBatchId(batchId);
+    } finally {
+      setUploading(false);
+    }
   };
 
   return (
@@ -136,8 +164,8 @@ function UploadPageContent() {
             <DialogClose asChild>
               <Button type="button" variant="outline" onClick={() => setStagedFiles([])}>Cancel</Button>
             </DialogClose>
-            <Button type="button" onClick={handleConfirmUpload} disabled={stagedFiles.length === 0}>
-              Confirm Upload
+            <Button type="button" onClick={handleConfirmUpload} disabled={stagedFiles.length === 0 || uploading}>
+              {uploading ? 'Uploading...' : 'Confirm Upload'}
             </Button>
           </DialogFooter>
         </DialogContent>

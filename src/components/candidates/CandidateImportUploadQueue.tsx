@@ -1,25 +1,30 @@
 "use client";
 
-import React, { createContext, useContext, useState, useCallback } from "react";
+import React, { createContext, useContext, useState, useCallback, useEffect, useRef } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Loader2, XCircle, CheckCircle, FileText, RotateCcw, ExternalLink, AlertCircle, Eye, FileUp, UploadCloud } from "lucide-react";
 import Link from "next/link";
 import { Table, TableHeader, TableBody, TableHead, TableRow, TableCell } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
+import { MINIO_PUBLIC_BASE_URL, MINIO_BUCKET } from '@/lib/minio-constants';
 
 export type CandidateJobType = "upload" | "import";
 
 export interface CandidateJob {
   id: string;
-  file: File;
-  type: CandidateJobType;
-  status: "queued" | "uploading" | "importing" | "success" | "error" | "cancelled";
+  file_name: string;
+  file_size: number;
+  status: string;
   error?: string;
-  errorDetails?: string;
-  candidateId?: string;
-  candidateProfileUrl?: string;
-  abortController?: AbortController;
+  error_details?: string;
+  source: string;
+  upload_date?: string;
+  completed_date?: string;
+  upload_id?: string;
+  created_by?: string;
+  updated_at?: string;
+  file_path?: string;
 }
 
 interface QueueContextType {
@@ -60,10 +65,33 @@ export const CandidateQueueProvider: React.FC<{ children: React.ReactNode }> = (
 };
 
 export const CandidateImportUploadQueue: React.FC = () => {
-  const { jobs, updateJob, removeJob } = useCandidateQueue();
+  const [jobs, setJobs] = useState<CandidateJob[]>([]);
+  const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(1);
+  const [pageSize] = useState(20);
   const [showErrorLogId, setShowErrorLogId] = useState<string | null>(null);
   const [filter, setFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
+
+  // Fetch paginated jobs
+  useEffect(() => {
+    let isMounted = true;
+    const fetchJobs = async () => {
+      const params = new URLSearchParams({
+        limit: String(pageSize),
+        offset: String((page - 1) * pageSize),
+      });
+      const res = await fetch(`/api/upload-queue?${params.toString()}`);
+      if (!res.ok) return;
+      const { data, total } = await res.json();
+      if (isMounted) {
+        setJobs(data);
+        setTotal(total);
+      }
+    };
+    fetchJobs();
+    return () => { isMounted = false; };
+  }, [page, pageSize]);
 
   function formatBytes(bytes: number) {
     if (bytes === 0) return "0 Bytes";
@@ -73,15 +101,19 @@ export const CandidateImportUploadQueue: React.FC = () => {
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
   }
 
-  // Filtering logic
+  // Filtering logic (client-side for now)
   const filteredJobs = jobs.filter(job => {
-    const matchesName = job.file.name.toLowerCase().includes(filter.toLowerCase());
+    if (job.source !== "bulk") return false;
+    const matchesName = job.file_name?.toLowerCase().includes(filter.toLowerCase());
     const matchesStatus = statusFilter ? job.status === statusFilter : true;
     return matchesName && matchesStatus;
   });
+  const totalBulkJobs = total; // Show total from API
+  const totalPages = Math.ceil(totalBulkJobs / pageSize);
 
   return (
     <div className="mb-6">
+      <div className="mb-2 font-semibold">Queued Files: {totalBulkJobs}</div>
       <div className="flex flex-col md:flex-row md:items-center gap-2 mb-4">
         <Input
           placeholder="Filter by file name..."
@@ -110,75 +142,92 @@ export const CandidateImportUploadQueue: React.FC = () => {
               <TableHead>File Name</TableHead>
               <TableHead>Size</TableHead>
               <TableHead>Status</TableHead>
+              <TableHead>Completed Date</TableHead>
+              <TableHead>Upload Date</TableHead>
+              <TableHead>Upload ID</TableHead>
               <TableHead>Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {filteredJobs.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={4} className="text-center text-muted-foreground">No import/upload jobs in queue.</TableCell>
+                <TableCell colSpan={7} className="text-center text-muted-foreground">No import/upload jobs in queue.</TableCell>
               </TableRow>
             ) : filteredJobs.map((item) => (
               <React.Fragment key={item.id}>
                 <TableRow>
                   <TableCell className="font-medium flex items-center gap-2">
-                    {item.type === "upload" ? <UploadCloud className="h-5 w-5 text-primary" /> : <FileUp className="h-5 w-5 text-primary" />}
-                    <span className="truncate max-w-xs" title={item.file.name}>{item.file.name}</span>
-                  </TableCell>
-                  <TableCell>{formatBytes(item.file.size)}</TableCell>
-                  <TableCell>
-                    {item.status === "uploading" || item.status === "importing" ? (
-                      <span className="flex items-center gap-1 text-primary"><Loader2 className="h-4 w-4 animate-spin" /> {item.status.charAt(0).toUpperCase() + item.status.slice(1)}</span>
-                    ) : item.status === "success" ? (
-                      <span className="flex items-center gap-1 text-green-600"><CheckCircle className="h-4 w-4" /> Success</span>
-                    ) : item.status === "error" ? (
-                      <span className="flex items-center gap-1 text-destructive"><AlertCircle className="h-4 w-4" /> Error</span>
-                    ) : item.status === "cancelled" ? (
-                      <span className="text-muted-foreground">Cancelled</span>
+                    {item.file_path ? (
+                      <a
+                        href={`${MINIO_PUBLIC_BASE_URL}/${MINIO_BUCKET}/${item.file_path}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-primary underline hover:text-primary/80 truncate max-w-xs"
+                        title={item.file_name}
+                      >
+                        {item.file_name}
+                      </a>
                     ) : (
-                      <span className="text-muted-foreground capitalize">{item.status}</span>
+                      <span className="truncate max-w-xs" title={item.file_name}>{item.file_name}</span>
                     )}
                   </TableCell>
+                  <TableCell>{formatBytes(item.file_size)}</TableCell>
+                  <TableCell>
+                    <span className="text-muted-foreground capitalize">{item.status}</span>
+                  </TableCell>
+                  <TableCell>{item.completed_date ? new Date(item.completed_date).toLocaleString() : '-'}</TableCell>
+                  <TableCell>{item.upload_date ? new Date(item.upload_date).toLocaleString() : '-'}</TableCell>
+                  <TableCell>{item.upload_id || '-'}</TableCell>
                   <TableCell className="flex gap-1">
                     {item.status === "error" && (
                       <Button variant="ghost" size="icon" onClick={() => setShowErrorLogId(item.id)} title="View error log">
                         <Eye className="h-4 w-4 text-destructive" />
                       </Button>
                     )}
-                    {item.status === "success" && item.candidateProfileUrl && (
-                      <Link href={item.candidateProfileUrl} target="_blank" rel="noopener noreferrer">
-                        <Button variant="ghost" size="icon" title="View candidate profile">
-                          <ExternalLink className="h-4 w-4 text-primary" />
-                        </Button>
-                      </Link>
-                    )}
-                    {(item.status === "uploading" || item.status === "importing" || item.status === "queued") && (
-                      <Button variant="ghost" size="icon" onClick={() => updateJob(item.id, { status: "cancelled" })} title="Cancel">
-                        <XCircle className="h-4 w-4 text-destructive" />
-                      </Button>
-                    )}
-                    {item.status === "error" && (
-                      <Button variant="ghost" size="icon" onClick={() => updateJob(item.id, { status: "queued", error: undefined, errorDetails: undefined })} title="Retry">
+                    {(item.status === "queued" || item.status === "error") && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        title="Retry"
+                        onClick={async () => {
+                          await fetch(`/api/upload-queue/${item.id}`, {
+                            method: 'PATCH',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ status: 'queued', error: null, error_details: null, completed_date: null })
+                          });
+                        }}
+                      >
                         <RotateCcw className="h-4 w-4 text-primary" />
                       </Button>
                     )}
-                    {(item.status === "success" || item.status === "cancelled" || item.status === "error") && (
-                      <Button variant="ghost" size="icon" onClick={() => removeJob(item.id)} title="Remove">
-                        <XCircle className="h-4 w-4 text-muted-foreground" />
+                    {(item.status === "queued" || item.status === "uploading") && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        title="Cancel"
+                        onClick={async () => {
+                          await fetch(`/api/upload-queue/${item.id}`, {
+                            method: 'PATCH',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ status: 'cancelled', completed_date: new Date().toISOString() })
+                          });
+                        }}
+                      >
+                        <XCircle className="h-4 w-4 text-destructive" />
                       </Button>
                     )}
                   </TableCell>
                 </TableRow>
-                {showErrorLogId === item.id && item.errorDetails && (
+                {showErrorLogId === item.id && item.error_details && (
                   <TableRow>
-                    <TableCell colSpan={4} className="bg-destructive/10 rounded p-2 text-xs text-destructive">
+                    <TableCell colSpan={7} className="bg-destructive/10 rounded p-2 text-xs text-destructive">
                       <div className="flex justify-between items-center mb-1">
                         <span>Error Log</span>
                         <Button variant="ghost" size="icon" onClick={() => setShowErrorLogId(null)}>
                           <XCircle className="h-4 w-4" />
                         </Button>
                       </div>
-                      <pre className="whitespace-pre-wrap break-all max-h-40 overflow-auto">{item.errorDetails}</pre>
+                      <pre className="whitespace-pre-wrap break-all max-h-40 overflow-auto">{item.error_details}</pre>
                     </TableCell>
                   </TableRow>
                 )}
@@ -186,6 +235,21 @@ export const CandidateImportUploadQueue: React.FC = () => {
             ))}
           </TableBody>
         </Table>
+      </div>
+      {/* Pagination controls */}
+      <div className="flex justify-center items-center gap-2 mt-4">
+        <Button variant="outline" size="sm" onClick={() => setPage(page - 1)} disabled={page === 1}>Prev</Button>
+        {Array.from({ length: totalPages }, (_, i) => (
+          <Button
+            key={i + 1}
+            variant={page === i + 1 ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => setPage(i + 1)}
+          >
+            {i + 1}
+          </Button>
+        ))}
+        <Button variant="outline" size="sm" onClick={() => setPage(page + 1)} disabled={page === totalPages}>Next</Button>
       </div>
     </div>
   );

@@ -12,6 +12,52 @@ const reorderSchema = z.object({
   stageIds: z.array(z.string().uuid()),
 });
 
+/**
+ * @openapi
+ * /api/settings/recruitment-stages/reorder:
+ *   post:
+ *     summary: Reorder recruitment stages
+ *     description: Reorders the recruitment stages by the given array of stage IDs. Requires authentication and Admin or RECRUITMENT_STAGES_MANAGE permission.
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               stageIds:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                 description: Array of recruitment stage IDs in the new order
+ *           examples:
+ *             example:
+ *               summary: Example request
+ *               value:
+ *                 stageIds: ["uuid1", "uuid2", "uuid3"]
+ *     responses:
+ *       200:
+ *         description: Recruitment stages reordered successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *             examples:
+ *               success:
+ *                 summary: Example response
+ *                 value:
+ *                   message: "Recruitment stages reordered successfully"
+ *       400:
+ *         description: Invalid input
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden: Insufficient permissions
+ */
+
 export async function POST(request: NextRequest) {
   const session = await getServerSession(authOptions);
   const actingUserId = session?.user?.id;

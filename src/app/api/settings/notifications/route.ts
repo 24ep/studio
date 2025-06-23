@@ -13,6 +13,7 @@ import { authOptions } from '@/lib/auth';
  * /api/settings/notifications:
  *   get:
  *     summary: Get notification settings
+ *     description: Returns the current notification settings for the system. Requires authentication and Admin or NOTIFICATION_SETTINGS_MANAGE permission.
  *     responses:
  *       200:
  *         description: Notification settings
@@ -22,19 +23,24 @@ import { authOptions } from '@/lib/auth';
  *               type: array
  *               items:
  *                 type: object
- *   post:
- *     summary: Update notification settings
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: array
- *             items:
- *               type: object
- *     responses:
- *       200:
- *         description: Notification settings updated
+ *             examples:
+ *               success:
+ *                 summary: Example response
+ *                 value:
+ *                   - id: "uuid"
+ *                     event_key: "candidate_created"
+ *                     label: "Candidate Created"
+ *                     channels:
+ *                       - channelId: "uuid"
+ *                         channelKey: "email"
+ *                         channelLabel: "Email"
+ *                         isEnabled: true
+ *                         configuration: {}
+ *                         settingId: "uuid"
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden: Insufficient permissions
  */
 
 export const dynamic = "force-dynamic";

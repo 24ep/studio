@@ -43,16 +43,18 @@ export async function GET(request: NextRequest) {
   // }
 
   try {
-    console.log('Positions API: Starting to fetch positions');
     const { searchParams } = new URL(request.url);
     const titleFilter = searchParams.get('title');
     const departmentFilter = searchParams.get('department'); // Expects comma-separated strings
     const isOpenFilter = searchParams.get('isOpen');
     const positionLevelFilter = searchParams.get('position_level');
+    const limit = parseInt(searchParams.get('limit') || '20', 10);
+    const offset = parseInt(searchParams.get('offset') || '0', 10);
 
     console.log('Positions API: Filters:', { titleFilter, departmentFilter, isOpenFilter, positionLevelFilter });
 
     let query = 'SELECT id, title, department, description, "isOpen", position_level, "customAttributes", "createdAt", "updatedAt" FROM "positions"';
+    let countQuery = 'SELECT COUNT(*) FROM "positions"';
     const conditions = [];
     const queryParams = [];
     let paramIndex = 1;
@@ -77,14 +79,18 @@ export async function GET(request: NextRequest) {
 
     if (conditions.length > 0) {
       query += ' WHERE ' + conditions.join(' AND ');
+      countQuery += ' WHERE ' + conditions.join(' AND ');
     }
     query += ' ORDER BY "createdAt" DESC';
-    
+    query += ` LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`;
+    queryParams.push(limit, offset);
+
     console.log('Positions API: Executing query:', query);
     console.log('Positions API: Query params:', queryParams);
     
     const result = await getPool().query(query, queryParams);
-    console.log('Positions API: Query result rows:', result.rows.length);
+    const countResult = await getPool().query(countQuery, queryParams.slice(0, paramIndex - 1));
+    const total = parseInt(countResult.rows[0].count, 10);
     
     const positions = result.rows.map(row => ({
         ...row,
@@ -92,7 +98,7 @@ export async function GET(request: NextRequest) {
     }));
     
     console.log('Positions API: Returning positions:', positions.length);
-    return NextResponse.json(positions, { status: 200 });
+    return NextResponse.json({ data: positions, total }, { status: 200 });
   } catch (error) {
     console.error("Failed to fetch positions:", error);
     await logAudit('ERROR', `Failed to fetch positions. Error: ${(error as Error).message}`, 'API:Positions:GetAll', session?.user?.id);

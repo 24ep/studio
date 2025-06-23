@@ -65,15 +65,97 @@ export async function POST(request: NextRequest) {
  * /api/logs:
  *   get:
  *     summary: Get system logs
+ *     description: Returns a paginated list of system and application logs. Requires authentication.
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *         description: Page number
+ *         example: 1
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 10
+ *         description: Number of items per page
+ *         example: 20
+ *       - in: query
+ *         name: level
+ *         schema:
+ *           type: string
+ *           enum: [INFO, WARN, ERROR, DEBUG, AUDIT]
+ *         description: Filter by log level
+ *         example: ERROR
+ *       - in: query
+ *         name: search
+ *         schema:
+ *           type: string
+ *         description: Search in message or source
+ *         example: "database"
+ *       - in: query
+ *         name: actingUserId
+ *         schema:
+ *           type: string
+ *         description: Filter by acting user ID
+ *         example: "user-uuid"
+ *       - in: query
+ *         name: startDate
+ *         schema:
+ *           type: string
+ *           format: date-time
+ *         description: Filter logs after this date
+ *         example: "2024-01-01T00:00:00.000Z"
+ *       - in: query
+ *         name: endDate
+ *         schema:
+ *           type: string
+ *           format: date-time
+ *         description: Filter logs before this date
+ *         example: "2024-01-31T23:59:59.999Z"
  *     responses:
  *       200:
- *         description: List of log entries
+ *         description: Paginated logs
  *         content:
  *           application/json:
  *             schema:
- *               type: array
- *               items:
- *                 type: object
+ *               type: object
+ *               properties:
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                 pagination:
+ *                   type: object
+ *                   properties:
+ *                     page:
+ *                       type: integer
+ *                     limit:
+ *                       type: integer
+ *                     total:
+ *                       type: integer
+ *                     totalPages:
+ *                       type: integer
+ *             examples:
+ *               success:
+ *                 summary: Example response
+ *                 value:
+ *                   data:
+ *                     - id: "uuid"
+ *                       timestamp: "2024-01-01T12:00:00.000Z"
+ *                       level: "ERROR"
+ *                       message: "Database connection failed"
+ *                       source: "API:Positions:GetAll"
+ *                       actingUserId: "user-uuid"
+ *                       actingUserName: "Alice"
+ *                   pagination:
+ *                     page: 1
+ *                     limit: 20
+ *                     total: 1
+ *                     totalPages: 1
+ *       401:
+ *         description: Unauthorized
  */
 export async function GET(request: NextRequest) {
     const session = await getServerSession(authOptions);

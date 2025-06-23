@@ -8,6 +8,42 @@ function extractIdFromUrl(request: NextRequest): string | null {
   return match ? match[1] : null;
 }
 
+/**
+ * @openapi
+ * /api/realtime/notifications/{id}/read:
+ *   post:
+ *     summary: Mark a notification as read
+ *     description: Marks a notification as read for the current user. Requires authentication.
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The ID of the notification
+ *         example: "uuid"
+ *     responses:
+ *       200:
+ *         description: Notification marked as read
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *             examples:
+ *               success:
+ *                 summary: Example response
+ *                 value:
+ *                   success: true
+ *       400:
+ *         description: Missing notification ID
+ *       401:
+ *         description: Unauthorized
+ *       500:
+ *         description: Failed to mark notification as read
+ */
 export async function POST(request: NextRequest) {
   const id = extractIdFromUrl(request);
   const session = await getServerSession(authOptions);

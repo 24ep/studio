@@ -17,6 +17,61 @@ function extractIdFromUrl(request: NextRequest): string | null {
   return match ? match[1] : null;
 }
 
+/**
+ * @openapi
+ * /api/settings/recruitment-stages/{id}/move:
+ *   post:
+ *     summary: Move a recruitment stage up or down
+ *     description: Moves a recruitment stage up or down in the order. Requires authentication and Admin or RECRUITMENT_STAGES_MANAGE permission.
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The ID of the recruitment stage
+ *         example: "uuid"
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               direction:
+ *                 type: string
+ *                 enum: [up, down]
+ *                 description: Direction to move the stage
+ *           examples:
+ *             example:
+ *               summary: Example request
+ *               value:
+ *                 direction: "up"
+ *     responses:
+ *       200:
+ *         description: Stage order updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *             examples:
+ *               success:
+ *                 summary: Example response
+ *                 value:
+ *                   message: "Stage order updated successfully"
+ *       400:
+ *         description: Invalid input or already at boundary
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden: Insufficient permissions
+ *       404:
+ *         description: Stage not found
+ */
+
 export async function POST(request: NextRequest) {
     const id = extractIdFromUrl(request);
     const session = await getServerSession(authOptions);

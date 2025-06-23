@@ -32,6 +32,15 @@ const updateCustomFieldSchema = createCustomFieldSchema.partial().omit({ model_n
  * /api/settings/custom-field-definitions:
  *   get:
  *     summary: Get all custom field definitions
+ *     description: Returns a list of all custom field definitions. Requires authentication.
+ *     parameters:
+ *       - in: query
+ *         name: model_name
+ *         schema:
+ *           type: string
+ *           enum: [Candidate, Position]
+ *         description: Filter by model name (Candidate or Position)
+ *         example: Candidate
  *     responses:
  *       200:
  *         description: List of custom field definitions
@@ -41,17 +50,60 @@ const updateCustomFieldSchema = createCustomFieldSchema.partial().omit({ model_n
  *               type: array
  *               items:
  *                 $ref: '#/components/schemas/CustomFieldDefinition'
+ *             examples:
+ *               success:
+ *                 summary: Example response
+ *                 value:
+ *                   - id: "uuid"
+ *                     model_name: "Candidate"
+ *                     field_key: "linkedin"
+ *                     label: "LinkedIn Profile"
+ *                     field_type: "text"
+ *                     is_required: false
+ *                     sort_order: 1
+ *       401:
+ *         description: Unauthorized
  *   post:
  *     summary: Create a new custom field definition
+ *     description: Creates a new custom field definition. Requires authentication and Admin or CUSTOM_FIELDS_MANAGE permission.
  *     requestBody:
  *       required: true
  *       content:
  *         application/json:
  *           schema:
  *             $ref: '#/components/schemas/CustomFieldDefinition'
+ *           examples:
+ *             example:
+ *               summary: Example request
+ *               value:
+ *                 model_name: "Candidate"
+ *                 field_key: "linkedin"
+ *                 label: "LinkedIn Profile"
+ *                 field_type: "text"
+ *                 is_required: false
+ *                 sort_order: 1
  *     responses:
  *       201:
  *         description: Custom field definition created
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/CustomFieldDefinition'
+ *             examples:
+ *               success:
+ *                 summary: Example response
+ *                 value:
+ *                   id: "uuid"
+ *                   model_name: "Candidate"
+ *                   field_key: "linkedin"
+ *                   label: "LinkedIn Profile"
+ *                   field_type: "text"
+ *                   is_required: false
+ *                   sort_order: 1
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden: Insufficient permissions
  */
 export async function GET(request: NextRequest) {
   const session = await getServerSession(authOptions);

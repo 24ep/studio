@@ -91,11 +91,14 @@ export default function PositionsPageClient({
   const canExportPositions = session?.user?.role === 'Admin' || session?.user?.modulePermissions?.includes('POSITIONS_EXPORT');
   const canManagePositions = session?.user?.role === 'Admin' || session?.user?.modulePermissions?.includes('POSITIONS_MANAGE');
 
+  const [page, setPage] = useState(1);
+  const [pageSize] = useState(20);
+  const [total, setTotal] = useState(0);
 
-  const fetchPositionsClientSide = useCallback(async (currentFilters?: PositionFilterValues) => {
+  const fetchPaginatedPositions = useCallback(async (currentFilters: PositionFilterValues, page: number, pageSize: number) => {
     if (sessionStatus !== 'authenticated') {
-        setIsLoading(false);
-        return;
+      setIsLoading(false);
+      return;
     }
     setIsLoading(true);
     setFetchError(null);
@@ -108,8 +111,8 @@ export default function PositionsPageClient({
       if (activeFilters.selectedDepartments && activeFilters.selectedDepartments.length > 0) query.append('department', activeFilters.selectedDepartments.join(','));
       if (activeFilters.isOpen && activeFilters.isOpen !== "all") query.append('isOpen', String(activeFilters.isOpen === "true"));
       if (activeFilters.positionLevel) query.append('position_level', activeFilters.positionLevel);
-
-
+      query.append('limit', String(pageSize));
+      query.append('offset', String((page - 1) * pageSize));
       const response = await fetch(`/api/positions?${query.toString()}`);
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({ message: response.statusText || `Status: ${response.status}` }));
@@ -122,16 +125,15 @@ export default function PositionsPageClient({
         }
         setFetchError(errorMessage); setPositions([]); return;
       }
-      const data: Position[] = await response.json();
-      setPositions(data);
-
+      const data = await response.json();
+      setPositions(data.data);
+      setTotal(data.total);
       const uniqueDepts = Array.from(
         new Set(
-          data.map(p => p.department).filter((d): d is string => typeof d === 'string' && Boolean(d))
+          data.data.map((p: Position) => p.department).filter((d: string) => typeof d === 'string' && Boolean(d))
         )
       );
       setAvailableDepartments(uniqueDepts.sort());
-
     } catch (error) {
       const errorMessage = (error as Error).message || "Could not load position data.";
       if (!(errorMessage.toLowerCase().includes("unauthorized") || errorMessage.toLowerCase().includes("forbidden"))) {
@@ -144,29 +146,12 @@ export default function PositionsPageClient({
   }, [filters, sessionStatus]);
 
   useEffect(() => {
-    // Set initial state from props
-    setPositions(initialPositions || []);
-    setAvailableDepartments(initialAvailableDepartments || []);
-    setFetchError(initialFetchError || null);
-    setAuthError(serverAuthError);
-    setPermissionError(serverPermissionError);
-
-    if (sessionStatus === 'unauthenticated' && !serverAuthError) {
-      signIn(undefined, { callbackUrl: pathname });
-    }
-
-    // Show error as toast popup if present
-    if (initialFetchError) {
-      toast.error(initialFetchError);
-    }
-
-    // Initial data is loaded by server component, client only fetches on filter change or action
-  }, [initialPositions, initialAvailableDepartments, initialFetchError, serverAuthError, serverPermissionError, sessionStatus, pathname]);
-
+    fetchPaginatedPositions(filters, page, pageSize);
+  }, [fetchPaginatedPositions, filters, page, pageSize]);
 
   const handleFilterChange = (newFilters: PositionFilterValues) => {
     setFilters(newFilters);
-    fetchPositionsClientSide(newFilters); // Fetch with new filters
+    fetchPaginatedPositions(newFilters, page, pageSize); // Fetch with new filters
   };
 
   const handleAddPositionSubmit = async (formData: AddPositionFormValues) => {
@@ -181,7 +166,7 @@ export default function PositionsPageClient({
             throw new Error(errorData.message || `Failed to add position: ${response.statusText || `Status: ${response.status}`}`);
         }
         const newPosition: Position = await response.json();
-        fetchPositionsClientSide(filters);
+        fetchPaginatedPositions(filters, page, pageSize);
         setIsAddModalOpen(false);
         toast.success(`${newPosition.title} has been successfully added.`);
     } catch (error) {
@@ -207,7 +192,7 @@ export default function PositionsPageClient({
         throw new Error(errorData.message || `Failed to update position: ${response.statusText || `Status: ${response.status}`}`);
       }
       const updatedPosition: Position = await response.json();
-      fetchPositionsClientSide(filters);
+      fetchPaginatedPositions(filters, page, pageSize);
       setIsEditModalOpen(false);
       setSelectedPositionForEdit(null);
       toast.success(`Position "${updatedPosition.title}" has been updated.`);
@@ -229,7 +214,7 @@ export default function PositionsPageClient({
         const errorData = await response.json().catch(() => ({message: "Failed to delete position."}));
         throw new Error(errorData.message || `Failed to delete position: ${response.statusText}`);
       }
-      fetchPositionsClientSide(filters);
+      fetchPaginatedPositions(filters, page, pageSize);
       toast.success(`Position "${positionToDelete.title}" has been deleted.`);
     } catch (error) {
       console.error("Error deleting position:", error);
@@ -326,7 +311,7 @@ export default function PositionsPageClient({
             });
         }
         setSelectedPositionIds(new Set());
-        fetchPositionsClientSide(filters);
+        fetchPaginatedPositions(filters, page, pageSize);
     } catch (error) {
         toast.error((error as Error).message);
     } finally {
@@ -335,6 +320,8 @@ export default function PositionsPageClient({
         setBulkActionType(null);
     } };
 
+  // Pagination controls
+  const totalPages = Math.ceil(total / pageSize);
 
   if (authError) return ( <div className="flex flex-col items-center justify-center h-[calc(100vh-10rem)] text-center p-4"> <ServerCrash className="w-16 h-16 text-destructive mb-4" /> <h2 className="text-2xl font-semibold text-foreground mb-2">Access Denied</h2> <p className="text-muted-foreground mb-4 max-w-md">You need to be signed in to view this page.</p> <Button onClick={() => signIn(undefined, { callbackUrl: pathname })} className="btn-hover-primary-gradient">Sign In</Button> </div> );
   if (permissionError) return ( <div className="flex flex-col items-center justify-center h-[calc(100vh-10rem)] text-center p-4"> <ServerCrash className="w-16 h-16 text-destructive mb-4" /> <h2 className="text-2xl font-semibold text-foreground mb-2">Permission Denied</h2> <p className="text-muted-foreground mb-4 max-w-md">{fetchError || "You do not have permission to view positions."}</p> <Button onClick={() => router.push('/')} className="btn-hover-primary-gradient">Go to Home</Button> </div> );
@@ -343,7 +330,7 @@ export default function PositionsPageClient({
         <ServerCrash className="w-16 h-16 text-destructive mb-4" />
         <h2 className="text-2xl font-semibold text-foreground mb-2">Error Loading Positions</h2>
         <p className="text-muted-foreground mb-4 max-w-md">{fetchError}</p>
-        <Button onClick={() => fetchPositionsClientSide(filters)} className="btn-hover-primary-gradient">Try Again</Button>
+        <Button onClick={() => fetchPaginatedPositions(filters, page, pageSize)} className="btn-hover-primary-gradient">Try Again</Button>
       </div> );
 
 
@@ -430,7 +417,7 @@ export default function PositionsPageClient({
       </Card>
       {canManagePositions && <AddPositionModal isOpen={isAddModalOpen} onOpenChange={setIsAddModalOpen} onAddPosition={handleAddPositionSubmit} />}
       {canManagePositions && selectedPositionForEdit && ( <EditPositionModal isOpen={isEditModalOpen} onOpenChange={(isOpen) => { setIsEditModalOpen(isOpen); if (!isOpen) setSelectedPositionForEdit(null); }} onEditPosition={handleEditPositionSubmit} position={selectedPositionForEdit} /> )}
-      {canImportPositions && <ImportPositionsModal isOpen={isImportModalOpen} onOpenChange={setIsImportModalOpen} onImportSuccess={() => fetchPositionsClientSide(filters)} />}
+      {canImportPositions && <ImportPositionsModal isOpen={isImportModalOpen} onOpenChange={setIsImportModalOpen} onImportSuccess={() => fetchPaginatedPositions(filters, page, pageSize)} />}
 
       <AlertDialog open={isBulkConfirmOpen} onOpenChange={setIsBulkConfirmOpen}>
         <AlertDialogContent>
@@ -461,6 +448,21 @@ export default function PositionsPageClient({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <div className="flex justify-center items-center gap-2 mt-4">
+        <Button variant="outline" size="sm" onClick={() => setPage(page - 1)} disabled={page === 1}>Prev</Button>
+        {Array.from({ length: totalPages }, (_, i) => (
+          <Button
+            key={i + 1}
+            variant={page === i + 1 ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => setPage(i + 1)}
+          >
+            {i + 1}
+          </Button>
+        ))}
+        <Button variant="outline" size="sm" onClick={() => setPage(page + 1)} disabled={page === totalPages}>Next</Button>
+      </div>
     </div>
   );
 }

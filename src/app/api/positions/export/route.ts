@@ -13,6 +13,7 @@ export const dynamic = "force-dynamic";
  * /api/positions/export:
  *   get:
  *     summary: Export positions
+ *     description: Export all positions (implementation placeholder).
  *     responses:
  *       200:
  *         description: Exported positions data
@@ -23,6 +24,11 @@ export const dynamic = "force-dynamic";
  *               properties:
  *                 ok:
  *                   type: boolean
+ *             examples:
+ *               success:
+ *                 summary: Example response
+ *                 value:
+ *                   ok: true
  */
 
 // Helper function to convert JSON object to CSV row

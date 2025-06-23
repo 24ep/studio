@@ -94,8 +94,7 @@ export default function ApplicationLogsPage() {
     setFetchError(null);
 
     try {
-      const offset = (page - 1) * ITEMS_PER_PAGE;
-      let url = `/api/logs?limit=${ITEMS_PER_PAGE}&offset=${offset}`;
+      let url = `/api/logs?page=${page}&limit=${ITEMS_PER_PAGE}`;
       if (filters.level !== "ALL") url += `&level=${filters.level}`;
       if (filters.search.trim()) url += `&search=${encodeURIComponent(filters.search.trim())}`;
       if (filters.userId !== "ALL") url += `&actingUserId=${filters.userId}`;
@@ -118,8 +117,9 @@ export default function ApplicationLogsPage() {
         setLogs([]); setTotalLogs(0); return;
       }
 
-      const data: { logs: LogEntry[], total: number } = await response.json();
-      setLogs(data.logs || []); setTotalLogs(data.total || 0);
+      const data = await response.json();
+      setLogs(data.data || []);
+      setTotalLogs(data.pagination?.total || 0);
     } catch (err) {
       console.error("Error fetching logs:", err);
       const errorMessage = (err as Error).message;

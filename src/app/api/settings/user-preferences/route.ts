@@ -21,6 +21,59 @@ const userPreferenceSchema = z.object({
 
 const saveUserPreferencesSchema = z.array(userPreferenceSchema);
 
+/**
+ * @openapi
+ * /api/settings/user-preferences:
+ *   get:
+ *     summary: Get user preferences
+ *     description: Returns the current user's preferences. Requires authentication.
+ *     responses:
+ *       200:
+ *         description: User preferences
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *             examples:
+ *               success:
+ *                 summary: Example response
+ *                 value:
+ *                   theme: "dark"
+ *                   notifications: true
+ *       401:
+ *         description: Unauthorized
+ *   post:
+ *     summary: Update user preferences
+ *     description: Updates the current user's preferences. Requires authentication.
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *           examples:
+ *             example:
+ *               summary: Example request
+ *               value:
+ *                 theme: "light"
+ *                 notifications: false
+ *     responses:
+ *       200:
+ *         description: Preferences updated
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *             examples:
+ *               success:
+ *                 summary: Example response
+ *                 value:
+ *                   theme: "light"
+ *                   notifications: false
+ *       401:
+ *         description: Unauthorized
+ */
+
 export async function GET(request: NextRequest) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) {

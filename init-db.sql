@@ -268,3 +268,20 @@ CREATE TABLE IF NOT EXISTS "CustomFieldDefinition" (
     "updatedAt" TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     UNIQUE (model_name, field_key)
 );
+
+-- Shared Upload Queue Table
+CREATE TABLE upload_queue (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    file_name TEXT NOT NULL,
+    file_size BIGINT NOT NULL,
+    status TEXT NOT NULL, -- 'queued', 'uploading', 'success', 'error', etc.
+    error TEXT,
+    error_details TEXT,
+    source TEXT,
+    upload_date TIMESTAMP WITH TIME ZONE DEFAULT now(),
+    completed_date TIMESTAMP WITH TIME ZONE,
+    upload_id UUID,
+    created_by TEXT,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT now(),
+    file_path TEXT
+);

@@ -74,6 +74,9 @@ async function getInitialTaskBoardData(session: any): Promise<{
   let initialPositions: Position[] = [];
   if (positionsResult.status === 'fulfilled') {
     initialPositions = positionsResult.value;
+    if (!initialPositions || initialPositions.length === 0) {
+      accumulatedError += "No positions found. Please check your database initialization.";
+    }
   } else {
     accumulatedError += "Failed to load positions. ";
     console.error("MyTasksPageServer fetchAllPositionsDb Error:", positionsResult.reason);
@@ -82,6 +85,9 @@ async function getInitialTaskBoardData(session: any): Promise<{
   let initialStages: RecruitmentStage[] = [];
   if (stagesResult.status === 'fulfilled') {
     initialStages = stagesResult.value;
+    if (!initialStages || initialStages.length === 0) {
+      accumulatedError += "No recruitment stages found. Please check your database initialization.";
+    }
   } else {
     accumulatedError += "Failed to load stages. ";
     console.error("MyTasksPageServer fetchAllRecruitmentStagesDb Error:", stagesResult.reason);

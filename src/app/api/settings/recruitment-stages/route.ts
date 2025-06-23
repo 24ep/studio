@@ -21,6 +21,7 @@ const recruitmentStageSchema = z.object({
  * /api/settings/recruitment-stages:
  *   get:
  *     summary: Get all recruitment stages
+ *     description: Returns a list of all recruitment stages. Requires authentication and Admin or RECRUITMENT_STAGES_MANAGE permission.
  *     responses:
  *       200:
  *         description: List of recruitment stages
@@ -30,17 +31,65 @@ const recruitmentStageSchema = z.object({
  *               type: array
  *               items:
  *                 type: object
+ *             examples:
+ *               success:
+ *                 summary: Example response
+ *                 value:
+ *                   - id: "uuid"
+ *                     name: "Applied"
+ *                     description: "Initial application stage"
+ *                     is_system: true
+ *                     sort_order: 1
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden: Insufficient permissions
  *   post:
  *     summary: Create a new recruitment stage
+ *     description: Creates a new recruitment stage. Requires authentication and Admin or RECRUITMENT_STAGES_MANAGE permission.
  *     requestBody:
  *       required: true
  *       content:
  *         application/json:
  *           schema:
  *             type: object
+ *             properties:
+ *               name:
+ *                 type: string
+ *               description:
+ *                 type: string
+ *               is_system:
+ *                 type: boolean
+ *               sort_order:
+ *                 type: integer
+ *           examples:
+ *             example:
+ *               summary: Example request
+ *               value:
+ *                 name: "Screening"
+ *                 description: "Screening stage"
+ *                 is_system: false
+ *                 sort_order: 2
  *     responses:
  *       201:
  *         description: Recruitment stage created
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *             examples:
+ *               success:
+ *                 summary: Example response
+ *                 value:
+ *                   id: "uuid"
+ *                   name: "Screening"
+ *                   description: "Screening stage"
+ *                   is_system: false
+ *                   sort_order: 2
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden: Insufficient permissions
  */
 export async function GET(request: NextRequest) {
     const session = await getServerSession(authOptions);

@@ -17,6 +17,77 @@ const webhookFieldMappingSchema = z.object({
 
 const saveWebhookMappingsSchema = z.array(webhookFieldMappingSchema);
 
+/**
+ * @openapi
+ * /api/settings/webhook-mappings:
+ *   get:
+ *     summary: Get webhook mappings
+ *     description: Returns a list of webhook field mappings. Requires authentication and Admin or WEBHOOK_MAPPING_MANAGE permission.
+ *     responses:
+ *       200:
+ *         description: List of webhook mappings
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 type: object
+ *             examples:
+ *               success:
+ *                 summary: Example response
+ *                 value:
+ *                   - id: "uuid"
+ *                     targetPath: "parsedData.personal_info.location"
+ *                     sourcePath: "location"
+ *                     notes: "Maps resume location to candidate location"
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden: Insufficient permissions
+ *   post:
+ *     summary: Create a webhook mapping
+ *     description: Creates a new webhook field mapping. Requires authentication and Admin or WEBHOOK_MAPPING_MANAGE permission.
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               targetPath:
+ *                 type: string
+ *               sourcePath:
+ *                 type: string
+ *               notes:
+ *                 type: string
+ *           examples:
+ *             example:
+ *               summary: Example request
+ *               value:
+ *                 targetPath: "parsedData.personal_info.location"
+ *                 sourcePath: "location"
+ *                 notes: "Maps resume location to candidate location"
+ *     responses:
+ *       201:
+ *         description: Webhook mapping created
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *             examples:
+ *               success:
+ *                 summary: Example response
+ *                 value:
+ *                   id: "uuid"
+ *                   targetPath: "parsedData.personal_info.location"
+ *                   sourcePath: "location"
+ *                   notes: "Maps resume location to candidate location"
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden: Insufficient permissions
+ */
+
 export async function GET(request: NextRequest) {
   const session = await getServerSession(authOptions);
   if (session?.user?.role !== 'Admin' && !session?.user?.modulePermissions?.includes('WEBHOOK_MAPPING_MANAGE')) {

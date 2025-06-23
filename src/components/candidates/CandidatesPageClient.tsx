@@ -98,6 +98,9 @@ export function CandidatesPageClient({
   const [bulkNewRecruiterId, setBulkNewRecruiterId] = useState<string | null>(null);
   const [bulkTransitionNotes, setBulkTransitionNotes] = useState<string>('');
 
+  const [page, setPage] = useState(1);
+  const [pageSize] = useState(20);
+  const [total, setTotal] = useState(0);
 
   const canImportCandidates = session?.user?.role === 'Admin' || session?.user?.modulePermissions?.includes('CANDIDATES_IMPORT');
   const canExportCandidates = session?.user?.role === 'Admin' || session?.user?.modulePermissions?.includes('CANDIDATES_EXPORT');
@@ -136,7 +139,7 @@ export function CandidatesPageClient({
   }, [sessionStatus]);
 
 
-  const fetchFilteredCandidatesOnClient = useCallback(async (currentFilters: CandidateFilterValues) => {
+  const fetchPaginatedCandidates = useCallback(async (currentFilters: CandidateFilterValues, page: number, pageSize: number) => {
     if (sessionStatus !== 'authenticated') {
       setIsLoading(false);
       return;
@@ -147,7 +150,6 @@ export function CandidatesPageClient({
     setPermissionError(false);
     setAiMatchedCandidateIds(null);
     setAiSearchReasoning(null);
-
     try {
       const query = new URLSearchParams();
       if (currentFilters.name) query.append('name', currentFilters.name);
@@ -161,7 +163,8 @@ export function CandidatesPageClient({
       if (currentFilters.applicationDateStart) query.append('applicationDateStart', currentFilters.applicationDateStart.toISOString());
       if (currentFilters.applicationDateEnd) query.append('applicationDateEnd', currentFilters.applicationDateEnd.toISOString());
       if (currentFilters.selectedRecruiterIds && currentFilters.selectedRecruiterIds.length > 0) query.append('recruiterId', currentFilters.selectedRecruiterIds.join(','));
-
+      query.append('page', String(page));
+      query.append('limit', String(pageSize));
       const response = await fetch(`/api/candidates?${query.toString()}`);
       if (!response.ok) {
         let errorData: any = {};
@@ -169,15 +172,11 @@ export function CandidatesPageClient({
         try {
           errorData = await response.json();
           errorMessageFromServer = errorData?.message || errorData?.error;
-        } catch (e) {
-          // Failed to parse JSON, use status text
-        }
-
+        } catch (e) {}
         let errorMessage = errorMessageFromServer || `Failed to fetch candidates. Server responded with status ${response.status}: ${response.statusText || 'No additional error message.'}`;
         if (errorData?.code) {
           errorMessage += ` (Code: ${errorData.code})`;
         }
-
         if (response.status === 401) {
             setAuthError(true);
             return;
@@ -192,8 +191,9 @@ export function CandidatesPageClient({
         setAllCandidates([]);
         return;
       }
-      const data: Candidate[] = await response.json();
-      setAllCandidates(data);
+      const data = await response.json();
+      setAllCandidates(data.data);
+      setTotal(data.total);
     } catch (error) {
       const errorMessage = (error as Error).message || "Could not load candidate data.";
        if (!(errorMessage.toLowerCase().includes("unauthorized") || errorMessage.toLowerCase().includes("forbidden"))) {
@@ -245,10 +245,10 @@ export function CandidatesPageClient({
     if (sessionStatus === 'authenticated' && !serverAuthError && !serverPermissionError) {
       fetchRecruiters(); // Fetch recruiters on client side
       if (safeInitialCandidates.length === 0 && !initialFetchError) { // Fetch candidates if not pre-loaded
-        fetchFilteredCandidatesOnClient(filters);
+        fetchPaginatedCandidates(filters, page, pageSize);
       }
     }
-  }, [sessionStatus, serverAuthError, serverPermissionError, fetchRecruiters, fetchFilteredCandidatesOnClient, filters, safeInitialCandidates.length, initialFetchError]);
+  }, [sessionStatus, serverAuthError, serverPermissionError, fetchRecruiters, fetchPaginatedCandidates, filters, safeInitialCandidates.length, initialFetchError, page, pageSize]);
 
 
   useEffect(() => {
@@ -274,7 +274,7 @@ export function CandidatesPageClient({
     setFilters(combinedFilters);
     setAiMatchedCandidateIds(null);
     setAiSearchReasoning(null);
-    fetchFilteredCandidatesOnClient(combinedFilters);
+    fetchPaginatedCandidates(combinedFilters, page, pageSize);
   };
 
   const fetchCandidateById = useCallback(async (candidateId: string): Promise<Candidate | null> => {
@@ -303,9 +303,9 @@ export function CandidatesPageClient({
       setAllCandidates(prev => prev.map(c => c.id === candidateId ? updatedCandidate : c));
     } else {
       toast.error('Could not refresh data for candidate. Attempting full list refresh.');
-      fetchFilteredCandidatesOnClient(filters);
+      fetchPaginatedCandidates(filters, page, pageSize);
     }
-  }, [fetchCandidateById, toast, fetchFilteredCandidatesOnClient, filters, aiMatchedCandidateIds]);
+  }, [fetchCandidateById, toast, fetchPaginatedCandidates, filters, page, pageSize, aiMatchedCandidateIds]);
 
   const handleUpdateCandidateAPI = async (candidateId: string, status: CandidateStatus, transitionNotes?: string) => {
     try {
@@ -407,7 +407,7 @@ export function CandidatesPageClient({
 
   const handleAutomatedProcessingStart = () => {
     toast('Processing Started: Resume sent for automated processing. Candidate list will refresh if successful.');
-    setTimeout(() => { fetchFilteredCandidatesOnClient(filters); }, 15000); // Optimistic refresh after 15s
+    setTimeout(() => { fetchPaginatedCandidates(filters, page, pageSize); }, 15000); // Optimistic refresh after 15s
   };
 
   const handleDownloadCsvTemplateGuide = () => {
@@ -485,7 +485,7 @@ export function CandidatesPageClient({
     if (sessionStatus === 'authenticated') {
         const posResponse = await fetch('/api/positions'); // Re-fetch all positions
         if (posResponse.ok) setAvailablePositions(await posResponse.json());
-        fetchFilteredCandidatesOnClient(filters); // Refresh candidates list
+        fetchPaginatedCandidates(filters, page, pageSize); // Refresh candidates list
     }
   };
 
@@ -559,7 +559,7 @@ export function CandidatesPageClient({
 
       toast.success(`${result.successCount} candidate(s) affected. ${result.failCount > 0 ? `${result.failCount} failed.` : ''}`);
       setSelectedCandidateIds(new Set()); // Clear selection
-      fetchFilteredCandidatesOnClient(filters); // Refresh list
+      fetchPaginatedCandidates(filters, page, pageSize); // Refresh list
     } catch (error) {
       toast.error((error as Error).message);
     } finally {
@@ -569,6 +569,8 @@ export function CandidatesPageClient({
     }
   };
 
+  // Pagination controls
+  const totalPages = Math.ceil(total / pageSize);
 
   if (authError) {
     return ( <div className="flex flex-col items-center justify-center h-[calc(100vh-10rem)] text-center p-4"> <ShieldAlert className="w-16 h-16 text-destructive mb-4" /> <h2 className="text-2xl font-semibold text-foreground mb-2">Access Denied</h2> <p className="text-muted-foreground mb-4 max-w-md">You need to be signed in to view this page.</p> <Button onClick={() => signIn(undefined, { callbackUrl: pathname })} className="btn-primary-gradient">Sign In</Button> </div> );
@@ -588,7 +590,7 @@ export function CandidatesPageClient({
         <h2 className="text-2xl font-semibold text-foreground mb-2">Error Loading Candidates</h2>
         <p className="text-muted-foreground mb-4 max-w-md">{fetchError}</p>
         {isMissingTableError && ( <div className="mb-6 p-4 border border-destructive bg-destructive/10 rounded-md text-sm"> <p className="font-semibold">It looks like a required database table (e.g., &quot;Candidate&quot;, &quot;Position&quot;, &quot;User&quot;, &quot;RecruitmentStage&quot;) is missing or not accessible.</p> <p className="mt-1">This usually means the database initialization script (`pg-init-scripts/init-db.sql`) did not run correctly when the PostgreSQL Docker container started.</p> <p className="mt-2">Please refer to the troubleshooting steps in the `README.md` for guidance on how to resolve this, typically involving a clean Docker volume reset.</p> </div> )}
-        <Button onClick={() => fetchFilteredCandidatesOnClient(filters)} className="btn-primary-gradient">Try Again</Button>
+        <Button onClick={() => fetchPaginatedCandidates(filters, page, pageSize)} className="btn-primary-gradient">Try Again</Button>
       </div>
     );
   }
@@ -681,12 +683,27 @@ export function CandidatesPageClient({
             isAllCandidatesSelected={isAllCandidatesSelected}
           />
         )}
+
+        <div className="flex justify-center items-center gap-2 mt-4">
+          <Button variant="outline" size="sm" onClick={() => setPage(page - 1)} disabled={page === 1}>Prev</Button>
+          {Array.from({ length: totalPages }, (_, i) => (
+            <Button
+              key={i + 1}
+              variant={page === i + 1 ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setPage(i + 1)}
+            >
+              {i + 1}
+            </Button>
+          ))}
+          <Button variant="outline" size="sm" onClick={() => setPage(page + 1)} disabled={page === totalPages}>Next</Button>
+        </div>
       </div>
 
       {canManageCandidates && <AddCandidateModal isOpen={isAddModalOpen} onOpenChange={setIsAddModalOpen} onAddCandidate={handleAddCandidateSubmit} availablePositions={availablePositions} availableStages={availableStages} />}
       {canManageCandidates && <UploadResumeModal isOpen={isUploadModalOpen} onOpenChange={setIsUploadModalOpen} candidate={selectedCandidateForUpload} onUploadSuccess={handleUploadSuccess} />}
       {canManageCandidates && <CreateCandidateViaN8nModal isOpen={isCreateViaN8nModalOpen} onOpenChange={setIsCreateViaN8nModalOpen} onProcessingStart={handleAutomatedProcessingStart} />}
-      {canImportCandidates && <ImportCandidatesModal isOpen={isImportModalOpen} onOpenChange={setIsImportModalOpen} onImportSuccess={() => fetchFilteredCandidatesOnClient(filters)} />}
+      {canImportCandidates && <ImportCandidatesModal isOpen={isImportModalOpen} onOpenChange={setIsImportModalOpen} onImportSuccess={() => fetchPaginatedCandidates(filters, page, pageSize)} />}
       {selectedPositionForEdit && ( <EditPositionModal isOpen={isEditPositionModalOpen} onOpenChange={(isOpen) => { setIsEditPositionModalOpen(isOpen); if (!isOpen) setSelectedPositionForEdit(null); }} position={selectedPositionForEdit} onEditPosition={handlePositionEdited} /> )}
 
       <AlertDialog open={isBulkActionConfirmOpen} onOpenChange={setIsBulkActionConfirmOpen}>
