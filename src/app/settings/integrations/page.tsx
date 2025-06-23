@@ -3,7 +3,6 @@ import { useState, useEffect, type ChangeEvent, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Switch } from '@/components/ui/switch';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Save, Settings, Mail, Zap, UploadCloud, FileText, XCircle, Loader2, AlertTriangle, ServerCrash, ShieldAlert, Info, BrainCircuit, StickyNote, RefreshCw } from 'lucide-react';
 import { signIn, useSession } from 'next-auth/react';
@@ -11,6 +10,7 @@ import { useRouter, usePathname } from 'next/navigation';
 import type { SystemSetting } from '@/lib/types';
 import { Separator } from '@/components/ui/separator';
 import { toast } from 'react-hot-toast';
+import { Toggle } from '@/components/ui/toggle';
 
 
 export default function IntegrationsSettingsPage() {
@@ -219,7 +219,7 @@ export default function IntegrationsSettingsPage() {
             </p>
           </div>
           <div className="flex items-center space-x-2 pt-1">
-            <Switch id="smtp-secure" checked={smtpSecure} onCheckedChange={setSmtpSecure} disabled={isSaving} className="switch-green"/>
+            <Toggle id="smtp-secure" checked={smtpSecure} onCheckedChange={setSmtpSecure} disabled={isSaving} variant="success"/>
             <Label htmlFor="smtp-secure" className="font-normal">Use TLS/SSL</Label>
           </div>
         </CardContent>

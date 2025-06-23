@@ -20,7 +20,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Switch } from '@/components/ui/switch';
+import { Toggle } from '@/components/ui/toggle';
 import { Textarea } from '@/components/ui/textarea';
 import {
   Table,
@@ -382,11 +382,11 @@ export default function DataModelsPage() {
                             <Input id="defaultValue" value={formData.defaultValue} onChange={e => setFormData({...formData, defaultValue: e.target.value})} />
                         </div>
                         <div className="flex items-center space-x-2">
-                            <Switch id="isRequired" checked={formData.isRequired} onCheckedChange={checked => setFormData({...formData, isRequired: checked})} />
+                            <Toggle checked={formData.isRequired} onCheckedChange={checked => setFormData({...formData, isRequired: checked})} />
                             <Label htmlFor="isRequired">Is Required?</Label>
                         </div>
                         <div className="flex items-center space-x-2">
-                            <Switch id="isFilterable" checked={formData.isFilterable} onCheckedChange={checked => setFormData({...formData, isFilterable: checked})} />
+                            <Toggle checked={formData.isFilterable} onCheckedChange={checked => setFormData({...formData, isFilterable: checked})} />
                             <Label htmlFor="isFilterable">Is Filterable?</Label>
                         </div>
                         <DialogFooter>

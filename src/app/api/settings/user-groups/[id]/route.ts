@@ -2,6 +2,7 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { z } from 'zod';
 import { getServerSession } from 'next-auth/next';
+import { authOptions } from '@/lib/auth';
 import type { UserGroup, PlatformModuleId } from '@/lib/types';
 import { PLATFORM_MODULES } from '@/lib/types';
 import { logAudit } from '@/lib/auditLog';
@@ -31,7 +32,7 @@ export const dynamic = "force-dynamic";
 
 export async function GET(request: NextRequest) {
   const id = extractIdFromUrl(request);
-  const session = await getServerSession();
+  const session = await getServerSession(authOptions);
   console.log('[API DEBUG] Session:', session);
   if (session && session.user) {
     console.log('[API DEBUG] User role:', session.user.role);
@@ -48,6 +49,7 @@ export async function GET(request: NextRequest) {
         ug.id, 
         ug.name, 
         ug.description, 
+        ug.permissions,
         ug."is_default", 
         ug."is_system_role",
         ug."createdAt", 
@@ -56,16 +58,13 @@ export async function GET(request: NextRequest) {
       FROM "UserGroup" ug
       LEFT JOIN "User_UserGroup" uug ON ug.id = uug."groupId"
       WHERE ug.id = $1
-      GROUP BY ug.id, ug.name, ug.description, ug."is_default", ug."is_system_role", ug."createdAt", ug."updatedAt"
+      GROUP BY ug.id, ug.name, ug.description, ug.permissions, ug."is_default", ug."is_system_role", ug."createdAt", ug."updatedAt"
     `, [id]);
 
     if (groupResult.rows.length === 0) {
       return NextResponse.json({ message: "User group (role) not found" }, { status: 404 });
     }
     const group: UserGroup = groupResult.rows[0];
-
-    const permissionsResult = await getPool().query('SELECT permission_id FROM "UserGroup_PlatformModule" WHERE group_id = $1', [id]);
-    group.permissions = permissionsResult.rows.map(row => row.permission_id as PlatformModuleId);
 
     return NextResponse.json(group, { status: 200 });
   } catch (error) {
@@ -77,7 +76,7 @@ export async function GET(request: NextRequest) {
 
 export async function PUT(request: NextRequest) {
     const id = extractIdFromUrl(request);
-    const session = await getServerSession();
+    const session = await getServerSession(authOptions);
     const actingUserId = session?.user?.id;
     if (!actingUserId) return new NextResponse('Unauthorized', { status: 401 });
 
@@ -128,7 +127,7 @@ export async function PUT(request: NextRequest) {
 
 export async function DELETE(request: NextRequest) {
     const id = extractIdFromUrl(request);
-    const session = await getServerSession();
+    const session = await getServerSession(authOptions);
     const actingUserId = session?.user?.id;
     if (!actingUserId) return new NextResponse('Unauthorized', { status: 401 });
     

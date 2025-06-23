@@ -7,7 +7,6 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from "@/components/ui/checkbox";
-import { Switch } from "@/components/ui/switch";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import {
   Dialog,
@@ -41,6 +40,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
+import { Toggle } from "@/components/ui/toggle";
 
 const platformModuleIds = PLATFORM_MODULES.map(m => m.id) as [PlatformModuleId, ...PlatformModuleId[]];
 
@@ -100,7 +100,7 @@ export default function RolesPermissionsPage() {
         const roleToReselect = data.find(r => r.id === roleIdToSelect);
         setSelectedRole(roleToReselect || (data.length > 0 ? data[0] : null));
         selectedRoleIdRef.current = roleToReselect?.id || (data.length > 0 ? data[0].id : null);
-      } else if (data.length > 0 && !selectedRole) { // If no role was selected before, select the first one.
+      } else if (data.length > 0 && !selectedRoleIdRef.current) { // Use ref instead of selectedRole
         setSelectedRole(data[0]);
         selectedRoleIdRef.current = data[0].id;
       } else if (data.length === 0) {
@@ -115,7 +115,7 @@ export default function RolesPermissionsPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [sessionStatus, pathname, selectedRole]); // Added selectedRole to dependencies
+  }, [sessionStatus, pathname]); // Removed selectedRole from dependencies
 
   useEffect(() => {
     // Debug: Log session and permissions
@@ -321,12 +321,10 @@ export default function RolesPermissionsPage() {
                               <Label htmlFor={`${selectedRole.id}-${perm.id}`} className="font-medium text-sm">{perm.label}</Label>
                               <p className="text-xs text-muted-foreground">{perm.description}</p>
                             </div>
-                            <Switch
-                              id={`${selectedRole.id}-${perm.id}`}
+                            <Toggle
                               checked={(selectedRole.permissions || []).includes(perm.id)}
                               onCheckedChange={() => handlePermissionToggle(perm.id, selectedRole)}
-                              disabled={isLoading || selectedRole.is_system_role}
-                              className="switch-green"
+                              variant="success"
                             />
                           </div>
                         ))}

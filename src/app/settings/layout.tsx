@@ -49,7 +49,7 @@ export default function SettingsLayout({ children }: { children: ReactNode }) {
     setIsClient(true);
   }, []);
 
-  const canAccess = (item: SettingsNavigationItem) => {
+  const canAccess = React.useCallback((item: SettingsNavigationItem) => {
     if (!isClient || status !== 'authenticated' || !session?.user) return false;
     const userRole = session.user.role;
     const modulePermissions = session.user.modulePermissions || [];
@@ -62,12 +62,13 @@ export default function SettingsLayout({ children }: { children: ReactNode }) {
     }
     if (item.permissionId && userRole !== 'Admin' && !modulePermissions.includes(item.permissionId)) return false;
     return true;
-  };
+  }, [isClient, status, session?.user?.role, session?.user?.modulePermissions]);
   
   const visibleNavItems = React.useMemo(() => {
-    return settingsNavItems.filter(item => canAccess(item));
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isClient, session, status]);
+    // Ensure settingsNavItems is an array before calling filter
+    const safeSettingsNavItems = Array.isArray(settingsNavItems) ? settingsNavItems : [];
+    return safeSettingsNavItems.filter(item => canAccess(item));
+  }, [canAccess]);
 
   if (status === "loading" && !isClient) {
     return (
@@ -128,7 +129,7 @@ export default function SettingsLayout({ children }: { children: ReactNode }) {
           </nav>
         </ScrollArea>
       </aside>
-      <div className="flex-1 overflow-y-auto relative p-6">
+      <div className="flex-1 overflow-y-auto relative">
         {/* Main content of the specific settings page will be rendered here */}
         {children}
       </div>

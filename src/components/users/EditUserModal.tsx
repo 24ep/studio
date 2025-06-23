@@ -21,7 +21,7 @@ import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Switch } from '@/components/ui/switch';
+import { Toggle } from '@/components/ui/toggle';
 import {
   Dialog,
   DialogContent,
@@ -246,10 +246,10 @@ export function EditUserModal({ isOpen, onOpenChange, onEditUser, user, isSelfEd
                                     return (
                                       <FormItem className="flex flex-row items-center space-x-4 mb-3">
                                         <FormControl>
-                                          <Switch
+                                          <Toggle
                                             checked={checked}
                                             onCheckedChange={(checked) => checked ? field.onChange([...(field.value || []), module.id]) : field.onChange((field.value || []).filter(v => v !== module.id))}
-                                            className="switch-green"
+                                            variant="success"
                                           />
                                         </FormControl>
                                         <div className="flex flex-col">

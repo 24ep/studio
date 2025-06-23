@@ -201,9 +201,11 @@ export function MyTasksPageClient({
   };
 
   const displayedCandidates = useMemo(() => {
+    // Ensure candidates is an array before calling filter
+    const safeCandidates = Array.isArray(candidates) ? candidates : [];
     return aiMatchedCandidateIds !== null
-      ? candidates.filter(c => aiMatchedCandidateIds.includes(c.id))
-      : candidates;
+      ? safeCandidates.filter(c => aiMatchedCandidateIds.includes(c.id))
+      : safeCandidates;
   }, [candidates, aiMatchedCandidateIds]);
 
   useEffect(() => {

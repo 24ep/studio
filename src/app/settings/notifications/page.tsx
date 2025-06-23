@@ -5,7 +5,6 @@ import { useState, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Switch } from '@/components/ui/switch';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { useSession } from 'next-auth/react';
@@ -13,6 +12,7 @@ import { useRouter, usePathname } from 'next/navigation';
 import { Save, BellRing, Info, Loader2, ServerCrash, ShieldAlert, RefreshCw, Webhook, Mail } from 'lucide-react';
 import type { NotificationEventWithSettings, NotificationChannel, NotificationSetting } from '@/lib/types';
 import { toast } from 'react-hot-toast';
+import { Toggle } from '@/components/ui/toggle';
 
 export default function NotificationSettingsPage() {
   const { data: session, status: sessionStatus } = useSession();
@@ -187,11 +187,11 @@ export default function NotificationSettingsPage() {
                             {channel.channelKey === 'email' ? <Mail className="mr-2 h-4 w-4 text-blue-500"/> : <Webhook className="mr-2 h-4 w-4 text-purple-500"/>}
                             {channel.channelLabel}
                           </Label>
-                          <Switch
+                          <Toggle
                             id={`enabled-${event.id}-${channel.channelId}`}
                             checked={channel.isEnabled}
                             onCheckedChange={(checked) => handleSettingChange(event.id, channel.channelId, 'isEnabled', checked)}
-                            className="switch-green"
+                            variant="success"
                           />
                         </div>
                         {channel.channelKey === 'webhook' && channel.isEnabled && (

@@ -502,9 +502,11 @@ export function CandidatesPageClient({
   };
 
   const displayedCandidates = useMemo(() => {
+    // Ensure allCandidates is an array before calling filter
+    const candidates = Array.isArray(allCandidates) ? allCandidates : [];
     return aiMatchedCandidateIds !== null
-      ? allCandidates.filter(c => aiMatchedCandidateIds.includes(c.id))
-      : allCandidates;
+      ? candidates.filter(c => aiMatchedCandidateIds.includes(c.id))
+      : candidates;
   }, [allCandidates, aiMatchedCandidateIds]);
 
 

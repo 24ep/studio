@@ -10,7 +10,7 @@ import { getRedisClient, CACHE_KEY_RECRUITMENT_STAGES } from '@/lib/redis';
 const updateRecruitmentStageSchema = z.object({
   name: z.string().min(1, 'Stage name cannot be empty.').optional(),
   description: z.string().optional().nullable(),
-  sortOrder: z.number().int().optional(),
+  sort_order: z.number().int().optional(),
 });
 
 function extractIdFromUrl(request: NextRequest): string | null {
@@ -62,12 +62,12 @@ export async function PUT(request: NextRequest) {
         return NextResponse.json({ message: 'No fields to update' }, { status: 400 });
     }
 
-    const { name, description, sortOrder } = validation.data;
+    const { name, description, sort_order } = validation.data;
     
     const client = await getPool().connect();
     try {
         const setClauses = Object.entries(validation.data).map(([key, value], index) => {
-            const dbKey = key === 'sortOrder' ? '"sortOrder"' : key;
+            const dbKey = key === 'sort_order' ? '"sort_order"' : key;
             return `${dbKey} = $${index + 1}`;
         });
         const queryParams = Object.values(validation.data);

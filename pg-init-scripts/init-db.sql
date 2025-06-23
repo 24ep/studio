@@ -50,7 +50,7 @@ CREATE TABLE IF NOT EXISTS "positions" (
 );
 CREATE INDEX IF NOT EXISTS idx_positions_title ON "positions"(title);
 
--- Create RecruitmentStage table if it doesn't exist
+-- Create RecruitmentStage table
 CREATE TABLE IF NOT EXISTS "RecruitmentStage" (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     name VARCHAR(255) NOT NULL UNIQUE,
@@ -60,11 +60,8 @@ CREATE TABLE IF NOT EXISTS "RecruitmentStage" (
     "createdAt" TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
-
--- Create indexes
 CREATE INDEX IF NOT EXISTS idx_recruitment_stage_name ON "RecruitmentStage"(name);
 CREATE INDEX IF NOT EXISTS idx_recruitment_stage_sort_order ON "RecruitmentStage"(sort_order);
-
 
 -- Insert default system recruitment stages
 INSERT INTO "RecruitmentStage" (id, name, description, is_system, sort_order) VALUES 
@@ -78,7 +75,8 @@ INSERT INTO "RecruitmentStage" (id, name, description, is_system, sort_order) VA
 ('550e8400-e29b-41d4-a716-446655440008', 'Hired', 'Candidate has been hired and started employment', true, 8),
 ('550e8400-e29b-41d4-a716-446655440009', 'Rejected', 'Candidate has been rejected from the process', true, 9),
 ('550e8400-e29b-41d4-a716-446655440010', 'On Hold', 'Candidate application is temporarily on hold', true, 10)
-ON CONFLICT (name) DO NOTHING; 
+ON CONFLICT (name) DO NOTHING;
+
 -- Create candidates table
 CREATE TABLE IF NOT EXISTS "candidates" (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),

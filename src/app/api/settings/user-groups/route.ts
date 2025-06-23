@@ -5,6 +5,7 @@ import { z } from 'zod';
 import { v4 as uuidv4 } from 'uuid';
 import { logAudit } from '@/lib/auditLog';
 import { getServerSession } from 'next-auth/next';
+import { authOptions } from '@/lib/auth';
 
 export const dynamic = "force-dynamic";
 
@@ -15,12 +16,27 @@ const userGroupSchema = z.object({
 });
 
 export async function GET(request: NextRequest) {
-    const session = await getServerSession();
+    const session = await getServerSession(authOptions);
     if (!session?.user?.id) return new NextResponse('Unauthorized', { status: 401 });
 
     const client = await getPool().connect();
     try {
-        const result = await client.query('SELECT * FROM "UserGroup" ORDER BY name ASC');
+        const result = await client.query(`
+            SELECT 
+                ug.id, 
+                ug.name, 
+                ug.description, 
+                ug.permissions,
+                ug."is_default", 
+                ug."is_system_role",
+                ug."createdAt", 
+                ug."updatedAt",
+                COUNT(uug."userId")::int as user_count
+            FROM "UserGroup" ug
+            LEFT JOIN "User_UserGroup" uug ON ug.id = uug."groupId"
+            GROUP BY ug.id, ug.name, ug.description, ug.permissions, ug."is_default", ug."is_system_role", ug."createdAt", ug."updatedAt"
+            ORDER BY ug.name ASC
+        `);
         return NextResponse.json(result.rows);
     } catch (error: any) {
         console.error("Failed to fetch user groups:", error);
@@ -31,7 +47,7 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-    const session = await getServerSession();
+    const session = await getServerSession(authOptions);
     const actingUserId = session?.user?.id;
     if (!actingUserId) return new NextResponse('Unauthorized', { status: 401 });
 

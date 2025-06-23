@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { Switch } from '@/components/ui/switch';
+import { Toggle } from '@/components/ui/toggle';
 import {
   Dialog,
   DialogContent,
@@ -147,9 +147,9 @@ export function EditPositionModal({ isOpen, onOpenChange, onEditPosition, positi
                     name="isOpen"
                     control={form.control}
                     render={({ field }) => (
-                        <Switch
+                        <Toggle
                             id="isOpen-edit"
-                            className="switch-green"
+                            variant="success"
                             checked={field.value}
                             onCheckedChange={field.onChange}
                         />

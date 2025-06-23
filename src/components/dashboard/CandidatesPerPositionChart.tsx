@@ -1,4 +1,3 @@
-
 "use client"
 
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis, ResponsiveContainer, LabelList } from "recharts"
@@ -19,8 +18,12 @@ interface CandidatesPerPositionChartProps {
 }
 
 export function CandidatesPerPositionChart({ candidates, positions }: CandidatesPerPositionChartProps) {
-  const data = positions.map(position => {
-    const candidateCount = candidates.filter(c => c.positionId === position.id).length;
+  // Ensure inputs are arrays before processing
+  const safeCandidates = Array.isArray(candidates) ? candidates : [];
+  const safePositions = Array.isArray(positions) ? positions : [];
+  
+  const data = safePositions.map(position => {
+    const candidateCount = safeCandidates.filter(c => c.positionId === position.id).length;
     return {
       position: position.title.length > 15 ? `${position.title.substring(0,12)}...` : position.title, // Truncate long titles
       fullPositionTitle: position.title,

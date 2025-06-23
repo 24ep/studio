@@ -8,7 +8,7 @@ import { getServerSession } from 'next-auth/next';
 export const dynamic = "force-dynamic";
 
 const moveStageSchema = z.object({
-  newOrder: z.number().int().min(0, "Order must be a non-negative integer."),
+  direction: z.enum(['up', 'down']),
 });
 
 function extractIdFromUrl(request: NextRequest): string | null {
@@ -36,39 +36,63 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ message: 'Invalid input', errors: validation.error.flatten().fieldErrors }, { status: 400 });
     }
 
-    const { newOrder } = validation.data;
+    const { direction } = validation.data;
     const stageId = id;
     const client = await getPool().connect();
 
     try {
         await client.query('BEGIN');
 
-        const stageToMoveResult = await client.query('SELECT "order", "positionId" FROM "RecruitmentStage" WHERE id = $1', [stageId]);
+        // Get current stage and its order
+        const stageToMoveResult = await client.query('SELECT sort_order FROM "RecruitmentStage" WHERE id = $1', [stageId]);
         if (stageToMoveResult.rows.length === 0) {
             await client.query('ROLLBACK');
             return NextResponse.json({ message: "Stage not found" }, { status: 404 });
         }
-        const { order: oldOrder, positionId } = stageToMoveResult.rows[0];
+        const currentOrder = stageToMoveResult.rows[0].sort_order;
 
-        if (newOrder > oldOrder) {
-            // Moving down
-            await client.query(
-                'UPDATE "RecruitmentStage" SET "order" = "order" - 1 WHERE "order" > $1 AND "order" <= $2 AND "positionId" = $3',
-                [oldOrder, newOrder, positionId]
+        if (direction === 'up') {
+            // Get the stage above this one
+            const aboveStageResult = await client.query(
+                'SELECT id, sort_order FROM "RecruitmentStage" WHERE sort_order < $1 ORDER BY sort_order DESC LIMIT 1',
+                [currentOrder]
             );
+            
+            if (aboveStageResult.rows.length === 0) {
+                await client.query('ROLLBACK');
+                return NextResponse.json({ message: "Stage is already at the top" }, { status: 400 });
+            }
+            
+            const aboveStage = aboveStageResult.rows[0];
+            const newOrder = aboveStage.sort_order;
+            
+            // Swap the orders
+            await client.query('UPDATE "RecruitmentStage" SET sort_order = $1 WHERE id = $2', [newOrder, stageId]);
+            await client.query('UPDATE "RecruitmentStage" SET sort_order = $1 WHERE id = $2', [currentOrder, aboveStage.id]);
+            
         } else {
-            // Moving up
-            await client.query(
-                'UPDATE "RecruitmentStage" SET "order" = "order" + 1 WHERE "order" >= $1 AND "order" < $2 AND "positionId" = $3',
-                [newOrder, oldOrder, positionId]
+            // Get the stage below this one
+            const belowStageResult = await client.query(
+                'SELECT id, sort_order FROM "RecruitmentStage" WHERE sort_order > $1 ORDER BY sort_order ASC LIMIT 1',
+                [currentOrder]
             );
+            
+            if (belowStageResult.rows.length === 0) {
+                await client.query('ROLLBACK');
+                return NextResponse.json({ message: "Stage is already at the bottom" }, { status: 400 });
+            }
+            
+            const belowStage = belowStageResult.rows[0];
+            const newOrder = belowStage.sort_order;
+            
+            // Swap the orders
+            await client.query('UPDATE "RecruitmentStage" SET sort_order = $1 WHERE id = $2', [newOrder, stageId]);
+            await client.query('UPDATE "RecruitmentStage" SET sort_order = $1 WHERE id = $2', [currentOrder, belowStage.id]);
         }
-
-        await client.query('UPDATE "RecruitmentStage" SET "order" = $1 WHERE id = $2', [newOrder, stageId]);
 
         await client.query('COMMIT');
 
-        await logAudit('AUDIT', `Recruitment stage (ID: ${stageId}) moved from order ${oldOrder} to ${newOrder}.`, 'API:RecruitmentStages:Move', actingUserId, { stageId, oldOrder, newOrder });
+        await logAudit('AUDIT', `Recruitment stage (ID: ${stageId}) moved ${direction}.`, 'API:RecruitmentStages:Move', actingUserId, { stageId, direction });
         return NextResponse.json({ message: 'Stage order updated successfully' }, { status: 200 });
 
     } catch (error: any) {

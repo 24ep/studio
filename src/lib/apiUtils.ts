@@ -50,7 +50,7 @@ export async function fetchAllRecruitmentStagesDb(): Promise<RecruitmentStage[]>
 
   const pool = getPool();
   try {
-    const result = await pool.query('SELECT * FROM "RecruitmentStage" ORDER BY "sortOrder" ASC, name ASC');
+    const result = await pool.query('SELECT * FROM "RecruitmentStage" ORDER BY sort_order ASC, name ASC');
     const stagesFromDb = result.rows;
 
     if (redisClient) {

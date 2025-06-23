@@ -11,7 +11,7 @@ export const dynamic = "force-dynamic";
 const recruitmentStageSchema = z.object({
   name: z.string().min(1, 'Stage name cannot be empty.'),
   description: z.string().optional().nullable(),
-  sortOrder: z.number().int().optional(),
+  sort_order: z.number().int().optional(),
 });
 
 export async function GET(request: NextRequest) {
@@ -20,7 +20,7 @@ export async function GET(request: NextRequest) {
 
     const client = await getPool().connect();
     try {
-        const result = await client.query('SELECT * FROM "RecruitmentStage" ORDER BY "sortOrder" ASC, name ASC');
+        const result = await client.query('SELECT * FROM "RecruitmentStage" ORDER BY sort_order ASC, name ASC');
         return NextResponse.json(result.rows);
     } catch (error: any) {
         console.error("Failed to fetch recruitment stages:", error);
@@ -48,14 +48,14 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ message: 'Invalid input', errors: validation.error.flatten().fieldErrors }, { status: 400 });
     }
 
-    const { name, description, sortOrder } = validation.data;
+    const { name, description, sort_order } = validation.data;
     const newId = uuidv4();
     
     const client = await getPool().connect();
     try {
         const result = await client.query(
-            'INSERT INTO "RecruitmentStage" (id, name, description, "sortOrder") VALUES ($1, $2, $3, $4) RETURNING *',
-            [newId, name, description, sortOrder ?? 0]
+            'INSERT INTO "RecruitmentStage" (id, name, description, sort_order) VALUES ($1, $2, $3, $4) RETURNING *',
+            [newId, name, description, sort_order ?? 0]
         );
         await logAudit('AUDIT', `Recruitment stage '${name}' created.`, 'API:RecruitmentStages:Create', actingUserId, { stageId: newId });
         return NextResponse.json(result.rows[0], { status: 201 });

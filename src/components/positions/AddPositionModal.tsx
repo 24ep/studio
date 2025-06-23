@@ -1,7 +1,6 @@
-
 "use client";
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -9,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { Switch } from '@/components/ui/switch';
+import { Toggle } from '@/components/ui/toggle';
 import {
   Dialog,
   DialogContent,
@@ -38,6 +37,8 @@ interface AddPositionModalProps {
 }
 
 export function AddPositionModal({ isOpen, onOpenChange, onAddPosition }: AddPositionModalProps) {
+  const [testInput, setTestInput] = useState('');
+  
   const form = useForm<AddPositionFormValues>({
     resolver: zodResolver(addPositionFormSchema),
     defaultValues: {
@@ -62,16 +63,12 @@ export function AddPositionModal({ isOpen, onOpenChange, onAddPosition }: AddPos
   }, [isOpen, form]);
 
   const onSubmit = async (data: AddPositionFormValues) => {
+    console.log('Form submitted with data:', data);
     await onAddPosition(data);
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => {
-      onOpenChange(open);
-      if (!open) {
-        form.reset();
-      }
-    }}>
+    <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle className="flex items-center">
@@ -81,40 +78,90 @@ export function AddPositionModal({ isOpen, onOpenChange, onAddPosition }: AddPos
             Enter the details for the new job position.
           </DialogDescription>
         </DialogHeader>
+        
+        {/* Test input to see if basic input functionality works */}
+        <div className="mb-4 p-2 bg-yellow-100 border border-yellow-300 rounded">
+          <Label htmlFor="test-input">Test Input (should work):</Label>
+          <Input 
+            id="test-input"
+            value={testInput}
+            onChange={(e) => setTestInput(e.target.value)}
+            placeholder="Type here to test..."
+            className="mt-1"
+          />
+          <p className="text-xs text-gray-600 mt-1">Current value: {testInput}</p>
+        </div>
+        
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-2">
           <div>
             <Label htmlFor="title-add">Position Title *</Label>
-            <Input id="title-add" {...form.register('title')} className="mt-1" />
-            {form.formState.errors.title && <p className="text-sm text-destructive mt-1">{form.formState.errors.title.message}</p>}
+            <Input 
+              id="title-add" 
+              {...form.register('title')} 
+              className="mt-1" 
+              placeholder="Enter position title"
+            />
+            {form.formState.errors.title && (
+              <p className="text-sm text-destructive mt-1">{form.formState.errors.title.message}</p>
+            )}
           </div>
           <div>
             <Label htmlFor="department-add">Department *</Label>
-            <Input id="department-add" {...form.register('department')} className="mt-1" />
-            {form.formState.errors.department && <p className="text-sm text-destructive mt-1">{form.formState.errors.department.message}</p>}
+            <Input 
+              id="department-add" 
+              {...form.register('department')} 
+              className="mt-1" 
+              placeholder="Enter department name"
+            />
+            {form.formState.errors.department && (
+              <p className="text-sm text-destructive mt-1">{form.formState.errors.department.message}</p>
+            )}
           </div>
-           <div>
+          <div>
             <Label htmlFor="position_level-add">Position Level</Label>
-            <Input id="position_level-add" {...form.register('position_level')} className="mt-1" placeholder="e.g., Senior, Mid-Level, L3"/>
-            {form.formState.errors.position_level && <p className="text-sm text-destructive mt-1">{form.formState.errors.position_level.message}</p>}
+            <Input 
+              id="position_level-add" 
+              {...form.register('position_level')} 
+              className="mt-1" 
+              placeholder="e.g., Senior, Mid-Level, L3"
+            />
+            {form.formState.errors.position_level && (
+              <p className="text-sm text-destructive mt-1">{form.formState.errors.position_level.message}</p>
+            )}
           </div>
           <div>
             <Label htmlFor="description-add">Job Description</Label>
-            <Textarea id="description-add" {...form.register('description')} className="mt-1" />
+            <Textarea 
+              id="description-add" 
+              {...form.register('description')} 
+              className="mt-1" 
+              placeholder="Enter job description"
+              rows={3}
+            />
           </div>
           <div className="flex items-center space-x-2">
             <Controller
-                name="isOpen"
-                control={form.control}
-                render={({ field }) => (
-                    <Switch
-                        id="isOpen-add"
-                        className="switch-green"
-                        checked={field.value}
-                        onCheckedChange={field.onChange}
-                    />
-                )}
+              name="isOpen"
+              control={form.control}
+              render={({ field }) => (
+                <Toggle
+                  variant="success"
+                  checked={field.value}
+                  onCheckedChange={field.onChange}
+                />
+              )}
             />
             <Label htmlFor="isOpen-add">Position is Open</Label>
+          </div>
+          
+          {/* Debug: Show current form values */}
+          <div className="text-xs text-gray-500 p-2 bg-gray-100 rounded">
+            <p>Debug - Current form values:</p>
+            <p>Title: {form.watch('title') || 'empty'}</p>
+            <p>Department: {form.watch('department') || 'empty'}</p>
+            <p>Position Level: {form.watch('position_level') || 'empty'}</p>
+            <p>Description: {form.watch('description') || 'empty'}</p>
+            <p>Is Open: {form.watch('isOpen') ? 'true' : 'false'}</p>
           </div>
           
           <DialogFooter className="pt-4">

@@ -133,36 +133,67 @@ export default function DashboardPageClient({
   }, [initialCandidates, initialPositions, initialUsers, initialFetchError, serverAuthError, serverPermissionError, sessionStatus, session?.user?.role, toast]);
 
 
-  const totalActiveCandidates = useMemo(() => allCandidates.filter((c: Candidate) => !BACKLOG_EXCLUSION_STATUSES.includes(c.status)).length, [allCandidates]);
-  const totalOpenPositions = useMemo(() => allPositions.filter((p: Position) => p.isOpen).length, [allPositions]);
-  const hiredThisMonthAdmin = useMemo(() => allCandidates.filter((c: Candidate) => {
-    try {
-      if (!c.applicationDate || typeof c.applicationDate !== 'string') return false;
-      const appDate = parseISO(c.applicationDate);
-      return c.status === 'Hired' && appDate.getFullYear() === new Date().getFullYear() && appDate.getMonth() === new Date().getMonth();
-    } catch { return false; }
-  }).length, [allCandidates]);
-  const totalActiveRecruiters = useMemo(() => allUsers.filter((u: UserProfile) => u.role === 'Recruiter').length, [allUsers]);
-  const newCandidatesTodayAdminList = useMemo(() => allCandidates.filter((c: Candidate) => {
-    try {
-      if (!c.applicationDate || typeof c.applicationDate !== 'string') return false;
-      return isToday(parseISO(c.applicationDate));
-    } catch { return false; }
-  }), [allCandidates]);
-  const openPositionsWithNoCandidates = useMemo(() => allPositions.filter((position: Position) => {
-    if (!position.isOpen) return false;
-    return !allCandidates.some(candidate => candidate.positionId === position.id);
-  }), [allPositions, allCandidates]);
-
-  const myActiveCandidatesList = useMemo(() => myAssignedCandidates.filter((c: Candidate) => !BACKLOG_EXCLUSION_STATUSES.includes(c.status)), [myAssignedCandidates]);
-  const myCandidatesInInterviewCount = useMemo(() => myActiveCandidatesList.filter((c: Candidate) => INTERVIEW_STATUSES.includes(c.status)).length, [myActiveCandidatesList]);
-  const newCandidatesAssignedToMeTodayList = useMemo(() => myActiveCandidatesList.filter((c: Candidate) => {
+  const totalActiveCandidates = useMemo(() => {
+    const safeAllCandidates = Array.isArray(allCandidates) ? allCandidates : [];
+    return safeAllCandidates.filter((c: Candidate) => !BACKLOG_EXCLUSION_STATUSES.includes(c.status)).length;
+  }, [allCandidates]);
+  const totalOpenPositions = useMemo(() => {
+    const safeAllPositions = Array.isArray(allPositions) ? allPositions : [];
+    return safeAllPositions.filter((p: Position) => p.isOpen).length;
+  }, [allPositions]);
+  const hiredThisMonthAdmin = useMemo(() => {
+    const safeAllCandidates = Array.isArray(allCandidates) ? allCandidates : [];
+    return safeAllCandidates.filter((c: Candidate) => {
+      try {
+        if (!c.applicationDate || typeof c.applicationDate !== 'string') return false;
+        const appDate = parseISO(c.applicationDate);
+        return c.status === 'Hired' && appDate.getFullYear() === new Date().getFullYear() && appDate.getMonth() === new Date().getMonth();
+      } catch { return false; }
+    }).length;
+  }, [allCandidates]);
+  const totalActiveRecruiters = useMemo(() => {
+    const safeAllUsers = Array.isArray(allUsers) ? allUsers : [];
+    return safeAllUsers.filter((u: UserProfile) => u.role === 'Recruiter').length;
+  }, [allUsers]);
+  const newCandidatesTodayAdminList = useMemo(() => {
+    const safeAllCandidates = Array.isArray(allCandidates) ? allCandidates : [];
+    return safeAllCandidates.filter((c: Candidate) => {
       try {
         if (!c.applicationDate || typeof c.applicationDate !== 'string') return false;
         return isToday(parseISO(c.applicationDate));
       } catch { return false; }
-  }), [myActiveCandidatesList]);
-  const myActionItemsList = useMemo(() => myBacklogCandidates.filter((c: Candidate) => c.recruiterId === session?.user?.id), [myBacklogCandidates, session?.user?.id]);
+    });
+  }, [allCandidates]);
+  const openPositionsWithNoCandidates = useMemo(() => {
+    const safeAllPositions = Array.isArray(allPositions) ? allPositions : [];
+    const safeAllCandidates = Array.isArray(allCandidates) ? allCandidates : [];
+    return safeAllPositions.filter((position: Position) => {
+      if (!position.isOpen) return false;
+      return !safeAllCandidates.some(candidate => candidate.positionId === position.id);
+    });
+  }, [allPositions, allCandidates]);
+
+  const myActiveCandidatesList = useMemo(() => {
+    const safeMyAssignedCandidates = Array.isArray(myAssignedCandidates) ? myAssignedCandidates : [];
+    return safeMyAssignedCandidates.filter((c: Candidate) => !BACKLOG_EXCLUSION_STATUSES.includes(c.status));
+  }, [myAssignedCandidates]);
+  const myCandidatesInInterviewCount = useMemo(() => {
+    const safeMyActiveCandidatesList = Array.isArray(myActiveCandidatesList) ? myActiveCandidatesList : [];
+    return safeMyActiveCandidatesList.filter((c: Candidate) => INTERVIEW_STATUSES.includes(c.status)).length;
+  }, [myActiveCandidatesList]);
+  const newCandidatesAssignedToMeTodayList = useMemo(() => {
+    const safeMyActiveCandidatesList = Array.isArray(myActiveCandidatesList) ? myActiveCandidatesList : [];
+    return safeMyActiveCandidatesList.filter((c: Candidate) => {
+      try {
+        if (!c.applicationDate || typeof c.applicationDate !== 'string') return false;
+        return isToday(parseISO(c.applicationDate));
+      } catch { return false; }
+    });
+  }, [myActiveCandidatesList]);
+  const myActionItemsList = useMemo(() => {
+    const safeMyBacklogCandidates = Array.isArray(myBacklogCandidates) ? myBacklogCandidates : [];
+    return safeMyBacklogCandidates.filter((c: Candidate) => c.recruiterId === session?.user?.id);
+  }, [myBacklogCandidates, session?.user?.id]);
 
   if (authError) return ( <div className="flex flex-col items-center justify-center h-[calc(100vh-10rem)] text-center p-4"> <ServerCrash className="w-16 h-16 text-destructive mb-4" /> <h2 className="text-2xl font-semibold text-foreground mb-2">Authentication Error</h2> <p className="text-muted-foreground mb-4 max-w-md">{fetchError || "You need to be signed in to view the dashboard."}</p> <Button onClick={() => signIn(undefined, { callbackUrl: window.location.pathname })} className="btn-hover-primary-gradient">Sign In</Button> </div> );
   if (permissionError) return ( <div className="flex flex-col items-center justify-center h-[calc(100vh-10rem)] text-center p-4"> <ServerCrash className="w-16 h-16 text-destructive mb-4" /> <h2 className="text-2xl font-semibold text-foreground mb-2">Permission Denied</h2> <p className="text-muted-foreground mb-4 max-w-md">{fetchError || "You do not have permission to view this page."}</p> <Button onClick={() => router.push('/')} className="btn-hover-primary-gradient">Go to Home</Button> </div> );

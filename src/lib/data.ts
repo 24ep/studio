@@ -63,8 +63,7 @@ export const updateUserInMockData = (id: string, updates: Partial<Omit<UserProfi
   return mockAppUsers[userIndex];
 };
 
-// mockCandidates - can be removed if your app exclusively uses DB for candidates.
-// Kept for reference or if other parts of the prototype still use it.
+
 export const mockCandidates: Candidate[] = [
   {
     id: 'cand1',

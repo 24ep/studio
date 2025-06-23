@@ -24,7 +24,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Checkbox } from "@/components/ui/checkbox";
-import { Switch } from '@/components/ui/switch';
+import { Toggle } from '@/components/ui/toggle';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { UserPlus, ShieldCheck, Users, Loader2 } from 'lucide-react';
 import type { UserProfile, PlatformModuleId, UserGroup, PlatformModuleCategory } from '@/lib/types';
@@ -197,10 +197,10 @@ export function AddUserModal({ isOpen, onOpenChange, onAddUser }: AddUserModalPr
                                     return (
                                       <FormItem className="flex flex-row items-center space-x-4 mb-3">
                                         <FormControl>
-                                          <Switch
+                                          <Toggle
                                             checked={checked}
                                             onCheckedChange={(checked) => checked ? field.onChange([...(field.value || []), module.id]) : field.onChange((field.value || []).filter(v => v !== module.id))}
-                                            className="switch-green"
+                                            variant="success"
                                           />
                                         </FormControl>
                                         <div className="flex flex-col">
