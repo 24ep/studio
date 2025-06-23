@@ -78,9 +78,10 @@ export default function ApplicationLogsPage() {
       const response = await fetch('/api/users');
       if (!response.ok) throw new Error('Failed to fetch users for log filter');
       const usersData: UserProfile[] = await response.json();
-      setAllUsers(usersData.map(u => ({ id: u.id, name: u.name })));
+      setAllUsers((usersData || []).map(u => ({ id: u.id, name: u.name })));
     } catch (error) {
       console.error("Error fetching users for log filter:", error);
+      setAllUsers([]); // Ensure fallback to empty array on error
     }
   }, []);
 
@@ -118,7 +119,7 @@ export default function ApplicationLogsPage() {
       }
 
       const data: { logs: LogEntry[], total: number } = await response.json();
-      setLogs(data.logs); setTotalLogs(data.total);
+      setLogs(data.logs || []); setTotalLogs(data.total || 0);
     } catch (err) {
       console.error("Error fetching logs:", err);
       const errorMessage = (err as Error).message;

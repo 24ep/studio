@@ -12,6 +12,10 @@ import { CredentialsSignInForm } from "@/components/auth/CredentialsSignInForm";
 import type { SystemSetting, LoginPageBackgroundType, LoginPageLayoutType } from '@/lib/types';
 import { setThemeAndColors } from '@/lib/themeUtils';
 
+interface SignInClientProps {
+  initialSettings?: SystemSetting[];
+}
+
 const APP_LOGO_DATA_URL_KEY = 'appLogoDataUrl';
 const APP_CONFIG_APP_NAME_KEY = 'appConfigAppName';
 const DEFAULT_APP_NAME = "CandiTrack";
@@ -21,16 +25,31 @@ const DEFAULT_PRIMARY_GRADIENT_START_SIGNIN = "179 67% 66%";
 const DEFAULT_PRIMARY_GRADIENT_END_SIGNIN = "238 74% 61%";
 const DEFAULT_LOGIN_LAYOUT_TYPE: LoginPageLayoutType = 'center';
 
-export default function SignInClient() {
+export default function SignInClient({ initialSettings }: SignInClientProps) {
   const { data: session, status } = useSession();
   const router = useRouter();
   const nextSearchParams = useSearchParams();
-  const [appLogoUrl, setAppLogoUrl] = useState<string | null>(null);
-  const [currentAppName, setCurrentAppName] = useState<string>(DEFAULT_APP_NAME);
+  const [appLogoUrl, setAppLogoUrl] = useState<string | null>(() => {
+    if (initialSettings) {
+      return initialSettings.find(s => s.key === 'appLogoDataUrl')?.value || null;
+    }
+    return null;
+  });
+  const [currentAppName, setCurrentAppName] = useState<string>(() => {
+    if (initialSettings) {
+      return initialSettings.find(s => s.key === 'appName')?.value || DEFAULT_APP_NAME;
+    }
+    return DEFAULT_APP_NAME;
+  });
   const [isClient, setIsClient] = useState(false);
   const [loginPageStyle, setLoginPageStyle] = useState<React.CSSProperties>({});
   const [isThemeDark, setIsThemeDark] = useState(false);
-  const [loginLayoutType, setLoginLayoutType] = useState<LoginPageLayoutType>(DEFAULT_LOGIN_LAYOUT_TYPE);
+  const [loginLayoutType, setLoginLayoutType] = useState<LoginPageLayoutType>(() => {
+    if (initialSettings) {
+      return (initialSettings.find(s => s.key === 'loginPageLayoutType')?.value as LoginPageLayoutType) || DEFAULT_LOGIN_LAYOUT_TYPE;
+    }
+    return DEFAULT_LOGIN_LAYOUT_TYPE;
+  });
 
   const callbackUrl = nextSearchParams.get('callbackUrl') || "/";
 
@@ -46,56 +65,99 @@ export default function SignInClient() {
     const observer = new MutationObserver(updateThemeStatus);
     observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
 
+    // If no initialSettings, fetch on client as fallback
+    if (!initialSettings) {
+      const fetchAppAndLoginConfig = async () => {
+        let appName = DEFAULT_APP_NAME;
+        let logoUrl = null;
+        let loginBgType: LoginPageBackgroundType = 'default';
+        let loginBgImageUrl: string | null = null;
+        let loginBgColor1: string | null = null;
+        let loginBgColor2: string | null = null;
+        let primaryStart = DEFAULT_PRIMARY_GRADIENT_START_SIGNIN;
+        let primaryEnd = DEFAULT_PRIMARY_GRADIENT_END_SIGNIN;
+        let loginLayoutTypeSetting: LoginPageLayoutType = DEFAULT_LOGIN_LAYOUT_TYPE;
 
-    const fetchAppAndLoginConfig = async () => {
-      let appName = DEFAULT_APP_NAME;
-      let logoUrl = null;
-      let loginBgType: LoginPageBackgroundType = 'default';
-      let loginBgImageUrl: string | null = null;
-      let loginBgColor1: string | null = null;
-      let loginBgColor2: string | null = null;
-      let primaryStart = DEFAULT_PRIMARY_GRADIENT_START_SIGNIN;
-      let primaryEnd = DEFAULT_PRIMARY_GRADIENT_END_SIGNIN;
-      let loginLayoutTypeSetting: LoginPageLayoutType = DEFAULT_LOGIN_LAYOUT_TYPE;
+        try {
+          const response = await fetch('/api/settings/system-settings');
+          if (response.ok) {
+            const settings: SystemSetting[] = await response.json();
+            appName = settings.find(s => s.key === 'appName')?.value || DEFAULT_APP_NAME;
+            logoUrl = settings.find(s => s.key === 'appLogoDataUrl')?.value || null;
+            loginBgType = settings.find(s => s.key === 'loginPageBackgroundType')?.value as LoginPageBackgroundType || 'default';
+            loginBgImageUrl = settings.find(s => s.key === 'loginPageBackgroundImageUrl')?.value || null;
+            loginBgColor1 = settings.find(s => s.key === 'loginPageBackgroundColor1')?.value || null;
+            loginBgColor2 = settings.find(s => s.key === 'loginPageBackgroundColor2')?.value || null;
+            loginLayoutTypeSetting = settings.find(s => s.key === 'loginPageLayoutType')?.value as LoginPageLayoutType || DEFAULT_LOGIN_LAYOUT_TYPE;
+            primaryStart = settings.find(s => s.key === 'primaryGradientStart')?.value || DEFAULT_PRIMARY_GRADIENT_START_SIGNIN;
+            primaryEnd = settings.find(s => s.key === 'primaryGradientEnd')?.value || DEFAULT_PRIMARY_GRADIENT_END_SIGNIN;
 
+            setCurrentAppName(appName);
+            setAppLogoUrl(logoUrl);
+            setLoginLayoutType(loginLayoutTypeSetting);
 
-      try {
-        const response = await fetch('/api/settings/system-settings');
-        if (response.ok) {
-          const settings: SystemSetting[] = await response.json();
-          appName = settings.find(s => s.key === 'appName')?.value || DEFAULT_APP_NAME;
-          logoUrl = settings.find(s => s.key === 'appLogoDataUrl')?.value || null;
-          loginBgType = settings.find(s => s.key === 'loginPageBackgroundType')?.value as LoginPageBackgroundType || 'default';
-          loginBgImageUrl = settings.find(s => s.key === 'loginPageBackgroundImageUrl')?.value || null;
-          loginBgColor1 = settings.find(s => s.key === 'loginPageBackgroundColor1')?.value || null;
-          loginBgColor2 = settings.find(s => s.key === 'loginPageBackgroundColor2')?.value || null;
-          loginLayoutTypeSetting = settings.find(s => s.key === 'loginPageLayoutType')?.value as LoginPageLayoutType || DEFAULT_LOGIN_LAYOUT_TYPE;
-          
-          primaryStart = settings.find(s => s.key === 'primaryGradientStart')?.value || DEFAULT_PRIMARY_GRADIENT_START_SIGNIN;
-          primaryEnd = settings.find(s => s.key === 'primaryGradientEnd')?.value || DEFAULT_PRIMARY_GRADIENT_END_SIGNIN;
-
-          setCurrentAppName(appName);
-          setAppLogoUrl(logoUrl);
-          setLoginLayoutType(loginLayoutTypeSetting);
-
-          // Apply primary colors and theme dynamically for login page
-          if (typeof document !== 'undefined') {
-            const themePref = (settings.find((s: SystemSetting) => s.key === 'appThemePreference')?.value as 'system' | 'light' | 'dark') || 'system';
-            setThemeAndColors({
-              themePreference: themePref,
-              primaryGradientStart: primaryStart,
-              primaryGradientEnd: primaryEnd,
-            });
+            // Apply primary colors and theme dynamically for login page
+            if (typeof document !== 'undefined') {
+              const themePref = (settings.find((s: SystemSetting) => s.key === 'appThemePreference')?.value as 'system' | 'light' | 'dark') || 'system';
+              setThemeAndColors({
+                themePreference: themePref,
+                primaryGradientStart: primaryStart,
+                primaryGradientEnd: primaryEnd,
+              });
+            }
           }
+        } catch (error) {
+          console.warn("Failed to fetch system settings for login page, using defaults/localStorage.", error);
+          // Fallback to localStorage for app name/logo if API fails
+          appName = localStorage.getItem(APP_CONFIG_APP_NAME_KEY) || DEFAULT_APP_NAME;
+          logoUrl = localStorage.getItem(APP_LOGO_DATA_URL_KEY) || null;
         }
-      } catch (error) {
-        console.warn("Failed to fetch system settings for login page, using defaults/localStorage.", error);
-        // Fallback to localStorage for app name/logo if API fails
-        appName = localStorage.getItem(APP_CONFIG_APP_NAME_KEY) || DEFAULT_APP_NAME;
-        logoUrl = localStorage.getItem(APP_LOGO_DATA_URL_KEY) || null;
-      }
-      
-      // Determine login page style
+        
+        // Determine login page style
+        const newStyle: React.CSSProperties = {
+          minHeight: '100vh',
+          display: 'flex',
+          flexDirection: loginLayoutTypeSetting === '2column' ? 'row' : 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '1rem',
+          transition: 'background 0.5s ease-in-out',
+        };
+
+        if (loginBgType === 'image' && loginBgImageUrl) {
+          newStyle.backgroundImage = `url(${loginBgImageUrl})`;
+          newStyle.backgroundSize = 'cover';
+          newStyle.backgroundPosition = 'center';
+          newStyle.backgroundRepeat = 'no-repeat';
+        } else if (loginBgType === 'color' && loginBgColor1) {
+          newStyle.backgroundColor = loginBgColor1;
+        } else if (loginBgType === 'gradient' && loginBgColor1 && loginBgColor2) {
+          newStyle.backgroundImage = `linear-gradient(to right, ${loginBgColor1}, ${loginBgColor2})`;
+        } else { // Default
+          newStyle.backgroundImage = isThemeDark ? DEFAULT_LOGIN_BG_GRADIENT_DARK : DEFAULT_LOGIN_BG_GRADIENT;
+        }
+        setLoginPageStyle(newStyle);
+      };
+      fetchAppAndLoginConfig();
+
+      const handleAppConfigChange = (event: Event) => {
+        fetchAppAndLoginConfig();
+      };
+      window.addEventListener('appConfigChanged', handleAppConfigChange);
+
+      return () => {
+        observer.disconnect();
+        window.removeEventListener('appConfigChanged', handleAppConfigChange);
+      };
+    }
+    // If initialSettings are present, set up style from them
+    else {
+      let loginBgType: LoginPageBackgroundType = initialSettings.find(s => s.key === 'loginPageBackgroundType')?.value as LoginPageBackgroundType || 'default';
+      let loginBgImageUrl: string | null = initialSettings.find(s => s.key === 'loginPageBackgroundImageUrl')?.value || null;
+      let loginBgColor1: string | null = initialSettings.find(s => s.key === 'loginPageBackgroundColor1')?.value || null;
+      let loginBgColor2: string | null = initialSettings.find(s => s.key === 'loginPageBackgroundColor2')?.value || null;
+      let loginLayoutTypeSetting: LoginPageLayoutType = (initialSettings.find(s => s.key === 'loginPageLayoutType')?.value as LoginPageLayoutType) || DEFAULT_LOGIN_LAYOUT_TYPE;
+      // Set style
       const newStyle: React.CSSProperties = {
         minHeight: '100vh',
         display: 'flex',
@@ -105,7 +167,6 @@ export default function SignInClient() {
         padding: '1rem',
         transition: 'background 0.5s ease-in-out',
       };
-
       if (loginBgType === 'image' && loginBgImageUrl) {
         newStyle.backgroundImage = `url(${loginBgImageUrl})`;
         newStyle.backgroundSize = 'cover';
@@ -115,26 +176,22 @@ export default function SignInClient() {
         newStyle.backgroundColor = loginBgColor1;
       } else if (loginBgType === 'gradient' && loginBgColor1 && loginBgColor2) {
         newStyle.backgroundImage = `linear-gradient(to right, ${loginBgColor1}, ${loginBgColor2})`;
-      } else { // Default
+      } else {
         newStyle.backgroundImage = isThemeDark ? DEFAULT_LOGIN_BG_GRADIENT_DARK : DEFAULT_LOGIN_BG_GRADIENT;
       }
       setLoginPageStyle(newStyle);
-    };
-    
-    fetchAppAndLoginConfig();
-
-    const handleAppConfigChange = (event: Event) => {
-        // Re-fetch all configurations to ensure login page also picks up primary color changes.
-        fetchAppAndLoginConfig();
-    };
-    window.addEventListener('appConfigChanged', handleAppConfigChange);
-
-    return () => {
-      observer.disconnect();
-      window.removeEventListener('appConfigChanged', handleAppConfigChange);
-    };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isThemeDark]); // Added isThemeDark dependency to re-evaluate default background
+      // Set theme/colors
+      let primaryStart = initialSettings.find(s => s.key === 'primaryGradientStart')?.value || DEFAULT_PRIMARY_GRADIENT_START_SIGNIN;
+      let primaryEnd = initialSettings.find(s => s.key === 'primaryGradientEnd')?.value || DEFAULT_PRIMARY_GRADIENT_END_SIGNIN;
+      const themePref = (initialSettings.find((s: SystemSetting) => s.key === 'appThemePreference')?.value as 'system' | 'light' | 'dark') || 'system';
+      setThemeAndColors({
+        themePreference: themePref,
+        primaryGradientStart: primaryStart,
+        primaryGradientEnd: primaryEnd,
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isThemeDark, initialSettings]);
 
   // Set browser tab title to currentAppName
   useEffect(() => {

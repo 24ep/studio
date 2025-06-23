@@ -7,12 +7,13 @@ services:
       dockerfile: Dockerfile
       args:
         DATABASE_URL: "postgresql://devuser:devpassword@postgres:5432/canditrack_db"
-        NEXTAUTH_URL: "http://159.89.193.226:9846"
+        NEXTAUTH_URL: "http://10.0.10.57:9846"
         NEXTAUTH_SECRET: "pMQcOKGO5zj/IDZxnu5ghHNLpmDc8+Ex+/qzieOM+zo="
         AZURE_AD_CLIENT_ID: "your_azure_ad_application_client_id"
         AZURE_AD_CLIENT_SECRET: "your_azure_ad_client_secret_value"
         AZURE_AD_TENANT_ID: "your_azure_ad_directory_tenant_id"
-        GOOGLE_API_KEY: "AIzaSyAEslELPZLJBUfiKiNwsyXax0XezkQA-20"
+        GOOGLE_API_KEY: "AIzaSyDM4TTZmwef-A3TOB4KND_XVxtXtDvZlRs"
+        NEXT_PUBLIC_GOOGLE_FONTS_API_KEY: "AIzaSyAEslELPZLJBUfiKiNwsyXax0XezkQA-20"
     ports:
       - "9846:3000"
     # For production deployments, you typically want the application code to be self-contained
@@ -39,14 +40,14 @@ services:
       MINIO_BUCKET_NAME: canditrack-resumes
       MINIO_USE_SSL: false
       REDIS_URL: redis://redis:6379
-      NEXTAUTH_URL: http://159.89.193.226:9846
+      NEXTAUTH_URL: http://10.0.10.57:9846
       NEXTAUTH_SECRET: pMQcOKGO5zj/IDZxnu5ghHNLpmDc8+Ex+/qzieOM+zo=
       AZURE_AD_CLIENT_ID: your_azure_ad_application_client_id
       AZURE_AD_CLIENT_SECRET: your_azure_ad_client_secret_value
       AZURE_AD_TENANT_ID: your_azure_ad_directory_tenant_id
-      N8N_RESUME_WEBHOOK_URL: https://n8n.bondarys.com/webhook/upload-cv
-      N8N_GENERIC_PDF_WEBHOOK_URL: https://n8n.bondarys.com/webhook/upload-cv
-      GOOGLE_API_KEY: AIzaSyAEslELPZLJBUfiKiNwsyXax0XezkQA-20
+      N8N_RESUME_WEBHOOK_URL: https://ncc-n8n.qsncc.com/webhook/a19157d8-0fdb-44b0-860e-291e52896696
+      N8N_GENERIC_PDF_WEBHOOK_URL: https://ncc-n8n.qsncc.com/webhook/a19157d8-0fdb-44b0-860e-291e52896696
+      GOOGLE_API_KEY: AIzaSyDM4TTZmwef-A3TOB4KND_XVxtXtDvZlRs
       NEXT_PUBLIC_GOOGLE_FONTS_API_KEY: AIzaSyAEslELPZLJBUfiKiNwsyXax0XezkQA-20
       NODE_ENV: development
     depends_on:
