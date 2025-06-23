@@ -238,6 +238,9 @@ export default function SignInClient({ initialSettings }: SignInClientProps) {
     }
   }
 
+  // Extract loginPageContent from settings
+  const loginPageContent = initialSettings?.find(s => s.key === 'loginPageContent')?.value || '';
+
   if (status === "loading" || !isClient) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center bg-gradient-to-br from-slate-100 to-sky-100 dark:from-slate-900 dark:to-sky-900 p-4">
@@ -297,6 +300,9 @@ export default function SignInClient({ initialSettings }: SignInClientProps) {
         </div>
         {/* Right column: Login panel (30%) */}
         <div className="w-full md:basis-[30%] md:max-w-[30%] flex flex-col justify-center items-center bg-card/80 dark:bg-card/80 border-l border-border shadow-2xl p-8">
+          {loginPageContent && (
+            <div style={{ marginBottom: 24 }} dangerouslySetInnerHTML={{ __html: loginPageContent }} />
+          )}
           {renderLoginForm()}
         </div>
       </div>
@@ -306,6 +312,9 @@ export default function SignInClient({ initialSettings }: SignInClientProps) {
   // Default: center box layout
   return (
     <div style={loginPageStyle}>
+      {loginPageContent && (
+        <div style={{ marginBottom: 24 }} dangerouslySetInnerHTML={{ __html: loginPageContent }} />
+      )}
       {renderLoginForm()}
     </div>
   );

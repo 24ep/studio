@@ -16,6 +16,7 @@ import {
 import { toast } from 'react-hot-toast';
 import { FileUp, Loader2, Users } from 'lucide-react';
 import type { Candidate } from '@/lib/types';
+import { useCandidateQueue } from "@/components/candidates/CandidateImportUploadQueue";
 
 interface ImportCandidatesModalProps {
   isOpen: boolean;
@@ -34,6 +35,7 @@ const ACCEPTED_EXCEL_TYPES = [
 export function ImportCandidatesModal({ isOpen, onOpenChange, onImportSuccess }: ImportCandidatesModalProps) {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isImporting, setIsImporting] = useState(false);
+  const { addJob, updateJob } = useCandidateQueue();
 
   const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -60,38 +62,34 @@ export function ImportCandidatesModal({ isOpen, onOpenChange, onImportSuccess }:
       return;
     }
     setIsImporting(true);
+    const jobId = `${selectedFile.name}-${selectedFile.size}-${Date.now()}-${Math.random()}`;
+    addJob({
+      id: jobId,
+      file: selectedFile,
+      type: "import",
+      status: "importing"
+    });
     const formData = new FormData();
     formData.append('file', selectedFile);
-
     try {
       const response = await fetch('/api/candidates/import', {
         method: 'POST',
-        body: formData, // Send as FormData
+        body: formData,
       });
-
       const result = await response.json();
-
       if (!response.ok) {
+        updateJob(jobId, { status: "error", error: result.message || `Failed to import candidates. Status: ${response.status}`, errorDetails: JSON.stringify(result) });
         throw new Error(result.message || `Failed to import candidates. Status: ${response.status}`);
       }
-
-      let successMessage = `Import process completed.`;
-      if (result.successfulImports !== undefined && result.failedImports !== undefined) {
-        successMessage += ` ${result.successfulImports} candidates imported successfully. ${result.failedImports} failed.`;
-        if (result.errors && result.errors.length > 0) {
-          console.error("Import errors:", result.errors);
-          successMessage += " Check console for details on failures."
-        }
-      }
-
-      toast.success(successMessage);
+      updateJob(jobId, { status: "success" });
+      toast.success("Import process completed.");
       onImportSuccess();
       onOpenChange(false);
       setSelectedFile(null);
       const fileInput = document.getElementById('candidate-excel-import') as HTMLInputElement;
       if (fileInput) fileInput.value = '';
-
     } catch (error) {
+      updateJob(jobId, { status: "error", error: (error as Error).message, errorDetails: (error as Error).stack });
       console.error("Error importing candidates:", error);
       toast.error((error as Error).message || "An unexpected error occurred during import.");
     } finally {

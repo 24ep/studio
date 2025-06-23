@@ -5,6 +5,7 @@ import { CandidatesPageClient } from '@/components/candidates/CandidatesPageClie
 import type { Candidate, Position, RecruitmentStage, UserProfile } from '@/lib/types';
 import { fetchAllPositionsDb, fetchAllRecruitmentStagesDb } from '@/lib/apiUtils';
 import { authOptions } from '@/lib/auth';
+import { CandidateQueueProvider, CandidateImportUploadQueue } from "@/components/candidates/CandidateImportUploadQueue";
 
 async function getInitialCandidatesData(session: any): Promise<{ candidates: Candidate[], error?: string, authError?: boolean, permissionError?: boolean }> {
   const userRole = session?.user?.role;
@@ -144,23 +145,29 @@ export default async function CandidatesPageServer() {
 
   if (candidatesAuthError || candidatesPermissionError) {
     return (
+      <CandidateQueueProvider>
+        <CandidateImportUploadQueue />
         <CandidatesPageClient
-            initialCandidates={[]} 
-            initialAvailablePositions={initialPositions}
-            initialAvailableStages={initialStages}
-            authError={candidatesAuthError}
-            permissionError={candidatesPermissionError}
-            initialFetchError={combinedError || undefined}
+          initialCandidates={[]}
+          initialAvailablePositions={initialPositions}
+          initialAvailableStages={initialStages}
+          authError={candidatesAuthError}
+          permissionError={candidatesPermissionError}
+          initialFetchError={combinedError || undefined}
         />
+      </CandidateQueueProvider>
     );
   }
   
   return (
-    <CandidatesPageClient
-      initialCandidates={initialCandidates}
-      initialAvailablePositions={initialPositions}
-      initialAvailableStages={initialStages}
-      initialFetchError={combinedError || undefined}
-    />
+    <CandidateQueueProvider>
+      <CandidateImportUploadQueue />
+      <CandidatesPageClient
+        initialCandidates={initialCandidates}
+        initialAvailablePositions={initialPositions}
+        initialAvailableStages={initialStages}
+        initialFetchError={combinedError || undefined}
+      />
+    </CandidateQueueProvider>
   );
 }

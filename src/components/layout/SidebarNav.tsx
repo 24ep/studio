@@ -2,7 +2,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { LayoutDashboard, Users, Briefcase, Settings, UsersRound, Code2, ListOrdered, Palette, Zap, ListTodo, DatabaseZap, SlidersHorizontal, KanbanSquare, Settings2, UserCog, Loader2 } from "lucide-react"; 
+import { LayoutDashboard, Users, Briefcase, Settings, UsersRound, Code2, ListOrdered, Palette, Zap, ListTodo, DatabaseZap, SlidersHorizontal, KanbanSquare, Settings2, UserCog, Loader2, UploadCloud } from "lucide-react"; 
 import { cn } from "@/lib/utils";
 import {
   SidebarMenu,
@@ -179,44 +179,104 @@ const SidebarNavComponent = function SidebarNav() {
         {/* Main Navigation */}
         <div className="mb-2">
           <div className="text-xs font-semibold text-muted-foreground px-4 mb-2 tracking-widest uppercase">Main</div>
-          {mainNavItems.map((item) => {
-            const isActive = pathname === item.href || (item.href !== "/" && pathname.startsWith(item.href));
-            const isNavigatingToThis = navigatingTo === item.href;
-            return (
-              <SidebarMenuItem key={item.href}>
-                <SidebarMenuButton
-                  asChild
-                  isActive={isActive}
-                  className={cn(
-                    "w-full justify-start rounded-md px-4 py-2 my-1 transition-all flex items-center gap-3 text-base",
-                    isActive
-                      ? "bg-primary/90 text-white font-bold shadow-lg scale-105"
-                      : "hover:bg-primary/10 hover:text-primary text-muted-foreground"
-                  )}
-                  tooltip={item.label}
-                  onClick={() => {
-                    if (accordionValue === "settings-group" && !currentClientIsSettingsSectionActive) {
-                      setAccordionValue(undefined);
-                    }
-                    handleNavigation(item.href);
-                  }}
-                  size="default"
-                  data-active={isActive}
-                  disabled={isNavigating}
-                  aria-label={item.label}
-                >
-                  <div className="flex items-center gap-3 w-full">
-                    {isNavigatingToThis ? (
-                      <Loader2 className="h-6 w-6 animate-spin" />
-                    ) : (
+          <Accordion type="single" collapsible defaultValue={pathname.startsWith("/candidates") ? "candidates-group" : undefined}>
+            {mainNavItems.map((item) => {
+              if (item.href === "/candidates") {
+                // Candidates group with sub-links
+                return (
+                  <AccordionItem value="candidates-group" key="candidates-group">
+                    <AccordionTrigger className="px-4 py-2 my-1 rounded-md flex items-center gap-3 text-base font-medium">
                       <item.icon className="h-6 w-6" />
+                      <span className="truncate">{item.label}</span>
+                    </AccordionTrigger>
+                    <AccordionContent className="pl-6">
+                      <SidebarMenuItem key="/candidates/all">
+                        <SidebarMenuButton
+                          asChild
+                          isActive={pathname === "/candidates"}
+                          className={cn(
+                            "w-full justify-start rounded-md px-4 py-2 my-1 transition-all flex items-center gap-3 text-base",
+                            pathname === "/candidates"
+                              ? "bg-primary/90 text-white font-bold shadow-lg scale-105"
+                              : "hover:bg-primary/10 hover:text-primary text-muted-foreground"
+                          )}
+                          tooltip="All Candidates"
+                          onClick={() => handleNavigation("/candidates")}
+                          size="default"
+                          data-active={pathname === "/candidates"}
+                          aria-label="All Candidates"
+                        >
+                          <div className="flex items-center gap-3 w-full">
+                            <Users className="h-5 w-5" />
+                            <span className="truncate">All Candidates</span>
+                          </div>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                      <SidebarMenuItem key="/candidates/upload">
+                        <SidebarMenuButton
+                          asChild
+                          isActive={pathname === "/candidates/upload"}
+                          className={cn(
+                            "w-full justify-start rounded-md px-4 py-2 my-1 transition-all flex items-center gap-3 text-base",
+                            pathname === "/candidates/upload"
+                              ? "bg-primary/80 text-white font-semibold shadow"
+                              : "hover:bg-primary/10 hover:text-primary text-muted-foreground"
+                          )}
+                          tooltip="Bulk Upload CVs"
+                          onClick={() => handleNavigation("/candidates/upload")}
+                          size="default"
+                          data-active={pathname === "/candidates/upload"}
+                          aria-label="Bulk Upload CVs"
+                        >
+                          <div className="flex items-center gap-3 w-full">
+                            <UploadCloud className="h-5 w-5" />
+                            <span className="truncate">Bulk Upload CVs</span>
+                          </div>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    </AccordionContent>
+                  </AccordionItem>
+                );
+              }
+              // Other main nav items
+              const isActive = pathname === item.href || (item.href !== "/" && pathname.startsWith(item.href));
+              const isNavigatingToThis = navigatingTo === item.href;
+              return (
+                <SidebarMenuItem key={item.href}>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={isActive}
+                    className={cn(
+                      "w-full justify-start rounded-md px-4 py-2 my-1 transition-all flex items-center gap-3 text-base",
+                      isActive
+                        ? "bg-primary/90 text-white font-bold shadow-lg scale-105"
+                        : "hover:bg-primary/10 hover:text-primary text-muted-foreground"
                     )}
-                    <span className="truncate">{item.label}</span>
-                  </div>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            );
-          })}
+                    tooltip={item.label}
+                    onClick={() => {
+                      if (accordionValue === "settings-group" && !currentClientIsSettingsSectionActive) {
+                        setAccordionValue(undefined);
+                      }
+                      handleNavigation(item.href);
+                    }}
+                    size="default"
+                    data-active={isActive}
+                    disabled={isNavigating}
+                    aria-label={item.label}
+                  >
+                    <div className="flex items-center gap-3 w-full">
+                      {isNavigatingToThis ? (
+                        <Loader2 className="h-6 w-6 animate-spin" />
+                      ) : (
+                        <item.icon className="h-6 w-6" />
+                      )}
+                      <span className="truncate">{item.label}</span>
+                    </div>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              );
+            })}
+          </Accordion>
         </div>
         <Separator className="my-2" />
         {/* Task Board */}

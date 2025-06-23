@@ -416,7 +416,8 @@ export type SystemSettingKey =
   | 'sidebarHoverBgD'
   | 'sidebarHoverTextD'
   | 'sidebarBorderD'
-  | 'appFontFamily';
+  | 'appFontFamily'
+  | 'loginPageContent';
 
 
 export interface SystemSetting {

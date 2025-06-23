@@ -26,6 +26,7 @@ const systemSettingKeyEnum = z.enum([
     'sidebarActiveBgStartD', 'sidebarActiveBgEndD', 'sidebarActiveTextD',
     'sidebarHoverBgD', 'sidebarHoverTextD', 'sidebarBorderD',
     'appFontFamily',
+    'loginPageContent',
 ]);
 
 
