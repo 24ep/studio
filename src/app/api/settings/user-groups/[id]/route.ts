@@ -35,21 +35,27 @@ export const dynamic = "force-dynamic";
  * /api/settings/user-groups/{id}:
  *   get:
  *     summary: Get a user group by ID
+ *     description: Returns a single user group. Requires authentication.
  *     parameters:
  *       - in: path
  *         name: id
  *         required: true
  *         schema:
  *           type: string
+ *         description: The ID of the user group
  *     responses:
  *       200:
- *         description: User group details
+ *         description: User group found
  *         content:
  *           application/json:
  *             schema:
  *               type: object
+ *       401:
+ *         description: Unauthorized
  *       404:
- *         description: User group not found
+ *         description: Not found
+ *       500:
+ *         description: Server error
  */
 export async function GET(request: NextRequest) {
   const id = extractIdFromUrl(request);
@@ -100,12 +106,14 @@ export async function GET(request: NextRequest) {
  * /api/settings/user-groups/{id}:
  *   put:
  *     summary: Update a user group by ID
+ *     description: Updates a user group. Requires Admin or USER_GROUPS_MANAGE permission.
  *     parameters:
  *       - in: path
  *         name: id
  *         required: true
  *         schema:
  *           type: string
+ *         description: The ID of the user group
  *     requestBody:
  *       required: true
  *       content:
@@ -115,6 +123,20 @@ export async function GET(request: NextRequest) {
  *     responses:
  *       200:
  *         description: User group updated
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *       400:
+ *         description: Invalid input
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden (insufficient permissions)
+ *       404:
+ *         description: Not found
+ *       500:
+ *         description: Server error
  */
 export async function PUT(request: NextRequest) {
     const id = extractIdFromUrl(request);
@@ -172,17 +194,29 @@ export async function PUT(request: NextRequest) {
  * /api/settings/user-groups/{id}:
  *   delete:
  *     summary: Delete a user group by ID
+ *     description: Deletes a user group. Requires Admin or USER_GROUPS_MANAGE permission.
  *     parameters:
  *       - in: path
  *         name: id
  *         required: true
  *         schema:
  *           type: string
+ *         description: The ID of the user group
  *     responses:
  *       200:
  *         description: User group deleted
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden (insufficient permissions)
  *       404:
- *         description: User group not found
+ *         description: Not found
+ *       500:
+ *         description: Server error
  */
 export async function DELETE(request: NextRequest) {
     const id = extractIdFromUrl(request);

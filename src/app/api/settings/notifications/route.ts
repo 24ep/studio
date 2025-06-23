@@ -13,34 +13,46 @@ import { authOptions } from '@/lib/auth';
  * /api/settings/notifications:
  *   get:
  *     summary: Get notification settings
- *     description: Returns the current notification settings for the system. Requires authentication and Admin or NOTIFICATION_SETTINGS_MANAGE permission.
+ *     description: Returns all notification event/channel settings. Requires Admin or NOTIFICATION_SETTINGS_MANAGE permission.
  *     responses:
  *       200:
- *         description: Notification settings
+ *         description: List of notification event/channel settings
  *         content:
  *           application/json:
  *             schema:
  *               type: array
  *               items:
  *                 type: object
- *             examples:
- *               success:
- *                 summary: Example response
- *                 value:
- *                   - id: "uuid"
- *                     event_key: "candidate_created"
- *                     label: "Candidate Created"
- *                     channels:
- *                       - channelId: "uuid"
- *                         channelKey: "email"
- *                         channelLabel: "Email"
- *                         isEnabled: true
- *                         configuration: {}
- *                         settingId: "uuid"
- *       401:
- *         description: Unauthorized
  *       403:
- *         description: "Forbidden: Insufficient permissions"
+ *         description: Forbidden (insufficient permissions)
+ *       500:
+ *         description: Server error
+ *   post:
+ *     summary: Update notification settings
+ *     description: Updates notification event/channel settings. Requires Admin or NOTIFICATION_SETTINGS_MANAGE permission.
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: array
+ *             items:
+ *               type: object
+ *     responses:
+ *       200:
+ *         description: Updated notification settings
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 type: object
+ *       400:
+ *         description: Invalid input
+ *       403:
+ *         description: Forbidden (insufficient permissions)
+ *       500:
+ *         description: Server error
  */
 
 export const dynamic = "force-dynamic";

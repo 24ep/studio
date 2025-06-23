@@ -48,7 +48,7 @@ export function CreateCandidateViaN8nModal({ isOpen, onOpenChange, onProcessingS
             throw new Error('Failed to fetch positions');
           }
           const data: Position[] = await response.json();
-          setAvailablePositions(data);
+          setAvailablePositions(Array.isArray(data) ? data : []);
         } catch (error) {
           console.error("Error fetching positions for modal:", error);
           toast.error("Could not load positions for selection.");

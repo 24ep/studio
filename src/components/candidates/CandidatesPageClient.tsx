@@ -192,7 +192,7 @@ export function CandidatesPageClient({
         return;
       }
       const data = await response.json();
-      setAllCandidates(data.data);
+      setAllCandidates(Array.isArray(data.data) ? data.data : []);
       setTotal(data.total);
     } catch (error) {
       const errorMessage = (error as Error).message || "Could not load candidate data.";

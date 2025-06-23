@@ -3,6 +3,7 @@
  * /api/positions:
  *   get:
  *     summary: Get all positions
+ *     description: Returns a list of all positions.
  *     responses:
  *       200:
  *         description: List of positions
@@ -14,6 +15,7 @@
  *                 $ref: '#/components/schemas/Position'
  *   post:
  *     summary: Create a new position
+ *     description: Creates a new position.
  *     requestBody:
  *       required: true
  *       content:
@@ -23,6 +25,10 @@
  *     responses:
  *       201:
  *         description: Position created
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Position'
  */
 export const dynamic = "force-dynamic";
 

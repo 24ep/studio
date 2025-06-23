@@ -13,7 +13,7 @@ export const dynamic = "force-dynamic";
  * /api/positions/export:
  *   get:
  *     summary: Export positions
- *     description: Export all positions (implementation placeholder).
+ *     description: Export all positions.
  *     responses:
  *       200:
  *         description: Exported positions data

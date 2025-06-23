@@ -16,6 +16,74 @@ const bulkPositionActionSchema = z.object({
   newIsOpenStatus: z.boolean().optional(), // Required if action is 'change_status'
 });
 
+/**
+ * @openapi
+ * /api/positions/bulk-action:
+ *   post:
+ *     summary: Perform a bulk action on positions
+ *     description: Perform bulk delete or status change on multiple positions. Requires authentication and POSITIONS_MANAGE permission.
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               action:
+ *                 type: string
+ *                 enum: [delete, change_status]
+ *               positionIds:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *               newIsOpenStatus:
+ *                 type: boolean
+ *                 nullable: true
+ *           examples:
+ *             delete:
+ *               summary: Bulk delete positions
+ *               value:
+ *                 action: delete
+ *                 positionIds: ["uuid1", "uuid2"]
+ *             change_status:
+ *               summary: Bulk change status
+ *               value:
+ *                 action: change_status
+ *                 positionIds: ["uuid1", "uuid2"]
+ *                 newIsOpenStatus: true
+ *     responses:
+ *       200:
+ *         description: Bulk action result
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                 successCount:
+ *                   type: integer
+ *                 failCount:
+ *                   type: integer
+ *                 failedDetails:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       positionId:
+ *                         type: string
+ *                       reason:
+ *                         type: string
+ *       400:
+ *         description: Invalid input or missing required fields
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden (insufficient permissions)
+ *       500:
+ *         description: Server error
+ */
+
 export async function POST(request: NextRequest) {
   const session = await getServerSession(authOptions);
   const actingUserId = session?.user?.id;

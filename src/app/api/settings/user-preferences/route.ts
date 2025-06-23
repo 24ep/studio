@@ -25,53 +25,47 @@ const saveUserPreferencesSchema = z.array(userPreferenceSchema);
  * @openapi
  * /api/settings/user-preferences:
  *   get:
- *     summary: Get user preferences
- *     description: Returns the current user's preferences. Requires authentication.
+ *     summary: Get user UI display preferences
+ *     description: Returns the UI display preferences for the current user. Requires authentication.
  *     responses:
  *       200:
- *         description: User preferences
+ *         description: List of user UI display preferences
  *         content:
  *           application/json:
  *             schema:
- *               type: object
- *             examples:
- *               success:
- *                 summary: Example response
- *                 value:
- *                   theme: "dark"
- *                   notifications: true
+ *               type: array
+ *               items:
+ *                 type: object
  *       401:
  *         description: Unauthorized
+ *       500:
+ *         description: Server error
  *   post:
- *     summary: Update user preferences
- *     description: Updates the current user's preferences. Requires authentication.
+ *     summary: Update user UI display preferences
+ *     description: Updates the UI display preferences for the current user. Requires authentication.
  *     requestBody:
  *       required: true
  *       content:
  *         application/json:
  *           schema:
- *             type: object
- *           examples:
- *             example:
- *               summary: Example request
- *               value:
- *                 theme: "light"
- *                 notifications: false
+ *             type: array
+ *             items:
+ *               type: object
  *     responses:
  *       200:
- *         description: Preferences updated
+ *         description: Updated user UI display preferences
  *         content:
  *           application/json:
  *             schema:
- *               type: object
- *             examples:
- *               success:
- *                 summary: Example response
- *                 value:
- *                   theme: "light"
- *                   notifications: false
+ *               type: array
+ *               items:
+ *                 type: object
+ *       400:
+ *         description: Invalid input
  *       401:
  *         description: Unauthorized
+ *       500:
+ *         description: Server error
  */
 
 export async function GET(request: NextRequest) {

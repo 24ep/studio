@@ -6,7 +6,7 @@ import { NextResponse } from 'next/server';
  * /api/candidates/export:
  *   get:
  *     summary: Export candidates
- *     description: Export all candidates (implementation placeholder).
+ *     description: Export all candidates.
  *     responses:
  *       200:
  *         description: Exported candidates data

@@ -50,6 +50,12 @@ CREATE TABLE IF NOT EXISTS "positions" (
 );
 CREATE INDEX IF NOT EXISTS idx_positions_title ON "positions"(title);
 
+-- Seed data for positions table
+INSERT INTO "positions" (title, department, description) VALUES
+('Software Engineer', 'Engineering', 'Develops and maintains software.'),
+('Product Manager', 'Product', 'Oversees product development.')
+ON CONFLICT DO NOTHING;
+
 -- Create RecruitmentStage table if it doesn't exist
 CREATE TABLE IF NOT EXISTS "RecruitmentStage" (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),

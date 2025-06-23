@@ -20,7 +20,7 @@ const userGroupSchema = z.object({
  * /api/settings/user-groups:
  *   get:
  *     summary: Get all user groups
- *     description: Returns a list of all user groups. Requires authentication and Admin or USER_GROUPS_MANAGE permission.
+ *     description: Returns all user groups. Requires authentication.
  *     responses:
  *       200:
  *         description: List of user groups
@@ -30,19 +30,10 @@ const userGroupSchema = z.object({
  *               type: array
  *               items:
  *                 type: object
- *             examples:
- *               success:
- *                 summary: Example response
- *                 value:
- *                   - id: "uuid"
- *                     name: "Recruiters"
- *                     description: "Group for all recruiters"
- *                     permissions: ["CANDIDATES_VIEW", "CANDIDATES_MANAGE"]
- *                     is_default: false
- *                     is_system_role: false
- *                     user_count: 5
  *       401:
  *         description: Unauthorized
+ *       500:
+ *         description: Server error
  *   post:
  *     summary: Create a new user group
  *     description: Creates a new user group. Requires authentication and Admin or USER_GROUPS_MANAGE permission.

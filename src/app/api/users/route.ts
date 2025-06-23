@@ -16,14 +16,7 @@ import { authOptions } from '@/lib/auth';
  * /api/users:
  *   get:
  *     summary: Get all users
- *     description: Returns a list of all users. Requires authentication.
- *     parameters:
- *       - in: query
- *         name: role
- *         schema:
- *           type: string
- *         description: Filter users by role (Admin, Recruiter, etc.)
- *         example: Recruiter
+ *     description: Returns a list of all users.
  *     responses:
  *       200:
  *         description: List of users
@@ -33,33 +26,15 @@ import { authOptions } from '@/lib/auth';
  *               type: array
  *               items:
  *                 $ref: '#/components/schemas/User'
- *             examples:
- *               success:
- *                 summary: Example response
- *                 value:
- *                   - id: "uuid"
- *                     name: "Alice"
- *                     email: "alice@example.com"
- *                     role: "Admin"
- *       401:
- *         description: Unauthorized
  *   post:
  *     summary: Create a new user
- *     description: Creates a new user. Requires authentication and Admin or USERS_MANAGE permission.
+ *     description: Creates a new user.
  *     requestBody:
  *       required: true
  *       content:
  *         application/json:
  *           schema:
  *             $ref: '#/components/schemas/User'
- *           examples:
- *             example:
- *               summary: Example request
- *               value:
- *                 name: "Bob"
- *                 email: "bob@example.com"
- *                 password: "password123"
- *                 role: "Recruiter"
  *     responses:
  *       201:
  *         description: User created
@@ -67,18 +42,6 @@ import { authOptions } from '@/lib/auth';
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/User'
- *             examples:
- *               success:
- *                 summary: Example response
- *                 value:
- *                   id: "uuid"
- *                   name: "Bob"
- *                   email: "bob@example.com"
- *                   role: "Recruiter"
- *       401:
- *         description: Unauthorized
- *       409:
- *         description: User with this email already exists
  */
 
 export const dynamic = "force-dynamic";

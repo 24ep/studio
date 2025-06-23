@@ -22,20 +22,33 @@
  *       401:
  *         description: Unauthorized
  *   post:
- *     summary: Update user preferences
- *     description: Updates the current user's UI display preferences. Requires authentication.
+ *     summary: Update user UI preferences (attributes)
+ *     description: Updates the UI preferences for candidate and position attributes for the current user. Requires authentication.
  *     requestBody:
  *       required: true
  *       content:
  *         application/json:
  *           schema:
  *             type: object
- *           examples:
- *             example:
- *               summary: Example request
- *               value:
- *                 candidateAttributes:
- *                   name: { uiPreference: "Emphasized", customNote: "Highlight this field" }
+ *             properties:
+ *               candidateAttributes:
+ *                 type: object
+ *                 additionalProperties:
+ *                   type: object
+ *                   properties:
+ *                     uiPreference:
+ *                       type: string
+ *                     customNote:
+ *                       type: string
+ *               positionAttributes:
+ *                 type: object
+ *                 additionalProperties:
+ *                   type: object
+ *                   properties:
+ *                     uiPreference:
+ *                       type: string
+ *                     customNote:
+ *                       type: string
  *     responses:
  *       200:
  *         description: Preferences updated
@@ -43,14 +56,15 @@
  *           application/json:
  *             schema:
  *               type: object
- *             examples:
- *               success:
- *                 summary: Example response
- *                 value:
- *                   candidateAttributes:
- *                     name: { uiPreference: "Emphasized", customNote: "Highlight this field" }
+ *               properties:
+ *                 message:
+ *                   type: string
+ *       400:
+ *         description: Invalid input
  *       401:
  *         description: Unauthorized
+ *       500:
+ *         description: Server error
  */
 import { NextResponse, type NextRequest } from 'next/server';
 import { z } from 'zod';

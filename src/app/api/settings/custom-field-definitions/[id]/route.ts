@@ -31,7 +31,7 @@ function extractIdFromUrl(request: NextRequest): string | null {
  * /api/settings/custom-field-definitions/{id}:
  *   get:
  *     summary: Get a custom field definition by ID
- *     description: Returns a custom field definition by its ID. Requires authentication.
+ *     description: Returns a single custom field definition. Requires authentication.
  *     parameters:
  *       - in: path
  *         name: id
@@ -39,29 +39,19 @@ function extractIdFromUrl(request: NextRequest): string | null {
  *         schema:
  *           type: string
  *         description: The ID of the custom field definition
- *         example: "uuid"
  *     responses:
  *       200:
- *         description: Custom field definition details
+ *         description: Custom field definition found
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/CustomFieldDefinition'
- *             examples:
- *               success:
- *                 summary: Example response
- *                 value:
- *                   id: "uuid"
- *                   model_name: "Candidate"
- *                   field_key: "linkedin"
- *                   label: "LinkedIn Profile"
- *                   field_type: "text"
- *                   is_required: false
- *                   sort_order: 1
+ *               type: object
  *       401:
  *         description: Unauthorized
  *       404:
- *         description: Custom field definition not found
+ *         description: Not found
+ *       500:
+ *         description: Server error
  */
 export async function GET(request: NextRequest) {
   const id = extractIdFromUrl(request);
@@ -103,7 +93,7 @@ export async function GET(request: NextRequest) {
  * /api/settings/custom-field-definitions/{id}:
  *   put:
  *     summary: Update a custom field definition by ID
- *     description: Updates a custom field definition by its ID. Requires authentication and Admin or CUSTOM_FIELDS_MANAGE permission.
+ *     description: Updates a custom field definition. Requires Admin or CUSTOM_FIELDS_MANAGE permission.
  *     parameters:
  *       - in: path
  *         name: id
@@ -111,35 +101,29 @@ export async function GET(request: NextRequest) {
  *         schema:
  *           type: string
  *         description: The ID of the custom field definition
- *         example: "uuid"
  *     requestBody:
  *       required: true
  *       content:
  *         application/json:
  *           schema:
- *             $ref: '#/components/schemas/CustomFieldDefinition'
- *           examples:
- *             example:
- *               summary: Example request
- *               value:
- *                 label: "LinkedIn URL"
+ *             type: object
  *     responses:
  *       200:
  *         description: Custom field definition updated
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/CustomFieldDefinition'
- *             examples:
- *               success:
- *                 summary: Example response
- *                 value:
- *                   id: "uuid"
- *                   label: "LinkedIn URL"
+ *               type: object
+ *       400:
+ *         description: Invalid input
  *       401:
  *         description: Unauthorized
  *       403:
- *         description: "Forbidden: Insufficient permissions"
+ *         description: Forbidden (insufficient permissions)
+ *       404:
+ *         description: Not found
+ *       500:
+ *         description: Server error
  */
 export async function PUT(request: NextRequest) {
   const id = extractIdFromUrl(request);
@@ -242,7 +226,7 @@ export async function PUT(request: NextRequest) {
  * /api/settings/custom-field-definitions/{id}:
  *   delete:
  *     summary: Delete a custom field definition by ID
- *     description: Deletes a custom field definition by its ID. Requires authentication and Admin or CUSTOM_FIELDS_MANAGE permission.
+ *     description: Deletes a custom field definition. Requires Admin or CUSTOM_FIELDS_MANAGE permission.
  *     parameters:
  *       - in: path
  *         name: id
@@ -250,16 +234,21 @@ export async function PUT(request: NextRequest) {
  *         schema:
  *           type: string
  *         description: The ID of the custom field definition
- *         example: "uuid"
  *     responses:
  *       200:
  *         description: Custom field definition deleted
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
  *       401:
  *         description: Unauthorized
  *       403:
- *         description: Forbidden: Insufficient permissions
+ *         description: Forbidden (insufficient permissions)
  *       404:
- *         description: Custom field definition not found
+ *         description: Not found
+ *       500:
+ *         description: Server error
  */
 export async function DELETE(request: NextRequest) {
   const id = extractIdFromUrl(request);

@@ -32,9 +32,10 @@ export const dynamic = "force-dynamic";
  *         required: true
  *         schema:
  *           type: string
+ *         description: The ID of the recruitment stage
  *     responses:
  *       200:
- *         description: Recruitment stage details
+ *         description: Recruitment stage
  *         content:
  *           application/json:
  *             schema:
@@ -49,6 +50,7 @@ export const dynamic = "force-dynamic";
  *         required: true
  *         schema:
  *           type: string
+ *         description: The ID of the recruitment stage
  *     requestBody:
  *       required: true
  *       content:
@@ -58,6 +60,12 @@ export const dynamic = "force-dynamic";
  *     responses:
  *       200:
  *         description: Recruitment stage updated
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *       404:
+ *         description: Recruitment stage not found
  *   delete:
  *     summary: Delete a recruitment stage by ID
  *     parameters:
@@ -66,6 +74,7 @@ export const dynamic = "force-dynamic";
  *         required: true
  *         schema:
  *           type: string
+ *         description: The ID of the recruitment stage
  *     responses:
  *       200:
  *         description: Recruitment stage deleted

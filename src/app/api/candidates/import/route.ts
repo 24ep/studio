@@ -33,9 +33,22 @@ const importCandidateSchema = z.object({
 /**
  * @openapi
  * /api/candidates/import:
+ *   get:
+ *     summary: Get all imported candidates
+ *     responses:
+ *       200:
+ *         description: List of imported candidates
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/Candidate'
  *   post:
- *     summary: Import candidates in bulk
- *     description: Import multiple candidates at once. Requires authentication.
+ *     summary: Bulk import candidates
  *     requestBody:
  *       required: true
  *       content:
@@ -44,14 +57,6 @@ const importCandidateSchema = z.object({
  *             type: array
  *             items:
  *               $ref: '#/components/schemas/Candidate'
- *           examples:
- *             example:
- *               summary: Example request
- *               value:
- *                 - name: "John Doe"
- *                   email: "john@example.com"
- *                   status: "Applied"
- *                   fitScore: 80
  *     responses:
  *       201:
  *         description: Import completed
@@ -66,46 +71,6 @@ const importCandidateSchema = z.object({
  *                   type: array
  *                   items:
  *                     type: object
- *             examples:
- *               success:
- *                 summary: Example response
- *                 value:
- *                   message: "Import completed"
- *                   results:
- *                     - success: true
- *                       candidate:
- *                         id: "uuid"
- *                         name: "John Doe"
- *                         email: "john@example.com"
- *                         status: "Applied"
- *                         fitScore: 80
- *       401:
- *         description: Unauthorized
- *   get:
- *     summary: Get all imported candidates
- *     description: Returns all imported candidates. Requires authentication.
- *     responses:
- *       200:
- *         description: List of imported candidates
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 data:
- *                   type: array
- *                   items:
- *                     $ref: '#/components/schemas/Candidate'
- *             examples:
- *               success:
- *                 summary: Example response
- *                 value:
- *                   data:
- *                     - id: "uuid"
- *                       name: "John Doe"
- *                       email: "john@example.com"
- *                       status: "Applied"
- *                       fitScore: 80
  */
 export async function POST(request: NextRequest) {
   const session = await getServerSession(authOptions);
@@ -167,6 +132,7 @@ export async function POST(request: NextRequest) {
  * /api/candidates/import:
  *   get:
  *     summary: Get all imported candidates
+ *     description: Returns all imported candidates. Requires authentication.
  *     responses:
  *       200:
  *         description: List of imported candidates

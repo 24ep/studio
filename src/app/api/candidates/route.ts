@@ -14,6 +14,7 @@ export const dynamic = "force-dynamic";
  * /api/candidates:
  *   get:
  *     summary: Get all candidates
+ *     description: Returns a list of all candidates.
  *     responses:
  *       200:
  *         description: List of candidates
@@ -25,6 +26,7 @@ export const dynamic = "force-dynamic";
  *                 $ref: '#/components/schemas/Candidate'
  *   post:
  *     summary: Create a new candidate
+ *     description: Creates a new candidate.
  *     requestBody:
  *       required: true
  *       content:
@@ -34,6 +36,10 @@ export const dynamic = "force-dynamic";
  *     responses:
  *       201:
  *         description: Candidate created
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Candidate'
  */
 
 // Candidate details schema (flattened for clarity)

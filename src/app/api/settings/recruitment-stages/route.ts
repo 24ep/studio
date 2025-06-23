@@ -21,7 +21,7 @@ const recruitmentStageSchema = z.object({
  * /api/settings/recruitment-stages:
  *   get:
  *     summary: Get all recruitment stages
- *     description: Returns a list of all recruitment stages. Requires authentication and Admin or RECRUITMENT_STAGES_MANAGE permission.
+ *     description: Returns all recruitment stages. Requires authentication.
  *     responses:
  *       200:
  *         description: List of recruitment stages
@@ -31,19 +31,10 @@ const recruitmentStageSchema = z.object({
  *               type: array
  *               items:
  *                 type: object
- *             examples:
- *               success:
- *                 summary: Example response
- *                 value:
- *                   - id: "uuid"
- *                     name: "Applied"
- *                     description: "Initial application stage"
- *                     is_system: true
- *                     sort_order: 1
  *       401:
  *         description: Unauthorized
- *       403:
- *         description: Forbidden: Insufficient permissions
+ *       500:
+ *         description: Server error
  *   post:
  *     summary: Create a new recruitment stage
  *     description: Creates a new recruitment stage. Requires authentication and Admin or RECRUITMENT_STAGES_MANAGE permission.
@@ -90,6 +81,8 @@ const recruitmentStageSchema = z.object({
  *         description: Unauthorized
  *       403:
  *         description: Forbidden: Insufficient permissions
+ *       500:
+ *         description: Server error
  */
 export async function GET(request: NextRequest) {
     const session = await getServerSession(authOptions);

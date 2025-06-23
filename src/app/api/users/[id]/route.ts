@@ -32,6 +32,7 @@ export const dynamic = "force-dynamic";
  *         required: true
  *         schema:
  *           type: string
+ *         description: The ID of the user
  *     responses:
  *       200:
  *         description: User details
@@ -75,6 +76,7 @@ export async function GET(request: NextRequest) {
  *         required: true
  *         schema:
  *           type: string
+ *         description: The ID of the user
  *     requestBody:
  *       required: true
  *       content:
@@ -84,6 +86,12 @@ export async function GET(request: NextRequest) {
  *     responses:
  *       200:
  *         description: User updated
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/User'
+ *       404:
+ *         description: User not found
  */
 export async function PUT(request: NextRequest) {
     const id = extractIdFromUrl(request);
@@ -158,6 +166,7 @@ export async function PUT(request: NextRequest) {
  *         required: true
  *         schema:
  *           type: string
+ *         description: The ID of the user
  *     responses:
  *       200:
  *         description: User deleted

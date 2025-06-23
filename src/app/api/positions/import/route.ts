@@ -11,8 +11,23 @@ export const dynamic = "force-dynamic";
 /**
  * @openapi
  * /api/positions/import:
+ *   get:
+ *     summary: Get all imported positions
+ *     description: Returns all imported positions. Requires authentication.
+ *     responses:
+ *       200:
+ *         description: List of imported positions
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/Position'
  *   post:
- *     summary: Import positions in bulk
+ *     summary: Bulk import positions
  *     description: Import multiple positions at once. Requires authentication.
  *     requestBody:
  *       required: true
@@ -22,14 +37,6 @@ export const dynamic = "force-dynamic";
  *             type: array
  *             items:
  *               $ref: '#/components/schemas/Position'
- *           examples:
- *             example:
- *               summary: Example request
- *               value:
- *                 - title: "Software Engineer"
- *                   department: "Engineering"
- *                   isOpen: true
- *                   position_level: "mid level"
  *     responses:
  *       201:
  *         description: Import completed
@@ -59,31 +66,6 @@ export const dynamic = "force-dynamic";
  *                         position_level: "mid level"
  *       401:
  *         description: Unauthorized
- *   get:
- *     summary: Get all imported positions
- *     description: Returns all imported positions. Requires authentication.
- *     responses:
- *       200:
- *         description: List of imported positions
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 data:
- *                   type: array
- *                   items:
- *                     $ref: '#/components/schemas/Position'
- *             examples:
- *               success:
- *                 summary: Example response
- *                 value:
- *                   data:
- *                     - id: "uuid"
- *                       title: "Software Engineer"
- *                       department: "Engineering"
- *                       isOpen: true
- *                       position_level: "mid level"
  */
 
 // Zod schema for position import

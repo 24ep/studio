@@ -7,6 +7,35 @@ import { logAudit } from '@/lib/auditLog';
 import { getPool } from '@/lib/db';
 import { authOptions } from '@/lib/auth';
 
+/**
+ * @openapi
+ * /api/settings/system-settings:
+ *   get:
+ *     summary: Get system settings
+ *     responses:
+ *       200:
+ *         description: System settings
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *   post:
+ *     summary: Update system settings
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *     responses:
+ *       200:
+ *         description: System settings updated
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ */
+
 export const dynamic = "force-dynamic";
 
 const systemSettingKeyEnum = z.enum([
