@@ -87,7 +87,7 @@ export const CandidateImportUploadQueue: React.FC = () => {
       if (!res.ok) return;
       const { data, total } = await res.json();
       if (isMounted) {
-        setJobs(data);
+        setJobs(Array.isArray(data) ? data : []);
         setTotal(total);
       }
     };
