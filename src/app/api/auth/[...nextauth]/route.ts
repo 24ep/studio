@@ -9,25 +9,30 @@ const handler = NextAuth(authOptions);
 /**
  * @openapi
  * /api/auth/[...nextauth]:
+ *   get:
+ *     summary: Get current session (NextAuth)
+ *     description: Returns the current authenticated session if available. Used to check if a user is logged in.
+ *     responses:
+ *       200:
+ *         description: Session data or null if not authenticated
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
  *   post:
- *     summary: User login (NextAuth)
- *     description: Login endpoint for credentials or OAuth providers. The request body depends on the provider.
+ *     summary: User login or signout (NextAuth)
+ *     description: Login (with credentials or OAuth) or signout (with provider-specific body). The request body depends on the provider and action.
  *     requestBody:
- *       required: true
+ *       required: false
  *       content:
  *         application/json:
  *           schema:
  *             type: object
- *             properties:
- *               email:
- *                 type: string
- *               password:
- *                 type: string
  *     responses:
  *       200:
- *         description: Login successful (session or redirect)
+ *         description: Login or signout successful
  *       401:
- *         description: Invalid credentials
+ *         description: Invalid credentials or not authenticated
  */
 
 export { handler as GET, handler as POST };
