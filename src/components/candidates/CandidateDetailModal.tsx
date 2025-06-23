@@ -1,4 +1,3 @@
-
 // src/components/candidates/CandidateDetailModal.tsx
 "use client";
 
@@ -19,7 +18,8 @@ import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
-import { format, parseISO } from 'date-fns';
+import { format } from 'date-fns';
+import parseISO from 'date-fns/parseISO';
 
 interface CandidateDetailModalProps {
   isOpen: boolean;

@@ -12,7 +12,8 @@ import type { Position, CandidateStatus, RecruitmentStage, UserProfile } from '@
 import { cn } from "@/lib/utils";
 import { ScrollArea } from '../ui/scroll-area';
 import { Calendar } from "@/components/ui/calendar";
-import { format, parseISO } from 'date-fns';
+import { format } from 'date-fns';
+import parseISO from 'date-fns/parseISO';
 import type { DateRange } from "react-day-picker";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Textarea } from '@/components/ui/textarea';

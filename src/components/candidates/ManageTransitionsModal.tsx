@@ -32,7 +32,8 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import type { Candidate, TransitionRecord, CandidateStatus, RecruitmentStage } from '@/lib/types';
 import { PlusCircle, CalendarDays, Edit3, Trash2, Save, X, User, ChevronsUpDown, Check } from 'lucide-react';
-import { format, parseISO } from 'date-fns';
+import { format } from 'date-fns';
+import parseISO from 'date-fns/parseISO';
 import { toast } from "react-hot-toast";
 import { cn } from "@/lib/utils";
 

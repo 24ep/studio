@@ -6,7 +6,8 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import type { Candidate, Position, CandidateStatus, UserProfile } from "@/lib/types";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Users, Briefcase, CheckCircle2, UserPlus, FileWarning, UserRoundSearch, ServerCrash, Loader2, ListChecks, CalendarClock, Users2 } from "lucide-react";
-import { isToday, parseISO } from 'date-fns';
+import { isToday } from 'date-fns';
+import parseISO from 'date-fns/parseISO';
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { signIn, useSession } from "next-auth/react";

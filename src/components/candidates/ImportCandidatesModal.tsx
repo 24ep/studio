@@ -13,7 +13,7 @@ import {
   DialogFooter,
   DialogClose,
 } from '@/components/ui/dialog';
-import { useToast } from '@/hooks/use-toast';
+import { useToast } from '../../hooks/use-toast';
 import { FileUp, Loader2, Users } from 'lucide-react';
 import type { Candidate } from '@/lib/types';
 
@@ -32,7 +32,7 @@ const ACCEPTED_EXCEL_TYPES = [
 
 
 export function ImportCandidatesModal({ isOpen, onOpenChange, onImportSuccess }: ImportCandidatesModalProps) {
-  const { toast } = useToast();
+  const { show, error, success } = useToast();
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isImporting, setIsImporting] = useState(false);
 
@@ -46,7 +46,7 @@ export function ImportCandidatesModal({ isOpen, onOpenChange, onImportSuccess }:
       if (acceptedMimeTypes.includes(fileType) || fileName.endsWith('.xlsx') || fileName.endsWith('.xls')) {
         setSelectedFile(file);
       } else {
-        toast({ title: "Invalid File Type", description: "Please select an Excel file (.xlsx, .xls).", variant: "destructive" });
+        error("Invalid File Type: Please select an Excel file (.xlsx, .xls)." );
         setSelectedFile(null);
         event.target.value = '';
       }
@@ -57,7 +57,7 @@ export function ImportCandidatesModal({ isOpen, onOpenChange, onImportSuccess }:
 
   const handleImport = async () => {
     if (!selectedFile) {
-      toast({ title: "No File Selected", description: "Please select an Excel file to import.", variant: "destructive" });
+      error("No File Selected: Please select an Excel file to import.");
       return;
     }
     setIsImporting(true);
@@ -85,20 +85,16 @@ export function ImportCandidatesModal({ isOpen, onOpenChange, onImportSuccess }:
         }
       }
 
-      toast({ title: "Import Complete", description: successMessage });
+      success(`Import Complete: ${successMessage}`);
       onImportSuccess();
       onOpenChange(false);
       setSelectedFile(null);
       const fileInput = document.getElementById('candidate-excel-import') as HTMLInputElement;
       if (fileInput) fileInput.value = '';
 
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error importing candidates:", error);
-      toast({
-        title: "Import Failed",
-        description: (error as Error).message || "An unexpected error occurred during import.",
-        variant: "destructive",
-      });
+      error(`Import Failed: ${error.message || "An unexpected error occurred during import."}`);
     } finally {
       setIsImporting(false);
     }

@@ -9,7 +9,7 @@ import Link from "next/link";
 import { CandidateQueueProvider, CandidateImportUploadQueue, useCandidateQueue } from "@/components/candidates/CandidateImportUploadQueue";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogClose, DialogFooter } from "@/components/ui/dialog";
 import { v4 as uuidv4 } from 'uuid';
-import { useToast } from "@/src/hooks/use-toast";
+import { useToast } from '../../../hooks/use-toast';
 
 const MAX_FILE_SIZE = 500 * 1024 * 1024; // 500MB
 const ACCEPTED_FILE_TYPES = ["application/pdf"];
@@ -24,7 +24,7 @@ function formatBytes(bytes: number) {
 
 function UploadPageContent() {
   const { addJob } = useCandidateQueue();
-  const { toast } = useToast ? useToast() : { toast: (opts: any) => alert(opts.description) };
+  const { error } = useToast();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [dragActive, setDragActive] = useState(false);
   const [stagedFiles, setStagedFiles] = useState<File[]>([]);
@@ -41,13 +41,13 @@ function UploadPageContent() {
       const file = files[i];
       if (file.type !== "application/pdf") {
         newInvalidFiles.push({ name: file.name, reason: "Invalid file type" });
-        toast({ title: "Invalid file", description: `${file.name}: Invalid file type`, variant: "destructive" });
+        error(`${file.name}: Invalid file type`);
       } else if (file.size > 500 * 1024 * 1024) {
         newInvalidFiles.push({ name: file.name, reason: "File too large (max 500MB)" });
-        toast({ title: "Invalid file", description: `${file.name}: File too large (max 500MB)`, variant: "destructive" });
+        error(`${file.name}: File too large (max 500MB)`);
       } else if (stagedFiles.some(f => f.name === file.name && f.size === file.size)) {
         newInvalidFiles.push({ name: file.name, reason: "Duplicate file" });
-        toast({ title: "Invalid file", description: `${file.name}: Duplicate file`, variant: "destructive" });
+        error(`${file.name}: Duplicate file`);
       } else {
         newFiles.push(file);
       }

@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState } from 'react';
@@ -19,7 +18,8 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { MoreHorizontal, FileEdit, Trash2, Eye, Users, UploadCloud, Briefcase } from 'lucide-react';
 import type { Candidate, CandidateStatus, Position, RecruitmentStage } from '@/lib/types';
 import { ManageTransitionsModal } from './ManageTransitionsModal';
-import { format, parseISO } from 'date-fns';
+import { format } from 'date-fns';
+import parseISO from 'date-fns/parseISO';
 import Link from 'next/link';
 import {
   AlertDialog,
