@@ -25,6 +25,8 @@ export interface CandidateJob {
   created_by?: string;
   updated_at?: string;
   file_path?: string;
+  file?: File;
+  type: CandidateJobType;
 }
 
 interface QueueContextType {

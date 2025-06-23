@@ -55,7 +55,7 @@ const reorderSchema = z.object({
  *       401:
  *         description: Unauthorized
  *       403:
- *         description: Forbidden: Insufficient permissions
+ *         description: "Forbidden: Insufficient permissions"
  */
 
 export async function POST(request: NextRequest) {

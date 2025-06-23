@@ -103,7 +103,7 @@ const updateCustomFieldSchema = createCustomFieldSchema.partial().omit({ model_n
  *       401:
  *         description: Unauthorized
  *       403:
- *         description: Forbidden: Insufficient permissions
+ *         description: "Forbidden: Insufficient permissions"
  */
 export async function GET(request: NextRequest) {
   const session = await getServerSession(authOptions);

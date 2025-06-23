@@ -67,7 +67,10 @@ export function ImportCandidatesModal({ isOpen, onOpenChange, onImportSuccess }:
       id: jobId,
       file: selectedFile,
       type: "import",
-      status: "importing"
+      status: "importing",
+      file_name: selectedFile.name,
+      file_size: selectedFile.size,
+      source: "import"
     });
     const formData = new FormData();
     formData.append('file', selectedFile);
@@ -78,7 +81,7 @@ export function ImportCandidatesModal({ isOpen, onOpenChange, onImportSuccess }:
       });
       const result = await response.json();
       if (!response.ok) {
-        updateJob(jobId, { status: "error", error: result.message || `Failed to import candidates. Status: ${response.status}`, errorDetails: JSON.stringify(result) });
+        updateJob(jobId, { status: "error", error: result.message || `Failed to import candidates. Status: ${response.status}`, error_details: JSON.stringify(result) });
         throw new Error(result.message || `Failed to import candidates. Status: ${response.status}`);
       }
       updateJob(jobId, { status: "success" });
@@ -89,7 +92,7 @@ export function ImportCandidatesModal({ isOpen, onOpenChange, onImportSuccess }:
       const fileInput = document.getElementById('candidate-excel-import') as HTMLInputElement;
       if (fileInput) fileInput.value = '';
     } catch (error) {
-      updateJob(jobId, { status: "error", error: (error as Error).message, errorDetails: (error as Error).stack });
+      updateJob(jobId, { status: "error", error: (error as Error).message, error_details: (error as Error).stack });
       console.error("Error importing candidates:", error);
       toast.error((error as Error).message || "An unexpected error occurred during import.");
     } finally {

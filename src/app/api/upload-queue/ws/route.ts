@@ -14,11 +14,10 @@
  *       426:
  *         description: Expected websocket upgrade
  */
-export const runtime = 'edge';
+export const runtime = 'nodejs';
 import { NextRequest } from 'next/server';
 import { getPool } from '@/lib/db';
-
-const clients = new Set<WebSocket>();
+import { clients } from './clients';
 
 export async function GET(request: NextRequest) {
   const { webSocket } = request as any;
@@ -38,21 +37,6 @@ async function sendQueue(socket: WebSocket) {
   try {
     const res = await client.query('SELECT * FROM upload_queue ORDER BY upload_date DESC');
     socket.send(JSON.stringify({ type: 'queue', data: res.rows }));
-  } finally {
-    client.release();
-  }
-}
-
-export async function broadcastQueueUpdate() {
-  const client = await getPool().connect();
-  try {
-    const res = await client.query('SELECT * FROM upload_queue ORDER BY upload_date DESC');
-    const data = JSON.stringify({ type: 'queue', data: res.rows });
-    for (const ws of clients) {
-      try {
-        ws.send(data);
-      } catch {}
-    }
   } finally {
     client.release();
   }

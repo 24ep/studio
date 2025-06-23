@@ -53,6 +53,13 @@
  *       401:
  *         description: Unauthorized
  *       403:
- *         description: Forbidden: Insufficient permissions
+ *         description: "Forbidden: Insufficient permissions"
  */
 // ... existing code ... 
+
+export async function GET() {
+  return new Response(JSON.stringify({ message: 'Not implemented' }), {
+    status: 501,
+    headers: { 'Content-Type': 'application/json' },
+  });
+} 

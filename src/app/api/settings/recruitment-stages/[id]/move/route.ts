@@ -67,7 +67,7 @@ function extractIdFromUrl(request: NextRequest): string | null {
  *       401:
  *         description: Unauthorized
  *       403:
- *         description: Forbidden: Insufficient permissions
+ *         description: "Forbidden: Insufficient permissions"
  *       404:
  *         description: Stage not found
  */

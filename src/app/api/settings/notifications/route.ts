@@ -40,7 +40,7 @@ import { authOptions } from '@/lib/auth';
  *       401:
  *         description: Unauthorized
  *       403:
- *         description: Forbidden: Insufficient permissions
+ *         description: "Forbidden: Insufficient permissions"
  */
 
 export const dynamic = "force-dynamic";

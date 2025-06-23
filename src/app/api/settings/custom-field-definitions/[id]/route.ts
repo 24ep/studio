@@ -139,7 +139,7 @@ export async function GET(request: NextRequest) {
  *       401:
  *         description: Unauthorized
  *       403:
- *         description: Forbidden: Insufficient permissions
+ *         description: "Forbidden: Insufficient permissions"
  */
 export async function PUT(request: NextRequest) {
   const id = extractIdFromUrl(request);

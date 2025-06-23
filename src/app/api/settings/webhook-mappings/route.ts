@@ -43,7 +43,7 @@ const saveWebhookMappingsSchema = z.array(webhookFieldMappingSchema);
  *       401:
  *         description: Unauthorized
  *       403:
- *         description: Forbidden: Insufficient permissions
+ *         description: "Forbidden: Insufficient permissions"
  *   post:
  *     summary: Create a webhook mapping
  *     description: Creates a new webhook field mapping. Requires authentication and Admin or WEBHOOK_MAPPING_MANAGE permission.
@@ -85,7 +85,7 @@ const saveWebhookMappingsSchema = z.array(webhookFieldMappingSchema);
  *       401:
  *         description: Unauthorized
  *       403:
- *         description: Forbidden: Insufficient permissions
+ *         description: "Forbidden: Insufficient permissions"
  */
 
 export async function GET(request: NextRequest) {

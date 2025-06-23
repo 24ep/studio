@@ -130,10 +130,10 @@ export default function PositionsPageClient({
       setTotal(data.total);
       const uniqueDepts = Array.from(
         new Set(
-          data.data.map((p: Position) => p.department).filter((d: string) => typeof d === 'string' && Boolean(d))
+          data.data.map((p: Position) => String(p.department)).filter((d: string) => typeof d === 'string' && Boolean(d))
         )
       );
-      setAvailableDepartments(uniqueDepts.sort());
+      setAvailableDepartments((uniqueDepts as string[]).sort());
     } catch (error) {
       const errorMessage = (error as Error).message || "Could not load position data.";
       if (!(errorMessage.toLowerCase().includes("unauthorized") || errorMessage.toLowerCase().includes("forbidden"))) {
