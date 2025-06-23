@@ -70,6 +70,14 @@ function setSidebarCSSVars(settings: Record<string, string>) {
   });
 }
 
+// Helper to determine the most specific active nav item
+function getActiveNavItem(pathname: string, navItems: { href: string }[]) {
+  // Sort by href length descending to prioritize more specific (deeper) routes
+  const sorted = [...navItems].sort((a, b) => b.href.length - a.href.length);
+  return sorted.find(item => pathname === item.href) ||
+         sorted.find(item => item.href !== "/" && pathname.startsWith(item.href));
+}
+
 // Memoize SidebarNav to prevent unnecessary re-renders
 const SidebarNavComponent = function SidebarNav() {
   const pathname = usePathname();
@@ -181,7 +189,9 @@ const SidebarNavComponent = function SidebarNav() {
         <div className="mb-2">
           <div className="text-xs font-semibold text-muted-foreground px-4 mb-2 tracking-widest uppercase">Main</div>
           {mainNavItems.map((item) => {
-            const isActive = pathname === item.href || (item.href !== "/" && pathname.startsWith(item.href));
+            // Use the helper to determine which item is active
+            const activeItem = getActiveNavItem(pathname, mainNavItems);
+            const isActive = activeItem && activeItem.href === item.href;
             const isNavigatingToThis = navigatingTo === item.href;
             return (
               <SidebarMenuItem key={item.href}>
