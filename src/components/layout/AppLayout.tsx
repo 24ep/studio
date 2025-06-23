@@ -17,6 +17,7 @@ import { Package2, Loader2 } from "lucide-react";
 import { usePathname } from "next/navigation";
 import Image from 'next/image';
 import packageJson from '../../../package.json';
+import { setThemeAndColors } from '@/lib/themeUtils';
 
 const APP_LOGO_DATA_URL_KEY = 'appLogoDataUrl';
 const APP_CONFIG_APP_NAME_KEY = 'appConfigAppName';
@@ -71,23 +72,41 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
         setAppLogoUrl(storedLogo);
         const storedAppName = localStorage.getItem(APP_CONFIG_APP_NAME_KEY);
         setCurrentAppName(storedAppName || DEFAULT_APP_NAME);
+        // Theme and color settings
+        const themePreference = localStorage.getItem('appThemePreference') || 'system';
+        const primaryGradientStart = localStorage.getItem('primaryGradientStart') || '179 67% 66%';
+        const primaryGradientEnd = localStorage.getItem('primaryGradientEnd') || '238 74% 61%';
+        // Sidebar colors
+        const sidebarColors: Record<string, string> = {};
+        [
+          'sidebarBgStartL','sidebarBgEndL','sidebarTextL','sidebarActiveBgStartL','sidebarActiveBgEndL','sidebarActiveTextL','sidebarHoverBgL','sidebarHoverTextL','sidebarBorderL',
+          'sidebarBgStartD','sidebarBgEndD','sidebarTextD','sidebarActiveBgStartD','sidebarActiveBgEndD','sidebarActiveTextD','sidebarHoverBgD','sidebarHoverTextD','sidebarBorderD',
+        ].forEach(key => {
+          const val = localStorage.getItem(key);
+          if (val) sidebarColors[key] = val;
+        });
+        setThemeAndColors({ themePreference: themePreference as 'system' | 'light' | 'dark', primaryGradientStart, primaryGradientEnd, sidebarColors });
       }
     };
 
     updateAppConfig(); // Initial load
 
     const handleAppConfigChange = (event: Event) => {
-        const customEvent = event as CustomEvent<{ appName?: string; logoUrl?: string | null }>;
+        const customEvent = event as CustomEvent<{ appName?: string; logoUrl?: string | null, themePreference?: string, primaryGradientStart?: string, primaryGradientEnd?: string, sidebarColors?: Record<string,string> }>;
         if (customEvent.detail) {
             if (customEvent.detail.appName) {
                 setCurrentAppName(customEvent.detail.appName);
             }
-            // Check for logoUrl specifically, could be null if reset
             if (customEvent.detail.logoUrl !== undefined) { 
                  setAppLogoUrl(customEvent.detail.logoUrl);
             }
+            setThemeAndColors({
+              themePreference: (customEvent.detail.themePreference || 'system') as 'system' | 'light' | 'dark',
+              primaryGradientStart: customEvent.detail.primaryGradientStart,
+              primaryGradientEnd: customEvent.detail.primaryGradientEnd,
+              sidebarColors: customEvent.detail.sidebarColors || {},
+            });
         } else {
-            // Fallback if event detail is not as expected
             updateAppConfig();
         }
     };
@@ -112,6 +131,8 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   if (pathname === "/auth/signin") {
     return <>{children}</>;
   }
+
+  const isSettingsPage = pathname.startsWith("/settings");
 
   const renderLogo = (isCollapsed: boolean) => {
     if (isClient && appLogoUrl) {
@@ -144,9 +165,9 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
       
         </SidebarFooter>
       </Sidebar>
-      <SidebarInset className="flex flex-col bg-background">
+      <SidebarInset>
         <Header pageTitle={pageTitle} />
-        <main className="flex-1 overflow-y-auto relative p-6">
+        <main className={isSettingsPage ? "flex-1 overflow-y-auto relative" : "flex-1 overflow-y-auto relative p-6"}>
           {isPageLoading && (
             <div className="absolute inset-0 flex items-center justify-center bg-background/50 backdrop-blur-sm z-10">
               <div className="flex flex-col items-center gap-4 p-6 rounded-lg bg-card border shadow-lg">

@@ -47,6 +47,7 @@ services:
       N8N_RESUME_WEBHOOK_URL: https://n8n.bondarys.com/webhook/upload-cv
       N8N_GENERIC_PDF_WEBHOOK_URL: https://n8n.bondarys.com/webhook/upload-cv
       GOOGLE_API_KEY: AIzaSyAEslELPZLJBUfiKiNwsyXax0XezkQA-20
+      NEXT_PUBLIC_GOOGLE_FONTS_API_KEY: AIzaSyAEslELPZLJBUfiKiNwsyXax0XezkQA-20
       NODE_ENV: development
     depends_on:
       postgres:

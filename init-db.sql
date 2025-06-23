@@ -130,7 +130,7 @@ CREATE INDEX IF NOT EXISTS idx_log_timestamp ON "LogEntry"(timestamp);
 -- Create UserGroup table
 CREATE TABLE IF NOT EXISTS "UserGroup" (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    name VARCHAR(100) NOT NULL,
+    name VARCHAR(100) NOT NULL UNIQUE,
     description TEXT,
     permissions TEXT[] DEFAULT ARRAY[]::TEXT[],
     is_default BOOLEAN DEFAULT FALSE,
@@ -217,12 +217,18 @@ INSERT INTO "UserGroup" (id, name, description, permissions, is_default, is_syst
 VALUES
   ('00000000-0000-0000-0000-000000000001', 'Admin', 'Full system access', ARRAY['CANDIDATES_VIEW','CANDIDATES_MANAGE','CANDIDATES_IMPORT','CANDIDATES_EXPORT','POSITIONS_VIEW','POSITIONS_MANAGE','POSITIONS_IMPORT','POSITIONS_EXPORT','USERS_MANAGE','USER_GROUPS_MANAGE','SYSTEM_SETTINGS_MANAGE','USER_PREFERENCES_MANAGE','RECRUITMENT_STAGES_MANAGE','CUSTOM_FIELDS_MANAGE','WEBHOOK_MAPPING_MANAGE','NOTIFICATION_SETTINGS_MANAGE','LOGS_VIEW'], true, true),
   ('00000000-0000-0000-0000-000000000002', 'Recruiter', 'Can manage candidates and positions', ARRAY['CANDIDATES_VIEW','CANDIDATES_MANAGE','CANDIDATES_IMPORT','CANDIDATES_EXPORT','POSITIONS_VIEW','POSITIONS_MANAGE','POSITIONS_IMPORT','POSITIONS_EXPORT','RECRUITMENT_STAGES_MANAGE'], true, false),
-  ('00000000-0000-0000-0000-000000000003', 'Hiring Manager', 'Can view candidates and positions', ARRAY['CANDIDATES_VIEW','POSITIONS_VIEW'], true, false)
+  ('00000000-0000-0000-0000-000000000003', 'Hiring Manager', 'Can view candidates and positions', ARRAY['CANDIDATES_VIEW','POSITIONS_VIEW'], true, false),
+  ('00000000-0000-0000-0000-000000000011', 'HR', 'HR Department group', ARRAY['HR_MANAGE','HR_CREATE','HR_UPDATE','HR_DELETE'], true, false),
+  ('00000000-0000-0000-0000-000000000012', 'IT', 'IT Department group', ARRAY['IT_MANAGE','IT_CREATE','IT_UPDATE','IT_DELETE'], true, false),
+  ('00000000-0000-0000-0000-000000000013', 'Finance', 'Finance Department group', ARRAY['FINANCE_MANAGE','FINANCE_CREATE','FINANCE_UPDATE','FINANCE_DELETE'], false, false),
+  ('00000000-0000-0000-0000-000000000014', 'Marketing', 'Marketing Department group', ARRAY['MARKETING_MANAGE','MARKETING_CREATE','MARKETING_UPDATE','MARKETING_DELETE'], false, false)
 ON CONFLICT (name) DO NOTHING;
 
 -- Assign default admin user to Admin group
 INSERT INTO "User_UserGroup" ("userId", "groupId")
-VALUES ('213d289f-31ef-47cb-bf13-8e7207295b42', '00000000-0000-0000-0000-000000000001')
+SELECT '213d289f-31ef-47cb-bf13-8e7207295b42', id
+FROM "UserGroup"
+WHERE name = 'Admin'
 ON CONFLICT DO NOTHING;
 
 -- Ensure candidates table has avatarUrl column for profile images
@@ -231,3 +237,34 @@ DO $$ BEGIN
     ALTER TABLE "candidates" ADD COLUMN "avatarUrl" VARCHAR(1024);
   END IF;
 END $$;
+
+-- MIGRATION: Remove duplicate UserGroup names and add unique constraint if not present
+DO $$
+BEGIN
+  -- Remove duplicates, keep the row with the lowest id for each name
+  DELETE FROM "UserGroup"
+  WHERE id NOT IN (
+    SELECT min(id) FROM "UserGroup" GROUP BY name
+  );
+  -- Add unique constraint if it does not exist
+  BEGIN
+    ALTER TABLE "UserGroup" ADD CONSTRAINT usergroup_name_unique UNIQUE (name);
+  EXCEPTION
+    WHEN duplicate_object THEN NULL; -- Constraint already exists
+  END;
+END $$;
+
+-- Create CustomFieldDefinition table if it doesn't exist
+CREATE TABLE IF NOT EXISTS "CustomFieldDefinition" (
+    id UUID PRIMARY KEY,
+    model_name TEXT NOT NULL, -- 'Candidate' or 'Position'
+    field_key TEXT NOT NULL,
+    label TEXT NOT NULL,
+    field_type TEXT NOT NULL, -- 'text', 'textarea', 'number', 'boolean', 'date', 'select_single', 'select_multiple'
+    options JSONB,
+    is_required BOOLEAN DEFAULT FALSE,
+    sort_order INTEGER DEFAULT 0,
+    "createdAt" TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    "updatedAt" TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    UNIQUE (model_name, field_key)
+);

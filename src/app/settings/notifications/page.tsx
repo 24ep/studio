@@ -153,7 +153,7 @@ export default function NotificationSettingsPage() {
         <div className="flex items-center gap-2">
           <Button onClick={handleSaveSettings} size="lg" className="btn-primary-gradient flex items-center gap-2" disabled={isSaving || isLoadingData || !!fetchError || eventsWithSettings.length === 0}>
             {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-            {isSaving ? 'Saving...' : 'Save Notification Settings'}
+            {isSaving ? 'Saving...' : 'Save All'}
           </Button>
         </div>
       </CardHeader>

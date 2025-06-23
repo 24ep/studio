@@ -399,7 +399,7 @@ export default function PositionsPageClient({
                     onCheckedChange={handleToggleSelectAllPositions}
                     aria-label="Select all positions"
                     disabled={isLoading || !canManagePositions}
-                  /></TableHead><TableHead>Title</TableHead><TableHead className="hidden sm:table-cell">Department</TableHead><TableHead className="hidden md:table-cell">Level</TableHead><TableHead>Status</TableHead><TableHead className="hidden lg:table-cell">Description</TableHead><TableHead className="text-right">Actions</TableHead></TableRow></TableHeader>
+                  /></TableHead><TableHead>Title</TableHead><TableHead className="hidden sm:table-cell">Department</TableHead><TableHead className="hidden md:table-cell">Level</TableHead><TableHead>Status</TableHead><TableHead className="text-right">Actions</TableHead></TableRow></TableHeader>
               <TableBody>
                 {positions.map((pos) => (
                   <TableRow key={pos.id} className="hover:bg-muted/50 transition-colors" data-state={selectedPositionIds.has(pos.id) ? "selected" : ""}>
@@ -413,7 +413,6 @@ export default function PositionsPageClient({
                     <TableCell className="hidden sm:table-cell">{pos.department}</TableCell>
                     <TableCell className="hidden md:table-cell">{pos.position_level || 'N/A'}</TableCell>
                     <TableCell> <Badge variant={pos.isOpen ? "default" : "outline"} className={pos.isOpen ? "bg-green-500 hover:bg-green-600 text-primary-foreground" : ""}> {pos.isOpen ? "Open" : "Closed"} </Badge> </TableCell>
-                    <TableCell className="text-sm text-muted-foreground truncate max-w-xs hidden lg:table-cell"> {pos.description || "No description"} </TableCell>
                     <TableCell className="text-right">
                       <Button variant="ghost" size="icon" className="mr-1 h-8 w-8" onClick={() => handleOpenEditModal(pos)} disabled={!canManagePositions}> <Edit className="h-4 w-4" /> <span className="sr-only">Edit</span> </Button>
                        <AlertDialog>

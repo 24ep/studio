@@ -20,7 +20,7 @@ async function getInitialCandidatesData(session: any): Promise<{ candidates: Can
 
   let initialQuery = `
     SELECT
-      c.id, c.name, c.email, c.phone, c."avatarUrl", c."dataAiHint", c."resumePath", c."parsedData", c.custom_attributes,
+      c.id, c.name, c.email, c.phone, c."avatarUrl", c."dataAiHint", c."resumePath", c."parsedData", c."customAttributes",
       c."positionId", c."fitScore", c.status, c."applicationDate",
       c."recruiterId", c."createdAt", c."updatedAt",
       p.title as "positionTitle", p.department as "positionDepartment", p.position_level as "positionLevel",
@@ -61,7 +61,7 @@ async function getInitialCandidatesData(session: any): Promise<{ candidates: Can
     const candidates = result.rows.map(row => ({
       ...row,
       parsedData: row.parsedData || { personal_info: {}, contact_info: {} },
-      custom_attributes: row.custom_attributes || {},
+      customAttributes: row.customAttributes || {},
       position: row.positionId ? {
           id: row.positionId,
           title: row.positionTitle,

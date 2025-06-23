@@ -41,7 +41,7 @@ async function getInitialTaskBoardData(session: any): Promise<{
   const defaultRecruiterIdFilter = userId;
   const candidateQuery = `
     SELECT
-      c.id, c.name, c.email, c.phone, c."avatarUrl", c."dataAiHint", c."resumePath", c."parsedData", c.custom_attributes,
+      c.id, c.name, c.email, c.phone, c."avatarUrl", c."dataAiHint", c."resumePath", c."parsedData", c."customAttributes",
       c."positionId", c."fitScore", c.status, c."applicationDate",
       c."recruiterId", c."createdAt", c."updatedAt",
       p.title as "positionTitle", p.department as "positionDepartment", p.position_level as "positionLevel",
@@ -100,7 +100,7 @@ async function getInitialTaskBoardData(session: any): Promise<{
     initialCandidates = candidatesQueryResult.value.rows.map(row => ({
       ...row,
       parsedData: row.parsedData || { personal_info: {}, contact_info: {} },
-      custom_attributes: row.custom_attributes || {},
+      customAttributes: row.customAttributes || {},
       position: row.positionId ? { id: row.positionId, title: row.positionTitle, department: row.department, position_level: row.positionLevel } : null,
       recruiter: row.recruiterId ? { id: row.recruiterId, name: row.recruiterName, email: null } : null,
       transitionHistory: row.transitionHistory || [],

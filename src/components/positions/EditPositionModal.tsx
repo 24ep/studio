@@ -78,8 +78,9 @@ export function EditPositionModal({ isOpen, onOpenChange, onEditPosition, positi
             const errorData = await response.json().catch(() => ({}));
             throw new Error(errorData.message || 'Failed to fetch associated candidates');
           }
-          const data: Candidate[] = await response.json();
-          setAssociatedCandidates(data.sort((a, b) => (b.fitScore || 0) - (a.fitScore || 0)));
+          const result = await response.json();
+          const candidates: Candidate[] = result.data || [];
+          setAssociatedCandidates(candidates.sort((a, b) => (b.fitScore || 0) - (a.fitScore || 0)));
         } catch (error) {
           console.error("Error fetching associated candidates:", error);
           toast.error((error as Error).message || "Could not load candidates for this position.");

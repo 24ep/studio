@@ -37,14 +37,32 @@ export function Header({ pageTitle: initialPageTitle }: { pageTitle: string }) {
     if (typeof window !== 'undefined') {
       const storedAppName = localStorage.getItem(APP_CONFIG_APP_NAME_KEY);
       setCurrentAppName(storedAppName || DEFAULT_APP_NAME);
+      // Listen for appConfigChanged event
+      const handleAppConfigChange = (event: Event) => {
+        const customEvent = event as CustomEvent<{ appName?: string }>;
+        if (customEvent.detail && customEvent.detail.appName) {
+          setCurrentAppName(customEvent.detail.appName);
+          document.title = customEvent.detail.appName;
+        } else {
+          const storedAppName = localStorage.getItem(APP_CONFIG_APP_NAME_KEY);
+          setCurrentAppName(storedAppName || DEFAULT_APP_NAME);
+          document.title = storedAppName || DEFAULT_APP_NAME;
+        }
+      };
+      window.addEventListener('appConfigChanged', handleAppConfigChange);
+      return () => {
+        window.removeEventListener('appConfigChanged', handleAppConfigChange);
+      };
     }
   }, []);
 
   useEffect(() => {
     if (initialPageTitle === DEFAULT_APP_NAME && currentAppName !== DEFAULT_APP_NAME) {
       setEffectivePageTitle(currentAppName);
+      document.title = currentAppName;
     } else {
       setEffectivePageTitle(initialPageTitle);
+      document.title = initialPageTitle;
     }
   }, [initialPageTitle, currentAppName]);
 

@@ -17,6 +17,7 @@ import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'react-hot-toast';
+import { setThemeAndColors } from '@/lib/themeUtils';
 
 type ThemePreference = "light" | "dark" | "system";
 const DEFAULT_APP_NAME = "CandiTrack";
@@ -368,8 +369,9 @@ export default function PreferencesSettingsPage() {
       });
 
       // Handle file uploads (logo and login background image)
+      let logoDataUrl = savedLogoDataUrl;
       if (selectedLogoFile) {
-        const logoDataUrl = await new Promise<string>((resolve) => {
+        logoDataUrl = await new Promise<string>((resolve) => {
           const reader = new FileReader();
           reader.onload = (e) => resolve(e.target?.result as string);
           reader.readAsDataURL(selectedLogoFile);
@@ -380,16 +382,49 @@ export default function PreferencesSettingsPage() {
         setLogoPreviewUrl(logoDataUrl);
       }
 
+      let loginBgDataUrl = savedLoginBgImageUrl;
       if (selectedLoginBgFile) {
-        const bgDataUrl = await new Promise<string>((resolve) => {
+        loginBgDataUrl = await new Promise<string>((resolve) => {
           const reader = new FileReader();
           reader.onload = (e) => resolve(e.target?.result as string);
           reader.readAsDataURL(selectedLoginBgFile);
         });
-        await saveSpecificSetting('loginPageBackgroundImageUrl', bgDataUrl);
+        await saveSpecificSetting('loginPageBackgroundImageUrl', loginBgDataUrl);
         setSelectedLoginBgFile(null);
-        setSavedLoginBgImageUrl(bgDataUrl);
-        setLoginBgImagePreviewUrl(bgDataUrl);
+        setSavedLoginBgImageUrl(loginBgDataUrl);
+        setLoginBgImagePreviewUrl(loginBgDataUrl);
+      }
+
+      // Update localStorage for app name and logo
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('appConfigAppName', appName);
+        if (logoDataUrl) {
+          localStorage.setItem('appLogoDataUrl', logoDataUrl);
+        } else {
+          localStorage.removeItem('appLogoDataUrl');
+        }
+      }
+
+      // Set theme and color CSS variables
+      setThemeAndColors({
+        themePreference,
+        primaryGradientStart,
+        primaryGradientEnd,
+        sidebarColors,
+      });
+
+      // Dispatch custom event for other tabs/components
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('appConfigChanged', {
+          detail: {
+            appName,
+            logoUrl: logoDataUrl,
+            themePreference,
+            primaryGradientStart,
+            primaryGradientEnd,
+            sidebarColors,
+          },
+        }));
       }
 
       toast.success("Your application preferences have been saved successfully.");

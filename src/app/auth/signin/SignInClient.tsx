@@ -10,6 +10,7 @@ import { AlertTriangle, Loader2 } from "lucide-react";
 import Image from 'next/image';
 import { CredentialsSignInForm } from "@/components/auth/CredentialsSignInForm";
 import type { SystemSetting, LoginPageBackgroundType, LoginPageLayoutType } from '@/lib/types';
+import { setThemeAndColors } from '@/lib/themeUtils';
 
 const APP_LOGO_DATA_URL_KEY = 'appLogoDataUrl';
 const APP_CONFIG_APP_NAME_KEY = 'appConfigAppName';
@@ -73,6 +74,19 @@ export default function SignInClient() {
           primaryStart = settings.find(s => s.key === 'primaryGradientStart')?.value || DEFAULT_PRIMARY_GRADIENT_START_SIGNIN;
           primaryEnd = settings.find(s => s.key === 'primaryGradientEnd')?.value || DEFAULT_PRIMARY_GRADIENT_END_SIGNIN;
 
+          setCurrentAppName(appName);
+          setAppLogoUrl(logoUrl);
+          setLoginLayoutType(loginLayoutTypeSetting);
+
+          // Apply primary colors and theme dynamically for login page
+          if (typeof document !== 'undefined') {
+            const themePref = (settings.find((s: SystemSetting) => s.key === 'appThemePreference')?.value as 'system' | 'light' | 'dark') || 'system';
+            setThemeAndColors({
+              themePreference: themePref,
+              primaryGradientStart: primaryStart,
+              primaryGradientEnd: primaryEnd,
+            });
+          }
         }
       } catch (error) {
         console.warn("Failed to fetch system settings for login page, using defaults/localStorage.", error);
@@ -81,20 +95,6 @@ export default function SignInClient() {
         logoUrl = localStorage.getItem(APP_LOGO_DATA_URL_KEY) || null;
       }
       
-      setCurrentAppName(appName);
-      setAppLogoUrl(logoUrl);
-      setLoginLayoutType(loginLayoutTypeSetting);
-
-      // Apply primary colors dynamically for login page
-      if (typeof document !== 'undefined') {
-        document.documentElement.style.setProperty('--primary-gradient-start-l', primaryStart);
-        document.documentElement.style.setProperty('--primary-gradient-end-l', primaryEnd);
-        document.documentElement.style.setProperty('--primary-gradient-start-d', primaryStart); 
-        document.documentElement.style.setProperty('--primary-gradient-end-d', primaryEnd);
-        document.documentElement.style.setProperty('--primary', `hsl(${primaryStart})`);
-      }
-
-
       // Determine login page style
       const newStyle: React.CSSProperties = {
         minHeight: '100vh',
