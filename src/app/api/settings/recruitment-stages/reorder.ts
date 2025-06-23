@@ -4,6 +4,7 @@ import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
 import { logAudit } from '@/lib/auditLog';
 import { z } from 'zod';
+import { deleteCache, CACHE_KEY_RECRUITMENT_STAGES } from '@/lib/redis';
 
 export const dynamic = "force-dynamic";
 
@@ -55,6 +56,8 @@ export async function POST(request: NextRequest) {
       actingUserId,
       { newOrder: stageIds }
     );
+    // Invalidate recruitment stages cache so new order is reflected
+    await deleteCache(CACHE_KEY_RECRUITMENT_STAGES);
     return NextResponse.json({ message: 'Recruitment stages reordered successfully' }, { status: 200 });
   } catch (error: any) {
     await client.query('ROLLBACK');

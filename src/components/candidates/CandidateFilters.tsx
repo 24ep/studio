@@ -310,7 +310,7 @@ export function CandidateFilters({
       </div>
 
       {/* Attribute Filters Section */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 gap-4">
         {/* Basic Info */}
         <div>
           <Label htmlFor="name-search" className="text-xs">Name</Label>

@@ -191,11 +191,11 @@ export async function DELETE(request: NextRequest) {
     const usageQuery = `
       SELECT COUNT(*) as count 
       FROM "candidates" 
-      WHERE custom_attributes ? $1
+      WHERE "customAttributes" ? $1
       UNION ALL
       SELECT COUNT(*) as count 
       FROM "positions" 
-      WHERE custom_attributes ? $1
+      WHERE "customAttributes" ? $1
     `;
     
     const usageResult = await getPool().query(usageQuery, [fieldData.field_key]);

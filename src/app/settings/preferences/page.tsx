@@ -149,35 +149,6 @@ function convertHslStringToHex(hslString: string | null | undefined): string {
     return hslToHex(hslObj.h, hslObj.s, hslObj.l);
 }
 
-const PREFERENCE_SECTIONS = [
-  { id: 'branding', label: 'Branding & Identity', icon: StickyNote },
-  { id: 'theme', label: 'Theme', icon: Paintbrush },
-  { id: 'primaryColors', label: 'Primary Colors', icon: LayoutDashboard },
-  { id: 'loginAppearance', label: 'Login Page', icon: LogIn },
-  { id: 'sidebarAppearance', label: 'Sidebar Colors', icon: SidebarMenuIcon },
-];
-
-const FONT_OPTIONS = [
-  { label: 'Poppins', value: 'Poppins' },
-  { label: 'Open Sans', value: 'Open Sans' },
-  { label: 'Roboto', value: 'Roboto' },
-  { label: 'Inter', value: 'Inter' },
-  { label: 'Montserrat', value: 'Montserrat' },
-  { label: 'Lato', value: 'Lato' },
-  { label: 'Nunito', value: 'Nunito' },
-  { label: 'Source Sans 3', value: 'Source Sans 3' },
-  { label: 'Raleway', value: 'Raleway' },
-  { label: 'Ubuntu', value: 'Ubuntu' },
-  { label: 'Quicksand', value: 'Quicksand' },
-  { label: 'PT Sans', value: 'PT Sans' },
-];
-
-// Add this helper for filtering font options
-function filterFontOptions(options: {label: string, value: string}[], input: string) {
-  if (!input) return options;
-  return options.filter((opt: {label: string, value: string}) => opt.label.toLowerCase().includes(input.toLowerCase()));
-}
-
 // Helper to update sidebar CSS variables for live preview
 const SIDEBAR_COLOR_KEYS = [
   'sidebarBgStartL', 'sidebarBgEndL', 'sidebarTextL',
@@ -196,6 +167,17 @@ function setSidebarCSSVars(settings: Record<string, string>) {
       root.style.setProperty(`--${cssVar}`, settings[key]);
     }
   });
+}
+
+// Add FONT_FALLBACK above its first usage
+const FONT_FALLBACK = [
+  { label: 'Poppins', value: 'Poppins' },
+];
+
+// Add this helper for filtering font options above its usage
+function filterFontOptions(options: {label: string, value: string}[], input: string) {
+  if (!input) return options;
+  return options.filter((opt) => opt.label.toLowerCase().includes(input.toLowerCase()));
 }
 
 export default function PreferencesSettingsPage() {
@@ -225,7 +207,7 @@ export default function PreferencesSettingsPage() {
   const [appFontFamily, setAppFontFamily] = useState<string>('Poppins');
   const [isFontLoading, setIsFontLoading] = useState(false);
   const [fontValidationWarning, setFontValidationWarning] = useState<string | null>(null);
-  const [fontOptions, setFontOptions] = useState<{label: string, value: string}[]>(FONT_OPTIONS);
+  const [fontOptions, setFontOptions] = useState<{label: string, value: string}[]>(FONT_FALLBACK);
   const [isFontListLoading, setIsFontListLoading] = useState(false);
   const fontValidationTimeout = useRef<any>(null);
   const GOOGLE_FONTS_API_KEY = process.env.NEXT_PUBLIC_GOOGLE_FONTS_API_KEY || '';
@@ -237,7 +219,6 @@ export default function PreferencesSettingsPage() {
     loginAppearance: useRef<HTMLDivElement>(null),
     sidebarAppearance: useRef<HTMLDivElement>(null),
   };
-  const [activeSection, setActiveSection] = useState<string>('branding');
 
   // Add at the top of the PreferencesSettingsPage component
   const [isClient, setIsClient] = useState(false);
@@ -374,16 +355,19 @@ export default function PreferencesSettingsPage() {
 
       // Add sidebar colors
       Object.entries(sidebarColors).forEach(([key, value]) => {
-        // Since SidebarColorKey is a subset of SystemSettingKey, we can safely cast
         if (key in sidebarColors) {
           settingsToSave.push({ key: key as SystemSettingKey, value });
         }
       });
 
-      // Save all settings
-      await Promise.all(settingsToSave.map(setting => saveSpecificSetting(setting.key, setting.value)));
+      // Save all settings in a single request
+      await fetch('/api/settings/system-settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(settingsToSave),
+      });
 
-      // Handle file uploads
+      // Handle file uploads (logo and login background image)
       if (selectedLogoFile) {
         const logoDataUrl = await new Promise<string>((resolve) => {
           const reader = new FileReader();
@@ -466,28 +450,6 @@ export default function PreferencesSettingsPage() {
     toast.success(`${themeType} sidebar colors reset to default. Click 'Save All' to persist.`);
   };
 
-  // Scroll to section on menu click
-  const handleMenuClick = (id: string) => {
-    setActiveSection(id);
-    sectionRefs[id as keyof typeof sectionRefs]?.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  };
-
-  // Track scroll to highlight active section
-  useEffect(() => {
-    const handleScroll = () => {
-      const offsets = Object.entries(sectionRefs).map(([id, ref]) => ({
-        id,
-        top: ref.current ? ref.current.getBoundingClientRect().top : Infinity
-      }));
-      const visible = offsets.filter(o => o.top < window.innerHeight / 2 && o.top > 0);
-      if (visible.length > 0) {
-        setActiveSection(visible[0].id);
-      }
-    };
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
-
   // Fetch full Google Fonts list on page load
   useEffect(() => {
     if (!GOOGLE_FONTS_API_KEY) return;
@@ -499,7 +461,7 @@ export default function PreferencesSettingsPage() {
           setFontOptions(data.items.map((item: any) => ({ label: item.family, value: item.family })));
         }
       })
-      .catch(() => setFontOptions(FONT_OPTIONS))
+      .catch(() => setFontOptions(FONT_FALLBACK))
       .finally(() => setIsFontListLoading(false));
   }, [GOOGLE_FONTS_API_KEY]);
 
@@ -585,40 +547,9 @@ export default function PreferencesSettingsPage() {
     );
   }
 
-        return (
+  return (
     <div className="flex gap-8 relative">
-      {/* Left menu */}
-      <nav className="w-56 flex-shrink-0 pt-8 sticky top-8 self-start hidden md:block">
-        <ul className="space-y-2">
-          {PREFERENCE_SECTIONS.map(section => (
-            <li key={section.id}>
-              <button
-                className={cn(
-                  'w-full flex items-center gap-3 text-left px-4 py-2 rounded transition font-medium',
-                  activeSection === section.id ? 'bg-primary/10 text-primary shadow' : 'hover:bg-muted text-muted-foreground'
-                )}
-                onClick={() => handleMenuClick(section.id)}
-              >
-                <section.icon className="h-5 w-5" />
-                {section.label}
-              </button>
-            </li>
-          ))}
-        </ul>
-      </nav>
-      {/* Mobile menu */}
-      <nav className="md:hidden w-full mb-4">
-        <select
-          className="w-full p-2 rounded border text-base"
-          value={activeSection}
-          onChange={e => handleMenuClick(e.target.value)}
-        >
-          {PREFERENCE_SECTIONS.map(section => (
-            <option key={section.id} value={section.id}>{section.label}</option>
-          ))}
-        </select>
-      </nav>
-      {/* Right content */}
+      {/* Only render the right content */}
       <div className="flex-1 space-y-12 pb-32 p-6">
         <div ref={sectionRefs.branding} id="branding">
           {/* Branding section content */}
@@ -1041,7 +972,7 @@ export default function PreferencesSettingsPage() {
                 </div>
               )}
               <datalist id="font-family-list">
-                {filterFontOptions(fontOptions, appFontFamily).map(opt => (
+                {filterFontOptions(fontOptions, appFontFamily).map((opt: {label: string, value: string}) => (
                   <option key={opt.value} value={opt.value}>{opt.label}</option>
                 ))}
               </datalist>
@@ -1054,7 +985,7 @@ export default function PreferencesSettingsPage() {
         </Card>
       </div>
       {/* Floating Save/Reset Bar */}
-      <div className="fixed bottom-0 left-0 w-full z-30 bg-background/95 border-t flex justify-center items-center gap-4 py-3 px-4 shadow-lg md:ml-56" style={{boxShadow: '0 -2px 16px 0 rgba(0,0,0,0.04)'}}>
+      <div className="fixed bottom-6 right-6 z-30 bg-background/95 border shadow-lg rounded-xl flex flex-row gap-4 py-3 px-6" style={{boxShadow: '0 2px 16px 0 rgba(0,0,0,0.10)'}}>
         <Button onClick={handleSavePreferences} disabled={isSaving} className="btn-primary-gradient flex items-center gap-2">
           {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />} Save All
         </Button>

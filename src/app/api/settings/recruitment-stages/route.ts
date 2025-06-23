@@ -6,6 +6,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { logAudit } from '@/lib/auditLog';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
+import { deleteCache, CACHE_KEY_RECRUITMENT_STAGES } from '@/lib/redis';
 
 export const dynamic = "force-dynamic";
 
@@ -59,6 +60,7 @@ export async function POST(request: NextRequest) {
             [newId, name, description, sort_order ?? 0]
         );
         await logAudit('AUDIT', `Recruitment stage '${name}' created.`, 'API:RecruitmentStages:Create', actingUserId, { stageId: newId });
+        await deleteCache(CACHE_KEY_RECRUITMENT_STAGES);
         return NextResponse.json(result.rows[0], { status: 201 });
     } catch (error: any) {
         console.error("Failed to create recruitment stage:", error);

@@ -5,7 +5,7 @@ import { z } from 'zod';
 import { getServerSession } from 'next-auth/next';
 import type { RecruitmentStage } from '@/lib/types';
 import { logAudit } from '@/lib/auditLog';
-import { getRedisClient, CACHE_KEY_RECRUITMENT_STAGES } from '@/lib/redis';
+import { getRedisClient, CACHE_KEY_RECRUITMENT_STAGES, deleteCache } from '@/lib/redis';
 import { authOptions } from '@/lib/auth';
 
 const updateRecruitmentStageSchema = z.object({
@@ -87,6 +87,7 @@ export async function PUT(request: NextRequest) {
         }
 
         await logAudit('AUDIT', `Recruitment stage '${result.rows[0].name}' (ID: ${id}) updated.`, 'API:RecruitmentStages:Update', actingUserId, { stageId: id, changes: validation.data });
+        await deleteCache(CACHE_KEY_RECRUITMENT_STAGES);
         return NextResponse.json(result.rows[0]);
 
     } catch (error: any) {
@@ -113,6 +114,7 @@ export async function DELETE(request: NextRequest) {
         }
         
         await logAudit('AUDIT', `Recruitment stage '${result.rows[0].name}' (ID: ${id}) deleted.`, 'API:RecruitmentStages:Delete', actingUserId, { stageId: id });
+        await deleteCache(CACHE_KEY_RECRUITMENT_STAGES);
         return NextResponse.json({ message: "Recruitment stage deleted successfully" });
 
     } catch (error: any) {
