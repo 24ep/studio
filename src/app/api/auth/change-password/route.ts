@@ -5,6 +5,7 @@ import { z } from 'zod';
 import bcrypt from 'bcryptjs';
 import { getPool } from '../../../../lib/db';
 import { logAudit } from '@/lib/auditLog';
+import { authOptions } from '@/lib/auth';
 
 const changePasswordSchema = z.object({
   currentPassword: z.string().min(1, "Current password is required"),
@@ -12,7 +13,7 @@ const changePasswordSchema = z.object({
 });
 
 export async function POST(request: NextRequest) {
-    const session = await getServerSession();
+    const session = await getServerSession(authOptions);
     if (!session?.user?.id) {
         return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }

@@ -4,6 +4,7 @@ import { getServerSession } from 'next-auth/next';
 import type { UserProfile, Position } from '@/lib/types';
 import { logAudit } from '@/lib/auditLog';
 import { getPool } from '../../../../lib/db';
+import { authOptions } from '@/lib/auth';
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 const ACCEPTED_FILE_TYPES = ['application/pdf'];
@@ -24,7 +25,7 @@ async function getSystemSetting(key: string): Promise<string | null> {
 export const dynamic = "force-dynamic";
 
 export async function POST(request: NextRequest) {
-  const session = await getServerSession();
+  const session = await getServerSession(authOptions);
   const actingUserId = session?.user?.id || null;
   const actingUserName = session?.user?.name || session?.user?.email || 'System (n8n Upload)';
 

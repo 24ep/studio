@@ -4,6 +4,7 @@ import { getPool } from '@/lib/db';
 import { CandidatesPageClient } from '@/components/candidates/CandidatesPageClient';
 import type { Candidate, Position, RecruitmentStage, UserProfile } from '@/lib/types';
 import { fetchAllPositionsDb, fetchAllRecruitmentStagesDb } from '@/lib/apiUtils';
+import { authOptions } from '@/lib/auth';
 
 async function getInitialCandidatesData(session: any): Promise<{ candidates: Candidate[], error?: string, authError?: boolean, permissionError?: boolean }> {
   const userRole = session?.user?.role;
@@ -82,7 +83,7 @@ async function getInitialCandidatesData(session: any): Promise<{ candidates: Can
 }
 
 export default async function CandidatesPageServer() {
-  const session = await getServerSession();
+  const session = await getServerSession(authOptions);
 
   if (!session?.user) {
     return <CandidatesPageClient 

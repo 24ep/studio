@@ -6,6 +6,7 @@ import { z } from 'zod';
 import { v4 as uuidv4 } from 'uuid';
 import type { CandidateStatus, CandidateDetails, PersonalInfo, ContactInfo } from '@/lib/types';
 import { logAudit } from '@/lib/auditLog';
+import { authOptions } from '@/lib/auth';
 // For actual Excel parsing, you would uncomment and use a library like 'xlsx'
 // import * as XLSX from 'xlsx';
 
@@ -30,7 +31,7 @@ const importCandidateSchema = z.object({
 // The validation below will apply to each row extracted from the Excel file.
 
 export async function POST(request: NextRequest) {
-  const session = await getServerSession();
+  const session = await getServerSession(authOptions);
   if (!session?.user?.id) {
     return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
   }
@@ -85,7 +86,7 @@ export async function POST(request: NextRequest) {
 }
 
 export async function GET(request: NextRequest) {
-  const session = await getServerSession();
+  const session = await getServerSession(authOptions);
   if (!session?.user?.id) {
     return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
   }

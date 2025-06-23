@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { getPool } from '@/lib/db';
 import { logAudit } from '@/lib/auditLog';
 import { getServerSession } from 'next-auth/next';
+import { authOptions } from '@/lib/auth';
 
 export const dynamic = "force-dynamic";
 
@@ -27,7 +28,7 @@ function extractIdFromUrl(request: NextRequest): string | null {
 
 export async function GET(request: NextRequest) {
   const id = extractIdFromUrl(request);
-  const session = await getServerSession();
+  const session = await getServerSession(authOptions);
   
   if (!session?.user?.id) {
     return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
@@ -62,7 +63,7 @@ export async function GET(request: NextRequest) {
 
 export async function PUT(request: NextRequest) {
   const id = extractIdFromUrl(request);
-  const session = await getServerSession();
+  const session = await getServerSession(authOptions);
   
   if (!session?.user?.id) {
     return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
@@ -158,7 +159,7 @@ export async function PUT(request: NextRequest) {
 
 export async function DELETE(request: NextRequest) {
   const id = extractIdFromUrl(request);
-  const session = await getServerSession();
+  const session = await getServerSession(authOptions);
   
   if (!session?.user?.id) {
     return NextResponse.json({ message: "Unauthorized" }, { status: 401 });

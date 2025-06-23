@@ -6,6 +6,7 @@ import { getServerSession } from 'next-auth/next';
 import type { RecruitmentStage } from '@/lib/types';
 import { logAudit } from '@/lib/auditLog';
 import { getRedisClient, CACHE_KEY_RECRUITMENT_STAGES } from '@/lib/redis';
+import { authOptions } from '@/lib/auth';
 
 const updateRecruitmentStageSchema = z.object({
   name: z.string().min(1, 'Stage name cannot be empty.').optional(),
@@ -22,7 +23,7 @@ export const dynamic = "force-dynamic";
 
 export async function GET(request: NextRequest) {
     const id = extractIdFromUrl(request);
-    const session = await getServerSession();
+    const session = await getServerSession(authOptions);
     if (!session?.user?.id) return new NextResponse('Unauthorized', { status: 401 });
 
     const client = await getPool().connect();
@@ -42,7 +43,7 @@ export async function GET(request: NextRequest) {
 
 export async function PUT(request: NextRequest) {
     const id = extractIdFromUrl(request);
-    const session = await getServerSession();
+    const session = await getServerSession(authOptions);
     const actingUserId = session?.user?.id;
     if (!actingUserId) return new NextResponse('Unauthorized', { status: 401 });
 
@@ -99,7 +100,7 @@ export async function PUT(request: NextRequest) {
 
 export async function DELETE(request: NextRequest) {
     const id = extractIdFromUrl(request);
-    const session = await getServerSession();
+    const session = await getServerSession(authOptions);
     const actingUserId = session?.user?.id;
     if (!actingUserId) return new NextResponse('Unauthorized', { status: 401 });
     

@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 import { markNotificationAsRead } from '@/lib/redis';
+import { authOptions } from '@/lib/auth';
 
 function extractIdFromUrl(request: NextRequest): string | null {
   const match = request.nextUrl.pathname.match(/\/notifications\/([^/]+)\/read/);
@@ -9,7 +10,7 @@ function extractIdFromUrl(request: NextRequest): string | null {
 
 export async function POST(request: NextRequest) {
   const id = extractIdFromUrl(request);
-  const session = await getServerSession();
+  const session = await getServerSession(authOptions);
 
   if (!session?.user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });

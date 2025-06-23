@@ -4,6 +4,7 @@ import { searchCandidatesAIChat } from '@/ai/flows/search-candidates-flow';
 import { z } from 'zod';
 import { logAudit } from '@/lib/auditLog';
 import { getServerSession } from 'next-auth/next';
+import { authOptions } from '@/lib/auth';
 
 const searchRequestSchema = z.object({
   query: z.string(),
@@ -12,7 +13,7 @@ const searchRequestSchema = z.object({
 export const dynamic = "force-dynamic";
 
 export async function POST(request: NextRequest) {
-  const session = await getServerSession();
+  const session = await getServerSession(authOptions);
   if (!session?.user?.id) {
     return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
   }

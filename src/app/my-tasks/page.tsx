@@ -4,6 +4,7 @@ import { getPool } from '@/lib/db';
 import { MyTasksPageClient } from '@/components/tasks/MyTasksPageClient';
 import type { Candidate, Position, RecruitmentStage, UserProfile } from '@/lib/types';
 import { fetchAllPositionsDb, fetchAllRecruitmentStagesDb } from '@/lib/apiUtils';
+import { authOptions } from '@/lib/auth';
 
 async function getInitialTaskBoardData(session: any): Promise<{
   initialCandidates: Candidate[];
@@ -113,7 +114,7 @@ async function getInitialTaskBoardData(session: any): Promise<{
 }
 
 export default async function MyTasksPageServer() {
-  const session = await getServerSession();
+  const session = await getServerSession(authOptions);
 
   if (!session?.user) {
     return <MyTasksPageClient

@@ -6,6 +6,7 @@ import { logAudit } from '@/lib/auditLog';
 import { getServerSession } from 'next-auth/next';
 import { v4 as uuidv4 } from 'uuid';
 import type { CustomFieldType } from '@/lib/types';
+import { authOptions } from '@/lib/auth';
 
 export const dynamic = "force-dynamic";
 
@@ -27,7 +28,7 @@ const createCustomFieldSchema = z.object({
 const updateCustomFieldSchema = createCustomFieldSchema.partial().omit({ model_name: true, field_key: true });
 
 export async function GET(request: NextRequest) {
-  const session = await getServerSession();
+  const session = await getServerSession(authOptions);
   if (!session?.user?.id) {
     return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
   }
@@ -62,7 +63,7 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  const session = await getServerSession();
+  const session = await getServerSession(authOptions);
   if (!session?.user?.id) {
     return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
   }

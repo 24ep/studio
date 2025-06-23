@@ -5,6 +5,7 @@ import { getServerSession } from 'next-auth/next';
 import type { WebhookFieldMapping } from '@/lib/types';
 import { logAudit } from '@/lib/auditLog';
 import { getPool } from '@/lib/db';
+import { authOptions } from '@/lib/auth';
 
 export const dynamic = "force-dynamic";
 
@@ -17,7 +18,7 @@ const webhookFieldMappingSchema = z.object({
 const saveWebhookMappingsSchema = z.array(webhookFieldMappingSchema);
 
 export async function GET(request: NextRequest) {
-  const session = await getServerSession();
+  const session = await getServerSession(authOptions);
   if (session?.user?.role !== 'Admin' && !session?.user?.modulePermissions?.includes('WEBHOOK_MAPPING_MANAGE')) {
     await logAudit('WARN', `Forbidden attempt to GET webhook mappings by user ${session?.user?.email || 'Unknown'}.`, 'API:WebhookMappings:Get', session?.user?.id);
     return NextResponse.json({ message: "Forbidden: Insufficient permissions" }, { status: 403 });
@@ -34,7 +35,7 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  const session = await getServerSession();
+  const session = await getServerSession(authOptions);
   if (session?.user?.role !== 'Admin' && !session?.user?.modulePermissions?.includes('WEBHOOK_MAPPING_MANAGE')) {
     await logAudit('WARN', `Forbidden attempt to POST webhook mappings by user ${session?.user?.email || 'Unknown'}.`, 'API:WebhookMappings:Post', session?.user?.id);
     return NextResponse.json({ message: "Forbidden: Insufficient permissions" }, { status: 403 });

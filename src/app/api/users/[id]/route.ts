@@ -5,6 +5,7 @@ import { getPool } from '@/lib/db';
 import { logAudit } from '@/lib/auditLog';
 import { getServerSession } from 'next-auth/next';
 import bcrypt from 'bcryptjs';
+import { authOptions } from '@/lib/auth';
 
 const updateUserSchema = z.object({
   name: z.string().min(1, "Name is required").optional(),
@@ -22,7 +23,7 @@ export const dynamic = "force-dynamic";
 
 export async function GET(request: NextRequest) {
     const id = extractIdFromUrl(request);
-    const session = await getServerSession();
+    const session = await getServerSession(authOptions);
     if (!session?.user?.id) {
         return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
@@ -44,7 +45,7 @@ export async function GET(request: NextRequest) {
 
 export async function PUT(request: NextRequest) {
     const id = extractIdFromUrl(request);
-    const session = await getServerSession();
+    const session = await getServerSession(authOptions);
     const actingUserId = session?.user?.id;
     if (!actingUserId) {
         return NextResponse.json({ message: "Forbidden" }, { status: 403 });
@@ -106,7 +107,7 @@ export async function PUT(request: NextRequest) {
 
 export async function DELETE(request: NextRequest) {
     const id = extractIdFromUrl(request);
-    const session = await getServerSession();
+    const session = await getServerSession(authOptions);
     const actingUserId = session?.user?.id;
      if (!actingUserId) {
         return NextResponse.json({ message: "Forbidden" }, { status: 403 });

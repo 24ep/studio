@@ -4,6 +4,7 @@ import { getPool } from '@/lib/db';
 import { getServerSession } from 'next-auth/next';
 import { z } from 'zod';
 import { v4 as uuidv4 } from 'uuid';
+import { authOptions } from '@/lib/auth';
 
 export const dynamic = "force-dynamic";
 
@@ -17,7 +18,7 @@ const importPositionSchema = z.object({
 });
 
 export async function POST(request: NextRequest) {
-  const session = await getServerSession();
+  const session = await getServerSession(authOptions);
   if (!session?.user?.id) {
     return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
   }
@@ -71,7 +72,7 @@ export async function POST(request: NextRequest) {
 }
 
 export async function GET(request: NextRequest) {
-  const session = await getServerSession();
+  const session = await getServerSession(authOptions);
   if (!session?.user?.id) {
     return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
   }

@@ -4,6 +4,7 @@ import { getServerSession } from 'next-auth/next';
 import PositionsPageClient from '@/components/positions/PositionsPageClient';
 import { fetchAllPositionsDb } from '@/lib/apiUtils';
 import type { Position } from '@/lib/types';
+import { authOptions } from '@/lib/auth';
 
 export default async function PositionsPageServer() {
   let session: any = null;
@@ -12,7 +13,7 @@ export default async function PositionsPageServer() {
   let fetchError: string | undefined = undefined;
 
   try {
-    session = await getServerSession();
+    session = await getServerSession(authOptions);
     if (!session?.user) {
       return <PositionsPageClient 
                initialPositions={[]} 

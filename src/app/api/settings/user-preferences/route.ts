@@ -5,6 +5,7 @@ import { getServerSession } from 'next-auth/next';
 import type { UserDataModelPreference, UIDisplayPreference } from '@/lib/types';
 import { logAudit } from '@/lib/auditLog';
 import { getPool } from '@/lib/db';
+import { authOptions } from '@/lib/auth';
 
 export const dynamic = "force-dynamic";
 
@@ -21,7 +22,7 @@ const userPreferenceSchema = z.object({
 const saveUserPreferencesSchema = z.array(userPreferenceSchema);
 
 export async function GET(request: NextRequest) {
-  const session = await getServerSession();
+  const session = await getServerSession(authOptions);
   if (!session?.user?.id) {
     return NextResponse.json({ message: "Unauthorized: No active session" }, { status: 401 });
   }
@@ -41,7 +42,7 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  const session = await getServerSession();
+  const session = await getServerSession(authOptions);
   if (!session?.user?.id) {
     return NextResponse.json({ message: "Unauthorized: No active session" }, { status: 401 });
   }
