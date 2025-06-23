@@ -19,6 +19,8 @@ import {
   DialogClose,
 } from '@/components/ui/dialog';
 import { Briefcase } from 'lucide-react';
+import ReactQuill from 'react-quill';
+import 'react-quill/dist/quill.snow.css';
 
 const addPositionFormSchema = z.object({
   title: z.string().min(1, "Title is required"),
@@ -131,12 +133,19 @@ export function AddPositionModal({ isOpen, onOpenChange, onAddPosition }: AddPos
           </div>
           <div>
             <Label htmlFor="description-add">Job Description</Label>
-            <Textarea 
-              id="description-add" 
-              {...form.register('description')} 
-              className="mt-1" 
-              placeholder="Enter job description"
-              rows={3}
+            <Controller
+              name="description"
+              control={form.control}
+              render={({ field }) => (
+                <ReactQuill
+                  id="description-add"
+                  theme="snow"
+                  value={field.value || ''}
+                  onChange={field.onChange}
+                  className="mt-1 bg-white"
+                  placeholder="Enter job description"
+                />
+              )}
             />
           </div>
           <div className="flex items-center space-x-2">

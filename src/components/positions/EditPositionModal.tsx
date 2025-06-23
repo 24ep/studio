@@ -24,6 +24,8 @@ import { Edit3, Users, Loader2, Save } from 'lucide-react';
 import type { Position, Candidate } from '@/lib/types';
 import { toast } from 'react-hot-toast';
 import Link from 'next/link';
+import ReactQuill from 'react-quill';
+import 'react-quill/dist/quill.snow.css';
 
 const editPositionFormSchema = z.object({
   title: z.string().min(1, "Title is required"),
@@ -140,7 +142,20 @@ export function EditPositionModal({ isOpen, onOpenChange, onEditPosition, positi
               </div>
               <div>
                 <Label htmlFor="description-edit">Job Description</Label>
-                <Textarea id="description-edit" {...form.register('description')} className="mt-1" />
+                <Controller
+                  name="description"
+                  control={form.control}
+                  render={({ field }) => (
+                    <ReactQuill
+                      id="description-edit"
+                      theme="snow"
+                      value={field.value || ''}
+                      onChange={field.onChange}
+                      className="mt-1 bg-white"
+                      placeholder="Enter job description"
+                    />
+                  )}
+                />
               </div>
               <div className="flex items-center space-x-2 pt-2">
                 <Controller
