@@ -16,6 +16,32 @@ const recruitmentStageSchema = z.object({
   sort_order: z.number().int().optional(),
 });
 
+/**
+ * @openapi
+ * /api/settings/recruitment-stages:
+ *   get:
+ *     summary: Get all recruitment stages
+ *     responses:
+ *       200:
+ *         description: List of recruitment stages
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 type: object
+ *   post:
+ *     summary: Create a new recruitment stage
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *     responses:
+ *       201:
+ *         description: Recruitment stage created
+ */
 export async function GET(request: NextRequest) {
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) return new NextResponse('Unauthorized', { status: 401 });

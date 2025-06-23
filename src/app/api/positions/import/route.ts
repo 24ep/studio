@@ -8,6 +8,49 @@ import { authOptions } from '@/lib/auth';
 
 export const dynamic = "force-dynamic";
 
+/**
+ * @openapi
+ * /api/positions/import:
+ *   post:
+ *     summary: Import positions in bulk
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: array
+ *             items:
+ *               $ref: '#/components/schemas/Position'
+ *     responses:
+ *       201:
+ *         description: Import completed
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                 results:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *   get:
+ *     summary: Get all imported positions
+ *     responses:
+ *       200:
+ *         description: List of imported positions
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/Position'
+ */
+
 // Zod schema for position import
 const importPositionSchema = z.object({
   title: z.string().min(1, "Title is required"),

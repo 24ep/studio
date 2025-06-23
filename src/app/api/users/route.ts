@@ -11,6 +11,33 @@ import { getRedisClient, CACHE_KEY_USERS } from '@/lib/redis';
 import { getPool } from '@/lib/db';
 import { authOptions } from '@/lib/auth';
 
+/**
+ * @openapi
+ * /api/users:
+ *   get:
+ *     summary: Get all users
+ *     responses:
+ *       200:
+ *         description: List of users
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 $ref: '#/components/schemas/User'
+ *   post:
+ *     summary: Create a new user
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/User'
+ *     responses:
+ *       201:
+ *         description: User created
+ */
+
 export const dynamic = "force-dynamic";
 
 const platformModuleIds = PLATFORM_MODULES.map(m => m.id) as [PlatformModuleId, ...PlatformModuleId[]];

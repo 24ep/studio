@@ -9,6 +9,58 @@ import { v4 as uuidv4 } from 'uuid';
 
 export const dynamic = "force-dynamic";
 
+/**
+ * @openapi
+ * /api/candidates/{id}:
+ *   get:
+ *     summary: Get a candidate by ID
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Candidate details
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Candidate'
+ *       404:
+ *         description: Candidate not found
+ *   put:
+ *     summary: Update a candidate by ID
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/Candidate'
+ *     responses:
+ *       200:
+ *         description: Candidate updated
+ *   delete:
+ *     summary: Delete a candidate by ID
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Candidate deleted
+ *       404:
+ *         description: Candidate not found
+ */
+
 // Define Zod schemas for validation...
 const updateCandidateSchema = z.object({
   name: z.string().min(1).optional(),

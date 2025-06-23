@@ -17,6 +17,59 @@ const bulkActionSchema = z.object({
   notes: z.string().optional().nullable(), // Optional for 'change_status'
 });
 
+/**
+ * @openapi
+ * /api/candidates/bulk-action:
+ *   post:
+ *     summary: Perform a bulk action on candidates
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               action:
+ *                 type: string
+ *                 enum: [delete, change_status, assign_recruiter]
+ *               candidateIds:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *               newStatus:
+ *                 type: string
+ *                 nullable: true
+ *               newRecruiterId:
+ *                 type: string
+ *                 nullable: true
+ *               notes:
+ *                 type: string
+ *                 nullable: true
+ *     responses:
+ *       200:
+ *         description: Bulk action result
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                 successCount:
+ *                   type: integer
+ *                 failCount:
+ *                   type: integer
+ *                 failedDetails:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       candidateId:
+ *                         type: string
+ *                       reason:
+ *                         type: string
+ */
+
 export async function POST(request: NextRequest) {
   const session = await getServerSession(authOptions);
   const actingUserId = session?.user?.id;

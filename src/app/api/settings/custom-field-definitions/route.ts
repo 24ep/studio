@@ -27,6 +27,32 @@ const createCustomFieldSchema = z.object({
 
 const updateCustomFieldSchema = createCustomFieldSchema.partial().omit({ model_name: true, field_key: true });
 
+/**
+ * @openapi
+ * /api/settings/custom-field-definitions:
+ *   get:
+ *     summary: Get all custom field definitions
+ *     responses:
+ *       200:
+ *         description: List of custom field definitions
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 $ref: '#/components/schemas/CustomFieldDefinition'
+ *   post:
+ *     summary: Create a new custom field definition
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/CustomFieldDefinition'
+ *     responses:
+ *       201:
+ *         description: Custom field definition created
+ */
 export async function GET(request: NextRequest) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) {

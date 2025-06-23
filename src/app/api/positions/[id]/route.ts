@@ -8,6 +8,58 @@ import { getPool } from '@/lib/db';
 
 export const dynamic = "force-dynamic";
 
+/**
+ * @openapi
+ * /api/positions/{id}:
+ *   get:
+ *     summary: Get a position by ID
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Position details
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Position'
+ *       404:
+ *         description: Position not found
+ *   put:
+ *     summary: Update a position by ID
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/Position'
+ *     responses:
+ *       200:
+ *         description: Position updated
+ *   delete:
+ *     summary: Delete a position by ID
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Position deleted
+ *       404:
+ *         description: Position not found
+ */
+
 function extractIdFromUrl(request: NextRequest): string | null {
   const match = request.nextUrl.pathname.match(/\/positions\/([^/]+)/);
   return match ? match[1] : null;

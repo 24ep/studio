@@ -26,6 +26,27 @@ function extractIdFromUrl(request: NextRequest): string | null {
   return match ? match[1] : null;
 }
 
+/**
+ * @openapi
+ * /api/settings/custom-field-definitions/{id}:
+ *   get:
+ *     summary: Get a custom field definition by ID
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Custom field definition details
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/CustomFieldDefinition'
+ *       404:
+ *         description: Custom field definition not found
+ */
 export async function GET(request: NextRequest) {
   const id = extractIdFromUrl(request);
   const session = await getServerSession(authOptions);
@@ -61,6 +82,27 @@ export async function GET(request: NextRequest) {
   }
 }
 
+/**
+ * @openapi
+ * /api/settings/custom-field-definitions/{id}:
+ *   put:
+ *     summary: Update a custom field definition by ID
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/CustomFieldDefinition'
+ *     responses:
+ *       200:
+ *         description: Custom field definition updated
+ */
 export async function PUT(request: NextRequest) {
   const id = extractIdFromUrl(request);
   const session = await getServerSession(authOptions);
@@ -157,6 +199,23 @@ export async function PUT(request: NextRequest) {
   }
 }
 
+/**
+ * @openapi
+ * /api/settings/custom-field-definitions/{id}:
+ *   delete:
+ *     summary: Delete a custom field definition by ID
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Custom field definition deleted
+ *       404:
+ *         description: Custom field definition not found
+ */
 export async function DELETE(request: NextRequest) {
   const id = extractIdFromUrl(request);
   const session = await getServerSession(authOptions);

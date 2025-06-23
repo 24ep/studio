@@ -1,3 +1,29 @@
+/**
+ * @openapi
+ * /api/positions:
+ *   get:
+ *     summary: Get all positions
+ *     responses:
+ *       200:
+ *         description: List of positions
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 $ref: '#/components/schemas/Position'
+ *   post:
+ *     summary: Create a new position
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/Position'
+ *     responses:
+ *       201:
+ *         description: Position created
+ */
 export const dynamic = "force-dynamic";
 
 import { NextResponse, type NextRequest } from 'next/server';

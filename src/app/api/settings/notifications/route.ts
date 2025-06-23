@@ -8,6 +8,35 @@ import { v4 as uuidv4 } from 'uuid';
 import { getPool } from '@/lib/db';
 import { authOptions } from '@/lib/auth';
 
+/**
+ * @openapi
+ * /api/settings/notifications:
+ *   get:
+ *     summary: Get notification settings
+ *     responses:
+ *       200:
+ *         description: Notification settings
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 type: object
+ *   post:
+ *     summary: Update notification settings
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: array
+ *             items:
+ *               type: object
+ *     responses:
+ *       200:
+ *         description: Notification settings updated
+ */
+
 export const dynamic = "force-dynamic";
 
 export async function GET(request: NextRequest) {

@@ -9,6 +9,33 @@ import { v4 as uuidv4 } from 'uuid';
 
 export const dynamic = "force-dynamic";
 
+/**
+ * @openapi
+ * /api/candidates:
+ *   get:
+ *     summary: Get all candidates
+ *     responses:
+ *       200:
+ *         description: List of candidates
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 $ref: '#/components/schemas/Candidate'
+ *   post:
+ *     summary: Create a new candidate
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/Candidate'
+ *     responses:
+ *       201:
+ *         description: Candidate created
+ */
+
 // Candidate details schema (flattened for clarity)
 const candidateDetailsSchema = z.object({
   cv_language: z.string().optional().nullable(),

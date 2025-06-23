@@ -21,6 +21,27 @@ function extractIdFromUrl(request: NextRequest): string | null {
 
 export const dynamic = "force-dynamic";
 
+/**
+ * @openapi
+ * /api/users/{id}:
+ *   get:
+ *     summary: Get a user by ID
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: User details
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/User'
+ *       404:
+ *         description: User not found
+ */
 export async function GET(request: NextRequest) {
     const id = extractIdFromUrl(request);
     const session = await getServerSession(authOptions);
@@ -43,6 +64,27 @@ export async function GET(request: NextRequest) {
     }
 }
 
+/**
+ * @openapi
+ * /api/users/{id}:
+ *   put:
+ *     summary: Update a user by ID
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/User'
+ *     responses:
+ *       200:
+ *         description: User updated
+ */
 export async function PUT(request: NextRequest) {
     const id = extractIdFromUrl(request);
     const session = await getServerSession(authOptions);
@@ -105,6 +147,23 @@ export async function PUT(request: NextRequest) {
     }
 }
 
+/**
+ * @openapi
+ * /api/users/{id}:
+ *   delete:
+ *     summary: Delete a user by ID
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: User deleted
+ *       404:
+ *         description: User not found
+ */
 export async function DELETE(request: NextRequest) {
     const id = extractIdFromUrl(request);
     const session = await getServerSession(authOptions);

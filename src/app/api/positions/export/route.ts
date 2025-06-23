@@ -8,6 +8,23 @@ import { getPool } from '@/lib/db';
 
 export const dynamic = "force-dynamic";
 
+/**
+ * @openapi
+ * /api/positions/export:
+ *   get:
+ *     summary: Export positions
+ *     responses:
+ *       200:
+ *         description: Exported positions data
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 ok:
+ *                   type: boolean
+ */
+
 // Helper function to convert JSON object to CSV row
 function escapeCsvValue(value: any): string {
   if (value === null || value === undefined) {

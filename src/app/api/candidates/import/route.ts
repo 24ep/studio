@@ -30,6 +30,34 @@ const importCandidateSchema = z.object({
 // The overall input for the API is now a single file, not an array of candidates
 // The validation below will apply to each row extracted from the Excel file.
 
+/**
+ * @openapi
+ * /api/candidates/import:
+ *   post:
+ *     summary: Import candidates in bulk
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: array
+ *             items:
+ *               $ref: '#/components/schemas/Candidate'
+ *     responses:
+ *       201:
+ *         description: Import completed
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                 results:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ */
 export async function POST(request: NextRequest) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) {
@@ -85,6 +113,24 @@ export async function POST(request: NextRequest) {
   }
 }
 
+/**
+ * @openapi
+ * /api/candidates/import:
+ *   get:
+ *     summary: Get all imported candidates
+ *     responses:
+ *       200:
+ *         description: List of imported candidates
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/Candidate'
+ */
 export async function GET(request: NextRequest) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) {

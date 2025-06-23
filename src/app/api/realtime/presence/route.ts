@@ -3,6 +3,31 @@ import { getServerSession } from 'next-auth/next';
 import { updateUserPresence, removeUserPresence, getOnlineUsers } from '@/lib/redis';
 import { authOptions } from '@/lib/auth';
 
+/**
+ * @openapi
+ * /api/realtime/presence:
+ *   get:
+ *     summary: Get presence information
+ *     responses:
+ *       200:
+ *         description: Presence data
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *   post:
+ *     summary: Update presence information
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *     responses:
+ *       200:
+ *         description: Presence updated
+ */
+
 export const dynamic = "force-dynamic";
 
 export async function POST(request: NextRequest) {

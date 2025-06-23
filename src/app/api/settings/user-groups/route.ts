@@ -15,6 +15,32 @@ const userGroupSchema = z.object({
   permissions: z.array(z.string()).optional(),
 });
 
+/**
+ * @openapi
+ * /api/settings/user-groups:
+ *   get:
+ *     summary: Get all user groups
+ *     responses:
+ *       200:
+ *         description: List of user groups
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 type: object
+ *   post:
+ *     summary: Create a new user group
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *     responses:
+ *       201:
+ *         description: User group created
+ */
 export async function GET(request: NextRequest) {
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) return new NextResponse('Unauthorized', { status: 401 });

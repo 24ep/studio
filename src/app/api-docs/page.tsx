@@ -1,24 +1,15 @@
-
 // src/app/api-docs/page.tsx
 // This page is now effectively part of the settings layout.
 // Redirect to /settings/api-docs if accessed directly.
 "use client";
 
-import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { Loader2 } from 'lucide-react';
+import SwaggerUI from 'swagger-ui-react';
+import 'swagger-ui-react/swagger-ui.css';
 
-export default function ApiDocsRedirectPage() {
-  const router = useRouter();
-
-  useEffect(() => {
-    router.replace('/settings/api-docs');
-  }, [router]);
-
+export default function ApiDocsPage() {
   return (
-    <div className="flex h-full items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        <p className="ml-2 text-muted-foreground">Redirecting to API Documentation...</p>
+    <div style={{ height: '100vh' }}>
+      <SwaggerUI url="/api-docs" />
     </div>
   );
 }

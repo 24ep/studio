@@ -52,6 +52,7 @@
     "react-quill": "^2.0.0",
     "recharts": "^2.15.1",
     "redis": "^4.6.15",
+    "swagger-ui-react": "^5.25.2",
     "tailwind-merge": "^3.0.1",
     "tailwindcss-animate": "^1.0.7",
     "uuid": "^10.0.0",

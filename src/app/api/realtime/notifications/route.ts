@@ -3,6 +3,33 @@ import { getServerSession } from 'next-auth/next';
 import { getUserNotifications, createNotification } from '@/lib/redis';
 import { authOptions } from '@/lib/auth';
 
+/**
+ * @openapi
+ * /api/realtime/notifications:
+ *   get:
+ *     summary: Get notifications
+ *     responses:
+ *       200:
+ *         description: List of notifications
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 type: object
+ *   post:
+ *     summary: Create a notification
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *     responses:
+ *       201:
+ *         description: Notification created
+ */
+
 export async function GET(request: NextRequest) {
   const session = await getServerSession(authOptions);
   

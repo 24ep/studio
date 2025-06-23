@@ -21,6 +21,57 @@ function extractIdFromUrl(request: NextRequest): string | null {
 
 export const dynamic = "force-dynamic";
 
+/**
+ * @openapi
+ * /api/settings/recruitment-stages/{id}:
+ *   get:
+ *     summary: Get a recruitment stage by ID
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Recruitment stage details
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *       404:
+ *         description: Recruitment stage not found
+ *   put:
+ *     summary: Update a recruitment stage by ID
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *     responses:
+ *       200:
+ *         description: Recruitment stage updated
+ *   delete:
+ *     summary: Delete a recruitment stage by ID
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Recruitment stage deleted
+ *       404:
+ *         description: Recruitment stage not found
+ */
 export async function GET(request: NextRequest) {
     const id = extractIdFromUrl(request);
     const session = await getServerSession(authOptions);

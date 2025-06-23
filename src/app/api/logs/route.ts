@@ -60,6 +60,21 @@ export async function POST(request: NextRequest) {
   }
 }
 
+/**
+ * @openapi
+ * /api/logs:
+ *   get:
+ *     summary: Get system logs
+ *     responses:
+ *       200:
+ *         description: List of log entries
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 type: object
+ */
 export async function GET(request: NextRequest) {
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) {
