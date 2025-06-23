@@ -94,7 +94,8 @@ CREATE TABLE IF NOT EXISTS "candidates" (
     "customAttributes" JSONB DEFAULT '{}',
     "resumePath" VARCHAR(1024),
     "createdAt" TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+    "updatedAt" TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    "avatarUrl" VARCHAR(1024)
 );
 CREATE INDEX IF NOT EXISTS idx_candidates_email ON "candidates"(email);
 CREATE INDEX IF NOT EXISTS idx_candidates_position_id ON "candidates"("positionId");
@@ -165,3 +166,67 @@ CREATE TABLE IF NOT EXISTS "WebhookFieldMapping" (
   "updatedAt" TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 CREATE INDEX IF NOT EXISTS idx_webhook_target_path ON "WebhookFieldMapping"(target_path);
+
+-- Notification Events (types of events that can trigger notifications)
+CREATE TABLE IF NOT EXISTS "NotificationEvent" (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    event_key VARCHAR(100) NOT NULL UNIQUE,
+    label VARCHAR(255) NOT NULL,
+    description TEXT,
+    "createdAt" TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Notification Channels (ways to notify: email, webhook, etc.)
+CREATE TABLE IF NOT EXISTS "NotificationChannel" (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    channel_key VARCHAR(100) NOT NULL UNIQUE,
+    label VARCHAR(255) NOT NULL,
+    "createdAt" TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Notification Settings (which events are enabled for which channels)
+CREATE TABLE IF NOT EXISTS "NotificationSetting" (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    event_id UUID NOT NULL REFERENCES "NotificationEvent"(id) ON DELETE CASCADE,
+    channel_id UUID NOT NULL REFERENCES "NotificationChannel"(id) ON DELETE CASCADE,
+    is_enabled BOOLEAN NOT NULL DEFAULT FALSE,
+    configuration JSONB,
+    "createdAt" TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(event_id, channel_id)
+);
+
+-- Seed default notification channels
+INSERT INTO "NotificationChannel" (channel_key, label)
+VALUES ('email', 'Email'), ('webhook', 'Webhook')
+ON CONFLICT (channel_key) DO NOTHING;
+
+-- Seed example notification events
+INSERT INTO "NotificationEvent" (event_key, label, description)
+VALUES
+  ('candidate_created', 'Candidate Created', 'Triggered when a new candidate is created.'),
+  ('position_filled', 'Position Filled', 'Triggered when a position is filled.'),
+  ('stage_changed', 'Stage Changed', 'Triggered when a candidate changes recruitment stage.')
+ON CONFLICT (event_key) DO NOTHING;
+
+-- Seed default user groups (roles) and permissions
+INSERT INTO "UserGroup" (id, name, description, permissions, is_default, is_system_role)
+VALUES
+  ('00000000-0000-0000-0000-000000000001', 'Admin', 'Full system access', ARRAY['CANDIDATES_VIEW','CANDIDATES_MANAGE','CANDIDATES_IMPORT','CANDIDATES_EXPORT','POSITIONS_VIEW','POSITIONS_MANAGE','POSITIONS_IMPORT','POSITIONS_EXPORT','USERS_MANAGE','USER_GROUPS_MANAGE','SYSTEM_SETTINGS_MANAGE','USER_PREFERENCES_MANAGE','RECRUITMENT_STAGES_MANAGE','CUSTOM_FIELDS_MANAGE','WEBHOOK_MAPPING_MANAGE','NOTIFICATION_SETTINGS_MANAGE','LOGS_VIEW'], true, true),
+  ('00000000-0000-0000-0000-000000000002', 'Recruiter', 'Can manage candidates and positions', ARRAY['CANDIDATES_VIEW','CANDIDATES_MANAGE','CANDIDATES_IMPORT','CANDIDATES_EXPORT','POSITIONS_VIEW','POSITIONS_MANAGE','POSITIONS_IMPORT','POSITIONS_EXPORT','RECRUITMENT_STAGES_MANAGE'], true, false),
+  ('00000000-0000-0000-0000-000000000003', 'Hiring Manager', 'Can view candidates and positions', ARRAY['CANDIDATES_VIEW','POSITIONS_VIEW'], true, false)
+ON CONFLICT (name) DO NOTHING;
+
+-- Assign default admin user to Admin group
+INSERT INTO "User_UserGroup" ("userId", "groupId")
+VALUES ('213d289f-31ef-47cb-bf13-8e7207295b42', '00000000-0000-0000-0000-000000000001')
+ON CONFLICT DO NOTHING;
+
+-- Ensure candidates table has avatarUrl column for profile images
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'candidates' AND column_name = 'avatarUrl') THEN
+    ALTER TABLE "candidates" ADD COLUMN "avatarUrl" VARCHAR(1024);
+  END IF;
+END $$;

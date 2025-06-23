@@ -206,12 +206,13 @@ export default function WebhookMappingPage() {
 
   return (
     <Card className="shadow-lg">
-      <CardHeader>
-        <CardTitle className="flex items-center text-2xl"><SlidersHorizontal className="mr-3 h-6 w-6 text-primary"/>Webhook Payload Mapping</CardTitle>
-        <CardDescription>
-          Define how incoming JSON fields from your automated workflow (e.g., n8n) map to the CandiTrack candidate attributes for the 
-          <code>/api/n8n/create-candidate-with-matches</code> endpoint. This configuration is saved on the server.
-        </CardDescription>
+      <CardHeader className="flex flex-row items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Button onClick={handleSaveConfiguration} size="lg" className="btn-primary-gradient flex items-center gap-2" disabled={isSaving || isLoadingData || !!fetchError || mappings.length === 0}>
+            {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+            {isSaving ? 'Saving...' : 'Save Mapping Configuration'}
+          </Button>
+        </div>
       </CardHeader>
       <CardContent>
           <Alert variant="default" className="mb-6 bg-blue-50 border-blue-300 text-blue-800 dark:bg-blue-900/30 dark:border-blue-700 dark:text-blue-300">
@@ -281,12 +282,6 @@ export default function WebhookMappingPage() {
             </Accordion>
           )}
       </CardContent>
-      <CardFooter className="border-t pt-6 flex justify-end">
-          <Button onClick={handleSaveConfiguration} size="lg" className="btn-primary-gradient" disabled={isSaving || isLoadingData || !!fetchError || mappings.length === 0}>
-          {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-          {isSaving ? 'Saving...' : 'Save Mapping Configuration'}
-          </Button>
-      </CardFooter>
     </Card>
   );
 }

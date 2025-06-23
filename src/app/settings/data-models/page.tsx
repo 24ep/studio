@@ -40,6 +40,7 @@ import {
   Loader2,
   AlertCircle,
   Shield,
+  Save,
 } from 'lucide-react';
 import { z } from 'zod';
 import { Badge } from '@/components/ui/badge';
@@ -334,6 +335,12 @@ export default function DataModelsPage() {
             <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
                 <DialogContent>
                     <DialogHeader>
+                        <div className="flex items-center gap-2 mb-4">
+                            <Button type="submit" disabled={isSaving} className="btn-primary-gradient flex items-center gap-2">
+                                {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+                                {editingField ? 'Save Changes' : 'Create Field'}
+                            </Button>
+                        </div>
                         <DialogTitle>{editingField ? 'Edit Field' : 'Add New Field'}</DialogTitle>
                         <DialogDescription>
                             Define the properties for this field. The &quot;Name (Key)&quot; is used programmatically and cannot be changed after creation.
@@ -389,13 +396,6 @@ export default function DataModelsPage() {
                             <Toggle checked={formData.isFilterable} onCheckedChange={checked => setFormData({...formData, isFilterable: checked})} />
                             <Label htmlFor="isFilterable">Is Filterable?</Label>
                         </div>
-                        <DialogFooter>
-                            <Button type="button" variant="outline" onClick={handleModalClose}>Cancel</Button>
-                            <Button type="submit" disabled={isSaving}>
-                                {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                                {editingField ? 'Save Changes' : 'Create Field'}
-                            </Button>
-                        </DialogFooter>
                     </form>
                 </DialogContent>
             </Dialog>

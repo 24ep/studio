@@ -149,11 +149,13 @@ export default function NotificationSettingsPage() {
 
   return (
     <Card className="shadow-lg">
-      <CardHeader>
-        <CardTitle className="flex items-center text-2xl"><BellRing className="mr-3 h-6 w-6 text-primary"/>Notification Settings</CardTitle>
-        <CardDescription>
-          Configure which actions in the system trigger notifications and through which channels (e.g., Email, Webhook).
-        </CardDescription>
+      <CardHeader className="flex flex-row items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Button onClick={handleSaveSettings} size="lg" className="btn-primary-gradient flex items-center gap-2" disabled={isSaving || isLoadingData || !!fetchError || eventsWithSettings.length === 0}>
+            {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+            {isSaving ? 'Saving...' : 'Save Notification Settings'}
+          </Button>
+        </div>
       </CardHeader>
       <CardContent>
           <Alert variant="default" className="mb-6 bg-blue-50 border-blue-300 text-blue-800 dark:bg-blue-900/30 dark:border-blue-700 dark:text-blue-300">
@@ -215,12 +217,6 @@ export default function NotificationSettingsPage() {
             )}
           </div>
       </CardContent>
-      <CardFooter className="border-t pt-6 flex justify-end">
-        <Button onClick={handleSaveSettings} size="lg" className="btn-primary-gradient" disabled={isSaving || isLoadingData || !!fetchError || eventsWithSettings.length === 0}>
-          {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-          {isSaving ? 'Saving...' : 'Save Notification Settings'}
-        </Button>
-      </CardFooter>
     </Card>
   );
 }

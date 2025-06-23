@@ -51,6 +51,7 @@ import {
 } from '@/components/ui/select';
 import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
 import { toast } from 'react-hot-toast';
+import { Session } from 'next-auth';
 
 
 const stageFormSchema = z.object({
@@ -61,7 +62,7 @@ const stageFormSchema = z.object({
 type StageFormValues = z.infer<typeof stageFormSchema>;
 
 export default function RecruitmentStagesPage() {
-  const { data: session, status: sessionStatus } = useSession();
+  const { data: session, status: sessionStatus } = useSession() as { data: Session | null, status: 'loading' | 'authenticated' | 'unauthenticated' };
   const router = useRouter();
   const pathname = usePathname();
 
@@ -117,7 +118,7 @@ export default function RecruitmentStagesPage() {
     if (sessionStatus === 'unauthenticated') {
       signIn(undefined, { callbackUrl: pathname });
     } else if (sessionStatus === 'authenticated') {
-      if (session.user.role !== 'Admin' && !session.user.modulePermissions?.includes('RECRUITMENT_STAGES_MANAGE')) {
+      if (!session || (session.user.role !== 'Admin' && !session.user.modulePermissions?.includes('RECRUITMENT_STAGES_MANAGE'))) {
         setFetchError("You do not have permission to manage recruitment stages.");
         setIsLoading(false);
       } else {
@@ -225,6 +226,25 @@ export default function RecruitmentStagesPage() {
     }
   };
 
+  const handleDragEnd = async (result: DropResult) => {
+    if (!result.destination) return;
+    const reorderedStages = Array.from(stages);
+    const [removed] = reorderedStages.splice(result.source.index, 1);
+    reorderedStages.splice(result.destination.index, 0, removed);
+    setStages(reorderedStages);
+    try {
+      await fetch('/api/settings/recruitment-stages/reorder', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ stageIds: reorderedStages.map(s => s.id) }),
+      });
+      toast.success('Recruitment stage order updated.');
+      fetchStages();
+    } catch (error) {
+      toast.error('Failed to update stage order.');
+      fetchStages();
+    }
+  };
 
   if (sessionStatus === 'loading' || (isLoading && !fetchError && stages.length === 0)) {
     return ( <div className="flex h-screen w-screen items-center justify-center bg-background fixed inset-0 z-50"><Loader2 className="h-16 w-16 animate-spin text-primary" /></div> );
@@ -260,53 +280,46 @@ export default function RecruitmentStagesPage() {
         </CardHeader>
         <CardContent className="pt-6">
           {isLoading && stages.length === 0 ? (
-             <div className="flex justify-center items-center py-10">
-                <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                <p className="ml-2 text-muted-foreground">Loading stages...</p>
+            <div className="flex justify-center items-center py-10">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              <p className="ml-2 text-muted-foreground">Loading stages...</p>
             </div>
-          ) : stages.length === 0 && !fetchError ? ( 
-            <p className="text-muted-foreground text-center">No recruitment stages configured yet.</p> 
+          ) : stages.length === 0 && !fetchError ? (
+            <p className="text-muted-foreground text-center">No recruitment stages configured yet.</p>
           ) : (
             <div className="border rounded-lg overflow-hidden">
-              <Table>
-                <TableHeader><TableRow><TableHead className="w-[60px]"></TableHead><TableHead>Name</TableHead><TableHead className="hidden sm:table-cell">Description</TableHead><TableHead className="w-[100px]">Type</TableHead><TableHead className="w-[100px]">Order</TableHead><TableHead className="text-right w-[120px]">Actions</TableHead></TableRow></TableHeader>
-                <TableBody>
-                  {stages.map((stage, index) => (
-                    <TableRow key={stage.id}>
-                      <TableCell className="py-1 px-2">
-                        <div className="flex flex-col items-center justify-center h-full">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-6 w-6 p-0"
-                            onClick={() => handleMoveStage(stage.id, 'up')}
-                            disabled={index === 0 || isMoving === stage.id}
-                          >
-                            <ChevronUp className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-6 w-6 p-0"
-                            onClick={() => handleMoveStage(stage.id, 'down')}
-                            disabled={index === stages.length - 1 || isMoving === stage.id}
-                          >
-                            <ChevronDown className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                      <TableCell className="font-medium">{stage.name}</TableCell>
-                      <TableCell className="text-sm text-muted-foreground max-w-xs sm:max-w-md truncate hidden sm:table-cell">{stage.description || 'N/A'}</TableCell>
-                      <TableCell><Badge variant={stage.is_system ? "secondary" : "outline"}>{stage.is_system ? "System" : "Custom"}</Badge></TableCell>
-                      <TableCell>{stage.sort_order}</TableCell>
-                      <TableCell className="text-right">
-                        <Button variant="ghost" size="icon" onClick={() => handleOpenModal(stage)} className="mr-1 h-8 w-8"><Edit3 className="h-4 w-4" /></Button>
-                        {!stage.is_system && (<Button variant="ghost" size="icon" onClick={() => attemptDeleteStage(stage)} className="text-destructive hover:text-destructive h-8 w-8"><Trash2 className="h-4 w-4" /></Button>)}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+              <DragDropContext onDragEnd={handleDragEnd}>
+                <Droppable droppableId="stages-table">
+                  {(provided) => (
+                    <TableBody ref={provided.innerRef} {...provided.droppableProps}>
+                      {stages.map((stage, index) => (
+                        <Draggable key={stage.id} draggableId={stage.id} index={index}>
+                          {(provided, snapshot) => (
+                            <TableRow
+                              ref={provided.innerRef}
+                              {...provided.draggableProps}
+                              style={{ ...provided.draggableProps.style, background: snapshot.isDragging ? '#f3f4f6' : undefined }}
+                            >
+                              <TableCell className="py-1 px-2" {...provided.dragHandleProps}>
+                                <span className="cursor-move">☰</span>
+                              </TableCell>
+                              <TableCell className="font-medium">{stage.name}</TableCell>
+                              <TableCell className="text-sm text-muted-foreground max-w-xs sm:max-w-md truncate hidden sm:table-cell">{stage.description || 'N/A'}</TableCell>
+                              <TableCell><Badge variant={stage.is_system ? "secondary" : "outline"}>{stage.is_system ? "System" : "Custom"}</Badge></TableCell>
+                              <TableCell>{stage.sort_order}</TableCell>
+                              <TableCell className="text-right">
+                                <Button variant="ghost" size="icon" onClick={() => handleOpenModal(stage)} className="mr-1 h-8 w-8"><Edit3 className="h-4 w-4" /></Button>
+                                {!stage.is_system && (<Button variant="ghost" size="icon" onClick={() => attemptDeleteStage(stage)} className="text-destructive hover:text-destructive h-8 w-8"><Trash2 className="h-4 w-4" /></Button>)}
+                              </TableCell>
+                            </TableRow>
+                          )}
+                        </Draggable>
+                      ))}
+                      {provided.placeholder}
+                    </TableBody>
+                  )}
+                </Droppable>
+              </DragDropContext>
             </div>
           )}
         </CardContent>
@@ -314,12 +327,26 @@ export default function RecruitmentStagesPage() {
 
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
         <DialogContent>
-          <DialogHeader><DialogTitle>{editingStage ? 'Edit' : 'Add New'} Recruitment Stage</DialogTitle><DialogDescription>{editingStage ? 'Update the details of this stage.' : 'Define a new stage for your recruitment pipeline.'}</DialogDescription></DialogHeader>
+          <DialogHeader>
+            <div className="flex items-center gap-2 mb-4">
+              <Button type="submit" disabled={form.formState.isSubmitting} className="btn-primary-gradient flex items-center gap-2">
+                {form.formState.isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+                {editingStage ? 'Save Changes' : 'Create Stage'}
+              </Button>
+            </div>
+            <DialogTitle>{editingStage ? 'Edit' : 'Add New'} Recruitment Stage</DialogTitle>
+            <DialogDescription>{editingStage ? 'Update the details of this stage.' : 'Define a new stage for your recruitment pipeline.'}</DialogDescription>
+          </DialogHeader>
           <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-4 py-2">
-            <div><Label htmlFor="name">Name *</Label><Input id="name" {...form.register('name')} disabled={!!editingStage?.is_system} />{form.formState.errors.name && <p className="text-sm text-destructive mt-1">{form.formState.errors.name.message}</p>}{editingStage?.is_system && <p className="text-xs text-muted-foreground mt-1">System stage names cannot be changed.</p>}</div>
+            <div>
+              <Label htmlFor="name">Name *</Label>
+              <Input id="name" {...form.register('name')} disabled={!!editingStage?.is_system} />
+              {form.formState.errors?.name && <p className="text-sm text-destructive mt-1">{form.formState.errors.name.message}</p>}
+              {editingStage?.is_system && <p className="text-xs text-muted-foreground mt-1">System stage names cannot be changed.</p>}
+            </div>
             <div><Label htmlFor="description">Description</Label><Textarea id="description" {...form.register('description')} /></div>
             <div><Label htmlFor="sort_order">Sort Order</Label><Input id="sort_order" type="number" {...form.register('sort_order')} /></div>
-            <DialogFooter className="pt-4"><DialogClose asChild><Button type="button" variant="outline">Cancel</Button></DialogClose><Button type="submit" disabled={form.formState.isSubmitting} className="btn-primary-gradient">{form.formState.isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Save className="mr-2 h-4 w-4"/>}{editingStage ? 'Save Changes' : 'Create Stage'}</Button></DialogFooter>
+            <DialogFooter className="pt-4"><DialogClose asChild><Button type="button" variant="outline">Cancel</Button></DialogClose></DialogFooter>
           </form>
         </DialogContent>
       </Dialog>

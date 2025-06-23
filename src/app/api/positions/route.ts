@@ -26,7 +26,7 @@ export async function GET(request: NextRequest) {
 
     console.log('Positions API: Filters:', { titleFilter, departmentFilter, isOpenFilter, positionLevelFilter });
 
-    let query = 'SELECT id, title, department, description, "isOpen", position_level, custom_attributes, "createdAt", "updatedAt" FROM "positions"';
+    let query = 'SELECT id, title, department, description, "isOpen", position_level, "customAttributes", "createdAt", "updatedAt" FROM "positions"';
     const conditions = [];
     const queryParams = [];
     let paramIndex = 1;

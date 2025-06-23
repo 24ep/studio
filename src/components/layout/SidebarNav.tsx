@@ -38,7 +38,6 @@ const mainNavItems = [
 const myTaskBoardNavItem = { href: "/my-tasks", label: "My Task Board", icon: ListTodo, description: "Your personal task board" };
 
 const baseSettingsSubItems = [
-  { href: "/settings/preferences", label: "Preferences", icon: Palette, description: "Application preferences and appearance" },
   { href: "/settings/integrations", label: "Integrations", icon: Zap, description: "Third-party integrations" },
   { href: "/settings/stages", label: "Recruitment Stages", icon: KanbanSquare, permissionId: 'RECRUITMENT_STAGES_MANAGE' as PlatformModuleId, description: "Manage recruitment stages" },
   { href: "/settings/data-models", label: "Data Models (Client)", icon: DatabaseZap, permissionId: 'DATA_MODELS_MANAGE' as PlatformModuleId, description: "Client-side data models" },
@@ -176,7 +175,7 @@ const SidebarNavComponent = function SidebarNav() {
   }, []);
 
   return (
-      <SidebarMenu className="bg-background min-h-screen py-6 px-2 flex flex-col gap-2">
+      <SidebarMenu className="bg-background  py-6 px-2 flex flex-col gap-2">
         {/* Main Navigation */}
         <div className="mb-2">
           <div className="text-xs font-semibold text-muted-foreground px-4 mb-2 tracking-widest uppercase">Main</div>

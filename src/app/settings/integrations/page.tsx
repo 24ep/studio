@@ -137,6 +137,15 @@ export default function IntegrationsSettingsPage() {
 
   return (
     <div className="space-y-12 pb-32 p-6">
+      <div className="flex items-center gap-2 mb-6">
+        <Button onClick={handleSaveSettings} disabled={isSaving || isLoading} className="btn-primary-gradient flex items-center gap-2">
+          {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />} Save All
+        </Button>
+        <Button variant="outline" onClick={fetchSystemSettings} disabled={isSaving || isLoading} className="flex items-center gap-2">
+          <RefreshCw className="h-4 w-4" /> Reset
+        </Button>
+      </div>
+
       {/* AI Configuration */}
       <Card className="shadow-lg ">
         <CardHeader>
@@ -224,16 +233,6 @@ export default function IntegrationsSettingsPage() {
           </div>
         </CardContent>
       </Card>
-
-      {/* Floating Save/Reset Bar */}
-      <div className="fixed bottom-0 left-0 w-full z-30 bg-background/95 border-t flex justify-center items-center gap-4 py-3 px-4 shadow-lg" style={{boxShadow: '0 -2px 16px 0 rgba(0,0,0,0.04)'}}>
-        <Button onClick={handleSaveSettings} disabled={isSaving || isLoading} className="btn-primary-gradient flex items-center gap-2">
-          {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />} Save All
-        </Button>
-        <Button variant="outline" onClick={fetchSystemSettings} disabled={isSaving || isLoading} className="flex items-center gap-2">
-          <RefreshCw className="h-4 w-4" /> Reset
-        </Button>
-      </div>
     </div>
   );
 }

@@ -81,19 +81,6 @@ export function AddPositionModal({ isOpen, onOpenChange, onAddPosition }: AddPos
           </DialogDescription>
         </DialogHeader>
         
-        {/* Test input to see if basic input functionality works */}
-        <div className="mb-4 p-2 bg-yellow-100 border border-yellow-300 rounded">
-          <Label htmlFor="test-input">Test Input (should work):</Label>
-          <Input 
-            id="test-input"
-            value={testInput}
-            onChange={(e) => setTestInput(e.target.value)}
-            placeholder="Type here to test..."
-            className="mt-1"
-          />
-          <p className="text-xs text-gray-600 mt-1">Current value: {testInput}</p>
-        </div>
-        
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-2">
           <div>
             <Label htmlFor="title-add">Position Title *</Label>
@@ -161,16 +148,6 @@ export function AddPositionModal({ isOpen, onOpenChange, onAddPosition }: AddPos
               )}
             />
             <Label htmlFor="isOpen-add">Position is Open</Label>
-          </div>
-          
-          {/* Debug: Show current form values */}
-          <div className="text-xs text-gray-500 p-2 bg-gray-100 rounded">
-            <p>Debug - Current form values:</p>
-            <p>Title: {form.watch('title') || 'empty'}</p>
-            <p>Department: {form.watch('department') || 'empty'}</p>
-            <p>Position Level: {form.watch('position_level') || 'empty'}</p>
-            <p>Description: {form.watch('description') || 'empty'}</p>
-            <p>Is Open: {form.watch('isOpen') ? 'true' : 'false'}</p>
           </div>
           
           <DialogFooter className="pt-4">

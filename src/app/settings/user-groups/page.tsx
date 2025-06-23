@@ -346,6 +346,12 @@ export default function RolesPermissionsPage() {
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
         <DialogContent className="sm:max-w-lg">
           <DialogHeader>
+            <div className="flex items-center gap-2 mb-4">
+              <Button type="submit" disabled={form.formState.isSubmitting || (editingRole?.is_system_role && form.getValues("name") === editingRole.name && !form.getFieldState("description").isDirty && !form.getFieldState("is_default").isDirty )} className="btn-primary-gradient flex items-center gap-2">
+                {form.formState.isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+                {editingRole ? 'Save Changes' : 'Create Role'}
+              </Button>
+            </div>
             <DialogTitle>{editingRole ? 'Edit Role' : 'Create New Role'}</DialogTitle>
             <DialogDescription>
               {editingRole ? `Update the details for the &quot;${editingRole.name}&quot; role.` : 'Define a new role. Permissions are managed on the main page after creation.'}
@@ -374,13 +380,6 @@ export default function RolesPermissionsPage() {
                   <FormLabel className="font-normal">Set as Default Role</FormLabel>
                 </FormItem>
               )} />
-              <DialogFooter className="pt-4">
-                <DialogClose asChild><Button type="button" variant="outline">Cancel</Button></DialogClose>
-                <Button type="submit" disabled={form.formState.isSubmitting || (editingRole?.is_system_role && form.getValues("name") === editingRole.name && !form.getFieldState("description").isDirty && !form.getFieldState("is_default").isDirty )}>
-                  {form.formState.isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Save className="mr-2 h-4 w-4"/>}
-                  {editingRole ? 'Save Changes' : 'Create Role'}
-                </Button>
-              </DialogFooter>
             </form>
           </Form>
         </DialogContent>

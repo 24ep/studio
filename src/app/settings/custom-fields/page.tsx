@@ -305,6 +305,12 @@ export default function CustomFieldsPage() {
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
         <DialogContent className="sm:max-w-2xl max-h-[90vh] flex flex-col">
           <DialogHeader>
+            <div className="flex items-center gap-2 mb-4">
+              <Button type="submit" disabled={form.formState.isSubmitting} className="btn-primary-gradient flex items-center gap-2">
+                {form.formState.isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+                {editingDefinition ? 'Save Changes' : 'Create Definition'}
+              </Button>
+            </div>
             <DialogTitle>{editingDefinition ? 'Edit' : 'Add New'} Custom Field Definition</DialogTitle>
             <DialogDescription>
               Define a new custom field. The &apos;Field Key&apos; should be unique for the selected model.
@@ -439,13 +445,6 @@ export default function CustomFieldsPage() {
                     </FormItem>
                   )}
                 />
-                <DialogFooter className="pt-4 sticky bottom-0 bg-dialog pb-1">
-                  <DialogClose asChild><Button type="button" variant="outline">Cancel</Button></DialogClose>
-                  <Button type="submit" disabled={form.formState.isSubmitting} className="btn-primary-gradient">
-                    {form.formState.isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Save className="mr-2 h-4 w-4"/>}
-                    {editingDefinition ? 'Save Changes' : 'Create Definition'}
-                  </Button>
-                </DialogFooter>
               </form>
             </Form>
           </ScrollArea>

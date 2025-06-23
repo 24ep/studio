@@ -54,7 +54,22 @@ export async function GET(request: NextRequest) {
 
     const result = await getPool().query(query, queryParams);
     
-    return NextResponse.json(result.rows, { status: 200 });
+    // Map DB fields to frontend expected fields
+    const mappedRows = result.rows.map(row => ({
+      id: row.id,
+      model: row.model_name,
+      name: row.field_key,
+      label: row.label,
+      type: row.field_type,
+      options: row.options || [],
+      placeholder: null,
+      defaultValue: null,
+      isRequired: row.is_required,
+      isFilterable: false,
+      isSystemField: false,
+      order: row.sort_order ?? 0,
+    }));
+    return NextResponse.json(mappedRows, { status: 200 });
   } catch (error: any) {
     console.error("Failed to fetch custom field definitions:", error);
     await logAudit('ERROR', `Failed to fetch custom field definitions. Error: ${error.message}`, 'API:CustomFields:GetAll', session.user.id);

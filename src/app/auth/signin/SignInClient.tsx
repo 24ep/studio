@@ -194,17 +194,17 @@ export default function SignInClient() {
   // Render login form based on layout type
   const renderLoginForm = () => (
     <Card className="w-full max-w-md bg-card dark:bg-card border border-border shadow-2xl">
-      <CardHeader className="text-center">
+      <CardHeader className="flex flex-col items-center justify-center text-center">
         {isClient && appLogoUrl && (
           <Image
             src={appLogoUrl}
             alt="Application Logo"
             width={80}
             height={80}
-            className="rounded-md"
+            className="rounded-md mb-2"
           />
         )}
-        <CardTitle className="mt-2 text-2xl font-bold">{currentAppName}</CardTitle>
+        <CardTitle className="mt-0 text-2xl font-bold">{currentAppName}</CardTitle>
         <CardDescription>Sign in to your account</CardDescription>
       </CardHeader>
       <CardContent>
