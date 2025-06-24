@@ -29,7 +29,14 @@ ENV GOOGLE_API_KEY=$GOOGLE_API_KEY
 COPY package.json package-lock.json* ./
 RUN npm install --legacy-peer-deps
 
+<<<<<<< HEAD
 # Copy source code
+=======
+# Install netcat
+RUN apt-get update && apt-get install -y netcat-openbsd
+
+# Copy source code - This layer is cached if your source code doesn't change
+>>>>>>> 8669c3abec5ecc96b3cd1714141ffb85fc7b55aa
 COPY . .
 
 # Build the Next.js application
