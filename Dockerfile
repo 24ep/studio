@@ -51,6 +51,9 @@ RUN printenv && ls -al
 #     echo "=== About to run npm run build ===" && npm run build
 RUN npm run build
 
+# Compile TypeScript to JavaScript
+RUN npx tsc
+
 # =================================================================
 # == Stage 2: Production Stage
 # =================================================================
@@ -74,6 +77,7 @@ COPY --chown=node:node --from=builder /app/.next ./.next
 COPY --chown=node:node --from=builder /app/package.json ./package.json
 COPY --chown=node:node --from=builder /app/process-upload-queue.js ./process-upload-queue.js
 COPY --chown=node:node --from=builder /app/prisma ./prisma
+COPY --chown=node:node --from=builder /app/dist ./dist
 
 # Expose the port the app will run on
 EXPOSE 9846
