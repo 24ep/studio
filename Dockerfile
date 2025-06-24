@@ -58,6 +58,9 @@ FROM node:20
 
 WORKDIR /app
 
+# Install netcat for health checks
+RUN apt-get update && apt-get install -y netcat-openbsd && rm -rf /var/lib/apt/lists/*
+
 # Don't run production as root
 USER node
 
