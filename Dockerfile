@@ -82,6 +82,9 @@ COPY --chown=node:node --from=builder /app/process-upload-queue.js ./process-upl
 COPY --chown=node:node --from=builder /app/prisma ./prisma
 COPY --chown=node:node --from=builder /app/dist ./dist
 
+# Ensure Prisma client is generated in the production environment
+RUN npx prisma generate
+
 # Expose the port the app will run on
 EXPOSE 9846
 
