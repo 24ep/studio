@@ -37,11 +37,11 @@ COPY package-lock.json ./
 # Install dependencies
 RUN npm install 
 
+# Copy source code (including prisma/schema.prisma)
+COPY . .
+
 # Generate Prisma client
 RUN npx prisma generate
-
-# Copy source code
-COPY . .
 
 # Show environment and directory contents for debugging
 RUN printenv && ls -al
