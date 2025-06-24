@@ -45,10 +45,11 @@ COPY . .
 RUN printenv && ls -al
 
 # Build the Next.js application
-RUN echo "=== Directory listing before build ===" && ls -al && \
-    echo "=== tsconfig.json ===" && cat tsconfig.json && \
-    echo "=== package.json ===" && cat package.json && \
-    echo "=== About to run npm run build ===" && npm run build
+# RUN echo "=== Directory listing before build ===" && ls -al && \
+#     echo "=== tsconfig.json ===" && cat tsconfig.json && \
+#     echo "=== package.json ===" && cat package.json && \
+#     echo "=== About to run npm run build ===" && npm run build
+RUN npm run build
 
 # =================================================================
 # == Stage 2: Production Stage
