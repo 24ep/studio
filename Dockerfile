@@ -35,8 +35,10 @@ COPY package.json ./
 COPY package-lock.json ./
 
 # Install dependencies
-# RUN npm install --legacy-peer-deps
 RUN npm install 
+
+# Generate Prisma client
+RUN npx prisma generate
 
 # Copy source code
 COPY . .
