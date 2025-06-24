@@ -26,6 +26,9 @@ ENV GOOGLE_API_KEY=$GOOGLE_API_KEY
 COPY package.json package-lock.json* ./
 RUN npm install --legacy-peer-deps
 
+# Install netcat
+RUN apt-get update && apt-get install -y netcat
+
 # Copy source code - This layer is cached if your source code doesn't change
 COPY . .
 
@@ -46,11 +49,11 @@ WORKDIR /app
 # The node:20 image comes with a non-root 'node' user, which we will use.
 USER node
 
-# # Copy only the necessary production artifacts from the builder stage
-# COPY --chown=node:node --from=builder /app/node_modules ./node_modules
-# COPY --chown=node:node --from=builder /app/.next ./.next
-# COPY --chown=node:node --from=builder /app/package.json ./package.json
-# COPY --chown=node:node --from=builder /app/process-upload-queue.js ./process-upload-queue.js
+# Copy only the necessary production artifacts from the builder stage
+COPY --chown=node:node --from=builder /app/node_modules ./node_modules
+COPY --chown=node:node --from=builder /app/.next ./.next
+COPY --chown=node:node --from=builder /app/package.json ./package.json
+COPY --chown=node:node --from=builder /app/process-upload-queue.js ./process-upload-queue.js
 
 # Expose the port the app will run on
 EXPOSE 9846
