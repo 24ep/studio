@@ -75,6 +75,7 @@ ENV NEXT_TELEMETRY_DISABLED=1
 
 # Copy only the necessary production artifacts from the builder stage
 COPY --chown=node:node --from=builder /app/node_modules ./node_modules
+COPY --chown=node:node --from=builder /app/node_modules/.prisma /app/node_modules/.prisma
 COPY --chown=node:node --from=builder /app/.next ./.next
 COPY --chown=node:node --from=builder /app/package.json ./package.json
 COPY --chown=node:node --from=builder /app/process-upload-queue.js ./process-upload-queue.js
