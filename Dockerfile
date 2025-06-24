@@ -72,6 +72,7 @@ USER node
 # Set NODE_ENV for production
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
+ENV DATABASE_URL="postgresql://user:password@localhost:5432/db"
 
 # Copy only the necessary production artifacts from the builder stage
 COPY --chown=node:node --from=builder /app/node_modules ./node_modules
