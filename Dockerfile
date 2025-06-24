@@ -73,6 +73,7 @@ COPY --chown=node:node --from=builder /app/node_modules ./node_modules
 COPY --chown=node:node --from=builder /app/.next ./.next
 COPY --chown=node:node --from=builder /app/package.json ./package.json
 COPY --chown=node:node --from=builder /app/process-upload-queue.js ./process-upload-queue.js
+COPY --chown=node:node --from=builder /app/prisma ./prisma
 
 # Expose the port the app will run on
 EXPOSE 9846
