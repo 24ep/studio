@@ -5,6 +5,9 @@ FROM node:20 AS builder
 
 WORKDIR /app
 
+# Install netcat and clean up apt cache in one layer
+RUN apt-get update && apt-get install -y netcat-openbsd && rm -rf /var/lib/apt/lists/*
+
 # Declare and set build-time environment variables
 ARG DATABASE_URL
 ARG NEXTAUTH_URL
@@ -26,17 +29,11 @@ ENV GOOGLE_API_KEY=$GOOGLE_API_KEY
 COPY package.json package-lock.json* ./
 RUN npm install --legacy-peer-deps
 
-# Install netcat
-RUN apt-get update && apt-get install -y netcat
-
-# Copy source code - This layer is cached if your source code doesn't change
+# Copy source code
 COPY . .
 
-# Build the Next.js application - This only runs if source code has changed
+# Build the Next.js application
 RUN npm run build
-
-# Prune development dependencies for the final stage
-# No need for prune, as npm install in production stage will handle it.
 
 # =================================================================
 # == Stage 2: Production Stage
@@ -46,8 +43,11 @@ FROM node:20
 WORKDIR /app
 
 # Don't run production as root
-# The node:20 image comes with a non-root 'node' user, which we will use.
 USER node
+
+# Set NODE_ENV for production
+ENV NODE_ENV=production
+ENV NEXT_TELEMETRY_DISABLED=1
 
 # Copy only the necessary production artifacts from the builder stage
 COPY --chown=node:node --from=builder /app/node_modules ./node_modules
@@ -57,9 +57,6 @@ COPY --chown=node:node --from=builder /app/process-upload-queue.js ./process-upl
 
 # Expose the port the app will run on
 EXPOSE 9846
-
-# Set this to disable Next.js telemetry
-ENV NEXT_TELEMETRY_DISABLED 1
 
 # Start the app
 CMD ["npm", "start"]
