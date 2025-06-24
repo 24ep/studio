@@ -25,12 +25,21 @@ ENV AZURE_AD_CLIENT_SECRET=$AZURE_AD_CLIENT_SECRET
 ENV AZURE_AD_TENANT_ID=$AZURE_AD_TENANT_ID
 ENV GOOGLE_API_KEY=$GOOGLE_API_KEY
 
+# Show node and npm versions for debugging
+RUN node -v && npm -v
+
+# Copy dependency files first for better caching
+COPY package.json ./
+COPY package-lock.json ./
+
 # Install dependencies
-COPY package.json package-lock.json* ./
 RUN npm install --legacy-peer-deps
 
 # Copy source code
 COPY . .
+
+# Show environment and directory contents for debugging
+RUN printenv && ls -al
 
 # Build the Next.js application
 RUN npm run build
