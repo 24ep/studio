@@ -6,13 +6,27 @@ import bcrypt from 'bcryptjs';
 import { logAudit } from '@/lib/auditLog';
 import type { UserProfile, PlatformModuleId } from '@/lib/types';
 
+// Check if Azure AD is configured
+const isAzureADConfigured = () => {
+  return process.env.AZURE_AD_CLIENT_ID && 
+         process.env.AZURE_AD_CLIENT_SECRET && 
+         process.env.AZURE_AD_TENANT_ID &&
+         process.env.AZURE_AD_CLIENT_ID !== 'your_azure_ad_application_client_id' &&
+         process.env.AZURE_AD_CLIENT_SECRET !== 'your_azure_ad_client_secret_value' &&
+         process.env.AZURE_AD_TENANT_ID !== 'your_azure_ad_directory_tenant_id';
+};
+
 export const authOptions: NextAuthOptions = {
     providers: [
-      AzureADProvider({
-        clientId: process.env.AZURE_AD_CLIENT_ID!,
-        clientSecret: process.env.AZURE_AD_CLIENT_SECRET!,
-        tenantId: process.env.AZURE_AD_TENANT_ID!,
-      }),
+      // Only add Azure AD provider if properly configured
+      ...(isAzureADConfigured() ? [
+        AzureADProvider({
+          clientId: process.env.AZURE_AD_CLIENT_ID!,
+          clientSecret: process.env.AZURE_AD_CLIENT_SECRET!,
+          tenantId: process.env.AZURE_AD_TENANT_ID!,
+        })
+      ] : []),
+      // Always include credentials provider for username/password authentication
       CredentialsProvider({
         name: 'Credentials',
         credentials: {
@@ -94,7 +108,8 @@ export const authOptions: NextAuthOptions = {
         return session;
       },
       async signIn({ user, account, profile }) {
-          if (account?.provider === 'azure-ad' && profile?.email) {
+          // Only handle Azure AD sign-in if Azure AD is configured and this is an Azure AD sign-in
+          if (isAzureADConfigured() && account?.provider === 'azure-ad' && profile?.email) {
               const client = await getPool().connect();
               try {
                   // Use profile.sub as the unique user ID (OID) if oid is not present

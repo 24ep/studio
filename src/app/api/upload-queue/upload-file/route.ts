@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { minioClient, MINIO_BUCKET } from '@/lib/minio';
+import { minioClient, MINIO_BUCKET, ensureBucketExists } from '@/lib/minio';
 import { v4 as uuidv4 } from 'uuid';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
@@ -33,22 +33,45 @@ import { authOptions } from '@/lib/auth';
  *         description: No file uploaded
  *       401:
  *         description: Unauthorized
+ *       500:
+ *         description: Internal server error
  */
 export async function POST(request: NextRequest) {
-  const session = await getServerSession(authOptions);
-  if (!session) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const formData = await request.formData();
+    const file = formData.get('file');
+    if (!file || typeof file === 'string') {
+      return NextResponse.json({ error: 'No file uploaded' }, { status: 400 });
+    }
+
+    const ext = (file as File).name.split('.').pop();
+    const objectName = `uploads/${uuidv4()}.${ext}`;
+    const buffer = Buffer.from(await (file as File).arrayBuffer());
+    
+    try {
+      // Ensure bucket exists before uploading
+      await ensureBucketExists();
+      
+      await minioClient.putObject(MINIO_BUCKET, objectName, buffer, buffer.length, {
+        'Content-Type': (file as File).type,
+      });
+    } catch (minioError) {
+      console.error('MinIO upload error:', minioError);
+      return NextResponse.json({ 
+        error: 'Failed to upload file to storage. Please check your MinIO configuration.' 
+      }, { status: 500 });
+    }
+
+    return NextResponse.json({ file_path: objectName });
+  } catch (error) {
+    console.error('Upload file error:', error);
+    return NextResponse.json({ 
+      error: 'Internal server error during file upload' 
+    }, { status: 500 });
   }
-  const formData = await request.formData();
-  const file = formData.get('file');
-  if (!file || typeof file === 'string') {
-    return NextResponse.json({ error: 'No file uploaded' }, { status: 400 });
-  }
-  const ext = (file as File).name.split('.').pop();
-  const objectName = `uploads/${uuidv4()}.${ext}`;
-  const buffer = Buffer.from(await (file as File).arrayBuffer());
-  await minioClient.putObject(MINIO_BUCKET, objectName, buffer, buffer.length, {
-    'Content-Type': (file as File).type,
-  });
-  return NextResponse.json({ file_path: objectName });
 } 

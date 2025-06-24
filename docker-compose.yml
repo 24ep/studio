@@ -9,9 +9,9 @@ services:
         DATABASE_URL: "postgresql://devuser:devpassword@postgres:5432/canditrack_db"
         NEXTAUTH_URL: "http://10.0.10.57:9846"
         NEXTAUTH_SECRET: "pMQcOKGO5zj/IDZxnu5ghHNLpmDc8+Ex+/qzieOM+zo="
-        AZURE_AD_CLIENT_ID: "your_azure_ad_application_client_id"
-        AZURE_AD_CLIENT_SECRET: "your_azure_ad_client_secret_value"
-        AZURE_AD_TENANT_ID: "your_azure_ad_directory_tenant_id"
+        AZURE_AD_CLIENT_ID: "${AZURE_AD_CLIENT_ID:-your_azure_ad_application_client_id}"
+        AZURE_AD_CLIENT_SECRET: "${AZURE_AD_CLIENT_SECRET:-your_azure_ad_client_secret_value}"
+        AZURE_AD_TENANT_ID: "${AZURE_AD_TENANT_ID:-your_azure_ad_directory_tenant_id}"
         GOOGLE_API_KEY: "AIzaSyDM4TTZmwef-A3TOB4KND_XVxtXtDvZlRs"
         NEXT_PUBLIC_GOOGLE_FONTS_API_KEY: "AIzaSyAEslELPZLJBUfiKiNwsyXax0XezkQA-20"
     ports:
@@ -42,14 +42,18 @@ services:
       REDIS_URL: redis://redis:6379
       NEXTAUTH_URL: http://10.0.10.57:9846
       NEXTAUTH_SECRET: pMQcOKGO5zj/IDZxnu5ghHNLpmDc8+Ex+/qzieOM+zo=
-      AZURE_AD_CLIENT_ID: your_azure_ad_application_client_id
-      AZURE_AD_CLIENT_SECRET: your_azure_ad_client_secret_value
-      AZURE_AD_TENANT_ID: your_azure_ad_directory_tenant_id
+      # Azure AD Configuration (Optional - set these only if you want to use Azure AD SSO)
+      AZURE_AD_CLIENT_ID: ${AZURE_AD_CLIENT_ID:-your_azure_ad_application_client_id}
+      AZURE_AD_CLIENT_SECRET: ${AZURE_AD_CLIENT_SECRET:-your_azure_ad_client_secret_value}
+      AZURE_AD_TENANT_ID: ${AZURE_AD_TENANT_ID:-your_azure_ad_directory_tenant_id}
+      # Public Azure AD variables for client-side detection (Optional)
+      NEXT_PUBLIC_AZURE_AD_CLIENT_ID: ${AZURE_AD_CLIENT_ID:-}
+      NEXT_PUBLIC_AZURE_AD_TENANT_ID: ${AZURE_AD_TENANT_ID:-}
       N8N_RESUME_WEBHOOK_URL: https://ncc-n8n.qsncc.com/webhook/a19157d8-0fdb-44b0-860e-291e52896696
       N8N_GENERIC_PDF_WEBHOOK_URL: https://ncc-n8n.qsncc.com/webhook/a19157d8-0fdb-44b0-860e-291e52896696
       GOOGLE_API_KEY: AIzaSyDM4TTZmwef-A3TOB4KND_XVxtXtDvZlRs
       NEXT_PUBLIC_GOOGLE_FONTS_API_KEY: AIzaSyAEslELPZLJBUfiKiNwsyXax0XezkQA-20
-      NODE_ENV: development
+      NODE_ENV: production
     depends_on:
       postgres:
         condition: service_healthy
@@ -75,10 +79,10 @@ services:
       POSTGRES_INITDB_ARGS: "--encoding=UTF-8 --lc-collate=C --lc-ctype=C"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      # Mount the initialization scripts directory
+      # Mount the initialization script from root directory
       # PostgreSQL will execute all .sql and .sh files found in /docker-entrypoint-initdb.d/ on first startup
       # when the postgres_data volume is empty or being newly created.
-      - ./pg-init-scripts:/docker-entrypoint-initdb.d:ro
+      - ./init-db.sql:/docker-entrypoint-initdb.d/01-init-db.sql:ro
     restart: unless-stopped
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U devuser -d canditrack_db"]
