@@ -8,7 +8,7 @@ import { authOptions } from '@/lib/auth';
  * @openapi
  * /api/upload-queue/upload-file:
  *   post:
- *     summary: Upload a file to MinIO
+ *     summary: Upload multiple files to MinIO
  *     requestBody:
  *       required: true
  *       content:
@@ -16,21 +16,34 @@ import { authOptions } from '@/lib/auth';
  *           schema:
  *             type: object
  *             properties:
- *               file:
- *                 type: string
- *                 format: binary
+ *               files:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                   format: binary
  *     responses:
  *       200:
- *         description: File uploaded successfully
+ *         description: Files uploaded with status
  *         content:
  *           application/json:
  *             schema:
  *               type: object
  *               properties:
- *                 file_path:
- *                   type: string
+ *                 results:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       file_name:
+ *                         type: string
+ *                       status:
+ *                         type: string
+ *                       file_path:
+ *                         type: string
+ *                       error:
+ *                         type: string
  *       400:
- *         description: No file uploaded
+ *         description: No files uploaded
  *       401:
  *         description: Unauthorized
  *       500:
@@ -44,34 +57,73 @@ export async function POST(request: NextRequest) {
     }
 
     const formData = await request.formData();
-    const file = formData.get('file');
-    if (!file || typeof file === 'string') {
-      return NextResponse.json({ error: 'No file uploaded' }, { status: 400 });
+    // Accept both 'files' (array) and fallback to 'file' (single) for backward compatibility
+    let files = formData.getAll('files');
+    if (!files.length) {
+      // fallback to single file field
+      const singleFile = formData.get('file');
+      if (singleFile && typeof singleFile !== 'string') {
+        files = [singleFile];
+      }
+    }
+    if (!files.length) {
+      return NextResponse.json({ error: 'No files uploaded' }, { status: 400 });
     }
 
-    const ext = (file as File).name.split('.').pop();
-    const objectName = `uploads/${uuidv4()}.${ext}`;
-    const buffer = Buffer.from(await (file as File).arrayBuffer());
-    
+    // Ensure bucket exists before uploading
     try {
-      // Ensure bucket exists before uploading
       await ensureBucketExists();
-      
-      await minioClient.putObject(MINIO_BUCKET, objectName, buffer, buffer.length, {
-        'Content-Type': (file as File).type,
-      });
     } catch (minioError) {
-      console.error('MinIO upload error:', minioError);
-      return NextResponse.json({ 
-        error: 'Failed to upload file to storage. Please check your MinIO configuration.' 
+      console.error('MinIO bucket check error:', minioError);
+      return NextResponse.json({
+        error: 'Failed to access storage. Please check your MinIO configuration.'
       }, { status: 500 });
     }
 
-    return NextResponse.json({ file_path: objectName });
+    const results = await Promise.all(files.map(async (file: any) => {
+      if (!file || typeof file === 'string') {
+        return {
+          file_name: typeof file === 'string' ? file : '',
+          status: 'failed',
+          error: 'Invalid file object',
+        };
+      }
+      const ext = file.name.split('.').pop();
+      const objectName = `uploads/${uuidv4()}.${ext}`;
+      let buffer;
+      try {
+        buffer = Buffer.from(await file.arrayBuffer());
+      } catch (err) {
+        return {
+          file_name: file.name,
+          status: 'failed',
+          error: 'Failed to read file buffer',
+        };
+      }
+      try {
+        await minioClient.putObject(MINIO_BUCKET, objectName, buffer, buffer.length, {
+          'Content-Type': file.type,
+        });
+        return {
+          file_name: file.name,
+          status: 'success',
+          file_path: objectName,
+        };
+      } catch (minioError) {
+        console.error('MinIO upload error:', minioError);
+        return {
+          file_name: file.name,
+          status: 'failed',
+          error: 'Failed to upload file to storage',
+        };
+      }
+    }));
+
+    return NextResponse.json({ results });
   } catch (error) {
-    console.error('Upload file error:', error);
-    return NextResponse.json({ 
-      error: 'Internal server error during file upload' 
+    console.error('Upload files error:', error);
+    return NextResponse.json({
+      error: 'Internal server error during file upload'
     }, { status: 500 });
   }
 } 

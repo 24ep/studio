@@ -115,7 +115,7 @@ export const CandidateImportUploadQueue: React.FC = () => {
 
   return (
     <div className="mb-6">
-      <div className="mb-2 font-semibold">Queued Files: {totalBulkJobs}</div>
+      <div className="mb-2 font-semibold">All Upload Jobs: {totalBulkJobs}</div>
       <div className="flex flex-col md:flex-row md:items-center gap-2 mb-4">
         <Input
           placeholder="Filter by file name..."

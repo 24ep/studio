@@ -85,30 +85,39 @@ function UploadPageContent() {
     const batchId = uuidv4();
     const now = new Date().toISOString();
     try {
-      await Promise.all(stagedFiles.map(async (file) => {
-        // 1. Upload file to MinIO
-        const formData = new FormData();
-        formData.append('file', file);
-        const uploadRes = await fetch('/api/upload-queue/upload-file', {
-          method: 'POST',
-          body: formData
-        });
-        if (!uploadRes.ok) throw new Error('File upload failed');
-        const { file_path } = await uploadRes.json();
-        // 2. POST metadata to queue
-        await fetch('/api/upload-queue', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            file_name: file.name,
-            file_size: file.size,
-            status: 'queued',
-            source: 'bulk',
-            upload_id: batchId,
-            upload_date: now,
-            file_path
-          })
-        });
+      // 1. Upload all files in a single request
+      const formData = new FormData();
+      stagedFiles.forEach((file) => {
+        formData.append('files', file);
+      });
+      const uploadRes = await fetch('/api/upload-queue/upload-file', {
+        method: 'POST',
+        body: formData
+      });
+      if (!uploadRes.ok) {
+        error('File upload failed');
+        return;
+      }
+      const { results } = await uploadRes.json();
+      // 2. For each successful upload, POST metadata to queue
+      await Promise.all(results.map(async (result: any, idx: number) => {
+        if (result.status === 'success') {
+          await fetch('/api/upload-queue', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              file_name: result.file_name,
+              file_size: stagedFiles[idx]?.size || 0,
+              status: 'queued',
+              source: 'bulk',
+              upload_id: batchId,
+              upload_date: now,
+              file_path: result.file_path
+            })
+          });
+        } else {
+          error(`${result.file_name}: ${result.error || 'Upload failed'}`);
+        }
       }));
       setStagedFiles([]);
       setDialogOpen(false);
