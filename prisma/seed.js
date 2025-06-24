@@ -19,18 +19,20 @@ async function main() {
     });
     // Create default positions
     await prisma.position.upsert({
-        where: { title: 'Software Engineer' },
+        where: { id: '11111111-1111-1111-1111-111111111111' },
         update: {},
         create: {
+            id: '11111111-1111-1111-1111-111111111111',
             title: 'Software Engineer',
             department: 'Engineering',
             description: 'Develops and maintains software.'
         }
     });
     await prisma.position.upsert({
-        where: { title: 'Product Manager' },
+        where: { id: '22222222-2222-2222-2222-222222222222' },
         update: {},
         create: {
+            id: '22222222-2222-2222-2222-222222222222',
             title: 'Product Manager',
             department: 'Product',
             description: 'Oversees product development.'
@@ -54,6 +56,120 @@ async function main() {
             where: { name: stage.name },
             update: {},
             create: stage
+        });
+    }
+    // Create default user groups (roles)
+    const userGroups = [
+        {
+            id: '00000000-0000-0000-0000-000000000001',
+            name: 'Admin',
+            description: 'Full system access',
+            permissions: [
+                'CANDIDATES_VIEW', 'CANDIDATES_MANAGE', 'CANDIDATES_IMPORT', 'CANDIDATES_EXPORT', 'POSITIONS_VIEW', 'POSITIONS_MANAGE', 'POSITIONS_IMPORT', 'POSITIONS_EXPORT', 'USERS_MANAGE', 'USER_GROUPS_MANAGE', 'SYSTEM_SETTINGS_MANAGE', 'USER_PREFERENCES_MANAGE', 'RECRUITMENT_STAGES_MANAGE', 'CUSTOM_FIELDS_MANAGE', 'WEBHOOK_MAPPING_MANAGE', 'NOTIFICATION_SETTINGS_MANAGE', 'LOGS_VIEW'
+            ],
+            is_default: true,
+            is_system_role: true
+        },
+        {
+            id: '00000000-0000-0000-0000-000000000002',
+            name: 'Recruiter',
+            description: 'Can manage candidates and positions',
+            permissions: [
+                'CANDIDATES_VIEW', 'CANDIDATES_MANAGE', 'CANDIDATES_IMPORT', 'CANDIDATES_EXPORT', 'POSITIONS_VIEW', 'POSITIONS_MANAGE', 'POSITIONS_IMPORT', 'POSITIONS_EXPORT', 'RECRUITMENT_STAGES_MANAGE'
+            ],
+            is_default: true,
+            is_system_role: false
+        },
+        {
+            id: '00000000-0000-0000-0000-000000000003',
+            name: 'Hiring Manager',
+            description: 'Can view candidates and positions',
+            permissions: [
+                'CANDIDATES_VIEW', 'POSITIONS_VIEW'
+            ],
+            is_default: true,
+            is_system_role: false
+        },
+        {
+            id: '00000000-0000-0000-0000-000000000011',
+            name: 'HR',
+            description: 'HR Department group',
+            permissions: [
+                'HR_MANAGE', 'HR_CREATE', 'HR_UPDATE', 'HR_DELETE'
+            ],
+            is_default: true,
+            is_system_role: false
+        },
+        {
+            id: '00000000-0000-0000-0000-000000000012',
+            name: 'IT',
+            description: 'IT Department group',
+            permissions: [
+                'IT_MANAGE', 'IT_CREATE', 'IT_UPDATE', 'IT_DELETE'
+            ],
+            is_default: true,
+            is_system_role: false
+        },
+        {
+            id: '00000000-0000-0000-0000-000000000013',
+            name: 'Finance',
+            description: 'Finance Department group',
+            permissions: [
+                'FINANCE_MANAGE', 'FINANCE_CREATE', 'FINANCE_UPDATE', 'FINANCE_DELETE'
+            ],
+            is_default: false,
+            is_system_role: false
+        },
+        {
+            id: '00000000-0000-0000-0000-000000000014',
+            name: 'Marketing',
+            description: 'Marketing Department group',
+            permissions: [
+                'MARKETING_MANAGE', 'MARKETING_CREATE', 'MARKETING_UPDATE', 'MARKETING_DELETE'
+            ],
+            is_default: false,
+            is_system_role: false
+        }
+    ];
+    for (const group of userGroups) {
+        await prisma.userGroup.upsert({
+            where: { id: group.id },
+            update: {},
+            create: group
+        });
+    }
+    // Assign default admin user to Admin group
+    const adminUser = await prisma.user.findUnique({ where: { email: adminEmail } });
+    if (adminUser) {
+        await prisma.user_UserGroup.upsert({
+            where: { userId_groupId: { userId: adminUser.id, groupId: '00000000-0000-0000-0000-000000000001' } },
+            update: {},
+            create: { userId: adminUser.id, groupId: '00000000-0000-0000-0000-000000000001' }
+        });
+    }
+    // Seed default notification channels
+    const notificationChannels = [
+        { id: '10000000-0000-0000-0000-000000000001', channel_key: 'email', label: 'Email' },
+        { id: '10000000-0000-0000-0000-000000000002', channel_key: 'webhook', label: 'Webhook' }
+    ];
+    for (const channel of notificationChannels) {
+        await prisma.notificationChannel.upsert({
+            where: { channel_key: channel.channel_key },
+            update: {},
+            create: channel
+        });
+    }
+    // Seed default notification events
+    const notificationEvents = [
+        { id: '20000000-0000-0000-0000-000000000001', event_key: 'candidate_created', label: 'Candidate Created', description: 'Triggered when a new candidate is created.' },
+        { id: '20000000-0000-0000-0000-000000000002', event_key: 'position_filled', label: 'Position Filled', description: 'Triggered when a position is filled.' },
+        { id: '20000000-0000-0000-0000-000000000003', event_key: 'stage_changed', label: 'Stage Changed', description: 'Triggered when a candidate changes recruitment stage.' }
+    ];
+    for (const event of notificationEvents) {
+        await prisma.notificationEvent.upsert({
+            where: { event_key: event.event_key },
+            update: {},
+            create: event
         });
     }
 }

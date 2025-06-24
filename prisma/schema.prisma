@@ -25,6 +25,7 @@ model User {
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
   candidates        Candidate[] @relation("RecruiterCandidates")
+  userGroups        User_UserGroup[]
 }
 
 model Position {
@@ -59,4 +60,126 @@ model Candidate {
   dataAiHint      String?  @map("dataAiHint")
   position        Position? @relation(fields: [positionId], references: [id])
   recruiter       User?     @relation("RecruiterCandidates", fields: [recruiterId], references: [id])
+}
+
+model RecruitmentStage {
+  id          String   @id @default(uuid()) @db.Uuid
+  name        String   @unique
+  description String?
+  is_system   Boolean
+  sort_order  Int
+}
+
+model TransitionRecord {
+  id            String   @id @default(uuid()) @db.Uuid
+  candidateId   String
+  date          DateTime @default(now())
+  stage         String
+  notes         String?
+  actingUserId  String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model LogEntry {
+  id          String   @id @default(uuid()) @db.Uuid
+  timestamp   DateTime @default(now())
+  level       String
+  message     String
+  source      String?
+  actingUserId String?
+  details     Json?
+  createdAt   DateTime @default(now())
+}
+
+model UserGroup {
+  id            String   @id @default(uuid()) @db.Uuid
+  name          String   @unique
+  description   String?
+  permissions   String[] @default([])
+  is_default    Boolean  @default(false)
+  is_system_role Boolean @default(false)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  users         User_UserGroup[]
+}
+
+model User_UserGroup {
+  userId   String
+  groupId  String
+  user     User     @relation(fields: [userId], references: [id])
+  group    UserGroup @relation(fields: [groupId], references: [id])
+  @@id([userId, groupId])
+}
+
+model SystemSetting {
+  key       String   @id
+  value     String?
+  updatedAt DateTime @default(now())
+}
+
+model WebhookFieldMapping {
+  id          String   @id @default(uuid()) @db.Uuid
+  target_path String
+  source_path String?
+  notes       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model NotificationEvent {
+  id          String   @id @default(uuid()) @db.Uuid
+  event_key   String   @unique
+  label       String
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model NotificationChannel {
+  id          String   @id @default(uuid()) @db.Uuid
+  channel_key String   @unique
+  label       String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model NotificationSetting {
+  id          String   @id @default(uuid()) @db.Uuid
+  event_id    String
+  channel_id  String
+  is_enabled  Boolean  @default(false)
+  configuration Json?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model CustomFieldDefinition {
+  id          String   @id @default(uuid()) @db.Uuid
+  model_name  String
+  field_key   String
+  label       String
+  field_type  String
+  options     Json?
+  is_required Boolean  @default(false)
+  sort_order  Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @default(now())
+  @@unique([model_name, field_key])
+}
+
+model upload_queue {
+  id             String   @id @default(uuid()) @db.Uuid
+  file_name      String
+  file_size      BigInt
+  status         String
+  error          String?
+  error_details  String?
+  source         String?
+  upload_date    DateTime @default(now())
+  completed_date DateTime?
+  upload_id      String?
+  created_by     String?
+  updated_at     DateTime @default(now())
+  file_path      String?
 }
