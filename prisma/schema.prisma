@@ -10,7 +10,7 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
+  url      = "postgresql://devuser:devpassword@159.89.193.226:5432/canditrack_db"
 }
 
 model User {
@@ -105,8 +105,8 @@ model UserGroup {
 }
 
 model User_UserGroup {
-  userId   String
-  groupId  String
+  userId   String   @db.Uuid
+  groupId  String   @db.Uuid
   user     User     @relation(fields: [userId], references: [id])
   group    UserGroup @relation(fields: [groupId], references: [id])
   @@id([userId, groupId])
