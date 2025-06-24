@@ -39,6 +39,7 @@ services:
       MINIO_SECRET_KEY: minio_secret_password
       MINIO_BUCKET_NAME: canditrack-resumes
       MINIO_USE_SSL: false
+      MINIO_PUBLIC_BASE_URL: http://10.0.10.57:9847
       REDIS_URL: redis://redis:6379
       NEXTAUTH_URL: http://10.0.10.57:9846
       NEXTAUTH_SECRET: pMQcOKGO5zj/IDZxnu5ghHNLpmDc8+Ex+/qzieOM+zo=
@@ -58,7 +59,7 @@ services:
       postgres:
         condition: service_healthy
       minio:
-        condition: service_started
+        condition: service_healthy
       redis:
         condition: service_started
     restart: unless-stopped
@@ -103,6 +104,12 @@ services:
     volumes:
       - minio_data:/data
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 20s
+      retries: 3
+      start_period: 40s
 
   redis:
     image: redis:alpine

@@ -1773,6 +1773,110 @@ const swaggerSpec = {
           }
         }
       }
+    },
+    '/api/setup/initialize': {
+      get: {
+        summary: 'Check application status',
+        description: 'Checks the status of all application services (database, MinIO)',
+        tags: ['Setup'],
+        responses: {
+          '200': {
+            description: 'Application status',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    status: { type: 'string', enum: ['ready', 'partial', 'failed'] },
+                    minio: {
+                      type: 'object',
+                      properties: {
+                        status: { type: 'string', enum: ['success', 'warning', 'error'] },
+                        message: { type: 'string' },
+                        bucket: { type: 'string' },
+                        error: { type: 'string' }
+                      }
+                    },
+                    database: {
+                      type: 'object',
+                      properties: {
+                        status: { type: 'string', enum: ['success', 'error'] },
+                        message: { type: 'string' },
+                        error: { type: 'string' }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          '500': {
+            description: 'Initialization error',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    error: { type: 'string' },
+                    details: { type: 'string' }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      post: {
+        summary: 'Initialize application services',
+        description: 'Initializes MinIO bucket and tests database connection',
+        tags: ['Setup'],
+        responses: {
+          '200': {
+            description: 'Application initialization result',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    status: { type: 'string', enum: ['ready', 'partial', 'failed'] },
+                    minio: {
+                      type: 'object',
+                      properties: {
+                        status: { type: 'string', enum: ['success', 'warning', 'error'] },
+                        message: { type: 'string' },
+                        bucket: { type: 'string' },
+                        error: { type: 'string' }
+                      }
+                    },
+                    database: {
+                      type: 'object',
+                      properties: {
+                        status: { type: 'string', enum: ['success', 'error'] },
+                        message: { type: 'string' },
+                        error: { type: 'string' }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          '500': {
+            description: 'Initialization error',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    error: { type: 'string' },
+                    details: { type: 'string' }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   components: {
