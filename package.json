@@ -7,7 +7,7 @@
     "genkit:dev": "genkit start -- tsx src/ai/dev.ts",
     "genkit:watch": "genkit start -- tsx --watch src/ai/dev.ts",
     "prebuild": "echo Build started",
-    "build": "next build && tsc prisma/seed.ts --outDir dist/prisma",
+    "build": "next build && tsc",
     "postbuild": "echo Build finished",
     "start": "next start -p 9846",
     "lint": "next lint"
