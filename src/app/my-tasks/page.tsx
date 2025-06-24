@@ -120,7 +120,9 @@ async function getInitialTaskBoardData(session: any): Promise<{
 }
 
 export default async function MyTasksPageServer() {
+  console.log("[BUILD LOG] Before getServerSession");
   const session = await getServerSession(authOptions);
+  console.log("[BUILD LOG] After getServerSession");
 
   if (!session?.user) {
     return <MyTasksPageClient
@@ -132,7 +134,9 @@ export default async function MyTasksPageServer() {
            />;
   }
 
+  console.log("[BUILD LOG] Before getInitialTaskBoardData");
   const { initialCandidates, initialPositions, initialStages, initialRecruiters, error, authError, permissionError } = await getInitialTaskBoardData(session);
+  console.log("[BUILD LOG] After getInitialTaskBoardData");
 
   if (authError || permissionError) {
      return <MyTasksPageClient

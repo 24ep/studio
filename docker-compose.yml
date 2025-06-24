@@ -66,7 +66,7 @@ services:
     # The command to run the application is typically defined in the Dockerfile's CMD instruction.
     # For Next.js, this is often `npm run start` (which runs `next start`).
     # You can override it here if needed, but it's usually better to keep it in the Dockerfile.
-    command: sh -c "npx prisma migrate deploy && npx prisma db seed && npm start"
+    command: sh -c "until nc -z postgres 5432; do echo Waiting for Postgres...; sleep 2; done; until nc -z minio 9000; do echo Waiting for MinIO...; sleep 2; done; until nc -z redis 6379; do echo Waiting for Redis...; sleep 2; done; npx prisma migrate deploy && npx prisma db seed && npm start"
 
   postgres:
     image: postgres:14-alpine
@@ -113,7 +113,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    command: node process-upload-queue.js
+    command: sh -c "until nc -z postgres 5432; do echo Waiting for Postgres...; sleep 2; done; until nc -z minio 9000; do echo Waiting for MinIO...; sleep 2; done; until nc -z redis 6379; do echo Waiting for Redis...; sleep 2; done; node process-upload-queue.js"
     environment:
       DATABASE_URL: postgresql://devuser:devpassword@postgres:5432/canditrack_db
       MINIO_ENDPOINT: minio

@@ -84,7 +84,9 @@ async function getInitialCandidatesData(session: any): Promise<{ candidates: Can
 }
 
 export default async function CandidatesPageServer() {
+  console.log("[BUILD LOG] Before getServerSession");
   const session = await getServerSession(authOptions);
+  console.log("[BUILD LOG] After getServerSession");
 
   if (!session?.user) {
     return <CandidatesPageClient 
@@ -95,10 +97,13 @@ export default async function CandidatesPageServer() {
            />;
   }
 
+  console.log("[BUILD LOG] Before getInitialCandidatesData, fetchAllPositionsDb, fetchAllRecruitmentStagesDb");
   const candidatesPromise = getInitialCandidatesData(session);
   const positionsPromise = fetchAllPositionsDb();
   const stagesPromise = fetchAllRecruitmentStagesDb();
+  console.log("[BUILD LOG] After getInitialCandidatesData, fetchAllPositionsDb, fetchAllRecruitmentStagesDb");
   
+  console.log("[BUILD LOG] Before Promise.allSettled for candidates page");
   const [
     candidatesResult,
     positionsResult,
@@ -108,6 +113,7 @@ export default async function CandidatesPageServer() {
     positionsPromise,
     stagesPromise,
   ]);
+  console.log("[BUILD LOG] After Promise.allSettled for candidates page");
 
   let initialCandidates: Candidate[] = [];
   let candidatesError: string | undefined = undefined;

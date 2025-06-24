@@ -15,7 +15,9 @@ export default async function DashboardPageServer() {
   let usersFetchFailed = false;
 
   try {
+    console.log("[BUILD LOG] Before getServerSession");
     session = await getServerSession(authOptions);
+    console.log("[BUILD LOG] After getServerSession");
     if (!session?.user) {
       return <DashboardPageClient 
                initialCandidates={[]} 
@@ -25,24 +27,32 @@ export default async function DashboardPageServer() {
              />;
     }
     
+    console.log("[BUILD LOG] Before fetchAllPositionsDb");
     const positionsPromise = fetchAllPositionsDb();
+    console.log("[BUILD LOG] After fetchAllPositionsDb");
     let candidatesPromise: Promise<Candidate[]>;
     let usersPromise: Promise<UserProfile[]> | Promise<null> = Promise.resolve(null);
 
     if (session.user.role === 'Admin' || session.user.role === 'Hiring Manager') {
+      console.log("[BUILD LOG] Before fetchInitialDashboardCandidatesDb and fetchAllUsersDb");
       candidatesPromise = fetchInitialDashboardCandidatesDb(50);
       usersPromise = fetchAllUsersDb();
+      console.log("[BUILD LOG] After fetchInitialDashboardCandidatesDb and fetchAllUsersDb");
     } else if (session.user.role === 'Recruiter') {
+      console.log("[BUILD LOG] Before fetchInitialDashboardCandidatesDb (Recruiter)");
       candidatesPromise = fetchInitialDashboardCandidatesDb(200); // Fetch more to filter client-side for now
+      console.log("[BUILD LOG] After fetchInitialDashboardCandidatesDb (Recruiter)");
     } else {
       candidatesPromise = Promise.resolve([]);
     }
 
+    console.log("[BUILD LOG] Before Promise.allSettled for dashboard");
     const [positionsResult, candidatesResult, usersResult] = await Promise.allSettled([
       positionsPromise,
       candidatesPromise,
       usersPromise
     ]);
+    console.log("[BUILD LOG] After Promise.allSettled for dashboard");
 
     if (positionsResult.status === 'fulfilled') {
       initialPositions = positionsResult.value;

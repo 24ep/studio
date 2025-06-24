@@ -13,7 +13,9 @@ export default async function PositionsPageServer() {
   let fetchError: string | undefined = undefined;
 
   try {
+    console.log("[BUILD LOG] Before getServerSession");
     session = await getServerSession(authOptions);
+    console.log("[BUILD LOG] After getServerSession");
     if (!session?.user) {
       return <PositionsPageClient 
                initialPositions={[]} 
@@ -27,7 +29,9 @@ export default async function PositionsPageServer() {
     //   return <PositionsPageClient initialPositions={[]} initialAvailableDepartments={[]} permissionError={true} />;
     // }
 
+    console.log("[BUILD LOG] Before fetchAllPositionsDb");
     initialPositions = await fetchAllPositionsDb();
+    console.log("[BUILD LOG] After fetchAllPositionsDb");
     const uniqueDepts = Array.from(
       new Set(
         initialPositions

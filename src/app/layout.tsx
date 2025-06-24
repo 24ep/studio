@@ -37,8 +37,10 @@ export async function generateMetadata(): Promise<Metadata> {
   let appName = DEFAULT_APP_NAME;
   let description = DEFAULT_DESCRIPTION;
   try {
+    console.log("[BUILD LOG] Before fetch system-settings in generateMetadata");
     const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || '';
     const res = await fetch(baseUrl + '/api/settings/system-settings', { cache: 'no-store' });
+    console.log("[BUILD LOG] After fetch system-settings in generateMetadata");
     if (res.ok) {
       const settings = await res.json();
       const appNameSetting = settings.find((s: any) => s.key === 'appName');
@@ -57,13 +59,16 @@ export default async function RootLayout({ // Note: 'async' if using getServerSe
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  // To pass server-side session to SessionProvider for faster initial loads (optional):
+  console.log("[BUILD LOG] Before getServerSession in RootLayout");
   const session = await getServerSession(authOptions); 
+  console.log("[BUILD LOG] After getServerSession in RootLayout");
 
   // Fetch system settings for font
   let appFontFamily = 'Poppins';
   try {
+    console.log("[BUILD LOG] Before fetch system-settings for font in RootLayout");
     const res = await fetch(process.env.NEXT_PUBLIC_BASE_URL + '/api/settings/system-settings', { cache: 'no-store' });
+    console.log("[BUILD LOG] After fetch system-settings for font in RootLayout");
     if (res.ok) {
       const settings = await res.json();
       const fontSetting = settings.find((s: any) => s.key === 'appFontFamily');
