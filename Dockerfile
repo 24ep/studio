@@ -89,5 +89,5 @@ RUN npx prisma generate
 # Expose the port the app will run on
 EXPOSE 9846
 
-# Start the app
-CMD ["npm", "start"]
+# Start the app with migrations
+CMD npx prisma migrate deploy && npm start
