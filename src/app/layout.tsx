@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
-import { Poppins, Open_Sans, Roboto, Inter, Montserrat, Lato, Nunito, Source_Sans_3, Raleway, Ubuntu, Quicksand, PT_Sans } from 'next/font/google';
+import { Poppins } from 'next/font/google';
+// import { Open_Sans, Roboto, Inter, Montserrat, Lato, Nunito, Source_Sans_3, Raleway, Ubuntu, Quicksand, PT_Sans } from 'next/font/google';
 import './globals.css';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Toaster } from 'react-hot-toast';
@@ -10,6 +11,9 @@ import { authOptions } from "@/lib/auth"
 // import { getServerSession } from "next-auth/next"
 // import { authOptions } from "@/app/api/auth/[...nextauth]/route"
 
+console.log(">>> [BUILD] src/app/layout.tsx loaded");
+
+export const dynamic = "force-dynamic";
 
 const poppins = Poppins({
   subsets: ['latin'],
@@ -17,18 +21,6 @@ const poppins = Poppins({
   display: 'swap',
   weight: ['100', '200', '300', '400', '500', '600', '700', '800', '900'],
 });
-
-const openSans = Open_Sans({ subsets: ['latin'], variable: '--font-open-sans', display: 'swap' });
-const roboto = Roboto({ subsets: ['latin'], variable: '--font-roboto', display: 'swap', weight: ['100', '300', '400', '500', '700', '900'] });
-const inter = Inter({ subsets: ['latin'], variable: '--font-inter', display: 'swap' });
-const montserrat = Montserrat({ subsets: ['latin'], variable: '--font-montserrat', display: 'swap' });
-const lato = Lato({ subsets: ['latin'], variable: '--font-lato', display: 'swap', weight: ['100', '300', '400', '700', '900'] });
-const nunito = Nunito({ subsets: ['latin'], variable: '--font-nunito', display: 'swap' });
-const sourceSans3 = Source_Sans_3({ subsets: ['latin'], variable: '--font-source-sans-3', display: 'swap' });
-const raleway = Raleway({ subsets: ['latin'], variable: '--font-raleway', display: 'swap' });
-const ubuntu = Ubuntu({ subsets: ['latin'], variable: '--font-ubuntu', display: 'swap', weight: ['300', '400', '500', '700'] });
-const quicksand = Quicksand({ subsets: ['latin'], variable: '--font-quicksand', display: 'swap' });
-const ptSans = PT_Sans({ subsets: ['latin'], variable: '--font-pt-sans', display: 'swap', weight: ['400', '700'] });
 
 const DEFAULT_APP_NAME = 'CandiTrack';
 const DEFAULT_DESCRIPTION = 'Streamline your hiring process with Candidate Matching.';
@@ -59,35 +51,13 @@ export default async function RootLayout({ // Note: 'async' if using getServerSe
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  console.log(">>> [BUILD] RootLayout function called");
   console.log("[BUILD LOG] Before getServerSession in RootLayout");
   const session = await getServerSession(authOptions); 
   console.log("[BUILD LOG] After getServerSession in RootLayout");
 
-  // Fetch system settings for font
-  let appFontFamily = 'Poppins';
-  try {
-    console.log("[BUILD LOG] Before fetch system-settings for font in RootLayout");
-    const res = await fetch(process.env.NEXT_PUBLIC_BASE_URL + '/api/settings/system-settings', { cache: 'no-store' });
-    console.log("[BUILD LOG] After fetch system-settings for font in RootLayout");
-    if (res.ok) {
-      const settings = await res.json();
-      const fontSetting = settings.find((s: any) => s.key === 'appFontFamily');
-      if (fontSetting && fontSetting.value) appFontFamily = fontSetting.value;
-    }
-  } catch {}
-
+  // Only use Poppins font
   let fontVar = poppins.variable;
-  if (appFontFamily === 'Open Sans') fontVar = openSans.variable;
-  else if (appFontFamily === 'Roboto') fontVar = roboto.variable;
-  else if (appFontFamily === 'Inter') fontVar = inter.variable;
-  else if (appFontFamily === 'Montserrat') fontVar = montserrat.variable;
-  else if (appFontFamily === 'Lato') fontVar = lato.variable;
-  else if (appFontFamily === 'Nunito') fontVar = nunito.variable;
-  else if (appFontFamily === 'Source Sans 3') fontVar = sourceSans3.variable;
-  else if (appFontFamily === 'Raleway') fontVar = raleway.variable;
-  else if (appFontFamily === 'Ubuntu') fontVar = ubuntu.variable;
-  else if (appFontFamily === 'Quicksand') fontVar = quicksand.variable;
-  else if (appFontFamily === 'PT Sans') fontVar = ptSans.variable;
 
   return (
     <html lang="en" suppressHydrationWarning>

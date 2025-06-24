@@ -1,3 +1,4 @@
+console.log(">>> [BUILD] src/app/page.tsx loaded");
 export const dynamic = "force-dynamic";
 // src/app/page.tsx (Server Component)
 import { getServerSession } from 'next-auth/next';
@@ -7,6 +8,7 @@ import { fetchInitialDashboardCandidatesDb, fetchAllPositionsDb, fetchAllUsersDb
 import type { Candidate, Position, UserProfile } from '@/lib/types';
 
 export default async function DashboardPageServer() {
+  console.log(">>> [BUILD] DashboardPageServer function called");
   let session: any = null;
   let initialCandidates: Candidate[] = [];
   let initialPositions: Position[] = [];

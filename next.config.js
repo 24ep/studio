@@ -1,3 +1,4 @@
+console.log(">>> [BUILD] next.config.js loaded");
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   images: {

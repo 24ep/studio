@@ -1,3 +1,4 @@
+export const dynamic = "force-dynamic";
 // src/app/candidates/page.tsx - Server Component
 import { getServerSession } from 'next-auth/next';
 import { getPool } from '@/lib/db';
