@@ -66,6 +66,11 @@ services:
       redis:
         condition: service_started
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9846/api/upload-queue/process" ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
     # The command to run the application is typically defined in the Dockerfile's CMD instruction.
     # For Next.js, this is often `npm run start` (which runs `next start`).
     # You can override it here if needed, but it's usually better to keep it in the Dockerfile.
@@ -144,7 +149,7 @@ services:
       PROCESSOR_API_KEY: ${PROCESSOR_API_KEY}
     depends_on:
       app:
-        condition: service_started
+        condition: service_healthy
       postgres:
         condition: service_started
       minio:
