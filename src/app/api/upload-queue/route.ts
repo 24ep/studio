@@ -82,6 +82,9 @@ import { authOptions } from '@/lib/auth';
  *               created_by:
  *                 type: string
  *                 example: "user-uuid"
+ *               file_path:
+ *                 type: string
+ *                 example: "/path/to/resume.pdf"
  *     responses:
  *       201:
  *         description: Upload queue job created
@@ -127,15 +130,18 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
   const data = await request.json();
-  const { file_name, file_size, status, source, upload_id, created_by } = data;
+  const { file_name, file_size, status, source, upload_id, created_by, file_path } = data;
+  if (!file_path) {
+    return NextResponse.json({ error: 'file_path is required' }, { status: 400 });
+  }
   const id = uuidv4();
   const client = await getPool().connect();
   try {
     const res = await client.query(
-      `INSERT INTO upload_queue (id, file_name, file_size, status, source, upload_id, created_by)
-       VALUES ($1, $2, $3, $4, $5, $6, $7)
+      `INSERT INTO upload_queue (id, file_name, file_size, status, source, upload_id, created_by, file_path)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
        RETURNING *`,
-      [id, file_name, file_size, status, source, upload_id, created_by]
+      [id, file_name, file_size, status, source, upload_id, created_by, file_path]
     );
     return NextResponse.json(res.rows[0], { status: 201 });
   } finally {

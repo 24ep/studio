@@ -181,5 +181,5 @@ model upload_queue {
   upload_id      String?
   created_by     String?
   updated_at     DateTime @default(now())
-  file_path      String?
+  file_path      String
 }
