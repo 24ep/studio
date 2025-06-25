@@ -34,12 +34,14 @@
     "@radix-ui/react-separator": "^1.1.2",
     "@radix-ui/react-slider": "^1.2.3",
     "@radix-ui/react-slot": "^1.1.2",
+    "@radix-ui/react-tabs": "^1.1.12",
     "@radix-ui/react-tooltip": "^1.1.8",
     "@types/uuid": "^10.0.0",
     "bcryptjs": "^2.4.3",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "date-fns": "^3.6.0",
+    "genkit": "latest",
     "lucide-react": "^0.475.0",
     "minio": "^8.0.5",
     "next": "^14.2.3",
@@ -60,8 +62,7 @@
     "tailwindcss-animate": "^1.0.7",
     "uuid": "^10.0.0",
     "ws": "^8.16.0",
-    "zod": "^3.24.2",
-    "genkit": "latest"
+    "zod": "^3.24.2"
   },
   "devDependencies": {
     "@types/bcryptjs": "^2.4.6",

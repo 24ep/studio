@@ -52,6 +52,7 @@ const systemSettingKeyEnum = z.enum([
     'sidebarHoverBgD', 'sidebarHoverTextD', 'sidebarBorderD',
     'appFontFamily',
     'loginPageContent',
+    'maxConcurrentProcessors',
 ]);
 const systemSettingSchema = z.object({
     key: systemSettingKeyEnum,
