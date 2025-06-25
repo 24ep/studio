@@ -73,7 +73,35 @@ export async function PATCH(request, { params }) {
         if (res.rows.length === 0) {
             return NextResponse.json({ error: 'Not found' }, { status: 404 });
         }
+        // Publish queue update event
+        const redisClient = await import('@/lib/redis').then(m => m.getRedisClient());
+        if (redisClient) {
+            await redisClient.publish('candidate_upload_queue', JSON.stringify({ type: 'queue_updated' }));
+        }
         return NextResponse.json(res.rows[0]);
+    }
+    finally {
+        client.release();
+    }
+}
+export async function DELETE(request, { params }) {
+    const session = await getServerSession(authOptions);
+    if (!session) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+    const id = params.id;
+    const client = await getPool().connect();
+    try {
+        const res = await client.query(`DELETE FROM upload_queue WHERE id = $1 RETURNING *`, [id]);
+        if (res.rows.length === 0) {
+            return NextResponse.json({ error: 'Not found' }, { status: 404 });
+        }
+        // Publish queue update event
+        const redisClient = await import('@/lib/redis').then(m => m.getRedisClient());
+        if (redisClient) {
+            await redisClient.publish('candidate_upload_queue', JSON.stringify({ type: 'queue_updated' }));
+        }
+        return NextResponse.json({ success: true });
     }
     finally {
         client.release();

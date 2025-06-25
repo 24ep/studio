@@ -8,8 +8,6 @@ var __asyncValues = (this && this.__asyncValues) || function (o) {
 import { NextResponse } from 'next/server';
 import { getPool } from '@/lib/db';
 import { minioClient, MINIO_BUCKET } from '@/lib/minio';
-import { getServerSession } from 'next-auth/next';
-import { authOptions } from '@/lib/auth';
 const N8N_WEBHOOK_URL = process.env.N8N_WEBHOOK_URL || 'http://localhost:5678/webhook';
 /**
  * @openapi

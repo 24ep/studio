@@ -79,10 +79,11 @@ COPY --chown=node:node --from=builder /app/node_modules ./node_modules
 COPY --chown=node:node --from=builder /app/node_modules/.prisma /app/node_modules/.prisma
 COPY --chown=node:node --from=builder /app/.next ./.next
 COPY --chown=node:node --from=builder /app/package.json ./package.json
-COPY --chown=node:node --from=builder /app/process-upload-queue.js ./process-upload-queue.js
+COPY --chown=node:node --from=builder /app/process-upload-queue.mjs ./process-upload-queue.mjs
 COPY --chown=node:node --from=builder /app/process-upload-queue.ts ./process-upload-queue.ts
 COPY --chown=node:node --from=builder /app/prisma ./prisma
 COPY --chown=node:node --from=builder /app/dist ./dist
+COPY --chown=node:node --from=builder /app/ws-queue-bridge.js ./ws-queue-bridge.js
 
 # Ensure Prisma client is generated in the production environment
 RUN npx prisma generate
