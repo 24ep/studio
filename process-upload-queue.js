@@ -7,17 +7,19 @@ async function runProcessorLoop() {
     while (true) {
         try {
             const res = await fetch(PROCESS_URL, { method: 'POST' });
-            if (!res.ok) {
-                console.error(`HTTP error! status: ${res.status}`);
-                continue;
-            }
-            const data = await res.json();
-            if (data && data.message === 'No queued jobs') {
-                // No jobs, just wait
-                console.log('No queued jobs found, waiting...');
-            }
-            else {
-                console.log('Processed job:', data);
+            const text = await res.text();
+            try {
+                const data = JSON.parse(text);
+                if (data && data.message === 'No queued jobs') {
+                    // No jobs, just wait
+                    console.log('No queued jobs found, waiting...');
+                }
+                else {
+                    console.log('Processed job:', data);
+                }
+            } catch (err) {
+                console.error('Background processor error: Could not parse JSON. Response was:');
+                console.error(text);
             }
         }
         catch (err) {
