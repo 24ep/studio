@@ -46,9 +46,15 @@ export async function POST(request: NextRequest) {
   const client = await getPool().connect();
   let job;
   try {
-    // 1. Find the oldest queued job
+    // 1. Atomically pick and mark the oldest queued job as 'processing'
     const res = await client.query(
-      `SELECT * FROM upload_queue WHERE status = 'queued' ORDER BY upload_date ASC LIMIT 1`
+      `UPDATE upload_queue
+       SET status = 'processing', updated_at = now()
+       WHERE id = (
+         SELECT id FROM upload_queue WHERE status = 'queued' ORDER BY upload_date ASC LIMIT 1
+         FOR UPDATE SKIP LOCKED
+       )
+       RETURNING *`
     );
     if (res.rows.length === 0) {
       // Publish queue update event

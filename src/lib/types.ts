@@ -417,7 +417,8 @@ export type SystemSettingKey =
   | 'sidebarHoverTextD'
   | 'sidebarBorderD'
   | 'appFontFamily'
-  | 'loginPageContent';
+  | 'loginPageContent'
+  | 'maxConcurrentProcessors';
 
 
 export interface SystemSetting {
