@@ -37,7 +37,12 @@ const N8N_WEBHOOK_URL = process.env.N8N_WEBHOOK_URL || 'http://localhost:5678/we
  *       500:
  *         description: Error processing job
  */
-export async function POST() {
+export async function POST(request: NextRequest) {
+  // API Key check
+  const apiKey = request.headers.get('x-api-key');
+  if (apiKey !== process.env.PROCESSOR_API_KEY) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
   const session = await getServerSession(authOptions);
   if (!session) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -102,7 +107,7 @@ if (require.main === module) {
     // eslint-disable-next-line no-constant-condition
     while (true) {
       try {
-        const res = await POST();
+        const res = await POST(new NextRequest({ headers: {} }));
         if (res && res.status === 200) {
           const data = await res.json();
           if (data && data.message === 'No queued jobs') {

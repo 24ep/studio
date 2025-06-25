@@ -6,7 +6,7 @@ async function runProcessorLoop() {
     console.log(`Processor URL: ${PROCESS_URL}`);
     while (true) {
         try {
-            const res = await fetch(PROCESS_URL, { method: 'POST' });
+            const res = await fetch(PROCESS_URL, { method: 'POST', headers: { 'x-api-key': process.env.PROCESSOR_API_KEY } });
             const text = await res.text();
             try {
                 const data = JSON.parse(text);
