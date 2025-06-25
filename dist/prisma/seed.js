@@ -40,9 +40,9 @@ var client_1 = require("@prisma/client");
 var prisma = new client_1.PrismaClient();
 function main() {
     return __awaiter(this, void 0, void 0, function () {
-        var adminEmail, adminPassword, stages, _i, stages_1, stage;
-        return __generator(this, function (_a) {
-            switch (_a.label) {
+        var adminEmail, adminPassword, stages, _i, stages_1, stage, userGroups, _a, userGroups_1, group, adminUser, notificationChannels, _b, notificationChannels_1, channel, notificationEvents, _c, notificationEvents_1, event;
+        return __generator(this, function (_d) {
+            switch (_d.label) {
                 case 0:
                     adminEmail = 'admin@ncc.com';
                     adminPassword = '$2a$10$dwiCxbUtCqnXeB2O8BmiyeWHL0e7rOqahafQAUACsnD4EZ9nGqPx2';
@@ -60,31 +60,31 @@ function main() {
                             }
                         })];
                 case 1:
-                    _a.sent();
-                    // Create default positions
+                    _d.sent();
                     return [4 /*yield*/, prisma.position.upsert({
-                            where: { title: 'Software Engineer' },
+                            where: { id: '11111111-1111-1111-1111-111111111111' },
                             update: {},
                             create: {
+                                id: '11111111-1111-1111-1111-111111111111',
                                 title: 'Software Engineer',
                                 department: 'Engineering',
                                 description: 'Develops and maintains software.'
                             }
                         })];
                 case 2:
-                    // Create default positions
-                    _a.sent();
+                    _d.sent();
                     return [4 /*yield*/, prisma.position.upsert({
-                            where: { title: 'Product Manager' },
+                            where: { id: '22222222-2222-2222-2222-222222222222' },
                             update: {},
                             create: {
+                                id: '22222222-2222-2222-2222-222222222222',
                                 title: 'Product Manager',
                                 department: 'Product',
                                 description: 'Oversees product development.'
                             }
                         })];
                 case 3:
-                    _a.sent();
+                    _d.sent();
                     stages = [
                         { id: '550e8400-e29b-41d4-a716-446655440001', name: 'Applied', description: 'Candidate has submitted their application', is_system: true, sort_order: 1 },
                         { id: '550e8400-e29b-41d4-a716-446655440002', name: 'Screening', description: 'Initial screening of candidate qualifications', is_system: true, sort_order: 2 },
@@ -98,7 +98,7 @@ function main() {
                         { id: '550e8400-e29b-41d4-a716-446655440010', name: 'On Hold', description: 'Candidate application is temporarily on hold', is_system: true, sort_order: 10 }
                     ];
                     _i = 0, stages_1 = stages;
-                    _a.label = 4;
+                    _d.label = 4;
                 case 4:
                     if (!(_i < stages_1.length)) return [3 /*break*/, 7];
                     stage = stages_1[_i];
@@ -108,12 +108,158 @@ function main() {
                             create: stage
                         })];
                 case 5:
-                    _a.sent();
-                    _a.label = 6;
+                    _d.sent();
+                    _d.label = 6;
                 case 6:
                     _i++;
                     return [3 /*break*/, 4];
-                case 7: return [2 /*return*/];
+                case 7:
+                    userGroups = [
+                        {
+                            id: '00000000-0000-0000-0000-000000000001',
+                            name: 'Admin',
+                            description: 'Full system access',
+                            permissions: [
+                                'CANDIDATES_VIEW', 'CANDIDATES_MANAGE', 'CANDIDATES_IMPORT', 'CANDIDATES_EXPORT', 'POSITIONS_VIEW', 'POSITIONS_MANAGE', 'POSITIONS_IMPORT', 'POSITIONS_EXPORT', 'USERS_MANAGE', 'USER_GROUPS_MANAGE', 'SYSTEM_SETTINGS_MANAGE', 'USER_PREFERENCES_MANAGE', 'RECRUITMENT_STAGES_MANAGE', 'CUSTOM_FIELDS_MANAGE', 'WEBHOOK_MAPPING_MANAGE', 'NOTIFICATION_SETTINGS_MANAGE', 'LOGS_VIEW'
+                            ],
+                            is_default: true,
+                            is_system_role: true
+                        },
+                        {
+                            id: '00000000-0000-0000-0000-000000000002',
+                            name: 'Recruiter',
+                            description: 'Can manage candidates and positions',
+                            permissions: [
+                                'CANDIDATES_VIEW', 'CANDIDATES_MANAGE', 'CANDIDATES_IMPORT', 'CANDIDATES_EXPORT', 'POSITIONS_VIEW', 'POSITIONS_MANAGE', 'POSITIONS_IMPORT', 'POSITIONS_EXPORT', 'RECRUITMENT_STAGES_MANAGE'
+                            ],
+                            is_default: true,
+                            is_system_role: false
+                        },
+                        {
+                            id: '00000000-0000-0000-0000-000000000003',
+                            name: 'Hiring Manager',
+                            description: 'Can view candidates and positions',
+                            permissions: [
+                                'CANDIDATES_VIEW', 'POSITIONS_VIEW'
+                            ],
+                            is_default: true,
+                            is_system_role: false
+                        },
+                        {
+                            id: '00000000-0000-0000-0000-000000000011',
+                            name: 'HR',
+                            description: 'HR Department group',
+                            permissions: [
+                                'HR_MANAGE', 'HR_CREATE', 'HR_UPDATE', 'HR_DELETE'
+                            ],
+                            is_default: true,
+                            is_system_role: false
+                        },
+                        {
+                            id: '00000000-0000-0000-0000-000000000012',
+                            name: 'IT',
+                            description: 'IT Department group',
+                            permissions: [
+                                'IT_MANAGE', 'IT_CREATE', 'IT_UPDATE', 'IT_DELETE'
+                            ],
+                            is_default: true,
+                            is_system_role: false
+                        },
+                        {
+                            id: '00000000-0000-0000-0000-000000000013',
+                            name: 'Finance',
+                            description: 'Finance Department group',
+                            permissions: [
+                                'FINANCE_MANAGE', 'FINANCE_CREATE', 'FINANCE_UPDATE', 'FINANCE_DELETE'
+                            ],
+                            is_default: false,
+                            is_system_role: false
+                        },
+                        {
+                            id: '00000000-0000-0000-0000-000000000014',
+                            name: 'Marketing',
+                            description: 'Marketing Department group',
+                            permissions: [
+                                'MARKETING_MANAGE', 'MARKETING_CREATE', 'MARKETING_UPDATE', 'MARKETING_DELETE'
+                            ],
+                            is_default: false,
+                            is_system_role: false
+                        }
+                    ];
+                    _a = 0, userGroups_1 = userGroups;
+                    _d.label = 8;
+                case 8:
+                    if (!(_a < userGroups_1.length)) return [3 /*break*/, 11];
+                    group = userGroups_1[_a];
+                    return [4 /*yield*/, prisma.userGroup.upsert({
+                            where: { id: group.id },
+                            update: {},
+                            create: group
+                        })];
+                case 9:
+                    _d.sent();
+                    _d.label = 10;
+                case 10:
+                    _a++;
+                    return [3 /*break*/, 8];
+                case 11: return [4 /*yield*/, prisma.user.findUnique({ where: { email: adminEmail } })];
+                case 12:
+                    adminUser = _d.sent();
+                    if (!adminUser) return [3 /*break*/, 15];
+                    return [4 /*yield*/, prisma.user_UserGroup.upsert({
+                            where: { userId_groupId: { userId: adminUser.id, groupId: '00000000-0000-0000-0000-000000000001' } },
+                            update: {},
+                            create: { userId: adminUser.id, groupId: '00000000-0000-0000-0000-000000000001' }
+                        })];
+                case 13:
+                    _d.sent();
+                    _d.label = 14;
+                case 14:
+                    _d.label = 15;
+                case 15:
+                    notificationChannels = [
+                        { id: '10000000-0000-0000-0000-000000000001', channel_key: 'email', label: 'Email' },
+                        { id: '10000000-0000-0000-0000-000000000002', channel_key: 'webhook', label: 'Webhook' }
+                    ];
+                    _b = 0, notificationChannels_1 = notificationChannels;
+                    _d.label = 16;
+                case 16:
+                    if (!(_b < notificationChannels_1.length)) return [3 /*break*/, 19];
+                    channel = notificationChannels_1[_b];
+                    return [4 /*yield*/, prisma.notificationChannel.upsert({
+                            where: { channel_key: channel.channel_key },
+                            update: {},
+                            create: channel
+                        })];
+                case 17:
+                    _d.sent();
+                    _d.label = 18;
+                case 18:
+                    _b++;
+                    return [3 /*break*/, 16];
+                case 19:
+                    notificationEvents = [
+                        { id: '20000000-0000-0000-0000-000000000001', event_key: 'candidate_created', label: 'Candidate Created', description: 'Triggered when a new candidate is created.' },
+                        { id: '20000000-0000-0000-0000-000000000002', event_key: 'position_filled', label: 'Position Filled', description: 'Triggered when a position is filled.' },
+                        { id: '20000000-0000-0000-0000-000000000003', event_key: 'stage_changed', label: 'Stage Changed', description: 'Triggered when a candidate changes recruitment stage.' }
+                    ];
+                    _c = 0, notificationEvents_1 = notificationEvents;
+                    _d.label = 20;
+                case 20:
+                    if (!(_c < notificationEvents_1.length)) return [3 /*break*/, 23];
+                    event = notificationEvents_1[_c];
+                    return [4 /*yield*/, prisma.notificationEvent.upsert({
+                            where: { event_key: event.event_key },
+                            update: {},
+                            create: event
+                        })];
+                case 21:
+                    _d.sent();
+                    _d.label = 22;
+                case 22:
+                    _c++;
+                    return [3 /*break*/, 20];
+                case 23: return [2 /*return*/];
             }
         });
     });
