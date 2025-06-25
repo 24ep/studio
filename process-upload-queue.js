@@ -19,6 +19,8 @@ async function runProcessorLoop() {
                 }
             } catch (err) {
                 console.error('Background processor error: Could not parse JSON. Response was:');
+                console.error('HTTP status:', res.status);
+                console.error('HTTP headers:', Object.fromEntries(res.headers.entries()));
                 console.error(text);
             }
         }
