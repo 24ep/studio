@@ -67,6 +67,15 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ message: 'No queued jobs' }, { status: 200 });
     }
     job = res.rows[0];
+    // Validate file_path before proceeding
+    if (!job.file_path) {
+      console.error(`Job ${job.id} has invalid file_path:`, job.file_path);
+      await client.query(
+        `UPDATE upload_queue SET status = 'error', error = $1, error_details = $2, completed_date = now(), updated_at = now() WHERE id = $3`,
+        ['Invalid file_path (null or empty) in job', `file_path: ${job.file_path}`, job.id]
+      );
+      return NextResponse.json({ error: 'Invalid file_path for job', job }, { status: 500 });
+    }
     // 2. Download file from MinIO
     const fileStream = await minioClient.getObject(MINIO_BUCKET, job.file_path);
     const chunks = [];

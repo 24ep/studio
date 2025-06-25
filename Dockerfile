@@ -43,18 +43,8 @@ COPY . .
 # Generate Prisma client
 RUN npx prisma generate
 
-# Show environment and directory contents for debugging
-RUN printenv && ls -al
-
-# Build the Next.js application
-# RUN echo "=== Directory listing before build ===" && ls -al && \
-#     echo "=== tsconfig.json ===" && cat tsconfig.json && \
-#     echo "=== package.json ===" && cat package.json && \
-#     echo "=== About to run npm run build ===" && npm run build
+# Build the Next.js application (includes type checking)
 RUN npm run build
-
-# Compile TypeScript to JavaScript
-RUN npx tsc
 
 # =================================================================
 # == Stage 2: Production Stage
@@ -82,14 +72,10 @@ COPY --chown=node:node --from=builder /app/package.json ./package.json
 COPY --chown=node:node --from=builder /app/process-upload-queue.mjs ./process-upload-queue.mjs
 COPY --chown=node:node --from=builder /app/process-upload-queue.ts ./process-upload-queue.ts
 COPY --chown=node:node --from=builder /app/prisma ./prisma
-COPY --chown=node:node --from=builder /app/dist ./dist
 COPY --chown=node:node --from=builder /app/ws-queue-bridge.js ./ws-queue-bridge.js
-
-# Ensure Prisma client is generated in the production environment
-RUN npx prisma generate
 
 # Expose the port the app will run on
 EXPOSE 9846
 
 # Start the app with migrations and seeding
-CMD npx prisma migrate deploy && npx prisma db:seed && npm start
+CMD npx prisma migrate deploy && npx prisma db:seed && npm run start
