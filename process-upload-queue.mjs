@@ -1,3 +1,4 @@
+// To run as ESM: rename this file to .mjs or set "type": "module" in package.json
 import fetch from 'node-fetch';
 const INTERVAL_MS = parseInt(process.env.PROCESSOR_INTERVAL_MS || '5000'); // 5 seconds default
 const PROCESS_URL = process.env.PROCESSOR_URL || 'http://app:9846/api/upload-queue/process';
