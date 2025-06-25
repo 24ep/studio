@@ -180,11 +180,37 @@ PUBLIC_HOST_URL=https://myapp.com
 |----------|-------------|---------|----------|
 | `PROCESSOR_INTERVAL_MS` | Background processor interval in milliseconds | `5000` | No |
 | `PROCESSOR_URL` | URL for the upload queue processor | `http://app:9846/api/upload-queue/process` | No |
+| `PROCESSOR_API_KEY` | API key for authenticating the background processor | - | Yes |
 
 **Example:**
 ```env
 PROCESSOR_INTERVAL_MS=10000
 PROCESSOR_URL=http://app:3000/api/upload-queue/process
+PROCESSOR_API_KEY=your_secure_api_key_here
+```
+
+**Generate PROCESSOR_API_KEY:**
+```bash
+# Linux/Mac
+openssl rand -base64 32
+
+# Windows (PowerShell)
+[System.Web.Security.Membership]::GeneratePassword(32, 0)
+```
+
+### WebSocket Bridge Configuration
+
+| Variable | Description | Default | Required |
+|----------|-------------|---------|----------|
+| `WS_QUEUE_BRIDGE_PORT` | Port for WebSocket bridge service | `3002` | No |
+| `WS_ALLOWED_ORIGINS` | Comma-separated list of allowed WebSocket origins | - | No |
+| `NEXT_PUBLIC_WS_QUEUE_BRIDGE_URL` | Public WebSocket bridge URL for client-side | `ws://localhost:3002` | No |
+
+**Example:**
+```env
+WS_QUEUE_BRIDGE_PORT=3002
+WS_ALLOWED_ORIGINS=http://localhost:9846,https://myapp.com
+NEXT_PUBLIC_WS_QUEUE_BRIDGE_URL=ws://myapp.com:3002
 ```
 
 ## Environment-Specific Configurations

@@ -3,7 +3,7 @@
 import React, { createContext, useContext, useState, useCallback, useEffect, useRef } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Loader2, XCircle, CheckCircle, FileText, RotateCcw, ExternalLink, AlertCircle, Eye, FileUp, UploadCloud } from "lucide-react";
+import { Loader2, XCircle, CheckCircle, FileText, RotateCcw, ExternalLink, AlertCircle, Eye, FileUp, UploadCloud, X } from "lucide-react";
 import Link from "next/link";
 import { Table, TableHeader, TableBody, TableHead, TableRow, TableCell } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
@@ -83,6 +83,8 @@ export const CandidateImportUploadQueue: React.FC = () => {
   const [bulkDeleteLoading, setBulkDeleteLoading] = useState(false);
   const [showBulkRetryConfirm, setShowBulkRetryConfirm] = useState(false);
   const [bulkRetryLoading, setBulkRetryLoading] = useState(false);
+  const [cancelId, setCancelId] = useState<string | null>(null);
+  const [cancelLoading, setCancelLoading] = useState(false);
   const { success, error } = useToast();
 
   // Fetch paginated jobs
@@ -288,27 +290,12 @@ export const CandidateImportUploadQueue: React.FC = () => {
                         variant="ghost"
                         size="icon"
                         title="Cancel"
-                        onClick={async () => {
-                          await fetch(`/api/upload-queue/${item.id}`, {
-                            method: 'PATCH',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ status: 'cancelled', completed_date: new Date().toISOString() })
-                          });
-                        }}
+                        disabled={cancelLoading}
+                        onClick={() => setCancelId(item.id)}
                       >
-                        <XCircle className="h-4 w-4 text-destructive" />
+                        {cancelLoading && cancelId === item.id ? <Loader2 className="animate-spin h-4 w-4" /> : <X className="h-4 w-4 text-orange-500" />}
                       </Button>
                     )}
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      title="Delete"
-                      aria-label={`Delete job ${item.file_name}`}
-                      onClick={() => setDeleteId(item.id)}
-                      disabled={deleteLoading}
-                    >
-                      {deleteLoading && deleteId === item.id ? <Loader2 className="animate-spin h-4 w-4" /> : <XCircle className="h-4 w-4 text-destructive" />}
-                    </Button>
                   </TableCell>
                 </TableRow>
                 {showErrorLogId === item.id && item.error_details && (
@@ -427,6 +414,38 @@ export const CandidateImportUploadQueue: React.FC = () => {
                 }
               }}
             >{bulkRetryLoading ? <Loader2 className="animate-spin h-4 w-4 mr-2" /> : null}Retry All</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+      {/* Confirm cancel */}
+      <AlertDialog open={!!cancelId} onOpenChange={open => !open && setCancelId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>Confirm Cancel</AlertDialogHeader>
+          <div>Are you sure you want to cancel this job?</div>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setCancelId(null)}>No, Keep Running</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={cancelLoading}
+              onClick={async () => {
+                if (cancelId) {
+                  setCancelLoading(true);
+                  try {
+                    const res = await fetch(`/api/upload-queue/${cancelId}`, {
+                      method: 'PATCH',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ status: 'cancelled', completed_date: new Date().toISOString() })
+                    });
+                    if (!res.ok) throw new Error('Cancel failed');
+                    success('Job cancelled successfully');
+                  } catch (err) {
+                    error('Failed to cancel job');
+                  } finally {
+                    setCancelLoading(false);
+                    setCancelId(null);
+                  }
+                }
+              }}
+            >{cancelLoading ? <Loader2 className="animate-spin h-4 w-4 mr-2" /> : null}Yes, Cancel Job</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

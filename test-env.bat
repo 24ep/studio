@@ -50,6 +50,13 @@ if "%NEXTAUTH_URL%"=="" (
     echo [OK] NEXTAUTH_URL is set
 )
 
+if "%PROCESSOR_API_KEY%"=="" (
+    echo [MISSING] PROCESSOR_API_KEY - Required for background processor
+    set /a missing_vars+=1
+) else (
+    echo [OK] PROCESSOR_API_KEY is set
+)
+
 echo.
 echo Checking optional variables...
 echo.
@@ -70,6 +77,18 @@ if "%N8N_RESUME_WEBHOOK_URL%"=="" (
     echo [INFO] N8N_RESUME_WEBHOOK_URL not set - n8n automation will be disabled
 ) else (
     echo [OK] N8N_RESUME_WEBHOOK_URL is set
+)
+
+if "%WS_QUEUE_BRIDGE_PORT%"=="" (
+    echo [INFO] WS_QUEUE_BRIDGE_PORT not set - using default port 3002
+) else (
+    echo [OK] WS_QUEUE_BRIDGE_PORT is set
+)
+
+if "%NEXT_PUBLIC_WS_QUEUE_BRIDGE_URL%"=="" (
+    echo [INFO] NEXT_PUBLIC_WS_QUEUE_BRIDGE_URL not set - using default ws://localhost:3002
+) else (
+    echo [OK] NEXT_PUBLIC_WS_QUEUE_BRIDGE_URL is set
 )
 
 echo.
