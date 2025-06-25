@@ -1,12 +1,9 @@
 import fetch from 'node-fetch';
-
 const INTERVAL_MS = parseInt(process.env.PROCESSOR_INTERVAL_MS || '5000'); // 5 seconds default
 const PROCESS_URL = process.env.PROCESSOR_URL || 'http://app:9846/api/upload-queue/process';
-
 async function runProcessorLoop() {
     console.log(`Starting background processor with interval: ${INTERVAL_MS}ms`);
     console.log(`Processor URL: ${PROCESS_URL}`);
-    
     while (true) {
         try {
             const res = await fetch(PROCESS_URL, { method: 'POST' });
@@ -29,18 +26,15 @@ async function runProcessorLoop() {
         await new Promise(resolve => setTimeout(resolve, INTERVAL_MS));
     }
 }
-
 // Handle graceful shutdown
 process.on('SIGINT', () => {
     console.log('Shutting down background processor...');
     process.exit(0);
 });
-
 process.on('SIGTERM', () => {
     console.log('Shutting down background processor...');
     process.exit(0);
 });
-
 console.log('Starting background processor...');
 runProcessorLoop().catch(err => {
     console.error('Fatal error in background processor:', err);

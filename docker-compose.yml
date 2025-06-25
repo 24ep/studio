@@ -115,7 +115,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    command: sh -c "until nc -z postgres ${POSTGRES_PORT}; do echo Waiting for Postgres...; sleep 2; done; until nc -z minio ${MINIO_PORT}; do echo Waiting for MinIO...; sleep 2; done; until nc -z redis ${REDIS_PORT}; do echo Waiting for Redis...; sleep 2; done; npx tsx process-upload-queue.ts"
+    command: sh -c "until nc -z postgres ${POSTGRES_PORT}; do echo Waiting for Postgres...; sleep 2; done; until nc -z minio ${MINIO_PORT}; do echo Waiting for MinIO...; sleep 2; done; until nc -z redis ${REDIS_PORT}; do echo Waiting for Redis...; sleep 2; done; node process-upload-queue.js"
     environment:
       DATABASE_URL: ${DATABASE_URL}
       MINIO_ENDPOINT: ${MINIO_ENDPOINT}
