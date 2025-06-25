@@ -1,7 +1,7 @@
 import fetch from 'node-fetch';
 
-const INTERVAL_MS = 5000; // 5 seconds
-const PROCESS_URL = 'http://app:9846/api/upload-queue/process'; // Use Docker service name
+const INTERVAL_MS = parseInt(process.env.PROCESSOR_INTERVAL_MS || '5000'); // 5 seconds default
+const PROCESS_URL = process.env.PROCESSOR_URL || 'http://app:9846/api/upload-queue/process';
 
 interface ProcessResponse {
   message?: string;
@@ -9,6 +9,9 @@ interface ProcessResponse {
 }
 
 async function runProcessorLoop(): Promise<never> {
+  console.log(`Starting background processor with interval: ${INTERVAL_MS}ms`);
+  console.log(`Processor URL: ${PROCESS_URL}`);
+  
   while (true) {
     try {
       const res = await fetch(PROCESS_URL, { method: 'POST' });

@@ -6,16 +6,16 @@ services:
       context: .
       dockerfile: Dockerfile
       args:
-        DATABASE_URL: "postgresql://devuser:devpassword@postgres:5432/canditrack_db"
-        NEXTAUTH_URL: "http://159.89.193.226:9846"
-        NEXTAUTH_SECRET: "pMQcOKGO5zj/IDZxnu5ghHNLpmDc8+Ex+/qzieOM+zo="
-        AZURE_AD_CLIENT_ID: "${AZURE_AD_CLIENT_ID:-your_azure_ad_application_client_id}"
-        AZURE_AD_CLIENT_SECRET: "${AZURE_AD_CLIENT_SECRET:-your_azure_ad_client_secret_value}"
-        AZURE_AD_TENANT_ID: "${AZURE_AD_TENANT_ID:-your_azure_ad_directory_tenant_id}"
-        GOOGLE_API_KEY: "AIzaSyDM4TTZmwef-A3TOB4KND_XVxtXtDvZlRs"
-        NEXT_PUBLIC_GOOGLE_FONTS_API_KEY: "AIzaSyAEslELPZLJBUfiKiNwsyXax0XezkQA-20"
+        DATABASE_URL: "${DATABASE_URL}"
+        NEXTAUTH_URL: "${NEXTAUTH_URL}"
+        NEXTAUTH_SECRET: "${NEXTAUTH_SECRET}"
+        AZURE_AD_CLIENT_ID: "${AZURE_AD_CLIENT_ID}"
+        AZURE_AD_CLIENT_SECRET: "${AZURE_AD_CLIENT_SECRET}"
+        AZURE_AD_TENANT_ID: "${AZURE_AD_TENANT_ID}"
+        GOOGLE_API_KEY: "${GOOGLE_API_KEY}"
+        NEXT_PUBLIC_GOOGLE_FONTS_API_KEY: "${NEXT_PUBLIC_GOOGLE_FONTS_API_KEY}"
     ports:
-      - "9846:9846"
+      - "${APP_PORT}:9846"
     # For production deployments, you typically want the application code to be self-contained
     # within the Docker image. The volume mount `.:/app` is primarily for local development to
     # reflect code changes without rebuilding the image. It's commented out for production-like behavior.
@@ -32,31 +32,31 @@ services:
       # - app_node_modules:/app/node_modules
       # - app_next:/app/.next
     environment:
-      DATABASE_URL: postgresql://devuser:devpassword@postgres:5432/canditrack_db
-      MINIO_ENDPOINT: minio
-      MINIO_PORT: 9000
-      MINIO_ACCESS_KEY: minioadmin
-      MINIO_SECRET_KEY: minio_secret_password
-      MINIO_BUCKET_NAME: canditrack-resumes
-      MINIO_USE_SSL: false
-      MINIO_PUBLIC_BASE_URL: http://159.89.193.226:9847
-      REDIS_URL: redis://redis:6379
-      NEXTAUTH_URL: http://159.89.193.226:9846
-      NEXTAUTH_SECRET: pMQcOKGO5zj/IDZxnu5ghHNLpmDc8+Ex+/qzieOM+zo=
+      DATABASE_URL: ${DATABASE_URL}
+      MINIO_ENDPOINT: ${MINIO_ENDPOINT}
+      MINIO_PORT: ${MINIO_PORT}
+      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY}
+      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY}
+      MINIO_BUCKET_NAME: ${MINIO_BUCKET_NAME}
+      MINIO_USE_SSL: ${MINIO_USE_SSL}
+      MINIO_PUBLIC_BASE_URL: ${MINIO_PUBLIC_BASE_URL}
+      REDIS_URL: ${REDIS_URL}
+      NEXTAUTH_URL: ${NEXTAUTH_URL}
+      NEXTAUTH_SECRET: ${NEXTAUTH_SECRET}
       # Azure AD Configuration (Optional - set these only if you want to use Azure AD SSO)
-      AZURE_AD_CLIENT_ID: ${AZURE_AD_CLIENT_ID:-your_azure_ad_application_client_id}
-      AZURE_AD_CLIENT_SECRET: ${AZURE_AD_CLIENT_SECRET:-your_azure_ad_client_secret_value}
-      AZURE_AD_TENANT_ID: ${AZURE_AD_TENANT_ID:-your_azure_ad_directory_tenant_id}
+      AZURE_AD_CLIENT_ID: ${AZURE_AD_CLIENT_ID}
+      AZURE_AD_CLIENT_SECRET: ${AZURE_AD_CLIENT_SECRET}
+      AZURE_AD_TENANT_ID: ${AZURE_AD_TENANT_ID}
       # Public Azure AD variables for client-side detection (Optional)
-      NEXT_PUBLIC_AZURE_AD_CLIENT_ID: ${AZURE_AD_CLIENT_ID:-}
-      NEXT_PUBLIC_AZURE_AD_TENANT_ID: ${AZURE_AD_TENANT_ID:-}
+      NEXT_PUBLIC_AZURE_AD_CLIENT_ID: ${NEXT_PUBLIC_AZURE_AD_CLIENT_ID}
+      NEXT_PUBLIC_AZURE_AD_TENANT_ID: ${NEXT_PUBLIC_AZURE_AD_TENANT_ID}
       # N8N_RESUME_WEBHOOK_URL: https://ncc-n8n.qsncc.com/webhook/a19157d8-0fdb-44b0-860e-291e52896696
       # N8N_GENERIC_PDF_WEBHOOK_URL: https://ncc-n8n.qsncc.com/webhook/a19157d8-0fdb-44b0-860e-291e52896696
-      N8N_RESUME_WEBHOOK_URL: https://n8n.bondarys.com/webhook/upload-cv
-      N8N_GENERIC_PDF_WEBHOOK_URL: https://n8n.bondarys.com/webhook/upload-cv
-      GOOGLE_API_KEY: AIzaSyDM4TTZmwef-A3TOB4KND_XVxtXtDvZlRs
-      NEXT_PUBLIC_GOOGLE_FONTS_API_KEY: AIzaSyAEslELPZLJBUfiKiNwsyXax0XezkQA-20
-      NODE_ENV: production
+      N8N_RESUME_WEBHOOK_URL: ${N8N_RESUME_WEBHOOK_URL}
+      N8N_GENERIC_PDF_WEBHOOK_URL: ${N8N_GENERIC_PDF_WEBHOOK_URL}
+      GOOGLE_API_KEY: ${GOOGLE_API_KEY}
+      NEXT_PUBLIC_GOOGLE_FONTS_API_KEY: ${NEXT_PUBLIC_GOOGLE_FONTS_API_KEY}
+      NODE_ENV: ${NODE_ENV}
     depends_on:
       postgres:
         condition: service_started
@@ -68,16 +68,16 @@ services:
     # The command to run the application is typically defined in the Dockerfile's CMD instruction.
     # For Next.js, this is often `npm run start` (which runs `next start`).
     # You can override it here if needed, but it's usually better to keep it in the Dockerfile.
-    command: sh -c "until nc -z postgres 5432; do echo Waiting for Postgres...; sleep 2; done; until nc -z minio 9000; do echo Waiting for MinIO...; sleep 2; done; until nc -z redis 6379; do echo Waiting for Redis...; sleep 2; done; npx prisma migrate deploy && npx prisma db seed && npm start"
+    command: sh -c "until nc -z postgres ${POSTGRES_PORT}; do echo Waiting for Postgres...; sleep 2; done; until nc -z minio ${MINIO_PORT}; do echo Waiting for MinIO...; sleep 2; done; until nc -z redis ${REDIS_PORT}; do echo Waiting for Redis...; sleep 2; done; npx prisma migrate deploy && npx prisma db seed && npm start"
 
   postgres:
     image: postgres:14-alpine
     ports:
-      - "5432:5432"
+      - "${POSTGRES_PORT}:5432"
     environment:
-      POSTGRES_USER: devuser
-      POSTGRES_PASSWORD: devpassword
-      POSTGRES_DB: canditrack_db
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
       # Ensure proper initialization
       POSTGRES_INITDB_ARGS: "--encoding=UTF-8 --lc-collate=C --lc-ctype=C"
     volumes:
@@ -91,13 +91,13 @@ services:
   minio:
     image: minio/minio:latest
     ports:
-      - "9847:9000" # MinIO API port
-      - "9848:9001" # MinIO Console port
+      - "${MINIO_API_PORT}:9000" # MinIO API port
+      - "${MINIO_CONSOLE_PORT}:9001" # MinIO Console port
     environment:
-      MINIO_ROOT_USER: minioadmin
-      MINIO_ROOT_PASSWORD: minio_secret_password
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
       MINIO_SERVER_URL: http://localhost:9000
-      MINIO_BROWSER_REDIRECT_URL: http://localhost:9848
+      MINIO_BROWSER_REDIRECT_URL: http://localhost:${MINIO_CONSOLE_PORT}
     command: server /data --console-address ":9001" --address ":9000"
     volumes:
       - minio_data:/data
@@ -106,7 +106,7 @@ services:
   redis:
     image: redis:alpine
     ports:
-      - "9849:6379"
+      - "${REDIS_EXTERNAL_PORT}:6379"
     volumes:
       - redis_data:/data
     restart: unless-stopped
@@ -115,29 +115,31 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    command: sh -c "until nc -z postgres 5432; do echo Waiting for Postgres...; sleep 2; done; until nc -z minio 9000; do echo Waiting for MinIO...; sleep 2; done; until nc -z redis 6379; do echo Waiting for Redis...; sleep 2; done; npx tsx process-upload-queue.ts"
+    command: sh -c "until nc -z postgres ${POSTGRES_PORT}; do echo Waiting for Postgres...; sleep 2; done; until nc -z minio ${MINIO_PORT}; do echo Waiting for MinIO...; sleep 2; done; until nc -z redis ${REDIS_PORT}; do echo Waiting for Redis...; sleep 2; done; npx tsx process-upload-queue.ts"
     environment:
-      DATABASE_URL: postgresql://devuser:devpassword@postgres:5432/canditrack_db
-      MINIO_ENDPOINT: minio
-      MINIO_PORT: 9000
-      MINIO_ACCESS_KEY: minioadmin
-      MINIO_SECRET_KEY: minio_secret_password
-      MINIO_BUCKET_NAME: canditrack-resumes
-      MINIO_USE_SSL: false
-      MINIO_PUBLIC_BASE_URL: http://159.89.193.226:9847
-      REDIS_URL: redis://redis:6379
-      NEXTAUTH_URL: http://159.89.193.226:9846
-      NEXTAUTH_SECRET: pMQcOKGO5zj/IDZxnu5ghHNLpmDc8+Ex+/qzieOM+zo=
-      AZURE_AD_CLIENT_ID: ${AZURE_AD_CLIENT_ID:-your_azure_ad_application_client_id}
-      AZURE_AD_CLIENT_SECRET: ${AZURE_AD_CLIENT_SECRET:-your_azure_ad_client_secret_value}
-      AZURE_AD_TENANT_ID: ${AZURE_AD_TENANT_ID:-your_azure_ad_directory_tenant_id}
-      NEXT_PUBLIC_AZURE_AD_CLIENT_ID: ${AZURE_AD_CLIENT_ID:-}
-      NEXT_PUBLIC_AZURE_AD_TENANT_ID: ${AZURE_AD_TENANT_ID:-}
-      N8N_RESUME_WEBHOOK_URL: https://ncc-n8n.qsncc.com/webhook/a19157d8-0fdb-44b0-860e-291e52896696
-      N8N_GENERIC_PDF_WEBHOOK_URL: https://ncc-n8n.qsncc.com/webhook/a19157d8-0fdb-44b0-860e-291e52896696
-      GOOGLE_API_KEY: AIzaSyDM4TTZmwef-A3TOB4KND_XVxtXtDvZlRs
-      NEXT_PUBLIC_GOOGLE_FONTS_API_KEY: AIzaSyAEslELPZLJBUfiKiNwsyXax0XezkQA-20
-      NODE_ENV: production
+      DATABASE_URL: ${DATABASE_URL}
+      MINIO_ENDPOINT: ${MINIO_ENDPOINT}
+      MINIO_PORT: ${MINIO_PORT}
+      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY}
+      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY}
+      MINIO_BUCKET_NAME: ${MINIO_BUCKET_NAME}
+      MINIO_USE_SSL: ${MINIO_USE_SSL}
+      MINIO_PUBLIC_BASE_URL: ${MINIO_PUBLIC_BASE_URL}
+      REDIS_URL: ${REDIS_URL}
+      NEXTAUTH_URL: ${NEXTAUTH_URL}
+      NEXTAUTH_SECRET: ${NEXTAUTH_SECRET}
+      AZURE_AD_CLIENT_ID: ${AZURE_AD_CLIENT_ID}
+      AZURE_AD_CLIENT_SECRET: ${AZURE_AD_CLIENT_SECRET}
+      AZURE_AD_TENANT_ID: ${AZURE_AD_TENANT_ID}
+      NEXT_PUBLIC_AZURE_AD_CLIENT_ID: ${NEXT_PUBLIC_AZURE_AD_CLIENT_ID}
+      NEXT_PUBLIC_AZURE_AD_TENANT_ID: ${NEXT_PUBLIC_AZURE_AD_TENANT_ID}
+      N8N_RESUME_WEBHOOK_URL: ${N8N_RESUME_WEBHOOK_URL}
+      N8N_GENERIC_PDF_WEBHOOK_URL: ${N8N_GENERIC_PDF_WEBHOOK_URL}
+      GOOGLE_API_KEY: ${GOOGLE_API_KEY}
+      NEXT_PUBLIC_GOOGLE_FONTS_API_KEY: ${NEXT_PUBLIC_GOOGLE_FONTS_API_KEY}
+      NODE_ENV: ${NODE_ENV}
+      PROCESSOR_INTERVAL_MS: ${PROCESSOR_INTERVAL_MS}
+      PROCESSOR_URL: ${PROCESSOR_URL}
     depends_on:
       app:
         condition: service_started
