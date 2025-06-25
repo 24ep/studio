@@ -10,7 +10,7 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url      = "postgresql://devuser:devpassword@159.89.193.226:5432/canditrack_db"
+  url      = env("DATABASE_URL")
 }
 
 model User {
