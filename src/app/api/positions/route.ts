@@ -59,8 +59,8 @@ export async function GET(request: NextRequest) {
 
     console.log('Positions API: Filters:', { titleFilter, departmentFilter, isOpenFilter, positionLevelFilter });
 
-    let query = 'SELECT id, title, department, description, "isOpen", position_level, "customAttributes", "createdAt", "updatedAt" FROM "positions"';
-    let countQuery = 'SELECT COUNT(*) FROM "positions"';
+    let query = 'SELECT id, title, department, description, "isOpen", position_level, "customAttributes", "createdAt", "updatedAt" FROM "Position"';
+    let countQuery = 'SELECT COUNT(*) FROM "Position"';
     const conditions = [];
     const queryParams = [];
     let paramIndex = 1;
@@ -152,7 +152,7 @@ export async function POST(request: NextRequest) {
   try {
     const newPositionId = uuidv4();
     const insertQuery = `
-      INSERT INTO "positions" (id, title, department, description, "isOpen", position_level, "customAttributes", "createdAt", "updatedAt")
+      INSERT INTO "Position" (id, title, department, description, "isOpen", position_level, "customAttributes", "createdAt", "updatedAt")
       VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), NOW())
       RETURNING *;
     `;

@@ -18,7 +18,7 @@ export async function fetchAllPositionsDb(): Promise<Position[]> {
 
   const pool = getPool();
   try {
-    const result = await pool.query('SELECT * FROM "positions" ORDER BY title ASC');
+    const result = await pool.query('SELECT * FROM "Position" ORDER BY title ASC');
     const positionsFromDb = result.rows;
 
     if (redisClient) {
@@ -113,7 +113,7 @@ export async function fetchInitialDashboardCandidatesDb(limit: number = 10): Pro
   try {
     const query = `
       SELECT id, name, email, phone, "positionId", "recruiterId", "fitScore", status, "applicationDate", "parsedData", "customAttributes", "resumePath", "createdAt", "updatedAt"
-      FROM "candidates"
+      FROM "Candidate"
       ORDER BY "createdAt" DESC
       LIMIT $1;
     `;
@@ -125,4 +125,37 @@ export async function fetchInitialDashboardCandidatesDb(limit: number = 10): Pro
     console.error("Error fetching initial dashboard candidates from DB:", error);
     throw error;
   }
+}
+
+export async function getAllPositions() {
+  const pool = getPool();
+  const result = await pool.query('SELECT * FROM "Position" ORDER BY title ASC');
+  return result.rows.map(row => ({
+    ...row,
+    custom_attributes: row.customAttributes || {},
+  }));
+}
+
+export async function getAllUsers() {
+  const pool = getPool();
+  let query = 'SELECT id, name, email, role, image as "avatarUrl" FROM "User"';
+  const result = await pool.query(query);
+  return result.rows;
+}
+
+export async function getAllCandidates() {
+  const pool = getPool();
+  const result = await pool.query(`
+    SELECT c.*, p.title as "positionTitle", r.name as "recruiterName"
+    FROM "Candidate" c
+    LEFT JOIN "Position" p ON c."positionId" = p.id
+    LEFT JOIN "User" r ON c."recruiterId" = r.id
+    ORDER BY c."applicationDate" DESC
+  `);
+  return result.rows.map(row => ({
+    ...row,
+    custom_attributes: row.customAttributes || {},
+    position: row.positionId ? { title: row.positionTitle } : null,
+    recruiter: row.recruiterId ? { name: row.recruiterName } : null,
+  }));
 }

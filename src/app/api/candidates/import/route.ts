@@ -74,54 +74,88 @@ const importCandidateSchema = z.object({
  */
 export async function POST(request: NextRequest) {
   const session = await getServerSession(authOptions);
-  if (!session?.user?.id) {
-    return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+  const actingUserId = session?.user?.id;
+  const actingUserName = session?.user?.name || session?.user?.email || 'System';
+
+  if (!actingUserId) {
+    return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
   }
 
   let body;
   try {
     body = await request.json();
   } catch {
-    return NextResponse.json({ message: "Invalid JSON body" }, { status: 400 });
+    return NextResponse.json({ message: 'Invalid JSON body' }, { status: 400 });
   }
 
-  if (!Array.isArray(body)) {
-    return NextResponse.json({ message: "Expected an array of candidates" }, { status: 400 });
+  const validationResult = importCandidateSchema.safeParse(body);
+  if (!validationResult.success) {
+    return NextResponse.json({ message: 'Invalid input', errors: validationResult.error.flatten().fieldErrors }, { status: 400 });
   }
+
+  const { candidates } = validationResult.data;
 
   const client = await getPool().connect();
-  const results = [];
   try {
     await client.query('BEGIN');
-    for (const item of body) {
-      const validationResult = importCandidateSchema.safeParse(item);
-      if (!validationResult.success) {
-        results.push({ error: validationResult.error.flatten().fieldErrors, item });
-        continue;
-      }
-      const { name, email, phone, positionId, recruiterId, fitScore, status } = validationResult.data;
-      const newCandidateId = uuidv4();
+
+    const results = {
+      success: 0,
+      failed: 0,
+      errors: [] as string[]
+    };
+
+    for (const candidate of candidates) {
       try {
+        // Check if candidate already exists
+        const existingResult = await client.query('SELECT id FROM "Candidate" WHERE email = $1', [candidate.email]);
+        if (existingResult.rows.length > 0) {
+          results.failed++;
+          results.errors.push(`Candidate with email ${candidate.email} already exists`);
+          continue;
+        }
+
+        // Insert candidate
         const insertQuery = `
-          INSERT INTO "candidates" (id, name, email, phone, "positionId", "recruiterId", "fitScore", status, "applicationDate", "updatedAt")
-          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW(), NOW())
+          INSERT INTO "Candidate" (id, name, email, phone, "positionId", "recruiterId", "fitScore", status, "parsedData", "customAttributes", "resumePath", "applicationDate", "updatedAt")
+          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, NOW(), NOW())
           RETURNING *;
         `;
-        const result = await client.query(insertQuery, [
-          newCandidateId, name, email, phone, positionId, recruiterId, fitScore, status
+        const candidateId = uuidv4();
+        await client.query(insertQuery, [
+          candidateId, candidate.name, candidate.email, candidate.phone, candidate.positionId, 
+          candidate.recruiterId, candidate.fitScore, candidate.status, candidate.parsedData, 
+          candidate.custom_attributes, candidate.resumePath
         ]);
-        results.push({ success: true, candidate: result.rows[0] });
+
+        // Create initial transition record
+        const insertTransitionQuery = `
+          INSERT INTO "TransitionRecord" (id, "candidateId", "positionId", stage, notes, "actingUserId", date)
+          VALUES ($1, $2, $3, $4, $5, $6, NOW());
+        `;
+        await client.query(insertTransitionQuery, [
+          uuidv4(), candidateId, candidate.positionId, candidate.status, 'Imported via bulk import', actingUserId
+        ]);
+
+        results.success++;
       } catch (error: any) {
-        results.push({ error: error.message, item });
+        results.failed++;
+        results.errors.push(`Failed to import ${candidate.email}: ${error.message}`);
       }
     }
+
     await client.query('COMMIT');
-    await logAudit('AUDIT', `Bulk candidate import by ${session.user.email || session.user.id}. Success: ${results.filter(r => r.success).length}, Fail: ${results.filter(r => r.error).length}.`, 'API:Candidates:Import', session.user.id, { results });
-    return NextResponse.json({ message: "Import completed", results }, { status: 201 });
+    await logAudit('AUDIT', `Bulk import completed by ${actingUserName}. Success: ${results.success}, Failed: ${results.failed}`, 'API:Candidates:Import', actingUserId, { results });
+
+    return NextResponse.json({
+      message: 'Import completed',
+      ...results
+    });
+
   } catch (error: any) {
     await client.query('ROLLBACK');
-    await logAudit('ERROR', `Bulk candidate import failed by ${session.user.email || session.user.id}. Error: ${error.message}`, 'API:Candidates:Import', session.user.id, { error: error.message });
-    return NextResponse.json({ message: 'Error importing candidates', error: error.message }, { status: 500 });
+    await logAudit('ERROR', `Bulk import failed. Error: ${error.message}`, 'API:Candidates:Import', actingUserId, { input: body });
+    return NextResponse.json({ message: 'Error during import', error: error.message }, { status: 500 });
   } finally {
     client.release();
   }

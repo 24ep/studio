@@ -79,53 +79,78 @@ const importPositionSchema = z.object({
 
 export async function POST(request: NextRequest) {
   const session = await getServerSession(authOptions);
-  if (!session?.user?.id) {
-    return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+  const actingUserId = session?.user?.id;
+  const actingUserName = session?.user?.name || session?.user?.email || 'System';
+
+  if (!actingUserId) {
+    return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
   }
 
   let body;
   try {
     body = await request.json();
   } catch {
-    return NextResponse.json({ message: "Invalid JSON body" }, { status: 400 });
+    return NextResponse.json({ message: 'Invalid JSON body' }, { status: 400 });
   }
 
-  if (!Array.isArray(body)) {
-    return NextResponse.json({ message: "Expected an array of positions" }, { status: 400 });
+  const validationResult = importPositionSchema.safeParse(body);
+  if (!validationResult.success) {
+    return NextResponse.json({ message: 'Invalid input', errors: validationResult.error.flatten().fieldErrors }, { status: 400 });
   }
+
+  const { positions } = validationResult.data;
 
   const client = await getPool().connect();
-  const results = [];
   try {
     await client.query('BEGIN');
-    for (const item of body) {
-      const validationResult = importPositionSchema.safeParse(item);
-      if (!validationResult.success) {
-        results.push({ error: validationResult.error.flatten().fieldErrors, item });
-        continue;
-      }
-      const { title, department, description, isOpen, position_level } = validationResult.data;
-      const newPositionId = uuidv4();
+
+    const results = {
+      success: 0,
+      failed: 0,
+      errors: [] as string[]
+    };
+
+    for (const position of positions) {
       try {
+        // Check if position already exists (by title and department)
+        const existingResult = await client.query('SELECT id FROM "Position" WHERE title = $1 AND department = $2', [position.title, position.department]);
+        if (existingResult.rows.length > 0) {
+          results.failed++;
+          results.errors.push(`Position with title "${position.title}" in department "${position.department}" already exists`);
+          continue;
+        }
+
+        // Insert position
         const insertQuery = `
-          INSERT INTO "positions" (id, title, department, description, "isOpen", position_level, "createdAt", "updatedAt")
-          VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW())
+          INSERT INTO "Position" (id, title, department, description, "isOpen", position_level, "customAttributes", "createdAt", "updatedAt")
+          VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), NOW())
           RETURNING *;
         `;
-        const result = await client.query(insertQuery, [
-          newPositionId, title, department, description, isOpen ?? true, position_level
+        const positionId = uuidv4();
+        await client.query(insertQuery, [
+          positionId, position.title, position.department, position.description, 
+          position.isOpen, position.position_level, position.custom_attributes || {}
         ]);
-        results.push({ success: true, position: result.rows[0] });
+
+        results.success++;
       } catch (error: any) {
-        results.push({ error: error.message, item });
+        results.failed++;
+        results.errors.push(`Failed to import ${position.title}: ${error.message}`);
       }
     }
+
     await client.query('COMMIT');
-    return NextResponse.json({ message: "Import completed", results }, { status: 201 });
+    await logAudit('AUDIT', `Bulk import completed by ${actingUserName}. Success: ${results.success}, Failed: ${results.failed}`, 'API:Positions:Import', actingUserId, { results });
+
+    return NextResponse.json({
+      message: 'Import completed',
+      ...results
+    });
+
   } catch (error: any) {
-    console.error('Error in /api/positions/import:', error);
     await client.query('ROLLBACK');
-    return NextResponse.json({ message: 'Error importing positions', error: error.message }, { status: 500 });
+    await logAudit('ERROR', `Bulk import failed. Error: ${error.message}`, 'API:Positions:Import', actingUserId, { input: body });
+    return NextResponse.json({ message: 'Error during import', error: error.message }, { status: 500 });
   } finally {
     client.release();
   }

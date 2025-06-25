@@ -73,123 +73,107 @@ const bulkActionSchema = z.object({
 export async function POST(request: NextRequest) {
   const session = await getServerSession(authOptions);
   const actingUserId = session?.user?.id;
-  const actingUserName = session?.user?.name || session?.user?.email || 'System (Bulk Action)';
+  const actingUserName = session?.user?.name || session?.user?.email || 'System';
 
-  if (!actingUserId || (session.user.role !== 'Admin' && !session.user.modulePermissions?.includes('CANDIDATES_MANAGE'))) {
-    await logAudit('WARN', `Forbidden attempt to perform bulk candidate action by ${actingUserName}.`, 'API:Candidates:BulkAction', actingUserId);
-    return NextResponse.json({ message: "Forbidden: Insufficient permissions." }, { status: 403 });
+  if (!actingUserId) {
+    return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
   }
 
   let body;
   try {
     body = await request.json();
-  } catch (error) {
-    return NextResponse.json({ message: "Error parsing request body", error: (error as Error).message }, { status: 400 });
+  } catch {
+    return NextResponse.json({ message: 'Invalid JSON body' }, { status: 400 });
   }
 
   const validationResult = bulkActionSchema.safeParse(body);
   if (!validationResult.success) {
-    return NextResponse.json(
-      { message: "Invalid input for bulk action.", errors: validationResult.error.flatten().fieldErrors },
-      { status: 400 }
-    );
+    return NextResponse.json({ message: 'Invalid input', errors: validationResult.error.flatten().fieldErrors }, { status: 400 });
   }
 
-  const { action, candidateIds, newStatus, newRecruiterId, notes } = validationResult.data;
-  const client = await getPool().connect();
-  let successCount = 0;
-  let failCount = 0;
-  const failedDetails: { candidateId: string, reason: string }[] = [];
+  const { action, candidateIds, newStatus, newRecruiterId } = validationResult.data;
 
+  const client = await getPool().connect();
   try {
     await client.query('BEGIN');
 
-    if (action === 'delete') {
-      await client.query('DELETE FROM "ResumeHistory" WHERE "candidateId" = ANY($1::uuid[])', [candidateIds]);
-      await client.query('DELETE FROM "TransitionRecord" WHERE "candidateId" = ANY($1::uuid[])', [candidateIds]);
-      const deleteResult = await client.query('DELETE FROM "candidates" WHERE id = ANY($1::uuid[]) RETURNING id', [candidateIds]);
-      successCount = deleteResult.rowCount ?? 0;
-      const deletedIds = deleteResult.rows.map((r: { id: string }) => r.id);
-      failCount = candidateIds.length - successCount;
-      candidateIds.forEach(id => {
-        if (!deletedIds.includes(id)) {
-          failedDetails.push({ candidateId: id, reason: "Candidate not found or already deleted."});
-        }
-      });
-    } else if (action === 'change_status') {
-      if (!newStatus) {
-        await client.query('ROLLBACK');
-        return NextResponse.json({ message: "New status is required for 'change_status' action." }, { status: 400 });
-      }
-      const stageCheck = await client.query('SELECT id FROM "RecruitmentStage" WHERE name = $1', [newStatus]);
-      if (stageCheck.rows.length === 0) {
-        await client.query('ROLLBACK');
-        return NextResponse.json({ message: `Invalid new status: '${newStatus}'. Stage not found.` }, { status: 400 });
-      }
+    let result;
+    let auditMessage = '';
 
-      const oldStatusesResult = await client.query('SELECT id, status FROM "candidates" WHERE id = ANY($1::uuid[])', [candidateIds]);
-      const oldStatusesMap = new Map<string, string>(oldStatusesResult.rows.map((r: { id: string, status: string }) => [r.id, r.status]));
+    switch (action) {
+      case 'delete':
+        const deleteResult = await client.query('DELETE FROM "Candidate" WHERE id = ANY($1::uuid[]) RETURNING id', [candidateIds]);
+        result = { deletedCount: deleteResult.rowCount };
+        auditMessage = `Bulk deleted ${deleteResult.rowCount} candidates`;
+        break;
 
-      const updateResult = await client.query(
-        'UPDATE "candidates" SET status = $1, "updatedAt" = NOW() WHERE id = ANY($2::uuid[]) RETURNING id, name',
-        [newStatus, candidateIds]
-      );
-      successCount = updateResult.rowCount ?? 0;
-      const updatedIds = updateResult.rows.map((r: { id: string }) => r.id);
-      failCount = candidateIds.length - successCount;
-      candidateIds.forEach(id => {
-        if (!updatedIds.includes(id)) {
-          failedDetails.push({ candidateId: id, reason: "Candidate not found or failed to update."});
-        }
-      });
+      case 'update_status':
+        const oldStatusesResult = await client.query('SELECT id, status FROM "Candidate" WHERE id = ANY($1::uuid[])', [candidateIds]);
+        const oldStatuses = oldStatusesResult.rows;
+        
+        const updateStatusResult = await client.query(
+          'UPDATE "Candidate" SET status = $1, "updatedAt" = NOW() WHERE id = ANY($2::uuid[]) RETURNING id',
+          [newStatus, candidateIds]
+        );
 
-      const transitionNotes = notes || `Bulk status change to ${newStatus} by ${actingUserName}.`;
-      for (const updatedRow of updateResult.rows as { id: string }[]) {
-        const oldStatusForCandidate = oldStatusesMap.get(updatedRow.id) || 'Unknown';
-        if (newStatus !== oldStatusForCandidate) {
-             await client.query(
-                'INSERT INTO "TransitionRecord" (id, "candidateId", date, stage, notes, "actingUserId", "createdAt", "updatedAt") VALUES ($1, $2, NOW(), $3, $4, $5, NOW(), NOW())',
-                [uuidv4(), updatedRow.id, newStatus, transitionNotes, actingUserId]
+        // Create transition records for status changes
+        for (const candidate of oldStatuses) {
+          if (candidate.status !== newStatus) {
+            await client.query(
+              'INSERT INTO "TransitionRecord" (id, "candidateId", stage, notes, "actingUserId", date) VALUES ($1, $2, $3, $4, $5, NOW())',
+              [uuidv4(), candidate.id, newStatus, `Bulk status change from ${candidate.status} to ${newStatus}`, actingUserId]
             );
+          }
         }
-      }
-    } else if (action === 'assign_recruiter') {
-      if (newRecruiterId) {
-         const recruiterCheck = await client.query('SELECT id FROM "User" WHERE id = $1 AND role = $2', [newRecruiterId, 'Recruiter']);
-         if (recruiterCheck.rows.length === 0) {
-            await client.query('ROLLBACK');
-            return NextResponse.json({ message: "Invalid recruiter ID or user is not a Recruiter." }, { status: 400 });
-         }
-      }
-      const updateResult = await client.query(
-        'UPDATE "candidates" SET "recruiterId" = $1, "updatedAt" = NOW() WHERE id = ANY($2::uuid[]) RETURNING id',
-        [newRecruiterId, candidateIds]
-      );
-      successCount = updateResult.rowCount ?? 0;
-      const updatedIds = updateResult.rows.map((r: { id: string }) => r.id);
-      failCount = candidateIds.length - successCount;
-       candidateIds.forEach(id => {
-        if (!updatedIds.includes(id)) {
-          failedDetails.push({ candidateId: id, reason: "Candidate not found or failed to update."});
+
+        result = { updatedCount: updateStatusResult.rowCount };
+        auditMessage = `Bulk updated status to ${newStatus} for ${updateStatusResult.rowCount} candidates`;
+        break;
+
+      case 'assign_recruiter':
+        if (!newRecruiterId) {
+          throw new Error('Recruiter ID is required for assign_recruiter action');
         }
-      });
+
+        // Verify recruiter exists and has recruiter role
+        const recruiterCheck = await client.query('SELECT id FROM "User" WHERE id = $1 AND role = $2', [newRecruiterId, 'Recruiter']);
+        if (recruiterCheck.rows.length === 0) {
+          throw new Error('Invalid recruiter ID or user is not a recruiter');
+        }
+
+        const assignRecruiterResult = await client.query(
+          'UPDATE "Candidate" SET "recruiterId" = $1, "updatedAt" = NOW() WHERE id = ANY($2::uuid[]) RETURNING id',
+          [newRecruiterId, candidateIds]
+        );
+
+        result = { updatedCount: assignRecruiterResult.rowCount };
+        auditMessage = `Bulk assigned recruiter for ${assignRecruiterResult.rowCount} candidates`;
+        break;
+
+      default:
+        throw new Error(`Unknown action: ${action}`);
     }
 
     await client.query('COMMIT');
-    await logAudit('AUDIT', `Bulk candidate action '${action}' performed by ${actingUserName}. Success: ${successCount}, Fail: ${failCount}. Target IDs: ${candidateIds.join(', ')}.`, 'API:Candidates:BulkAction', actingUserId, { action, successCount, failCount, candidateIds, failedDetails: failCount > 0 ? failedDetails : undefined, newStatus: newStatus, newRecruiterId: newRecruiterId, notes: notes });
-    
+    await logAudit('AUDIT', `${auditMessage} by ${actingUserName}.`, 'API:Candidates:BulkAction', actingUserId, { 
+      action, 
+      candidateIds, 
+      result 
+    });
+
     return NextResponse.json({ 
-      message: `Bulk action '${action}' processed. Success: ${successCount}, Failed: ${failCount}.`,
-      successCount,
-      failCount,
-      failedDetails: failCount > 0 ? failedDetails : undefined,
-    }, { status: 200 });
+      message: 'Bulk action completed successfully', 
+      ...result 
+    });
 
   } catch (error: any) {
     await client.query('ROLLBACK');
-    console.error(`Failed to perform bulk candidate action '${action}':`, error);
-    await logAudit('ERROR', `Failed bulk candidate action '${action}' by ${actingUserName}. Error: ${error.message}`, 'API:Candidates:BulkAction', actingUserId, { action, candidateIds, error: error.message });
-    return NextResponse.json({ message: `Error during bulk action: ${error.message}`, error: error.message }, { status: 500 });
+    await logAudit('ERROR', `Bulk action failed. Error: ${error.message}`, 'API:Candidates:BulkAction', actingUserId, { 
+      action, 
+      candidateIds, 
+      input: body 
+    });
+    return NextResponse.json({ message: 'Error performing bulk action', error: error.message }, { status: 500 });
   } finally {
     client.release();
   }

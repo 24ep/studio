@@ -65,23 +65,31 @@ function extractIdFromUrl(request: NextRequest): string | null {
   return match ? match[1] : null;
 }
 
-export async function GET(request: NextRequest) {
-  const id = extractIdFromUrl(request);
+export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.id) {
+    return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
+  }
+
+  const { id } = params;
+  const client = await getPool().connect();
   try {
-    const query = 'SELECT id, title, department, description, "isOpen", position_level, "customAttributes", "createdAt", "updatedAt" FROM "positions" WHERE id = $1';
-    const result = await getPool().query(query, [id]);
+    const query = 'SELECT id, title, department, description, "isOpen", position_level, "customAttributes", "createdAt", "updatedAt" FROM "Position" WHERE id = $1';
+    const result = await client.query(query, [id]);
+    
     if (result.rows.length === 0) {
-      return NextResponse.json({ message: "Position not found" }, { status: 404 });
+      return NextResponse.json({ message: 'Position not found' }, { status: 404 });
     }
-    const position = {
-        ...result.rows[0],
-        custom_attributes: result.rows[0].customAttributes || {},
-    };
-    return NextResponse.json(position, { status: 200 });
-  } catch (error) {
-    console.error('Error in /api/positions/[id]:', error);
-    await logAudit('ERROR', `Failed to fetch position ${id}. Error: ${(error as Error).message}`, 'API:Positions', null, { targetPositionId: id });
-    return NextResponse.json({ message: "Error fetching position", error: (error as Error).message }, { status: 500 });
+
+    const position = result.rows[0];
+    return NextResponse.json({
+      ...position,
+      custom_attributes: position.customAttributes || {},
+    });
+  } catch (error: any) {
+    return NextResponse.json({ message: 'Error fetching position', error: error.message }, { status: 500 });
+  } finally {
+    client.release();
   }
 }
 
@@ -94,112 +102,125 @@ const updatePositionSchema = z.object({
   custom_attributes: z.record(z.any()).optional().nullable(), // New
 });
 
-export async function PUT(request: NextRequest) {
-  const id = extractIdFromUrl(request);
+export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {
   const session = await getServerSession(authOptions);
+  const actingUserId = session?.user?.id;
+  const actingUserName = session?.user?.name || session?.user?.email || 'System';
+
+  if (!actingUserId) {
+    return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
+  }
+
+  const { id } = params;
   let body;
   try {
     body = await request.json();
-  } catch (error) {
-    console.error("Error parsing request body for position update:", error);
-    return NextResponse.json({ message: "Error parsing request body", error: (error as Error).message }, { status: 400 });
+  } catch {
+    return NextResponse.json({ message: 'Invalid JSON body' }, { status: 400 });
   }
 
   const validationResult = updatePositionSchema.safeParse(body);
   if (!validationResult.success) {
-    return NextResponse.json(
-      { message: "Invalid input", errors: validationResult.error.flatten().fieldErrors },
-      { status: 400 }
-    );
+    return NextResponse.json({ message: 'Invalid input', errors: validationResult.error.flatten().fieldErrors }, { status: 400 });
   }
-  
-  const validatedData = validationResult.data;
-  
+
+  const { title, department, description, isOpen, position_level, custom_attributes } = validationResult.data;
+
+  const client = await getPool().connect();
   try {
-    const positionExistsQuery = 'SELECT id, "customAttributes" FROM "positions" WHERE id = $1';
-    const positionResult = await getPool().query(positionExistsQuery, [id]);
-    if (positionResult.rows.length === 0) {
-      return NextResponse.json({ message: "Position not found" }, { status: 404 });
+    await client.query('BEGIN');
+    
+    // Check if position exists
+    const positionExistsQuery = 'SELECT id, "customAttributes" FROM "Position" WHERE id = $1';
+    const existingResult = await client.query(positionExistsQuery, [id]);
+    
+    if (existingResult.rows.length === 0) {
+      await client.query('ROLLBACK');
+      return NextResponse.json({ message: 'Position not found' }, { status: 404 });
     }
-    const existingPosition = positionResult.rows[0];
 
-    const updateFields: string[] = [];
-    const updateValues: any[] = [];
-    let paramIndex = 1;
+    // Update position
+    const updateQuery = `
+      UPDATE "Position" 
+      SET title = $1, department = $2, description = $3, "isOpen" = $4, 
+          position_level = $5, "customAttributes" = $6, "updatedAt" = NOW()
+      WHERE id = $7
+      RETURNING *;
+    `;
+    const updateResult = await client.query(updateQuery, [
+      title, department, description, isOpen, position_level, custom_attributes || {}, id
+    ]);
 
-    Object.entries(validatedData).forEach(([key, value]) => {
-      if (value !== undefined) {
-        if (key === 'custom_attributes') {
-            updateFields.push(`"customAttributes" = $${paramIndex++}`);
-            updateValues.push(value || {}); // Ensure it's an object
-        } else {
-            updateFields.push(`"${key}" = $${paramIndex++}`);
-            updateValues.push(value);
-        }
+    await client.query('COMMIT');
+    await logAudit('AUDIT', `Position '${title}' updated by ${actingUserName}.`, 'API:Positions:Update', actingUserId, { positionId: id });
+    
+    const updatedPosition = updateResult.rows[0];
+    return NextResponse.json({ 
+      message: 'Position updated successfully', 
+      position: {
+        ...updatedPosition,
+        custom_attributes: updatedPosition.customAttributes || {},
       }
     });
-
-    if (updateFields.length === 0) {
-        const currentPosition = await getPool().query('SELECT * FROM "positions" WHERE id = $1', [id]);
-        return NextResponse.json({ ...currentPosition.rows[0], custom_attributes: currentPosition.rows[0].customAttributes || {} }, { status: 200 });
-    }
-
-    updateFields.push(`"updatedAt" = NOW()`);
-    updateValues.push(id);
-
-    const updateQuery = `UPDATE "positions" SET ${updateFields.join(', ')} WHERE id = $${paramIndex} RETURNING *;`;
-    const updatedResult = await getPool().query(updateQuery, updateValues);
-    const updatedPosition = {
-        ...updatedResult.rows[0],
-        custom_attributes: updatedResult.rows[0].customAttributes || {},
-    };
-
-    const redisClient = await getRedisClient();
-    if (redisClient) {
-        await redisClient.del(CACHE_KEY_POSITIONS);
-    }
-
-    await logAudit('AUDIT', `Position '${updatedPosition.title}' (ID: ${updatedPosition.id}) updated.`, 'API:Positions', null, { targetPositionId: updatedPosition.id, changes: Object.keys(validatedData) });
-    return NextResponse.json(updatedPosition, { status: 200 });
-  } catch (error) {
-    console.error('Error in /api/positions/[id]:', error);
-    await logAudit('ERROR', `Failed to update position ${id}. Error: ${(error as Error).message}`, 'API:Positions', null, { targetPositionId: id });
-    return NextResponse.json({ message: "Error updating position", error: (error as Error).message }, { status: 500 });
+  } catch (error: any) {
+    await client.query('ROLLBACK');
+    await logAudit('ERROR', `Failed to update position. Error: ${error.message}`, 'API:Positions:Update', actingUserId, { positionId: id, input: body });
+    return NextResponse.json({ message: 'Error updating position', error: error.message }, { status: 500 });
+  } finally {
+    client.release();
   }
 }
 
-export async function DELETE(request: NextRequest) {
-  const id = extractIdFromUrl(request);
+export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
+  const session = await getServerSession(authOptions);
+  const actingUserId = session?.user?.id;
+  const actingUserName = session?.user?.name || session?.user?.email || 'System';
+
+  if (!actingUserId) {
+    return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
+  }
+
+  const { id } = params;
+  const client = await getPool().connect();
   try {
-    const positionQuery = 'SELECT p.id, p.title, COUNT(c.id) as "candidateCount" FROM "positions" p LEFT JOIN "candidates" c ON p.id = c."positionId" WHERE p.id = $1 GROUP BY p.id, p.title;';
-    const positionResult = await getPool().query(positionQuery, [id]);
-
-    if (positionResult.rows.length === 0) {
-      return NextResponse.json({ message: "Position not found" }, { status: 404 });
-    }
-    const positionTitle = positionResult.rows[0].title;
-
-    if (parseInt(positionResult.rows[0].candidateCount, 10) > 0) {
-        await logAudit('WARN', `Attempt to delete position '${positionTitle}' (ID: ${id}) with associated candidates. Action denied.`, 'API:Positions', null, { targetPositionId: id });
-        return NextResponse.json({ message: "Cannot delete position with associated candidates. Please reassign or delete candidates first." }, { status: 409 });
-    }
+    await client.query('BEGIN');
     
-    const deleteQuery = 'DELETE FROM "positions" WHERE id = $1';
-    await getPool().query(deleteQuery, [id]);
-
-    const redisClient = await getRedisClient();
-    if (redisClient) {
-        await redisClient.del(CACHE_KEY_POSITIONS);
+    // Check if position has candidates
+    const currentPosition = await getPool().query('SELECT * FROM "Position" WHERE id = $1', [id]);
+    if (currentPosition.rows.length === 0) {
+      await client.query('ROLLBACK');
+      return NextResponse.json({ message: 'Position not found' }, { status: 404 });
     }
+
+    const positionQuery = 'SELECT p.id, p.title, COUNT(c.id) as "candidateCount" FROM "Position" p LEFT JOIN "Candidate" c ON p.id = c."positionId" WHERE p.id = $1 GROUP BY p.id, p.title;';
+    const candidateCountResult = await client.query(positionQuery, [id]);
+    const candidateCount = parseInt(candidateCountResult.rows[0]?.candidateCount || '0', 10);
+
+    if (candidateCount > 0) {
+      await client.query('ROLLBACK');
+      return NextResponse.json({ 
+        message: `Cannot delete position. It has ${candidateCount} associated candidate(s).` 
+      }, { status: 409 });
+    }
+
+    // Delete position
+    const deleteQuery = 'DELETE FROM "Position" WHERE id = $1';
+    const deleteResult = await client.query(deleteQuery, [id]);
     
-    await logAudit('AUDIT', `Position '${positionTitle}' (ID: ${id}) deleted.`, 'API:Positions', null, { targetPositionId: id, deletedPositionTitle: positionTitle });
-    return NextResponse.json({ message: "Position deleted successfully" }, { status: 200 });
+    if (deleteResult.rowCount === 0) {
+      await client.query('ROLLBACK');
+      return NextResponse.json({ message: 'Position not found' }, { status: 404 });
+    }
+
+    await client.query('COMMIT');
+    await logAudit('AUDIT', `Position '${currentPosition.rows[0].title}' deleted by ${actingUserName}.`, 'API:Positions:Delete', actingUserId, { positionId: id });
+    
+    return NextResponse.json({ message: 'Position deleted successfully' });
   } catch (error: any) {
-     console.error('Error in /api/positions/[id]:', error);
-     await logAudit('ERROR', `Failed to delete position ${id}. Error: ${(error as Error).message}`, 'API:Positions', null, { targetPositionId: id });
-     if (error.code === '23503') {
-        return NextResponse.json({ message: "Cannot delete this position as it is still referenced by other entities (e.g., candidates)." }, { status: 409 });
-     }
-    return NextResponse.json({ message: "Error deleting position", error: error.message }, { status: 500 });
+    await client.query('ROLLBACK');
+    await logAudit('ERROR', `Failed to delete position. Error: ${error.message}`, 'API:Positions:Delete', actingUserId, { positionId: id });
+    return NextResponse.json({ message: 'Error deleting position', error: error.message }, { status: 500 });
+  } finally {
+    client.release();
   }
 }
