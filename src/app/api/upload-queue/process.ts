@@ -43,10 +43,6 @@ export async function POST(request: NextRequest) {
   if (apiKey !== process.env.PROCESSOR_API_KEY) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
-  const session = await getServerSession(authOptions);
-  if (!session) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
   const client = await getPool().connect();
   let job;
   try {

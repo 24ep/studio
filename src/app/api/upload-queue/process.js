@@ -49,16 +49,17 @@ export async function POST(request) {
     if (apiKey !== process.env.PROCESSOR_API_KEY) {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
-    const session = await getServerSession(authOptions);
-    if (!session) {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
     const client = await getPool().connect();
     let job;
     try {
         // 1. Find the oldest queued job
         const res = await client.query(`SELECT * FROM upload_queue WHERE status = 'queued' ORDER BY upload_date ASC LIMIT 1`);
         if (res.rows.length === 0) {
+            // Publish queue update event
+            const redisClient = await import('@/lib/redis').then(m => m.getRedisClient());
+            if (redisClient) {
+                await redisClient.publish('candidate_upload_queue', JSON.stringify({ type: 'queue_updated' }));
+            }
             return NextResponse.json({ message: 'No queued jobs' }, { status: 200 });
         }
         job = res.rows[0];
@@ -98,6 +99,11 @@ export async function POST(request) {
         }
         // 4. Update job status
         await client.query(`UPDATE upload_queue SET status = $1, error = $2, error_details = $3, completed_date = now(), updated_at = now() WHERE id = $4`, [status, error, error_details, job.id]);
+        // Publish queue update event
+        const redisClient = await import('@/lib/redis').then(m => m.getRedisClient());
+        if (redisClient) {
+            await redisClient.publish('candidate_upload_queue', JSON.stringify({ type: 'queue_updated' }));
+        }
         return NextResponse.json({ job: Object.assign(Object.assign({}, job), { status, error, error_details }), n8n_status: n8nRes.status });
     }
     catch (err) {
