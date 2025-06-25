@@ -97,33 +97,4 @@ export async function POST(request: NextRequest) {
   } finally {
     client.release();
   }
-}
-
-// Background processor for the upload queue
-if (require.main === module) {
-  // Only run if this file is executed directly
-  const INTERVAL_MS = 5000; // 5 seconds
-  async function runProcessorLoop() {
-    // eslint-disable-next-line no-constant-condition
-    while (true) {
-      try {
-        const res = await POST(new NextRequest({ headers: {} }));
-        if (res && res.status === 200) {
-          const data = await res.json();
-          if (data && data.message === 'No queued jobs') {
-            // No jobs, can log or just wait
-          } else {
-            console.log('Processed job:', data);
-          }
-        } else if (res) {
-          const data = await res.json();
-          console.error('Error processing job:', data);
-        }
-      } catch (err) {
-        console.error('Background processor error:', err);
-      }
-      await new Promise(resolve => setTimeout(resolve, INTERVAL_MS));
-    }
-  }
-  runProcessorLoop();
 } 

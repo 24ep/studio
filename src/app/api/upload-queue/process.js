@@ -42,8 +42,13 @@ const N8N_WEBHOOK_URL = process.env.N8N_WEBHOOK_URL || 'http://localhost:5678/we
  *       500:
  *         description: Error processing job
  */
-export async function POST() {
+export async function POST(request) {
     var _a, e_1, _b, _c;
+    // API Key check
+    const apiKey = request.headers.get('x-api-key');
+    if (apiKey !== process.env.PROCESSOR_API_KEY) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
     const session = await getServerSession(authOptions);
     if (!session) {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -104,35 +109,4 @@ export async function POST() {
     finally {
         client.release();
     }
-}
-// Background processor for the upload queue
-if (require.main === module) {
-    // Only run if this file is executed directly
-    const INTERVAL_MS = 5000; // 5 seconds
-    async function runProcessorLoop() {
-        // eslint-disable-next-line no-constant-condition
-        while (true) {
-            try {
-                const res = await POST();
-                if (res && res.status === 200) {
-                    const data = await res.json();
-                    if (data && data.message === 'No queued jobs') {
-                        // No jobs, can log or just wait
-                    }
-                    else {
-                        console.log('Processed job:', data);
-                    }
-                }
-                else if (res) {
-                    const data = await res.json();
-                    console.error('Error processing job:', data);
-                }
-            }
-            catch (err) {
-                console.error('Background processor error:', err);
-            }
-            await new Promise(resolve => setTimeout(resolve, INTERVAL_MS));
-        }
-    }
-    runProcessorLoop();
 }
