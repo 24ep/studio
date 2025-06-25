@@ -1,6 +1,8 @@
 // src/components/candidates/CandidatesPageClient.tsx
 "use client";
 
+import * as React from "react";
+import type { ReactNode } from "react";
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { CandidateFilters, type CandidateFilterValues } from '@/components/candidates/CandidateFilters';
 import { CandidateTable } from '@/components/candidates/CandidateTable';
@@ -572,6 +574,25 @@ export function CandidatesPageClient({
   // Pagination controls
   const totalPages = Math.ceil(total / pageSize);
 
+  // Add handler for assigning recruiter inline
+  const handleAssignRecruiter = async (candidateId: string, recruiterId: string | null) => {
+    try {
+      const response = await fetch(`/api/candidates/${candidateId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ recruiterId }),
+      });
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ message: 'Failed to assign recruiter' }));
+        throw new Error(errorData.message || 'Failed to assign recruiter');
+      }
+      await refreshCandidateInList(candidateId);
+      toast.success('Recruiter updated.');
+    } catch (error) {
+      toast.error((error as Error).message);
+    }
+  };
+
   if (authError) {
     return ( <div className="flex flex-col items-center justify-center h-[calc(100vh-10rem)] text-center p-4"> <ShieldAlert className="w-16 h-16 text-destructive mb-4" /> <h2 className="text-2xl font-semibold text-foreground mb-2">Access Denied</h2> <p className="text-muted-foreground mb-4 max-w-md">You need to be signed in to view this page.</p> <Button onClick={() => signIn(undefined, { callbackUrl: pathname })} className="btn-primary-gradient">Sign In</Button> </div> );
   }
@@ -671,6 +692,8 @@ export function CandidatesPageClient({
             candidates={displayedCandidates}
             availablePositions={availablePositions}
             availableStages={availableStages}
+            availableRecruiters={availableRecruiters}
+            onAssignRecruiter={handleAssignRecruiter}
             onUpdateCandidate={handleUpdateCandidateAPI}
             onDeleteCandidate={handleDeleteCandidate}
             onOpenUploadModal={handleOpenUploadModal}

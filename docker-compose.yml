@@ -57,6 +57,7 @@ services:
       GOOGLE_API_KEY: ${GOOGLE_API_KEY}
       NEXT_PUBLIC_GOOGLE_FONTS_API_KEY: ${NEXT_PUBLIC_GOOGLE_FONTS_API_KEY}
       NODE_ENV: ${NODE_ENV}
+      PROCESSOR_API_KEY: ${PROCESSOR_API_KEY}
     depends_on:
       postgres:
         condition: service_started

@@ -1,5 +1,6 @@
 "use client";
 
+import * as React from "react";
 import { useState } from 'react';
 import {
   Table,
@@ -31,11 +32,14 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 interface CandidateTableProps {
   candidates: Candidate[];
   availablePositions: Position[];
   availableStages: RecruitmentStage[];
+  availableRecruiters: { id: string; name: string }[];
+  onAssignRecruiter: (candidateId: string, recruiterId: string | null) => void;
   onUpdateCandidate: (candidateId: string, status: CandidateStatus) => Promise<void>;
   onDeleteCandidate: (candidateId: string) => Promise<void>;
   onOpenUploadModal: (candidate: Candidate) => void;
@@ -74,6 +78,8 @@ export function CandidateTable({
   candidates,
   availablePositions,
   availableStages,
+  availableRecruiters,
+  onAssignRecruiter,
   onUpdateCandidate,
   onDeleteCandidate,
   onOpenUploadModal,
@@ -144,7 +150,7 @@ export function CandidateTable({
                 checked={isAllCandidatesSelected}
                 onCheckedChange={onToggleSelectAllCandidates}
                 aria-label="Select all candidates"
-              /></TableHead><TableHead className="w-[250px]">Candidate</TableHead><TableHead>Applied Job</TableHead><TableHead className="w-[100px] hidden sm:table-cell">Fit Score</TableHead><TableHead>Status</TableHead><TableHead className="hidden md:table-cell">Last Update</TableHead><TableHead className="w-[120px] hidden sm:table-cell">Resume</TableHead><TableHead className="text-right w-[80px]">Actions</TableHead></TableRow></TableHeader>
+              /></TableHead><TableHead className="w-[250px]">Candidate</TableHead><TableHead>Applied Job</TableHead><TableHead>Recruiter</TableHead><TableHead className="w-[100px] hidden sm:table-cell">Fit Score</TableHead><TableHead>Status</TableHead><TableHead className="hidden md:table-cell">Last Update</TableHead><TableHead className="w-[120px] hidden sm:table-cell">Resume</TableHead><TableHead className="text-right w-[80px]">Actions</TableHead></TableRow></TableHeader>
           <TableBody>
             {candidates.map((candidate) => {
               const dateValue = candidate.updatedAt || candidate.createdAt;
@@ -198,6 +204,19 @@ export function CandidateTable({
                     ) : (
                       <span className="text-muted-foreground">N/A</span>
                     )}
+                  </TableCell>
+                  <TableCell>
+                    <Select value={candidate.recruiter?.id || ''} onValueChange={value => onAssignRecruiter(candidate.id, value === '___UNASSIGN___' ? null : value)}>
+                      <SelectTrigger className="w-36">
+                        <SelectValue placeholder="Unassigned" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="___UNASSIGN___">Unassigned</SelectItem>
+                        {availableRecruiters.map(r => (
+                          <SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </TableCell>
                   <TableCell className="hidden sm:table-cell">
                     <div className="flex items-center gap-2">

@@ -18,6 +18,9 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'react-hot-toast';
 import { setThemeAndColors } from '@/lib/themeUtils';
+import dynamic from 'next/dynamic';
+import 'react-quill/dist/quill.snow.css';
+const ReactQuill = dynamic(() => import('react-quill'), { ssr: false });
 
 type ThemePreference = "light" | "dark" | "system";
 const DEFAULT_APP_NAME = "CandiTrack";
@@ -212,6 +215,7 @@ export default function PreferencesSettingsPage() {
   const [isFontListLoading, setIsFontListLoading] = useState(false);
   const fontValidationTimeout = useRef<any>(null);
   const GOOGLE_FONTS_API_KEY = process.env.NEXT_PUBLIC_GOOGLE_FONTS_API_KEY || '';
+  const [loginPageContent, setLoginPageContent] = useState('');
 
   const sectionRefs = {
     branding: useRef<HTMLDivElement>(null),
@@ -253,6 +257,7 @@ export default function PreferencesSettingsPage() {
       setLoginBgColor2(settingsMap.get('loginPageBackgroundColor2') || DEFAULT_LOGIN_BG_COLOR2_HEX);
       setLoginLayoutType(settingsMap.get('loginPageLayoutType') || DEFAULT_LOGIN_LAYOUT_TYPE);
       setAppFontFamily(settingsMap.get('appFontFamily') || 'Poppins');
+      setLoginPageContent(settingsMap.get('loginPageContent') || '');
 
       // Load sidebar colors
       const newSidebarColors = createInitialSidebarColors();
@@ -352,6 +357,7 @@ export default function PreferencesSettingsPage() {
         { key: 'loginPageBackgroundColor2' as SystemSettingKey, value: loginBgColor2 },
         { key: 'loginPageLayoutType' as SystemSettingKey, value: loginLayoutType },
         { key: 'appFontFamily' as SystemSettingKey, value: appFontFamily },
+        { key: 'loginPageContent' as SystemSettingKey, value: loginPageContent },
       ];
 
       // Add sidebar colors
@@ -929,7 +935,21 @@ export default function PreferencesSettingsPage() {
               </Button>
             </CardContent>
           </Card>
-            </div>
+          <Card className="lg:col-span-2">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <LogIn className="h-5 w-5 text-primary" />
+                Login Page Content
+              </CardTitle>
+              <CardDescription>
+                Configure the content displayed on the login page (e.g., instructions, welcome message).
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <ReactQuill value={loginPageContent} onChange={setLoginPageContent} />
+            </CardContent>
+          </Card>
+        </div>
         <div ref={sectionRefs.sidebarAppearance} id="sidebarAppearance">
           {/* Sidebar Colors section content */}
           <Card className="lg:col-span-3">

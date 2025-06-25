@@ -1,8 +1,9 @@
 "use client";
 
+import React from 'react';
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import type { Position, Candidate } from '@/lib/types';
+import type { Position, Candidate, UserProfile } from '@/lib/types';
 import { signIn, useSession } from 'next-auth/react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -27,6 +28,7 @@ export default function PositionDetailPage() {
   const [availablePositions, setAvailablePositions] = useState<Position[]>([]);
   const [availableStages, setAvailableStages] = useState<any[]>([]); // Use RecruitmentStage[] if imported
   const [selectedCandidateIds, setSelectedCandidateIds] = useState<Set<string>>(new Set());
+  const [availableRecruiters, setAvailableRecruiters] = useState<{ id: string; name: string }[]>([]);
 
   const { data: session, status: sessionStatus } = useSession();
 
@@ -97,6 +99,22 @@ export default function PositionDetailPage() {
     }
   }, [fetchError]);
 
+  // Fetch recruiters
+  useEffect(() => {
+    const fetchRecruiters = async () => {
+      try {
+        const response = await fetch('/api/users?role=Recruiter');
+        if (!response.ok) throw new Error('Failed to fetch recruiters');
+        const data: UserProfile[] = await response.json();
+        setAvailableRecruiters(data.map(r => ({ id: r.id, name: r.name })));
+      } catch (error) {
+        console.error('Error fetching recruiters:', error);
+        toast.error('Could not load recruiters for assignment.');
+      }
+    };
+    fetchRecruiters();
+  }, []);
+
   const handleUpdateCandidateStatus = async (candidateId: string, status: Candidate['status']) => {
     toast.success("Candidate status updates should be done from the main Candidates page or Candidate Detail page.");
     // Re-fetch candidates for this position to reflect any external changes
@@ -142,6 +160,25 @@ export default function PositionDetailPage() {
 
   const handleEditPosition = (position: Position) => {
     toast.success("Edit position is not available on this page.");
+  };
+
+  // Handler for assigning recruiter
+  const handleAssignRecruiter = async (candidateId: string, recruiterId: string | null) => {
+    try {
+      const response = await fetch(`/api/candidates/${candidateId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ recruiterId }),
+      });
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ message: 'Failed to assign recruiter' }));
+        throw new Error(errorData.message || 'Failed to assign recruiter');
+      }
+      await refreshCandidateInList(candidateId);
+      toast.success('Recruiter updated.');
+    } catch (error) {
+      toast.error((error as Error).message);
+    }
   };
 
   if (isLoading) {
@@ -245,6 +282,8 @@ export default function PositionDetailPage() {
               candidates={associatedCandidates}
               availablePositions={availablePositions}
               availableStages={availableStages}
+              availableRecruiters={availableRecruiters}
+              onAssignRecruiter={handleAssignRecruiter}
               onUpdateCandidate={handleUpdateCandidateStatus}
               onDeleteCandidate={handleDeleteCandidate}
               onOpenUploadModal={handleOpenUploadModal}

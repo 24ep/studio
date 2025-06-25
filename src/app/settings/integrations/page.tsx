@@ -30,6 +30,7 @@ export default function IntegrationsSettingsPage() {
   const [n8nResumeWebhookUrl, setN8nResumeWebhookUrl] = useState('');
   const [n8nGenericPdfWebhookUrl, setN8nGenericPdfWebhookUrl] = useState('');
   const [geminiApiKey, setGeminiApiKey] = useState('');
+  const [maxConcurrentProcessors, setMaxConcurrentProcessors] = useState(5);
 
 
   const fetchSystemSettings = useCallback(async () => {
@@ -51,6 +52,7 @@ export default function IntegrationsSettingsPage() {
       setN8nResumeWebhookUrl(settings.find(s => s.key === 'n8nResumeWebhookUrl')?.value || '');
       setN8nGenericPdfWebhookUrl(settings.find(s => s.key === 'n8nGenericPdfWebhookUrl')?.value || '');
       setGeminiApiKey(settings.find(s => s.key === 'geminiApiKey')?.value || '');
+      setMaxConcurrentProcessors(parseInt(settings.find(s => s.key === 'maxConcurrentProcessors')?.value || '5', 10));
 
     } catch (error) {
       console.error("Error fetching system settings:", error);
@@ -88,6 +90,7 @@ export default function IntegrationsSettingsPage() {
       { key: 'n8nResumeWebhookUrl', value: n8nResumeWebhookUrl },
       { key: 'n8nGenericPdfWebhookUrl', value: n8nGenericPdfWebhookUrl },
       { key: 'geminiApiKey', value: geminiApiKey },
+      { key: 'maxConcurrentProcessors', value: String(maxConcurrentProcessors) },
     ];
 
     // Note: smtpPassword is not saved to the DB via this UI.
@@ -222,6 +225,33 @@ export default function IntegrationsSettingsPage() {
             <Toggle id="smtp-secure" checked={smtpSecure} onCheckedChange={setSmtpSecure} disabled={isSaving} variant="success"/>
             <Label htmlFor="smtp-secure" className="font-normal">Use TLS/SSL</Label>
           </div>
+        </CardContent>
+      </Card>
+
+      {/* Background Processor Concurrency */}
+      <Card className="shadow-lg ">
+        <CardHeader>
+          <CardTitle className="flex items-center text-2xl gap-2">
+            <RefreshCw className="h-7 w-7 text-primary" />
+            Background Processor Concurrency
+          </CardTitle>
+          <CardDescription className="text-base text-muted-foreground">
+            Set the maximum number of concurrent background processor jobs.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4 pt-6">
+          <Label htmlFor="max-concurrent-processors">Max Concurrent Processors</Label>
+          <Input
+            id="max-concurrent-processors"
+            type="number"
+            min={1}
+            max={100}
+            value={maxConcurrentProcessors}
+            onChange={(e) => setMaxConcurrentProcessors(Number(e.target.value))}
+            className="mt-1 w-32"
+            disabled={isSaving}
+          />
+          <p className="text-xs text-muted-foreground mt-1">Controls how many jobs the background processor can run in parallel.</p>
         </CardContent>
       </Card>
 

@@ -1,4 +1,5 @@
 "use client";
+import React from 'react';
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { signIn, useSession } from 'next-auth/react';
@@ -22,6 +23,7 @@ export default function PositionDetailPage() {
     const [availablePositions, setAvailablePositions] = useState([]);
     const [availableStages, setAvailableStages] = useState([]); // Use RecruitmentStage[] if imported
     const [selectedCandidateIds, setSelectedCandidateIds] = useState(new Set());
+    const [availableRecruiters, setAvailableRecruiters] = useState([]);
     const { data: session, status: sessionStatus } = useSession();
     const fetchPositionAndCandidates = useCallback(async () => {
         if (!positionId || sessionStatus !== 'authenticated')
@@ -88,6 +90,23 @@ export default function PositionDetailPage() {
             toast.error(fetchError);
         }
     }, [fetchError]);
+    // Fetch recruiters
+    useEffect(() => {
+        const fetchRecruiters = async () => {
+            try {
+                const response = await fetch('/api/users?role=Recruiter');
+                if (!response.ok)
+                    throw new Error('Failed to fetch recruiters');
+                const data = await response.json();
+                setAvailableRecruiters(data.map(r => ({ id: r.id, name: r.name })));
+            }
+            catch (error) {
+                console.error('Error fetching recruiters:', error);
+                toast.error('Could not load recruiters for assignment.');
+            }
+        };
+        fetchRecruiters();
+    }, []);
     const handleUpdateCandidateStatus = async (candidateId, status) => {
         toast.success("Candidate status updates should be done from the main Candidates page or Candidate Detail page.");
         // Re-fetch candidates for this position to reflect any external changes
@@ -135,6 +154,25 @@ export default function PositionDetailPage() {
     const isAllCandidatesSelected = selectedCandidateIds.size === associatedCandidates.length && associatedCandidates.length > 0;
     const handleEditPosition = (position) => {
         toast.success("Edit position is not available on this page.");
+    };
+    // Handler for assigning recruiter
+    const handleAssignRecruiter = async (candidateId, recruiterId) => {
+        try {
+            const response = await fetch(`/api/candidates/${candidateId}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ recruiterId }),
+            });
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({ message: 'Failed to assign recruiter' }));
+                throw new Error(errorData.message || 'Failed to assign recruiter');
+            }
+            await refreshCandidateInList(candidateId);
+            toast.success('Recruiter updated.');
+        }
+        catch (error) {
+            toast.error(error.message);
+        }
     };
     if (isLoading) {
         return (<div className="flex h-[calc(100vh-8rem)] items-center justify-center">
@@ -217,7 +255,7 @@ export default function PositionDetailPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {associatedCandidates.length > 0 ? (<CandidateTable candidates={associatedCandidates} availablePositions={availablePositions} availableStages={availableStages} onUpdateCandidate={handleUpdateCandidateStatus} onDeleteCandidate={handleDeleteCandidate} onOpenUploadModal={handleOpenUploadModal} onEditPosition={handleEditPosition} isLoading={isLoading && associatedCandidates.length === 0} onRefreshCandidateData={refreshCandidateInList} selectedCandidateIds={selectedCandidateIds} onToggleSelectCandidate={onToggleSelectCandidate} onToggleSelectAllCandidates={onToggleSelectAllCandidates} isAllCandidatesSelected={isAllCandidatesSelected}/>) : (<div className="text-center py-8 text-muted-foreground">
+          {associatedCandidates.length > 0 ? (<CandidateTable candidates={associatedCandidates} availablePositions={availablePositions} availableStages={availableStages} availableRecruiters={availableRecruiters} onAssignRecruiter={handleAssignRecruiter} onUpdateCandidate={handleUpdateCandidateStatus} onDeleteCandidate={handleDeleteCandidate} onOpenUploadModal={handleOpenUploadModal} onEditPosition={handleEditPosition} isLoading={isLoading && associatedCandidates.length === 0} onRefreshCandidateData={refreshCandidateInList} selectedCandidateIds={selectedCandidateIds} onToggleSelectCandidate={onToggleSelectCandidate} onToggleSelectAllCandidates={onToggleSelectAllCandidates} isAllCandidatesSelected={isAllCandidatesSelected}/>) : (<div className="text-center py-8 text-muted-foreground">
               <Users className="mx-auto h-12 w-12 mb-2"/>
               No candidates currently associated with this position.
             </div>)}

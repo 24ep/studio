@@ -1,6 +1,7 @@
 // src/components/tasks/MyTasksPageClient.tsx
 "use client";
 
+import React from 'react';
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useSession, signIn } from 'next-auth/react';
 import { useRouter, usePathname } from 'next/navigation';
@@ -357,6 +358,8 @@ export function MyTasksPageClient({
                     candidates={displayedCandidates}
                     availablePositions={availablePositions}
                     availableStages={availableStages}
+                    availableRecruiters={allRecruitersForFilter}
+                    onAssignRecruiter={() => { /* Not allowed in My Tasks */ }}
                     onUpdateCandidate={async (id, newStatus) => { /* Limited action */ }}
                     onDeleteCandidate={async (id) => { /* Limited action */ }}
                     onOpenUploadModal={() => { /* Limited action */ }}

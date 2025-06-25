@@ -5,13 +5,16 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Save, Palette, Trash2, Loader2, XCircle, ServerCrash, Wallpaper, Droplets, Type, Sidebar as SidebarIcon, RotateCcw, Monitor, Sun, Moon } from 'lucide-react';
+import { Save, Palette, Trash2, Loader2, XCircle, ServerCrash, Wallpaper, Droplets, Type, Sidebar as SidebarIcon, RotateCcw, Monitor, Sun, Moon, LogIn } from 'lucide-react';
 import Image from 'next/image';
 import { useSession } from 'next-auth/react';
 import { useRouter, usePathname } from 'next/navigation';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'react-hot-toast';
 import { setThemeAndColors } from '@/lib/themeUtils';
+import dynamic from 'next/dynamic';
+import 'react-quill/dist/quill.snow.css';
+const ReactQuill = dynamic(() => import('react-quill'), { ssr: false });
 const DEFAULT_APP_NAME = "CandiTrack";
 const DEFAULT_PRIMARY_GRADIENT_START = "179 67% 66%";
 const DEFAULT_PRIMARY_GRADIENT_END = "238 74% 61%";
@@ -177,6 +180,7 @@ export default function PreferencesSettingsPage() {
     const [isFontListLoading, setIsFontListLoading] = useState(false);
     const fontValidationTimeout = useRef(null);
     const GOOGLE_FONTS_API_KEY = process.env.NEXT_PUBLIC_GOOGLE_FONTS_API_KEY || '';
+    const [loginPageContent, setLoginPageContent] = useState('');
     const sectionRefs = {
         branding: useRef(null),
         theme: useRef(null),
@@ -214,6 +218,7 @@ export default function PreferencesSettingsPage() {
             setLoginBgColor2(settingsMap.get('loginPageBackgroundColor2') || DEFAULT_LOGIN_BG_COLOR2_HEX);
             setLoginLayoutType(settingsMap.get('loginPageLayoutType') || DEFAULT_LOGIN_LAYOUT_TYPE);
             setAppFontFamily(settingsMap.get('appFontFamily') || 'Poppins');
+            setLoginPageContent(settingsMap.get('loginPageContent') || '');
             // Load sidebar colors
             const newSidebarColors = createInitialSidebarColors();
             Object.keys(newSidebarColors).forEach(key => {
@@ -312,6 +317,7 @@ export default function PreferencesSettingsPage() {
                 { key: 'loginPageBackgroundColor2', value: loginBgColor2 },
                 { key: 'loginPageLayoutType', value: loginLayoutType },
                 { key: 'appFontFamily', value: appFontFamily },
+                { key: 'loginPageContent', value: loginPageContent },
             ];
             // Add sidebar colors
             Object.entries(sidebarColors).forEach(([key, value]) => {
@@ -758,7 +764,21 @@ export default function PreferencesSettingsPage() {
               </Button>
             </CardContent>
           </Card>
-            </div>
+          <Card className="lg:col-span-2">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <LogIn className="h-5 w-5 text-primary"/>
+                Login Page Content
+              </CardTitle>
+              <CardDescription>
+                Configure the content displayed on the login page (e.g., instructions, welcome message).
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <ReactQuill value={loginPageContent} onChange={setLoginPageContent}/>
+            </CardContent>
+          </Card>
+        </div>
         <div ref={sectionRefs.sidebarAppearance} id="sidebarAppearance">
           {/* Sidebar Colors section content */}
           <Card className="lg:col-span-3">

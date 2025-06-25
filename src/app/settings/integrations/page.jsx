@@ -26,8 +26,9 @@ export default function IntegrationsSettingsPage() {
     const [n8nResumeWebhookUrl, setN8nResumeWebhookUrl] = useState('');
     const [n8nGenericPdfWebhookUrl, setN8nGenericPdfWebhookUrl] = useState('');
     const [geminiApiKey, setGeminiApiKey] = useState('');
+    const [maxConcurrentProcessors, setMaxConcurrentProcessors] = useState(5);
     const fetchSystemSettings = useCallback(async () => {
-        var _a, _b, _c, _d, _e, _f, _g, _h;
+        var _a, _b, _c, _d, _e, _f, _g, _h, _j;
         setIsLoading(true);
         setFetchError(null);
         try {
@@ -45,6 +46,7 @@ export default function IntegrationsSettingsPage() {
             setN8nResumeWebhookUrl(((_f = settings.find(s => s.key === 'n8nResumeWebhookUrl')) === null || _f === void 0 ? void 0 : _f.value) || '');
             setN8nGenericPdfWebhookUrl(((_g = settings.find(s => s.key === 'n8nGenericPdfWebhookUrl')) === null || _g === void 0 ? void 0 : _g.value) || '');
             setGeminiApiKey(((_h = settings.find(s => s.key === 'geminiApiKey')) === null || _h === void 0 ? void 0 : _h.value) || '');
+            setMaxConcurrentProcessors(parseInt(((_j = settings.find(s => s.key === 'maxConcurrentProcessors')) === null || _j === void 0 ? void 0 : _j.value) || '5', 10));
         }
         catch (error) {
             console.error("Error fetching system settings:", error);
@@ -82,6 +84,7 @@ export default function IntegrationsSettingsPage() {
             { key: 'n8nResumeWebhookUrl', value: n8nResumeWebhookUrl },
             { key: 'n8nGenericPdfWebhookUrl', value: n8nGenericPdfWebhookUrl },
             { key: 'geminiApiKey', value: geminiApiKey },
+            { key: 'maxConcurrentProcessors', value: String(maxConcurrentProcessors) },
         ];
         // Note: smtpPassword is not saved to the DB via this UI.
         // It must be set as an environment variable on the server.
@@ -205,6 +208,24 @@ export default function IntegrationsSettingsPage() {
             <Toggle id="smtp-secure" checked={smtpSecure} onCheckedChange={setSmtpSecure} disabled={isSaving} variant="success"/>
             <Label htmlFor="smtp-secure" className="font-normal">Use TLS/SSL</Label>
           </div>
+        </CardContent>
+      </Card>
+
+      {/* Background Processor Concurrency */}
+      <Card className="shadow-lg ">
+        <CardHeader>
+          <CardTitle className="flex items-center text-2xl gap-2">
+            <RefreshCw className="h-7 w-7 text-primary"/>
+            Background Processor Concurrency
+          </CardTitle>
+          <CardDescription className="text-base text-muted-foreground">
+            Set the maximum number of concurrent background processor jobs.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4 pt-6">
+          <Label htmlFor="max-concurrent-processors">Max Concurrent Processors</Label>
+          <Input id="max-concurrent-processors" type="number" min={1} max={100} value={maxConcurrentProcessors} onChange={(e) => setMaxConcurrentProcessors(Number(e.target.value))} className="mt-1 w-32" disabled={isSaving}/>
+          <p className="text-xs text-muted-foreground mt-1">Controls how many jobs the background processor can run in parallel.</p>
         </CardContent>
       </Card>
 
