@@ -17,6 +17,7 @@ import { ChangePasswordModal } from '@/components/auth/ChangePasswordModal';
 import { EditUserModal, type EditUserFormValues } from '@/components/users/EditUserModal';
 import { toast } from "react-hot-toast";
 import type { UserProfile } from "@/lib/types";
+import * as React from 'react';
 
 
 const APP_CONFIG_APP_NAME_KEY = 'appConfigAppName';
@@ -145,16 +146,16 @@ export function Header({ pageTitle: initialPageTitle }: { pageTitle: string }) {
                   </div>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
-                 <DropdownMenuItem onClick={() => setIsEditProfileModalOpen(true)}>
+                 <DropdownMenuItem onSelect={() => setIsEditProfileModalOpen(true)}>
                   <Edit3 className="mr-2 h-4 w-4" />
                   Edit My Profile
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setIsChangePasswordModalOpen(true)}>
+                <DropdownMenuItem onSelect={() => setIsChangePasswordModalOpen(true)}>
                   <KeyRound className="mr-2 h-4 w-4" />
                   Change Password
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => signOut({ callbackUrl: '/auth/signin' })}>
+                <DropdownMenuItem onSelect={() => signOut({ callbackUrl: '/auth/signin' })}>
                   <LogOut className="mr-2 h-4 w-4" />
                   Log out
                 </DropdownMenuItem>

@@ -36,6 +36,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import * as React from 'react';
 
 interface PositionsPageClientProps {
   initialPositions: Position[];
@@ -346,10 +347,10 @@ export default function PositionsPageClient({
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="start">
-                  <DropdownMenuItem onClick={() => handleBulkPositionAction('delete')}>
+                  <DropdownMenuItem onSelect={() => handleBulkPositionAction('delete')}>
                     <BulkTrashIcon className="mr-2 h-4 w-4" /> Delete Selected
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => handleBulkPositionAction('change_status')}>
+                  <DropdownMenuItem onSelect={() => handleBulkPositionAction('change_status')}>
                     <BulkEditIcon className="mr-2 h-4 w-4" /> Change Status (Open/Closed)
                   </DropdownMenuItem>
                 </DropdownMenuContent>
@@ -360,9 +361,9 @@ export default function PositionsPageClient({
               <Button variant="outline" className="w-full sm:w-auto"> Import/Export <ChevronDown className="ml-2 h-4 w-4" /> </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start">
-              {canImportPositions && (<DropdownMenuItem onClick={() => setIsImportModalOpen(true)}> <FileUp className="mr-2 h-4 w-4" /> Import Positions (CSV) </DropdownMenuItem>)}
-              {canImportPositions && (<DropdownMenuItem onClick={handleDownloadCsvTemplate}> <FileDown className="mr-2 h-4 w-4" /> Download CSV Template </DropdownMenuItem>)}
-              {canExportPositions && (<DropdownMenuItem onClick={handleExportToCsv} disabled={isLoading}> <FileSpreadsheet className="mr-2 h-4 w-4" /> Export Positions (CSV) </DropdownMenuItem>)}
+              {canImportPositions && (<DropdownMenuItem onSelect={() => setIsImportModalOpen(true)}> <FileUp className="mr-2 h-4 w-4" /> Import Positions (CSV) </DropdownMenuItem>)}
+              {canImportPositions && (<DropdownMenuItem onSelect={handleDownloadCsvTemplate}> <FileDown className="mr-2 h-4 w-4" /> Download CSV Template </DropdownMenuItem>)}
+              {canExportPositions && (<DropdownMenuItem onSelect={handleExportToCsv} disabled={isLoading}> <FileSpreadsheet className="mr-2 h-4 w-4" /> Export Positions (CSV) </DropdownMenuItem>)}
             </DropdownMenuContent>
           </DropdownMenu>
          </div>

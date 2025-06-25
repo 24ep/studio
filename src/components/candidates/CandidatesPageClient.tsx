@@ -648,13 +648,13 @@ export function CandidatesPageClient({
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
-                  <DropdownMenuItem onClick={() => handleBulkAction('delete')}>
+                  <DropdownMenuItem onSelect={() => handleBulkAction('delete')}>
                     <BulkTrashIcon className="mr-2 h-4 w-4" /> Delete Selected
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => handleBulkAction('change_status')}>
+                  <DropdownMenuItem onSelect={() => handleBulkAction('change_status')}>
                     <BulkEditIcon className="mr-2 h-4 w-4" /> Change Status
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => handleBulkAction('assign_recruiter')}>
+                  <DropdownMenuItem onSelect={() => handleBulkAction('assign_recruiter')}>
                      <Users className="mr-2 h-4 w-4" /> Assign Recruiter
                   </DropdownMenuItem>
                 </DropdownMenuContent>
@@ -666,10 +666,10 @@ export function CandidatesPageClient({
             <DropdownMenu>
                <DropdownMenuTrigger asChild><Button variant="outline" className="w-full sm:w-auto"> More Actions <ChevronDown className="ml-2 h-4 w-4" /> </Button></DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                {canManageCandidates && (<DropdownMenuItem onClick={() => setIsAddModalOpen(true)}> <PlusCircle className="mr-2 h-4 w-4" /> Add Manually </DropdownMenuItem>)}
-                {canImportCandidates && (<DropdownMenuItem onClick={() => setIsImportModalOpen(true)}> <FileUp className="mr-2 h-4 w-4" /> Import (CSV) </DropdownMenuItem>)}
-                {canImportCandidates && (<DropdownMenuItem onClick={handleDownloadCsvTemplateGuide}> <FileDown className="mr-2 h-4 w-4" /> Download CSV Template </DropdownMenuItem>)}
-                {canExportCandidates && (<DropdownMenuItem onClick={handleExportToCsv} disabled={isLoading}> <FileSpreadsheet className="mr-2 h-4 w-4" /> Export (CSV) </DropdownMenuItem>)}
+                {canManageCandidates && (<DropdownMenuItem onSelect={() => setIsAddModalOpen(true)}> <PlusCircle className="mr-2 h-4 w-4" /> Add Manually </DropdownMenuItem>)}
+                {canImportCandidates && (<DropdownMenuItem onSelect={() => setIsImportModalOpen(true)}> <FileUp className="mr-2 h-4 w-4" /> Import (CSV) </DropdownMenuItem>)}
+                {canImportCandidates && (<DropdownMenuItem onSelect={handleDownloadCsvTemplateGuide}> <FileDown className="mr-2 h-4 w-4" /> Download CSV Template </DropdownMenuItem>)}
+                {canExportCandidates && (<DropdownMenuItem onSelect={handleExportToCsv} disabled={isLoading}> <FileSpreadsheet className="mr-2 h-4 w-4" /> Export (CSV) </DropdownMenuItem>)}
               </DropdownMenuContent>
             </DropdownMenu>
           </div>

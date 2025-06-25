@@ -253,19 +253,19 @@ export function CandidateTable({
                             <Eye className="mr-2 h-4 w-4" /> View Details
                           </Link>
                         </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleManageTransitionsClick(candidate)}>
+                        <DropdownMenuItem onSelect={() => handleManageTransitionsClick(candidate)}>
                           <FileEdit className="mr-2 h-4 w-4" /> Manage Transitions
                         </DropdownMenuItem>
-                         <DropdownMenuItem onClick={() => onOpenUploadModal(candidate)}>
+                         <DropdownMenuItem onSelect={() => onOpenUploadModal(candidate)}>
                           <UploadCloud className="mr-2 h-4 w-4" /> Upload Resume
                         </DropdownMenuItem>
                         {candidate.positionId && (
-                          <DropdownMenuItem onClick={() => handleEditPositionClick(candidate.positionId)}>
+                          <DropdownMenuItem onSelect={() => handleEditPositionClick(candidate.positionId)}>
                             <Briefcase className="mr-2 h-4 w-4" /> Edit Applied Job
                           </DropdownMenuItem>
                         )}
                         <DropdownMenuSeparator />
-                        <DropdownMenuItem onClick={() => confirmDelete(candidate)} className="text-destructive hover:!bg-destructive/10 focus:!bg-destructive/10 focus:!text-destructive">
+                        <DropdownMenuItem onSelect={() => confirmDelete(candidate)} className="text-destructive hover:!bg-destructive/10 focus:!bg-destructive/10 focus:!text-destructive">
                           <Trash2 className="mr-2 h-4 w-4" /> Delete
                         </DropdownMenuItem>
                       </DropdownMenuContent>
