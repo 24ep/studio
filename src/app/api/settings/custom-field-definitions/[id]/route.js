@@ -236,11 +236,11 @@ export async function DELETE(request) {
         // Check if field is being used in any records
         const usageQuery = `
       SELECT COUNT(*) as count 
-      FROM "candidates" 
+      FROM "Candidate" 
       WHERE "customAttributes" ? $1
       UNION ALL
       SELECT COUNT(*) as count 
-      FROM "positions" 
+      FROM "Position" 
       WHERE "customAttributes" ? $1
     `;
         const usageResult = await getPool().query(usageQuery, [fieldData.field_key]);

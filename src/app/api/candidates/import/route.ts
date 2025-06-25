@@ -195,7 +195,7 @@ export async function GET(request: NextRequest) {
   const client = await getPool().connect();
   try {
     const candidatesQuery = `
-      SELECT * FROM "candidates"
+      SELECT * FROM "Candidate"
       ORDER BY "applicationDate" DESC;
     `;
     const candidatesResult = await client.query(candidatesQuery);

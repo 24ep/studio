@@ -49,7 +49,7 @@ export async function POST(request) {
             candidate.parsedData = Object.assign(Object.assign({}, candidate.parsedData), { job_matches: job_matches });
         }
         const insertCandidateQuery = `
-      INSERT INTO "candidates" (id, name, email, phone, status, "avatarUrl", "positionId", "recruiterId", "parsedData", "fitScore", "dataAiHint", "createdAt", "updatedAt")
+      INSERT INTO "Candidate" (id, name, email, phone, status, "avatarUrl", "positionId", "recruiterId", "parsedData", "fitScore", "dataAiHint", "createdAt", "updatedAt")
       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, NOW(), NOW())
       RETURNING *;
     `;

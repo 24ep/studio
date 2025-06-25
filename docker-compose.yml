@@ -115,7 +115,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    command: sh -c "until nc -z postgres 5432; do echo Waiting for Postgres...; sleep 2; done; until nc -z minio 9000; do echo Waiting for MinIO...; sleep 2; done; until nc -z redis 6379; do echo Waiting for Redis...; sleep 2; done; node process-upload-queue.js"
+    command: sh -c "until nc -z postgres 5432; do echo Waiting for Postgres...; sleep 2; done; until nc -z minio 9000; do echo Waiting for MinIO...; sleep 2; done; until nc -z redis 6379; do echo Waiting for Redis...; sleep 2; done; npx tsx process-upload-queue.ts"
     environment:
       DATABASE_URL: postgresql://devuser:devpassword@postgres:5432/canditrack_db
       MINIO_ENDPOINT: minio

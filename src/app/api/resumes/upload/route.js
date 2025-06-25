@@ -52,7 +52,7 @@ export async function POST(request) {
         });
         // Update candidate in DB
         const pool = getPool();
-        const updateQuery = `UPDATE "candidates" SET "resumePath" = $1, "updatedAt" = NOW() WHERE id = $2 RETURNING *;`;
+        const updateQuery = `UPDATE "Candidate" SET "resumePath" = $1, "updatedAt" = NOW() WHERE id = $2 RETURNING *;`;
         const result = await pool.query(updateQuery, [objectName, candidateId]);
         if (result.rows.length === 0) {
             return NextResponse.json({ message: 'Candidate not found' }, { status: 404 });

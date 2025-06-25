@@ -1,23 +1,40 @@
-const fetch = require('node-fetch');
-
+import fetch from 'node-fetch';
 const INTERVAL_MS = 5000; // 5 seconds
-const PROCESS_URL = 'http://localhost:3000/api/upload-queue/process'; // Update port if needed
-
+const PROCESS_URL = 'http://app:9846/api/upload-queue/process'; // Use Docker service name
 async function runProcessorLoop() {
-  while (true) {
-    try {
-      const res = await fetch(PROCESS_URL, { method: 'POST' });
-      const data = await res.json();
-      if (data && data.message === 'No queued jobs') {
-        // No jobs, just wait
-      } else {
-        console.log('Processed job:', data);
-      }
-    } catch (err) {
-      console.error('Background processor error:', err);
+    while (true) {
+        try {
+            const res = await fetch(PROCESS_URL, { method: 'POST' });
+            if (!res.ok) {
+                console.error(`HTTP error! status: ${res.status}`);
+                continue;
+            }
+            const data = await res.json();
+            if (data && data.message === 'No queued jobs') {
+                // No jobs, just wait
+                console.log('No queued jobs found, waiting...');
+            }
+            else {
+                console.log('Processed job:', data);
+            }
+        }
+        catch (err) {
+            console.error('Background processor error:', err);
+        }
+        await new Promise(resolve => setTimeout(resolve, INTERVAL_MS));
     }
-    await new Promise(resolve => setTimeout(resolve, INTERVAL_MS));
-  }
 }
-
-runProcessorLoop(); 
+// Handle graceful shutdown
+process.on('SIGINT', () => {
+    console.log('Shutting down background processor...');
+    process.exit(0);
+});
+process.on('SIGTERM', () => {
+    console.log('Shutting down background processor...');
+    process.exit(0);
+});
+console.log('Starting background processor...');
+runProcessorLoop().catch(err => {
+    console.error('Fatal error in background processor:', err);
+    process.exit(1);
+});

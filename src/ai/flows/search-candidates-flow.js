@@ -173,8 +173,8 @@ export async function searchCandidatesAIChat(input) {
             p.title as "positionTitle",
             rec.name as "recruiterName",
             COALESCE(th_data.history, '[]'::json) as "transitionHistory"
-        FROM "candidates" c 
-        LEFT JOIN "positions" p ON c."positionId" = p.id
+        FROM "Candidate" c 
+        LEFT JOIN "Position" p ON c."positionId" = p.id
         LEFT JOIN "User" rec ON c."recruiterId" = rec.id
         LEFT JOIN LATERAL (
           SELECT json_agg(

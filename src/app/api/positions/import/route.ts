@@ -170,7 +170,7 @@ export async function GET(request: NextRequest) {
   const client = await getPool().connect();
   try {
     const positionsQuery = `
-      SELECT * FROM "positions"
+      SELECT * FROM "Position"
       ORDER BY "createdAt" DESC;
     `;
     const positionsResult = await client.query(positionsQuery);
