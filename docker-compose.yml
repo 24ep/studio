@@ -15,7 +15,7 @@ services:
         GOOGLE_API_KEY: "${GOOGLE_API_KEY}"
         NEXT_PUBLIC_GOOGLE_FONTS_API_KEY: "${NEXT_PUBLIC_GOOGLE_FONTS_API_KEY}"
     ports:
-      - "${APP_PORT}:9846"
+      - "${APP_PORT:-9846}:9846"
     # For production deployments, you typically want the application code to be self-contained
     # within the Docker image. The volume mount `.:/app` is primarily for local development to
     # reflect code changes without rebuilding the image. It's commented out for production-like behavior.
@@ -73,7 +73,7 @@ services:
   postgres:
     image: postgres:14-alpine
     ports:
-      - "${POSTGRES_PORT}:5432"
+      - "${POSTGRES_PORT:-5432}:5432"
     environment:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
@@ -91,8 +91,8 @@ services:
   minio:
     image: minio/minio:latest
     ports:
-      - "${MINIO_API_PORT}:9000" # MinIO API port
-      - "${MINIO_CONSOLE_PORT}:9001" # MinIO Console port
+      - "${MINIO_API_PORT:-9847}:9000" # MinIO API port
+      - "${MINIO_CONSOLE_PORT:-9848}:9001" # MinIO Console port
     environment:
       MINIO_ROOT_USER: ${MINIO_ROOT_USER}
       MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
@@ -106,7 +106,7 @@ services:
   redis:
     image: redis:alpine
     ports:
-      - "${REDIS_EXTERNAL_PORT}:6379"
+      - "${REDIS_EXTERNAL_PORT:-9849}:6379"
     volumes:
       - redis_data:/data
     restart: unless-stopped
@@ -159,11 +159,11 @@ services:
     command: sh -c "until nc -z redis ${REDIS_PORT}; do echo Waiting for Redis...; sleep 2; done; node ws-queue-bridge.js"
     environment:
       REDIS_URL: ${REDIS_URL}
-      WS_QUEUE_BRIDGE_PORT: ${WS_QUEUE_BRIDGE_PORT}
+      WS_QUEUE_BRIDGE_PORT: ${WS_QUEUE_BRIDGE_PORT:-3002}
       WS_ALLOWED_ORIGINS: ${WS_ALLOWED_ORIGINS}
       NODE_ENV: ${NODE_ENV}
     ports:
-      - "${WS_QUEUE_BRIDGE_PORT}:${WS_QUEUE_BRIDGE_PORT}"
+      - "${WS_QUEUE_BRIDGE_PORT:-3002}:3002"
     depends_on:
       redis:
         condition: service_started
