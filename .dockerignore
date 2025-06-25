@@ -35,3 +35,12 @@ Thumbs.db
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+
+# Ignore build output
+dist/
+# Ignore compiled JS/JSX in src
+src/**/*.js
+src/**/*.jsx
+# Ignore legacy configs
+tailwind.config.js
+prisma/seed.js
