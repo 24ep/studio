@@ -1,7 +1,8 @@
 // src/app/settings/layout.tsx
 "use client";
 
-import React, { type ReactNode, useState, useEffect } from 'react';
+import * as React from "react";
+import type { ReactNode } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation'; // Added useRouter import
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -26,6 +27,7 @@ import { useSession, signIn } from 'next-auth/react';
 import { Button } from '@/components/ui/button';
 
 export const settingsNavItems: SettingsNavigationItem[] = [
+  { href: "/settings/system-settings", label: "System Settings", icon: Settings, description: "System-wide configuration.", permissionId: 'SYSTEM_SETTINGS_MANAGE' as PlatformModuleId, adminOnlyOrPermission: true },
   { href: "/settings/preferences", label: "Preferences", icon: Palette, description: "App name, logo, and theme.", permissionId: 'SYSTEM_SETTINGS_MANAGE' as PlatformModuleId, adminOnlyOrPermission: true },
   { href: "/settings/integrations", label: "Integrations", icon: Zap, description: "SMTP and webhook configurations.", permissionId: 'SYSTEM_SETTINGS_MANAGE' as PlatformModuleId, adminOnlyOrPermission: true },
   { href: "/settings/stages", label: "Recruitment Stages", icon: KanbanSquare, description: "Define your hiring pipeline.", permissionId: 'RECRUITMENT_STAGES_MANAGE' as PlatformModuleId, adminOnlyOrPermission: true },
