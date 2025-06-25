@@ -38,8 +38,10 @@ const N8N_WEBHOOK_URL = process.env.N8N_WEBHOOK_URL || 'http://localhost:5678/we
  *         description: Error processing job
  */
 export async function POST(request: NextRequest) {
-  // API Key check
+  // DEBUG: Log the API key from env and the received header
+  console.log('API handler env PROCESSOR_API_KEY:', process.env.PROCESSOR_API_KEY);
   const apiKey = request.headers.get('x-api-key');
+  console.log('API handler received x-api-key:', apiKey);
   if (apiKey !== process.env.PROCESSOR_API_KEY) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
