@@ -4,6 +4,7 @@ import { getPool } from '@/lib/db';
 import { getServerSession } from 'next-auth/next';
 import { z } from 'zod';
 import { v4 as uuidv4 } from 'uuid';
+import { logAudit } from '@/lib/auditLog';
 import { authOptions } from '@/lib/auth';
 export const dynamic = "force-dynamic";
 /**
@@ -72,59 +73,73 @@ const importPositionSchema = z.object({
     description: z.string().optional().nullable(),
     isOpen: z.boolean().optional(),
     position_level: z.string().optional().nullable(),
+    custom_attributes: z.any().optional().nullable(),
 });
+// Schema for array of positions
+const importPositionsArraySchema = z.array(importPositionSchema);
 export async function POST(request) {
-    var _a;
+    var _a, _b, _c;
     const session = await getServerSession(authOptions);
-    if (!((_a = session === null || session === void 0 ? void 0 : session.user) === null || _a === void 0 ? void 0 : _a.id)) {
-        return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+    const actingUserId = (_a = session === null || session === void 0 ? void 0 : session.user) === null || _a === void 0 ? void 0 : _a.id;
+    const actingUserName = ((_b = session === null || session === void 0 ? void 0 : session.user) === null || _b === void 0 ? void 0 : _b.name) || ((_c = session === null || session === void 0 ? void 0 : session.user) === null || _c === void 0 ? void 0 : _c.email) || 'System';
+    if (!actingUserId) {
+        return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
     }
     let body;
     try {
         body = await request.json();
     }
-    catch (_b) {
-        return NextResponse.json({ message: "Invalid JSON body" }, { status: 400 });
+    catch (_d) {
+        return NextResponse.json({ message: 'Invalid JSON body' }, { status: 400 });
     }
-    if (!Array.isArray(body)) {
-        return NextResponse.json({ message: "Expected an array of positions" }, { status: 400 });
+    const validationResult = importPositionsArraySchema.safeParse(body);
+    if (!validationResult.success) {
+        return NextResponse.json({ message: 'Invalid input', errors: validationResult.error.flatten().fieldErrors }, { status: 400 });
     }
+    const positions = validationResult.data;
     const client = await getPool().connect();
-    const results = [];
     try {
         await client.query('BEGIN');
-        for (const item of body) {
-            const validationResult = importPositionSchema.safeParse(item);
-            if (!validationResult.success) {
-                results.push({ error: validationResult.error.flatten().fieldErrors, item });
-                continue;
-            }
-            const { title, department, description, isOpen, position_level } = validationResult.data;
-            const newPositionId = uuidv4();
+        const results = {
+            success: 0,
+            failed: 0,
+            errors: []
+        };
+        for (const position of positions) {
             try {
+                // Check if position already exists (by title and department)
+                const existingResult = await client.query('SELECT id FROM "Position" WHERE title = $1 AND department = $2', [position.title, position.department]);
+                if (existingResult.rows.length > 0) {
+                    results.failed++;
+                    results.errors.push(`Position with title "${position.title}" in department "${position.department}" already exists`);
+                    continue;
+                }
+                // Insert position
                 const insertQuery = `
-          INSERT INTO "positions" (id, title, department, description, "isOpen", position_level, "createdAt", "updatedAt")
-          VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW())
+          INSERT INTO "Position" (id, title, department, description, "isOpen", position_level, "customAttributes", "createdAt", "updatedAt")
+          VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), NOW())
           RETURNING *;
         `;
-                const result = await client.query(insertQuery, [
-                    newPositionId, title, department, description,
-                    isOpen !== null && isOpen !== void 0 ? isOpen : true,
-                    position_level
+                const positionId = uuidv4();
+                await client.query(insertQuery, [
+                    positionId, position.title, position.department, position.description,
+                    position.isOpen, position.position_level, position.custom_attributes || {}
                 ]);
-                results.push({ success: true, position: result.rows[0] });
+                results.success++;
             }
             catch (error) {
-                results.push({ error: error.message, item });
+                results.failed++;
+                results.errors.push(`Failed to import ${position.title}: ${error.message}`);
             }
         }
         await client.query('COMMIT');
-        return NextResponse.json({ message: "Import completed", results }, { status: 201 });
+        await logAudit('AUDIT', `Bulk import completed by ${actingUserName}. Success: ${results.success}, Failed: ${results.failed}`, 'API:Positions:Import', actingUserId, { results });
+        return NextResponse.json(Object.assign({ message: 'Import completed' }, results));
     }
     catch (error) {
-        console.error('Error in /api/positions/import:', error);
         await client.query('ROLLBACK');
-        return NextResponse.json({ message: 'Error importing positions', error: error.message }, { status: 500 });
+        await logAudit('ERROR', `Bulk import failed. Error: ${error.message}`, 'API:Positions:Import', actingUserId, { input: body });
+        return NextResponse.json({ message: 'Error during import', error: error.message }, { status: 500 });
     }
     finally {
         client.release();

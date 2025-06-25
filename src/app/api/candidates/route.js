@@ -98,7 +98,7 @@ export async function POST(request) {
     try {
         await client.query('BEGIN');
         const insertCandidateQuery = `
-      INSERT INTO "candidates" (id, name, email, phone, "positionId", "recruiterId", "fitScore", status, "parsedData", "customAttributes", "resumePath", "applicationDate", "updatedAt")
+      INSERT INTO "Candidate" (id, name, email, phone, "positionId", "recruiterId", "fitScore", status, "parsedData", "customAttributes", "resumePath", "applicationDate", "updatedAt")
       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, NOW(), NOW())
       RETURNING *;
     `;
@@ -180,15 +180,15 @@ export async function GET(request) {
     try {
         const candidatesQuery = `
       SELECT c.*, p.title as "positionTitle", r.name as "recruiterName"
-      FROM "candidates" c
-      LEFT JOIN "positions" p ON c."positionId" = p.id
+      FROM "Candidate" c
+      LEFT JOIN "Position" p ON c."positionId" = p.id
       LEFT JOIN "User" r ON c."recruiterId" = r.id
       ${whereString}
       ORDER BY c."applicationDate" DESC
       LIMIT $${paramIndex} OFFSET $${paramIndex + 1};
     `;
         const candidatesResult = await client.query(candidatesQuery, [...queryParams, limit, offset]);
-        const totalQuery = `SELECT COUNT(*) FROM "candidates" c ${whereString};`;
+        const totalQuery = `SELECT COUNT(*) FROM "Candidate" c ${whereString};`;
         const totalResult = await client.query(totalQuery, queryParams.slice(0, paramIndex - 1));
         const total = parseInt(totalResult.rows[0].count, 10);
         const candidates = candidatesResult.rows.map(row => (Object.assign(Object.assign({}, row), { custom_attributes: row.customAttributes || {}, position: row.positionId ? { title: row.positionTitle } : null, recruiter: row.recruiterId ? { name: row.recruiterName } : null })));

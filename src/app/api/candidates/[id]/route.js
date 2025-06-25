@@ -1,14 +1,3 @@
-var __rest = (this && this.__rest) || function (s, e) {
-    var t = {};
-    for (var p in s) if (Object.prototype.hasOwnProperty.call(s, p) && e.indexOf(p) < 0)
-        t[p] = s[p];
-    if (s != null && typeof Object.getOwnPropertySymbols === "function")
-        for (var i = 0, p = Object.getOwnPropertySymbols(s); i < p.length; i++) {
-            if (e.indexOf(p[i]) < 0 && Object.prototype.propertyIsEnumerable.call(s, p[i]))
-                t[p[i]] = s[p[i]];
-        }
-    return t;
-};
 // src/app/api/candidates/[id]/route.ts
 import { NextResponse } from 'next/server';
 import { getPool } from '@/lib/db';
@@ -87,145 +76,140 @@ function extractIdFromUrl(request) {
     const match = request.nextUrl.pathname.match(/\/candidates\/([^/]+)/);
     return match ? match[1] : null;
 }
-export async function GET(request) {
-    var _a, _b;
-    const id = extractIdFromUrl(request);
+export async function GET(request, { params }) {
+    var _a;
     const session = await getServerSession(authOptions);
     if (!((_a = session === null || session === void 0 ? void 0 : session.user) === null || _a === void 0 ? void 0 : _a.id)) {
-        return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+        return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
     }
+    const { id } = params;
     const client = await getPool().connect();
     try {
         const query = `
-      SELECT 
-        c.*, 
-        p.title as "positionTitle", 
-        r.name as "recruiterName"
-      FROM "candidates" c
-      LEFT JOIN "positions" p ON c."positionId" = p.id
+      SELECT c.*, p.title as "positionTitle", p.department as "positionDepartment", r.name as "recruiterName"
+      FROM "Candidate" c
+      LEFT JOIN "Position" p ON c."positionId" = p.id
       LEFT JOIN "User" r ON c."recruiterId" = r.id
       WHERE c.id = $1;
     `;
         const result = await client.query(query, [id]);
         if (result.rows.length === 0) {
-            return NextResponse.json({ message: "Candidate not found" }, { status: 404 });
+            return NextResponse.json({ message: 'Candidate not found' }, { status: 404 });
         }
         const candidate = result.rows[0];
-        const historyQuery = `
-      SELECT th.*, u.name as "actingUserName"
-      FROM "TransitionRecord" th
-      LEFT JOIN "User" u ON th."actingUserId" = u.id
-      WHERE th."candidateId" = $1
-      ORDER BY th.date DESC;
-    `;
-        const historyResult = await client.query(historyQuery, [id]);
-        candidate.transitionHistory = historyResult.rows;
-        candidate.custom_attributes = candidate.customAttributes || {};
-        return NextResponse.json(candidate, { status: 200 });
+        return NextResponse.json(Object.assign(Object.assign({}, candidate), { custom_attributes: candidate.customAttributes || {}, position: candidate.positionId ? {
+                title: candidate.positionTitle,
+                department: candidate.positionDepartment
+            } : null, recruiter: candidate.recruiterId ? { name: candidate.recruiterName } : null }));
     }
     catch (error) {
-        console.error(`Failed to fetch candidate ${id}:`, error);
-        await logAudit('ERROR', `Failed to fetch candidate (ID: ${id}). Error: ${error.message}`, 'API:Candidates:GetById', (_b = session === null || session === void 0 ? void 0 : session.user) === null || _b === void 0 ? void 0 : _b.id, { targetCandidateId: id });
-        return NextResponse.json({ message: "Error fetching candidate", error: error.message }, { status: 500 });
+        return NextResponse.json({ message: 'Error fetching candidate', error: error.message }, { status: 500 });
     }
     finally {
         client.release();
     }
 }
-export async function PUT(request) {
+export async function PUT(request, { params }) {
     var _a, _b, _c;
-    const id = extractIdFromUrl(request);
     const session = await getServerSession(authOptions);
     const actingUserId = (_a = session === null || session === void 0 ? void 0 : session.user) === null || _a === void 0 ? void 0 : _a.id;
-    const actingUserName = ((_b = session === null || session === void 0 ? void 0 : session.user) === null || _b === void 0 ? void 0 : _b.name) || ((_c = session === null || session === void 0 ? void 0 : session.user) === null || _c === void 0 ? void 0 : _c.email) || 'System (API Update)';
+    const actingUserName = ((_b = session === null || session === void 0 ? void 0 : session.user) === null || _b === void 0 ? void 0 : _b.name) || ((_c = session === null || session === void 0 ? void 0 : session.user) === null || _c === void 0 ? void 0 : _c.email) || 'System';
     if (!actingUserId) {
-        return NextResponse.json({ message: "Forbidden: Insufficient permissions." }, { status: 403 });
+        return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
     }
+    const { id } = params;
     let body;
     try {
         body = await request.json();
     }
-    catch (error) {
-        return NextResponse.json({ message: "Error parsing request body", error: error.message }, { status: 400 });
+    catch (_d) {
+        return NextResponse.json({ message: 'Invalid JSON body' }, { status: 400 });
     }
     const validationResult = updateCandidateSchema.safeParse(body);
     if (!validationResult.success) {
-        return NextResponse.json({ message: "Invalid input", errors: validationResult.error.flatten().fieldErrors }, { status: 400 });
+        return NextResponse.json({ message: 'Invalid input', errors: validationResult.error.flatten().fieldErrors }, { status: 400 });
     }
-    const _d = validationResult.data, { transitionNotes } = _d, updateData = __rest(_d, ["transitionNotes"]);
+    const { name, email, phone, positionId, recruiterId, fitScore, status, parsedData, custom_attributes, resumePath } = validationResult.data;
     const client = await getPool().connect();
     try {
         await client.query('BEGIN');
-        const existingResult = await client.query('SELECT * FROM "candidates" WHERE id = $1', [id]);
+        // Check if candidate exists
+        const existingResult = await client.query('SELECT * FROM "Candidate" WHERE id = $1', [id]);
         if (existingResult.rows.length === 0) {
-            return NextResponse.json({ message: "Candidate not found" }, { status: 404 });
+            await client.query('ROLLBACK');
+            return NextResponse.json({ message: 'Candidate not found' }, { status: 404 });
         }
         const existingCandidate = existingResult.rows[0];
-        if (updateData.status && updateData.status !== existingCandidate.status) {
+        const oldStatus = existingCandidate.status;
+        // Update candidate
+        const updateQuery = `
+      UPDATE "Candidate" 
+      SET name = $1, email = $2, phone = $3, "positionId" = $4, "recruiterId" = $5, 
+          "fitScore" = $6, status = $7, "parsedData" = $8, "customAttributes" = $9, 
+          "resumePath" = $10, "updatedAt" = NOW()
+      WHERE id = $11
+      RETURNING *;
+    `;
+        const updateResult = await client.query(updateQuery, [
+            name, email, phone, positionId, recruiterId, fitScore, status, parsedData, custom_attributes, resumePath, id
+        ]);
+        // Create transition record if status changed
+        if (oldStatus !== status) {
             const insertTransitionQuery = `
         INSERT INTO "TransitionRecord" (id, "candidateId", "positionId", stage, notes, "actingUserId", date)
         VALUES ($1, $2, $3, $4, $5, $6, NOW());
       `;
             await client.query(insertTransitionQuery, [
-                uuidv4(), id, existingCandidate.positionId, updateData.status, transitionNotes || `Status changed from ${existingCandidate.status} to ${updateData.status}.`, actingUserId
+                uuidv4(), id, positionId, status, `Status changed from ${oldStatus} to ${status}`, actingUserId
             ]);
         }
-        const fieldsToUpdate = Object.keys(updateData).filter(key => key !== 'transitionNotes');
-        if (fieldsToUpdate.length === 0) {
-            return NextResponse.json({ message: "No fields to update." }, { status: 400 });
-        }
-        const setClauses = fieldsToUpdate.map((key, index) => {
-            if (key === 'custom_attributes') {
-                return `"customAttributes" = $${index + 1}`;
-            }
-            return `"${key}" = $${index + 1}`;
-        });
-        const queryParams = fieldsToUpdate.map(key => updateData[key]);
-        const updateQuery = `
-      UPDATE "candidates"
-      SET ${setClauses.join(', ')}, "updatedAt" = NOW()
-      WHERE id = $${fieldsToUpdate.length + 1}
-      RETURNING *;
-    `;
-        const updatedResult = await client.query(updateQuery, [...queryParams, id]);
-        const updatedCandidate = Object.assign(Object.assign({}, updatedResult.rows[0]), { custom_attributes: updatedResult.rows[0].customAttributes || {} });
         await client.query('COMMIT');
-        await logAudit('AUDIT', `Candidate '${updatedCandidate.name}' (ID: ${id}) was updated by ${actingUserName}.`, 'API:Candidates:Update', actingUserId, { targetCandidateId: id, changes: updateData });
-        return NextResponse.json({ message: "Candidate updated successfully", candidate: updatedCandidate }, { status: 200 });
+        await logAudit('AUDIT', `Candidate '${name}' updated by ${actingUserName}.`, 'API:Candidates:Update', actingUserId, { candidateId: id, oldStatus, newStatus: status });
+        const updatedCandidate = updateResult.rows[0];
+        return NextResponse.json({
+            message: 'Candidate updated successfully',
+            candidate: Object.assign(Object.assign({}, updatedCandidate), { custom_attributes: updatedCandidate.customAttributes || {} })
+        });
     }
     catch (error) {
         await client.query('ROLLBACK');
-        console.error(`Failed to update candidate ${id}:`, error);
-        await logAudit('ERROR', `Failed to update candidate (ID: ${id}). Error: ${error.message}`, 'API:Candidates:Update', actingUserId, { targetCandidateId: id, input: body });
-        return NextResponse.json({ message: "Error updating candidate", error: error.message }, { status: 500 });
+        await logAudit('ERROR', `Failed to update candidate. Error: ${error.message}`, 'API:Candidates:Update', actingUserId, { candidateId: id, input: body });
+        if (error.code === '23505' && error.constraint === 'Candidate_email_key') {
+            return NextResponse.json({ message: `A candidate with the email "${email}" already exists.` }, { status: 409 });
+        }
+        return NextResponse.json({ message: 'Error updating candidate', error: error.message }, { status: 500 });
     }
     finally {
         client.release();
     }
 }
-export async function DELETE(request) {
+export async function DELETE(request, { params }) {
     var _a, _b, _c;
-    const id = extractIdFromUrl(request);
     const session = await getServerSession(authOptions);
     const actingUserId = (_a = session === null || session === void 0 ? void 0 : session.user) === null || _a === void 0 ? void 0 : _a.id;
     const actingUserName = ((_b = session === null || session === void 0 ? void 0 : session.user) === null || _b === void 0 ? void 0 : _b.name) || ((_c = session === null || session === void 0 ? void 0 : session.user) === null || _c === void 0 ? void 0 : _c.email) || 'System';
     if (!actingUserId) {
-        return NextResponse.json({ message: "Forbidden" }, { status: 403 });
+        return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
     }
+    const { id } = params;
     const client = await getPool().connect();
     try {
-        const result = await client.query('DELETE FROM "candidates" WHERE id = $1 RETURNING name', [id]);
-        if (result.rowCount === 0) {
-            return NextResponse.json({ message: "Candidate not found" }, { status: 404 });
+        await client.query('BEGIN');
+        // Get candidate name for audit log
+        const result = await client.query('DELETE FROM "Candidate" WHERE id = $1 RETURNING name', [id]);
+        if (result.rows.length === 0) {
+            await client.query('ROLLBACK');
+            return NextResponse.json({ message: 'Candidate not found' }, { status: 404 });
         }
         const candidateName = result.rows[0].name;
-        await logAudit('AUDIT', `Candidate '${candidateName}' (ID: ${id}) was deleted by ${actingUserName}.`, 'API:Candidates:Delete', actingUserId, { targetCandidateId: id });
-        return NextResponse.json({ message: "Candidate deleted successfully" }, { status: 200 });
+        await client.query('COMMIT');
+        await logAudit('AUDIT', `Candidate '${candidateName}' deleted by ${actingUserName}.`, 'API:Candidates:Delete', actingUserId, { candidateId: id });
+        return NextResponse.json({ message: 'Candidate deleted successfully' });
     }
     catch (error) {
-        console.error(`Failed to delete candidate ${id}:`, error);
-        await logAudit('ERROR', `Failed to delete candidate (ID: ${id}). Error: ${error.message}`, 'API:Candidates:Delete', actingUserId, { targetCandidateId: id });
-        return NextResponse.json({ message: "Error deleting candidate", error: error.message }, { status: 500 });
+        await client.query('ROLLBACK');
+        await logAudit('ERROR', `Failed to delete candidate. Error: ${error.message}`, 'API:Candidates:Delete', actingUserId, { candidateId: id });
+        return NextResponse.json({ message: 'Error deleting candidate', error: error.message }, { status: 500 });
     }
     finally {
         client.release();

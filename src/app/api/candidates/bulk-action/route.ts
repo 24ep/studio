@@ -107,7 +107,7 @@ export async function POST(request: NextRequest) {
         auditMessage = `Bulk deleted ${deleteResult.rowCount} candidates`;
         break;
 
-      case 'update_status':
+      case 'change_status':
         const oldStatusesResult = await client.query('SELECT id, status FROM "Candidate" WHERE id = ANY($1::uuid[])', [candidateIds]);
         const oldStatuses = oldStatusesResult.rows;
         

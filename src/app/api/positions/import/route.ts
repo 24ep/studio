@@ -4,6 +4,7 @@ import { getPool } from '@/lib/db';
 import { getServerSession } from 'next-auth/next';
 import { z } from 'zod';
 import { v4 as uuidv4 } from 'uuid';
+import { logAudit } from '@/lib/auditLog';
 import { authOptions } from '@/lib/auth';
 
 export const dynamic = "force-dynamic";
@@ -75,7 +76,11 @@ const importPositionSchema = z.object({
   description: z.string().optional().nullable(),
   isOpen: z.boolean().optional(),
   position_level: z.string().optional().nullable(),
+  custom_attributes: z.any().optional().nullable(),
 });
+
+// Schema for array of positions
+const importPositionsArraySchema = z.array(importPositionSchema);
 
 export async function POST(request: NextRequest) {
   const session = await getServerSession(authOptions);
@@ -93,12 +98,12 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ message: 'Invalid JSON body' }, { status: 400 });
   }
 
-  const validationResult = importPositionSchema.safeParse(body);
+  const validationResult = importPositionsArraySchema.safeParse(body);
   if (!validationResult.success) {
     return NextResponse.json({ message: 'Invalid input', errors: validationResult.error.flatten().fieldErrors }, { status: 400 });
   }
 
-  const { positions } = validationResult.data;
+  const positions = validationResult.data;
 
   const client = await getPool().connect();
   try {

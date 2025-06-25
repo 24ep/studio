@@ -24,8 +24,14 @@ const importCandidateSchema = z.object({
   recruiterId: z.string().uuid().optional().nullable(),
   fitScore: z.number().min(0).max(100).optional(),
   status: z.string().min(1),
+  parsedData: z.any().optional().nullable(),
+  custom_attributes: z.any().optional().nullable(),
+  resumePath: z.string().optional().nullable(),
   // Add other fields as needed
 });
+
+// Schema for array of candidates
+const importCandidatesArraySchema = z.array(importCandidateSchema);
 
 // The overall input for the API is now a single file, not an array of candidates
 // The validation below will apply to each row extracted from the Excel file.
@@ -88,12 +94,12 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ message: 'Invalid JSON body' }, { status: 400 });
   }
 
-  const validationResult = importCandidateSchema.safeParse(body);
+  const validationResult = importCandidatesArraySchema.safeParse(body);
   if (!validationResult.success) {
     return NextResponse.json({ message: 'Invalid input', errors: validationResult.error.flatten().fieldErrors }, { status: 400 });
   }
 
-  const { candidates } = validationResult.data;
+  const candidates = validationResult.data;
 
   const client = await getPool().connect();
   try {
