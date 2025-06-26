@@ -1,4 +1,3 @@
-
 # Business Requirements Document (BRD) - Candidate Matching ATS
 
 ## 1. Executive Summary
@@ -44,7 +43,7 @@ The current (hypothetical) recruitment process may suffer from inefficiencies du
 | **My Task Board**                        | View for recruiters/admins to see their assigned candidates, with **enhanced filtering capabilities similar to the main candidate list**.                                                                                                                                                                                                                                                                                                                                                                                                                                             |
 | **Application Logging**                  | Audit trail for key system and user actions, with **filtering and search capabilities**.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
 | **API Documentation Page**               | Overview of available API endpoints.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
-| **Settings**                             | **Server-side general preferences** (Theme preference, App Name, App Logo). **Server-side data model UI preferences** per user. Server-side configurations for recruitment stages (including **deletion with replacement**), custom fields, and webhook payload mapping. Conceptual SMTP and n8n webhook integration points. **Notification Settings Configuration** (UI to define events and channels like email/webhook, with URL for webhooks; actual triggering is future). |
+| **Settings**                             | **Server-side general preferences** (Theme preference, App Name, App Logo). **Server-side data model UI preferences** per user. Server-side configurations for recruitment stages (including **deletion with replacement**), custom fields, and webhook payload mapping. SMTP and automation webhook integration points. **Notification Settings Configuration** (UI to define events and channels like email/webhook, with URL for webhooks; actual triggering is future). |
 
 ### Out-of-Scope (for this prototype phase):
 
@@ -53,7 +52,7 @@ The current (hypothetical) recruitment process may suffer from inefficiencies du
 | Advanced AI-powered resume parsing and candidate-to-job matching (Genkit integration is conceptual).                  |
 | Real-time notifications and collaboration features (Redis integration is conceptual).                                 |
 | **Actual triggering and sending of notifications** (email/webhook) based on configured settings.                      |
-| Direct third-party job board integrations (posting, applicant import beyond current CSV/n8n conceptual flow).         |
+| Direct third-party job board integrations (posting, applicant import beyond current CSV/automation conceptual flow).         |
 | Advanced analytics and reporting beyond basic dashboard views.                                                        |
 | Automated email communication workflows (beyond conceptual SMTP setup).                                               |
 | Comprehensive performance testing and optimization for very large datasets.                                         |
@@ -138,7 +137,7 @@ The current (hypothetical) recruitment process may suffer from inefficiencies du
 | :---------------------------------------------------------------------------------------------------- |
 | The chosen technology stack (Next.js, PostgreSQL, MinIO, Docker) is suitable for the project's objectives. |
 | Docker and Docker Compose will be used for local development and deployment environments.             |
-| Necessary environment variables for external services (Azure AD, n8n webhooks) will be provided.        |
+| Necessary environment variables for external services (Azure AD, automation webhooks) will be provided.        |
 | Standard web browsers will be used to access the application.                                         |
 | Initial database schema (`init-db.sql`) will be correctly applied during setup.                         |
 

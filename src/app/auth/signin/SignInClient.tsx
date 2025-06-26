@@ -81,16 +81,16 @@ export default function SignInClient({ initialSettings }: SignInClientProps) {
         try {
           const response = await fetch('/api/settings/system-settings');
           if (response.ok) {
-            const settings: SystemSetting[] = await response.json();
-            appName = settings.find(s => s.key === 'appName')?.value || DEFAULT_APP_NAME;
-            logoUrl = settings.find(s => s.key === 'appLogoDataUrl')?.value || null;
-            loginBgType = settings.find(s => s.key === 'loginPageBackgroundType')?.value as LoginPageBackgroundType || 'default';
-            loginBgImageUrl = settings.find(s => s.key === 'loginPageBackgroundImageUrl')?.value || null;
-            loginBgColor1 = settings.find(s => s.key === 'loginPageBackgroundColor1')?.value || null;
-            loginBgColor2 = settings.find(s => s.key === 'loginPageBackgroundColor2')?.value || null;
-            loginLayoutTypeSetting = settings.find(s => s.key === 'loginPageLayoutType')?.value as LoginPageLayoutType || DEFAULT_LOGIN_LAYOUT_TYPE;
-            primaryStart = settings.find(s => s.key === 'primaryGradientStart')?.value || DEFAULT_PRIMARY_GRADIENT_START_SIGNIN;
-            primaryEnd = settings.find(s => s.key === 'primaryGradientEnd')?.value || DEFAULT_PRIMARY_GRADIENT_END_SIGNIN;
+            const settings = await response.json();
+            appName = settings.appName || DEFAULT_APP_NAME;
+            logoUrl = settings.appLogoDataUrl || null;
+            loginBgType = settings.loginPageBackgroundType as LoginPageBackgroundType || 'default';
+            loginBgImageUrl = settings.loginPageBackgroundImageUrl || null;
+            loginBgColor1 = settings.loginPageBackgroundColor1 || null;
+            loginBgColor2 = settings.loginPageBackgroundColor2 || null;
+            loginLayoutTypeSetting = settings.loginPageLayoutType as LoginPageLayoutType || DEFAULT_LOGIN_LAYOUT_TYPE;
+            primaryStart = settings.primaryGradientStart || DEFAULT_PRIMARY_GRADIENT_START_SIGNIN;
+            primaryEnd = settings.primaryGradientEnd || DEFAULT_PRIMARY_GRADIENT_END_SIGNIN;
 
             setCurrentAppName(appName);
             setAppLogoUrl(logoUrl);
@@ -98,7 +98,7 @@ export default function SignInClient({ initialSettings }: SignInClientProps) {
 
             // Apply primary colors and theme dynamically for login page
             if (typeof document !== 'undefined') {
-              const themePref = (settings.find((s: SystemSetting) => s.key === 'appThemePreference')?.value as 'system' | 'light' | 'dark') || 'system';
+              const themePref = (settings.appThemePreference as 'system' | 'light' | 'dark') || 'system';
               setThemeAndColors({
                 themePreference: themePref,
                 primaryGradientStart: primaryStart,

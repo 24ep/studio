@@ -7,7 +7,7 @@ This is a Next.js application prototype for an Applicant Tracking System, built 
 *   **Dashboard Overview:** Visual summary with metrics like candidates per position (via chart).
 *   **Candidate Management:**
     *   View, Add, Edit (detailed profile and status updates), Delete candidates.
-    *   Resume Uploads: Direct upload to MinIO, with optional n8n webhook trigger for processing.
+    *   Resume Uploads: Direct upload to MinIO, with optional automation webhook trigger for processing.
     *   **Resume History:** Tracks all uploaded resume versions for a candidate (API support; UI display for history is a future enhancement).
     *   **Profile Image Upload:** Upload and display candidate profile images.
     *   Drag-and-drop interface for reordering recruitment stages.
@@ -33,12 +33,12 @@ This is a Next.js application prototype for an Applicant Tracking System, built 
 *   **Settings & Configuration:**
     *   **Server-Side Preferences:** App Name, App Logo (actual theme application is client-side, preference stored server-side).
     *   Integrations (Conceptual SMTP, Server-Side Webhooks):
-        *   Server-configured n8n webhook for processing resumes of existing candidates.
-        *   Server-configured n8n webhook for creating new candidates from generic PDF uploads.
+        *   Server-configured automation webhook for processing resumes of existing candidates.
+        *   Server-configured automation webhook for creating new candidates from generic PDF uploads.
     *   Recruitment Stages: Manage custom stages in the hiring pipeline. **Stages can be deleted with a replacement strategy if in use.**
     *   **Server-Side Data Model UI Preferences:** View and set local UI display preferences for Candidate and Position attributes per user.
     *   Custom Field Definitions: Define custom data fields for Candidates and Positions.
-    *   Webhook Payload Mapping: Configure how incoming JSON from n8n maps to candidate attributes.
+    *   Webhook Payload Mapping: Configure how incoming JSON from your automation service maps to candidate attributes.
     *   **User Groups:** Create groups, assign users, and configure module permissions for groups.
     *   **Notification Settings:** Configure which system events trigger notifications and via which channels (e.g., email, webhook). (UI for configuration; actual notification triggering is future work).
 *   **API Documentation:** Page detailing available API endpoints.
@@ -104,7 +104,7 @@ This is a Next.js application prototype for an Applicant Tracking System, built 
         *   **NextAuth:** Set `NEXTAUTH_SECRET` (generate with `openssl rand -base64 32`)
         *   **MinIO:** Configure `MINIO_ACCESS_KEY`, `MINIO_SECRET_KEY`, `MINIO_BUCKET_NAME`
         *   **API Keys:** Add your `GOOGLE_API_KEY`, `NEXT_PUBLIC_GOOGLE_FONTS_API_KEY`
-        *   **Webhooks:** Set `N8N_RESUME_WEBHOOK_URL`, `N8N_GENERIC_PDF_WEBHOOK_URL`
+        *   **Webhooks:** Set `RESUME_PROCESSING_WEBHOOK_URL`, `GENERAL_PDF_WEBHOOK_URL`
         *   **Azure AD (Optional):** Configure `AZURE_AD_CLIENT_ID`, `AZURE_AD_CLIENT_SECRET`, `AZURE_AD_TENANT_ID`
         *   **Host Configuration:** Update `HOST_URL`, `PUBLIC_HOST_URL` for your deployment
 
@@ -119,7 +119,7 @@ This is a Next.js application prototype for an Applicant Tracking System, built 
     *   **Optional Variables:**
         *   `AZURE_AD_*`: Azure AD SSO configuration
         *   `GOOGLE_API_KEY`: Google AI API key for Genkit
-        *   `N8N_*_WEBHOOK_URL`: n8n webhook URLs for automation
+        *   `RESUME_PROCESSING_WEBHOOK_URL`, `GENERAL_PDF_WEBHOOK_URL`: automation webhook URLs for workflow automation
         *   `PROCESSOR_INTERVAL_MS`: Background processor interval (default: 5000ms)
     
     *   **Port Configuration:**

@@ -280,6 +280,7 @@ export const CandidateImportUploadQueue: React.FC = () => {
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({ status: 'queued', error: null, error_details: null, completed_date: null })
                           });
+                          fetchJobs();
                         }}
                       >
                         <RotateCcw className="h-4 w-4 text-primary" />
@@ -405,6 +406,7 @@ export const CandidateImportUploadQueue: React.FC = () => {
                   })));
                   if (results.some(res => !res.ok)) throw new Error('Some retries failed');
                   success('Selected jobs retried successfully');
+                  await fetchJobs();
                 } catch (err) {
                   error('Failed to retry some jobs');
                 } finally {

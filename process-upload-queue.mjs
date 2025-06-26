@@ -15,10 +15,7 @@ async function getMaxConcurrentProcessors() {
         if (!res.ok)
             throw new Error('Failed to fetch system settings');
         const settings = await res.json();
-        const found = Array.isArray(settings)
-            ? settings.find((s) => s.key === 'maxConcurrentProcessors')
-            : null;
-        const value = found ? parseInt(found.value, 10) : 5;
+        const value = settings.maxConcurrentProcessors ? parseInt(settings.maxConcurrentProcessors, 10) : 5;
         return isNaN(value) ? 5 : value;
     } catch (e) {
         return 5;

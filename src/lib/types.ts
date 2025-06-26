@@ -159,7 +159,7 @@ export interface ExperienceEntry {
   description?: string;
   period?: string;
   duration?: string;
-  is_current_position?: boolean | string; // Allow string for n8n, preprocess in Zod
+  is_current_position?: boolean | string; // Allow string for automation, preprocess in Zod
   postition_level?: string | null | undefined;
 }
 
@@ -176,7 +176,7 @@ export interface JobSuitableEntry {
   suitable_salary_bath_month?: string;
 }
 
-export interface N8NJobMatch {
+export interface AutomationJobMatch {
   job_id?: string;
   job_title?: string | null;
   fit_score: number;
@@ -195,14 +195,14 @@ export interface CandidateDetails {
     jobTitle: string;
     fitScore: number;
     reasons: string[];
-    n8nJobId?: string;
+    automationJobId?: string;
   };
-  job_matches?: N8NJobMatch[];
+  job_matches?: AutomationJobMatch[];
 }
 
-export interface N8NCandidateWebhookEntry {
+export interface AutomationCandidateWebhookEntry {
   candidate_info: CandidateDetails;
-  jobs?: N8NJobMatch[];
+  jobs?: AutomationJobMatch[];
   targetPositionId?: string | null;
   targetPositionTitle?: string | null;
   targetPositionDescription?: string | null;
@@ -215,7 +215,7 @@ export interface N8NCandidateWebhookEntry {
   } | null;
 }
 
-export type N8NWebhookPayload = N8NCandidateWebhookEntry;
+export type AutomationWebhookPayload = AutomationCandidateWebhookEntry;
 
 export interface OldParsedResumeData {
   name?: string;
@@ -389,8 +389,6 @@ export type SystemSettingKey =
   | 'smtpSecure'
   | 'smtpFromEmail'
   | 'resumeProcessingWebhookUrl'
-  | 'n8nResumeWebhookUrl'
-  | 'generalPdfWebhookUrl'
   | 'geminiApiKey'
   | 'loginPageBackgroundType'
   | 'loginPageBackgroundImageUrl'

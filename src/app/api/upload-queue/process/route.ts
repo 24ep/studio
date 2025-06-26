@@ -10,7 +10,7 @@ import { getSystemSetting } from '@/lib/settings';
  * /api/upload-queue/process:
  *   post:
  *     summary: Process the next queued upload job
- *     description: Processes the next file in the upload queue by sending it to n8n. Requires authentication. Not for public use.
+ *     description: Processes the next file in the upload queue by sending it to an automation webhook. Requires authentication. Not for public use.
  *     responses:
  *       200:
  *         description: Job processed (or no jobs)
@@ -26,7 +26,7 @@ import { getSystemSetting } from '@/lib/settings';
  *                     id: "uuid"
  *                     file_name: "resume.pdf"
  *                     status: "success"
- *                   n8n_status: 200
+ *                   automation_status: 200
  *               no_jobs:
  *                 summary: No queued jobs
  *                 value:
@@ -85,11 +85,7 @@ export async function POST(request: NextRequest) {
     // 3. POST to the configured webhook endpoint (any compatible service)
     let resumeWebhookUrl = await getSystemSetting('resumeProcessingWebhookUrl');
     if (!resumeWebhookUrl) {
-      // fallback to old key for backward compatibility
-      resumeWebhookUrl = await getSystemSetting('n8nResumeWebhookUrl');
-    }
-    if (!resumeWebhookUrl) {
-      resumeWebhookUrl = process.env.N8N_WEBHOOK_URL || 'http://localhost:5678/webhook';
+      resumeWebhookUrl = process.env.RESUME_PROCESSING_WEBHOOK_URL || 'http://localhost:5678/webhook';
     }
     console.log('Posting to webhook URL:', resumeWebhookUrl);
     const formData = new FormData();
@@ -126,7 +122,7 @@ export async function POST(request: NextRequest) {
     if (redisClient) {
       await redisClient.publish('candidate_upload_queue', JSON.stringify({ type: 'queue_updated' }));
     }
-    return NextResponse.json({ job: { ...job, status, error, error_details }, webhook_status: webhookRes.status });
+    return NextResponse.json({ job: { ...job, status, error, error_details }, automation_status: webhookRes.status });
   } catch (err) {
     if (job) {
       await client.query(

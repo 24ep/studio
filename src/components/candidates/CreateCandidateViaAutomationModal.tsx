@@ -27,13 +27,13 @@ import type { Position } from '@/lib/types';
 const MAX_FILE_SIZE = 500 * 1024 * 1024; // 500MB
 const NONE_POSITION_VALUE = "___NONE_POSITION___"; // Placeholder for SelectItem value
 
-interface CreateCandidateViaN8nModalProps {
+interface CreateCandidateViaAutomationModalProps {
   isOpen: boolean;
   onOpenChange: (isOpen: boolean) => void;
   onProcessingStart: () => void; // Callback when processing starts
 }
 
-export function CreateCandidateViaN8nModal({ isOpen, onOpenChange, onProcessingStart }: CreateCandidateViaN8nModalProps) {
+export function CreateCandidateViaAutomationModal({ isOpen, onOpenChange, onProcessingStart }: CreateCandidateViaAutomationModalProps) {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [availablePositions, setAvailablePositions] = useState<Position[]>([]);
@@ -115,7 +115,7 @@ export function CreateCandidateViaN8nModal({ isOpen, onOpenChange, onProcessingS
     }
 
     try {
-      const response = await fetch('/api/candidates/upload-for-n8n', {
+      const response = await fetch('/api/candidates/upload-for-automation', {
         method: 'POST',
         body: formData,
       });
@@ -127,20 +127,20 @@ export function CreateCandidateViaN8nModal({ isOpen, onOpenChange, onProcessingS
         
         if (response.status === 500 && typeof result.errorDetails === 'string') {
             try {
-                const parsedN8nError = JSON.parse(result.errorDetails);
-                if (parsedN8nError.message === "No item to return got found") {
-                    description = "The n8n workflow reported: 'No item to return got found'. This means the workflow ran but didn't produce the expected candidate data. Please check the n8n workflow configuration and execution logs.";
-                } else if (parsedN8nError.message === "Error in workflow") {
-                    description = "The n8n workflow reported a general error: 'Error in workflow'. This indicates an issue within the n8n workflow itself. Please check the n8n execution logs for more specific details about what went wrong during its processing.";
-                } else { // Other JSON error from n8n
+                const parsedAutomationError = JSON.parse(result.errorDetails);
+                if (parsedAutomationError.message === "No item to return got found") {
+                    description = "The automation workflow reported: 'No item to return got found'. This means the workflow ran but didn't produce the expected candidate data. Please check the automation workflow configuration and execution logs.";
+                } else if (parsedAutomationError.message === "Error in workflow") {
+                    description = "The automation workflow reported a general error: 'Error in workflow'. This indicates an issue within the automation workflow itself. Please check the automation execution logs for more specific details about what went wrong during its processing.";
+                } else { // Other JSON error from automation
                     const detailsSnippet = String(result.errorDetails).substring(0, 150) + (String(result.errorDetails).length > 150 ? '...' : '');
-                    description = `The n8n workflow encountered an internal server error (500). Please check your n8n workflow logs for details. n8n Output: ${detailsSnippet}`;
+                    description = `The automation workflow encountered an internal server error (500). Please check your automation workflow logs for details. Automation Output: ${detailsSnippet}`;
                 }
             } catch (e) { // JSON.parse failed or errorDetails was not a JSON string
                 const detailsSnippet = String(result.errorDetails).substring(0, 150) + (String(result.errorDetails).length > 150 ? '...' : '');
-                description = `The n8n workflow encountered an internal server error (500) with non-JSON output. Please check your n8n workflow logs. Output Snippet: ${detailsSnippet}`;
+                description = `The automation workflow encountered an internal server error (500) with non-JSON output. Please check your automation workflow logs. Output Snippet: ${detailsSnippet}`;
             }
-        } else if (result.message === "n8n integration for candidate creation is not configured on the server.") { 
+        } else if (result.message === "automation integration for candidate creation is not configured on the server.") { 
           description = "Automated candidate creation is not configured on the server. Please ensure the Generic PDF Webhook URL environment variable is set.";
         } else if (result.errorDetails) { // Non-500 error, but with errorDetails
             const detailsSnippet = String(result.errorDetails).substring(0, 150) + (String(result.errorDetails).length > 150 ? '...' : '');

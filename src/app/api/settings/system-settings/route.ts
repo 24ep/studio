@@ -42,7 +42,7 @@ const systemSettingKeyEnum = z.enum([
     'appName', 'appLogoDataUrl', 'appThemePreference',
     'primaryGradientStart', 'primaryGradientEnd',
     'smtpHost', 'smtpPort', 'smtpUser', 'smtpSecure', 'smtpFromEmail',
-    'n8nResumeWebhookUrl', 'generalPdfWebhookUrl', 'geminiApiKey',
+    'generalPdfWebhookUrl', 'geminiApiKey',
     'loginPageBackgroundType', 'loginPageBackgroundImageUrl', 
     'loginPageBackgroundColor1', 'loginPageBackgroundColor2',
     'loginPageLayoutType',
@@ -76,13 +76,9 @@ export async function GET(request: NextRequest) {
     if (!settings.resumeProcessingWebhookUrl) {
       settings.resumeProcessingWebhookUrl = process.env.RESUME_PROCESSING_WEBHOOK_URL || 'http://localhost:5678/webhook';
     }
-    // Fallback for generalPdfWebhookUrl (formerly n8nGenericPdfWebhookUrl)
+    // Fallback for generalPdfWebhookUrl
     if (!settings.generalPdfWebhookUrl) {
       settings.generalPdfWebhookUrl = process.env.GENERAL_PDF_WEBHOOK_URL || '';
-    }
-    // For backward compatibility, also support n8nGenericPdfWebhookUrl if present
-    if (settings.n8nGenericPdfWebhookUrl && !settings.generalPdfWebhookUrl) {
-      settings.generalPdfWebhookUrl = settings.n8nGenericPdfWebhookUrl;
     }
     return NextResponse.json(settings, { status: 200 });
   } catch (error) {

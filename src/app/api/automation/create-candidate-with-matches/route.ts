@@ -1,4 +1,4 @@
-// src/app/api/n8n/create-candidate-with-matches/route.ts
+// src/app/api/automation/create-candidate-with-matches/route.ts
 import { NextResponse, type NextRequest } from 'next/server';
 import { z } from 'zod';
 import { v4 as uuidv4 } from 'uuid';

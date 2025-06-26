@@ -29,7 +29,7 @@ const SidebarNav = dynamic(() => import('./SidebarNav'), { ssr: false });
 function getPageTitle(pathname: string): string {
   if (pathname === "/") return "Dashboard";
   if (pathname.startsWith("/candidates")) { 
-    if (pathname.split('/').length === 3 && pathname.split('/')[2] !== '' && !pathname.includes('create-via-n8n')) {
+    if (pathname.split('/').length === 3 && pathname.split('/')[2] !== '' && !pathname.includes('create-via-automation')) {
         return "Candidate Details";
     }
     return "Candidates";

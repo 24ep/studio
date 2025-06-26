@@ -3,7 +3,7 @@ export const dynamic = "force-dynamic";
 
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import type { Candidate, CandidateDetails, TransitionRecord, EducationEntry, ExperienceEntry, SkillEntry, JobSuitableEntry, PersonalInfo, N8NJobMatch, UserProfile, Position, PositionLevel, RecruitmentStage } from '@/lib/types';
+import type { Candidate, CandidateDetails, TransitionRecord, EducationEntry, ExperienceEntry, SkillEntry, JobSuitableEntry, PersonalInfo, AutomationJobMatch, UserProfile, Position, PositionLevel, RecruitmentStage } from '@/lib/types';
 import { useSession, signIn } from 'next-auth/react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -154,7 +154,7 @@ const RoleSuggestionSummary: React.FC<RoleSuggestionSummaryProps> = ({ candidate
   const currentAppliedPositionId = candidate.positionId;
   const currentAppliedPosition = allDbPositions.find(p => p.id === currentAppliedPositionId);
   const currentFitScore = candidate.fitScore || 0;
-  let bestAlternativeMatch: N8NJobMatch | null = null;
+  let bestAlternativeMatch: AutomationJobMatch | null = null;
   let bestAlternativeScore = currentFitScore;
   let bestAlternativePositionInDb: Position | null = null;
 

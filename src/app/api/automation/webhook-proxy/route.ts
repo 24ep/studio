@@ -1,9 +1,9 @@
-// src/app/api/n8n/webhook-proxy/route.ts
+// src/app/api/automation/webhook-proxy/route.ts
 import { NextResponse } from 'next/server';
 
 /**
  * @openapi
- * /api/n8n/webhook-proxy:
+ * /api/automation/webhook-proxy:
  *   get:
  *     summary: Check webhook proxy
  *     responses:

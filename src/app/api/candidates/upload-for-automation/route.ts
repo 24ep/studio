@@ -1,4 +1,4 @@
-// src/app/api/candidates/upload-for-n8n/route.ts
+// src/app/api/candidates/upload-for-automation/route.ts
 import { NextResponse, type NextRequest } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 import type { UserProfile, Position } from '@/lib/types';
@@ -27,7 +27,7 @@ export const dynamic = "force-dynamic";
 export async function POST(request: NextRequest) {
   const session = await getServerSession(authOptions);
   const actingUserId = session?.user?.id || null;
-  const actingUserName = session?.user?.name || session?.user?.email || 'System (n8n Upload)';
+  const actingUserName = session?.user?.name || session?.user?.email || 'System (automation Upload)';
 
   let generalPdfWebhookUrl = await getSystemSetting('generalPdfWebhookUrl'); // Fetch from DB first
   if (!generalPdfWebhookUrl) {
@@ -82,7 +82,7 @@ export async function POST(request: NextRequest) {
     webhookFormData.append('sourceApplication', 'NCC Candidate Management');
     webhookFormData.append('uploadTimestamp', new Date().toISOString());
     if (actingUserId) webhookFormData.append('uploadedByUserId', actingUserId);
-    if (actingUserName && actingUserName !== 'System (n8n Upload)') webhookFormData.append('uploadedByUserName', actingUserName);
+    if (actingUserName && actingUserName !== 'System (automation Upload)') webhookFormData.append('uploadedByUserName', actingUserName);
     
     if (targetPositionId) {
         webhookFormData.append('targetPositionId', targetPositionId);

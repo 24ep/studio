@@ -50,10 +50,10 @@ services:
       # Public Azure AD variables for client-side detection (Optional)
       NEXT_PUBLIC_AZURE_AD_CLIENT_ID: ${NEXT_PUBLIC_AZURE_AD_CLIENT_ID}
       NEXT_PUBLIC_AZURE_AD_TENANT_ID: ${NEXT_PUBLIC_AZURE_AD_TENANT_ID}
-      # RESUME_PROCESSING_WEBHOOK_URL is the new generic fallback for resume processing webhook
+      # RESUME_PROCESSING_WEBHOOK_URL is the generic fallback for resume processing webhook
       RESUME_PROCESSING_WEBHOOK_URL: ${RESUME_PROCESSING_WEBHOOK_URL}
-      # N8N_RESUME_WEBHOOK_URL: ${N8N_RESUME_WEBHOOK_URL}  # (legacy fallback, optional)
-      N8N_GENERIC_PDF_WEBHOOK_URL: ${N8N_GENERIC_PDF_WEBHOOK_URL}
+      # GENERAL_PDF_WEBHOOK_URL is used for automated candidate creation from PDF resumes
+      GENERAL_PDF_WEBHOOK_URL: ${GENERAL_PDF_WEBHOOK_URL}
       GOOGLE_API_KEY: ${GOOGLE_API_KEY}
       NEXT_PUBLIC_GOOGLE_FONTS_API_KEY: ${NEXT_PUBLIC_GOOGLE_FONTS_API_KEY}
       NODE_ENV: ${NODE_ENV}
@@ -154,10 +154,10 @@ services:
       AZURE_AD_TENANT_ID: ${AZURE_AD_TENANT_ID}
       NEXT_PUBLIC_AZURE_AD_CLIENT_ID: ${NEXT_PUBLIC_AZURE_AD_CLIENT_ID}
       NEXT_PUBLIC_AZURE_AD_TENANT_ID: ${NEXT_PUBLIC_AZURE_AD_TENANT_ID}
-      # RESUME_PROCESSING_WEBHOOK_URL is the new generic fallback for resume processing webhook
+      # RESUME_PROCESSING_WEBHOOK_URL is the generic fallback for resume processing webhook
       RESUME_PROCESSING_WEBHOOK_URL: ${RESUME_PROCESSING_WEBHOOK_URL}
-      # N8N_RESUME_WEBHOOK_URL: ${N8N_RESUME_WEBHOOK_URL}  # (legacy fallback, optional)
-      N8N_GENERIC_PDF_WEBHOOK_URL: ${N8N_GENERIC_PDF_WEBHOOK_URL}
+      # GENERAL_PDF_WEBHOOK_URL is used for automated candidate creation from PDF resumes
+      GENERAL_PDF_WEBHOOK_URL: ${GENERAL_PDF_WEBHOOK_URL}
       GOOGLE_API_KEY: ${GOOGLE_API_KEY}
       NEXT_PUBLIC_GOOGLE_FONTS_API_KEY: ${NEXT_PUBLIC_GOOGLE_FONTS_API_KEY}
       NODE_ENV: ${NODE_ENV}

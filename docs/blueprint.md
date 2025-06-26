@@ -3,7 +3,7 @@
 ## Core Features:
 
 - Resume Upload: Enable users to upload resumes in PDF or DOC format.
-- Resume Parsing via n8n: Integrates with an n8n webhook to extract key information such as name, education, skills, and experience from uploaded resumes, preparing the data for storage and candidate fit scoring.
+- Resume Parsing via automation: Integrates with an automation webhook to extract key information such as name, education, skills, and experience from uploaded resumes, preparing the data for storage and candidate fit scoring.
 - Candidate Auto-Match & Scoring: Calculate a fit score for each candidate based on predefined criteria (position, education, skills) and data automatically pulled from the parsed resume. This will automatically associate the candidate to the position
 - Candidate Search & Filter: Provide a dedicated page to filter and search candidates. Filtering available per position, education and fit score
 - Dashboard Overview: Display a dashboard summarizing the number of candidates per position.

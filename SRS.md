@@ -1,4 +1,3 @@
-
 # Software Requirements Specification (SRS)
 ## Candidate Matching - Applicant Tracking System
 
@@ -81,7 +80,7 @@ Features currently out of scope for the prototype include advanced AI matching, 
 *   **NextAuth.js:** Authentication library for Next.js
 *   **ShadCN UI:** UI component library
 *   **Tailwind CSS:** CSS framework
-*   **n8n:** Workflow automation tool
+*   **Automation Service:** Workflow automation tool
 *   **Genkit:** AI framework (conceptual for this phase)
 *   **CSV:** Comma-Separated Values
 
@@ -101,7 +100,7 @@ This document details the system's capabilities, constraints, and interfaces. Se
 
 ### 2.1. Product Perspective
 
-The Candidate Matching ATS is a self-contained web application. It interacts with a PostgreSQL database for data persistence and a MinIO server for file storage (e.g., resumes, candidate avatars). It can optionally integrate with Azure AD for SSO and n8n for workflow automation via webhooks. It features server-side configuration for several aspects of its operation.
+The Candidate Matching ATS is a self-contained web application. It interacts with a PostgreSQL database for data persistence and a MinIO server for file storage (e.g., resumes, candidate avatars). It can optionally integrate with Azure AD for SSO and a workflow automation service via webhooks. It features server-side configuration for several aspects of its operation.
 
 ### 2.2. Product Functions
 
@@ -178,7 +177,7 @@ The Candidate Matching ATS is a self-contained web application. It interacts wit
 | FR-CAND-002  | The system shall allow uploading candidate resumes (PDF, DOC, DOCX) to MinIO.                                            |
 | FR-CAND-003  | The system shall maintain a history of uploaded resumes for each candidate.                                              |
 | FR-CAND-004  | The system shall allow uploading and displaying a profile image for each candidate.                                      |
-| FR-CAND-005  | The system shall provide an option to send uploaded resumes to a configurable n8n webhook for processing.                |
+| FR-CAND-005  | The system shall provide an option to send uploaded resumes to a configurable automation webhook for processing.                |
 | FR-CAND-006  | The system shall allow authorized users to view a list of all candidates, with enhanced filtering options (name, position, status, education, fit score). |
 | FR-CAND-007  | Authorized users shall be able to view detailed information for a specific candidate.                                    |
 | FR-CAND-008  | Authorized users shall be able to edit candidate profile information, including parsed data fields.                      |
@@ -190,7 +189,7 @@ The Candidate Matching ATS is a self-contained web application. It interacts wit
 | FR-CAND-014  | The system shall support associating custom-defined fields with candidate profiles.                                      |
 | FR-CAND-015  | The system shall provide an option to import candidates from a CSV file.                                                 |
 | FR-CAND-016  | The system shall provide an option to export candidate data to a CSV file.                                               |
-| FR-CAND-017  | The system shall allow uploading a PDF resume to an n8n webhook for automated new candidate creation.                    |
+| FR-CAND-017  | The system shall allow uploading a PDF resume to an automation webhook for automated new candidate creation.                    |
 
 #### 3.1.4. Position Management
 
@@ -257,7 +256,7 @@ The Candidate Matching ATS is a self-contained web application. It interacts wit
 | FR-API-001  | The system shall expose RESTful API endpoints for managing candidates (CRUD, resume upload, avatar upload).         |
 | FR-API-002  | The system shall expose RESTful API endpoints for managing positions (CRUD).                                        |
 | FR-API-003  | The system shall expose RESTful API endpoints for managing users (CRUD) - Admin restricted.                           |
-| FR-API-004  | The system shall expose an API endpoint for receiving candidate data from external workflows (e.g., n8n).             |
+| FR-API-004  | The system shall expose an API endpoint for receiving candidate data from external workflows (e.g., automation service).             |
 | FR-API-005  | The system shall expose an API endpoint for logging.                                                                  |
 | FR-API-006  | The system shall provide an API documentation page listing key public/semi-public endpoints.                        |
 | FR-API-007  | The system shall expose API endpoints for managing system settings (preferences, stages, custom fields, webhook mappings, notification settings) - Admin restricted. |
@@ -283,7 +282,7 @@ The Candidate Matching ATS is a self-contained web application. It interacts wit
 | EI-001  | Database (PostgreSQL)  | Interface with PostgreSQL for data persistence.                                                                                |
 | EI-002  | File Storage (MinIO)   | Interface with MinIO (or S3-compatible) for storing resumes, candidate avatars, and other files.                               |
 | EI-003  | Azure AD (Optional)    | Interface with Azure Active Directory for SSO if configured.                                                                   |
-| EI-004  | n8n Webhooks (Optional)| Send/receive data to/from n8n workflows for automation.                                                                        |
+| EI-004  | Automation Webhooks (Optional)| Send/receive data to/from automation workflows for automation.                                                                        |
 | EI-005  | Google AI (Conceptual) | Future interface with Google AI services via Genkit.                                                                           |
 
 ### 3.4. Non-Functional Requirements
@@ -379,4 +378,3 @@ Key tables include:
 | Automated Email Workflows.                               |
 | Full User Group Permission Inheritance enforcement.      |
 | Rich UI for drag-and-drop sorting.                       |
-```

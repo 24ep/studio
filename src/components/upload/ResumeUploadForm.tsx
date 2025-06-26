@@ -28,7 +28,7 @@ type ResumeUploadFormValues = z.infer<typeof resumeUploadSchema>;
 
 interface ResumeUploadFormProps {
   candidateId: string;
-  onUploadSuccess?: (updatedCandidate: Candidate, n8nResponse?: any) => void;
+  onUploadSuccess?: (updatedCandidate: Candidate, automationResponse?: any) => void;
   currentResumePath?: string | null;
   cardMode?: boolean; 
 }
@@ -74,19 +74,18 @@ export function ResumeUploadForm({ candidateId, onUploadSuccess, currentResumePa
       }
 
       let toastDescription = `Resume uploaded successfully.`;
-      if (result.n8nResponse) {
-        if (result.n8nResponse.success) {
-          toastDescription += ` n8n processing status: ${result.n8nResponse.message || 'Initiated'}.`;
-          if(result.n8nResponse.data) console.log("n8n data:", result.n8nResponse.data);
-        } else {
-          toastDescription += ` n8n notification failed: ${result.n8nResponse.error || 'Unknown n8n error'}`;
+      if (result.automationResponse) {
+        if (result.automationResponse.success) {
+          toastDescription += ` automation processing status: ${result.automationResponse.message || 'Initiated'}.`;
+          if(result.automationResponse.data) console.log("automation data:", result.automationResponse.data);
         }
+        toastDescription += ` automation notification failed: ${result.automationResponse.error || 'Unknown automation error'}`;
       }
 
       toast.success(toastDescription);
 
       if (onUploadSuccess && result.candidate) {
-        onUploadSuccess(result.candidate, result.n8nResponse);
+        onUploadSuccess(result.candidate, result.automationResponse);
       }
       form.reset();
       setSelectedFile(null);
@@ -203,7 +202,7 @@ export function ResumeUploadForm({ candidateId, onUploadSuccess, currentResumePa
             <UploadCloud className="mr-2 h-6 w-6 text-primary" /> Upload Resume {candidateId && <span className="text-base text-muted-foreground ml-2">for Candidate ID: {candidateId.substring(0,8)}...</span>}
           </CardTitle>
           <CardDescription>
-            Upload a resume in PDF, DOC, or DOCX format. Results from n8n processing will be shown if configured.
+            Upload a resume in PDF, DOC, or DOCX format. Results from automation processing will be shown if configured.
           </CardDescription>
         </CardHeader>
         {formContent}

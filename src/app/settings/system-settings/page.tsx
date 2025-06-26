@@ -50,7 +50,7 @@ export default function SystemSettingsPage() {
       setSmtpUser(settings.smtpUser || '');
       setSmtpSecure(settings.smtpSecure === 'true');
       setSmtpFromEmail(settings.smtpFromEmail || '');
-      setResumeProcessingWebhookUrl(settings.resumeProcessingWebhookUrl || settings.n8nResumeWebhookUrl || '');
+      setResumeProcessingWebhookUrl(settings.resumeProcessingWebhookUrl || '');
       setGeneralPdfWebhookUrl(settings.generalPdfWebhookUrl || '');
       setGeminiApiKey(settings.geminiApiKey || '');
     } catch (error) {
@@ -152,28 +152,28 @@ export default function SystemSettingsPage() {
           </div>
         </CardContent>
       </Card>
-      {/* Webhook Automation (n8n) + Max Concurrent Processors */}
+      {/* Webhook Automation + Max Concurrent Processors */}
       <Card className="shadow-lg ">
         <CardHeader>
           <CardTitle className="flex items-center text-2xl gap-2">
             <Zap className="h-7 w-7 text-primary" />
-            Workflow Automation (Webhooks)
+            Workflow Automation
           </CardTitle>
           <CardDescription className="text-base text-muted-foreground">
-            Configure server-side webhook URLs for automated processing tasks via n8n or similar tools.
+            Configure server-side webhook URLs for automated processing tasks via any compatible automation service.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4 pt-6">
           <div>
             <Label htmlFor="resume-processing-webhook">Resume Processing Webhook URL (Any Service)</Label>
             <Input id="resume-processing-webhook" type="url" placeholder="https://your-webhook-endpoint/receive-resume" value={resumeProcessingWebhookUrl} onChange={(e) => setResumeProcessingWebhookUrl(e.target.value)} className="mt-1" disabled={isSaving}/>
-            <p className="text-xs text-muted-foreground mt-1">This URL will receive a POST request with the uploaded resume file (as FormData). You can use any compatible webhook service (n8n, Zapier, Make, custom API, etc.).</p>
+            <p className="text-xs text-muted-foreground mt-1">This URL will receive a POST request with the uploaded resume file (as FormData). You can use any compatible webhook service (Zapier, Make, custom API, etc.).</p>
           </div>
           <Separator />
           <div>
             <Label htmlFor="general-pdf-webhook">New Candidate PDF Webhook URL</Label>
             <Input id="general-pdf-webhook" type="url" placeholder="https://your-webhook-endpoint/receive-pdf" value={generalPdfWebhookUrl} onChange={(e) => setGeneralPdfWebhookUrl(e.target.value)} className="mt-1" disabled={isSaving}/>
-            <p className="text-xs text-muted-foreground mt-1">Used by the "Create via Resume (Automated)" feature. The application sends the PDF file (as FormData) and optional target position info to this endpoint. You can use any compatible webhook service (n8n, Zapier, Make, custom API, etc.).</p>
+            <p className="text-xs text-muted-foreground mt-1">Used by the "Create via Resume (Automated)" feature. The application sends the PDF file (as FormData) and optional target position info to this endpoint. You can use any compatible webhook service (Zapier, Make, custom API, etc.).</p>
           </div>
           <Separator />
           <div>
