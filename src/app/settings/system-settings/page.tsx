@@ -78,7 +78,6 @@ export default function SystemSettingsPage() {
       { key: 'smtpUser', value: smtpUser },
       { key: 'smtpSecure', value: String(smtpSecure) },
       { key: 'smtpFromEmail', value: smtpFromEmail },
-      { key: 'resumeProcessingWebhookUrl', value: resumeProcessingWebhookUrl },
       { key: 'generalPdfWebhookUrl', value: generalPdfWebhookUrl },
       { key: 'geminiApiKey', value: geminiApiKey },
     ];

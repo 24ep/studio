@@ -131,6 +131,7 @@ export function AddPositionModal({ isOpen, onOpenChange, onAddPosition }: AddPos
                   onChange={field.onChange}
                   className="mt-1 bg-white"
                   placeholder="Enter job description"
+                  style={{ minHeight: 300 }}
                 />
               )}
             />

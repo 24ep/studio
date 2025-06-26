@@ -17,8 +17,6 @@ export interface StartupResult {
 }
 
 export async function initializeApplication(): Promise<StartupResult> {
-  console.log('🚀 Starting application initialization...');
-  
   const result: StartupResult = {
     minio: { status: 'error', message: 'Not initialized' },
     database: { status: 'error', message: 'Not initialized' },
@@ -27,7 +25,6 @@ export async function initializeApplication(): Promise<StartupResult> {
   
   // Initialize MinIO
   try {
-    console.log('📦 Initializing MinIO...');
     const minioResult = await startupMinIOInitialization();
     result.minio = {
       status: minioResult.status as 'success' | 'warning' | 'error',
@@ -35,9 +32,7 @@ export async function initializeApplication(): Promise<StartupResult> {
       bucket: minioResult.bucket,
       error: 'error' in minioResult ? minioResult.error : undefined
     };
-    console.log(`✅ MinIO: ${minioResult.message}`);
   } catch (error) {
-    console.error('❌ MinIO initialization failed:', error);
     result.minio = {
       status: 'error',
       message: 'Failed to initialize MinIO',
@@ -47,7 +42,6 @@ export async function initializeApplication(): Promise<StartupResult> {
   
   // Test database connection
   try {
-    console.log('🗄️ Testing database connection...');
     const pool = getPool();
     const client = await pool.connect();
     await client.query('SELECT 1');
@@ -56,9 +50,7 @@ export async function initializeApplication(): Promise<StartupResult> {
       status: 'success',
       message: 'Database connection successful'
     };
-    console.log('✅ Database: Connection successful');
   } catch (error) {
-    console.error('❌ Database connection failed:', error);
     result.database = {
       status: 'error',
       message: 'Failed to connect to database',
@@ -75,10 +67,6 @@ export async function initializeApplication(): Promise<StartupResult> {
     result.overall = 'failed';
   }
   
-  console.log(`🎯 Application initialization ${result.overall}:`);
-  console.log(`   Database: ${result.database.status} - ${result.database.message}`);
-  console.log(`   MinIO: ${result.minio.status} - ${result.minio.message}`);
-  
   return result;
 }
 
@@ -88,7 +76,6 @@ export async function isApplicationReady(): Promise<boolean> {
     const result = await initializeApplication();
     return result.overall === 'ready';
   } catch (error) {
-    console.error('Failed to check application readiness:', error);
     return false;
   }
 }

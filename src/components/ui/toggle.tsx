@@ -10,7 +10,6 @@ interface ToggleProps {
   disabled?: boolean
   className?: string
   size?: "sm" | "md" | "lg"
-  variant?: "default" | "success" | "warning" | "danger"
 }
 
 const Toggle = React.forwardRef<HTMLButtonElement, ToggleProps>(
@@ -21,7 +20,6 @@ const Toggle = React.forwardRef<HTMLButtonElement, ToggleProps>(
     disabled = false, 
     className,
     size = "md",
-    variant = "default",
     ...props 
   }, ref) => {
     const handleClick = () => {
@@ -42,12 +40,8 @@ const Toggle = React.forwardRef<HTMLButtonElement, ToggleProps>(
       lg: "h-6 w-6"
     }
 
-    const variantClasses = {
-      default: "data-[state=checked]:bg-primary data-[state=unchecked]:bg-input",
-      success: "data-[state=checked]:bg-green-500 data-[state=unchecked]:bg-input",
-      warning: "data-[state=checked]:bg-yellow-500 data-[state=unchecked]:bg-input", 
-      danger: "data-[state=checked]:bg-red-500 data-[state=unchecked]:bg-input"
-    }
+    // Use neutral/gray for checked and unchecked states
+    const baseClasses = "data-[state=checked]:bg-gray-700 data-[state=unchecked]:bg-gray-300";
 
     return (
       <button
@@ -62,7 +56,7 @@ const Toggle = React.forwardRef<HTMLButtonElement, ToggleProps>(
         className={cn(
           "peer inline-flex shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-all duration-200 ease-in-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:opacity-50",
           sizeClasses[size],
-          variantClasses[variant],
+          baseClasses,
           className
         )}
         {...props}

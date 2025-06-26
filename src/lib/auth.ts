@@ -42,11 +42,11 @@ export const authOptions: NextAuthOptions = {
           try {
             const result = await client.query('SELECT * FROM "User" WHERE email = $1', [credentials.email]);
             const user = result.rows[0];
-            console.log('[AUTH DEBUG] User lookup result:', user);
+            // console.log('[AUTH DEBUG] User lookup result:', user);
   
             if (user && user.password) {
               const isValid = await bcrypt.compare(credentials.password, user.password);
-              console.log('[AUTH DEBUG] bcrypt.compare result:', isValid);
+              // console.log('[AUTH DEBUG] bcrypt.compare result:', isValid);
               if (isValid) {
                 // Fetch merged permissions (direct + group)
                 const mergedPermissions = await getMergedUserPermissions(user.id) as PlatformModuleId[];
@@ -79,7 +79,7 @@ export const authOptions: NextAuthOptions = {
     },
     callbacks: {
       async jwt({ token, user, account }) {
-        console.log('[AUTH DEBUG] JWT callback input:', { token, user, account });
+        // console.log('[AUTH DEBUG] JWT callback input:', { token, user, account });
         if (account && user) {
           token.accessToken = account.access_token;
           token.id = user.id;
@@ -94,17 +94,17 @@ export const authOptions: NextAuthOptions = {
             token.modulePermissions = [];
           }
         }
-        console.log('[AUTH DEBUG] JWT callback output:', token);
+        // console.log('[AUTH DEBUG] JWT callback output:', token);
         return token;
       },
       async session({ session, token }) {
-        console.log('[AUTH DEBUG] Session callback input:', { session, token });
+        // console.log('[AUTH DEBUG] Session callback input:', { session, token });
         if (session.user) {
           session.user.id = token.id as string;
           session.user.role = token.role as UserProfile['role'];
           session.user.modulePermissions = token.modulePermissions as PlatformModuleId[];
         }
-        console.log('[AUTH DEBUG] Session callback output:', session);
+        // console.log('[AUTH DEBUG] Session callback output:', session);
         return session;
       },
       async signIn({ user, account, profile }) {

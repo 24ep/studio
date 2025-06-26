@@ -9,7 +9,6 @@ const wss = new WebSocket.Server({ port: PORT });
 const redis = createClient({ url: REDIS_URL });
 
 redis.connect().then(() => {
-  console.log('Connected to Redis for WebSocket bridge');
   redis.subscribe('candidate_upload_queue', (message) => {
     wss.clients.forEach((client) => {
       if (client.readyState === WebSocket.OPEN) {
@@ -25,10 +24,8 @@ wss.on('connection', (ws, req) => {
     ws.close(1008, 'Origin not allowed');
     return;
   }
-  console.log('WebSocket client connected:', origin);
   ws.on('close', () => {
-    console.log('WebSocket client disconnected');
   });
 });
 
-console.log(`WebSocket bridge server running on ws://localhost:${PORT}`); 
+console.error(`WebSocket bridge server running on ws://localhost:${PORT}`); 

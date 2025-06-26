@@ -37,10 +37,9 @@ import { getSystemSetting } from '@/lib/settings';
  *         description: Error processing job
  */
 export async function POST(request: NextRequest) {
-  // DEBUG: Log the API key from env and the received header
-  console.log('API handler env PROCESSOR_API_KEY:', process.env.PROCESSOR_API_KEY);
+  
   const apiKey = request.headers.get('x-api-key');
-  console.log('API handler received x-api-key:', apiKey);
+
   if (apiKey !== process.env.PROCESSOR_API_KEY) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
@@ -87,7 +86,6 @@ export async function POST(request: NextRequest) {
     if (!resumeWebhookUrl) {
       resumeWebhookUrl = process.env.RESUME_PROCESSING_WEBHOOK_URL || 'http://localhost:5678/webhook';
     }
-    console.log('Posting to webhook URL:', resumeWebhookUrl);
     const form = new FormData();
     form.append('file', new Blob([fileBuffer]), job.file_name);
     let webhookRes;
@@ -100,8 +98,9 @@ export async function POST(request: NextRequest) {
       console.error('Fetch to webhook URL failed:', fetchErr);
       throw fetchErr;
     }
+    let errorText = null;
     if (!webhookRes.ok) {
-      const errorText = await webhookRes.text();
+      errorText = await webhookRes.text();
       console.error('Webhook POST failed:', webhookRes.status, errorText);
     }
     let status = 'success';
@@ -110,7 +109,7 @@ export async function POST(request: NextRequest) {
     if (!webhookRes.ok) {
       status = 'error';
       error = `Webhook responded with status ${webhookRes.status}`;
-      error_details = await webhookRes.text();
+      error_details = errorText;
     }
     // 4. Update job status
     await client.query(

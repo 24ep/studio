@@ -593,6 +593,20 @@ export function CandidatesPageClient({
     }
   };
 
+  if (sessionStatus === 'loading') {
+    // Show a loading spinner while session is being established
+    return (
+      <div className="flex h-screen w-screen items-center justify-center bg-background fixed inset-0 z-50">
+        <Loader2 className="h-16 w-16 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  // Prevent any fetches or UI rendering until authenticated or error
+  if (sessionStatus !== 'authenticated') {
+    return null;
+  }
+
   if (authError) {
     return ( <div className="flex flex-col items-center justify-center h-[calc(100vh-10rem)] text-center p-4"> <ShieldAlert className="w-16 h-16 text-destructive mb-4" /> <h2 className="text-2xl font-semibold text-foreground mb-2">Access Denied</h2> <p className="text-muted-foreground mb-4 max-w-md">You need to be signed in to view this page.</p> <Button onClick={() => signIn(undefined, { callbackUrl: pathname })} className="btn-primary-gradient">Sign In</Button> </div> );
   }

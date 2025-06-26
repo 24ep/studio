@@ -28,8 +28,8 @@ async function getInitialCandidatesData(session: any): Promise<{ candidates: Can
       p.title as "positionTitle", p.department as "positionDepartment", p.position_level as "positionLevel",
       rec.name as "recruiterName",
       COALESCE(th_data.history, '[]'::json) as "transitionHistory"
-    FROM "candidates" c
-    LEFT JOIN "positions" p ON c."positionId" = p.id
+    FROM "Candidate" c
+    LEFT JOIN "Position" p ON c."positionId" = p.id
     LEFT JOIN "User" rec ON c."recruiterId" = rec.id
     LEFT JOIN LATERAL (
       SELECT json_agg(

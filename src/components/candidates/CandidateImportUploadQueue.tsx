@@ -10,6 +10,8 @@ import { Input } from "@/components/ui/input";
 import { MINIO_PUBLIC_BASE_URL, MINIO_BUCKET } from '@/lib/minio-constants';
 import { AlertDialog, AlertDialogTrigger, AlertDialogContent, AlertDialogHeader, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from "@/components/ui/alert-dialog";
 import { useToast } from '@/hooks/use-toast';
+import { addDays, format, isAfter, isBefore, parseISO, subDays } from 'date-fns';
+import { Badge } from '@/components/ui/badge';
 
 export type CandidateJobType = "upload" | "import";
 
@@ -86,6 +88,11 @@ export const CandidateImportUploadQueue: React.FC = () => {
   const [cancelId, setCancelId] = useState<string | null>(null);
   const [cancelLoading, setCancelLoading] = useState(false);
   const { success, error } = useToast();
+  const [dateRange, setDateRange] = useState<{ start: Date; end: Date }>(() => {
+    const end = new Date();
+    const start = subDays(end, 30);
+    return { start, end };
+  });
 
   // Fetch paginated jobs
   const fetchJobs = useCallback(async () => {
@@ -156,8 +163,51 @@ export const CandidateImportUploadQueue: React.FC = () => {
     }
   };
 
+  // Helper to check if a date is in range
+  function isInRange(dateStr?: string) {
+    if (!dateStr) return false;
+    const date = typeof dateStr === 'string' ? parseISO(dateStr) : dateStr;
+    return isAfter(date, dateRange.start) && isBefore(date, addDays(dateRange.end, 1));
+  }
+
+  // Status counts
+  const numQueued = jobs.filter(j => j.source === 'bulk' && j.status === 'queued').length;
+  const numInProgress = jobs.filter(j => j.source === 'bulk' && (j.status === 'uploading' || j.status === 'importing')).length;
+  const numSuccess = jobs.filter(j => j.source === 'bulk' && j.status === 'success' && isInRange(j.completed_date)).length;
+  const numError = jobs.filter(j => j.source === 'bulk' && j.status === 'error' && isInRange(j.completed_date)).length;
+
   return (
     <div className="mb-6">
+      {/* Summary Status Section */}
+      <div className="mb-4 p-4 rounded-lg bg-muted/50 flex flex-col md:flex-row md:items-end md:gap-8 gap-2">
+        <div>
+          <div className="font-semibold text-lg">Summary (Bulk Uploads)</div>
+          <div className="flex flex-wrap gap-4 mt-2">
+            <div><span className="font-bold">Queued:</span> {numQueued}</div>
+            <div><span className="font-bold">In Progress:</span> {numInProgress}</div>
+            <div><span className="font-bold">Success:</span> {numSuccess}</div>
+            <div><span className="font-bold">Error:</span> {numError}</div>
+          </div>
+        </div>
+        <div className="flex flex-col gap-1">
+          <label className="text-sm font-medium">Date Range (for Success/Error):</label>
+          <div className="flex gap-2 items-center">
+            <input
+              type="date"
+              value={format(dateRange.start, 'yyyy-MM-dd')}
+              onChange={e => setDateRange(r => ({ ...r, start: new Date(e.target.value) }))}
+              className="border rounded px-2 py-1 text-sm"
+            />
+            <span>-</span>
+            <input
+              type="date"
+              value={format(dateRange.end, 'yyyy-MM-dd')}
+              onChange={e => setDateRange(r => ({ ...r, end: new Date(e.target.value) }))}
+              className="border rounded px-2 py-1 text-sm"
+            />
+          </div>
+        </div>
+      </div>
       <div className="mb-2 font-semibold">All Upload Jobs: {totalBulkJobs}</div>
       <div className="flex flex-col md:flex-row md:items-center gap-2 mb-4">
         <Input
@@ -259,12 +309,46 @@ export const CandidateImportUploadQueue: React.FC = () => {
                   </TableCell>
                   <TableCell>{formatBytes(item.file_size)}</TableCell>
                   <TableCell>
-                    <span className="text-muted-foreground capitalize">{item.status}</span>
+                    <span className="text-muted-foreground capitalize">
+                      {(() => {
+                        const status = item.status;
+                        let color = '';
+                        switch (status) {
+                          case 'queued': color = 'bg-gray-400 text-white'; break;
+                          case 'uploading': color = 'bg-blue-500 text-white'; break;
+                          case 'importing': color = 'bg-blue-400 text-white'; break;
+                          case 'success': color = 'bg-green-500 text-white'; break;
+                          case 'error': color = 'bg-red-500 text-white'; break;
+                          case 'cancelled': color = 'bg-yellow-400 text-black'; break;
+                          default: color = 'bg-gray-300 text-black';
+                        }
+                        return (
+                          <span className={`inline-block px-2 py-0.5 rounded text-xs font-semibold ${color}`}>{status}</span>
+                        );
+                      })()}
+                    </span>
                   </TableCell>
                   <TableCell>{item.completed_date ? new Date(item.completed_date).toLocaleString() : '-'}</TableCell>
                   <TableCell>{item.upload_date ? new Date(item.upload_date).toLocaleString() : '-'}</TableCell>
                   <TableCell>{item.upload_id || '-'}</TableCell>
                   <TableCell className="flex gap-1">
+                    {item.file_path && (
+                      <Button
+                        asChild
+                        variant="ghost"
+                        size="icon"
+                        title="Download CV"
+                      >
+                        <a
+                          href={`${MINIO_PUBLIC_BASE_URL}/${MINIO_BUCKET}/${item.file_path}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          download={item.file_name}
+                        >
+                          <FileText className="h-4 w-4 text-primary" />
+                        </a>
+                      </Button>
+                    )}
                     {item.status === "error" && (
                       <Button variant="ghost" size="icon" onClick={() => setShowErrorLogId(item.id)} title="View error log">
                         <Eye className="h-4 w-4 text-destructive" />
