@@ -29,16 +29,16 @@ export async function POST(request: NextRequest) {
   const actingUserId = session?.user?.id || null;
   const actingUserName = session?.user?.name || session?.user?.email || 'System (n8n Upload)';
 
-  let n8nWebhookUrl = await getSystemSetting('n8nGenericPdfWebhookUrl'); // Fetch from DB first
-  if (!n8nWebhookUrl) {
+  let generalPdfWebhookUrl = await getSystemSetting('generalPdfWebhookUrl'); // Fetch from DB first
+  if (!generalPdfWebhookUrl) {
     // Fallback to environment variable if not found in DB
-    n8nWebhookUrl = process.env.N8N_GENERIC_PDF_WEBHOOK_URL || null;
+    generalPdfWebhookUrl = process.env.GENERAL_PDF_WEBHOOK_URL || null;
   }
 
-  if (!n8nWebhookUrl) {
-    const errorMessage = "Automated candidate creation is not configured on the server. Please ensure the Generic PDF Webhook URL is set either in Settings > Integrations or as an N8N_GENERIC_PDF_WEBHOOK_URL environment variable.";
+  if (!generalPdfWebhookUrl) {
+    const errorMessage = "Automated candidate creation is not configured on the server. Please ensure the PDF Webhook URL is set either in Settings > Integrations or as a GENERAL_PDF_WEBHOOK_URL environment variable.";
     console.error(errorMessage);
-    await logAudit('ERROR', `Attempt to use n8n candidate creation upload by ${actingUserName} (ID: ${actingUserId}) failed: Generic PDF Webhook URL not configured.`, 'API:Candidates:N8NCreate', actingUserId);
+    await logAudit('ERROR', `Attempt to use candidate creation upload by ${actingUserName} (ID: ${actingUserId}) failed: PDF Webhook URL not configured.`, 'API:Candidates:Create', actingUserId);
     return NextResponse.json({ message: errorMessage }, { status: 500 });
   }
 
@@ -74,51 +74,49 @@ export async function POST(request: NextRequest) {
         }
     }
 
-    // We will forward the file as FormData to n8n
-    const n8nFormData = new FormData();
-    n8nFormData.append('file', file, file.name); // Send the file itself
-    n8nFormData.append('originalFileName', file.name);
-    n8nFormData.append('mimeType', file.type);
-    n8nFormData.append('sourceApplication', 'NCC Candidate Management');
-    n8nFormData.append('uploadTimestamp', new Date().toISOString());
-    if (actingUserId) n8nFormData.append('uploadedByUserId', actingUserId);
-    if (actingUserName && actingUserName !== 'System (n8n Upload)') n8nFormData.append('uploadedByUserName', actingUserName);
+    // We will forward the file as FormData to the generic webhook
+    const webhookFormData = new FormData();
+    webhookFormData.append('file', file, file.name); // Send the file itself
+    webhookFormData.append('originalFileName', file.name);
+    webhookFormData.append('mimeType', file.type);
+    webhookFormData.append('sourceApplication', 'NCC Candidate Management');
+    webhookFormData.append('uploadTimestamp', new Date().toISOString());
+    if (actingUserId) webhookFormData.append('uploadedByUserId', actingUserId);
+    if (actingUserName && actingUserName !== 'System (n8n Upload)') webhookFormData.append('uploadedByUserName', actingUserName);
     
     if (targetPositionId) {
-        n8nFormData.append('targetPositionId', targetPositionId);
+        webhookFormData.append('targetPositionId', targetPositionId);
     }
     if (targetPositionTitle) {
-        n8nFormData.append('targetPositionTitle', targetPositionTitle);
+        webhookFormData.append('targetPositionTitle', targetPositionTitle);
     }
     if (targetPositionDescription) {
-        n8nFormData.append('targetPositionDescription', targetPositionDescription);
+        webhookFormData.append('targetPositionDescription', targetPositionDescription);
     }
     if (targetPositionLevel) {
-        n8nFormData.append('targetPositionLevel', targetPositionLevel);
+        webhookFormData.append('targetPositionLevel', targetPositionLevel);
     }
 
 
-    const n8nResponse = await fetch(n8nWebhookUrl, {
+    const webhookResponse = await fetch(generalPdfWebhookUrl, {
       method: 'POST',
-      body: n8nFormData, 
-      // Do not set Content-Type header when sending FormData;
-      // the browser (or fetch) will set it correctly with the boundary.
+      body: webhookFormData,
     });
 
-    if (n8nResponse.ok) {
-      console.log(`Successfully sent PDF to n8n for candidate creation: ${file.name}`);
-      const n8nResponseBody = await n8nResponse.json().catch(() => ({ message: "Successfully sent to n8n, but no JSON response or n8n response was not JSON."}));
-      await logAudit('AUDIT', `PDF resume '${file.name}' sent to n8n for candidate creation by ${actingUserName} (ID: ${actingUserId}). Target Position ID: ${targetPositionId || 'N/A'}.`, 'API:Candidates:N8NCreate', actingUserId, { fileName: file.name, targetPositionId });
-      return NextResponse.json({ message: 'PDF successfully sent to n8n workflow for candidate creation.', n8nResponse: n8nResponseBody }, { status: 200 });
+    if (webhookResponse.ok) {
+      console.log(`Successfully sent PDF to webhook for candidate creation: ${file.name}`);
+      const webhookResponseBody = await webhookResponse.json().catch(() => ({ message: "Successfully sent to webhook, but no JSON response or webhook response was not JSON."}));
+      await logAudit('AUDIT', `PDF resume '${file.name}' sent to webhook for candidate creation by ${actingUserName} (ID: ${actingUserId}). Target Position ID: ${targetPositionId || 'N/A'}.`, 'API:Candidates:Create', actingUserId, { fileName: file.name, targetPositionId });
+      return NextResponse.json({ message: 'PDF successfully sent to workflow for candidate creation.', webhookResponse: webhookResponseBody }, { status: 200 });
     } else {
-      const errorBody = await n8nResponse.text();
-      console.error(`Failed to send PDF to n8n for candidate creation. n8n status: ${n8nResponse.status}, Body: ${errorBody}`);
-      await logAudit('ERROR', `Failed to send PDF resume '${file.name}' to n8n for candidate creation by ${actingUserName} (ID: ${actingUserId}). n8n status: ${n8nResponse.status}. Target Position ID: ${targetPositionId || 'N/A'}.`, 'API:Candidates:N8NCreate', actingUserId, { fileName: file.name, n8nError: errorBody, targetPositionId });
-      return NextResponse.json({ message: `Failed to send PDF to n8n workflow. n8n responded with status ${n8nResponse.status}.`, errorDetails: errorBody }, { status: n8nResponse.status });
+      const errorBody = await webhookResponse.text();
+      console.error(`Failed to send PDF to webhook for candidate creation. Webhook status: ${webhookResponse.status}, Body: ${errorBody}`);
+      await logAudit('ERROR', `Failed to send PDF resume '${file.name}' to webhook for candidate creation by ${actingUserName} (ID: ${actingUserId}). Webhook status: ${webhookResponse.status}. Target Position ID: ${targetPositionId || 'N/A'}.`, 'API:Candidates:Create', actingUserId, { fileName: file.name, webhookError: errorBody, targetPositionId });
+      return NextResponse.json({ message: `Failed to send PDF to workflow. Webhook responded with status ${webhookResponse.status}.`, errorDetails: errorBody }, { status: webhookResponse.status });
     }
   } catch (error) {
-    console.error('Error processing PDF upload for n8n candidate creation:', error);
-    await logAudit('ERROR', `Error processing PDF upload for n8n candidate creation by ${actingUserName} (ID: ${actingUserId}). Error: ${(error as Error).message}`, 'API:Candidates:N8NCreate', actingUserId);
+    console.error('Error processing PDF upload for candidate creation:', error);
+    await logAudit('ERROR', `Error processing PDF upload for candidate creation by ${actingUserName} (ID: ${actingUserId}). Error: ${(error as Error).message}`, 'API:Candidates:Create', actingUserId);
     return NextResponse.json({ message: 'Error processing file upload', error: (error as Error).message }, { status: 500 });
   }
 }

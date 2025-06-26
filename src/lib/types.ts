@@ -390,7 +390,7 @@ export type SystemSettingKey =
   | 'smtpFromEmail'
   | 'resumeProcessingWebhookUrl'
   | 'n8nResumeWebhookUrl'
-  | 'n8nGenericPdfWebhookUrl'
+  | 'generalPdfWebhookUrl'
   | 'geminiApiKey'
   | 'loginPageBackgroundType'
   | 'loginPageBackgroundImageUrl'

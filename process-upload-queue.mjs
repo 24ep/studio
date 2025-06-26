@@ -40,6 +40,12 @@ async function processJob() {
             console.error(`Response body:`, text);
             return false;
         }
+        if (text.trim().startsWith('<!DOCTYPE html') || text.trim().startsWith('<html')) {
+            console.error('Background processor error: Received HTML instead of JSON. This usually means the API route failed or returned an error page.');
+            console.error('HTTP status:', res.status);
+            console.error('Response text:', text.substring(0, 500));
+            return false;
+        }
         try {
             const data = JSON.parse(text);
             if (data && data.message === 'No queued jobs') {
