@@ -17,7 +17,7 @@ const mainNavItems = [
 ];
 const myTaskBoardNavItem = { href: "/my-tasks", label: "My Task Board", icon: ListTodo, description: "Your personal task board" };
 const baseSettingsSubItems = [
-    { href: "/settings/integrations", label: "Integrations", icon: Zap, description: "Third-party integrations" },
+    { href: "/settings/system-settings", label: "System Settings", icon: Zap, description: "Third-party integrations" },
     { href: "/settings/stages", label: "Recruitment Stages", icon: KanbanSquare, permissionId: 'RECRUITMENT_STAGES_MANAGE', description: "Manage recruitment stages" },
     { href: "/settings/data-models", label: "Data Models (Client)", icon: DatabaseZap, permissionId: 'DATA_MODELS_MANAGE', description: "Client-side data models" },
     { href: "/settings/custom-fields", label: "Custom Fields (Server)", icon: Settings2, permissionId: 'CUSTOM_FIELDS_MANAGE', description: "Server-side custom fields" },

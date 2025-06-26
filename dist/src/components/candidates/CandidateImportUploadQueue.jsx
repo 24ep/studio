@@ -68,6 +68,7 @@ export const CandidateImportUploadQueue = () => {
         fetchJobs();
     }, [fetchJobs]);
     useEffect(() => {
+        // Use NEXT_PUBLIC_WS_QUEUE_BRIDGE_URL for Docker/production, fallback to localhost for local dev
         const wsUrl = process.env.NEXT_PUBLIC_WS_QUEUE_BRIDGE_URL || 'ws://localhost:3002';
         const ws = new window.WebSocket(wsUrl);
         ws.onmessage = (event) => {
@@ -188,6 +189,7 @@ export const CandidateImportUploadQueue = () => {
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ status: 'queued', error: null, error_details: null, completed_date: null })
                     });
+                    fetchJobs();
                 }}>
                         <RotateCcw className="h-4 w-4 text-primary"/>
                       </Button>)}
@@ -292,6 +294,7 @@ export const CandidateImportUploadQueue = () => {
                 if (results.some(res => !res.ok))
                     throw new Error('Some retries failed');
                 success('Selected jobs retried successfully');
+                await fetchJobs();
             }
             catch (err) {
                 error('Failed to retry some jobs');

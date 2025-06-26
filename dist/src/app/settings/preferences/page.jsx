@@ -202,27 +202,26 @@ export default function PreferencesSettingsPage() {
                 throw new Error(errorData.message);
             }
             const settings = await response.json();
-            const settingsMap = new Map(settings.map(s => [s.key, s.value]));
-            setAppName(settingsMap.get('appName') || DEFAULT_APP_NAME);
-            setThemePreference(settingsMap.get('appThemePreference') || 'system');
-            const logoUrl = settingsMap.get('appLogoDataUrl') || null;
+            setAppName(settings.appName || DEFAULT_APP_NAME);
+            setThemePreference(settings.appThemePreference || 'system');
+            const logoUrl = settings.appLogoDataUrl || null;
             setSavedLogoDataUrl(logoUrl);
             setLogoPreviewUrl(logoUrl);
-            setPrimaryGradientStart(settingsMap.get('primaryGradientStart') || DEFAULT_PRIMARY_GRADIENT_START);
-            setPrimaryGradientEnd(settingsMap.get('primaryGradientEnd') || DEFAULT_PRIMARY_GRADIENT_END);
-            setLoginBgType(settingsMap.get('loginPageBackgroundType') || DEFAULT_LOGIN_BG_TYPE);
-            const loginBgUrl = settingsMap.get('loginPageBackgroundImageUrl') || null;
+            setPrimaryGradientStart(settings.primaryGradientStart || DEFAULT_PRIMARY_GRADIENT_START);
+            setPrimaryGradientEnd(settings.primaryGradientEnd || DEFAULT_PRIMARY_GRADIENT_END);
+            setLoginBgType(settings.loginPageBackgroundType || DEFAULT_LOGIN_BG_TYPE);
+            const loginBgUrl = settings.loginPageBackgroundImageUrl || null;
             setSavedLoginBgImageUrl(loginBgUrl);
             setLoginBgImagePreviewUrl(loginBgUrl);
-            setLoginBgColor1(settingsMap.get('loginPageBackgroundColor1') || DEFAULT_LOGIN_BG_COLOR1_HEX);
-            setLoginBgColor2(settingsMap.get('loginPageBackgroundColor2') || DEFAULT_LOGIN_BG_COLOR2_HEX);
-            setLoginLayoutType(settingsMap.get('loginPageLayoutType') || DEFAULT_LOGIN_LAYOUT_TYPE);
-            setAppFontFamily(settingsMap.get('appFontFamily') || 'Poppins');
-            setLoginPageContent(settingsMap.get('loginPageContent') || '');
+            setLoginBgColor1(settings.loginPageBackgroundColor1 || DEFAULT_LOGIN_BG_COLOR1_HEX);
+            setLoginBgColor2(settings.loginPageBackgroundColor2 || DEFAULT_LOGIN_BG_COLOR2_HEX);
+            setLoginLayoutType(settings.loginPageLayoutType || DEFAULT_LOGIN_LAYOUT_TYPE);
+            setAppFontFamily(settings.appFontFamily || 'Poppins');
+            setLoginPageContent(settings.loginPageContent || '');
             // Load sidebar colors
             const newSidebarColors = createInitialSidebarColors();
             Object.keys(newSidebarColors).forEach(key => {
-                const value = settingsMap.get(key);
+                const value = settings[key];
                 if (value) {
                     newSidebarColors[key] = value;
                 }

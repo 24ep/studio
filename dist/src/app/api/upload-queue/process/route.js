@@ -8,13 +8,13 @@ var __asyncValues = (this && this.__asyncValues) || function (o) {
 import { NextResponse } from 'next/server';
 import { getPool } from '@/lib/db';
 import { minioClient, MINIO_BUCKET } from '@/lib/minio';
-const N8N_WEBHOOK_URL = process.env.N8N_WEBHOOK_URL || 'http://localhost:5678/webhook';
+import { getSystemSetting } from '@/lib/settings';
 /**
  * @openapi
  * /api/upload-queue/process:
  *   post:
  *     summary: Process the next queued upload job
- *     description: Processes the next file in the upload queue by sending it to n8n. Requires authentication. Not for public use.
+ *     description: Processes the next file in the upload queue by sending it to an automation webhook. Requires authentication. Not for public use.
  *     responses:
  *       200:
  *         description: Job processed (or no jobs)
@@ -30,7 +30,7 @@ const N8N_WEBHOOK_URL = process.env.N8N_WEBHOOK_URL || 'http://localhost:5678/we
  *                     id: "uuid"
  *                     file_name: "resume.pdf"
  *                     status: "success"
- *                   n8n_status: 200
+ *                   automation_status: 200
  *               no_jobs:
  *                 summary: No queued jobs
  *                 value:
@@ -94,20 +94,36 @@ export async function POST(request) {
             finally { if (e_1) throw e_1.error; }
         }
         const fileBuffer = Buffer.concat(chunks);
-        // 3. POST to n8n webhook
-        const formData = new FormData();
-        formData.append('file', new Blob([fileBuffer]), job.file_name);
-        const n8nRes = await fetch(N8N_WEBHOOK_URL, {
-            method: 'POST',
-            body: formData
-        });
+        // 3. POST to the configured webhook endpoint (any compatible service)
+        let resumeWebhookUrl = await getSystemSetting('resumeProcessingWebhookUrl');
+        if (!resumeWebhookUrl) {
+            resumeWebhookUrl = process.env.RESUME_PROCESSING_WEBHOOK_URL || 'http://localhost:5678/webhook';
+        }
+        console.log('Posting to webhook URL:', resumeWebhookUrl);
+        const form = new FormData();
+        form.append('file', new Blob([fileBuffer]), job.file_name);
+        let webhookRes;
+        try {
+            webhookRes = await fetch(resumeWebhookUrl, {
+                method: 'POST',
+                body: form
+            });
+        }
+        catch (fetchErr) {
+            console.error('Fetch to webhook URL failed:', fetchErr);
+            throw fetchErr;
+        }
+        if (!webhookRes.ok) {
+            const errorText = await webhookRes.text();
+            console.error('Webhook POST failed:', webhookRes.status, errorText);
+        }
         let status = 'success';
         let error = null;
         let error_details = null;
-        if (!n8nRes.ok) {
+        if (!webhookRes.ok) {
             status = 'error';
-            error = `n8n responded with status ${n8nRes.status}`;
-            error_details = await n8nRes.text();
+            error = `Webhook responded with status ${webhookRes.status}`;
+            error_details = await webhookRes.text();
         }
         // 4. Update job status
         await client.query(`UPDATE upload_queue SET status = $1, error = $2, error_details = $3, completed_date = now(), updated_at = now() WHERE id = $4`, [status, error, error_details, job.id]);
@@ -116,7 +132,7 @@ export async function POST(request) {
         if (redisClient) {
             await redisClient.publish('candidate_upload_queue', JSON.stringify({ type: 'queue_updated' }));
         }
-        return NextResponse.json({ job: Object.assign(Object.assign({}, job), { status, error, error_details }), n8n_status: n8nRes.status });
+        return NextResponse.json({ job: Object.assign(Object.assign({}, job), { status, error, error_details }), automation_status: webhookRes.status });
     }
     catch (err) {
         if (job) {

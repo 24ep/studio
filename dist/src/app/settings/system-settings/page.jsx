@@ -27,8 +27,8 @@ export default function SystemSettingsPage() {
     const [smtpPassword, setSmtpPassword] = useState('');
     const [smtpSecure, setSmtpSecure] = useState(true);
     const [smtpFromEmail, setSmtpFromEmail] = useState('');
-    const [n8nResumeWebhookUrl, setN8nResumeWebhookUrl] = useState('');
-    const [n8nGenericPdfWebhookUrl, setN8nGenericPdfWebhookUrl] = useState('');
+    const [resumeProcessingWebhookUrl, setResumeProcessingWebhookUrl] = useState('');
+    const [generalPdfWebhookUrl, setGeneralPdfWebhookUrl] = useState('');
     const [geminiApiKey, setGeminiApiKey] = useState('');
     const fetchSystemSettings = useCallback(async () => {
         setIsLoading(true);
@@ -46,8 +46,8 @@ export default function SystemSettingsPage() {
             setSmtpUser(settings.smtpUser || '');
             setSmtpSecure(settings.smtpSecure === 'true');
             setSmtpFromEmail(settings.smtpFromEmail || '');
-            setN8nResumeWebhookUrl(settings.n8nResumeWebhookUrl || '');
-            setN8nGenericPdfWebhookUrl(settings.n8nGenericPdfWebhookUrl || '');
+            setResumeProcessingWebhookUrl(settings.resumeProcessingWebhookUrl || '');
+            setGeneralPdfWebhookUrl(settings.generalPdfWebhookUrl || '');
             setGeminiApiKey(settings.geminiApiKey || '');
         }
         catch (error) {
@@ -75,8 +75,8 @@ export default function SystemSettingsPage() {
             { key: 'smtpUser', value: smtpUser },
             { key: 'smtpSecure', value: String(smtpSecure) },
             { key: 'smtpFromEmail', value: smtpFromEmail },
-            { key: 'n8nResumeWebhookUrl', value: n8nResumeWebhookUrl },
-            { key: 'n8nGenericPdfWebhookUrl', value: n8nGenericPdfWebhookUrl },
+            { key: 'resumeProcessingWebhookUrl', value: resumeProcessingWebhookUrl },
+            { key: 'generalPdfWebhookUrl', value: generalPdfWebhookUrl },
             { key: 'geminiApiKey', value: geminiApiKey },
         ];
         try {
@@ -144,28 +144,28 @@ export default function SystemSettingsPage() {
           </div>
         </CardContent>
       </Card>
-      {/* Webhook Automation (n8n) + Max Concurrent Processors */}
+      {/* Webhook Automation + Max Concurrent Processors */}
       <Card className="shadow-lg ">
         <CardHeader>
           <CardTitle className="flex items-center text-2xl gap-2">
             <Zap className="h-7 w-7 text-primary"/>
-            Workflow Automation (Webhooks)
+            Workflow Automation
           </CardTitle>
           <CardDescription className="text-base text-muted-foreground">
-            Configure server-side webhook URLs for automated processing tasks via n8n or similar tools.
+            Configure server-side webhook URLs for automated processing tasks via any compatible automation service.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4 pt-6">
           <div>
-            <Label htmlFor="n8n-resume-webhook">Resume Processing Webhook URL</Label>
-            <Input id="n8n-resume-webhook" type="url" placeholder="https://your-n8n-instance/webhook/resume-processing" value={n8nResumeWebhookUrl} onChange={(e) => setN8nResumeWebhookUrl(e.target.value)} className="mt-1" disabled={isSaving}/>
-            <p className="text-xs text-muted-foreground mt-1">Used for resumes uploaded to existing candidates. The application will send candidate details and a MinIO presigned URL for the resume to this endpoint.</p>
+            <Label htmlFor="resume-processing-webhook">Resume Processing Webhook URL (Any Service)</Label>
+            <Input id="resume-processing-webhook" type="url" placeholder="https://your-webhook-endpoint/receive-resume" value={resumeProcessingWebhookUrl} onChange={(e) => setResumeProcessingWebhookUrl(e.target.value)} className="mt-1" disabled={isSaving}/>
+            <p className="text-xs text-muted-foreground mt-1">This URL will receive a POST request with the uploaded resume file (as FormData). You can use any compatible webhook service (Zapier, Make, custom API, etc.).</p>
           </div>
           <Separator />
           <div>
-            <Label htmlFor="n8n-generic-pdf-webhook">New Candidate PDF Webhook URL</Label>
-            <Input id="n8n-generic-pdf-webhook" type="url" placeholder="https://your-n8n-instance/webhook/new-candidate-pdf" value={n8nGenericPdfWebhookUrl} onChange={(e) => setN8nGenericPdfWebhookUrl(e.target.value)} className="mt-1" disabled={isSaving}/>
-            <p className="text-xs text-muted-foreground mt-1">Used by &quot;Create via Resume (Automated)&quot; feature. The application sends the PDF file (as FormData) and optional target position info to this endpoint. This webhook should then call back to <code className='font-mono text-xs bg-muted px-1 rounded'>/api/n8n/create-candidate-with-matches</code>.</p>
+            <Label htmlFor="general-pdf-webhook">New Candidate PDF Webhook URL</Label>
+            <Input id="general-pdf-webhook" type="url" placeholder="https://your-webhook-endpoint/receive-pdf" value={generalPdfWebhookUrl} onChange={(e) => setGeneralPdfWebhookUrl(e.target.value)} className="mt-1" disabled={isSaving}/>
+            <p className="text-xs text-muted-foreground mt-1">Used by the "Create via Resume (Automated)" feature. The application sends the PDF file (as FormData) and optional target position info to this endpoint. You can use any compatible webhook service (Zapier, Make, custom API, etc.).</p>
           </div>
           <Separator />
           <div>

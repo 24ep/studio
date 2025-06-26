@@ -10,7 +10,7 @@ import { PlusCircle, Users, ServerCrash, Zap, Loader2, FileDown, FileUp, Chevron
 import { toast } from "react-hot-toast";
 import { AddCandidateModal } from '@/components/candidates/AddCandidateModal';
 import { UploadResumeModal } from '@/components/candidates/UploadResumeModal';
-import { CreateCandidateViaN8nModal } from '@/components/candidates/CreateCandidateViaN8nModal';
+import { CreateCandidateViaAutomationModal } from '@/components/candidates/CreateCandidateViaAutomationModal';
 import { ImportCandidatesModal } from '@/components/candidates/ImportCandidatesModal';
 import { EditPositionModal } from '@/components/positions/EditPositionModal';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
@@ -54,7 +54,7 @@ export function CandidatesPageClient({ initialCandidates, initialAvailablePositi
     const [aiMatchedCandidateIds, setAiMatchedCandidateIds] = useState(null);
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
-    const [isCreateViaN8nModalOpen, setIsCreateViaN8nModalOpen] = useState(false);
+    const [isCreateViaAutomationModalOpen, setIsCreateViaAutomationModalOpen] = useState(false);
     const [isImportModalOpen, setIsImportModalOpen] = useState(false);
     const [selectedCandidateForUpload, setSelectedCandidateForUpload] = useState(null);
     const router = useRouter();
@@ -629,7 +629,7 @@ export function CandidatesPageClient({ initialCandidates, initialAvailablePositi
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>)}
-            {canManageCandidates && (<Button onClick={() => setIsCreateViaN8nModalOpen(true)} className="w-full sm:w-auto btn-primary-gradient"> <Zap className="mr-2 h-4 w-4"/> Create via Resume </Button>)}
+            {canManageCandidates && (<Button onClick={() => setIsCreateViaAutomationModalOpen(true)} className="w-full sm:w-auto btn-primary-gradient"> <Zap className="mr-2 h-4 w-4"/> Create via Resume </Button>)}
             <DropdownMenu>
                <DropdownMenuTrigger asChild><Button variant="outline" className="w-full sm:w-auto"> More Actions <ChevronDown className="ml-2 h-4 w-4"/> </Button></DropdownMenuTrigger>
               <DropdownMenuContent align="end">
@@ -664,7 +664,7 @@ export function CandidatesPageClient({ initialCandidates, initialAvailablePositi
 
       {canManageCandidates && <AddCandidateModal isOpen={isAddModalOpen} onOpenChange={setIsAddModalOpen} onAddCandidate={handleAddCandidateSubmit} availablePositions={availablePositions} availableStages={availableStages}/>}
       {canManageCandidates && <UploadResumeModal isOpen={isUploadModalOpen} onOpenChange={setIsUploadModalOpen} candidate={selectedCandidateForUpload} onUploadSuccess={handleUploadSuccess}/>}
-      {canManageCandidates && <CreateCandidateViaN8nModal isOpen={isCreateViaN8nModalOpen} onOpenChange={setIsCreateViaN8nModalOpen} onProcessingStart={handleAutomatedProcessingStart}/>}
+      {canManageCandidates && <CreateCandidateViaAutomationModal isOpen={isCreateViaAutomationModalOpen} onOpenChange={setIsCreateViaAutomationModalOpen} onProcessingStart={handleAutomatedProcessingStart}/>}
       {canImportCandidates && <ImportCandidatesModal isOpen={isImportModalOpen} onOpenChange={setIsImportModalOpen} onImportSuccess={() => fetchPaginatedCandidates(filters, page, pageSize)}/>}
       {selectedPositionForEdit && (<EditPositionModal isOpen={isEditPositionModalOpen} onOpenChange={(isOpen) => { setIsEditPositionModalOpen(isOpen); if (!isOpen)
         setSelectedPositionForEdit(null); }} position={selectedPositionForEdit} onEditPosition={handlePositionEdited}/>)}

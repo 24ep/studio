@@ -1409,12 +1409,12 @@ const swaggerSpec = {
                 }
             }
         },
-        // N8N Integration endpoints
-        '/api/n8n/create-candidate-with-matches': {
+        // Automation Integration endpoints
+        '/api/automation/create-candidate-with-matches': {
             get: {
-                summary: 'Health check for n8n integration',
+                summary: 'Health check for automation integration',
                 description: 'Returns a simple health check response',
-                tags: ['N8N Integration'],
+                tags: ['Automation Integration'],
                 responses: {
                     '200': {
                         description: 'Health check response',
@@ -1433,8 +1433,8 @@ const swaggerSpec = {
             },
             post: {
                 summary: 'Create candidate with job matches',
-                description: 'Creates a new candidate with associated job matches from n8n workflow',
-                tags: ['N8N Integration'],
+                description: 'Creates a new candidate with associated job matches from automation workflow',
+                tags: ['Automation Integration'],
                 requestBody: {
                     required: true,
                     content: {
@@ -1480,11 +1480,11 @@ const swaggerSpec = {
                 }
             }
         },
-        '/api/n8n/webhook-proxy': {
+        '/api/automation/webhook-proxy': {
             post: {
-                summary: 'N8N webhook proxy',
-                description: 'Proxies webhook requests from n8n workflows',
-                tags: ['N8N Integration'],
+                summary: 'Automation webhook proxy',
+                description: 'Proxies webhook requests from automation workflows',
+                tags: ['Automation Integration'],
                 requestBody: {
                     required: true,
                     content: {
@@ -1717,29 +1717,6 @@ const swaggerSpec = {
             }
         },
         // Setup endpoints
-        '/api/setup/check-db-schema': {
-            get: {
-                summary: 'Check database schema',
-                description: 'Checks if the database schema is properly set up',
-                tags: ['Setup'],
-                responses: {
-                    '200': {
-                        description: 'Database schema status',
-                        content: {
-                            'application/json': {
-                                schema: {
-                                    type: 'object',
-                                    properties: {
-                                        status: { type: 'string', enum: ['ok', 'missing_tables', 'missing_columns'] },
-                                        details: { type: 'object' }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        },
         '/api/setup/check-minio-bucket': {
             get: {
                 summary: 'Check MinIO bucket',
@@ -2285,8 +2262,8 @@ const swaggerSpec = {
             description: 'Candidate transition and status change endpoints'
         },
         {
-            name: 'N8N Integration',
-            description: 'N8N workflow integration endpoints'
+            name: 'Automation Integration',
+            description: 'Automation workflow integration endpoints'
         }
     ]
 };

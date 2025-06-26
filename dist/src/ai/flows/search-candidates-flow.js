@@ -121,7 +121,7 @@ function createCandidateSummary(candidate) {
             });
         }
         if (details.job_matches && details.job_matches.length > 0) {
-            summaryParts.push("Automated Job Matches (from n8n):");
+            summaryParts.push("Automated Job Matches (from automation):");
             details.job_matches.forEach(match => {
                 summaryParts.push(`  - Job: ${match.job_title || match.job_id || 'N/A'}, Fit: ${match.fit_score}%, Reasons: ${(match.match_reasons || []).join(', ')}`);
             });

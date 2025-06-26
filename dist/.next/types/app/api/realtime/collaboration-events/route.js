@@ -1,4 +1,4 @@
-// File: C:\Users\Zenbook\Desktop\repo\studio-2\src\app\api\realtime\collaboration-events\route.ts
+// File: C:\Users\Zenbook\Desktop\repo\studio-3\src\app\api\realtime\collaboration-events\route.ts
 import * as entry from '../../../../../../src/app/api/realtime/collaboration-events/route.js';
 // Check that the entry is a valid entry
 checkFields();

@@ -38,7 +38,7 @@ const systemSettingKeyEnum = z.enum([
     'appName', 'appLogoDataUrl', 'appThemePreference',
     'primaryGradientStart', 'primaryGradientEnd',
     'smtpHost', 'smtpPort', 'smtpUser', 'smtpSecure', 'smtpFromEmail',
-    'n8nResumeWebhookUrl', 'n8nGenericPdfWebhookUrl', 'geminiApiKey',
+    'generalPdfWebhookUrl', 'geminiApiKey',
     'loginPageBackgroundType', 'loginPageBackgroundImageUrl',
     'loginPageBackgroundColor1', 'loginPageBackgroundColor2',
     'loginPageLayoutType',
@@ -63,7 +63,16 @@ export async function GET(request) {
     // Publicly accessible or light auth check if needed for non-sensitive parts
     try {
         const result = await getPool().query('SELECT key, value, "updatedAt" FROM "SystemSetting"');
-        return NextResponse.json(result.rows, { status: 200 });
+        const settings = Object.fromEntries(result.rows.map(row => [row.key, row.value]));
+        // Fallback for resumeProcessingWebhookUrl
+        if (!settings.resumeProcessingWebhookUrl) {
+            settings.resumeProcessingWebhookUrl = process.env.RESUME_PROCESSING_WEBHOOK_URL || 'http://localhost:5678/webhook';
+        }
+        // Fallback for generalPdfWebhookUrl
+        if (!settings.generalPdfWebhookUrl) {
+            settings.generalPdfWebhookUrl = process.env.GENERAL_PDF_WEBHOOK_URL || '';
+        }
+        return NextResponse.json(settings, { status: 200 });
     }
     catch (error) {
         console.error("Failed to fetch system settings:", error);
@@ -107,9 +116,18 @@ export async function POST(request) {
         }
         await client.query('COMMIT');
         await logAudit('AUDIT', `System settings updated by ${session.user.name}. Keys: ${settingsToSave.map(s => s.key).join(', ')}`, 'API:SystemSettings:Update', session.user.id, { updatedKeys: settingsToSave.map(s => s.key) });
-        // Return all current settings after update
+        // Return all current settings after update as an object (key-value pairs)
         const allSettingsResult = await client.query('SELECT key, value, "updatedAt" FROM "SystemSetting"');
-        return NextResponse.json(allSettingsResult.rows, { status: 200 });
+        const settings = Object.fromEntries(allSettingsResult.rows.map(row => [row.key, row.value]));
+        // Fallback for resumeProcessingWebhookUrl
+        if (!settings.resumeProcessingWebhookUrl) {
+            settings.resumeProcessingWebhookUrl = process.env.RESUME_PROCESSING_WEBHOOK_URL || 'http://localhost:5678/webhook';
+        }
+        // Fallback for generalPdfWebhookUrl
+        if (!settings.generalPdfWebhookUrl) {
+            settings.generalPdfWebhookUrl = process.env.GENERAL_PDF_WEBHOOK_URL || '';
+        }
+        return NextResponse.json(settings, { status: 200 });
     }
     catch (error) {
         await client.query('ROLLBACK');

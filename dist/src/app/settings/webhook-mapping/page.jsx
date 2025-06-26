@@ -26,7 +26,7 @@ const TARGET_CANDIDATE_ATTRIBUTES_CONFIG = [
     { path: 'candidate_info.experience', label: 'Experience (Array)', type: 'array of objects', example: 'payload.workHistory', defaultNotes: 'Source should be an array of experience objects matching ExperienceEntry structure.' },
     { path: 'candidate_info.skills', label: 'Skills (Array)', type: 'array of objects', example: 'payload.skillSet', defaultNotes: 'Source should be an array of skill objects/groups matching SkillEntry structure.' },
     { path: 'candidate_info.job_suitable', label: 'Job Suitability (Array)', type: 'array of objects', example: 'payload.preferences.jobTypes', defaultNotes: 'Source should be an array of job suitability objects matching JobSuitableEntry structure.' },
-    { path: 'jobs', label: 'Job Matches (Array)', type: 'array of N8NJobMatch objects', example: 'payload.suggestedRoles', defaultNotes: 'Array of suggested job matches from processing, matching N8NJobMatch structure.' },
+    { path: 'jobs', label: 'Job Matches (Array)', type: 'array of AutomationJobMatch objects', example: 'payload.suggestedRoles', defaultNotes: 'Array of suggested job matches from processing, matching AutomationJobMatch structure.' },
     { path: 'job_applied.job_id', label: 'Applied Job - ID', type: 'string (UUID)', example: 'payload.application.jobReferenceID', defaultNotes: 'ID of the job applied for.' },
     { path: 'job_applied.job_title', label: 'Applied Job - Title', type: 'string', example: 'payload.application.jobTitle', defaultNotes: 'Title of the job applied for.' },
     { path: 'job_applied.fit_score', label: 'Applied Job - Fit Score', type: 'number', example: 'payload.application.matchScore', defaultNotes: 'Fit score for the applied job.' },
