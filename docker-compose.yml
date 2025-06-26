@@ -60,22 +60,22 @@ services:
       PROCESSOR_API_KEY: ${PROCESSOR_API_KEY}
     depends_on:
       postgres:
-        condition: service_started
+        condition: service_healthy
       minio:
-        condition: service_started
+        condition: service_healthy
       redis:
-        condition: service_started
+        condition: service_healthy
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:9846/api/health" ]
-      interval: 30s
-      timeout: 10s
-      retries: 5
-      start_period: 60s
+      interval: 60s
+      timeout: 15s
+      retries: 3
+      start_period: 120s
     # The command to run the application is typically defined in the Dockerfile's CMD instruction.
     # For Next.js, this is often `npm run start` (which runs `next start`).
     # You can override it here if needed, but it's usually better to keep it in the Dockerfile.
-    command: sh -c "echo 'Starting application...' && until nc -z postgres ${POSTGRES_PORT}; do echo 'Waiting for Postgres...'; sleep 2; done && until nc -z minio ${MINIO_PORT}; do echo 'Waiting for MinIO...'; sleep 2; done && until nc -z redis ${REDIS_PORT}; do echo 'Waiting for Redis...'; sleep 2; done && echo 'All dependencies ready, running migrations...' && npx prisma migrate deploy && echo 'Migrations complete, seeding database...' && npx prisma db seed && echo 'Database ready, starting application...' && npm start"
+    command: sh -c "echo 'Starting application...' && sleep 5 && echo 'Running database migrations...' && npx prisma migrate deploy && echo 'Seeding database...' && npx prisma db seed && echo 'Starting Next.js application...' && npm start"
 
   postgres:
     image: postgres:14-alpine
@@ -94,6 +94,12 @@ services:
       # when the postgres_data volume is empty or being newly created.
       - ./init-db.sql:/docker-entrypoint-initdb.d/01-init-db.sql:ro
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
 
   minio:
     image: minio/minio:latest
@@ -109,6 +115,12 @@ services:
     volumes:
       - minio_data:/data
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
 
   redis:
     image: redis:alpine
@@ -117,6 +129,12 @@ services:
     volumes:
       - redis_data:/data
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
 
   upload-queue-processor:
     build:
@@ -152,11 +170,11 @@ services:
       app:
         condition: service_healthy
       postgres:
-        condition: service_started
+        condition: service_healthy
       minio:
-        condition: service_started
+        condition: service_healthy
       redis:
-        condition: service_started
+        condition: service_healthy
     restart: unless-stopped
 
   ws-queue-bridge:
@@ -173,7 +191,7 @@ services:
       - "${WS_QUEUE_BRIDGE_PORT:-3002}:3002"
     depends_on:
       redis:
-        condition: service_started
+        condition: service_healthy
     restart: unless-stopped
 
 volumes:
