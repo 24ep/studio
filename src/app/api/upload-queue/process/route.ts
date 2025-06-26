@@ -91,12 +91,23 @@ export async function POST(request: NextRequest) {
     if (!resumeWebhookUrl) {
       resumeWebhookUrl = process.env.N8N_WEBHOOK_URL || 'http://localhost:5678/webhook';
     }
+    console.log('Posting to webhook URL:', resumeWebhookUrl);
     const formData = new FormData();
     formData.append('file', new Blob([fileBuffer]), job.file_name);
-    const webhookRes = await fetch(resumeWebhookUrl, {
-      method: 'POST',
-      body: formData
-    });
+    let webhookRes;
+    try {
+      webhookRes = await fetch(resumeWebhookUrl, {
+        method: 'POST',
+        body: formData
+      });
+    } catch (fetchErr) {
+      console.error('Fetch to webhook URL failed:', fetchErr);
+      throw fetchErr;
+    }
+    if (!webhookRes.ok) {
+      const errorText = await webhookRes.text();
+      console.error('Webhook POST failed:', webhookRes.status, errorText);
+    }
     let status = 'success';
     let error = null;
     let error_details = null;
