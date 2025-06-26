@@ -3,8 +3,7 @@ import { getPool } from '@/lib/db';
 import { minioClient, MINIO_BUCKET } from '@/lib/minio';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
-
-const N8N_WEBHOOK_URL = process.env.N8N_WEBHOOK_URL || 'http://localhost:5678/webhook';
+import { getSystemSetting } from '@/lib/settings';
 
 /**
  * @openapi
@@ -83,20 +82,28 @@ export async function POST(request: NextRequest) {
       chunks.push(chunk);
     }
     const fileBuffer = Buffer.concat(chunks);
-    // 3. POST to n8n webhook
+    // 3. POST to the configured webhook endpoint (any compatible service)
+    let resumeWebhookUrl = await getSystemSetting('resumeProcessingWebhookUrl');
+    if (!resumeWebhookUrl) {
+      // fallback to old key for backward compatibility
+      resumeWebhookUrl = await getSystemSetting('n8nResumeWebhookUrl');
+    }
+    if (!resumeWebhookUrl) {
+      resumeWebhookUrl = process.env.N8N_WEBHOOK_URL || 'http://localhost:5678/webhook';
+    }
     const formData = new FormData();
     formData.append('file', new Blob([fileBuffer]), job.file_name);
-    const n8nRes = await fetch(N8N_WEBHOOK_URL, {
+    const webhookRes = await fetch(resumeWebhookUrl, {
       method: 'POST',
       body: formData
     });
     let status = 'success';
     let error = null;
     let error_details = null;
-    if (!n8nRes.ok) {
+    if (!webhookRes.ok) {
       status = 'error';
-      error = `n8n responded with status ${n8nRes.status}`;
-      error_details = await n8nRes.text();
+      error = `Webhook responded with status ${webhookRes.status}`;
+      error_details = await webhookRes.text();
     }
     // 4. Update job status
     await client.query(
@@ -108,7 +115,7 @@ export async function POST(request: NextRequest) {
     if (redisClient) {
       await redisClient.publish('candidate_upload_queue', JSON.stringify({ type: 'queue_updated' }));
     }
-    return NextResponse.json({ job: { ...job, status, error, error_details }, n8n_status: n8nRes.status });
+    return NextResponse.json({ job: { ...job, status, error, error_details }, webhook_status: webhookRes.status });
   } catch (err) {
     if (job) {
       await client.query(

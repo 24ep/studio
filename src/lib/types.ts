@@ -388,6 +388,7 @@ export type SystemSettingKey =
   | 'smtpUser'
   | 'smtpSecure'
   | 'smtpFromEmail'
+  | 'resumeProcessingWebhookUrl'
   | 'n8nResumeWebhookUrl'
   | 'n8nGenericPdfWebhookUrl'
   | 'geminiApiKey'
