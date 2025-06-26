@@ -67,14 +67,15 @@ services:
         condition: service_started
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:9846/api/upload-queue/process" ]
-      interval: 10s
-      timeout: 5s
-      retries: 10
+      test: ["CMD", "curl", "-f", "http://localhost:9846/api-docs" ]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
     # The command to run the application is typically defined in the Dockerfile's CMD instruction.
     # For Next.js, this is often `npm run start` (which runs `next start`).
     # You can override it here if needed, but it's usually better to keep it in the Dockerfile.
-    command: sh -c "until nc -z postgres ${POSTGRES_PORT}; do echo Waiting for Postgres...; sleep 2; done; until nc -z minio ${MINIO_PORT}; do echo Waiting for MinIO...; sleep 2; done; until nc -z redis ${REDIS_PORT}; do echo Waiting for Redis...; sleep 2; done; npx prisma migrate deploy && npx prisma db seed && npm start"
+    command: sh -c "echo 'Starting application...' && until nc -z postgres ${POSTGRES_PORT}; do echo 'Waiting for Postgres...'; sleep 2; done && until nc -z minio ${MINIO_PORT}; do echo 'Waiting for MinIO...'; sleep 2; done && until nc -z redis ${REDIS_PORT}; do echo 'Waiting for Redis...'; sleep 2; done && echo 'All dependencies ready, running migrations...' && npx prisma migrate deploy && echo 'Migrations complete, seeding database...' && npx prisma db seed && echo 'Database ready, starting application...' && npm start"
 
   postgres:
     image: postgres:14-alpine

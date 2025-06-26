@@ -6,7 +6,7 @@ FROM node:20 AS builder
 WORKDIR /app
 
 # Install netcat and clean up apt cache in one layer
-RUN apt-get update && apt-get install -y netcat-openbsd && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y netcat-openbsd curl && rm -rf /var/lib/apt/lists/*
 
 # Declare and set build-time environment variables
 ARG DATABASE_URL
@@ -53,8 +53,8 @@ FROM node:20
 
 WORKDIR /app
 
-# Install netcat for health checks
-RUN apt-get update && apt-get install -y netcat-openbsd && rm -rf /var/lib/apt/lists/*
+# Install netcat and clean up apt cache in one layer
+RUN apt-get update && apt-get install -y netcat-openbsd curl && rm -rf /var/lib/apt/lists/*
 
 # Don't run production as root
 USER node
