@@ -12,6 +12,6 @@ export default withAuth({
 export const config = {
   matcher: [
     // Exclude /api/upload-queue/process from auth
-    '/((?!_next/static|_next/image|favicon.ico|auth/signin|api/auth/|api/upload-queue/process|images).*)',
+    '/((?!_next/static|_next/image|favicon.ico|auth/signin|api/auth/|api/upload-queue/process|api-docs|api/health|images).*)',
   ],
 };
