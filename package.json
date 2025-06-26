@@ -43,6 +43,7 @@
     "clsx": "^2.1.1",
     "date-fns": "^3.6.0",
     "genkit": "latest",
+    "ioredis": "^5.6.1",
     "lucide-react": "^0.475.0",
     "minio": "^8.0.5",
     "next": "^14.2.3",
