@@ -1728,29 +1728,6 @@ const swaggerSpec = {
     },
 
     // Setup endpoints
-    '/api/setup/check-db-schema': {
-      get: {
-        summary: 'Check database schema',
-        description: 'Checks if the database schema is properly set up',
-        tags: ['Setup'],
-        responses: {
-          '200': {
-            description: 'Database schema status',
-            content: {
-              'application/json': {
-                schema: {
-                  type: 'object',
-                  properties: {
-                    status: { type: 'string', enum: ['ok', 'missing_tables', 'missing_columns'] },
-                    details: { type: 'object' }
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     '/api/setup/check-minio-bucket': {
       get: {
         summary: 'Check MinIO bucket',
