@@ -18,7 +18,7 @@ ARG AZURE_AD_TENANT_ID
 ARG GOOGLE_API_KEY
 ARG NEXT_PUBLIC_GOOGLE_FONTS_API_KEY
 
-ENV DATABASE_URL=$DATABASE_URL
+# ENV DATABASE_URL=$DATABASE_URL  # Commented out - will use runtime env from docker-compose
 ENV NEXTAUTH_URL=$NEXTAUTH_URL
 ENV NEXTAUTH_SECRET=$NEXTAUTH_SECRET
 ENV AZURE_AD_CLIENT_ID=$AZURE_AD_CLIENT_ID
@@ -62,7 +62,6 @@ USER node
 # Set NODE_ENV for production
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
-ENV DATABASE_URL="postgresql://user:password@localhost:5432/db"
 
 # Copy only the necessary production artifacts from the builder stage
 COPY --chown=node:node --from=builder /app/node_modules ./node_modules
