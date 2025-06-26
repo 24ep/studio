@@ -42,6 +42,7 @@
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "date-fns": "^3.6.0",
+    "form-data": "^4.0.3",
     "genkit": "latest",
     "ioredis": "^5.6.1",
     "lucide-react": "^0.475.0",

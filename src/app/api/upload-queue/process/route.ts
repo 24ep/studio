@@ -4,6 +4,7 @@ import { minioClient, MINIO_BUCKET } from '@/lib/minio';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
 import { getSystemSetting } from '@/lib/settings';
+import FormData from 'form-data';
 
 /**
  * @openapi
@@ -88,13 +89,14 @@ export async function POST(request: NextRequest) {
       resumeWebhookUrl = process.env.RESUME_PROCESSING_WEBHOOK_URL || 'http://localhost:5678/webhook';
     }
     console.log('Posting to webhook URL:', resumeWebhookUrl);
-    const formData = new FormData();
-    formData.append('file', new Blob([fileBuffer]), job.file_name);
+    const form = new FormData();
+    form.append('file', fileBuffer, job.file_name);
     let webhookRes;
     try {
       webhookRes = await fetch(resumeWebhookUrl, {
         method: 'POST',
-        body: formData
+        body: form,
+        headers: form.getHeaders()
       });
     } catch (fetchErr) {
       console.error('Fetch to webhook URL failed:', fetchErr);

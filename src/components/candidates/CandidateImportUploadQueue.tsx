@@ -109,6 +109,7 @@ export const CandidateImportUploadQueue: React.FC = () => {
   }, [fetchJobs]);
 
   useEffect(() => {
+    // Use NEXT_PUBLIC_WS_QUEUE_BRIDGE_URL for Docker/production, fallback to localhost for local dev
     const wsUrl = process.env.NEXT_PUBLIC_WS_QUEUE_BRIDGE_URL || 'ws://localhost:3002';
     const ws = new window.WebSocket(wsUrl);
     ws.onmessage = (event) => {
