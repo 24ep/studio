@@ -89,10 +89,6 @@ services:
       POSTGRES_INITDB_ARGS: "--encoding=UTF-8 --lc-collate=C --lc-ctype=C"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      # Mount the initialization script from root directory
-      # PostgreSQL will execute all .sql and .sh files found in /docker-entrypoint-initdb.d/ on first startup
-      # when the postgres_data volume is empty or being newly created.
-      - ./init-db.sql:/docker-entrypoint-initdb.d/01-init-db.sql:ro
     restart: unless-stopped
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
