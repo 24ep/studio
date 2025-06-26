@@ -71,7 +71,12 @@ export async function GET(request: NextRequest) {
   // Publicly accessible or light auth check if needed for non-sensitive parts
   try {
     const result = await getPool().query('SELECT key, value, "updatedAt" FROM "SystemSetting"');
-    return NextResponse.json(result.rows, { status: 200 });
+    const settings = Object.fromEntries(result.rows.map(row => [row.key, row.value]));
+    // If resumeProcessingWebhookUrl is not set, use the fallback env var or default
+    if (!settings.resumeProcessingWebhookUrl) {
+      settings.resumeProcessingWebhookUrl = process.env.RESUME_PROCESSING_WEBHOOK_URL || 'http://localhost:5678/webhook';
+    }
+    return NextResponse.json(settings, { status: 200 });
   } catch (error) {
     console.error("Failed to fetch system settings:", error);
     return NextResponse.json({ message: "Error fetching system settings", error: (error as Error).message }, { status: 500 });

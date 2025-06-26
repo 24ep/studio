@@ -229,3 +229,15 @@ This method runs the Next.js app, PostgreSQL, MinIO, and Redis in Docker contain
 *   **MinIO:** Check Next.js app logs for "Successfully connected to MinIO server..." or "MinIO: Bucket ... already exists/created..."
 *   **Redis:** Check Next.js app logs for "Successfully connected to Redis server." or "Redis client connection established and ready."
 If connection errors occur, verify your `.env` settings, Docker networking, and ensure backend services are running correctly.
+
+## Resume Processing Webhook URL Configuration
+
+- The primary way to set the resume processing webhook URL is via the System Settings UI ("Resume Processing Webhook URL (Any Service)").
+- Optionally, you can set the environment variable `RESUME_PROCESSING_WEBHOOK_URL` in your deployment environment or `.env` file. This will only be used as a fallback if the value is not set in the UI.
+- If neither is set, the system will use the default: `http://localhost:5678/webhook`.
+
+Example usage in `.env` (optional):
+
+```
+RESUME_PROCESSING_WEBHOOK_URL=https://your-webhook-endpoint/receive-resume
+```
