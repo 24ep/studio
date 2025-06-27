@@ -40,9 +40,6 @@ const Toggle = React.forwardRef<HTMLButtonElement, ToggleProps>(
       lg: "h-6 w-6"
     }
 
-    // Use neutral/gray for checked and unchecked states
-    const baseClasses = "data-[state=checked]:bg-gray-700 data-[state=unchecked]:bg-gray-300";
-
     return (
       <button
         ref={ref}
@@ -56,7 +53,9 @@ const Toggle = React.forwardRef<HTMLButtonElement, ToggleProps>(
         className={cn(
           "peer inline-flex shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-all duration-200 ease-in-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:opacity-50",
           sizeClasses[size],
-          baseClasses,
+          checked 
+            ? "bg-primary border-primary" 
+            : "bg-muted border-muted-foreground/20",
           className
         )}
         {...props}

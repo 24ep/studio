@@ -31,6 +31,8 @@ export interface CandidateJob {
   file_path?: string;
   file?: File;
   type: CandidateJobType;
+  webhook_payload?: any;
+  webhook_response?: any;
 }
 
 interface QueueContextType {
@@ -76,6 +78,7 @@ export const CandidateImportUploadQueue: React.FC = () => {
   const [page, setPage] = useState(1);
   const [pageSize] = useState(20);
   const [showErrorLogId, setShowErrorLogId] = useState<string | null>(null);
+  const [showWebhookLogId, setShowWebhookLogId] = useState<string | null>(null);
   const [filter, setFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [deleteId, setDeleteId] = useState<string | null>(null);
@@ -139,6 +142,37 @@ export const CandidateImportUploadQueue: React.FC = () => {
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
   }
 
+  // Function to calculate and format duration
+  function formatDuration(startDate: string, endDate?: string): string {
+    const start = new Date(startDate);
+    const end = endDate ? new Date(endDate) : new Date();
+    const diffMs = end.getTime() - start.getTime();
+    
+    if (diffMs < 1000) return "0s";
+    
+    const seconds = Math.floor(diffMs / 1000);
+    const minutes = Math.floor(seconds / 60);
+    const hours = Math.floor(minutes / 60);
+    
+    if (hours > 0) {
+      return `${hours}h ${minutes % 60}m ${seconds % 60}s`;
+    } else if (minutes > 0) {
+      return `${minutes}m ${seconds % 60}s`;
+    } else {
+      return `${seconds}s`;
+    }
+  }
+
+  // Real-time duration updates for in-progress jobs
+  const [currentTime, setCurrentTime] = useState(new Date());
+  
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 1000);
+    return () => clearInterval(interval);
+  }, []);
+
   // Filtering logic (client-side for now)
   const filteredJobs = jobs.filter(job => {
     if (job.source !== "bulk") return false;
@@ -172,7 +206,7 @@ export const CandidateImportUploadQueue: React.FC = () => {
 
   // Status counts
   const numQueued = jobs.filter(j => j.source === 'bulk' && j.status === 'queued').length;
-  const numInProgress = jobs.filter(j => j.source === 'bulk' && (j.status === 'uploading' || j.status === 'importing')).length;
+  const numInProgress = jobs.filter(j => j.source === 'bulk' && (j.status === 'uploading' || j.status === 'importing' || j.status === 'processing')).length;
   const numSuccess = jobs.filter(j => j.source === 'bulk' && j.status === 'success' && isInRange(j.completed_date)).length;
   const numError = jobs.filter(j => j.source === 'bulk' && j.status === 'error' && isInRange(j.completed_date)).length;
 
@@ -276,6 +310,7 @@ export const CandidateImportUploadQueue: React.FC = () => {
           <option value="">All Statuses</option>
           <option value="queued">Queued</option>
           <option value="uploading">Uploading</option>
+          <option value="processing">Processing</option>
           <option value="importing">Importing</option>
           <option value="success">Success</option>
           <option value="error">Error</option>
@@ -322,6 +357,7 @@ export const CandidateImportUploadQueue: React.FC = () => {
               <TableHead>File Name</TableHead>
               <TableHead>Size</TableHead>
               <TableHead>Status</TableHead>
+              <TableHead>Duration</TableHead>
               <TableHead>Completed Date</TableHead>
               <TableHead>Upload Date</TableHead>
               <TableHead>Upload ID</TableHead>
@@ -331,7 +367,7 @@ export const CandidateImportUploadQueue: React.FC = () => {
           <TableBody>
             {filteredJobs.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={8} className="text-center text-muted-foreground">No import/upload jobs in queue.</TableCell>
+                <TableCell colSpan={9} className="text-center text-muted-foreground">No import/upload jobs in queue.</TableCell>
               </TableRow>
             ) : filteredJobs.map((item) => (
               <React.Fragment key={item.id}>
@@ -368,6 +404,7 @@ export const CandidateImportUploadQueue: React.FC = () => {
                         switch (status) {
                           case 'queued': color = 'bg-gray-400 text-white'; break;
                           case 'uploading': color = 'bg-blue-500 text-white'; break;
+                          case 'processing': color = 'bg-orange-500 text-white'; break;
                           case 'importing': color = 'bg-blue-400 text-white'; break;
                           case 'success': color = 'bg-green-500 text-white'; break;
                           case 'error': color = 'bg-red-500 text-white'; break;
@@ -379,6 +416,16 @@ export const CandidateImportUploadQueue: React.FC = () => {
                         );
                       })()}
                     </span>
+                  </TableCell>
+                  <TableCell>
+                    {item.upload_date ? (
+                      <span className="text-sm font-mono">
+                        {formatDuration(item.upload_date, item.completed_date)}
+                        {!item.completed_date && (item.status === 'uploading' || item.status === 'importing' || item.status === 'processing') && (
+                          <span className="text-blue-500 ml-1">●</span>
+                        )}
+                      </span>
+                    ) : '-'}
                   </TableCell>
                   <TableCell>{item.completed_date ? new Date(item.completed_date).toLocaleString() : '-'}</TableCell>
                   <TableCell>{item.upload_date ? new Date(item.upload_date).toLocaleString() : '-'}</TableCell>
@@ -399,6 +446,16 @@ export const CandidateImportUploadQueue: React.FC = () => {
                         >
                           <FileText className="h-4 w-4 text-primary" />
                         </a>
+                      </Button>
+                    )}
+                    {(item.webhook_payload || item.webhook_response) && (
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        onClick={() => setShowWebhookLogId(showWebhookLogId === item.id ? null : item.id)} 
+                        title="View webhook log"
+                      >
+                        <ExternalLink className="h-4 w-4 text-blue-500" />
                       </Button>
                     )}
                     {item.status === "error" && (
@@ -438,7 +495,7 @@ export const CandidateImportUploadQueue: React.FC = () => {
                 </TableRow>
                 {showErrorLogId === item.id && item.error_details && (
                   <TableRow>
-                    <TableCell colSpan={8} className="bg-destructive/10 rounded p-2 text-xs text-destructive">
+                    <TableCell colSpan={9} className="bg-destructive/10 rounded p-2 text-xs text-destructive">
                       <div className="flex justify-between items-center mb-1">
                         <span>Error Log</span>
                         <Button variant="ghost" size="icon" onClick={() => setShowErrorLogId(null)}>
@@ -446,6 +503,36 @@ export const CandidateImportUploadQueue: React.FC = () => {
                         </Button>
                       </div>
                       <pre className="whitespace-pre-wrap break-all max-h-40 overflow-auto">{item.error_details}</pre>
+                    </TableCell>
+                  </TableRow>
+                )}
+                {showWebhookLogId === item.id && (item.webhook_payload || item.webhook_response) && (
+                  <TableRow>
+                    <TableCell colSpan={9} className="bg-blue-50 rounded p-2 text-xs">
+                      <div className="flex justify-between items-center mb-2">
+                        <span className="font-semibold text-blue-800">Webhook Log</span>
+                        <Button variant="ghost" size="icon" onClick={() => setShowWebhookLogId(null)}>
+                          <XCircle className="h-4 w-4" />
+                        </Button>
+                      </div>
+                      <div className="space-y-4">
+                        {item.webhook_payload && (
+                          <div>
+                            <h4 className="font-medium text-blue-700 mb-1">Payload Sent to Webhook:</h4>
+                            <pre className="whitespace-pre-wrap break-all max-h-40 overflow-auto bg-white p-2 rounded border text-xs">
+                              {JSON.stringify(item.webhook_payload, null, 2)}
+                            </pre>
+                          </div>
+                        )}
+                        {item.webhook_response && (
+                          <div>
+                            <h4 className="font-medium text-blue-700 mb-1">Webhook Response:</h4>
+                            <pre className="whitespace-pre-wrap break-all max-h-40 overflow-auto bg-white p-2 rounded border text-xs">
+                              {JSON.stringify(item.webhook_response, null, 2)}
+                            </pre>
+                          </div>
+                        )}
+                      </div>
                     </TableCell>
                   </TableRow>
                 )}

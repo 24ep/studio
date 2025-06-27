@@ -84,18 +84,37 @@ export async function GET(request, { params }) {
     const { id } = params;
     const client = await getPool().connect();
     try {
-        const query = `
+        // Get candidate with position and recruiter info
+        const candidateQuery = `
       SELECT c.*, p.title as "positionTitle", p.department as "positionDepartment", r.name as "recruiterName"
       FROM "Candidate" c
       LEFT JOIN "Position" p ON c."positionId" = p.id
       LEFT JOIN "User" r ON c."recruiterId" = r.id
       WHERE c.id = $1;
     `;
-        const result = await client.query(query, [id]);
-        if (result.rows.length === 0) {
+        const candidateResult = await client.query(candidateQuery, [id]);
+        if (candidateResult.rows.length === 0) {
             return NextResponse.json({ message: 'Candidate not found' }, { status: 404 });
         }
-        const candidate = result.rows[0];
+        const candidate = candidateResult.rows[0];
+        // Get job matches for this candidate
+        const jobMatchesQuery = `
+      SELECT jm.*, p.title as "positionTitle"
+      FROM "JobMatch" jm
+      LEFT JOIN "Position" p ON jm."jobId" = p.id
+      WHERE jm."candidateId" = $1
+      ORDER BY jm."fitScore" DESC;
+    `;
+        const jobMatchesResult = await client.query(jobMatchesQuery, [id]);
+        // Get resume history for this candidate
+        const resumeHistoryQuery = `
+      SELECT rh.*, u.name as "uploadedByUserName"
+      FROM "ResumeHistory" rh
+      LEFT JOIN "User" u ON rh."uploadedByUserId" = u.id
+      WHERE rh."candidateId" = $1
+      ORDER BY rh."uploadedAt" DESC;
+    `;
+        const resumeHistoryResult = await client.query(resumeHistoryQuery, [id]);
         return NextResponse.json({
             ...candidate,
             custom_attributes: candidate.customAttributes || {},
@@ -104,6 +123,8 @@ export async function GET(request, { params }) {
                 department: candidate.positionDepartment
             } : null,
             recruiter: candidate.recruiterId ? { name: candidate.recruiterName } : null,
+            jobMatches: jobMatchesResult.rows,
+            resumeHistory: resumeHistoryResult.rows,
         });
     }
     catch (error) {

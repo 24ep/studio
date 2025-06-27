@@ -377,11 +377,18 @@ export function EditUserModal({ isOpen, onOpenChange, onEditUser, user, isSelfEd
 
                   {activeTab === 'permissions' && !isSelfEdit && (
                     <div className="space-y-8">
-                      <div className="space-y-4">
-                        <Label className="flex items-center text-lg font-semibold">
-                          <Users className="mr-3 h-6 w-6 text-primary" /> Assign to Groups (Roles)
-                        </Label>
-                        <div className="bg-muted/30 rounded-lg p-6">
+                      {/* Groups Section */}
+                      <div className="space-y-6">
+                        <div className="border-b pb-2">
+                          <Label className="flex items-center text-xl font-semibold text-primary">
+                            <Users className="mr-3 h-6 w-6" /> User Groups (Roles)
+                          </Label>
+                          <p className="text-sm text-muted-foreground mt-1">
+                            Assign user to specific groups to inherit their permissions and access levels.
+                          </p>
+                        </div>
+                        
+                        <div className="bg-muted/30 rounded-lg p-6 border">
                           <Popover open={groupSearchOpen} onOpenChange={setGroupSearchOpen}>
                             <PopoverTrigger asChild>
                               <Button variant="outline" role="combobox" aria-expanded={groupSearchOpen} className="w-full justify-between h-12 text-base">
@@ -399,13 +406,25 @@ export function EditUserModal({ isOpen, onOpenChange, onEditUser, user, isSelfEd
                                 {filteredGroups.map(group => (
                                   <FormField key={group.id} control={form.control} name="groupIds"
                                     render={({ field }) => (
-                                      <FormItem className="flex flex-row items-center space-x-3 space-y-0 px-3 py-2 hover:bg-accent rounded-md">
+                                      <FormItem className="flex flex-row items-center space-x-3 space-y-0 px-3 py-2 hover:bg-accent rounded-sm">
                                         <FormControl>
-                                          <Checkbox checked={field.value?.includes(group.id)}
-                                            onCheckedChange={(checked) => checked ? field.onChange([...(field.value || []), group.id]) : field.onChange((field.value || []).filter(v => v !== group.id))}
+                                          <Checkbox 
+                                            checked={field.value?.includes(group.id)}
+                                            onCheckedChange={(checked) => 
+                                              checked 
+                                                ? field.onChange([...(field.value || []), group.id]) 
+                                                : field.onChange((field.value || []).filter(v => v !== group.id))
+                                            }
                                           />
                                         </FormControl>
-                                        <FormLabel className="text-sm font-normal cursor-pointer flex-grow">{group.name}</FormLabel>
+                                        <FormLabel className="text-sm font-normal cursor-pointer flex-grow">
+                                          <div className="flex flex-col">
+                                            <span className="font-medium">{group.name}</span>
+                                            {group.description && (
+                                              <span className="text-xs text-muted-foreground">{group.description}</span>
+                                            )}
+                                          </div>
+                                        </FormLabel>
                                       </FormItem>
                                     )} 
                                   />
@@ -416,48 +435,57 @@ export function EditUserModal({ isOpen, onOpenChange, onEditUser, user, isSelfEd
                           <FormMessage />
                         </div>
                       </div>
-                      
+
                       <Separator className="my-8" />
-                      
-                      <div className="space-y-4">
-                        <Label className="flex items-center text-lg font-semibold">
-                          <ShieldCheck className="mr-3 h-6 w-6 text-primary" /> Direct Module Permissions
-                        </Label>
-                        <div className="bg-muted/30 rounded-lg border p-6 max-h-96 overflow-y-auto">
+
+                      {/* Direct Permissions Section */}
+                      <div className="space-y-6">
+                        <div className="border-b pb-2">
+                          <Label className="flex items-center text-xl font-semibold text-primary">
+                            <ShieldCheck className="mr-3 h-6 w-6" /> Direct Module Permissions
+                          </Label>
+                          <p className="text-sm text-muted-foreground mt-1">
+                            Grant specific permissions directly to this user, overriding group permissions.
+                          </p>
+                        </div>
+                        
+                        <div className="space-y-6 max-h-96 overflow-y-auto pr-2">
                           {groupedPermissions.map(group => (
-                            <div key={group.category} className="mb-6 last:mb-0">
-                              <h4 className="font-semibold text-base text-foreground mb-4 pb-2 border-b">{group.category}</h4>
-                              <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+                            <div key={group.category} className="bg-muted/20 rounded-lg p-4 border">
+                              <h4 className="font-semibold text-lg text-primary mb-4 border-b pb-2">{group.category}</h4>
+                              <div className="space-y-4">
                                 {group.permissions.map((module) => (
                                   <FormField key={module.id} control={form.control} name="modulePermissions"
                                     render={({ field }) => {
                                       const checked = field.value?.includes(module.id);
                                       return (
-                                        <FormItem className="flex flex-row items-start space-x-4 p-3 bg-background rounded-lg border hover:shadow-sm transition-shadow">
+                                        <FormItem className="flex flex-row items-center justify-between p-3 rounded-md bg-background hover:bg-muted/50 transition-colors border">
+                                          <div className="flex-1">
+                                            <Label htmlFor={`${user?.id}-${module.id}`} className="font-medium text-base cursor-pointer">
+                                              {module.label}
+                                            </Label>
+                                            <p className="text-sm text-muted-foreground mt-1">{module.description}</p>
+                                          </div>
                                           <FormControl>
                                             <Toggle
+                                              id={`${user?.id}-${module.id}`}
                                               checked={checked}
-                                              onCheckedChange={(checked) => checked ? field.onChange([...(field.value || []), module.id]) : field.onChange((field.value || []).filter(v => v !== module.id))}
-                                              className="ml-2"
+                                              onCheckedChange={(checked) => 
+                                                checked 
+                                                  ? field.onChange([...(field.value || []), module.id]) 
+                                                  : field.onChange((field.value || []).filter(v => v !== module.id))
+                                              }
                                             />
                                           </FormControl>
-                                          <div className="flex flex-col flex-1">
-                                            <FormLabel className="text-sm font-semibold cursor-pointer">{module.label}</FormLabel>
-                                            <span className="text-xs text-muted-foreground mt-1">{module.description}</span>
-                                          </div>
                                         </FormItem>
                                       );
-                                    }}
+                                    }} 
                                   />
                                 ))}
                               </div>
                             </div>
                           ))}
                         </div>
-                        <FormMessage />
-                        <p className="text-sm text-muted-foreground mt-2">
-                          These are direct permissions. User also inherits permissions from assigned groups.
-                        </p>
                       </div>
                     </div>
                   )}

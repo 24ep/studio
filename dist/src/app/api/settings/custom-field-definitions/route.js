@@ -7,20 +7,18 @@ import { getServerSession } from 'next-auth/next';
 import { v4 as uuidv4 } from 'uuid';
 import { authOptions } from '@/lib/auth';
 export const dynamic = "force-dynamic";
-const customFieldOptionSchema = z.object({
-    value: z.string(),
-    label: z.string(),
-});
 const createCustomFieldSchema = z.object({
-    model_name: z.enum(['Candidate', 'Position']),
-    field_key: z.string().min(1, "Field key is required"),
+    model: z.enum(['Candidate', 'Position']),
+    name: z.string().min(1, "Field name is required"),
     label: z.string().min(1, "Label is required"),
-    field_type: z.enum(['text', 'textarea', 'number', 'boolean', 'date', 'select_single', 'select_multiple']),
-    options: z.array(customFieldOptionSchema).optional().nullable(),
-    is_required: z.boolean().default(false),
-    sort_order: z.number().default(0),
+    type: z.enum(['TEXT', 'TEXTAREA', 'NUMBER', 'DATE', 'BOOLEAN', 'SELECT', 'MULTISELECT']),
+    options: z.array(z.string()).optional().nullable(),
+    placeholder: z.string().optional().nullable(),
+    defaultValue: z.string().optional().nullable(),
+    isRequired: z.boolean().default(false),
+    isFilterable: z.boolean().default(false),
 });
-const updateCustomFieldSchema = createCustomFieldSchema.partial().omit({ model_name: true, field_key: true });
+const updateCustomFieldSchema = createCustomFieldSchema.partial().omit({ model: true, name: true });
 /**
  * @openapi
  * /api/settings/custom-field-definitions:
@@ -29,7 +27,7 @@ const updateCustomFieldSchema = createCustomFieldSchema.partial().omit({ model_n
  *     description: Returns all custom field definitions for candidates or positions. Requires authentication.
  *     parameters:
  *       - in: query
- *         name: model_name
+ *         name: model
  *         schema:
  *           type: string
  *           enum: [Candidate, Position]
@@ -57,23 +55,23 @@ const updateCustomFieldSchema = createCustomFieldSchema.partial().omit({ model_n
  *           schema:
  *             type: object
  *             properties:
- *               model_name:
+ *               model:
  *                 type: string
  *                 enum: [Candidate, Position]
- *               field_key:
+ *               name:
  *                 type: string
  *               label:
  *                 type: string
- *               field_type:
+ *               type:
  *                 type: string
  *               options:
  *                 type: array
  *                 items:
  *                   type: string
- *               is_required:
+ *               isRequired:
  *                 type: boolean
- *               sort_order:
- *                 type: integer
+ *               isFilterable:
+ *                 type: boolean
  *     responses:
  *       201:
  *         description: Custom field definition created
@@ -96,7 +94,7 @@ export async function GET(request) {
         return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
     const { searchParams } = new URL(request.url);
-    const modelName = searchParams.get('model_name');
+    const modelName = searchParams.get('model');
     try {
         let query = `
       SELECT 
@@ -157,13 +155,13 @@ export async function POST(request) {
             errors: validationResult.error.flatten().fieldErrors
         }, { status: 400 });
     }
-    const { model_name, field_key, label, field_type, options, is_required, sort_order } = validationResult.data;
+    const { model, name, label, type, options, placeholder, defaultValue, isRequired, isFilterable } = validationResult.data;
     try {
-        // Check if field_key already exists for this model
-        const existingField = await getPool().query('SELECT id FROM "CustomFieldDefinition" WHERE model_name = $1 AND field_key = $2', [model_name, field_key]);
+        // Check if field name already exists for this model
+        const existingField = await getPool().query('SELECT id FROM "CustomFieldDefinition" WHERE model_name = $1 AND field_key = $2', [model, name]);
         if (existingField.rows.length > 0) {
             return NextResponse.json({
-                message: `A custom field with key "${field_key}" already exists for ${model_name}`
+                message: `A custom field with name "${name}" already exists for ${model}`
             }, { status: 409 });
         }
         const newFieldId = uuidv4();
@@ -176,12 +174,26 @@ export async function POST(request) {
       RETURNING *;
     `;
         const result = await getPool().query(insertQuery, [
-            newFieldId, model_name, field_key, label, field_type,
-            options || null, is_required, sort_order
+            newFieldId, model, name, label, type,
+            options || null, isRequired, 0
         ]);
         const newField = result.rows[0];
-        await logAudit('AUDIT', `Custom field "${label}" (${field_key}) created for ${model_name} by ${session.user.name}.`, 'API:CustomFields:Create', session.user.id, { fieldId: newFieldId, modelName: model_name, fieldKey: field_key, fieldType: field_type });
-        return NextResponse.json(newField, { status: 201 });
+        await logAudit('AUDIT', `Custom field "${label}" (${name}) created for ${model} by ${session.user.name}.`, 'API:CustomFields:Create', session.user.id, { fieldId: newFieldId, modelName: model, fieldKey: name, fieldType: type });
+        // Return in the format expected by frontend
+        return NextResponse.json({
+            id: newField.id,
+            model: newField.model_name,
+            name: newField.field_key,
+            label: newField.label,
+            type: newField.field_type,
+            options: newField.options || [],
+            placeholder: null,
+            defaultValue: null,
+            isRequired: newField.is_required,
+            isFilterable: false,
+            isSystemField: false,
+            order: newField.sort_order ?? 0,
+        }, { status: 201 });
     }
     catch (error) {
         console.error("Failed to create custom field definition:", error);

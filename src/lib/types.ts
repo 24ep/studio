@@ -33,22 +33,10 @@ export const PLATFORM_MODULES = [
   { id: 'WEBHOOK_MAPPING_MANAGE', label: 'Manage Webhook Mappings', category: PLATFORM_MODULE_CATEGORIES.SYSTEM_CONFIGURATION, description: "Allows configuring mappings for incoming webhook payloads." },
   { id: 'NOTIFICATION_SETTINGS_MANAGE', label: 'Manage Notification Settings', category: PLATFORM_MODULE_CATEGORIES.SYSTEM_CONFIGURATION, description: "Allows configuring system notification events and channels." },
   { id: 'LOGS_VIEW', label: 'View Application Logs', category: PLATFORM_MODULE_CATEGORIES.LOGGING_AUDIT, description: "Allows viewing system and audit logs." },
-  { id: 'HR_MANAGE', label: 'Manage HR Department', category: PLATFORM_MODULE_CATEGORIES.DEPARTMENT_MANAGEMENT, description: "Allows managing users and settings for the HR department." },
-  { id: 'HR_CREATE', label: 'Create HR Records', category: PLATFORM_MODULE_CATEGORIES.DEPARTMENT_MANAGEMENT, description: "Allows creating HR records." },
-  { id: 'HR_UPDATE', label: 'Update HR Records', category: PLATFORM_MODULE_CATEGORIES.DEPARTMENT_MANAGEMENT, description: "Allows updating HR records." },
-  { id: 'HR_DELETE', label: 'Delete HR Records', category: PLATFORM_MODULE_CATEGORIES.DEPARTMENT_MANAGEMENT, description: "Allows deleting HR records." },
-  { id: 'IT_MANAGE', label: 'Manage IT Department', category: PLATFORM_MODULE_CATEGORIES.DEPARTMENT_MANAGEMENT, description: "Allows managing users and settings for the IT department." },
-  { id: 'IT_CREATE', label: 'Create IT Records', category: PLATFORM_MODULE_CATEGORIES.DEPARTMENT_MANAGEMENT, description: "Allows creating IT records." },
-  { id: 'IT_UPDATE', label: 'Update IT Records', category: PLATFORM_MODULE_CATEGORIES.DEPARTMENT_MANAGEMENT, description: "Allows updating IT records." },
-  { id: 'IT_DELETE', label: 'Delete IT Records', category: PLATFORM_MODULE_CATEGORIES.DEPARTMENT_MANAGEMENT, description: "Allows deleting IT records." },
-  { id: 'FINANCE_MANAGE', label: 'Manage Finance Department', category: PLATFORM_MODULE_CATEGORIES.DEPARTMENT_MANAGEMENT, description: "Allows managing users and settings for the Finance department." },
-  { id: 'FINANCE_CREATE', label: 'Create Finance Records', category: PLATFORM_MODULE_CATEGORIES.DEPARTMENT_MANAGEMENT, description: "Allows creating Finance records." },
-  { id: 'FINANCE_UPDATE', label: 'Update Finance Records', category: PLATFORM_MODULE_CATEGORIES.DEPARTMENT_MANAGEMENT, description: "Allows updating Finance records." },
-  { id: 'FINANCE_DELETE', label: 'Delete Finance Records', category: PLATFORM_MODULE_CATEGORIES.DEPARTMENT_MANAGEMENT, description: "Allows deleting Finance records." },
-  { id: 'MARKETING_MANAGE', label: 'Manage Marketing Department', category: PLATFORM_MODULE_CATEGORIES.DEPARTMENT_MANAGEMENT, description: "Allows managing users and settings for the Marketing department." },
-  { id: 'MARKETING_CREATE', label: 'Create Marketing Records', category: PLATFORM_MODULE_CATEGORIES.DEPARTMENT_MANAGEMENT, description: "Allows creating Marketing records." },
-  { id: 'MARKETING_UPDATE', label: 'Update Marketing Records', category: PLATFORM_MODULE_CATEGORIES.DEPARTMENT_MANAGEMENT, description: "Allows updating Marketing records." },
-  { id: 'MARKETING_DELETE', label: 'Delete Marketing Records', category: PLATFORM_MODULE_CATEGORIES.DEPARTMENT_MANAGEMENT, description: "Allows deleting Marketing records." },
+  { id: 'HR_DEPARTMENT_MANAGE', label: 'Manage HR Department', category: PLATFORM_MODULE_CATEGORIES.DEPARTMENT_MANAGEMENT, description: "Allows full management of HR department including users, records, and settings." },
+  { id: 'IT_DEPARTMENT_MANAGE', label: 'Manage IT Department', category: PLATFORM_MODULE_CATEGORIES.DEPARTMENT_MANAGEMENT, description: "Allows full management of IT department including users, records, and settings." },
+  { id: 'FINANCE_DEPARTMENT_MANAGE', label: 'Manage Finance Department', category: PLATFORM_MODULE_CATEGORIES.DEPARTMENT_MANAGEMENT, description: "Allows full management of Finance department including users, records, and settings." },
+  { id: 'MARKETING_DEPARTMENT_MANAGE', label: 'Manage Marketing Department', category: PLATFORM_MODULE_CATEGORIES.DEPARTMENT_MANAGEMENT, description: "Allows full management of Marketing department including users, records, and settings." },
 ] as const;
 
 export type PlatformModule = typeof PLATFORM_MODULES[number];
@@ -284,6 +272,31 @@ export interface ResumeHistoryEntry {
   uploadedByUserName?: string | null; // For display
 }
 
+// Database model for JobMatch (matches Prisma schema)
+export interface JobMatch {
+  id: string;
+  candidateId: string;
+  jobId?: string | null;
+  jobTitle?: string | null;
+  fitScore: number;
+  matchReasons?: string[] | null;
+  jobDescriptionSummary?: string | null;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+// Database model for ResumeHistory (matches Prisma schema)
+export interface ResumeHistory {
+  id: string;
+  candidateId: string;
+  filePath: string;
+  originalFileName: string;
+  uploadedAt: string;
+  uploadedByUserId?: string | null;
+  uploadedByUserName?: string | null; // For display purposes, populated by JOIN
+  createdAt?: string;
+  updatedAt?: string;
+}
 
 export interface UserProfile {
   id: string;

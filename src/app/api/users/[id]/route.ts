@@ -12,6 +12,9 @@ const updateUserSchema = z.object({
   email: z.string().email("A valid email is required").optional(),
   role: z.enum(['Admin', 'Recruiter', 'Hiring Manager']).optional(),
   password: z.string().min(8, "Password must be at least 8 characters").optional(),
+  authenticationMethod: z.enum(['basic', 'azure']).optional(),
+  forcePasswordChange: z.boolean().optional(),
+  newPassword: z.string().min(8, "New password must be at least 8 characters").optional(),
 });
 
 function extractIdFromUrl(request: NextRequest): string | null {
@@ -52,7 +55,7 @@ export async function GET(request: NextRequest) {
 
     const client = await getPool().connect();
     try {
-        const result = await client.query('SELECT id, name, email, role, image as "avatarUrl" FROM "User" WHERE id = $1', [id]);
+        const result = await client.query('SELECT id, name, email, role, "avatarUrl", "authenticationMethod", "forcePasswordChange" FROM "User" WHERE id = $1', [id]);
         if (result.rows.length === 0) {
             return NextResponse.json({ message: "User not found" }, { status: 404 });
         }
@@ -113,18 +116,25 @@ export async function PUT(request: NextRequest) {
         return NextResponse.json({ message: "Invalid input", errors: validationResult.error.flatten().fieldErrors }, { status: 400 });
     }
 
-    const { password, ...fieldsToUpdate } = validationResult.data;
+    const { password, newPassword, ...fieldsToUpdate } = validationResult.data;
 
-    if (Object.keys(fieldsToUpdate).length === 0 && !password) {
+    if (Object.keys(fieldsToUpdate).length === 0 && !password && !newPassword) {
         return NextResponse.json({ message: "No fields to update." }, { status: 400 });
     }
     
     const client = await getPool().connect();
     try {
         const updateFields: any = { ...fieldsToUpdate };
+        
+        // Handle password updates
         if (password) {
             const saltRounds = 10;
             updateFields.password = await bcrypt.hash(password, saltRounds);
+        }
+        
+        if (newPassword) {
+            const saltRounds = 10;
+            updateFields.password = await bcrypt.hash(newPassword, saltRounds);
         }
 
         const setClauses = Object.keys(updateFields).map((key, index) => `"${key}" = $${index + 1}`);
@@ -134,7 +144,7 @@ export async function PUT(request: NextRequest) {
             UPDATE "User"
             SET ${setClauses.join(', ')}, "updatedAt" = NOW()
             WHERE id = $${queryParams.length + 1}
-            RETURNING id, name, email, role;
+            RETURNING id, name, email, role, "authenticationMethod", "forcePasswordChange";
         `;
 
         const result = await client.query(updateQuery, [...queryParams, id]);

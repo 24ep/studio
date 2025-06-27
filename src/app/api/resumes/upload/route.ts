@@ -78,23 +78,44 @@ export async function POST(request: NextRequest) {
 
     // Update candidate in DB
     const pool = getPool();
-    const updateQuery = `UPDATE "Candidate" SET "resumePath" = $1, "updatedAt" = NOW() WHERE id = $2 RETURNING *;`;
-    const result = await pool.query(updateQuery, [objectName, candidateId]);
-    if (result.rows.length === 0) {
-      await logAudit('ERROR', `Resume upload failed - candidate not found by ${actingUserName}`, 'API:Resumes:Upload', actingUserId, { candidateId, fileName: originalName });
-      return NextResponse.json({ message: 'Candidate not found' }, { status: 404 });
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+      
+      // Update candidate's resume path
+      const updateQuery = `UPDATE "Candidate" SET "resumePath" = $1, "updatedAt" = NOW() WHERE id = $2 RETURNING *;`;
+      const result = await client.query(updateQuery, [objectName, candidateId]);
+      if (result.rows.length === 0) {
+        await client.query('ROLLBACK');
+        await logAudit('ERROR', `Resume upload failed - candidate not found by ${actingUserName}`, 'API:Resumes:Upload', actingUserId, { candidateId, fileName: originalName });
+        return NextResponse.json({ message: 'Candidate not found' }, { status: 404 });
+      }
+      const candidate = result.rows[0];
+
+      // Create resume history entry
+      const historyQuery = `
+        INSERT INTO "ResumeHistory" (id, "candidateId", "filePath", "originalFileName", "uploadedAt", "uploadedByUserId", "createdAt", "updatedAt")
+        VALUES ($1, $2, $3, $4, NOW(), $5, NOW(), NOW());
+      `;
+      await client.query(historyQuery, [randomUUID(), candidateId, objectName, originalName, actingUserId]);
+
+      await client.query('COMMIT');
+
+      await logAudit('AUDIT', `Resume '${originalName}' uploaded for candidate '${candidate.name}' by ${actingUserName}`, 'API:Resumes:Upload', actingUserId, { 
+        candidateId, 
+        candidateName: candidate.name,
+        fileName: originalName,
+        fileSize: buffer.length,
+        filePath: objectName 
+      });
+
+      return NextResponse.json({ message: 'Resume uploaded', candidate, file_path: objectName, url: `${MINIO_PUBLIC_BASE_URL}/${MINIO_BUCKET}/${objectName}` });
+    } catch (error) {
+      await client.query('ROLLBACK');
+      throw error;
+    } finally {
+      client.release();
     }
-    const candidate = result.rows[0];
-
-    await logAudit('AUDIT', `Resume '${originalName}' uploaded for candidate '${candidate.name}' by ${actingUserName}`, 'API:Resumes:Upload', actingUserId, { 
-      candidateId, 
-      candidateName: candidate.name,
-      fileName: originalName,
-      fileSize: buffer.length,
-      filePath: objectName 
-    });
-
-    return NextResponse.json({ message: 'Resume uploaded', candidate, file_path: objectName, url: `${MINIO_PUBLIC_BASE_URL}/${MINIO_BUCKET}/${objectName}` });
   } catch (error) {
     console.error('Resume upload error:', error);
     await logAudit('ERROR', `Resume upload failed by ${actingUserName}. Error: ${(error as Error).message}`, 'API:Resumes:Upload', actingUserId, { 

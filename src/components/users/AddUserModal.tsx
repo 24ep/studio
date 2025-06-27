@@ -45,6 +45,8 @@ const addUserFormSchema = z.object({
   email: z.string().email("Invalid email address"),
   password: z.string().min(6, "Password must be at least 6 characters long"),
   role: z.enum(userRoleOptions as [UserProfile['role'], ...UserProfile['role'][]], { required_error: "Role is required" }),
+  authenticationMethod: z.enum(['basic', 'azure']).default('basic'),
+  forcePasswordChange: z.boolean().default(false),
   modulePermissions: z.array(z.enum(platformModuleIds)).optional().default([]),
   groupIds: z.array(z.string().uuid()).optional().default([]),
 });
@@ -75,6 +77,8 @@ export function AddUserModal({ isOpen, onOpenChange, onAddUser }: AddUserModalPr
       email: '',
       password: '',
       role: 'Recruiter',
+      authenticationMethod: 'basic',
+      forcePasswordChange: false,
       modulePermissions: [],
       groupIds: [],
     },
@@ -87,6 +91,8 @@ export function AddUserModal({ isOpen, onOpenChange, onAddUser }: AddUserModalPr
         email: '',
         password: '',
         role: 'Recruiter',
+        authenticationMethod: 'basic',
+        forcePasswordChange: false,
         modulePermissions: [],
         groupIds: [],
       });
@@ -148,6 +154,8 @@ export function AddUserModal({ isOpen, onOpenChange, onAddUser }: AddUserModalPr
                   <FormField control={form.control} name="email" render={({ field }) => (<FormItem><FormLabel htmlFor="email-add">Email Address *</FormLabel><FormControl><Input id="email-add" type="email" {...field} className="mt-1" /></FormControl><FormMessage /></FormItem>)} />
                   <FormField control={form.control} name="password" render={({ field }) => (<FormItem><FormLabel htmlFor="password-add">Password *</FormLabel><FormControl><Input id="password-add" type="password" {...field} className="mt-1" /></FormControl><FormMessage /></FormItem>)} />
                   <FormField control={form.control} name="role" render={({ field }) => (<FormItem><FormLabel htmlFor="role-add">System Role *</FormLabel><Select onValueChange={field.onChange} value={field.value} defaultValue={field.value}><FormControl><SelectTrigger id="role-add" className="mt-1"><SelectValue placeholder="Select a role" /></SelectTrigger></FormControl><SelectContent>{userRoleOptions.map(role => (<SelectItem key={role} value={role}>{role}</SelectItem>))}</SelectContent></Select><FormMessage /></FormItem>)} />
+                  <FormField control={form.control} name="authenticationMethod" render={({ field }) => (<FormItem><FormLabel htmlFor="auth-method-add">Authentication Method *</FormLabel><Select onValueChange={field.onChange} value={field.value} defaultValue={field.value}><FormControl><SelectTrigger id="auth-method-add" className="mt-1"><SelectValue placeholder="Select authentication method" /></SelectTrigger></FormControl><SelectContent><SelectItem value="basic">Basic (Email/Password)</SelectItem><SelectItem value="azure">Azure AD</SelectItem></SelectContent></Select><FormMessage /></FormItem>)} />
+                  <FormField control={form.control} name="forcePasswordChange" render={({ field }) => (<FormItem className="flex flex-row items-center space-x-3 space-y-0 pt-2"><FormControl><Toggle checked={field.value} onCheckedChange={field.onChange} /></FormControl><FormLabel className="font-normal">Force Password Change on First Login</FormLabel></FormItem>)} />
                 </div>
 
                 {/* Right Column: Groups & Permissions */}

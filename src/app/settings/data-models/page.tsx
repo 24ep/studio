@@ -84,6 +84,7 @@ export default function DataModelsPage() {
     const [error, setError] = useState<string | null>(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingField, setEditingField] = useState<CustomFieldDefinition | null>(null);
+    const [currentModel, setCurrentModel] = useState<'Candidate' | 'Position'>('Candidate');
     const [formData, setFormData] = useState<z.infer<typeof fieldSchema>>({
         name: '',
         label: '',
@@ -124,8 +125,9 @@ export default function DataModelsPage() {
         }
     }, [error]);
     
-    const handleModalOpen = (field: CustomFieldDefinition | null = null) => {
+    const handleModalOpen = (field: CustomFieldDefinition | null = null, model: 'Candidate' | 'Position' = 'Candidate') => {
         setEditingField(field);
+        setCurrentModel(model);
         if (field) {
             setFormData({
                 name: field.name,
@@ -158,7 +160,7 @@ export default function DataModelsPage() {
         setEditingField(null);
     };
     
-    const handleSubmit = async (e: React.FormEvent, model: 'Candidate' | 'Position') => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setFormErrors(null);
         setIsSaving(true);
@@ -172,7 +174,7 @@ export default function DataModelsPage() {
 
         const payload: any = {
             ...validation.data,
-            model,
+            model: currentModel,
         };
 
         if (payload.options) {
@@ -239,7 +241,7 @@ export default function DataModelsPage() {
         return (
             <div>
                 <div className="flex justify-end mb-4">
-                    <Button onClick={() => handleModalOpen()}>
+                    <Button onClick={() => handleModalOpen(null, model)}>
                         <PlusCircle className="mr-2 h-4 w-4" /> Add New Field
                     </Button>
                 </div>
@@ -262,6 +264,12 @@ export default function DataModelsPage() {
                                         <Loader2 className="inline-block animate-spin mr-2" /> Loading...
                                     </TableCell>
                                 </TableRow>
+                            ) : filteredDefs.length === 0 ? (
+                                <TableRow>
+                                    <TableCell colSpan={6} className="text-center text-muted-foreground">
+                                        No custom fields defined for {model}s yet.
+                                    </TableCell>
+                                </TableRow>
                             ) : filteredDefs.map(def => (
                                 <TableRow key={def.id}>
                                     <TableCell className="font-medium">{def.label}</TableCell>
@@ -278,7 +286,7 @@ export default function DataModelsPage() {
                                         )}
                                     </TableCell>
                                     <TableCell>
-                                        <Button variant="ghost" size="icon" onClick={() => handleModalOpen(def)} disabled={def.isSystemField}>
+                                        <Button variant="ghost" size="icon" onClick={() => handleModalOpen(def, model)} disabled={def.isSystemField}>
                                             <Edit className="h-4 w-4" />
                                         </Button>
                                         <Button variant="ghost" size="icon" onClick={() => handleDelete(def.id)} disabled={def.isSystemField}>
@@ -333,20 +341,14 @@ export default function DataModelsPage() {
             </Tabs>
             
             <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-                <DialogContent>
+                <DialogContent className="sm:max-w-2xl">
                     <DialogHeader>
-                        <div className="flex items-center gap-2 mb-4">
-                            <Button type="submit" disabled={isSaving} className="btn-primary-gradient flex items-center gap-2">
-                                {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-                                {editingField ? 'Save Changes' : 'Create Field'}
-                            </Button>
-                        </div>
                         <DialogTitle>{editingField ? 'Edit Field' : 'Add New Field'}</DialogTitle>
                         <DialogDescription>
                             Define the properties for this field. The &quot;Name (Key)&quot; is used programmatically and cannot be changed after creation.
                         </DialogDescription>
                     </DialogHeader>
-                    <form onSubmit={(e) => handleSubmit(e, 'Candidate')} className="space-y-4">
+                    <form onSubmit={handleSubmit} className="space-y-4">
                         <div>
                             <Label htmlFor="label">Label</Label>
                             <Input id="label" value={formData.label} onChange={e => setFormData({...formData, label: e.target.value})} />
@@ -396,6 +398,15 @@ export default function DataModelsPage() {
                             <Toggle checked={formData.isFilterable} onCheckedChange={checked => setFormData({...formData, isFilterable: checked})} />
                             <Label htmlFor="isFilterable">Is Filterable?</Label>
                         </div>
+                        <DialogFooter>
+                            <Button type="button" variant="outline" onClick={handleModalClose}>
+                                Cancel
+                            </Button>
+                            <Button type="submit" disabled={isSaving} className="btn-primary-gradient flex items-center gap-2">
+                                {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+                                {editingField ? 'Save Changes' : 'Create Field'}
+                            </Button>
+                        </DialogFooter>
                     </form>
                 </DialogContent>
             </Dialog>

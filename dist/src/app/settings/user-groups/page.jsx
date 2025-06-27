@@ -7,7 +7,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, } from "@/components/ui/alert-dialog";
 import { toast } from 'react-hot-toast';
 import { useSession, signIn } from 'next-auth/react';
@@ -282,12 +282,6 @@ export default function RolesPermissionsPage() {
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
         <DialogContent className="sm:max-w-lg">
           <DialogHeader>
-            <div className="flex items-center gap-2 mb-4">
-              <Button type="submit" disabled={form.formState.isSubmitting || (editingRole?.is_system_role && form.getValues("name") === editingRole.name && !form.getFieldState("description").isDirty && !form.getFieldState("is_default").isDirty)} className="btn-primary-gradient flex items-center gap-2">
-                {form.formState.isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Save className="mr-2 h-4 w-4"/>}
-                {editingRole ? 'Save Changes' : 'Create Role'}
-              </Button>
-            </div>
             <DialogTitle>{editingRole ? 'Edit Role' : 'Create New Role'}</DialogTitle>
             <DialogDescription>
               {editingRole ? `Update the details for the &quot;${editingRole.name}&quot; role.` : 'Define a new role. Permissions are managed on the main page after creation.'}
@@ -312,6 +306,15 @@ export default function RolesPermissionsPage() {
                 </FormItem>)}/>
             </form>
           </Form>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setIsModalOpen(false)}>
+              Cancel
+            </Button>
+            <Button type="submit" disabled={form.formState.isSubmitting || (editingRole?.is_system_role && form.getValues("name") === editingRole.name && !form.getFieldState("description").isDirty && !form.getFieldState("is_default").isDirty)} className="btn-primary-gradient flex items-center gap-2" onClick={form.handleSubmit(handleRoleFormSubmit)}>
+              {form.formState.isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Save className="mr-2 h-4 w-4"/>}
+              {editingRole ? 'Save Changes' : 'Create Role'}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 

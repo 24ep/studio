@@ -12,6 +12,8 @@ import { signIn, useSession } from "next-auth/react";
 import { CandidatesPerPositionChart } from '@/components/dashboard/CandidatesPerPositionChart';
 import { useRouter } from 'next/navigation';
 import { toast } from "react-hot-toast";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
 const BACKLOG_EXCLUSION_STATUSES = ['Hired', 'Rejected', 'Offer Accepted'];
 const INTERVIEW_STATUSES = ['Interview Scheduled', 'Interviewing'];
 export default function DashboardPageClient({ initialCandidates, initialPositions, initialUsers, initialFetchError, authError: serverAuthError = false, permissionError: serverPermissionError = false, }) {
@@ -220,6 +222,11 @@ export default function DashboardPageClient({ initialCandidates, initialPosition
         const safeAllCandidates = Array.isArray(allCandidates) ? allCandidates : [];
         return safeAllCandidates.filter((c) => !BACKLOG_EXCLUSION_STATUSES.includes(c.status) && !c.recruiterId).length;
     }, [allCandidates]);
+    // Unassigned candidates list
+    const unassignedCandidatesList = useMemo(() => {
+        const safeAllCandidates = Array.isArray(allCandidates) ? allCandidates : [];
+        return safeAllCandidates.filter((c) => !BACKLOG_EXCLUSION_STATUSES.includes(c.status) && !c.recruiterId);
+    }, [allCandidates]);
     // Stage summary metrics
     const stageSummary = useMemo(() => {
         const safeAllCandidates = Array.isArray(allCandidates) ? allCandidates : [];
@@ -258,7 +265,7 @@ export default function DashboardPageClient({ initialCandidates, initialPosition
             { title: "Hired This Month", value: hiredThisMonthAdmin, icon: CheckCircle2, color: "text-green-500", bgColor: "bg-green-500/10" },
             { title: "Active Recruiters", value: totalActiveRecruiters, icon: Users2, color: "text-purple-500", bgColor: "bg-purple-500/10" },
             { title: "Unassigned Candidates", value: unassignedCandidatesCount, icon: UserRoundSearch, color: "text-orange-500", bgColor: "bg-orange-500/10" }
-        ].map(stat => (<Card key={stat.title} className="shadow-sm hover:shadow-md transition-all duration-200 border-l-4 border-l-primary">
+        ].map(stat => (<Card key={stat.title} className="shadow-sm hover:shadow-md transition-all duration-200">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium text-muted-foreground">{stat.title}</CardTitle>
                 <div className={`p-2 rounded-lg ${stat.bgColor}`}>
@@ -279,7 +286,7 @@ export default function DashboardPageClient({ initialCandidates, initialPosition
             <h2 className="text-xl font-semibold text-foreground">My Performance</h2>
           </div>
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            <Card className="shadow-sm hover:shadow-md transition-all duration-200 border-l-4 border-l-purple-500">
+            <Card className="shadow-sm hover:shadow-md transition-all duration-200">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium text-muted-foreground">My Active Candidates</CardTitle>
                 <div className="p-2 rounded-lg bg-purple-500/10">
@@ -288,7 +295,7 @@ export default function DashboardPageClient({ initialCandidates, initialPosition
               </CardHeader>
               <CardContent><div className="text-2xl font-bold text-foreground">{myActiveCandidatesList.length}</div></CardContent>
             </Card>
-            <Card className="shadow-sm hover:shadow-md transition-all duration-200 border-l-4 border-l-purple-500">
+            <Card className="shadow-sm hover:shadow-md transition-all duration-200">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium text-muted-foreground">My Candidates in Interview</CardTitle>
                 <div className="p-2 rounded-lg bg-purple-500/10">
@@ -297,7 +304,7 @@ export default function DashboardPageClient({ initialCandidates, initialPosition
               </CardHeader>
               <CardContent><div className="text-2xl font-bold text-foreground">{myCandidatesInInterviewCount}</div></CardContent>
             </Card>
-            <Card className="shadow-sm hover:shadow-md transition-all duration-200 border-l-4 border-l-purple-500">
+            <Card className="shadow-sm hover:shadow-md transition-all duration-200">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium text-muted-foreground">New Candidates Today (Assigned)</CardTitle>
                 <div className="p-2 rounded-lg bg-purple-500/10">
@@ -309,33 +316,35 @@ export default function DashboardPageClient({ initialCandidates, initialPosition
           </div>
         </div>)}
 
-      {/* Section 3: Candidate Scoring Analysis */}
+      {/* Section 3: Candidate Scoring Analysis - Vertical Bar Chart */}
       <div className="space-y-4">
         <div className="flex items-center space-x-2">
           <div className="h-6 w-1 bg-blue-500 rounded-full"></div>
           <h2 className="text-xl font-semibold text-foreground">Candidate Scoring Analysis</h2>
         </div>
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
-          {candidateScoreRanges.map((range, index) => {
+        <Card className="shadow-sm hover:shadow-md transition-all duration-200">
+          <CardContent className="pt-6">
+            <div className="flex items-end justify-between h-64 space-x-2">
+              {candidateScoreRanges.map((range, index) => {
             const colors = [
-                { text: "text-red-500", bg: "bg-red-500/10" },
-                { text: "text-orange-500", bg: "bg-orange-500/10" },
-                { text: "text-yellow-500", bg: "bg-yellow-500/10" },
-                { text: "text-blue-500", bg: "bg-blue-500/10" },
-                { text: "text-green-500", bg: "bg-green-500/10" }
+                { bg: "bg-red-500", text: "text-red-500" },
+                { bg: "bg-orange-500", text: "text-orange-500" },
+                { bg: "bg-yellow-500", text: "text-yellow-500" },
+                { bg: "bg-blue-500", text: "text-blue-500" },
+                { bg: "bg-green-500", text: "text-green-500" }
             ];
             const color = colors[index];
-            return (<Card key={range.label} className="shadow-sm hover:shadow-md transition-all duration-200 border-l-4 border-l-blue-500">
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">Score {range.label}</CardTitle>
-                  <div className={`p-2 rounded-lg ${color.bg}`}>
-                    <div className={`h-5 w-5 rounded-full ${color.text} bg-current`}></div>
-                  </div>
-                </CardHeader>
-                <CardContent><div className="text-2xl font-bold text-foreground">{range.count}</div></CardContent>
-              </Card>);
+            const maxCount = Math.max(...candidateScoreRanges.map(r => r.count));
+            const height = maxCount > 0 ? (range.count / maxCount) * 100 : 0;
+            return (<div key={range.label} className="flex flex-col items-center flex-1">
+                    <div className="text-sm font-medium text-muted-foreground mb-2">{range.count}</div>
+                    <div className={`w-full ${color.bg} rounded-t transition-all duration-300 hover:opacity-80`} style={{ height: `${Math.max(height, 4)}%` }}></div>
+                    <div className="text-xs text-muted-foreground mt-2 text-center">{range.label}</div>
+                  </div>);
         })}
-        </div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Section 4: Recruitment Pipeline */}
@@ -345,7 +354,7 @@ export default function DashboardPageClient({ initialCandidates, initialPosition
           <h2 className="text-xl font-semibold text-foreground">Recruitment Pipeline</h2>
         </div>
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          {stageSummary.slice(0, 8).map(stage => (<Card key={stage.stage} className="shadow-sm hover:shadow-md transition-all duration-200 border-l-4 border-l-green-500">
+          {stageSummary.slice(0, 8).map(stage => (<Card key={stage.stage} className="shadow-sm hover:shadow-md transition-all duration-200">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium text-muted-foreground capitalize">{stage.stage.replace(/([A-Z])/g, ' $1').trim()}</CardTitle>
                 <div className="p-2 rounded-lg bg-green-500/10">
@@ -357,7 +366,59 @@ export default function DashboardPageClient({ initialCandidates, initialPosition
         </div>
       </div>
 
-      {/* Section 5: Recent Activity */}
+      {/* Section 5: Unassigned Candidates */}
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-2">
+            <div className="h-6 w-1 bg-orange-500 rounded-full"></div>
+            <h2 className="text-xl font-semibold text-foreground">Unassigned Candidates</h2>
+          </div>
+          <Link href="/candidates?recruiterId=unassigned" passHref>
+            <Button variant="outline" size="sm">
+              View All ({unassignedCandidatesCount})
+            </Button>
+          </Link>
+        </div>
+        <Card className="shadow-sm hover:shadow-md transition-all duration-200">
+          <CardContent className="pt-6">
+            {unassignedCandidatesList.length > 0 ? (<Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Candidate</TableHead>
+                    <TableHead>Position</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Fit Score</TableHead>
+                    <TableHead>Applied</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {unassignedCandidatesList.slice(0, 5).map(candidate => (<TableRow key={candidate.id} className="hover:bg-muted/50">
+                      <TableCell>
+                        <Link href={`/candidates/${candidate.id}`} className="flex items-center space-x-3 hover:underline">
+                          <Avatar className="h-8 w-8">
+                            <AvatarImage src={candidate.avatarUrl || `https://placehold.co/32x32.png?text=${candidate.name.charAt(0)}`} alt={candidate.name}/>
+                            <AvatarFallback>{candidate.name.charAt(0).toUpperCase()}</AvatarFallback>
+                          </Avatar>
+                          <span className="font-medium">{candidate.name}</span>
+                        </Link>
+                      </TableCell>
+                      <TableCell>{candidate.position?.title || 'N/A'}</TableCell>
+                      <TableCell>
+                        <Badge variant="outline" className="capitalize">{candidate.status}</Badge>
+                      </TableCell>
+                      <TableCell>{candidate.fitScore || 0}%</TableCell>
+                      <TableCell>{candidate.applicationDate ? new Date(candidate.applicationDate).toLocaleDateString() : 'N/A'}</TableCell>
+                    </TableRow>))}
+                </TableBody>
+              </Table>) : (<div className="flex flex-col items-center justify-center py-8 text-center">
+                <CheckCircle2 className="h-12 w-12 text-green-500 mb-3"/>
+                <p className="text-sm text-muted-foreground">All candidates have been assigned to recruiters!</p>
+              </div>)}
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Section 6: Recent Activity - Tables */}
       <div className="space-y-4">
         <div className="flex items-center space-x-2">
           <div className="h-6 w-1 bg-orange-500 rounded-full"></div>
@@ -365,7 +426,7 @@ export default function DashboardPageClient({ initialCandidates, initialPosition
         </div>
         <div className="grid gap-6 md:grid-cols-1 lg:grid-cols-2">
           {/* New Candidates Today */}
-          <Card className="shadow-sm hover:shadow-md transition-all duration-200 border-l-4 border-l-orange-500">
+          <Card className="shadow-sm hover:shadow-md transition-all duration-200">
             <CardHeader>
               <CardTitle className="flex items-center text-lg">
                 <UserPlus className="mr-2 h-5 w-5 text-orange-500"/> 
@@ -374,23 +435,34 @@ export default function DashboardPageClient({ initialCandidates, initialPosition
               <CardDescription>All candidates who applied today.</CardDescription>
             </CardHeader>
             <CardContent>
-              {newCandidatesTodayAdminList.length > 0 ? (<ul className="space-y-3 max-h-72 overflow-y-auto">
-                  {newCandidatesTodayAdminList.slice(0, 7).map(candidate => (<li key={candidate.id} className="flex items-center space-x-3 p-3 bg-muted/50 rounded-lg hover:bg-muted/80 transition-colors">
-                      <Avatar className="h-10 w-10">
-                        <AvatarImage src={candidate.avatarUrl || `https://placehold.co/40x40.png?text=${candidate.name.charAt(0)}`} alt={candidate.name} data-ai-hint="person avatar"/>
-                        <AvatarFallback>{candidate.name.charAt(0).toUpperCase()}</AvatarFallback>
-                      </Avatar>
-                      <div className="flex-1 min-w-0">
-                        <Link href={`/candidates/${candidate.id}`} passHref>
-                          <span className="text-sm font-medium text-foreground hover:underline cursor-pointer truncate block">{candidate.name}</span>
-                        </Link>
-                        <p className="text-xs text-muted-foreground truncate" title={candidate.position?.title || 'N/A'}>{candidate.position?.title || 'N/A'}</p>
-                      </div>
-                    </li>))}
-                  {newCandidatesTodayAdminList.length > 7 && (<Link href="/candidates" passHref>
-                      <Button variant="link" className="text-sm p-0 h-auto mt-2">View all {newCandidatesTodayAdminList.length} new candidates...</Button>
-                    </Link>)}
-                </ul>) : (<div className="flex flex-col items-center justify-center py-8 text-center">
+              {newCandidatesTodayAdminList.length > 0 ? (<Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Candidate</TableHead>
+                      <TableHead>Position</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Recruiter</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {newCandidatesTodayAdminList.slice(0, 5).map(candidate => (<TableRow key={candidate.id} className="hover:bg-muted/50">
+                        <TableCell>
+                          <Link href={`/candidates/${candidate.id}`} className="flex items-center space-x-3 hover:underline">
+                            <Avatar className="h-8 w-8">
+                              <AvatarImage src={candidate.avatarUrl || `https://placehold.co/32x32.png?text=${candidate.name.charAt(0)}`} alt={candidate.name}/>
+                              <AvatarFallback>{candidate.name.charAt(0).toUpperCase()}</AvatarFallback>
+                            </Avatar>
+                            <span className="font-medium">{candidate.name}</span>
+                          </Link>
+                        </TableCell>
+                        <TableCell>{candidate.position?.title || 'N/A'}</TableCell>
+                        <TableCell>
+                          <Badge variant="outline" className="capitalize">{candidate.status}</Badge>
+                        </TableCell>
+                        <TableCell>{candidate.recruiter?.name || 'Unassigned'}</TableCell>
+                      </TableRow>))}
+                  </TableBody>
+                </Table>) : (<div className="flex flex-col items-center justify-center py-8 text-center">
                   <UserRoundSearch className="h-12 w-12 text-muted-foreground mb-3"/>
                   <p className="text-sm text-muted-foreground">No new candidates today.</p>
                 </div>)}
@@ -398,26 +470,39 @@ export default function DashboardPageClient({ initialCandidates, initialPosition
           </Card>
 
           {/* Positions Needing Applicants */}
-          <Card className="shadow-sm hover:shadow-md transition-all duration-200 border-l-4 border-l-orange-500">
+          <Card className="shadow-sm hover:shadow-md transition-all duration-200">
             <CardHeader>
               <CardTitle className="flex items-center text-lg">
                 <FileWarning className="mr-2 h-5 w-5 text-amber-600"/> 
-                Positions Needing Applicants
+                Positions Needing Applicants ({openPositionsWithNoCandidates.length})
               </CardTitle>
               <CardDescription>Open positions with no candidates yet.</CardDescription>
             </CardHeader>
             <CardContent>
-              {openPositionsWithNoCandidates.length > 0 ? (<ul className="space-y-3 max-h-72 overflow-y-auto">
-                  {openPositionsWithNoCandidates.slice(0, 7).map(position => (<li key={position.id} className="p-3 bg-muted/50 rounded-lg hover:bg-muted/80 transition-colors">
-                      <Link href={`/positions/${position.id}`} passHref>
-                        <span className="text-sm font-medium text-foreground hover:underline cursor-pointer block truncate">{position.title}</span>
-                      </Link>
-                      <p className="text-xs text-muted-foreground truncate">{position.department}</p>
-                    </li>))}
-                  {openPositionsWithNoCandidates.length > 7 && (<Link href="/positions" passHref>
-                      <Button variant="link" className="text-sm p-0 h-auto mt-2">View all {openPositionsWithNoCandidates.length} positions...</Button>
-                    </Link>)}
-                </ul>) : (<div className="flex flex-col items-center justify-center py-8 text-center">
+              {openPositionsWithNoCandidates.length > 0 ? (<Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Position</TableHead>
+                      <TableHead>Department</TableHead>
+                      <TableHead>Level</TableHead>
+                      <TableHead>Status</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {openPositionsWithNoCandidates.slice(0, 5).map(position => (<TableRow key={position.id} className="hover:bg-muted/50">
+                        <TableCell>
+                          <Link href={`/positions/${position.id}`} className="font-medium hover:underline">
+                            {position.title}
+                          </Link>
+                        </TableCell>
+                        <TableCell>{position.department}</TableCell>
+                        <TableCell>{position.position_level || 'N/A'}</TableCell>
+                        <TableCell>
+                          <Badge variant="outline" className="text-green-600 border-green-600">Open</Badge>
+                        </TableCell>
+                      </TableRow>))}
+                  </TableBody>
+                </Table>) : (<div className="flex flex-col items-center justify-center py-8 text-center">
                   <CheckCircle2 className="h-12 w-12 text-green-500 mb-3"/>
                   <p className="text-sm text-muted-foreground">All open positions have applicants!</p>
                 </div>)}
@@ -426,14 +511,14 @@ export default function DashboardPageClient({ initialCandidates, initialPosition
         </div>
       </div>
 
-      {/* Section 6: Recruiter Action Items (if applicable) */}
+      {/* Section 7: Recruiter Action Items (if applicable) */}
       {session?.user?.role === 'Recruiter' && (<div className="space-y-4">
           <div className="flex items-center space-x-2">
             <div className="h-6 w-1 bg-red-500 rounded-full"></div>
             <h2 className="text-xl font-semibold text-foreground">My Action Items</h2>
           </div>
           <div className="grid gap-6 md:grid-cols-1">
-            <Card className="shadow-sm hover:shadow-md transition-all duration-200 border-l-4 border-l-red-500">
+            <Card className="shadow-sm hover:shadow-md transition-all duration-200">
               <CardHeader>
                 <CardTitle className="flex items-center text-lg">
                   <ListChecks className="mr-2 h-5 w-5 text-red-500"/>
@@ -442,32 +527,43 @@ export default function DashboardPageClient({ initialCandidates, initialPosition
                 <CardDescription>Active candidates assigned to you requiring attention.</CardDescription>
               </CardHeader>
               <CardContent>
-                {myActionItemsList.length > 0 ? (<ul className="space-y-3 max-h-96 overflow-y-auto">
-                    {myActionItemsList.slice(0, 5).map(candidate => (<li key={candidate.id} className="flex items-center space-x-3 p-3 bg-muted/50 rounded-lg hover:bg-muted/80 transition-colors">
-                        <Avatar className="h-10 w-10">
-                          <AvatarImage src={candidate.avatarUrl || `https://placehold.co/40x40.png?text=${candidate.name.charAt(0)}`} alt={candidate.name} data-ai-hint="person avatar"/>
-                          <AvatarFallback>{candidate.name.charAt(0).toUpperCase()}</AvatarFallback>
-                        </Avatar>
-                        <div className="flex-1 min-w-0">
-                          <Link href={`/candidates/${candidate.id}`} passHref>
-                            <span className="text-sm font-medium text-foreground hover:underline cursor-pointer truncate block">{candidate.name}</span>
-                          </Link>
-                          <p className="text-xs text-muted-foreground truncate" title={candidate.position?.title || 'N/A'}>
-                            {candidate.position?.title || 'N/A'} - <span className="capitalize">{candidate.status}</span>
-                          </p>
-                        </div>
-                      </li>))}
-                    {myActionItemsList.length > 5 && (<Link href="/my-tasks" passHref>
-                        <Button variant="link" className="text-sm p-0 h-auto mt-2">View all {myActionItemsList.length} action items...</Button>
-                      </Link>)}
-                  </ul>) : (<div className="flex flex-col items-center justify-center py-8 text-center">
+                {myActionItemsList.length > 0 ? (<Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Candidate</TableHead>
+                        <TableHead>Position</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Fit Score</TableHead>
+                        <TableHead>Applied</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {myActionItemsList.slice(0, 5).map(candidate => (<TableRow key={candidate.id} className="hover:bg-muted/50">
+                          <TableCell>
+                            <Link href={`/candidates/${candidate.id}`} className="flex items-center space-x-3 hover:underline">
+                              <Avatar className="h-8 w-8">
+                                <AvatarImage src={candidate.avatarUrl || `https://placehold.co/32x32.png?text=${candidate.name.charAt(0)}`} alt={candidate.name}/>
+                                <AvatarFallback>{candidate.name.charAt(0).toUpperCase()}</AvatarFallback>
+                              </Avatar>
+                              <span className="font-medium">{candidate.name}</span>
+                            </Link>
+                          </TableCell>
+                          <TableCell>{candidate.position?.title || 'N/A'}</TableCell>
+                          <TableCell>
+                            <Badge variant="outline" className="capitalize">{candidate.status}</Badge>
+                          </TableCell>
+                          <TableCell>{candidate.fitScore || 0}%</TableCell>
+                          <TableCell>{candidate.applicationDate ? new Date(candidate.applicationDate).toLocaleDateString() : 'N/A'}</TableCell>
+                        </TableRow>))}
+                    </TableBody>
+                  </Table>) : (<div className="flex flex-col items-center justify-center py-8 text-center">
                     <CheckCircle2 className="h-12 w-12 text-green-500 mb-3"/>
                     <p className="text-sm text-muted-foreground">Your backlog is clear!</p>
                   </div>)}
               </CardContent>
             </Card>
 
-            {newCandidatesAssignedToMeTodayList.length > 0 && (<Card className="shadow-sm hover:shadow-md transition-all duration-200 border-l-4 border-l-red-500">
+            {newCandidatesAssignedToMeTodayList.length > 0 && (<Card className="shadow-sm hover:shadow-md transition-all duration-200">
                 <CardHeader>
                   <CardTitle className="flex items-center text-lg">
                     <UserPlus className="mr-2 h-5 w-5 text-red-500"/> 
@@ -476,35 +572,46 @@ export default function DashboardPageClient({ initialCandidates, initialPosition
                   <CardDescription>Candidates assigned to you that applied today.</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <ul className="space-y-3 max-h-72 overflow-y-auto">
-                    {newCandidatesAssignedToMeTodayList.slice(0, 5).map(candidate => (<li key={candidate.id} className="flex items-center space-x-3 p-3 bg-muted/50 rounded-lg hover:bg-muted/80 transition-colors">
-                        <Avatar className="h-10 w-10">
-                          <AvatarImage src={candidate.avatarUrl || `https://placehold.co/40x40.png?text=${candidate.name.charAt(0)}`} alt={candidate.name} data-ai-hint="person avatar"/>
-                          <AvatarFallback>{candidate.name.charAt(0).toUpperCase()}</AvatarFallback>
-                        </Avatar>
-                        <div className="flex-1 min-w-0">
-                          <Link href={`/candidates/${candidate.id}`} passHref>
-                            <span className="text-sm font-medium text-foreground hover:underline cursor-pointer truncate block">{candidate.name}</span>
-                          </Link>
-                          <p className="text-xs text-muted-foreground truncate" title={candidate.position?.title || 'N/A'}>{candidate.position?.title || 'N/A'}</p>
-                        </div>
-                      </li>))}
-                    {newCandidatesAssignedToMeTodayList.length > 5 && (<Link href="/my-tasks?filter=newToday" passHref>
-                        <Button variant="link" className="text-sm p-0 h-auto mt-2">View all new assigned candidates...</Button>
-                      </Link>)}
-                  </ul>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Candidate</TableHead>
+                        <TableHead>Position</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Fit Score</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {newCandidatesAssignedToMeTodayList.slice(0, 5).map(candidate => (<TableRow key={candidate.id} className="hover:bg-muted/50">
+                          <TableCell>
+                            <Link href={`/candidates/${candidate.id}`} className="flex items-center space-x-3 hover:underline">
+                              <Avatar className="h-8 w-8">
+                                <AvatarImage src={candidate.avatarUrl || `https://placehold.co/32x32.png?text=${candidate.name.charAt(0)}`} alt={candidate.name}/>
+                                <AvatarFallback>{candidate.name.charAt(0).toUpperCase()}</AvatarFallback>
+                              </Avatar>
+                              <span className="font-medium">{candidate.name}</span>
+                            </Link>
+                          </TableCell>
+                          <TableCell>{candidate.position?.title || 'N/A'}</TableCell>
+                          <TableCell>
+                            <Badge variant="outline" className="capitalize">{candidate.status}</Badge>
+                          </TableCell>
+                          <TableCell>{candidate.fitScore || 0}%</TableCell>
+                        </TableRow>))}
+                    </TableBody>
+                  </Table>
                 </CardContent>
               </Card>)}
           </div>
         </div>)}
 
-      {/* Section 7: Analytics Chart */}
+      {/* Section 8: Analytics Chart */}
       <div className="space-y-4">
         <div className="flex items-center space-x-2">
           <div className="h-6 w-1 bg-indigo-500 rounded-full"></div>
           <h2 className="text-xl font-semibold text-foreground">Analytics Overview</h2>
         </div>
-        <Card className="shadow-sm hover:shadow-md transition-all duration-200 border-l-4 border-l-indigo-500">
+        <Card className="shadow-sm hover:shadow-md transition-all duration-200">
           <CardContent className="pt-6">
             <CandidatesPerPositionChart candidates={allCandidates} positions={allPositions.filter(p => p.isOpen)}/>
           </CardContent>

@@ -51,6 +51,8 @@ const createUserSchema = z.object({
     role: userRoleEnum,
     modulePermissions: z.array(z.enum(platformModuleIds)).optional().default([]),
     groupIds: z.array(z.string().uuid()).optional().default([]),
+    authenticationMethod: z.enum(['basic', 'azure']).optional().default('basic'),
+    forcePasswordChange: z.boolean().optional().default(false),
 });
 export async function GET(request) {
     const session = await getServerSession(authOptions);
@@ -65,7 +67,7 @@ export async function GET(request) {
     let query = `
     SELECT 
       u.id, u.name, u.email, u.role, u."avatarUrl", u."dataAiHint", u."modulePermissions", 
-      u."createdAt", u."updatedAt",
+      u."authenticationMethod", u."forcePasswordChange", u."createdAt", u."updatedAt",
       COALESCE(
         jsonb_agg(DISTINCT jsonb_build_object('id', g.id, 'name', g.name)) FILTER (WHERE g.id IS NOT NULL), 
         '[]'::jsonb
@@ -107,7 +109,7 @@ export async function GET(request) {
         query += ' WHERE ' + conditions.join(' AND ');
     }
     query += `
-    GROUP BY u.id, u.name, u.email, u.role, u."avatarUrl", u."dataAiHint", u."modulePermissions", u."createdAt", u."updatedAt"
+    GROUP BY u.id, u.name, u.email, u.role, u."avatarUrl", u."dataAiHint", u."modulePermissions", u."authenticationMethod", u."forcePasswordChange", u."createdAt", u."updatedAt"
     ORDER BY u.name ASC
   `;
     try {
@@ -148,7 +150,7 @@ export async function POST(request) {
     if (!validationResult.success) {
         return NextResponse.json({ message: "Invalid input", errors: validationResult.error.flatten().fieldErrors }, { status: 400 });
     }
-    const { name, email, password, role, modulePermissions, groupIds } = validationResult.data;
+    const { name, email, password, role, modulePermissions, groupIds, authenticationMethod, forcePasswordChange } = validationResult.data;
     const saltRounds = 10;
     let hashedPassword;
     try {
@@ -171,11 +173,15 @@ export async function POST(request) {
         const defaultDataAiHint = "profile person";
         const newUserId = uuidv4();
         const insertUserQuery = `
-      INSERT INTO "User" (id, name, email, password, role, "avatarUrl", "dataAiHint", "modulePermissions", "createdAt", "updatedAt")
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW(), NOW())
-      RETURNING id, name, email, role, "avatarUrl", "dataAiHint", "modulePermissions", "createdAt", "updatedAt";
+      INSERT INTO "User" (id, name, email, password, role, "avatarUrl", "dataAiHint", "modulePermissions", "authenticationMethod", "forcePasswordChange", "createdAt", "updatedAt")
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW(), NOW())
+      RETURNING id, name, email, role, "avatarUrl", "dataAiHint", "modulePermissions", "authenticationMethod", "forcePasswordChange", "createdAt", "updatedAt";
     `;
-        const userResult = await getPool().query(insertUserQuery, [newUserId, name, email, hashedPassword, role, defaultAvatarUrl, defaultDataAiHint, modulePermissions || []]);
+        const insertUserParams = [
+            newUserId, name, email, hashedPassword, role, defaultAvatarUrl, defaultDataAiHint,
+            JSON.stringify(modulePermissions), authenticationMethod, forcePasswordChange
+        ];
+        const userResult = await getPool().query(insertUserQuery, insertUserParams);
         let newUser = userResult.rows[0];
         if (groupIds && groupIds.length > 0) {
             const insertGroupPromises = groupIds.map(groupId => {
@@ -186,7 +192,7 @@ export async function POST(request) {
         const finalUserQuery = `
       SELECT 
         u.id, u.name, u.email, u.role, u."avatarUrl", u."dataAiHint", u."modulePermissions", 
-        u."createdAt", u."updatedAt",
+        u."authenticationMethod", u."forcePasswordChange", u."createdAt", u."updatedAt",
         COALESCE(
           jsonb_agg(DISTINCT jsonb_build_object('id', g.id, 'name', g.name)) FILTER (WHERE g.id IS NOT NULL), 
           '[]'::jsonb
@@ -195,7 +201,7 @@ export async function POST(request) {
       LEFT JOIN "User_UserGroup" ugg ON u.id = ugg."userId"
       LEFT JOIN "UserGroup" g ON ugg."groupId" = g.id
       WHERE u.id = $1
-      GROUP BY u.id, u.name, u.email, u.role, u."avatarUrl", u."dataAiHint", u."modulePermissions", u."createdAt", u."updatedAt";
+      GROUP BY u.id, u.name, u.email, u.role, u."avatarUrl", u."dataAiHint", u."modulePermissions", u."authenticationMethod", u."forcePasswordChange", u."createdAt", u."updatedAt";
     `;
         const finalUserResult = await getPool().query(finalUserQuery, [newUserId]);
         newUser = { ...finalUserResult.rows[0], modulePermissions: finalUserResult.rows[0].modulePermissions || [], groups: finalUserResult.rows[0].groups || [] };

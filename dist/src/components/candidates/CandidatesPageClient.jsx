@@ -228,6 +228,16 @@ export function CandidatesPageClient({ initialCandidates, initialAvailablePositi
         setIsLoading(safeInitialCandidates.length === 0 && !initialFetchError); // Only set loading if initial data wasn't provided or there was an error
         if (sessionStatus === 'authenticated' && !serverAuthError && !serverPermissionError) {
             fetchRecruiters(); // Fetch recruiters on client side
+            // Check for URL parameters
+            const urlParams = new URLSearchParams(window.location.search);
+            const recruiterIdParam = urlParams.get('recruiterId');
+            // Handle unassigned filter
+            if (recruiterIdParam === 'unassigned') {
+                setFilters(prev => ({
+                    ...prev,
+                    selectedRecruiterIds: ['unassigned']
+                }));
+            }
             if (safeInitialCandidates.length === 0 && !initialFetchError) { // Fetch candidates if not pre-loaded
                 fetchPaginatedCandidates(filters, page, pageSize);
             }

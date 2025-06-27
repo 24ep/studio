@@ -60,8 +60,11 @@ const saveWebhookMappingsSchema = z.array(webhookFieldMappingSchema);
  */
 export async function GET(request) {
     const session = await getServerSession(authOptions);
-    if (session?.user?.role !== 'Admin' && !session?.user?.modulePermissions?.includes('WEBHOOK_MAPPING_MANAGE')) {
-        await logAudit('WARN', `Forbidden attempt to GET webhook mappings by user ${session?.user?.email || 'Unknown'}.`, 'API:WebhookMappings:Get', session?.user?.id);
+    if (!session?.user?.id) {
+        return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+    }
+    if (session.user.role !== 'Admin' && !session.user.modulePermissions?.includes('WEBHOOK_MAPPING_MANAGE')) {
+        await logAudit('WARN', `Forbidden attempt to GET webhook mappings by user ${session.user.email || 'Unknown'}.`, 'API:WebhookMappings:Get', session.user.id);
         return NextResponse.json({ message: "Forbidden: Insufficient permissions" }, { status: 403 });
     }
     try {
@@ -70,14 +73,17 @@ export async function GET(request) {
     }
     catch (error) {
         console.error("Failed to fetch webhook mappings:", error);
-        await logAudit('ERROR', `Failed to fetch webhook mappings by ${session?.user?.name}. Error: ${error.message}`, 'API:WebhookMappings:Get', session?.user?.id);
+        await logAudit('ERROR', `Failed to fetch webhook mappings by ${session.user.name}. Error: ${error.message}`, 'API:WebhookMappings:Get', session.user.id);
         return NextResponse.json({ message: "Error fetching webhook mappings", error: error.message }, { status: 500 });
     }
 }
 export async function POST(request) {
     const session = await getServerSession(authOptions);
-    if (session?.user?.role !== 'Admin' && !session?.user?.modulePermissions?.includes('WEBHOOK_MAPPING_MANAGE')) {
-        await logAudit('WARN', `Forbidden attempt to POST webhook mappings by user ${session?.user?.email || 'Unknown'}.`, 'API:WebhookMappings:Post', session?.user?.id);
+    if (!session?.user?.id) {
+        return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+    }
+    if (session.user.role !== 'Admin' && !session.user.modulePermissions?.includes('WEBHOOK_MAPPING_MANAGE')) {
+        await logAudit('WARN', `Forbidden attempt to POST webhook mappings by user ${session.user.email || 'Unknown'}.`, 'API:WebhookMappings:Post', session.user.id);
         return NextResponse.json({ message: "Forbidden: Insufficient permissions" }, { status: 403 });
     }
     let body;
@@ -89,18 +95,19 @@ export async function POST(request) {
     }
     const validationResult = saveWebhookMappingsSchema.safeParse(body);
     if (!validationResult.success) {
+        console.error("Validation error:", validationResult.error);
         return NextResponse.json({ message: "Invalid input", errors: validationResult.error.flatten().fieldErrors }, { status: 400 });
     }
     const mappingsToSave = validationResult.data;
     const client = await getPool().connect();
     try {
         await client.query('BEGIN');
-        // Clear existing mappings (or use a specific config ID if multiple configs were supported)
+        // Clear existing mappings
         await client.query('DELETE FROM "WebhookFieldMapping"');
         if (mappingsToSave.length > 0) {
             const insertQuery = `
-        INSERT INTO "WebhookFieldMapping" (target_path, source_path, notes, "createdAt", "updatedAt")
-        VALUES ($1, $2, $3, NOW(), NOW())
+        INSERT INTO "WebhookFieldMapping" (id, target_path, source_path, notes, "createdAt", "updatedAt")
+        VALUES (gen_random_uuid(), $1, $2, $3, NOW(), NOW())
       `;
             for (const mapping of mappingsToSave) {
                 // Ensure sourcePath is null if it's an empty string from UI for consistency

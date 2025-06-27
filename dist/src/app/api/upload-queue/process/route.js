@@ -46,6 +46,7 @@ export async function POST(request) {
     await logAudit('INFO', 'Upload queue processing started', 'API:UploadQueue:Process', null);
     const client = await getPool().connect();
     let job;
+    let payload = null;
     try {
         // 1. Atomically pick and mark the oldest queued job as 'processing'
         const res = await client.query(`UPDATE upload_queue
@@ -106,7 +107,7 @@ export async function POST(request) {
                 level: job.position_level
             };
         }
-        const payload = {
+        payload = {
             inputs: {
                 file: fileBase64,
                 fileName: job.file_name,
@@ -151,7 +152,7 @@ export async function POST(request) {
             error_details = errorText;
         }
         // 4. Update job status
-        await client.query(`UPDATE upload_queue SET status = $1, error = $2, error_details = $3, completed_date = now(), updated_at = now() WHERE id = $4`, [status, error, error_details, job.id]);
+        await client.query(`UPDATE upload_queue SET status = $1, error = $2, error_details = $3, completed_date = now(), updated_at = now(), webhook_payload = $4, webhook_response = $5 WHERE id = $6`, [status, error, error_details, payload, { status: webhookRes.status, response: errorText || 'Success' }, job.id]);
         // Publish queue update event
         const redisClient = await import('@/lib/redis').then(m => m.getRedisClient());
         if (redisClient) {
@@ -178,7 +179,7 @@ export async function POST(request) {
     }
     catch (err) {
         if (job) {
-            await client.query(`UPDATE upload_queue SET status = 'error', error = $1, error_details = $2, completed_date = now(), updated_at = now() WHERE id = $3`, [err.message, err.stack, job.id]);
+            await client.query(`UPDATE upload_queue SET status = 'error', error = $1, error_details = $2, completed_date = now(), updated_at = now(), webhook_payload = $3, webhook_response = $4 WHERE id = $5`, [err.message, err.stack, payload, { error: err.message, stack: err.stack }, job.id]);
             await logAudit('ERROR', `Upload queue job '${job.file_name}' failed with exception`, 'API:UploadQueue:Process', null, {
                 jobId: job.id,
                 fileName: job.file_name,

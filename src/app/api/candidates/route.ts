@@ -185,8 +185,12 @@ export async function GET(request: NextRequest) {
     queryParams.push(filters.positionId);
   }
   if (filters.recruiterId) {
-    whereClauses.push(`c."recruiterId" = $${paramIndex++}`);
-    queryParams.push(filters.recruiterId);
+    if (filters.recruiterId === 'unassigned') {
+      whereClauses.push(`c."recruiterId" IS NULL`);
+    } else {
+      whereClauses.push(`c."recruiterId" = $${paramIndex++}`);
+      queryParams.push(filters.recruiterId);
+    }
   }
   if (filters.searchTerm) {
     whereClauses.push(`(c.name ILIKE $${paramIndex} OR c.email ILIKE $${paramIndex})`);
