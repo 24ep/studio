@@ -22,6 +22,8 @@ model User {
   avatarUrl         String?
   dataAiHint        String?
   modulePermissions String[] @default([])
+  authenticationMethod String? @default("basic") @map("authentication_method")
+  forcePasswordChange Boolean @default(false) @map("force_password_change")
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
   
@@ -29,10 +31,12 @@ model User {
   candidates        Candidate[] @relation("RecruiterCandidates")
   userGroups        User_UserGroup[]
   transitionRecords TransitionRecord[] @relation("ActingUserTransitions")
+  resumeHistory     ResumeHistory[] @relation("UserResumeHistory")
   
   // Indexes
   @@index([email])
   @@index([role])
+  @@index([authenticationMethod])
 }
 
 model Position {
@@ -77,6 +81,8 @@ model Candidate {
   position        Position? @relation(fields: [positionId], references: [id])
   recruiter       User?     @relation("RecruiterCandidates", fields: [recruiterId], references: [id])
   transitionRecords TransitionRecord[]
+  jobMatches      JobMatch[]
+  resumeHistory   ResumeHistory[]
   
   // Indexes
   @@index([email])
@@ -244,6 +250,26 @@ model CustomFieldDefinition {
   @@index([sortOrder])
 }
 
+model JobMatch {
+  id                    String   @id @default(uuid()) @db.Uuid
+  candidateId           String   @db.Uuid
+  jobId                 String?
+  jobTitle              String?  @map("job_title")
+  fitScore              Int?     @map("fit_score")
+  matchReasons          String[] @map("match_reasons")
+  jobDescriptionSummary String?  @map("job_description_summary")
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+  
+  // Relations
+  candidate             Candidate @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  
+  // Indexes
+  @@index([candidateId])
+  @@index([jobId])
+  @@index([fitScore])
+}
+
 model UploadQueue {
   id             String   @id @default(uuid()) @db.Uuid
   fileName       String   @map("file_name")
@@ -265,4 +291,23 @@ model UploadQueue {
   @@index([completedDate])
   @@index([createdBy])
   @@index([source])
+}
+
+model ResumeHistory {
+  id                String   @id @default(uuid()) @db.Uuid
+  candidateId       String   @db.Uuid
+  filePath          String   @map("file_path")
+  originalFileName  String   @map("original_file_name")
+  uploadedAt        DateTime @default(now()) @map("uploaded_at")
+  uploadedByUserId  String?  @db.Uuid @map("uploaded_by_user_id")
+  uploadedByUserName String? @map("uploaded_by_user_name")
+  
+  // Relations
+  candidate         Candidate @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  uploadedByUser    User?     @relation("UserResumeHistory", fields: [uploadedByUserId], references: [id])
+  
+  // Indexes
+  @@index([candidateId])
+  @@index([uploadedAt])
+  @@index([uploadedByUserId])
 }
