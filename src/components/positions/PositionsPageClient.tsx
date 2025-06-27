@@ -324,6 +324,15 @@ export default function PositionsPageClient({
   // Pagination controls
   const totalPages = Math.ceil(total / pageSize);
 
+  // Position status metrics
+  const openPositionsCount = useMemo(() => {
+    return positions.filter(pos => pos.isOpen).length;
+  }, [positions]);
+
+  const closedPositionsCount = useMemo(() => {
+    return positions.filter(pos => !pos.isOpen).length;
+  }, [positions]);
+
   if (authError) return ( <div className="flex flex-col items-center justify-center h-[calc(100vh-10rem)] text-center p-4"> <ServerCrash className="w-16 h-16 text-destructive mb-4" /> <h2 className="text-2xl font-semibold text-foreground mb-2">Access Denied</h2> <p className="text-muted-foreground mb-4 max-w-md">You need to be signed in to view this page.</p> <Button onClick={() => signIn(undefined, { callbackUrl: pathname })} className="btn-hover-primary-gradient">Sign In</Button> </div> );
   if (permissionError) return ( <div className="flex flex-col items-center justify-center h-[calc(100vh-10rem)] text-center p-4"> <ServerCrash className="w-16 h-16 text-destructive mb-4" /> <h2 className="text-2xl font-semibold text-foreground mb-2">Permission Denied</h2> <p className="text-muted-foreground mb-4 max-w-md">{fetchError || "You do not have permission to view positions."}</p> <Button onClick={() => router.push('/')} className="btn-hover-primary-gradient">Go to Home</Button> </div> );
   if (sessionStatus === 'loading' || isLoading) return ( <div className="flex h-screen w-screen items-center justify-center bg-background fixed inset-0 z-50"> <Loader2 className="h-16 w-16 animate-spin text-primary" /> </div> );
@@ -373,6 +382,43 @@ export default function PositionsPageClient({
       </div>
 
       <PositionFilters initialFilters={filters} onFilterChange={handleFilterChange} isLoading={isLoading} availableDepartments={availableDepartments} />
+
+      {/* Position Status Metrics */}
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        <Card className="shadow-sm hover:shadow-md transition-shadow duration-200">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Total Positions</CardTitle>
+            <Briefcase className="h-5 w-5 text-primary" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-foreground">{positions.length}</div>
+          </CardContent>
+        </Card>
+        
+        <Card className="shadow-sm hover:shadow-md transition-shadow duration-200">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Open Positions</CardTitle>
+            <div className="h-5 w-5 rounded-full bg-green-500 flex items-center justify-center">
+              <span className="text-white text-xs font-bold">O</span>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-foreground">{openPositionsCount}</div>
+          </CardContent>
+        </Card>
+        
+        <Card className="shadow-sm hover:shadow-md transition-shadow duration-200">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Closed Positions</CardTitle>
+            <div className="h-5 w-5 rounded-full bg-gray-500 flex items-center justify-center">
+              <span className="text-white text-xs font-bold">C</span>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-foreground">{closedPositionsCount}</div>
+          </CardContent>
+        </Card>
+      </div>
 
       <Card className="shadow-sm">
         <CardHeader> <CardTitle className="flex items-center"> <Briefcase className="mr-2 h-5 w-5 text-primary" /> Job Positions </CardTitle> <CardDescription>Manage job positions and their statuses.</CardDescription> </CardHeader>

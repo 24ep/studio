@@ -87,6 +87,12 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
   }
 
+  // Check if user has permission to create candidates
+  if (session.user.role !== 'Admin' && !session.user.modulePermissions?.includes('CANDIDATES_MANAGE')) {
+    await logAudit('WARN', `Forbidden attempt to create candidate by ${actingUserName}.`, 'API:Candidates:Create', actingUserId);
+    return NextResponse.json({ message: 'Forbidden: Insufficient permissions to create candidates' }, { status: 403 });
+  }
+
   let body;
   try {
     body = await request.json();
@@ -148,6 +154,12 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
   }
 
+  // Check if user has permission to view candidates
+  if (session.user.role !== 'Admin' && !session.user.modulePermissions?.includes('CANDIDATES_VIEW')) {
+    await logAudit('WARN', `Forbidden attempt to view candidates by ${session.user.name || session.user.email}.`, 'API:Candidates:Get', session.user.id);
+    return NextResponse.json({ message: 'Forbidden: Insufficient permissions to view candidates' }, { status: 403 });
+  }
+
   const { searchParams } = new URL(request.url);
   const page = parseInt(searchParams.get('page') || '1', 10);
   const limit = parseInt(searchParams.get('limit') || '10', 10);
@@ -182,6 +194,7 @@ export async function GET(request: NextRequest) {
     paramIndex++;
   }
 
+  // If user is a Recruiter, only show their assigned candidates
   if (session.user.role === 'Recruiter') {
     whereClauses.push(`c."recruiterId" = $${paramIndex++}`);
     queryParams.push(session.user.id);

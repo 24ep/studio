@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { initializeApplication } from '@/lib/startup';
+import { logAudit } from '@/lib/auditLog';
 
 /**
  * @openapi
@@ -58,14 +59,26 @@ export async function POST() {
   try {
     console.log('🚀 Starting application initialization via API...');
     
+    await logAudit('INFO', 'Application initialization started via API', 'API:Setup:Initialize:Post', null);
+    
     const result = await initializeApplication();
     
     console.log('✅ Application initialization completed via API');
+    
+    await logAudit('AUDIT', `Application initialization completed via API. Status: ${result.overall}`, 'API:Setup:Initialize:Post', null, { 
+      status: result.overall,
+      minioStatus: result.minio?.status,
+      databaseStatus: result.database?.status 
+    });
     
     return NextResponse.json(result);
     
   } catch (error) {
     console.error('❌ Application initialization failed via API:', error);
+    
+    await logAudit('ERROR', `Application initialization failed via API. Error: ${error instanceof Error ? error.message : 'Unknown error'}`, 'API:Setup:Initialize:Post', null, { 
+      error: error instanceof Error ? error.message : 'Unknown error' 
+    });
     
     return NextResponse.json({ 
       error: 'Failed to initialize application',
@@ -78,14 +91,26 @@ export async function GET() {
   try {
     console.log('🔍 Checking application status...');
     
+    await logAudit('INFO', 'Application status check started via API', 'API:Setup:Initialize:Get', null);
+    
     const result = await initializeApplication();
     
     console.log('✅ Application status check completed');
+    
+    await logAudit('AUDIT', `Application status check completed via API. Status: ${result.overall}`, 'API:Setup:Initialize:Get', null, { 
+      status: result.overall,
+      minioStatus: result.minio?.status,
+      databaseStatus: result.database?.status 
+    });
     
     return NextResponse.json(result);
     
   } catch (error) {
     console.error('❌ Application status check failed:', error);
+    
+    await logAudit('ERROR', `Application status check failed via API. Error: ${error instanceof Error ? error.message : 'Unknown error'}`, 'API:Setup:Initialize:Get', null, { 
+      error: error instanceof Error ? error.message : 'Unknown error' 
+    });
     
     return NextResponse.json({ 
       error: 'Failed to check application status',

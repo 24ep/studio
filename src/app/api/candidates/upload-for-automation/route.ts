@@ -5,6 +5,7 @@ import type { UserProfile, Position } from '@/lib/types';
 import { logAudit } from '@/lib/auditLog';
 import { getPool } from '../../../../lib/db';
 import { authOptions } from '@/lib/auth';
+import { Buffer } from 'buffer';
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 const ACCEPTED_FILE_TYPES = ['application/pdf'];
@@ -74,33 +75,32 @@ export async function POST(request: NextRequest) {
         }
     }
 
-    // We will forward the file as FormData to the generic webhook
-    const webhookFormData = new FormData();
-    webhookFormData.append('file', file, file.name); // Send the file itself
-    webhookFormData.append('originalFileName', file.name);
-    webhookFormData.append('mimeType', file.type);
-    webhookFormData.append('sourceApplication', 'NCC Candidate Management');
-    webhookFormData.append('uploadTimestamp', new Date().toISOString());
-    if (actingUserId) webhookFormData.append('uploadedByUserId', actingUserId);
-    if (actingUserName && actingUserName !== 'System (automation Upload)') webhookFormData.append('uploadedByUserName', actingUserName);
-    
-    if (targetPositionId) {
-        webhookFormData.append('targetPositionId', targetPositionId);
-    }
-    if (targetPositionTitle) {
-        webhookFormData.append('targetPositionTitle', targetPositionTitle);
-    }
-    if (targetPositionDescription) {
-        webhookFormData.append('targetPositionDescription', targetPositionDescription);
-    }
-    if (targetPositionLevel) {
-        webhookFormData.append('targetPositionLevel', targetPositionLevel);
-    }
-
-
+    // Convert file to base64
+    const arrayBuffer = await file.arrayBuffer();
+    const fileBase64 = Buffer.from(arrayBuffer).toString('base64');
+    const payload = {
+      inputs: {
+        file: fileBase64,
+        fileName: file.name,
+        mimeType: file.type,
+        sourceApplication: 'NCC Candidate Management',
+        uploadTimestamp: new Date().toISOString(),
+        uploadedByUserId: actingUserId,
+        uploadedByUserName: actingUserName,
+        applied_job: {
+          id: targetPositionId,
+          title: targetPositionTitle,
+          description: targetPositionDescription,
+          level: targetPositionLevel
+        }
+      },
+      response_mode: 'streaming',
+      user: 'cv_screening'
+    };
     const webhookResponse = await fetch(generalPdfWebhookUrl, {
       method: 'POST',
-      body: webhookFormData,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
     });
 
     if (webhookResponse.ok) {

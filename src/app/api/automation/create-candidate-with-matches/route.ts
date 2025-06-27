@@ -3,6 +3,7 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { z } from 'zod';
 import { v4 as uuidv4 } from 'uuid';
 import { getPool } from '@/lib/db';
+import { logAudit } from '@/lib/auditLog';
 
 export const dynamic = "force-dynamic";
 
@@ -37,11 +38,16 @@ export async function POST(request: NextRequest) {
   try {
     body = await request.json();
   } catch (e) {
+    await logAudit('ERROR', 'Invalid JSON body in automation candidate creation request', 'API:Automation:CreateCandidate', null, { error: 'Invalid JSON' });
     return NextResponse.json({ message: 'Invalid JSON body' }, { status: 400 });
   }
 
   const validation = requestSchema.safeParse(body);
   if (!validation.success) {
+    await logAudit('ERROR', 'Invalid input data in automation candidate creation request', 'API:Automation:CreateCandidate', null, { 
+      errors: validation.error.flatten().fieldErrors,
+      input: body 
+    });
     return NextResponse.json({ message: 'Invalid input', errors: validation.error.flatten().fieldErrors }, { status: 400 });
   }
 
@@ -102,12 +108,34 @@ export async function POST(request: NextRequest) {
     }
 
     await client.query('COMMIT');
+    
+    await logAudit('AUDIT', `Candidate '${candidate.name}' created via automation with ${job_matches?.length || 0} job matches`, 'API:Automation:CreateCandidate', null, { 
+      candidateId: newCandidateId,
+      candidateName: candidate.name,
+      candidateEmail: candidate.email,
+      positionId: candidate.positionId,
+      recruiterId: candidate.recruiterId,
+      jobMatchesCount: job_matches?.length || 0,
+      fitScore: candidate.fitScore
+    });
+    
     return NextResponse.json({ message: 'Candidate and matches created successfully', candidate: newCandidate }, { status: 201 });
   } catch (error: any) {
     await client.query('ROLLBACK');
     if (error.code === '23505' && error.constraint === 'Candidate_email_key') {
+      await logAudit('WARN', `Automation candidate creation failed - duplicate email '${candidate.email}'`, 'API:Automation:CreateCandidate', null, { 
+        candidateEmail: candidate.email,
+        error: 'Duplicate email' 
+      });
       return NextResponse.json({ message: `A candidate with email '${candidate.email}' already exists.` }, { status: 409 });
     }
+    
+    await logAudit('ERROR', `Automation candidate creation failed. Error: ${error.message}`, 'API:Automation:CreateCandidate', null, { 
+      candidateName: candidate.name,
+      candidateEmail: candidate.email,
+      error: error.message 
+    });
+    
     return NextResponse.json({ message: 'Error creating candidate', error: error.message }, { status: 500 });
   } finally {
     client.release();
@@ -115,5 +143,6 @@ export async function POST(request: NextRequest) {
 }
 
 export async function GET() {
+  await logAudit('INFO', 'Automation candidate creation endpoint health check', 'API:Automation:CreateCandidate', null);
   return NextResponse.json({ ok: true });
 }

@@ -87,6 +87,12 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
   }
 
+  // Check if user has permission to import candidates
+  if (session.user.role !== 'Admin' && !session.user.modulePermissions?.includes('CANDIDATES_IMPORT')) {
+    await logAudit('WARN', `Forbidden attempt to import candidates by ${actingUserName}.`, 'API:Candidates:Import', actingUserId);
+    return NextResponse.json({ message: 'Forbidden: Insufficient permissions to import candidates' }, { status: 403 });
+  }
+
   let body;
   try {
     body = await request.json();
@@ -190,6 +196,12 @@ export async function GET(request: NextRequest) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) {
     return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+  }
+
+  // Check if user has permission to view candidates
+  if (session.user.role !== 'Admin' && !session.user.modulePermissions?.includes('CANDIDATES_VIEW')) {
+    await logAudit('WARN', `Forbidden attempt to view imported candidates by ${session.user.name || session.user.email}.`, 'API:Candidates:Import:Get', session.user.id);
+    return NextResponse.json({ message: 'Forbidden: Insufficient permissions to view candidates' }, { status: 403 });
   }
 
   const client = await getPool().connect();

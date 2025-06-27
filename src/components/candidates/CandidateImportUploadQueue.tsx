@@ -178,19 +178,70 @@ export const CandidateImportUploadQueue: React.FC = () => {
 
   return (
     <div className="mb-6">
-      {/* Summary Status Section */}
-      <div className="mb-4 p-4 rounded-lg bg-muted/50 flex flex-col md:flex-row md:items-end md:gap-8 gap-2">
-        <div>
-          <div className="font-semibold text-lg">Summary (Bulk Uploads)</div>
-          <div className="flex flex-wrap gap-4 mt-2">
-            <div><span className="font-bold">Queued:</span> {numQueued}</div>
-            <div><span className="font-bold">In Progress:</span> {numInProgress}</div>
-            <div><span className="font-bold">Success:</span> {numSuccess}</div>
-            <div><span className="font-bold">Error:</span> {numError}</div>
-          </div>
+      {/* Summary Status Cards */}
+      <div className="mb-6">
+        <div className="font-semibold text-lg mb-4">Bulk Upload Summary</div>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+          <Card className="shadow-sm hover:shadow-md transition-shadow duration-200">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Queued</p>
+                  <p className="text-2xl font-bold text-foreground">{numQueued}</p>
+                </div>
+                <div className="h-8 w-8 rounded-full bg-gray-400 flex items-center justify-center">
+                  <span className="text-white text-xs font-bold">Q</span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          
+          <Card className="shadow-sm hover:shadow-md transition-shadow duration-200">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">In Progress</p>
+                  <p className="text-2xl font-bold text-foreground">{numInProgress}</p>
+                </div>
+                <div className="h-8 w-8 rounded-full bg-blue-500 flex items-center justify-center">
+                  <span className="text-white text-xs font-bold">P</span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          
+          <Card className="shadow-sm hover:shadow-md transition-shadow duration-200">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Success</p>
+                  <p className="text-2xl font-bold text-foreground">{numSuccess}</p>
+                </div>
+                <div className="h-8 w-8 rounded-full bg-green-500 flex items-center justify-center">
+                  <CheckCircle className="h-4 w-4 text-white" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          
+          <Card className="shadow-sm hover:shadow-md transition-shadow duration-200">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Error</p>
+                  <p className="text-2xl font-bold text-foreground">{numError}</p>
+                </div>
+                <div className="h-8 w-8 rounded-full bg-red-500 flex items-center justify-center">
+                  <XCircle className="h-4 w-4 text-white" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </div>
+        
+        {/* Date Range Filter */}
         <div className="flex flex-col gap-1">
-          <label className="text-sm font-medium">Date Range (for Success/Error):</label>
+          <label className="text-sm font-medium">Date Range (for Success/Error counts):</label>
           <div className="flex gap-2 items-center">
             <input
               type="date"
@@ -208,6 +259,7 @@ export const CandidateImportUploadQueue: React.FC = () => {
           </div>
         </div>
       </div>
+      
       <div className="mb-2 font-semibold">All Upload Jobs: {totalBulkJobs}</div>
       <div className="flex flex-col md:flex-row md:items-center gap-2 mb-4">
         <Input

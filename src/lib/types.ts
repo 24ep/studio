@@ -293,6 +293,7 @@ export interface UserProfile {
   dataAiHint?: string;
   role: 'Admin' | 'Recruiter' | 'Hiring Manager';
   password?: string;
+  authenticationMethod?: 'basic' | 'azure';
   modulePermissions?: PlatformModuleId[];
   groups?: UserGroup[]; // User can belong to multiple groups
   createdAt?: string;

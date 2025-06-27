@@ -19,13 +19,20 @@ model User {
   email             String   @unique
   password          String
   role              String
-  avatarUrl         String?  @map("avatarUrl")
-  dataAiHint        String?  @map("dataAiHint")
+  avatarUrl         String?
+  dataAiHint        String?
   modulePermissions String[] @default([])
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
+  
+  // Relations
   candidates        Candidate[] @relation("RecruiterCandidates")
   userGroups        User_UserGroup[]
+  transitionRecords TransitionRecord[] @relation("ActingUserTransitions")
+  
+  // Indexes
+  @@index([email])
+  @@index([role])
 }
 
 model Position {
@@ -34,11 +41,18 @@ model Position {
   department       String
   description      String?
   isOpen           Boolean  @default(true)
-  position_level   String?
+  positionLevel    String?  @map("position_level")
   customAttributes Json?    @default("{}")
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
+  
+  // Relations
   candidates       Candidate[]
+  
+  // Indexes
+  @@index([title])
+  @@index([department])
+  @@index([isOpen])
 }
 
 model Candidate {
@@ -56,29 +70,54 @@ model Candidate {
   resumePath      String?
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
-  avatarUrl       String?  @map("avatarUrl")
-  dataAiHint      String?  @map("dataAiHint")
+  avatarUrl       String?
+  dataAiHint      String?
+  
+  // Relations
   position        Position? @relation(fields: [positionId], references: [id])
   recruiter       User?     @relation("RecruiterCandidates", fields: [recruiterId], references: [id])
+  transitionRecords TransitionRecord[]
+  
+  // Indexes
+  @@index([email])
+  @@index([status])
+  @@index([positionId])
+  @@index([recruiterId])
+  @@index([applicationDate])
+  @@index([fitScore])
 }
 
 model RecruitmentStage {
   id          String   @id @default(uuid()) @db.Uuid
   name        String   @unique
   description String?
-  is_system   Boolean
-  sort_order  Int
+  isSystem    Boolean  @map("is_system")
+  sortOrder   Int      @map("sort_order")
+  
+  // Indexes
+  @@index([sortOrder])
+  @@index([isSystem])
 }
 
 model TransitionRecord {
   id            String   @id @default(uuid()) @db.Uuid
-  candidateId   String
+  candidateId   String   @db.Uuid
   date          DateTime @default(now())
   stage         String
   notes         String?
-  actingUserId  String?
+  actingUserId  String?  @db.Uuid
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
+  
+  // Relations
+  candidate     Candidate @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  actingUser    User?     @relation("ActingUserTransitions", fields: [actingUserId], references: [id])
+  
+  // Indexes
+  @@index([candidateId])
+  @@index([actingUserId])
+  @@index([date])
+  @@index([stage])
 }
 
 model LogEntry {
@@ -90,6 +129,12 @@ model LogEntry {
   actingUserId String?
   details     Json?
   createdAt   DateTime @default(now())
+  
+  // Indexes
+  @@index([timestamp])
+  @@index([level])
+  @@index([source])
+  @@index([actingUserId])
 }
 
 model UserGroup {
@@ -97,89 +142,127 @@ model UserGroup {
   name          String   @unique
   description   String?
   permissions   String[] @default([])
-  is_default    Boolean  @default(false)
-  is_system_role Boolean @default(false)
+  isDefault     Boolean  @default(false) @map("is_default")
+  isSystemRole  Boolean  @default(false) @map("is_system_role")
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
+  
+  // Relations
   users         User_UserGroup[]
+  
+  // Indexes
+  @@index([isDefault])
+  @@index([isSystemRole])
 }
 
 model User_UserGroup {
   userId   String   @db.Uuid
   groupId  String   @db.Uuid
-  user     User     @relation(fields: [userId], references: [id])
-  group    UserGroup @relation(fields: [groupId], references: [id])
+  
+  // Relations
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  group    UserGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  
   @@id([userId, groupId])
+  @@index([userId])
+  @@index([groupId])
 }
 
 model SystemSetting {
   key       String   @id
   value     String?
   updatedAt DateTime @default(now())
+  
+  // Indexes
+  @@index([updatedAt])
 }
 
 model WebhookFieldMapping {
   id          String   @id @default(uuid()) @db.Uuid
-  target_path String
-  source_path String?
+  targetPath  String   @map("target_path")
+  sourcePath  String?  @map("source_path")
   notes       String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+  
+  // Indexes
+  @@index([targetPath])
 }
 
 model NotificationEvent {
   id          String   @id @default(uuid()) @db.Uuid
-  event_key   String   @unique
+  eventKey    String   @unique @map("event_key")
   label       String
   description String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+  
+  // Indexes
+  @@index([eventKey])
 }
 
 model NotificationChannel {
   id          String   @id @default(uuid()) @db.Uuid
-  channel_key String   @unique
+  channelKey  String   @unique @map("channel_key")
   label       String
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+  
+  // Indexes
+  @@index([channelKey])
 }
 
 model NotificationSetting {
   id          String   @id @default(uuid()) @db.Uuid
-  event_id    String
-  channel_id  String
-  is_enabled  Boolean  @default(false)
+  eventId     String   @map("event_id")
+  channelId   String   @map("channel_id")
+  isEnabled   Boolean  @default(false) @map("is_enabled")
   configuration Json?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+  
+  // Indexes
+  @@index([eventId])
+  @@index([channelId])
+  @@index([isEnabled])
 }
 
 model CustomFieldDefinition {
   id          String   @id @default(uuid()) @db.Uuid
-  model_name  String
-  field_key   String
+  modelName   String   @map("model_name")
+  fieldKey    String   @map("field_key")
   label       String
-  field_type  String
+  fieldType   String   @map("field_type")
   options     Json?
-  is_required Boolean  @default(false)
-  sort_order  Int      @default(0)
+  isRequired  Boolean  @default(false) @map("is_required")
+  sortOrder   Int      @default(0) @map("sort_order")
   createdAt   DateTime @default(now())
   updatedAt   DateTime @default(now())
-  @@unique([model_name, field_key])
+  
+  @@unique([modelName, fieldKey])
+  @@index([modelName])
+  @@index([sortOrder])
 }
 
-model upload_queue {
+model UploadQueue {
   id             String   @id @default(uuid()) @db.Uuid
-  file_name      String
-  file_size      BigInt
+  fileName       String   @map("file_name")
+  fileSize       BigInt   @map("file_size")
   status         String
   error          String?
-  error_details  String?
+  errorDetails   String?  @map("error_details")
   source         String?
-  upload_date    DateTime @default(now())
-  completed_date DateTime?
-  upload_id      String?
-  created_by     String?
-  updated_at     DateTime @default(now())
-  file_path      String
+  uploadDate     DateTime @default(now()) @map("upload_date")
+  completedDate  DateTime? @map("completed_date")
+  uploadId       String?  @map("upload_id")
+  createdBy      String?  @map("created_by")
+  updatedAt      DateTime @default(now()) @map("updated_at")
+  filePath       String   @map("file_path")
+  
+  // Indexes
+  @@index([status])
+  @@index([uploadDate])
+  @@index([completedDate])
+  @@index([createdBy])
+  @@index([source])
 }
