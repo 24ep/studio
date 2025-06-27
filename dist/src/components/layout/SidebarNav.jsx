@@ -55,13 +55,12 @@ function getActiveNavItem(pathname, navItems) {
 }
 // Memoize SidebarNav to prevent unnecessary re-renders
 const SidebarNavComponent = function SidebarNav() {
-    var _a, _b;
     const pathname = usePathname();
     const router = useRouter();
     const { state: sidebarState, isMobile } = useSidebar();
     const { data: session, status: sessionStatus } = useSession();
-    const userRole = (_a = session === null || session === void 0 ? void 0 : session.user) === null || _a === void 0 ? void 0 : _a.role;
-    const modulePermissions = ((_b = session === null || session === void 0 ? void 0 : session.user) === null || _b === void 0 ? void 0 : _b.modulePermissions) || [];
+    const userRole = session?.user?.role;
+    const modulePermissions = session?.user?.modulePermissions || [];
     const [isClient, setIsClient] = React.useState(false);
     const [isNavigating, setIsNavigating] = React.useState(false);
     const [navigatingTo, setNavigatingTo] = React.useState(null);
@@ -79,7 +78,7 @@ const SidebarNavComponent = function SidebarNav() {
         router.push(href);
     };
     const canAccess = (item) => {
-        if (!isClient || sessionStatus !== 'authenticated' || !(session === null || session === void 0 ? void 0 : session.user))
+        if (!isClient || sessionStatus !== 'authenticated' || !session?.user)
             return false;
         if (item.adminOnly && userRole !== 'Admin')
             return false;
@@ -145,7 +144,7 @@ const SidebarNavComponent = function SidebarNav() {
                 settingsArr.forEach((s) => { settings[s.key] = s.value; });
                 setSidebarCSSVars(settings);
             }
-            catch (_a) { }
+            catch { }
         }
         fetchSidebarColors();
         // Listen for appConfigChanged event to update sidebar colors live

@@ -14,7 +14,7 @@ export const minioClient = new Minio({
 // Function to ensure bucket exists with enhanced configuration
 export async function ensureBucketExists() {
   try {
-    await minioClient.bucketExists(MINIO_BUCKET);
+    const exists = await minioClient.bucketExists(MINIO_BUCKET);
     
     if (!exists) {
       await minioClient.makeBucket(MINIO_BUCKET);

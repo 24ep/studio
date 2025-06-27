@@ -40,16 +40,16 @@ async function main() {
     });
     // Create default recruitment stages
     const stages = [
-        { id: '550e8400-e29b-41d4-a716-446655440001', name: 'Applied', description: 'Candidate has submitted their application', is_system: true, sort_order: 1 },
-        { id: '550e8400-e29b-41d4-a716-446655440002', name: 'Screening', description: 'Initial screening of candidate qualifications', is_system: true, sort_order: 2 },
-        { id: '550e8400-e29b-41d4-a716-446655440003', name: 'Shortlisted', description: 'Candidate has been shortlisted for further consideration', is_system: true, sort_order: 3 },
-        { id: '550e8400-e29b-41d4-a716-446655440004', name: 'Interview Scheduled', description: 'Interview has been scheduled with the candidate', is_system: true, sort_order: 4 },
-        { id: '550e8400-e29b-41d4-a716-446655440005', name: 'Interviewing', description: 'Candidate is currently in the interview process', is_system: true, sort_order: 5 },
-        { id: '550e8400-e29b-41d4-a716-446655440006', name: 'Offer Extended', description: 'Job offer has been extended to the candidate', is_system: true, sort_order: 6 },
-        { id: '550e8400-e29b-41d4-a716-446655440007', name: 'Offer Accepted', description: 'Candidate has accepted the job offer', is_system: true, sort_order: 7 },
-        { id: '550e8400-e29b-41d4-a716-446655440008', name: 'Hired', description: 'Candidate has been hired and started employment', is_system: true, sort_order: 8 },
-        { id: '550e8400-e29b-41d4-a716-446655440009', name: 'Rejected', description: 'Candidate has been rejected from the process', is_system: true, sort_order: 9 },
-        { id: '550e8400-e29b-41d4-a716-446655440010', name: 'On Hold', description: 'Candidate application is temporarily on hold', is_system: true, sort_order: 10 }
+        { id: '550e8400-e29b-41d4-a716-446655440001', name: 'Applied', description: 'Candidate has submitted their application', isSystem: true, sortOrder: 1 },
+        { id: '550e8400-e29b-41d4-a716-446655440002', name: 'Screening', description: 'Initial screening of candidate qualifications', isSystem: true, sortOrder: 2 },
+        { id: '550e8400-e29b-41d4-a716-446655440003', name: 'Shortlisted', description: 'Candidate has been shortlisted for further consideration', isSystem: true, sortOrder: 3 },
+        { id: '550e8400-e29b-41d4-a716-446655440004', name: 'Interview Scheduled', description: 'Interview has been scheduled with the candidate', isSystem: true, sortOrder: 4 },
+        { id: '550e8400-e29b-41d4-a716-446655440005', name: 'Interviewing', description: 'Candidate is currently in the interview process', isSystem: true, sortOrder: 5 },
+        { id: '550e8400-e29b-41d4-a716-446655440006', name: 'Offer Extended', description: 'Job offer has been extended to the candidate', isSystem: true, sortOrder: 6 },
+        { id: '550e8400-e29b-41d4-a716-446655440007', name: 'Offer Accepted', description: 'Candidate has accepted the job offer', isSystem: true, sortOrder: 7 },
+        { id: '550e8400-e29b-41d4-a716-446655440008', name: 'Hired', description: 'Candidate has been hired and started employment', isSystem: true, sortOrder: 8 },
+        { id: '550e8400-e29b-41d4-a716-446655440009', name: 'Rejected', description: 'Candidate has been rejected from the process', isSystem: true, sortOrder: 9 },
+        { id: '550e8400-e29b-41d4-a716-446655440010', name: 'On Hold', description: 'Candidate application is temporarily on hold', isSystem: true, sortOrder: 10 }
     ];
     for (const stage of stages) {
         await prisma.recruitmentStage.upsert({
@@ -67,8 +67,8 @@ async function main() {
             permissions: [
                 'CANDIDATES_VIEW', 'CANDIDATES_MANAGE', 'CANDIDATES_IMPORT', 'CANDIDATES_EXPORT', 'POSITIONS_VIEW', 'POSITIONS_MANAGE', 'POSITIONS_IMPORT', 'POSITIONS_EXPORT', 'USERS_MANAGE', 'USER_GROUPS_MANAGE', 'SYSTEM_SETTINGS_MANAGE', 'USER_PREFERENCES_MANAGE', 'RECRUITMENT_STAGES_MANAGE', 'CUSTOM_FIELDS_MANAGE', 'WEBHOOK_MAPPING_MANAGE', 'NOTIFICATION_SETTINGS_MANAGE', 'LOGS_VIEW'
             ],
-            is_default: true,
-            is_system_role: true
+            isDefault: true,
+            isSystemRole: true
         },
         {
             id: '00000000-0000-0000-0000-000000000002',
@@ -77,8 +77,8 @@ async function main() {
             permissions: [
                 'CANDIDATES_VIEW', 'CANDIDATES_MANAGE', 'CANDIDATES_IMPORT', 'CANDIDATES_EXPORT', 'POSITIONS_VIEW', 'POSITIONS_MANAGE', 'POSITIONS_IMPORT', 'POSITIONS_EXPORT', 'RECRUITMENT_STAGES_MANAGE'
             ],
-            is_default: true,
-            is_system_role: false
+            isDefault: true,
+            isSystemRole: false
         },
         {
             id: '00000000-0000-0000-0000-000000000003',
@@ -87,8 +87,8 @@ async function main() {
             permissions: [
                 'CANDIDATES_VIEW', 'POSITIONS_VIEW'
             ],
-            is_default: true,
-            is_system_role: false
+            isDefault: true,
+            isSystemRole: false
         },
         {
             id: '00000000-0000-0000-0000-000000000011',
@@ -97,8 +97,8 @@ async function main() {
             permissions: [
                 'HR_MANAGE', 'HR_CREATE', 'HR_UPDATE', 'HR_DELETE'
             ],
-            is_default: true,
-            is_system_role: false
+            isDefault: true,
+            isSystemRole: false
         },
         {
             id: '00000000-0000-0000-0000-000000000012',
@@ -107,8 +107,8 @@ async function main() {
             permissions: [
                 'IT_MANAGE', 'IT_CREATE', 'IT_UPDATE', 'IT_DELETE'
             ],
-            is_default: true,
-            is_system_role: false
+            isDefault: true,
+            isSystemRole: false
         },
         {
             id: '00000000-0000-0000-0000-000000000013',
@@ -117,8 +117,8 @@ async function main() {
             permissions: [
                 'FINANCE_MANAGE', 'FINANCE_CREATE', 'FINANCE_UPDATE', 'FINANCE_DELETE'
             ],
-            is_default: false,
-            is_system_role: false
+            isDefault: false,
+            isSystemRole: false
         },
         {
             id: '00000000-0000-0000-0000-000000000014',
@@ -127,8 +127,8 @@ async function main() {
             permissions: [
                 'MARKETING_MANAGE', 'MARKETING_CREATE', 'MARKETING_UPDATE', 'MARKETING_DELETE'
             ],
-            is_default: false,
-            is_system_role: false
+            isDefault: false,
+            isSystemRole: false
         }
     ];
     for (const group of userGroups) {
@@ -149,25 +149,25 @@ async function main() {
     }
     // Seed default notification channels
     const notificationChannels = [
-        { id: '10000000-0000-0000-0000-000000000001', channel_key: 'email', label: 'Email' },
-        { id: '10000000-0000-0000-0000-000000000002', channel_key: 'webhook', label: 'Webhook' }
+        { id: '10000000-0000-0000-0000-000000000001', channelKey: 'email', label: 'Email' },
+        { id: '10000000-0000-0000-0000-000000000002', channelKey: 'webhook', label: 'Webhook' }
     ];
     for (const channel of notificationChannels) {
         await prisma.notificationChannel.upsert({
-            where: { channel_key: channel.channel_key },
+            where: { channelKey: channel.channelKey },
             update: {},
             create: channel
         });
     }
     // Seed default notification events
     const notificationEvents = [
-        { id: '20000000-0000-0000-0000-000000000001', event_key: 'candidate_created', label: 'Candidate Created', description: 'Triggered when a new candidate is created.' },
-        { id: '20000000-0000-0000-0000-000000000002', event_key: 'position_filled', label: 'Position Filled', description: 'Triggered when a position is filled.' },
-        { id: '20000000-0000-0000-0000-000000000003', event_key: 'stage_changed', label: 'Stage Changed', description: 'Triggered when a candidate changes recruitment stage.' }
+        { id: '20000000-0000-0000-0000-000000000001', eventKey: 'candidate_created', label: 'Candidate Created', description: 'Triggered when a new candidate is created.' },
+        { id: '20000000-0000-0000-0000-000000000002', eventKey: 'position_filled', label: 'Position Filled', description: 'Triggered when a position is filled.' },
+        { id: '20000000-0000-0000-0000-000000000003', eventKey: 'stage_changed', label: 'Stage Changed', description: 'Triggered when a candidate changes recruitment stage.' }
     ];
     for (const event of notificationEvents) {
         await prisma.notificationEvent.upsert({
-            where: { event_key: event.event_key },
+            where: { eventKey: event.eventKey },
             update: {},
             create: event
         });

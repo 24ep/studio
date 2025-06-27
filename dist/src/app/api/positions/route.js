@@ -40,7 +40,6 @@ import { v4 as uuidv4 } from 'uuid';
 import { getRedisClient, CACHE_KEY_POSITIONS } from '@/lib/redis';
 import { getPool } from '@/lib/db';
 export async function GET(request) {
-    var _a;
     const session = await getServerSession(authOptions);
     // Publicly viewable, but actions (POST, PUT, DELETE) might be restricted
     // if (!session?.user) {
@@ -90,13 +89,16 @@ export async function GET(request) {
         const result = await getPool().query(query, queryParams);
         const countResult = await getPool().query(countQuery, queryParams.slice(0, paramIndex - 1));
         const total = parseInt(countResult.rows[0].count, 10);
-        const positions = result.rows.map(row => (Object.assign(Object.assign({}, row), { custom_attributes: row.customAttributes || {} })));
+        const positions = result.rows.map(row => ({
+            ...row,
+            custom_attributes: row.customAttributes || {},
+        }));
         console.log('Positions API: Returning positions:', positions.length);
         return NextResponse.json({ data: positions, total }, { status: 200 });
     }
     catch (error) {
         console.error("Failed to fetch positions:", error);
-        await logAudit('ERROR', `Failed to fetch positions. Error: ${error.message}`, 'API:Positions:GetAll', (_a = session === null || session === void 0 ? void 0 : session.user) === null || _a === void 0 ? void 0 : _a.id);
+        await logAudit('ERROR', `Failed to fetch positions. Error: ${error.message}`, 'API:Positions:GetAll', session?.user?.id);
         return NextResponse.json({ message: "Error fetching positions", error: error.message }, { status: 500 });
     }
 }
@@ -109,11 +111,10 @@ const createPositionSchema = z.object({
     custom_attributes: z.record(z.any()).optional().nullable(),
 });
 export async function POST(request) {
-    var _a, _b, _c, _d;
     const session = await getServerSession(authOptions);
-    const actingUserId = ((_a = session === null || session === void 0 ? void 0 : session.user) === null || _a === void 0 ? void 0 : _a.id) || null;
-    const actingUserName = ((_b = session === null || session === void 0 ? void 0 : session.user) === null || _b === void 0 ? void 0 : _b.name) || ((_c = session === null || session === void 0 ? void 0 : session.user) === null || _c === void 0 ? void 0 : _c.email) || 'System (API Create)';
-    if (!(session === null || session === void 0 ? void 0 : session.user) || (session.user.role !== 'Admin' && !((_d = session.user.modulePermissions) === null || _d === void 0 ? void 0 : _d.includes('POSITIONS_MANAGE')))) {
+    const actingUserId = session?.user?.id || null;
+    const actingUserName = session?.user?.name || session?.user?.email || 'System (API Create)';
+    if (!session?.user || (session.user.role !== 'Admin' && !session.user.modulePermissions?.includes('POSITIONS_MANAGE'))) {
         await logAudit('WARN', `Forbidden attempt to create position by ${actingUserName}.`, 'API:Positions:Create', actingUserId);
         return NextResponse.json({ message: "Forbidden: Insufficient permissions" }, { status: 403 });
     }
@@ -147,7 +148,10 @@ export async function POST(request) {
             validatedData.custom_attributes || {},
         ];
         const result = await getPool().query(insertQuery, values);
-        const newPosition = Object.assign(Object.assign({}, result.rows[0]), { custom_attributes: result.rows[0].customAttributes || {} });
+        const newPosition = {
+            ...result.rows[0],
+            custom_attributes: result.rows[0].customAttributes || {},
+        };
         // Invalidate cache
         const redisClient = await getRedisClient();
         if (redisClient) {

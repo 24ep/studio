@@ -115,7 +115,9 @@ export async function fetchInitialDashboardCandidatesDb(limit = 10) {
       LIMIT $1;
     `;
         const result = await pool.query(query, [limit]);
-        return result.rows.map((row) => (Object.assign({}, row)));
+        return result.rows.map((row) => ({
+            ...row,
+        }));
     }
     catch (error) {
         console.error("Error fetching initial dashboard candidates from DB:", error);
@@ -125,7 +127,10 @@ export async function fetchInitialDashboardCandidatesDb(limit = 10) {
 export async function getAllPositions() {
     const pool = getPool();
     const result = await pool.query('SELECT * FROM "Position" ORDER BY title ASC');
-    return result.rows.map(row => (Object.assign(Object.assign({}, row), { custom_attributes: row.customAttributes || {} })));
+    return result.rows.map(row => ({
+        ...row,
+        custom_attributes: row.customAttributes || {},
+    }));
 }
 export async function getAllUsers() {
     const pool = getPool();
@@ -142,5 +147,10 @@ export async function getAllCandidates() {
     LEFT JOIN "User" r ON c."recruiterId" = r.id
     ORDER BY c."applicationDate" DESC
   `);
-    return result.rows.map(row => (Object.assign(Object.assign({}, row), { custom_attributes: row.customAttributes || {}, position: row.positionId ? { title: row.positionTitle } : null, recruiter: row.recruiterId ? { name: row.recruiterName } : null })));
+    return result.rows.map(row => ({
+        ...row,
+        custom_attributes: row.customAttributes || {},
+        position: row.positionId ? { title: row.positionTitle } : null,
+        recruiter: row.recruiterId ? { name: row.recruiterName } : null,
+    }));
 }

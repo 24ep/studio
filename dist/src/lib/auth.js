@@ -30,17 +30,17 @@ export const authOptions = {
                 password: { label: "Password", type: "password" }
             },
             async authorize(credentials) {
-                if (!(credentials === null || credentials === void 0 ? void 0 : credentials.email) || !(credentials === null || credentials === void 0 ? void 0 : credentials.password)) {
+                if (!credentials?.email || !credentials?.password) {
                     throw new Error("Please enter both email and password.");
                 }
                 const client = await getPool().connect();
                 try {
                     const result = await client.query('SELECT * FROM "User" WHERE email = $1', [credentials.email]);
                     const user = result.rows[0];
-                    console.log('[AUTH DEBUG] User lookup result:', user);
+                    // console.log('[AUTH DEBUG] User lookup result:', user);
                     if (user && user.password) {
                         const isValid = await bcrypt.compare(credentials.password, user.password);
-                        console.log('[AUTH DEBUG] bcrypt.compare result:', isValid);
+                        // console.log('[AUTH DEBUG] bcrypt.compare result:', isValid);
                         if (isValid) {
                             // Fetch merged permissions (direct + group)
                             const mergedPermissions = await getMergedUserPermissions(user.id);
@@ -75,7 +75,7 @@ export const authOptions = {
     },
     callbacks: {
         async jwt({ token, user, account }) {
-            console.log('[AUTH DEBUG] JWT callback input:', { token, user, account });
+            // console.log('[AUTH DEBUG] JWT callback input:', { token, user, account });
             if (account && user) {
                 token.accessToken = account.access_token;
                 token.id = user.id;
@@ -91,28 +91,27 @@ export const authOptions = {
                     token.modulePermissions = [];
                 }
             }
-            console.log('[AUTH DEBUG] JWT callback output:', token);
+            // console.log('[AUTH DEBUG] JWT callback output:', token);
             return token;
         },
         async session({ session, token }) {
-            console.log('[AUTH DEBUG] Session callback input:', { session, token });
+            // console.log('[AUTH DEBUG] Session callback input:', { session, token });
             if (session.user) {
                 session.user.id = token.id;
                 session.user.role = token.role;
                 session.user.modulePermissions = token.modulePermissions;
             }
-            console.log('[AUTH DEBUG] Session callback output:', session);
+            // console.log('[AUTH DEBUG] Session callback output:', session);
             return session;
         },
         async signIn({ user, account, profile }) {
-            var _a, _b, _c;
             // Only handle Azure AD sign-in if Azure AD is configured and this is an Azure AD sign-in
-            if (isAzureADConfigured() && (account === null || account === void 0 ? void 0 : account.provider) === 'azure-ad' && (profile === null || profile === void 0 ? void 0 : profile.email)) {
+            if (isAzureADConfigured() && account?.provider === 'azure-ad' && profile?.email) {
                 const client = await getPool().connect();
                 try {
                     // Use profile.sub as the unique user ID (OID) if oid is not present
-                    const oid = (_b = (_a = profile.oid) !== null && _a !== void 0 ? _a : profile.sub) !== null && _b !== void 0 ? _b : profile.email;
-                    const picture = (_c = profile.picture) !== null && _c !== void 0 ? _c : null;
+                    const oid = profile.oid ?? profile.sub ?? profile.email;
+                    const picture = profile.picture ?? null;
                     // Check if user exists
                     let res = await client.query('SELECT * FROM "User" WHERE email = $1', [profile.email]);
                     let dbUser = res.rows[0];

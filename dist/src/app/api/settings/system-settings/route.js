@@ -80,10 +80,9 @@ export async function GET(request) {
     }
 }
 export async function POST(request) {
-    var _a, _b, _c, _d, _e;
     const session = await getServerSession(authOptions);
-    if (((_a = session === null || session === void 0 ? void 0 : session.user) === null || _a === void 0 ? void 0 : _a.role) !== 'Admin' && !((_c = (_b = session === null || session === void 0 ? void 0 : session.user) === null || _b === void 0 ? void 0 : _b.modulePermissions) === null || _c === void 0 ? void 0 : _c.includes('SYSTEM_SETTINGS_MANAGE'))) {
-        await logAudit('WARN', `Forbidden attempt to update system settings by user ${((_d = session === null || session === void 0 ? void 0 : session.user) === null || _d === void 0 ? void 0 : _d.email) || 'Unknown'}.`, 'API:SystemSettings:Update', (_e = session === null || session === void 0 ? void 0 : session.user) === null || _e === void 0 ? void 0 : _e.id);
+    if (session?.user?.role !== 'Admin' && !session?.user?.modulePermissions?.includes('SYSTEM_SETTINGS_MANAGE')) {
+        await logAudit('WARN', `Forbidden attempt to update system settings by user ${session?.user?.email || 'Unknown'}.`, 'API:SystemSettings:Update', session?.user?.id);
         return NextResponse.json({ message: "Forbidden: Insufficient permissions" }, { status: 403 });
     }
     let body;

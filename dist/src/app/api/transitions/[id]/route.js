@@ -14,10 +14,9 @@ function extractIdFromUrl(request) {
     return match ? match[1] : null;
 }
 export async function PUT(request) {
-    var _a;
     const id = extractIdFromUrl(request);
     const session = await getServerSession(authOptions);
-    const actingUserId = (_a = session === null || session === void 0 ? void 0 : session.user) === null || _a === void 0 ? void 0 : _a.id;
+    const actingUserId = session?.user?.id;
     if (!actingUserId) {
         return NextResponse.json({ message: "Forbidden" }, { status: 403 });
     }
@@ -52,10 +51,9 @@ export async function PUT(request) {
     }
 }
 export async function DELETE(request) {
-    var _a;
     const id = extractIdFromUrl(request);
     const session = await getServerSession(authOptions);
-    const actingUserId = (_a = session === null || session === void 0 ? void 0 : session.user) === null || _a === void 0 ? void 0 : _a.id;
+    const actingUserId = session?.user?.id;
     if (!actingUserId) {
         return NextResponse.json({ message: "Forbidden" }, { status: 403 });
     }

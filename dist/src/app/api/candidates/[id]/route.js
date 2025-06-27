@@ -77,9 +77,8 @@ function extractIdFromUrl(request) {
     return match ? match[1] : null;
 }
 export async function GET(request, { params }) {
-    var _a;
     const session = await getServerSession(authOptions);
-    if (!((_a = session === null || session === void 0 ? void 0 : session.user) === null || _a === void 0 ? void 0 : _a.id)) {
+    if (!session?.user?.id) {
         return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
     }
     const { id } = params;
@@ -97,10 +96,15 @@ export async function GET(request, { params }) {
             return NextResponse.json({ message: 'Candidate not found' }, { status: 404 });
         }
         const candidate = result.rows[0];
-        return NextResponse.json(Object.assign(Object.assign({}, candidate), { custom_attributes: candidate.customAttributes || {}, position: candidate.positionId ? {
+        return NextResponse.json({
+            ...candidate,
+            custom_attributes: candidate.customAttributes || {},
+            position: candidate.positionId ? {
                 title: candidate.positionTitle,
                 department: candidate.positionDepartment
-            } : null, recruiter: candidate.recruiterId ? { name: candidate.recruiterName } : null }));
+            } : null,
+            recruiter: candidate.recruiterId ? { name: candidate.recruiterName } : null,
+        });
     }
     catch (error) {
         return NextResponse.json({ message: 'Error fetching candidate', error: error.message }, { status: 500 });
@@ -110,10 +114,9 @@ export async function GET(request, { params }) {
     }
 }
 export async function PUT(request, { params }) {
-    var _a, _b, _c;
     const session = await getServerSession(authOptions);
-    const actingUserId = (_a = session === null || session === void 0 ? void 0 : session.user) === null || _a === void 0 ? void 0 : _a.id;
-    const actingUserName = ((_b = session === null || session === void 0 ? void 0 : session.user) === null || _b === void 0 ? void 0 : _b.name) || ((_c = session === null || session === void 0 ? void 0 : session.user) === null || _c === void 0 ? void 0 : _c.email) || 'System';
+    const actingUserId = session?.user?.id;
+    const actingUserName = session?.user?.name || session?.user?.email || 'System';
     if (!actingUserId) {
         return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
     }
@@ -122,7 +125,7 @@ export async function PUT(request, { params }) {
     try {
         body = await request.json();
     }
-    catch (_d) {
+    catch {
         return NextResponse.json({ message: 'Invalid JSON body' }, { status: 400 });
     }
     const validationResult = updateCandidateSchema.safeParse(body);
@@ -168,7 +171,10 @@ export async function PUT(request, { params }) {
         const updatedCandidate = updateResult.rows[0];
         return NextResponse.json({
             message: 'Candidate updated successfully',
-            candidate: Object.assign(Object.assign({}, updatedCandidate), { custom_attributes: updatedCandidate.customAttributes || {} })
+            candidate: {
+                ...updatedCandidate,
+                custom_attributes: updatedCandidate.customAttributes || {},
+            }
         });
     }
     catch (error) {
@@ -184,10 +190,9 @@ export async function PUT(request, { params }) {
     }
 }
 export async function DELETE(request, { params }) {
-    var _a, _b, _c;
     const session = await getServerSession(authOptions);
-    const actingUserId = (_a = session === null || session === void 0 ? void 0 : session.user) === null || _a === void 0 ? void 0 : _a.id;
-    const actingUserName = ((_b = session === null || session === void 0 ? void 0 : session.user) === null || _b === void 0 ? void 0 : _b.name) || ((_c = session === null || session === void 0 ? void 0 : session.user) === null || _c === void 0 ? void 0 : _c.email) || 'System';
+    const actingUserId = session?.user?.id;
+    const actingUserName = session?.user?.name || session?.user?.email || 'System';
     if (!actingUserId) {
         return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
     }

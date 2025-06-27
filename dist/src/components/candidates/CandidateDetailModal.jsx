@@ -38,7 +38,6 @@ const renderModalField = (label, value, icon, isLink, linkHref) => {
       </div>);
 };
 export function CandidateDetailModal({ isOpen, onOpenChange, candidateSummary }) {
-    var _a, _b, _c;
     const [fullCandidate, setFullCandidate] = useState(null);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState(null);
@@ -74,14 +73,14 @@ export function CandidateDetailModal({ isOpen, onOpenChange, candidateSummary })
     }, [isOpen, candidateSummary, fetchFullCandidate, fullCandidate]);
     const displayCandidate = fullCandidate || candidateSummary;
     const parsedDetails = displayCandidate.parsedData;
-    const personalInfo = parsedDetails === null || parsedDetails === void 0 ? void 0 : parsedDetails.personal_info;
+    const personalInfo = parsedDetails?.personal_info;
     return (<Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-2xl max-h-[90vh] flex flex-col">
         <DialogHeader className="pt-6 px-6 pb-4 border-b">
           <DialogTitle className="text-2xl flex items-center">
              <Avatar className="h-10 w-10 mr-3 border-2 border-primary">
-                <AvatarImage src={(personalInfo === null || personalInfo === void 0 ? void 0 : personalInfo.avatar_url) || `https://placehold.co/40x40.png?text=${((_a = displayCandidate.name) === null || _a === void 0 ? void 0 : _a.charAt(0)) || 'C'}`} alt={displayCandidate.name || "Candidate"} data-ai-hint="person avatar"/>
-                <AvatarFallback>{((_b = displayCandidate.name) === null || _b === void 0 ? void 0 : _b.charAt(0).toUpperCase()) || 'C'}</AvatarFallback>
+                <AvatarImage src={personalInfo?.avatar_url || `https://placehold.co/40x40.png?text=${displayCandidate.name?.charAt(0) || 'C'}`} alt={displayCandidate.name || "Candidate"} data-ai-hint="person avatar"/>
+                <AvatarFallback>{displayCandidate.name?.charAt(0).toUpperCase() || 'C'}</AvatarFallback>
             </Avatar>
             {displayCandidate.name || "Candidate Details"}
           </DialogTitle>
@@ -98,10 +97,10 @@ export function CandidateDetailModal({ isOpen, onOpenChange, candidateSummary })
                         <h3 className="text-md font-semibold text-primary mb-2 flex items-center"><Info className="h-5 w-5 mr-2"/> Core Information</h3>
                         {renderModalField("Email", displayCandidate.email, Mail)}
                         {renderModalField("Phone", displayCandidate.phone, Phone)}
-                        {renderModalField("Applied for", ((_c = displayCandidate.position) === null || _c === void 0 ? void 0 : _c.title) || 'N/A - General Application', Briefcase)}
+                        {renderModalField("Applied for", displayCandidate.position?.title || 'N/A - General Application', Briefcase)}
                         {displayCandidate.fitScore !== undefined && renderModalField("Fit Score", `${displayCandidate.fitScore}%`, Percent)}
                         {displayCandidate.applicationDate && renderModalField("Application Date", format(parseISO(displayCandidate.applicationDate), "PPP"), CalendarDays)}
-                        {renderModalField("CV Language", parsedDetails === null || parsedDetails === void 0 ? void 0 : parsedDetails.cv_language, Tag)}
+                        {renderModalField("CV Language", parsedDetails?.cv_language, Tag)}
                     </section>
 
                     {personalInfo && (<section>

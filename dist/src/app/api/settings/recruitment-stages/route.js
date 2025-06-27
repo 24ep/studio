@@ -82,9 +82,8 @@ const recruitmentStageSchema = z.object({
  *         description: Server error
  */
 export async function GET(request) {
-    var _a;
     const session = await getServerSession(authOptions);
-    if (!((_a = session === null || session === void 0 ? void 0 : session.user) === null || _a === void 0 ? void 0 : _a.id))
+    if (!session?.user?.id)
         return new NextResponse('Unauthorized', { status: 401 });
     const client = await getPool().connect();
     try {
@@ -100,9 +99,8 @@ export async function GET(request) {
     }
 }
 export async function POST(request) {
-    var _a;
     const session = await getServerSession(authOptions);
-    const actingUserId = (_a = session === null || session === void 0 ? void 0 : session.user) === null || _a === void 0 ? void 0 : _a.id;
+    const actingUserId = session?.user?.id;
     if (!actingUserId)
         return new NextResponse('Unauthorized', { status: 401 });
     let body;
@@ -120,7 +118,7 @@ export async function POST(request) {
     const newId = uuidv4();
     const client = await getPool().connect();
     try {
-        const result = await client.query('INSERT INTO "RecruitmentStage" (id, name, description, sort_order) VALUES ($1, $2, $3, $4) RETURNING *', [newId, name, description, sort_order !== null && sort_order !== void 0 ? sort_order : 0]);
+        const result = await client.query('INSERT INTO "RecruitmentStage" (id, name, description, sort_order) VALUES ($1, $2, $3, $4) RETURNING *', [newId, name, description, sort_order ?? 0]);
         await logAudit('AUDIT', `Recruitment stage '${name}' created.`, 'API:RecruitmentStages:Create', actingUserId, { stageId: newId });
         await deleteCache(CACHE_KEY_RECRUITMENT_STAGES);
         return NextResponse.json(result.rows[0], { status: 201 });

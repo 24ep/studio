@@ -91,9 +91,8 @@ const updateCustomFieldSchema = createCustomFieldSchema.partial().omit({ model_n
  *         description: Server error
  */
 export async function GET(request) {
-    var _a;
     const session = await getServerSession(authOptions);
-    if (!((_a = session === null || session === void 0 ? void 0 : session.user) === null || _a === void 0 ? void 0 : _a.id)) {
+    if (!session?.user?.id) {
         return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
     const { searchParams } = new URL(request.url);
@@ -113,23 +112,20 @@ export async function GET(request) {
         query += ' ORDER BY sort_order ASC, label ASC';
         const result = await getPool().query(query, queryParams);
         // Map DB fields to frontend expected fields
-        const mappedRows = result.rows.map(row => {
-            var _a;
-            return ({
-                id: row.id,
-                model: row.model_name,
-                name: row.field_key,
-                label: row.label,
-                type: row.field_type,
-                options: row.options || [],
-                placeholder: null,
-                defaultValue: null,
-                isRequired: row.is_required,
-                isFilterable: false,
-                isSystemField: false,
-                order: (_a = row.sort_order) !== null && _a !== void 0 ? _a : 0,
-            });
-        });
+        const mappedRows = result.rows.map(row => ({
+            id: row.id,
+            model: row.model_name,
+            name: row.field_key,
+            label: row.label,
+            type: row.field_type,
+            options: row.options || [],
+            placeholder: null,
+            defaultValue: null,
+            isRequired: row.is_required,
+            isFilterable: false,
+            isSystemField: false,
+            order: row.sort_order ?? 0,
+        }));
         return NextResponse.json(mappedRows, { status: 200 });
     }
     catch (error) {
@@ -139,12 +135,11 @@ export async function GET(request) {
     }
 }
 export async function POST(request) {
-    var _a, _b;
     const session = await getServerSession(authOptions);
-    if (!((_a = session === null || session === void 0 ? void 0 : session.user) === null || _a === void 0 ? void 0 : _a.id)) {
+    if (!session?.user?.id) {
         return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
-    if (session.user.role !== 'Admin' && !((_b = session.user.modulePermissions) === null || _b === void 0 ? void 0 : _b.includes('CUSTOM_FIELDS_MANAGE'))) {
+    if (session.user.role !== 'Admin' && !session.user.modulePermissions?.includes('CUSTOM_FIELDS_MANAGE')) {
         await logAudit('WARN', `Forbidden attempt to create custom field by ${session.user.name}.`, 'API:CustomFields:Create', session.user.id);
         return NextResponse.json({ message: "Forbidden: Insufficient permissions" }, { status: 403 });
     }

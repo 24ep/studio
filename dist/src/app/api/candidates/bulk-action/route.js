@@ -67,18 +67,22 @@ const bulkActionSchema = z.object({
  *                         type: string
  */
 export async function POST(request) {
-    var _a, _b, _c;
     const session = await getServerSession(authOptions);
-    const actingUserId = (_a = session === null || session === void 0 ? void 0 : session.user) === null || _a === void 0 ? void 0 : _a.id;
-    const actingUserName = ((_b = session === null || session === void 0 ? void 0 : session.user) === null || _b === void 0 ? void 0 : _b.name) || ((_c = session === null || session === void 0 ? void 0 : session.user) === null || _c === void 0 ? void 0 : _c.email) || 'System';
+    const actingUserId = session?.user?.id;
+    const actingUserName = session?.user?.name || session?.user?.email || 'System';
     if (!actingUserId) {
         return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
+    }
+    // Check if user has permission to manage candidates
+    if (session.user.role !== 'Admin' && !session.user.modulePermissions?.includes('CANDIDATES_MANAGE')) {
+        await logAudit('WARN', `Forbidden attempt to perform bulk candidate action by ${actingUserName}.`, 'API:Candidates:BulkAction', actingUserId);
+        return NextResponse.json({ message: 'Forbidden: Insufficient permissions to perform bulk candidate actions' }, { status: 403 });
     }
     let body;
     try {
         body = await request.json();
     }
-    catch (_d) {
+    catch {
         return NextResponse.json({ message: 'Invalid JSON body' }, { status: 400 });
     }
     const validationResult = bulkActionSchema.safeParse(body);
@@ -132,7 +136,10 @@ export async function POST(request) {
             candidateIds,
             result
         });
-        return NextResponse.json(Object.assign({ message: 'Bulk action completed successfully' }, result));
+        return NextResponse.json({
+            message: 'Bulk action completed successfully',
+            ...result
+        });
     }
     catch (error) {
         await client.query('ROLLBACK');

@@ -59,10 +59,9 @@ const saveWebhookMappingsSchema = z.array(webhookFieldMappingSchema);
  *         description: Server error
  */
 export async function GET(request) {
-    var _a, _b, _c, _d, _e, _f, _g;
     const session = await getServerSession(authOptions);
-    if (((_a = session === null || session === void 0 ? void 0 : session.user) === null || _a === void 0 ? void 0 : _a.role) !== 'Admin' && !((_c = (_b = session === null || session === void 0 ? void 0 : session.user) === null || _b === void 0 ? void 0 : _b.modulePermissions) === null || _c === void 0 ? void 0 : _c.includes('WEBHOOK_MAPPING_MANAGE'))) {
-        await logAudit('WARN', `Forbidden attempt to GET webhook mappings by user ${((_d = session === null || session === void 0 ? void 0 : session.user) === null || _d === void 0 ? void 0 : _d.email) || 'Unknown'}.`, 'API:WebhookMappings:Get', (_e = session === null || session === void 0 ? void 0 : session.user) === null || _e === void 0 ? void 0 : _e.id);
+    if (session?.user?.role !== 'Admin' && !session?.user?.modulePermissions?.includes('WEBHOOK_MAPPING_MANAGE')) {
+        await logAudit('WARN', `Forbidden attempt to GET webhook mappings by user ${session?.user?.email || 'Unknown'}.`, 'API:WebhookMappings:Get', session?.user?.id);
         return NextResponse.json({ message: "Forbidden: Insufficient permissions" }, { status: 403 });
     }
     try {
@@ -71,15 +70,14 @@ export async function GET(request) {
     }
     catch (error) {
         console.error("Failed to fetch webhook mappings:", error);
-        await logAudit('ERROR', `Failed to fetch webhook mappings by ${(_f = session === null || session === void 0 ? void 0 : session.user) === null || _f === void 0 ? void 0 : _f.name}. Error: ${error.message}`, 'API:WebhookMappings:Get', (_g = session === null || session === void 0 ? void 0 : session.user) === null || _g === void 0 ? void 0 : _g.id);
+        await logAudit('ERROR', `Failed to fetch webhook mappings by ${session?.user?.name}. Error: ${error.message}`, 'API:WebhookMappings:Get', session?.user?.id);
         return NextResponse.json({ message: "Error fetching webhook mappings", error: error.message }, { status: 500 });
     }
 }
 export async function POST(request) {
-    var _a, _b, _c, _d, _e;
     const session = await getServerSession(authOptions);
-    if (((_a = session === null || session === void 0 ? void 0 : session.user) === null || _a === void 0 ? void 0 : _a.role) !== 'Admin' && !((_c = (_b = session === null || session === void 0 ? void 0 : session.user) === null || _b === void 0 ? void 0 : _b.modulePermissions) === null || _c === void 0 ? void 0 : _c.includes('WEBHOOK_MAPPING_MANAGE'))) {
-        await logAudit('WARN', `Forbidden attempt to POST webhook mappings by user ${((_d = session === null || session === void 0 ? void 0 : session.user) === null || _d === void 0 ? void 0 : _d.email) || 'Unknown'}.`, 'API:WebhookMappings:Post', (_e = session === null || session === void 0 ? void 0 : session.user) === null || _e === void 0 ? void 0 : _e.id);
+    if (session?.user?.role !== 'Admin' && !session?.user?.modulePermissions?.includes('WEBHOOK_MAPPING_MANAGE')) {
+        await logAudit('WARN', `Forbidden attempt to POST webhook mappings by user ${session?.user?.email || 'Unknown'}.`, 'API:WebhookMappings:Post', session?.user?.id);
         return NextResponse.json({ message: "Forbidden: Insufficient permissions" }, { status: 403 });
     }
     let body;

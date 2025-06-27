@@ -45,7 +45,7 @@ function extractIdFromUrl(request) {
 export async function POST(request) {
     const id = extractIdFromUrl(request);
     const session = await getServerSession(authOptions);
-    if (!(session === null || session === void 0 ? void 0 : session.user)) {
+    if (!session?.user) {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
     try {

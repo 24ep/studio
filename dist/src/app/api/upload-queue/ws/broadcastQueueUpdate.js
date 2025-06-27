@@ -12,7 +12,7 @@ export async function broadcastQueueUpdate() {
             try {
                 ws.send(data);
             }
-            catch (_a) { }
+            catch { }
         }
     }
     finally {

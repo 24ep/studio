@@ -70,14 +70,13 @@ export default function DataModelsPage() {
         }
     }, [error]);
     const handleModalOpen = (field = null) => {
-        var _a;
         setEditingField(field);
         if (field) {
             setFormData({
                 name: field.name,
                 label: field.label,
                 type: field.type,
-                options: (_a = field.options) === null || _a === void 0 ? void 0 : _a.join(', '),
+                options: field.options?.join(', '),
                 placeholder: field.placeholder || '',
                 defaultValue: field.defaultValue || '',
                 isRequired: field.isRequired,
@@ -113,7 +112,10 @@ export default function DataModelsPage() {
             setIsSaving(false);
             return;
         }
-        const payload = Object.assign(Object.assign({}, validation.data), { model });
+        const payload = {
+            ...validation.data,
+            model,
+        };
         if (payload.options) {
             payload.options = payload.options.split(',').map((opt) => opt.trim());
         }
@@ -264,17 +266,17 @@ export default function DataModelsPage() {
                     <form onSubmit={(e) => handleSubmit(e, 'Candidate')} className="space-y-4">
                         <div>
                             <Label htmlFor="label">Label</Label>
-                            <Input id="label" value={formData.label} onChange={e => setFormData(Object.assign(Object.assign({}, formData), { label: e.target.value }))}/>
-                            {(formErrors === null || formErrors === void 0 ? void 0 : formErrors.flatten().fieldErrors.label) && <p className="text-red-500 text-sm mt-1">{formErrors.flatten().fieldErrors.label}</p>}
+                            <Input id="label" value={formData.label} onChange={e => setFormData({ ...formData, label: e.target.value })}/>
+                            {formErrors?.flatten().fieldErrors.label && <p className="text-red-500 text-sm mt-1">{formErrors.flatten().fieldErrors.label}</p>}
                         </div>
                         <div>
                             <Label htmlFor="name">Name (Key)</Label>
-                            <Input id="name" value={formData.name} onChange={e => setFormData(Object.assign(Object.assign({}, formData), { name: e.target.value }))} disabled={!!editingField}/>
-                             {(formErrors === null || formErrors === void 0 ? void 0 : formErrors.flatten().fieldErrors.name) && <p className="text-red-500 text-sm mt-1">{formErrors.flatten().fieldErrors.name}</p>}
+                            <Input id="name" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} disabled={!!editingField}/>
+                             {formErrors?.flatten().fieldErrors.name && <p className="text-red-500 text-sm mt-1">{formErrors.flatten().fieldErrors.name}</p>}
                         </div>
                         <div>
                             <Label htmlFor="type">Field Type</Label>
-                            <Select value={formData.type} onValueChange={(value) => setFormData(Object.assign(Object.assign({}, formData), { type: value }))}>
+                            <Select value={formData.type} onValueChange={(value) => setFormData({ ...formData, type: value })}>
                                 <SelectTrigger>
                                     <SelectValue />
                                 </SelectTrigger>
@@ -291,22 +293,22 @@ export default function DataModelsPage() {
                         </div>
                         {(formData.type === 'SELECT' || formData.type === 'MULTISELECT') && (<div>
                                 <Label htmlFor="options">Options (comma-separated)</Label>
-                                <Input id="options" value={formData.options} onChange={e => setFormData(Object.assign(Object.assign({}, formData), { options: e.target.value }))}/>
+                                <Input id="options" value={formData.options} onChange={e => setFormData({ ...formData, options: e.target.value })}/>
                             </div>)}
                         <div>
                             <Label htmlFor="placeholder">Placeholder</Label>
-                            <Input id="placeholder" value={formData.placeholder} onChange={e => setFormData(Object.assign(Object.assign({}, formData), { placeholder: e.target.value }))}/>
+                            <Input id="placeholder" value={formData.placeholder} onChange={e => setFormData({ ...formData, placeholder: e.target.value })}/>
                         </div>
                         <div>
                             <Label htmlFor="defaultValue">Default Value</Label>
-                            <Input id="defaultValue" value={formData.defaultValue} onChange={e => setFormData(Object.assign(Object.assign({}, formData), { defaultValue: e.target.value }))}/>
+                            <Input id="defaultValue" value={formData.defaultValue} onChange={e => setFormData({ ...formData, defaultValue: e.target.value })}/>
                         </div>
                         <div className="flex items-center space-x-2">
-                            <Toggle checked={formData.isRequired} onCheckedChange={checked => setFormData(Object.assign(Object.assign({}, formData), { isRequired: checked }))}/>
+                            <Toggle checked={formData.isRequired} onCheckedChange={checked => setFormData({ ...formData, isRequired: checked })}/>
                             <Label htmlFor="isRequired">Is Required?</Label>
                         </div>
                         <div className="flex items-center space-x-2">
-                            <Toggle checked={formData.isFilterable} onCheckedChange={checked => setFormData(Object.assign(Object.assign({}, formData), { isFilterable: checked }))}/>
+                            <Toggle checked={formData.isFilterable} onCheckedChange={checked => setFormData({ ...formData, isFilterable: checked })}/>
                             <Label htmlFor="isFilterable">Is Filterable?</Label>
                         </div>
                     </form>

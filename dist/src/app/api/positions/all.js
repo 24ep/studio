@@ -40,9 +40,8 @@ export const dynamic = "force-dynamic";
  *                       position_level: "mid level"
  */
 export async function GET(request) {
-    var _a;
     const session = await getServerSession(authOptions);
-    if (!((_a = session === null || session === void 0 ? void 0 : session.user) === null || _a === void 0 ? void 0 : _a.id)) {
+    if (!session?.user?.id) {
         return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
     }
     try {
@@ -82,7 +81,10 @@ export async function GET(request) {
         query += ` LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`;
         queryParams.push(limit, offset);
         const result = await getPool().query(query, queryParams);
-        const positions = result.rows.map(row => (Object.assign(Object.assign({}, row), { custom_attributes: row.customAttributes || {} })));
+        const positions = result.rows.map(row => ({
+            ...row,
+            custom_attributes: row.customAttributes || {},
+        }));
         return NextResponse.json({ data: positions }, { status: 200 });
     }
     catch (error) {

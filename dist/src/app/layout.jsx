@@ -35,7 +35,7 @@ export async function generateMetadata() {
             // Optionally, you could add a description setting as well
         }
     }
-    catch (_a) { }
+    catch { }
     return {
         title: appName,
         description,

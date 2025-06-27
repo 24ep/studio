@@ -50,7 +50,7 @@ export function MobileTableRow({ title, value, className }) {
 }
 export function CardTable({ data, columns, className, onRowClick }) {
     return (<div className={cn('space-y-4', className)}>
-      {data.map((row) => (<div key={row.id} className={cn('border rounded-lg p-4 space-y-2', onRowClick && 'cursor-pointer hover:bg-muted/50 transition-colors')} onClick={() => onRowClick === null || onRowClick === void 0 ? void 0 : onRowClick(row)}>
+      {data.map((row) => (<div key={row.id} className={cn('border rounded-lg p-4 space-y-2', onRowClick && 'cursor-pointer hover:bg-muted/50 transition-colors')} onClick={() => onRowClick?.(row)}>
           {columns.map((column) => (<MobileTableRow key={column.key} title={column.label} value={column.render ? column.render(row[column.key], row) : row[column.key]}/>))}
         </div>))}
     </div>);
@@ -69,7 +69,7 @@ export function AdaptiveTable({ data, columns, className, onRowClick, breakpoint
               </TableRow>
             </TableHeader>
             <TableBody>
-              {data.map((row) => (<TableRow key={row.id} onClick={() => onRowClick === null || onRowClick === void 0 ? void 0 : onRowClick(row)}>
+              {data.map((row) => (<TableRow key={row.id} onClick={() => onRowClick?.(row)}>
                   {columns.map((column) => (<TableCell key={column.key} align={column.align}>
                       {column.render ? column.render(row[column.key], row) : row[column.key]}
                     </TableCell>))}

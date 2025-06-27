@@ -5,7 +5,7 @@ import 'react-quill/dist/quill.snow.css';
 import { useSession, signIn } from 'next-auth/react';
 import { useRouter, usePathname } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Save, Mail, Zap, BrainCircuit, Loader2, ServerCrash, Settings } from 'lucide-react';
+import { Save, Mail, Zap, BrainCircuit, Loader2, ServerCrash, Settings, RefreshCw } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
@@ -65,8 +65,7 @@ export default function SystemSettingsPage() {
             fetchSystemSettings();
         }
     }, [sessionStatus, pathname, fetchSystemSettings]);
-    const handleSave = async (e) => {
-        e.preventDefault();
+    const handleSave = async () => {
         setIsSaving(true);
         const settingsToUpdate = [
             { key: 'maxConcurrentProcessors', value: String(maxConcurrentProcessors) },
@@ -75,7 +74,6 @@ export default function SystemSettingsPage() {
             { key: 'smtpUser', value: smtpUser },
             { key: 'smtpSecure', value: String(smtpSecure) },
             { key: 'smtpFromEmail', value: smtpFromEmail },
-            { key: 'resumeProcessingWebhookUrl', value: resumeProcessingWebhookUrl },
             { key: 'generalPdfWebhookUrl', value: generalPdfWebhookUrl },
             { key: 'geminiApiKey', value: geminiApiKey },
         ];
@@ -112,7 +110,7 @@ export default function SystemSettingsPage() {
         <Button onClick={() => router.push('/')} className="btn-hover-primary-gradient">Go to Dashboard</Button>
       </div>);
     }
-    return (<form onSubmit={handleSave} className="space-y-12 pb-32 p-6">
+    return (<div className="space-y-12 pb-32 p-6">
       {/* System Settings (no concurrent input here) */}
       <Card className="shadow-lg ">
         <CardHeader>
@@ -214,9 +212,15 @@ export default function SystemSettingsPage() {
           </div>
         </CardContent>
       </Card>
-      <Button type="submit" disabled={isSaving} className="mt-8">
-        <Save className="mr-2 h-4 w-4"/>
-        {isSaving ? 'Saving...' : 'Save All Settings'}
-      </Button>
-    </form>);
+
+      {/* Floating Save/Reset Bar */}
+      <div className="fixed bottom-6 right-6 z-30 bg-background/95 border shadow-lg rounded-xl flex flex-row gap-4 py-3 px-6" style={{ boxShadow: '0 2px 16px 0 rgba(0,0,0,0.10)' }}>
+        <Button onClick={handleSave} disabled={isSaving} className="btn-primary-gradient flex items-center gap-2">
+          {isSaving ? <Loader2 className="h-4 w-4 animate-spin"/> : <Save className="h-4 w-4"/>} Save All
+        </Button>
+        <Button variant="outline" onClick={fetchSystemSettings} disabled={isSaving} className="flex items-center gap-2">
+          <RefreshCw className="h-4 w-4"/> Reset
+        </Button>
+      </div>
+    </div>);
 }

@@ -41,7 +41,6 @@ const getLogLevelIcon = (level) => {
 };
 const ITEMS_PER_PAGE = 20;
 export default function ApplicationLogsPage() {
-    var _a;
     const [logs, setLogs] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     const [fetchError, setFetchError] = useState(null);
@@ -77,7 +76,6 @@ export default function ApplicationLogsPage() {
         }
     }, []);
     const fetchLogs = useCallback(async (page, filters) => {
-        var _a;
         if (sessionStatus !== 'authenticated') {
             setIsLoading(false);
             return;
@@ -120,7 +118,7 @@ export default function ApplicationLogsPage() {
             }
             const data = await response.json();
             setLogs(data.data || []);
-            setTotalLogs(((_a = data.pagination) === null || _a === void 0 ? void 0 : _a.total) || 0);
+            setTotalLogs(data.pagination?.total || 0);
         }
         catch (err) {
             console.error("Error fetching logs:", err);
@@ -137,13 +135,12 @@ export default function ApplicationLogsPage() {
         }
     }, [sessionStatus, toast, pathname]);
     useEffect(() => {
-        var _a;
         setIsClient(true);
         if (sessionStatus === 'unauthenticated') {
             signIn(undefined, { callbackUrl: pathname });
         }
         else if (sessionStatus === 'authenticated') {
-            if (session.user.role !== 'Admin' && !((_a = session.user.modulePermissions) === null || _a === void 0 ? void 0 : _a.includes('LOGS_VIEW'))) {
+            if (session.user.role !== 'Admin' && !session.user.modulePermissions?.includes('LOGS_VIEW')) {
                 setFetchError("You do not have permission to view logs.");
                 setIsLoading(false);
             }
@@ -205,7 +202,7 @@ export default function ApplicationLogsPage() {
                     <Popover open={userPopoverOpen} onOpenChange={setUserPopoverOpen}>
                       <PopoverTrigger asChild>
                         <Button variant="outline" role="combobox" aria-expanded={userPopoverOpen} className="w-full justify-between font-normal">
-                          {actingUserIdFilter === 'ALL' ? 'All Users' : ((_a = allUsers.find(u => u.id === actingUserIdFilter)) === null || _a === void 0 ? void 0 : _a.name) || 'All Users'}
+                          {actingUserIdFilter === 'ALL' ? 'All Users' : allUsers.find(u => u.id === actingUserIdFilter)?.name || 'All Users'}
                           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50"/>
                         </Button>
                       </PopoverTrigger>

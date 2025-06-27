@@ -54,10 +54,9 @@ import { authOptions } from '@/lib/auth';
  */
 export const dynamic = "force-dynamic";
 export async function GET(request) {
-    var _a, _b, _c, _d, _e, _f, _g;
     const session = await getServerSession(authOptions);
-    if (((_a = session === null || session === void 0 ? void 0 : session.user) === null || _a === void 0 ? void 0 : _a.role) !== 'Admin' && !((_c = (_b = session === null || session === void 0 ? void 0 : session.user) === null || _b === void 0 ? void 0 : _b.modulePermissions) === null || _c === void 0 ? void 0 : _c.includes('NOTIFICATION_SETTINGS_MANAGE'))) {
-        await logAudit('WARN', `Forbidden attempt to GET notification settings by user ${((_d = session === null || session === void 0 ? void 0 : session.user) === null || _d === void 0 ? void 0 : _d.email) || 'Unknown'}.`, 'API:NotificationSettings:Get', (_e = session === null || session === void 0 ? void 0 : session.user) === null || _e === void 0 ? void 0 : _e.id);
+    if (session?.user?.role !== 'Admin' && !session?.user?.modulePermissions?.includes('NOTIFICATION_SETTINGS_MANAGE')) {
+        await logAudit('WARN', `Forbidden attempt to GET notification settings by user ${session?.user?.email || 'Unknown'}.`, 'API:NotificationSettings:Get', session?.user?.id);
         return NextResponse.json({ message: "Forbidden: Insufficient permissions" }, { status: 403 });
     }
     try {
@@ -76,13 +75,16 @@ export async function GET(request) {
                     settingId: setting ? setting.id : undefined,
                 };
             });
-            return Object.assign(Object.assign({}, event), { channels: channelsWithTheirSettings });
+            return {
+                ...event,
+                channels: channelsWithTheirSettings,
+            };
         });
         return NextResponse.json(eventsWithSettings, { status: 200 });
     }
     catch (error) {
         console.error("Failed to fetch notification settings:", error);
-        await logAudit('ERROR', `Failed to fetch notification settings by ${(_f = session === null || session === void 0 ? void 0 : session.user) === null || _f === void 0 ? void 0 : _f.name}. Error: ${error.message}`, 'API:NotificationSettings:Get', (_g = session === null || session === void 0 ? void 0 : session.user) === null || _g === void 0 ? void 0 : _g.id);
+        await logAudit('ERROR', `Failed to fetch notification settings by ${session?.user?.name}. Error: ${error.message}`, 'API:NotificationSettings:Get', session?.user?.id);
         return NextResponse.json({ message: "Error fetching notification settings", error: error.message }, { status: 500 });
     }
 }
@@ -97,10 +99,9 @@ const notificationEventSettingSchema = z.object({
 });
 const updateNotificationSettingsSchema = z.array(notificationEventSettingSchema);
 export async function POST(request) {
-    var _a, _b, _c, _d, _e, _f;
     const session = await getServerSession(authOptions);
-    if (((_a = session === null || session === void 0 ? void 0 : session.user) === null || _a === void 0 ? void 0 : _a.role) !== 'Admin' && !((_c = (_b = session === null || session === void 0 ? void 0 : session.user) === null || _b === void 0 ? void 0 : _b.modulePermissions) === null || _c === void 0 ? void 0 : _c.includes('NOTIFICATION_SETTINGS_MANAGE'))) {
-        await logAudit('WARN', `Forbidden attempt to POST notification settings by user ${((_d = session === null || session === void 0 ? void 0 : session.user) === null || _d === void 0 ? void 0 : _d.email) || 'Unknown'}.`, 'API:NotificationSettings:Post', (_e = session === null || session === void 0 ? void 0 : session.user) === null || _e === void 0 ? void 0 : _e.id);
+    if (session?.user?.role !== 'Admin' && !session?.user?.modulePermissions?.includes('NOTIFICATION_SETTINGS_MANAGE')) {
+        await logAudit('WARN', `Forbidden attempt to POST notification settings by user ${session?.user?.email || 'Unknown'}.`, 'API:NotificationSettings:Post', session?.user?.id);
         return NextResponse.json({ message: "Forbidden: Insufficient permissions" }, { status: 403 });
     }
     let body;
@@ -131,7 +132,7 @@ export async function POST(request) {
         `;
                 // Ensure configuration is null if not provided or if webhookUrl is empty for webhooks
                 let configPayload = null;
-                if ((_f = channelSetting.configuration) === null || _f === void 0 ? void 0 : _f.webhookUrl) {
+                if (channelSetting.configuration?.webhookUrl) {
                     configPayload = channelSetting.configuration;
                 }
                 else if (channelSetting.configuration && Object.keys(channelSetting.configuration).length > 0 && !channelSetting.configuration.webhookUrl) {
@@ -165,7 +166,10 @@ export async function POST(request) {
                     settingId: setting ? setting.id : undefined,
                 };
             });
-            return Object.assign(Object.assign({}, event), { channels: channelsWithTheirSettings });
+            return {
+                ...event,
+                channels: channelsWithTheirSettings,
+            };
         });
         return NextResponse.json(eventsWithSettings, { status: 200 });
     }

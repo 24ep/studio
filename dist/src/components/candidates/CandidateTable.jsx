@@ -80,7 +80,6 @@ export function CandidateTable({ candidates, availablePositions, availableStages
           <TableHeader><TableRow><TableHead className="w-12"><Checkbox checked={isAllCandidatesSelected} onCheckedChange={onToggleSelectAllCandidates} aria-label="Select all candidates"/></TableHead><TableHead className="w-[250px]">Candidate</TableHead><TableHead>Applied Job</TableHead><TableHead>Recruiter</TableHead><TableHead className="w-[100px] hidden sm:table-cell">Fit Score</TableHead><TableHead>Status</TableHead><TableHead className="hidden md:table-cell">Last Update</TableHead><TableHead className="w-[120px] hidden sm:table-cell">Resume</TableHead><TableHead className="text-right w-[80px]">Actions</TableHead></TableRow></TableHeader>
           <TableBody>
             {candidates.map((candidate) => {
-            var _a, _b, _c, _d, _e;
             const dateValue = candidate.updatedAt || candidate.createdAt;
             let displayDate = 'N/A';
             if (dateValue && typeof dateValue === 'string') {
@@ -106,7 +105,7 @@ export function CandidateTable({ candidates, availablePositions, availableStages
                   <TableCell>
                     <div className="flex items-center gap-3">
                       <Avatar className="h-10 w-10">
-                        <AvatarImage src={((_b = (_a = candidate.parsedData) === null || _a === void 0 ? void 0 : _a.personal_info) === null || _b === void 0 ? void 0 : _b.avatar_url) || `https://placehold.co/40x40.png?text=${candidate.name.charAt(0)}`} alt={candidate.name} data-ai-hint="person avatar"/>
+                        <AvatarImage src={candidate.parsedData?.personal_info?.avatar_url || `https://placehold.co/40x40.png?text=${candidate.name.charAt(0)}`} alt={candidate.name} data-ai-hint="person avatar"/>
                         <AvatarFallback>{candidate.name.charAt(0).toUpperCase()}</AvatarFallback>
                       </Avatar>
                       <div>
@@ -118,12 +117,12 @@ export function CandidateTable({ candidates, availablePositions, availableStages
                     </div>
                   </TableCell>
                   <TableCell>
-                    {((_c = candidate.position) === null || _c === void 0 ? void 0 : _c.title) ? (<span className="font-medium text-primary hover:underline cursor-pointer" onClick={() => handleEditPositionClick(candidate.positionId)} title={`Edit ${candidate.position.title}`}>
+                    {candidate.position?.title ? (<span className="font-medium text-primary hover:underline cursor-pointer" onClick={() => handleEditPositionClick(candidate.positionId)} title={`Edit ${candidate.position.title}`}>
                         {candidate.position.title}
                       </span>) : (<span className="text-muted-foreground">N/A</span>)}
                   </TableCell>
                   <TableCell>
-                    <Select value={((_d = candidate.recruiter) === null || _d === void 0 ? void 0 : _d.id) || ''} onValueChange={value => onAssignRecruiter(candidate.id, value === '___UNASSIGN___' ? null : value)}>
+                    <Select value={candidate.recruiter?.id || ''} onValueChange={value => onAssignRecruiter(candidate.id, value === '___UNASSIGN___' ? null : value)}>
                       <SelectTrigger className="w-36">
                         <SelectValue placeholder="Unassigned"/>
                       </SelectTrigger>
@@ -150,7 +149,7 @@ export function CandidateTable({ candidates, availablePositions, availableStages
                   <TableCell className="text-xs hidden sm:table-cell">
                     {candidate.resumePath ?
                     <span className="text-green-600 truncate block max-w-[100px] hover:underline cursor-pointer" title={candidate.resumePath}>
-                        {((_e = candidate.resumePath.split('-').pop()) === null || _e === void 0 ? void 0 : _e.split('.').slice(0, -1).join('.')) || candidate.resumePath.split('-').pop()}
+                        {candidate.resumePath.split('-').pop()?.split('.').slice(0, -1).join('.') || candidate.resumePath.split('-').pop()}
                       </span>
                     : <span className="text-muted-foreground">No resume</span>}
                   </TableCell>
@@ -200,7 +199,7 @@ export function CandidateTable({ candidates, availablePositions, availableStages
           <AlertDialogHeader>
             <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
             <AlertDialogDescription>
-              This action cannot be undone. This will permanently delete the candidate <strong>{candidateToDelete === null || candidateToDelete === void 0 ? void 0 : candidateToDelete.name}</strong> and all associated records (resume history, transition history).
+              This action cannot be undone. This will permanently delete the candidate <strong>{candidateToDelete?.name}</strong> and all associated records (resume history, transition history).
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

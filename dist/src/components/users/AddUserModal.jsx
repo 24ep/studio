@@ -33,10 +33,10 @@ const groupedPermissions = Object.values(PLATFORM_MODULE_CATEGORIES).map(categor
     permissions: PLATFORM_MODULES.filter(p => p.category === category)
 }));
 export function AddUserModal({ isOpen, onOpenChange, onAddUser }) {
-    var _a, _b;
     const [availableGroups, setAvailableGroups] = useState([]);
     const [groupSearchOpen, setGroupSearchOpen] = useState(false);
     const [groupSearchQuery, setGroupSearchQuery] = useState('');
+    const [forcePasswordChange, setForcePasswordChange] = useState(false);
     const form = useForm({
         resolver: zodResolver(addUserFormSchema),
         defaultValues: {
@@ -122,7 +122,7 @@ export function AddUserModal({ isOpen, onOpenChange, onAddUser }) {
                         <Popover open={groupSearchOpen} onOpenChange={setGroupSearchOpen}>
                           <PopoverTrigger asChild>
                             <Button variant="outline" role="combobox" aria-expanded={groupSearchOpen} className="w-full justify-between">
-                               {((_a = form.getValues("groupIds")) === null || _a === void 0 ? void 0 : _a.length) > 0 ? `${(_b = form.getValues("groupIds")) === null || _b === void 0 ? void 0 : _b.length} group(s) selected` : "Select groups..."}
+                               {form.getValues("groupIds")?.length > 0 ? `${form.getValues("groupIds")?.length} group(s) selected` : "Select groups..."}
                               <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50"/>
                             </Button>
                           </PopoverTrigger>
@@ -131,13 +131,10 @@ export function AddUserModal({ isOpen, onOpenChange, onAddUser }) {
                             <ScrollArea className="max-h-40">
                               {availableGroups.length === 0 && <p className="p-2 text-xs text-muted-foreground text-center">No groups available.</p>}
                               {filteredGroups.length === 0 && groupSearchQuery && <p className="p-2 text-xs text-muted-foreground text-center">No group found.</p>}
-                              {filteredGroups.map(group => (<FormField key={group.id} control={form.control} name="groupIds" render={({ field }) => {
-                var _a;
-                return (<FormItem className="flex flex-row items-center space-x-3 space-y-0 px-2 py-1.5 hover:bg-accent rounded-sm">
-                                      <FormControl><Checkbox checked={(_a = field.value) === null || _a === void 0 ? void 0 : _a.includes(group.id)} onCheckedChange={(checked) => checked ? field.onChange([...(field.value || []), group.id]) : field.onChange((field.value || []).filter(v => v !== group.id))}/></FormControl>
+                              {filteredGroups.map(group => (<FormField key={group.id} control={form.control} name="groupIds" render={({ field }) => (<FormItem className="flex flex-row items-center space-x-3 space-y-0 px-2 py-1.5 hover:bg-accent rounded-sm">
+                                      <FormControl><Checkbox checked={field.value?.includes(group.id)} onCheckedChange={(checked) => checked ? field.onChange([...(field.value || []), group.id]) : field.onChange((field.value || []).filter(v => v !== group.id))}/></FormControl>
                                       <FormLabel className="text-sm font-normal cursor-pointer flex-grow">{group.name}</FormLabel>
-                                    </FormItem>);
-            }}/>))}
+                                    </FormItem>)}/>))}
                             </ScrollArea>
                           </PopoverContent>
                         </Popover>
@@ -152,11 +149,10 @@ export function AddUserModal({ isOpen, onOpenChange, onAddUser }) {
                           {groupedPermissions.map(group => (<div key={group.category}>
                               <h4 className="font-medium text-sm text-muted-foreground mb-1.5">{group.category}</h4>
                               {group.permissions.map((module) => (<FormField key={module.id} control={form.control} name="modulePermissions" render={({ field }) => {
-                    var _a;
-                    const checked = (_a = field.value) === null || _a === void 0 ? void 0 : _a.includes(module.id);
+                    const checked = field.value?.includes(module.id);
                     return (<FormItem className="flex flex-row items-center space-x-4 mb-3">
                                         <FormControl>
-                                          <Toggle checked={checked} onCheckedChange={(checked) => checked ? field.onChange([...(field.value || []), module.id]) : field.onChange((field.value || []).filter(v => v !== module.id))} variant="success"/>
+                                          <Toggle checked={checked} onCheckedChange={(checked) => checked ? field.onChange([...(field.value || []), module.id]) : field.onChange((field.value || []).filter(v => v !== module.id))}/>
                                         </FormControl>
                                         <div className="flex flex-col">
                                           <FormLabel className="text-sm font-medium">{module.label}</FormLabel>

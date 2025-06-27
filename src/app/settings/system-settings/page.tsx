@@ -68,8 +68,7 @@ export default function SystemSettingsPage() {
     }
   }, [sessionStatus, pathname, fetchSystemSettings]);
 
-  const handleSave = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
+  const handleSave = async () => {
     setIsSaving(true);
     const settingsToUpdate = [
       { key: 'maxConcurrentProcessors', value: String(maxConcurrentProcessors) },

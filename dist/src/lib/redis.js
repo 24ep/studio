@@ -19,7 +19,7 @@ function initializeRedisClient() {
     client.on('error', (err) => {
         console.error('Redis Client Error:', err);
         // When a persistent error occurs, reset the connection promise to allow for a fresh reconnect attempt
-        if ((redisClient === null || redisClient === void 0 ? void 0 : redisClient.isOpen) === false) {
+        if (redisClient?.isOpen === false) {
             redisClient = null;
             connectionPromise = null;
         }
@@ -93,7 +93,15 @@ export async function updateUserPresence(userId, presence) {
         if (!client)
             return;
         const key = `${REALTIME_KEYS.PRESENCE}:${userId}`;
-        const fullPresence = Object.assign({ userId, userName: presence.userName || '', userRole: presence.userRole || '', currentPage: presence.currentPage || '', lastActivity: Date.now(), isOnline: true }, presence);
+        const fullPresence = {
+            userId,
+            userName: presence.userName || '',
+            userRole: presence.userRole || '',
+            currentPage: presence.currentPage || '',
+            lastActivity: Date.now(),
+            isOnline: true,
+            ...presence,
+        };
         await client.hSet(key, Object.fromEntries(Object.entries(fullPresence).map(([k, v]) => [k, String(v)])));
         await client.expire(key, 300); // Expire after 5 minutes of inactivity
     }
@@ -149,7 +157,11 @@ export async function publishCollaborationEvent(event) {
         const client = await getRedisClient();
         if (!client)
             return;
-        const fullEvent = Object.assign(Object.assign({}, event), { id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`, timestamp: Date.now() });
+        const fullEvent = {
+            ...event,
+            id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+            timestamp: Date.now(),
+        };
         const key = `${REALTIME_KEYS.COLLABORATION}:${event.entityType}:${event.entityId}`;
         await client.lPush(key, JSON.stringify(fullEvent));
         await client.lTrim(key, 0, 99); // Keep only last 100 events
@@ -183,7 +195,12 @@ export async function createNotification(notification) {
         const client = await getRedisClient();
         if (!client)
             return;
-        const fullNotification = Object.assign(Object.assign({}, notification), { id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`, timestamp: Date.now(), read: false });
+        const fullNotification = {
+            ...notification,
+            id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+            timestamp: Date.now(),
+            read: false,
+        };
         const key = `${REALTIME_KEYS.NOTIFICATIONS}:${notification.targetUserId || 'global'}`;
         await client.lPush(key, JSON.stringify(fullNotification));
         await client.lTrim(key, 0, 999); // Keep last 1000 notifications
@@ -207,8 +224,8 @@ export async function getUserNotifications(userId, limit = 50) {
             client.lRange(globalKey, 0, limit - 1),
         ]);
         const allNotifications = [
-            ...userNotifications.map(n => (Object.assign(Object.assign({}, JSON.parse(n)), { isGlobal: false }))),
-            ...globalNotifications.map(n => (Object.assign(Object.assign({}, JSON.parse(n)), { isGlobal: true }))),
+            ...userNotifications.map(n => ({ ...JSON.parse(n), isGlobal: false })),
+            ...globalNotifications.map(n => ({ ...JSON.parse(n), isGlobal: true })),
         ];
         return allNotifications
             .sort((a, b) => b.timestamp - a.timestamp)

@@ -25,7 +25,6 @@ const stageFormSchema = z.object({
     sort_order: z.coerce.number().int().optional().default(0),
 });
 export default function RecruitmentStagesPage() {
-    var _a;
     const { data: session, status: sessionStatus } = useSession();
     const router = useRouter();
     const pathname = usePathname();
@@ -66,7 +65,7 @@ export default function RecruitmentStagesPage() {
                 throw new Error(messageFromServer);
             }
             const data = await response.json();
-            setStages(data.sort((a, b) => { var _a, _b; return ((_a = a.sort_order) !== null && _a !== void 0 ? _a : Infinity) - ((_b = b.sort_order) !== null && _b !== void 0 ? _b : Infinity) || a.name.localeCompare(b.name); }));
+            setStages(data.sort((a, b) => (a.sort_order ?? Infinity) - (b.sort_order ?? Infinity) || a.name.localeCompare(b.name)));
         }
         catch (error) {
             console.error('Error fetching recruitment stages:', error);
@@ -77,12 +76,11 @@ export default function RecruitmentStagesPage() {
         }
     }, [sessionStatus, pathname]);
     useEffect(() => {
-        var _a;
         if (sessionStatus === 'unauthenticated') {
             signIn(undefined, { callbackUrl: pathname });
         }
         else if (sessionStatus === 'authenticated') {
-            if (!session || (session.user.role !== 'Admin' && !((_a = session.user.modulePermissions) === null || _a === void 0 ? void 0 : _a.includes('RECRUITMENT_STAGES_MANAGE')))) {
+            if (!session || (session.user.role !== 'Admin' && !session.user.modulePermissions?.includes('RECRUITMENT_STAGES_MANAGE'))) {
                 setFetchError("You do not have permission to manage recruitment stages.");
                 setIsLoading(false);
             }
@@ -104,8 +102,8 @@ export default function RecruitmentStagesPage() {
     const handleFormSubmit = async (data) => {
         const url = editingStage ? `/api/settings/recruitment-stages/${editingStage.id}` : '/api/settings/recruitment-stages';
         const method = editingStage ? 'PUT' : 'POST';
-        const payload = Object.assign({}, data);
-        if ((editingStage === null || editingStage === void 0 ? void 0 : editingStage.is_system) && editingStage.name === data.name) {
+        const payload = { ...data };
+        if (editingStage?.is_system && editingStage.name === data.name) {
             delete payload.name;
         }
         try {
@@ -244,7 +242,7 @@ export default function RecruitmentStagesPage() {
                 <Droppable droppableId="stages-table">
                   {(provided) => (<TableBody ref={provided.innerRef} {...provided.droppableProps}>
                       {stages.map((stage, index) => (<Draggable key={stage.id} draggableId={stage.id} index={index}>
-                          {(provided, snapshot) => (<TableRow ref={provided.innerRef} {...provided.draggableProps} style={Object.assign(Object.assign({}, provided.draggableProps.style), { background: snapshot.isDragging ? '#f3f4f6' : undefined })}>
+                          {(provided, snapshot) => (<TableRow ref={provided.innerRef} {...provided.draggableProps} style={{ ...provided.draggableProps.style, background: snapshot.isDragging ? '#f3f4f6' : undefined }}>
                               <TableCell className="py-1 px-2" {...provided.dragHandleProps}>
                                 <span className="cursor-move">☰</span>
                               </TableCell>
@@ -281,9 +279,9 @@ export default function RecruitmentStagesPage() {
           <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-4 py-2">
             <div>
               <Label htmlFor="name">Name *</Label>
-              <Input id="name" {...form.register('name')} disabled={!!(editingStage === null || editingStage === void 0 ? void 0 : editingStage.is_system)}/>
-              {((_a = form.formState.errors) === null || _a === void 0 ? void 0 : _a.name) && <p className="text-sm text-destructive mt-1">{form.formState.errors.name.message}</p>}
-              {(editingStage === null || editingStage === void 0 ? void 0 : editingStage.is_system) && <p className="text-xs text-muted-foreground mt-1">System stage names cannot be changed.</p>}
+              <Input id="name" {...form.register('name')} disabled={!!editingStage?.is_system}/>
+              {form.formState.errors?.name && <p className="text-sm text-destructive mt-1">{form.formState.errors.name.message}</p>}
+              {editingStage?.is_system && <p className="text-xs text-muted-foreground mt-1">System stage names cannot be changed.</p>}
             </div>
             <div><Label htmlFor="description">Description</Label><Textarea id="description" {...form.register('description')}/></div>
             <div><Label htmlFor="sort_order">Sort Order</Label><Input id="sort_order" type="number" {...form.register('sort_order')}/></div>
@@ -303,7 +301,7 @@ export default function RecruitmentStagesPage() {
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center"><AlertCircle className="mr-2 h-5 w-5 text-amber-500"/>Stage In Use</AlertDialogTitle>
             <AlertDialogDescription>
-              The stage &quot;<strong>{stageToDelete === null || stageToDelete === void 0 ? void 0 : stageToDelete.name}</strong>&quot; is currently in use by candidates or in transition history.
+              The stage &quot;<strong>{stageToDelete?.name}</strong>&quot; is currently in use by candidates or in transition history.
               To delete it, please select a new stage to migrate all associated records to.
             </AlertDialogDescription>
           </AlertDialogHeader>
@@ -314,7 +312,7 @@ export default function RecruitmentStagesPage() {
                 <SelectValue placeholder="Choose a new stage..."/>
               </SelectTrigger>
               <SelectContent>
-                {stages.filter(s => s.id !== (stageToDelete === null || stageToDelete === void 0 ? void 0 : stageToDelete.id) && !s.is_system).map(s => (<SelectItem key={s.id} value={s.name}>{s.name}</SelectItem>))}
+                {stages.filter(s => s.id !== stageToDelete?.id && !s.is_system).map(s => (<SelectItem key={s.id} value={s.name}>{s.name}</SelectItem>))}
               </SelectContent>
             </Select>
           </div>

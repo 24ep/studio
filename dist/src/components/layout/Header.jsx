@@ -58,7 +58,7 @@ export function Header({ pageTitle: initialPageTitle }) {
         document.documentElement.classList.toggle('dark');
     };
     const handleEditProfile = async (userId, data) => {
-        if (!(session === null || session === void 0 ? void 0 : session.user))
+        if (!session?.user)
             return;
         try {
             const response = await fetch(`/api/users/${userId}`, {
@@ -96,7 +96,7 @@ export function Header({ pageTitle: initialPageTitle }) {
         </div>
       </header>);
     }
-    const user = session === null || session === void 0 ? void 0 : session.user;
+    const user = session?.user;
     return (<>
       <header className="flex h-16 items-center justify-between border-b bg-card px-4 md:px-6 sticky top-0 z-30">
         <div className="flex items-center gap-2">
@@ -147,7 +147,7 @@ export function Header({ pageTitle: initialPageTitle }) {
       </header>
       {user && (<>
           <ChangePasswordModal isOpen={isChangePasswordModalOpen} onOpenChange={setIsChangePasswordModalOpen}/>
-          <EditUserModal isOpen={isEditProfileModalOpen} onOpenChange={setIsEditProfileModalOpen} onEditUser={handleEditProfile} user={session === null || session === void 0 ? void 0 : session.user} isSelfEdit={true}/>
+          <EditUserModal isOpen={isEditProfileModalOpen} onOpenChange={setIsEditProfileModalOpen} onEditUser={handleEditProfile} user={session?.user} isSelfEdit={true}/>
         </>)}
     </>);
 }

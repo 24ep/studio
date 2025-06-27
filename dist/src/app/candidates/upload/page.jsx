@@ -96,14 +96,13 @@ function UploadPageContent() {
             const { results } = await uploadRes.json();
             // 2. For each successful upload, POST metadata to queue
             await Promise.all(results.map(async (result, idx) => {
-                var _a;
                 if (result.status === 'success') {
                     await fetch('/api/upload-queue', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
                             file_name: result.file_name,
-                            file_size: ((_a = stagedFiles[idx]) === null || _a === void 0 ? void 0 : _a.size) || 0,
+                            file_size: stagedFiles[idx]?.size || 0,
                             status: 'queued',
                             source: 'bulk',
                             upload_id: batchId,
@@ -145,7 +144,7 @@ function UploadPageContent() {
               Drag and drop PDF files here, or click to select files. Max 10MB each.
             </DialogDescription>
           </DialogHeader>
-          <div className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${dragActive ? "border-primary bg-primary/10" : "border-input"}`} onDrop={handleDrop} onDragOver={handleDragOver} onDragLeave={handleDragLeave} onClick={() => { var _a; return (_a = document.getElementById("bulk-upload-input")) === null || _a === void 0 ? void 0 : _a.click(); }} style={{ cursor: "pointer" }}>
+          <div className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${dragActive ? "border-primary bg-primary/10" : "border-input"}`} onDrop={handleDrop} onDragOver={handleDragOver} onDragLeave={handleDragLeave} onClick={() => document.getElementById("bulk-upload-input")?.click()} style={{ cursor: "pointer" }}>
             <Input id="bulk-upload-input" type="file" accept="application/pdf" multiple className="hidden" onChange={handleInputChange}/>
             <p className="text-muted-foreground">Drop PDF files here or click to select</p>
           </div>

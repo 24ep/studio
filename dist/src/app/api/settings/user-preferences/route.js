@@ -62,9 +62,8 @@ const saveUserPreferencesSchema = z.array(userPreferenceSchema);
  *         description: Server error
  */
 export async function GET(request) {
-    var _a;
     const session = await getServerSession(authOptions);
-    if (!((_a = session === null || session === void 0 ? void 0 : session.user) === null || _a === void 0 ? void 0 : _a.id)) {
+    if (!session?.user?.id) {
         return NextResponse.json({ message: "Unauthorized: No active session" }, { status: 401 });
     }
     const userId = session.user.id;
@@ -79,9 +78,8 @@ export async function GET(request) {
     }
 }
 export async function POST(request) {
-    var _a;
     const session = await getServerSession(authOptions);
-    if (!((_a = session === null || session === void 0 ? void 0 : session.user) === null || _a === void 0 ? void 0 : _a.id)) {
+    if (!session?.user?.id) {
         return NextResponse.json({ message: "Unauthorized: No active session" }, { status: 401 });
     }
     // Optional: Add permission check if needed, though users typically manage their own prefs.

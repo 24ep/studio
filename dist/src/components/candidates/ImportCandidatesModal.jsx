@@ -17,8 +17,7 @@ export function ImportCandidatesModal({ isOpen, onOpenChange, onImportSuccess })
     const [selectedFile, setSelectedFile] = useState(null);
     const [isImporting, setIsImporting] = useState(false);
     const handleFileChange = (event) => {
-        var _a;
-        const file = (_a = event.target.files) === null || _a === void 0 ? void 0 : _a[0];
+        const file = event.target.files?.[0];
         if (file) {
             const fileType = file.type;
             const fileName = file.name.toLowerCase();

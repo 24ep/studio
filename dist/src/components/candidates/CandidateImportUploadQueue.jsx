@@ -1,12 +1,14 @@
 "use client";
 import React, { createContext, useContext, useState, useCallback, useEffect } from "react";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Loader2, XCircle, RotateCcw, Eye, X } from "lucide-react";
+import { Loader2, XCircle, CheckCircle, FileText, RotateCcw, Eye, X } from "lucide-react";
 import { Table, TableHeader, TableBody, TableHead, TableRow, TableCell } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import { MINIO_PUBLIC_BASE_URL, MINIO_BUCKET } from '@/lib/minio-constants';
 import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from "@/components/ui/alert-dialog";
 import { useToast } from '@/hooks/use-toast';
+import { addDays, format, isAfter, isBefore, parseISO, subDays } from 'date-fns';
 const CandidateQueueContext = createContext(undefined);
 export function useCandidateQueue() {
     const ctx = useContext(CandidateQueueContext);
@@ -20,7 +22,7 @@ export const CandidateQueueProvider = ({ children }) => {
         setJobs((prev) => [...prev, job]);
     }, []);
     const updateJob = useCallback((id, update) => {
-        setJobs((prev) => prev.map((j) => (j.id === id ? Object.assign(Object.assign({}, j), update) : j)));
+        setJobs((prev) => prev.map((j) => (j.id === id ? { ...j, ...update } : j)));
     }, []);
     const removeJob = useCallback((id) => {
         setJobs((prev) => prev.filter((j) => j.id !== id));
@@ -47,6 +49,11 @@ export const CandidateImportUploadQueue = () => {
     const [cancelId, setCancelId] = useState(null);
     const [cancelLoading, setCancelLoading] = useState(false);
     const { success, error } = useToast();
+    const [dateRange, setDateRange] = useState(() => {
+        const end = new Date();
+        const start = subDays(end, 30);
+        return { start, end };
+    });
     // Fetch paginated jobs
     const fetchJobs = useCallback(async () => {
         let isMounted = true;
@@ -79,7 +86,7 @@ export const CandidateImportUploadQueue = () => {
                     fetchJobs();
                 }
             }
-            catch (_a) { }
+            catch { }
         };
         return () => ws.close();
     }, [fetchJobs]);
@@ -93,10 +100,9 @@ export const CandidateImportUploadQueue = () => {
     }
     // Filtering logic (client-side for now)
     const filteredJobs = jobs.filter(job => {
-        var _a;
         if (job.source !== "bulk")
             return false;
-        const matchesName = (_a = job.file_name) === null || _a === void 0 ? void 0 : _a.toLowerCase().includes(filter.toLowerCase());
+        const matchesName = job.file_name?.toLowerCase().includes(filter.toLowerCase());
         const matchesStatus = statusFilter ? job.status === statusFilter : true;
         return matchesName && matchesStatus;
     });
@@ -116,7 +122,91 @@ export const CandidateImportUploadQueue = () => {
             setBulkDeleteIds([]);
         }
     };
+    // Helper to check if a date is in range
+    function isInRange(dateStr) {
+        if (!dateStr)
+            return false;
+        const date = typeof dateStr === 'string' ? parseISO(dateStr) : dateStr;
+        return isAfter(date, dateRange.start) && isBefore(date, addDays(dateRange.end, 1));
+    }
+    // Status counts
+    const numQueued = jobs.filter(j => j.source === 'bulk' && j.status === 'queued').length;
+    const numInProgress = jobs.filter(j => j.source === 'bulk' && (j.status === 'uploading' || j.status === 'importing')).length;
+    const numSuccess = jobs.filter(j => j.source === 'bulk' && j.status === 'success' && isInRange(j.completed_date)).length;
+    const numError = jobs.filter(j => j.source === 'bulk' && j.status === 'error' && isInRange(j.completed_date)).length;
     return (<div className="mb-6">
+      {/* Summary Status Cards */}
+      <div className="mb-6">
+        <div className="font-semibold text-lg mb-4">Bulk Upload Summary</div>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+          <Card className="shadow-sm hover:shadow-md transition-shadow duration-200">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Queued</p>
+                  <p className="text-2xl font-bold text-foreground">{numQueued}</p>
+                </div>
+                <div className="h-8 w-8 rounded-full bg-gray-400 flex items-center justify-center">
+                  <span className="text-white text-xs font-bold">Q</span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          
+          <Card className="shadow-sm hover:shadow-md transition-shadow duration-200">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">In Progress</p>
+                  <p className="text-2xl font-bold text-foreground">{numInProgress}</p>
+                </div>
+                <div className="h-8 w-8 rounded-full bg-blue-500 flex items-center justify-center">
+                  <span className="text-white text-xs font-bold">P</span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          
+          <Card className="shadow-sm hover:shadow-md transition-shadow duration-200">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Success</p>
+                  <p className="text-2xl font-bold text-foreground">{numSuccess}</p>
+                </div>
+                <div className="h-8 w-8 rounded-full bg-green-500 flex items-center justify-center">
+                  <CheckCircle className="h-4 w-4 text-white"/>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          
+          <Card className="shadow-sm hover:shadow-md transition-shadow duration-200">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Error</p>
+                  <p className="text-2xl font-bold text-foreground">{numError}</p>
+                </div>
+                <div className="h-8 w-8 rounded-full bg-red-500 flex items-center justify-center">
+                  <XCircle className="h-4 w-4 text-white"/>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+        
+        {/* Date Range Filter */}
+        <div className="flex flex-col gap-1">
+          <label className="text-sm font-medium">Date Range (for Success/Error counts):</label>
+          <div className="flex gap-2 items-center">
+            <input type="date" value={format(dateRange.start, 'yyyy-MM-dd')} onChange={e => setDateRange(r => ({ ...r, start: new Date(e.target.value) }))} className="border rounded px-2 py-1 text-sm"/>
+            <span>-</span>
+            <input type="date" value={format(dateRange.end, 'yyyy-MM-dd')} onChange={e => setDateRange(r => ({ ...r, end: new Date(e.target.value) }))} className="border rounded px-2 py-1 text-sm"/>
+          </div>
+        </div>
+      </div>
+      
       <div className="mb-2 font-semibold">All Upload Jobs: {totalBulkJobs}</div>
       <div className="flex flex-col md:flex-row md:items-center gap-2 mb-4">
         <Input placeholder="Filter by file name..." value={filter} onChange={e => setFilter(e.target.value)} className="max-w-xs"/>
@@ -174,12 +264,44 @@ export const CandidateImportUploadQueue = () => {
                   </TableCell>
                   <TableCell>{formatBytes(item.file_size)}</TableCell>
                   <TableCell>
-                    <span className="text-muted-foreground capitalize">{item.status}</span>
+                    <span className="text-muted-foreground capitalize">
+                      {(() => {
+                const status = item.status;
+                let color = '';
+                switch (status) {
+                    case 'queued':
+                        color = 'bg-gray-400 text-white';
+                        break;
+                    case 'uploading':
+                        color = 'bg-blue-500 text-white';
+                        break;
+                    case 'importing':
+                        color = 'bg-blue-400 text-white';
+                        break;
+                    case 'success':
+                        color = 'bg-green-500 text-white';
+                        break;
+                    case 'error':
+                        color = 'bg-red-500 text-white';
+                        break;
+                    case 'cancelled':
+                        color = 'bg-yellow-400 text-black';
+                        break;
+                    default: color = 'bg-gray-300 text-black';
+                }
+                return (<span className={`inline-block px-2 py-0.5 rounded text-xs font-semibold ${color}`}>{status}</span>);
+            })()}
+                    </span>
                   </TableCell>
                   <TableCell>{item.completed_date ? new Date(item.completed_date).toLocaleString() : '-'}</TableCell>
                   <TableCell>{item.upload_date ? new Date(item.upload_date).toLocaleString() : '-'}</TableCell>
                   <TableCell>{item.upload_id || '-'}</TableCell>
                   <TableCell className="flex gap-1">
+                    {item.file_path && (<Button asChild variant="ghost" size="icon" title="Download CV">
+                        <a href={`${MINIO_PUBLIC_BASE_URL}/${MINIO_BUCKET}/${item.file_path}`} target="_blank" rel="noopener noreferrer" download={item.file_name}>
+                          <FileText className="h-4 w-4 text-primary"/>
+                        </a>
+                      </Button>)}
                     {item.status === "error" && (<Button variant="ghost" size="icon" onClick={() => setShowErrorLogId(item.id)} title="View error log">
                         <Eye className="h-4 w-4 text-destructive"/>
                       </Button>)}

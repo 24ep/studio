@@ -83,9 +83,8 @@ const preferencesSchema = z.object({
     positionAttributes: z.record(attributePreferenceSchema),
 });
 export async function GET(request) {
-    var _a, _b, _c;
     const session = await getServerSession(authOptions);
-    if (!((_a = session === null || session === void 0 ? void 0 : session.user) === null || _a === void 0 ? void 0 : _a.id)) {
+    if (!session?.user?.id) {
         return NextResponse.json({ message: "Unauthorized: No active session" }, { status: 401 });
     }
     const userId = session.user.id;
@@ -99,13 +98,13 @@ export async function GET(request) {
             if (row.modelType === 'Candidate') {
                 prefs.candidateAttributes[row.attributeKey] = {
                     uiPreference: row.uiPreference,
-                    customNote: (_b = row.customNote) !== null && _b !== void 0 ? _b : '',
+                    customNote: row.customNote ?? '',
                 };
             }
             else if (row.modelType === 'Position') {
                 prefs.positionAttributes[row.attributeKey] = {
                     uiPreference: row.uiPreference,
-                    customNote: (_c = row.customNote) !== null && _c !== void 0 ? _c : '',
+                    customNote: row.customNote ?? '',
                 };
             }
         }
@@ -118,9 +117,8 @@ export async function GET(request) {
     }
 }
 export async function POST(request) {
-    var _a, _b, _c;
     const session = await getServerSession(authOptions);
-    if (!((_a = session === null || session === void 0 ? void 0 : session.user) === null || _a === void 0 ? void 0 : _a.id)) {
+    if (!session?.user?.id) {
         return NextResponse.json({ message: "Unauthorized: No active session" }, { status: 401 });
     }
     const userId = session.user.id;
@@ -143,7 +141,7 @@ export async function POST(request) {
             modelType: 'Candidate',
             attributeKey,
             uiPreference: value.uiPreference,
-            customNote: (_b = value.customNote) !== null && _b !== void 0 ? _b : '',
+            customNote: value.customNote ?? '',
         });
     }
     for (const [attributeKey, value] of Object.entries(positionAttributes)) {
@@ -152,7 +150,7 @@ export async function POST(request) {
             modelType: 'Position',
             attributeKey,
             uiPreference: value.uiPreference,
-            customNote: (_c = value.customNote) !== null && _c !== void 0 ? _c : '',
+            customNote: value.customNote ?? '',
         });
     }
     const client = await getPool().connect();

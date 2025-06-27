@@ -74,18 +74,22 @@ const createCandidateSchema = z.object({
     resumePath: z.string().optional().nullable(),
 });
 export async function POST(request) {
-    var _a, _b, _c;
     const session = await getServerSession(authOptions);
-    const actingUserId = (_a = session === null || session === void 0 ? void 0 : session.user) === null || _a === void 0 ? void 0 : _a.id;
-    const actingUserName = ((_b = session === null || session === void 0 ? void 0 : session.user) === null || _b === void 0 ? void 0 : _b.name) || ((_c = session === null || session === void 0 ? void 0 : session.user) === null || _c === void 0 ? void 0 : _c.email) || 'System';
+    const actingUserId = session?.user?.id;
+    const actingUserName = session?.user?.name || session?.user?.email || 'System';
     if (!actingUserId) {
         return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
+    }
+    // Check if user has permission to create candidates
+    if (session.user.role !== 'Admin' && !session.user.modulePermissions?.includes('CANDIDATES_MANAGE')) {
+        await logAudit('WARN', `Forbidden attempt to create candidate by ${actingUserName}.`, 'API:Candidates:Create', actingUserId);
+        return NextResponse.json({ message: 'Forbidden: Insufficient permissions to create candidates' }, { status: 403 });
     }
     let body;
     try {
         body = await request.json();
     }
-    catch (_d) {
+    catch {
         return NextResponse.json({ message: 'Invalid JSON body' }, { status: 400 });
     }
     const validationResult = createCandidateSchema.safeParse(body);
@@ -131,15 +135,19 @@ export async function POST(request) {
     }
 }
 export async function GET(request) {
-    var _a, _b;
     const session = await getServerSession(authOptions);
-    if (!((_a = session === null || session === void 0 ? void 0 : session.user) === null || _a === void 0 ? void 0 : _a.id)) {
+    if (!session?.user?.id) {
         console.error('Candidates API: No session or user ID found', {
             hasSession: !!session,
-            hasUser: !!(session === null || session === void 0 ? void 0 : session.user),
-            userId: (_b = session === null || session === void 0 ? void 0 : session.user) === null || _b === void 0 ? void 0 : _b.id
+            hasUser: !!session?.user,
+            userId: session?.user?.id
         });
         return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
+    }
+    // Check if user has permission to view candidates
+    if (session.user.role !== 'Admin' && !session.user.modulePermissions?.includes('CANDIDATES_VIEW')) {
+        await logAudit('WARN', `Forbidden attempt to view candidates by ${session.user.name || session.user.email}.`, 'API:Candidates:Get', session.user.id);
+        return NextResponse.json({ message: 'Forbidden: Insufficient permissions to view candidates' }, { status: 403 });
     }
     const { searchParams } = new URL(request.url);
     const page = parseInt(searchParams.get('page') || '1', 10);
@@ -171,6 +179,7 @@ export async function GET(request) {
         queryParams.push(`%${filters.searchTerm}%`);
         paramIndex++;
     }
+    // If user is a Recruiter, only show their assigned candidates
     if (session.user.role === 'Recruiter') {
         whereClauses.push(`c."recruiterId" = $${paramIndex++}`);
         queryParams.push(session.user.id);
@@ -191,7 +200,12 @@ export async function GET(request) {
         const totalQuery = `SELECT COUNT(*) FROM "Candidate" c ${whereString};`;
         const totalResult = await client.query(totalQuery, queryParams.slice(0, paramIndex - 1));
         const total = parseInt(totalResult.rows[0].count, 10);
-        const candidates = candidatesResult.rows.map(row => (Object.assign(Object.assign({}, row), { custom_attributes: row.customAttributes || {}, position: row.positionId ? { title: row.positionTitle } : null, recruiter: row.recruiterId ? { name: row.recruiterName } : null })));
+        const candidates = candidatesResult.rows.map(row => ({
+            ...row,
+            custom_attributes: row.customAttributes || {}, // Note: column name is customAttributes in DB
+            position: row.positionId ? { title: row.positionTitle } : null,
+            recruiter: row.recruiterId ? { name: row.recruiterName } : null,
+        }));
         return NextResponse.json({
             data: candidates,
             pagination: {

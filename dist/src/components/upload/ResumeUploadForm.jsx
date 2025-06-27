@@ -16,7 +16,7 @@ const resumeUploadSchema = z.object({
     resume: z
         .custom()
         .refine((files) => files && files.length === 1, 'Exactly one resume file is required.')
-        .refine((files) => { var _a; return !!files && ((_a = files[0]) === null || _a === void 0 ? void 0 : _a.size) <= MAX_FILE_SIZE; }, `File size should be less than ${MAX_FILE_SIZE / (1024 * 1024)}MB.`)
+        .refine((files) => !!files && files[0]?.size <= MAX_FILE_SIZE, `File size should be less than ${MAX_FILE_SIZE / (1024 * 1024)}MB.`)
         .refine((files) => !!files && files[0] && ACCEPTED_FILE_TYPES.includes(files[0].type), '.pdf, .doc, .docx files are accepted.'),
 });
 export function ResumeUploadForm({ candidateId, onUploadSuccess, currentResumePath, cardMode = true }) {
@@ -33,8 +33,7 @@ export function ResumeUploadForm({ candidateId, onUploadSuccess, currentResumePa
         form.reset({ resume: undefined });
     }, [form, candidateId]);
     const onSubmit = async (data) => {
-        var _a;
-        if (!candidateId || !((_a = data.resume) === null || _a === void 0 ? void 0 : _a[0])) {
+        if (!candidateId || !data.resume?.[0]) {
             toast.error("Candidate ID and resume file are required.");
             return;
         }
@@ -79,8 +78,7 @@ export function ResumeUploadForm({ candidateId, onUploadSuccess, currentResumePa
         }
     };
     const handleFileChange = (event) => {
-        var _a;
-        const file = (_a = event.target.files) === null || _a === void 0 ? void 0 : _a[0];
+        const file = event.target.files?.[0];
         if (file) {
             setSelectedFile(file);
             const dataTransfer = new DataTransfer();

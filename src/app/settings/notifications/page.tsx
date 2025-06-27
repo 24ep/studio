@@ -195,7 +195,6 @@ export default function NotificationSettingsPage() {
                               id={`enabled-${event.id}-${channel.channelId}`}
                               checked={channel.isEnabled}
                               onCheckedChange={(checked) => handleSettingChange(event.id, channel.channelId, 'isEnabled', checked)}
-                              variant="success"
                             />
                           </div>
                           {channel.channelKey === 'webhook' && channel.isEnabled && (

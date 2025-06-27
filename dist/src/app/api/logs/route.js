@@ -148,9 +148,8 @@ export async function POST(request) {
  *         description: Unauthorized
  */
 export async function GET(request) {
-    var _a;
     const session = await getServerSession(authOptions);
-    if (!((_a = session === null || session === void 0 ? void 0 : session.user) === null || _a === void 0 ? void 0 : _a.id)) {
+    if (!session?.user?.id) {
         return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
     const { searchParams } = new URL(request.url);

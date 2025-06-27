@@ -52,7 +52,7 @@ const createInitialSidebarColors = () => ({
 });
 // Color conversion utilities
 function parseHslString(hslString) {
-    const match = hslString === null || hslString === void 0 ? void 0 : hslString.match(/^(\d+)\s+(\d+)%\s+(\d+)%$/);
+    const match = hslString?.match(/^(\d+)\s+(\d+)%\s+(\d+)%$/);
     if (!match)
         return null;
     return {
@@ -244,11 +244,10 @@ export default function PreferencesSettingsPage() {
     }, [sessionStatus, fetchSystemSettings]);
     // Event handlers
     const handleSidebarColorChange = (key, value) => {
-        setSidebarColors(prev => (Object.assign(Object.assign({}, prev), { [key]: value })));
+        setSidebarColors(prev => ({ ...prev, [key]: value }));
     };
     const handleLogoFileChange = (event, type) => {
-        var _a;
-        const file = (_a = event.target.files) === null || _a === void 0 ? void 0 : _a[0];
+        const file = event.target.files?.[0];
         if (!file)
             return;
         if (file.size > 500 * 1024) {
@@ -257,8 +256,7 @@ export default function PreferencesSettingsPage() {
         }
         const reader = new FileReader();
         reader.onload = (e) => {
-            var _a;
-            const dataUrl = (_a = e.target) === null || _a === void 0 ? void 0 : _a.result;
+            const dataUrl = e.target?.result;
             if (type === 'appLogo') {
                 setSelectedLogoFile(file);
                 setLogoPreviewUrl(dataUrl);
@@ -335,7 +333,7 @@ export default function PreferencesSettingsPage() {
             if (selectedLogoFile) {
                 logoDataUrl = await new Promise((resolve) => {
                     const reader = new FileReader();
-                    reader.onload = (e) => { var _a; return resolve((_a = e.target) === null || _a === void 0 ? void 0 : _a.result); };
+                    reader.onload = (e) => resolve(e.target?.result);
                     reader.readAsDataURL(selectedLogoFile);
                 });
                 await saveSpecificSetting('appLogoDataUrl', logoDataUrl);
@@ -347,7 +345,7 @@ export default function PreferencesSettingsPage() {
             if (selectedLoginBgFile) {
                 loginBgDataUrl = await new Promise((resolve) => {
                     const reader = new FileReader();
-                    reader.onload = (e) => { var _a; return resolve((_a = e.target) === null || _a === void 0 ? void 0 : _a.result); };
+                    reader.onload = (e) => resolve(e.target?.result);
                     reader.readAsDataURL(selectedLoginBgFile);
                 });
                 await saveSpecificSetting('loginPageBackgroundImageUrl', loginBgDataUrl);
@@ -423,7 +421,18 @@ export default function PreferencesSettingsPage() {
             [`sidebarBorder${suffix}`]: DEFAULT_SIDEBAR_COLORS_BASE[`sidebarBorder${suffix}`],
         };
         setSidebarColors(prev => {
-            const updated = Object.assign(Object.assign({}, prev), { [`sidebarBgStart${suffix}`]: defaultColorsForTheme[`sidebarBgStart${suffix}`], [`sidebarBgEnd${suffix}`]: defaultColorsForTheme[`sidebarBgEnd${suffix}`], [`sidebarText${suffix}`]: defaultColorsForTheme[`sidebarText${suffix}`], [`sidebarActiveBgStart${suffix}`]: defaultColorsForTheme[`sidebarActiveBgStart${suffix}`], [`sidebarActiveBgEnd${suffix}`]: defaultColorsForTheme[`sidebarActiveBgEnd${suffix}`], [`sidebarActiveText${suffix}`]: defaultColorsForTheme[`sidebarActiveText${suffix}`], [`sidebarHoverBg${suffix}`]: defaultColorsForTheme[`sidebarHoverBg${suffix}`], [`sidebarHoverText${suffix}`]: defaultColorsForTheme[`sidebarHoverText${suffix}`], [`sidebarBorder${suffix}`]: defaultColorsForTheme[`sidebarBorder${suffix}`] });
+            const updated = {
+                ...prev,
+                [`sidebarBgStart${suffix}`]: defaultColorsForTheme[`sidebarBgStart${suffix}`],
+                [`sidebarBgEnd${suffix}`]: defaultColorsForTheme[`sidebarBgEnd${suffix}`],
+                [`sidebarText${suffix}`]: defaultColorsForTheme[`sidebarText${suffix}`],
+                [`sidebarActiveBgStart${suffix}`]: defaultColorsForTheme[`sidebarActiveBgStart${suffix}`],
+                [`sidebarActiveBgEnd${suffix}`]: defaultColorsForTheme[`sidebarActiveBgEnd${suffix}`],
+                [`sidebarActiveText${suffix}`]: defaultColorsForTheme[`sidebarActiveText${suffix}`],
+                [`sidebarHoverBg${suffix}`]: defaultColorsForTheme[`sidebarHoverBg${suffix}`],
+                [`sidebarHoverText${suffix}`]: defaultColorsForTheme[`sidebarHoverText${suffix}`],
+                [`sidebarBorder${suffix}`]: defaultColorsForTheme[`sidebarBorder${suffix}`],
+            };
             setSidebarCSSVars(updated);
             return updated;
         });
@@ -471,7 +480,7 @@ export default function PreferencesSettingsPage() {
                 const found = data.items.some((item) => item.family.toLowerCase() === appFontFamily.toLowerCase());
                 setFontValidationWarning(found ? null : 'Font not found on Google Fonts.');
             }
-            catch (_a) {
+            catch {
                 setFontValidationWarning(null); // Fail silently
             }
         }, 500);

@@ -18,21 +18,18 @@ const DEFAULT_PRIMARY_GRADIENT_START_SIGNIN = "179 67% 66%";
 const DEFAULT_PRIMARY_GRADIENT_END_SIGNIN = "238 74% 61%";
 const DEFAULT_LOGIN_LAYOUT_TYPE = 'center';
 export default function SignInClient({ initialSettings }) {
-    var _a;
     const { data: session, status } = useSession();
     const router = useRouter();
     const nextSearchParams = useSearchParams();
     const [appLogoUrl, setAppLogoUrl] = useState(() => {
-        var _a;
         if (initialSettings) {
-            return ((_a = initialSettings.find(s => s.key === 'appLogoDataUrl')) === null || _a === void 0 ? void 0 : _a.value) || null;
+            return initialSettings.find(s => s.key === 'appLogoDataUrl')?.value || null;
         }
         return null;
     });
     const [currentAppName, setCurrentAppName] = useState(() => {
-        var _a;
         if (initialSettings) {
-            return ((_a = initialSettings.find(s => s.key === 'appName')) === null || _a === void 0 ? void 0 : _a.value) || DEFAULT_APP_NAME;
+            return initialSettings.find(s => s.key === 'appName')?.value || DEFAULT_APP_NAME;
         }
         return DEFAULT_APP_NAME;
     });
@@ -40,15 +37,13 @@ export default function SignInClient({ initialSettings }) {
     const [loginPageStyle, setLoginPageStyle] = useState({});
     const [isThemeDark, setIsThemeDark] = useState(false);
     const [loginLayoutType, setLoginLayoutType] = useState(() => {
-        var _a;
         if (initialSettings) {
-            return ((_a = initialSettings.find(s => s.key === 'loginPageLayoutType')) === null || _a === void 0 ? void 0 : _a.value) || DEFAULT_LOGIN_LAYOUT_TYPE;
+            return initialSettings.find(s => s.key === 'loginPageLayoutType')?.value || DEFAULT_LOGIN_LAYOUT_TYPE;
         }
         return DEFAULT_LOGIN_LAYOUT_TYPE;
     });
     const callbackUrl = nextSearchParams.get('callbackUrl') || "/";
     useEffect(() => {
-        var _a, _b, _c, _d, _e, _f, _g, _h;
         setIsClient(true);
         // Function to update theme status
         const updateThemeStatus = () => {
@@ -142,11 +137,11 @@ export default function SignInClient({ initialSettings }) {
         }
         // If initialSettings are present, set up style from them
         else {
-            let loginBgType = ((_a = initialSettings.find(s => s.key === 'loginPageBackgroundType')) === null || _a === void 0 ? void 0 : _a.value) || 'default';
-            let loginBgImageUrl = ((_b = initialSettings.find(s => s.key === 'loginPageBackgroundImageUrl')) === null || _b === void 0 ? void 0 : _b.value) || null;
-            let loginBgColor1 = ((_c = initialSettings.find(s => s.key === 'loginPageBackgroundColor1')) === null || _c === void 0 ? void 0 : _c.value) || null;
-            let loginBgColor2 = ((_d = initialSettings.find(s => s.key === 'loginPageBackgroundColor2')) === null || _d === void 0 ? void 0 : _d.value) || null;
-            let loginLayoutTypeSetting = ((_e = initialSettings.find(s => s.key === 'loginPageLayoutType')) === null || _e === void 0 ? void 0 : _e.value) || DEFAULT_LOGIN_LAYOUT_TYPE;
+            let loginBgType = initialSettings.find(s => s.key === 'loginPageBackgroundType')?.value || 'default';
+            let loginBgImageUrl = initialSettings.find(s => s.key === 'loginPageBackgroundImageUrl')?.value || null;
+            let loginBgColor1 = initialSettings.find(s => s.key === 'loginPageBackgroundColor1')?.value || null;
+            let loginBgColor2 = initialSettings.find(s => s.key === 'loginPageBackgroundColor2')?.value || null;
+            let loginLayoutTypeSetting = initialSettings.find(s => s.key === 'loginPageLayoutType')?.value || DEFAULT_LOGIN_LAYOUT_TYPE;
             // Set style
             const newStyle = {
                 minHeight: '100vh',
@@ -174,9 +169,9 @@ export default function SignInClient({ initialSettings }) {
             }
             setLoginPageStyle(newStyle);
             // Set theme/colors
-            let primaryStart = ((_f = initialSettings.find(s => s.key === 'primaryGradientStart')) === null || _f === void 0 ? void 0 : _f.value) || DEFAULT_PRIMARY_GRADIENT_START_SIGNIN;
-            let primaryEnd = ((_g = initialSettings.find(s => s.key === 'primaryGradientEnd')) === null || _g === void 0 ? void 0 : _g.value) || DEFAULT_PRIMARY_GRADIENT_END_SIGNIN;
-            const themePref = ((_h = initialSettings.find((s) => s.key === 'appThemePreference')) === null || _h === void 0 ? void 0 : _h.value) || 'system';
+            let primaryStart = initialSettings.find(s => s.key === 'primaryGradientStart')?.value || DEFAULT_PRIMARY_GRADIENT_START_SIGNIN;
+            let primaryEnd = initialSettings.find(s => s.key === 'primaryGradientEnd')?.value || DEFAULT_PRIMARY_GRADIENT_END_SIGNIN;
+            const themePref = initialSettings.find((s) => s.key === 'appThemePreference')?.value || 'system';
             setThemeAndColors({
                 themePreference: themePref,
                 primaryGradientStart: primaryStart,
@@ -222,7 +217,7 @@ export default function SignInClient({ initialSettings }) {
         }
     }
     // Extract loginPageContent from settings
-    const loginPageContent = ((_a = initialSettings === null || initialSettings === void 0 ? void 0 : initialSettings.find(s => s.key === 'loginPageContent')) === null || _a === void 0 ? void 0 : _a.value) || '';
+    const loginPageContent = initialSettings?.find(s => s.key === 'loginPageContent')?.value || '';
     if (status === "loading" || !isClient) {
         return (<div className="flex min-h-screen flex-col items-center justify-center bg-gradient-to-br from-slate-100 to-sky-100 dark:from-slate-900 dark:to-sky-900 p-4">
         <Loader2 className="h-12 w-12 animate-spin text-primary"/>

@@ -22,7 +22,6 @@ const transitionFormSchema = z.object({
     notes: z.string().optional(),
 });
 export function ManageTransitionsModal({ candidate, isOpen, onOpenChange, onUpdateCandidate, onRefreshCandidateData, availableStages, }) {
-    var _a;
     const [editingTransitionId, setEditingTransitionId] = useState(null);
     const [editingNotes, setEditingNotes] = useState('');
     const [transitionToDelete, setTransitionToDelete] = useState(null);
@@ -31,7 +30,7 @@ export function ManageTransitionsModal({ candidate, isOpen, onOpenChange, onUpda
     const form = useForm({
         resolver: zodResolver(transitionFormSchema),
         defaultValues: {
-            newStatus: (candidate === null || candidate === void 0 ? void 0 : candidate.status) || (((_a = availableStages[0]) === null || _a === void 0 ? void 0 : _a.name) || 'Applied'),
+            newStatus: candidate?.status || (availableStages[0]?.name || 'Applied'),
             notes: '',
         },
     });
@@ -48,8 +47,7 @@ export function ManageTransitionsModal({ candidate, isOpen, onOpenChange, onUpda
     if (!candidate)
         return null;
     const handleAddTransitionSubmit = async (data) => {
-        var _a;
-        const noChangeCondition = data.newStatus === candidate.status && !((_a = data.notes) === null || _a === void 0 ? void 0 : _a.trim());
+        const noChangeCondition = data.newStatus === candidate.status && !data.notes?.trim();
         if (noChangeCondition) {
             toast("Please select a new status or add notes to create a transition.");
             return;
@@ -152,14 +150,12 @@ export function ManageTransitionsModal({ candidate, isOpen, onOpenChange, onUpda
               <form onSubmit={form.handleSubmit(handleAddTransitionSubmit)} className="space-y-4">
                 <div>
                   <Label htmlFor="newStatus" className="text-sm font-medium text-muted-foreground">New Stage</Label>
-                  <Controller name="newStatus" control={form.control} render={({ field }) => {
-            var _a;
-            return (<Popover open={statusSearchOpen} onOpenChange={setStatusSearchOpen}>
+                  <Controller name="newStatus" control={form.control} render={({ field }) => (<Popover open={statusSearchOpen} onOpenChange={setStatusSearchOpen}>
                         <PopoverTrigger asChild>
                           <Button variant="outline" role="combobox" aria-expanded={statusSearchOpen} className="w-full justify-between mt-1">
                             {field.value
-                    ? (_a = availableStages.find((stage) => stage.name === field.value)) === null || _a === void 0 ? void 0 : _a.name
-                    : "Select new stage"}
+                ? availableStages.find((stage) => stage.name === field.value)?.name
+                : "Select new stage"}
                             <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50"/>
                           </Button>
                         </PopoverTrigger>
@@ -170,18 +166,17 @@ export function ManageTransitionsModal({ candidate, isOpen, onOpenChange, onUpda
                           <ScrollArea className="max-h-60">
                             {filteredStages.length === 0 && statusSearchQuery && (<p className="p-2 text-sm text-muted-foreground text-center">No stage found.</p>)}
                             {filteredStages.map((stage) => (<Button key={stage.id} variant="ghost" className={cn("w-full justify-start px-2 py-1 text-sm font-normal h-auto", // Reduced py
-                    field.value === stage.name && "bg-accent text-accent-foreground")} onClick={() => {
-                        field.onChange(stage.name);
-                        setStatusSearchOpen(false);
-                        setStatusSearchQuery('');
-                    }}>
+                field.value === stage.name && "bg-accent text-accent-foreground")} onClick={() => {
+                    field.onChange(stage.name);
+                    setStatusSearchOpen(false);
+                    setStatusSearchQuery('');
+                }}>
                                 <Check className={cn("mr-2 h-4 w-4", field.value === stage.name ? "opacity-100" : "opacity-0")}/>
                                 {stage.name}
                               </Button>))}
                           </ScrollArea>
                         </PopoverContent>
-                      </Popover>);
-        }}/>
+                      </Popover>)}/>
                   {form.formState.errors.newStatus && (<p className="text-xs text-destructive mt-1">{form.formState.errors.newStatus.message}</p>)}
                 </div>
                 <div>
@@ -248,7 +243,7 @@ export function ManageTransitionsModal({ candidate, isOpen, onOpenChange, onUpda
           <AlertDialogHeader>
             <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
             <AlertDialogDescription>
-              This action cannot be undone. Deleting this transition for stage &quot;<strong>{transitionToDelete === null || transitionToDelete === void 0 ? void 0 : transitionToDelete.stage}</strong>&quot; (dated {transitionToDelete ? format(parseISO(transitionToDelete.date), "MMM d, yyyy") : 'N/A'}) will permanently remove it.
+              This action cannot be undone. Deleting this transition for stage &quot;<strong>{transitionToDelete?.stage}</strong>&quot; (dated {transitionToDelete ? format(parseISO(transitionToDelete.date), "MMM d, yyyy") : 'N/A'}) will permanently remove it.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

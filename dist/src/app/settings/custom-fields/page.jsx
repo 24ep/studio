@@ -80,12 +80,11 @@ export default function CustomFieldsPage() {
         }
     }, [sessionStatus, pathname]);
     useEffect(() => {
-        var _a;
         if (sessionStatus === 'unauthenticated') {
             signIn(undefined, { callbackUrl: pathname });
         }
         else if (sessionStatus === 'authenticated') {
-            if (session.user.role !== 'Admin' && !((_a = session.user.modulePermissions) === null || _a === void 0 ? void 0 : _a.includes('CUSTOM_FIELDS_MANAGE'))) {
+            if (session.user.role !== 'Admin' && !session.user.modulePermissions?.includes('CUSTOM_FIELDS_MANAGE')) {
                 setFetchError("You do not have permission to manage custom field definitions.");
                 setIsLoading(false);
             }
@@ -218,7 +217,7 @@ export default function CustomFieldsPage() {
                         </Button>
                         <AlertDialog>
                             <AlertDialogTrigger asChild><Button variant="ghost" size="icon" className="text-destructive hover:text-destructive h-8 w-8" onClick={() => confirmDelete(def)}><Trash2 className="h-4 w-4"/></Button></AlertDialogTrigger>
-                            {(definitionToDelete === null || definitionToDelete === void 0 ? void 0 : definitionToDelete.id) === def.id && (<AlertDialogContent>
+                            {definitionToDelete?.id === def.id && (<AlertDialogContent>
                                     <AlertDialogHeader><AlertDialogTitle>Are you sure?</AlertDialogTitle><AlertDialogDescription>This will delete the custom field definition &quot;<strong>{def.label}</strong>&quot;. This does not delete data already stored, but the definition will be removed.</AlertDialogDescription></AlertDialogHeader>
                                     <AlertDialogFooter><AlertDialogCancel onClick={() => setDefinitionToDelete(null)}>Cancel</AlertDialogCancel><AlertDialogAction onClick={handleDelete} className={buttonVariants({ variant: "destructive" })}>Delete Definition</AlertDialogAction></AlertDialogFooter>
                                 </AlertDialogContent>)}

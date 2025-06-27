@@ -28,7 +28,7 @@ export function CredentialsSignInForm() {
         },
     });
     useEffect(() => {
-        const nextAuthError = searchParams === null || searchParams === void 0 ? void 0 : searchParams.get('error');
+        const nextAuthError = searchParams?.get('error');
         if (nextAuthError) {
             if (nextAuthError === "CredentialsSignin") {
                 setError("Invalid email or password. Please try again.");
@@ -51,9 +51,9 @@ export function CredentialsSignInForm() {
                 redirect: false, // Handle redirect manually to show errors
                 email: data.email,
                 password: data.password,
-                callbackUrl: (searchParams === null || searchParams === void 0 ? void 0 : searchParams.get('callbackUrl')) || '/', // Redirect to intended page or dashboard
+                callbackUrl: searchParams?.get('callbackUrl') || '/', // Redirect to intended page or dashboard
             });
-            if (result === null || result === void 0 ? void 0 : result.error) {
+            if (result?.error) {
                 // Error messages from NextAuth can be a bit generic or internal
                 // Map common errors to user-friendly messages
                 if (result.error === "CredentialsSignin" || result.error.toLowerCase().includes("invalid") || result.error.toLowerCase().includes("password")) {
@@ -63,10 +63,10 @@ export function CredentialsSignInForm() {
                     setError(result.error); // Or a generic message: "Login failed. Please try again."
                 }
             }
-            else if ((result === null || result === void 0 ? void 0 : result.ok) && (result === null || result === void 0 ? void 0 : result.url)) {
+            else if (result?.ok && result?.url) {
                 router.push(result.url); // Navigate to callbackUrl on success
             }
-            else if ((result === null || result === void 0 ? void 0 : result.ok) && !(result === null || result === void 0 ? void 0 : result.url)) {
+            else if (result?.ok && !result?.url) {
                 router.push('/'); // Fallback if URL is not provided but login is ok
             }
         }
@@ -81,7 +81,7 @@ export function CredentialsSignInForm() {
     return (<Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
         {/* Display error from signIn attempt if not already handled by page error */}
-        {error && !(searchParams === null || searchParams === void 0 ? void 0 : searchParams.get('error')) && (<Alert variant="destructive" className="mt-0 mb-4">
+        {error && !searchParams?.get('error') && (<Alert variant="destructive" className="mt-0 mb-4">
             <AlertTriangle className="h-4 w-4"/>
             <AlertTitle>Login Failed</AlertTitle>
             <AlertDescription>{error}</AlertDescription>

@@ -34,7 +34,6 @@ function downloadFile(content, filename, contentType) {
     URL.revokeObjectURL(url);
 }
 export default function PositionsPageClient({ initialPositions, initialAvailableDepartments, initialFetchError, authError: serverAuthError = false, permissionError: serverPermissionError = false, }) {
-    var _a, _b, _c, _d, _e, _f, _g, _h, _j;
     const [positions, setPositions] = useState(initialPositions || []);
     const [isLoading, setIsLoading] = useState(false); // Only for client-side actions/refreshes
     const [filters, setFilters] = useState({ isOpen: "all" });
@@ -54,9 +53,9 @@ export default function PositionsPageClient({ initialPositions, initialAvailable
     const [isBulkConfirmOpen, setIsBulkConfirmOpen] = useState(false);
     const [bulkActionType, setBulkActionType] = useState(null);
     const [bulkNewIsOpenStatus, setBulkNewIsOpenStatus] = useState(true);
-    const canImportPositions = ((_a = session === null || session === void 0 ? void 0 : session.user) === null || _a === void 0 ? void 0 : _a.role) === 'Admin' || ((_c = (_b = session === null || session === void 0 ? void 0 : session.user) === null || _b === void 0 ? void 0 : _b.modulePermissions) === null || _c === void 0 ? void 0 : _c.includes('POSITIONS_IMPORT'));
-    const canExportPositions = ((_d = session === null || session === void 0 ? void 0 : session.user) === null || _d === void 0 ? void 0 : _d.role) === 'Admin' || ((_f = (_e = session === null || session === void 0 ? void 0 : session.user) === null || _e === void 0 ? void 0 : _e.modulePermissions) === null || _f === void 0 ? void 0 : _f.includes('POSITIONS_EXPORT'));
-    const canManagePositions = ((_g = session === null || session === void 0 ? void 0 : session.user) === null || _g === void 0 ? void 0 : _g.role) === 'Admin' || ((_j = (_h = session === null || session === void 0 ? void 0 : session.user) === null || _h === void 0 ? void 0 : _h.modulePermissions) === null || _j === void 0 ? void 0 : _j.includes('POSITIONS_MANAGE'));
+    const canImportPositions = session?.user?.role === 'Admin' || session?.user?.modulePermissions?.includes('POSITIONS_IMPORT');
+    const canExportPositions = session?.user?.role === 'Admin' || session?.user?.modulePermissions?.includes('POSITIONS_EXPORT');
+    const canManagePositions = session?.user?.role === 'Admin' || session?.user?.modulePermissions?.includes('POSITIONS_MANAGE');
     const [page, setPage] = useState(1);
     const [pageSize] = useState(20);
     const [total, setTotal] = useState(0);
@@ -210,7 +209,6 @@ export default function PositionsPageClient({ initialPositions, initialAvailable
         toast.success("A CSV template for positions has been downloaded.");
     };
     const handleExportToCsv = async () => {
-        var _a, _b;
         setIsLoading(true);
         try {
             const query = new URLSearchParams();
@@ -228,7 +226,7 @@ export default function PositionsPageClient({ initialPositions, initialAvailable
                 throw new Error(errorData.message);
             }
             const blob = await response.blob();
-            const filename = ((_b = (_a = response.headers.get('content-disposition')) === null || _a === void 0 ? void 0 : _a.split('filename=')[1]) === null || _b === void 0 ? void 0 : _b.replace(/"/g, '')) || 'positions_export.csv';
+            const filename = response.headers.get('content-disposition')?.split('filename=')[1]?.replace(/"/g, '') || 'positions_export.csv';
             downloadFile(await blob.text(), filename, blob.type);
             toast.success("Positions exported as CSV.");
         }
@@ -275,7 +273,11 @@ export default function PositionsPageClient({ initialPositions, initialAvailable
             return;
         setIsLoading(true);
         try {
-            const payload = Object.assign({ action: bulkActionType, positionIds: Array.from(selectedPositionIds) }, (bulkActionType === 'change_status' && { newIsOpenStatus: bulkNewIsOpenStatus }));
+            const payload = {
+                action: bulkActionType,
+                positionIds: Array.from(selectedPositionIds),
+                ...(bulkActionType === 'change_status' && { newIsOpenStatus: bulkNewIsOpenStatus }),
+            };
             const response = await fetch('/api/positions/bulk-action', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -288,7 +290,7 @@ export default function PositionsPageClient({ initialPositions, initialAvailable
             if (result.failCount > 0 && result.failedDetails) {
                 result.failedDetails.forEach((detail) => {
                     const pos = positions.find(p => p.id === detail.positionId);
-                    toast.error(`Action Failed for ${(pos === null || pos === void 0 ? void 0 : pos.title) || detail.positionId}: ${detail.reason}`);
+                    toast.error(`Action Failed for ${pos?.title || detail.positionId}: ${detail.reason}`);
                 });
             }
             setSelectedPositionIds(new Set());
@@ -305,6 +307,13 @@ export default function PositionsPageClient({ initialPositions, initialAvailable
     };
     // Pagination controls
     const totalPages = Math.ceil(total / pageSize);
+    // Position status metrics
+    const openPositionsCount = useMemo(() => {
+        return positions.filter(pos => pos.isOpen).length;
+    }, [positions]);
+    const closedPositionsCount = useMemo(() => {
+        return positions.filter(pos => !pos.isOpen).length;
+    }, [positions]);
     if (authError)
         return (<div className="flex flex-col items-center justify-center h-[calc(100vh-10rem)] text-center p-4"> <ServerCrash className="w-16 h-16 text-destructive mb-4"/> <h2 className="text-2xl font-semibold text-foreground mb-2">Access Denied</h2> <p className="text-muted-foreground mb-4 max-w-md">You need to be signed in to view this page.</p> <Button onClick={() => signIn(undefined, { callbackUrl: pathname })} className="btn-hover-primary-gradient">Sign In</Button> </div>);
     if (permissionError)
@@ -352,6 +361,43 @@ export default function PositionsPageClient({ initialPositions, initialAvailable
 
       <PositionFilters initialFilters={filters} onFilterChange={handleFilterChange} isLoading={isLoading} availableDepartments={availableDepartments}/>
 
+      {/* Position Status Metrics */}
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        <Card className="shadow-sm hover:shadow-md transition-shadow duration-200">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Total Positions</CardTitle>
+            <Briefcase className="h-5 w-5 text-primary"/>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-foreground">{positions.length}</div>
+          </CardContent>
+        </Card>
+        
+        <Card className="shadow-sm hover:shadow-md transition-shadow duration-200">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Open Positions</CardTitle>
+            <div className="h-5 w-5 rounded-full bg-green-500 flex items-center justify-center">
+              <span className="text-white text-xs font-bold">O</span>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-foreground">{openPositionsCount}</div>
+          </CardContent>
+        </Card>
+        
+        <Card className="shadow-sm hover:shadow-md transition-shadow duration-200">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Closed Positions</CardTitle>
+            <div className="h-5 w-5 rounded-full bg-gray-500 flex items-center justify-center">
+              <span className="text-white text-xs font-bold">C</span>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-foreground">{closedPositionsCount}</div>
+          </CardContent>
+        </Card>
+      </div>
+
       <Card className="shadow-sm">
         <CardHeader> <CardTitle className="flex items-center"> <Briefcase className="mr-2 h-5 w-5 text-primary"/> Job Positions </CardTitle> <CardDescription>Manage job positions and their statuses.</CardDescription> </CardHeader>
         <CardContent>
@@ -388,7 +434,7 @@ export default function PositionsPageClient({ initialPositions, initialAvailable
           <AlertDialogHeader>
             <AlertDialogTitle>Confirm Bulk Position Action</AlertDialogTitle>
             <AlertDialogDescription>
-              You are about to perform <strong>{bulkActionType === null || bulkActionType === void 0 ? void 0 : bulkActionType.replace('_', ' ')}</strong> on <strong>{selectedPositionIds.size}</strong> selected position(s).
+              You are about to perform <strong>{bulkActionType?.replace('_', ' ')}</strong> on <strong>{selectedPositionIds.size}</strong> selected position(s).
               {bulkActionType === 'delete' && " This action cannot be undone and might fail if positions have associated candidates."}
             </AlertDialogDescription>
           </AlertDialogHeader>

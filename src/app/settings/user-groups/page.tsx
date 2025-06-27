@@ -324,7 +324,6 @@ export default function RolesPermissionsPage() {
                             <Toggle
                               checked={(selectedRole.permissions || []).includes(perm.id)}
                               onCheckedChange={() => handlePermissionToggle(perm.id, selectedRole)}
-                              variant="success"
                             />
                           </div>
                         ))}

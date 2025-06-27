@@ -61,9 +61,8 @@ function extractIdFromUrl(request) {
     return match ? match[1] : null;
 }
 export async function GET(request, { params }) {
-    var _a;
     const session = await getServerSession(authOptions);
-    if (!((_a = session === null || session === void 0 ? void 0 : session.user) === null || _a === void 0 ? void 0 : _a.id)) {
+    if (!session?.user?.id) {
         return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
     }
     const { id } = params;
@@ -75,7 +74,10 @@ export async function GET(request, { params }) {
             return NextResponse.json({ message: 'Position not found' }, { status: 404 });
         }
         const position = result.rows[0];
-        return NextResponse.json(Object.assign(Object.assign({}, position), { custom_attributes: position.customAttributes || {} }));
+        return NextResponse.json({
+            ...position,
+            custom_attributes: position.customAttributes || {},
+        });
     }
     catch (error) {
         return NextResponse.json({ message: 'Error fetching position', error: error.message }, { status: 500 });
@@ -93,10 +95,9 @@ const updatePositionSchema = z.object({
     custom_attributes: z.record(z.any()).optional().nullable(), // New
 });
 export async function PUT(request, { params }) {
-    var _a, _b, _c;
     const session = await getServerSession(authOptions);
-    const actingUserId = (_a = session === null || session === void 0 ? void 0 : session.user) === null || _a === void 0 ? void 0 : _a.id;
-    const actingUserName = ((_b = session === null || session === void 0 ? void 0 : session.user) === null || _b === void 0 ? void 0 : _b.name) || ((_c = session === null || session === void 0 ? void 0 : session.user) === null || _c === void 0 ? void 0 : _c.email) || 'System';
+    const actingUserId = session?.user?.id;
+    const actingUserName = session?.user?.name || session?.user?.email || 'System';
     if (!actingUserId) {
         return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
     }
@@ -105,7 +106,7 @@ export async function PUT(request, { params }) {
     try {
         body = await request.json();
     }
-    catch (_d) {
+    catch {
         return NextResponse.json({ message: 'Invalid JSON body' }, { status: 400 });
     }
     const validationResult = updatePositionSchema.safeParse(body);
@@ -139,7 +140,10 @@ export async function PUT(request, { params }) {
         const updatedPosition = updateResult.rows[0];
         return NextResponse.json({
             message: 'Position updated successfully',
-            position: Object.assign(Object.assign({}, updatedPosition), { custom_attributes: updatedPosition.customAttributes || {} })
+            position: {
+                ...updatedPosition,
+                custom_attributes: updatedPosition.customAttributes || {},
+            }
         });
     }
     catch (error) {
@@ -152,10 +156,9 @@ export async function PUT(request, { params }) {
     }
 }
 export async function DELETE(request, { params }) {
-    var _a, _b, _c, _d;
     const session = await getServerSession(authOptions);
-    const actingUserId = (_a = session === null || session === void 0 ? void 0 : session.user) === null || _a === void 0 ? void 0 : _a.id;
-    const actingUserName = ((_b = session === null || session === void 0 ? void 0 : session.user) === null || _b === void 0 ? void 0 : _b.name) || ((_c = session === null || session === void 0 ? void 0 : session.user) === null || _c === void 0 ? void 0 : _c.email) || 'System';
+    const actingUserId = session?.user?.id;
+    const actingUserName = session?.user?.name || session?.user?.email || 'System';
     if (!actingUserId) {
         return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
     }
@@ -171,7 +174,7 @@ export async function DELETE(request, { params }) {
         }
         const positionQuery = 'SELECT p.id, p.title, COUNT(c.id) as "candidateCount" FROM "Position" p LEFT JOIN "Candidate" c ON p.id = c."positionId" WHERE p.id = $1 GROUP BY p.id, p.title;';
         const candidateCountResult = await client.query(positionQuery, [id]);
-        const candidateCount = parseInt(((_d = candidateCountResult.rows[0]) === null || _d === void 0 ? void 0 : _d.candidateCount) || '0', 10);
+        const candidateCount = parseInt(candidateCountResult.rows[0]?.candidateCount || '0', 10);
         if (candidateCount > 0) {
             await client.query('ROLLBACK');
             return NextResponse.json({

@@ -24,46 +24,42 @@ export default function ToggleDemoPage() {
     <div className="container mx-auto p-8 space-y-8">
       <div className="text-center">
         <h1 className="text-3xl font-bold mb-2">Toggle Component Demo</h1>
-        <p className="text-muted-foreground">Showcasing the new custom Toggle component with different variants and sizes</p>
+        <p className="text-muted-foreground">Showcasing the new custom Toggle component with different sizes</p>
       </div>
 
       <div className="grid md:grid-cols-2 gap-6">
         {/* Variants */}
         <Card>
           <CardHeader>
-            <CardTitle>Toggle Variants</CardTitle>
+            <CardTitle>Toggle Examples</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex items-center justify-between">
-              <Label>Default Variant</Label>
+              <Label>Default Toggle</Label>
               <Toggle
                 checked={toggles.default}
                 onCheckedChange={(checked) => handleToggleChange('default', checked)}
-                variant="default"
               />
             </div>
             <div className="flex items-center justify-between">
-              <Label>Success Variant</Label>
+              <Label>Success Toggle</Label>
               <Toggle
                 checked={toggles.success}
                 onCheckedChange={(checked) => handleToggleChange('success', checked)}
-                variant="success"
               />
             </div>
             <div className="flex items-center justify-between">
-              <Label>Warning Variant</Label>
+              <Label>Warning Toggle</Label>
               <Toggle
                 checked={toggles.warning}
                 onCheckedChange={(checked) => handleToggleChange('warning', checked)}
-                variant="warning"
               />
             </div>
             <div className="flex items-center justify-between">
-              <Label>Danger Variant</Label>
+              <Label>Danger Toggle</Label>
               <Toggle
                 checked={toggles.danger}
                 onCheckedChange={(checked) => handleToggleChange('danger', checked)}
-                variant="danger"
               />
             </div>
           </CardContent>
@@ -81,7 +77,6 @@ export default function ToggleDemoPage() {
                 checked={toggles.small}
                 onCheckedChange={(checked) => handleToggleChange('small', checked)}
                 size="sm"
-                variant="success"
               />
             </div>
             <div className="flex items-center justify-between">
@@ -90,7 +85,6 @@ export default function ToggleDemoPage() {
                 checked={toggles.medium}
                 onCheckedChange={(checked) => handleToggleChange('medium', checked)}
                 size="md"
-                variant="success"
               />
             </div>
             <div className="flex items-center justify-between">
@@ -99,7 +93,6 @@ export default function ToggleDemoPage() {
                 checked={toggles.large}
                 onCheckedChange={(checked) => handleToggleChange('large', checked)}
                 size="lg"
-                variant="success"
               />
             </div>
           </CardContent>
@@ -133,7 +126,6 @@ export default function ToggleDemoPage() {
         <CardContent>
           <ul className="space-y-2 text-sm">
             <li>✅ Custom CSS-only implementation (no external dependencies)</li>
-            <li>✅ Multiple variants: default, success, warning, danger</li>
             <li>✅ Multiple sizes: small, medium, large</li>
             <li>✅ Smooth animations and transitions</li>
             <li>✅ Accessible with proper ARIA attributes</li>

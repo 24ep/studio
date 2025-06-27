@@ -78,10 +78,9 @@ const importPositionSchema = z.object({
 // Schema for array of positions
 const importPositionsArraySchema = z.array(importPositionSchema);
 export async function POST(request) {
-    var _a, _b, _c;
     const session = await getServerSession(authOptions);
-    const actingUserId = (_a = session === null || session === void 0 ? void 0 : session.user) === null || _a === void 0 ? void 0 : _a.id;
-    const actingUserName = ((_b = session === null || session === void 0 ? void 0 : session.user) === null || _b === void 0 ? void 0 : _b.name) || ((_c = session === null || session === void 0 ? void 0 : session.user) === null || _c === void 0 ? void 0 : _c.email) || 'System';
+    const actingUserId = session?.user?.id;
+    const actingUserName = session?.user?.name || session?.user?.email || 'System';
     if (!actingUserId) {
         return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
     }
@@ -89,7 +88,7 @@ export async function POST(request) {
     try {
         body = await request.json();
     }
-    catch (_d) {
+    catch {
         return NextResponse.json({ message: 'Invalid JSON body' }, { status: 400 });
     }
     const validationResult = importPositionsArraySchema.safeParse(body);
@@ -134,7 +133,10 @@ export async function POST(request) {
         }
         await client.query('COMMIT');
         await logAudit('AUDIT', `Bulk import completed by ${actingUserName}. Success: ${results.success}, Failed: ${results.failed}`, 'API:Positions:Import', actingUserId, { results });
-        return NextResponse.json(Object.assign({ message: 'Import completed' }, results));
+        return NextResponse.json({
+            message: 'Import completed',
+            ...results
+        });
     }
     catch (error) {
         await client.query('ROLLBACK');
@@ -146,9 +148,8 @@ export async function POST(request) {
     }
 }
 export async function GET(request) {
-    var _a;
     const session = await getServerSession(authOptions);
-    if (!((_a = session === null || session === void 0 ? void 0 : session.user) === null || _a === void 0 ? void 0 : _a.id)) {
+    if (!session?.user?.id) {
         return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
     const client = await getPool().connect();

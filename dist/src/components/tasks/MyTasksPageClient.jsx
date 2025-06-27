@@ -20,7 +20,6 @@ import { toast } from "react-hot-toast";
 const ALL_CANDIDATES_ADMIN_VALUE = "ALL_CANDIDATES_ADMIN";
 const MY_ASSIGNED_VALUE = "me";
 export function MyTasksPageClient({ initialCandidates, initialPositions, initialStages, initialRecruiters, authError: serverAuthError = false, permissionError: serverPermissionError = false, initialFetchError, }) {
-    var _a, _b, _c, _d, _e, _f, _g, _h, _j;
     const { data: session, status: sessionStatus } = useSession();
     const router = useRouter();
     const pathname = usePathname();
@@ -42,8 +41,7 @@ export function MyTasksPageClient({ initialCandidates, initialPositions, initial
     const [authError, setAuthError] = useState(serverAuthError);
     const [permissionError, setPermissionError] = useState(serverPermissionError);
     const fetchRecruitersForAdminFilter = useCallback(async () => {
-        var _a;
-        if (((_a = session === null || session === void 0 ? void 0 : session.user) === null || _a === void 0 ? void 0 : _a.role) === 'Admin' && allRecruitersForFilter.length <= 1) { // Only fetch if not already populated or just has self
+        if (session?.user?.role === 'Admin' && allRecruitersForFilter.length <= 1) { // Only fetch if not already populated or just has self
             try {
                 const response = await fetch('/api/users?role=Recruiter');
                 if (!response.ok)
@@ -56,10 +54,9 @@ export function MyTasksPageClient({ initialCandidates, initialPositions, initial
                 // Do not toast here as it might be redundant if initialRecruiters prop was fine
             }
         }
-    }, [(_a = session === null || session === void 0 ? void 0 : session.user) === null || _a === void 0 ? void 0 : _a.role, allRecruitersForFilter.length]);
+    }, [session?.user?.role, allRecruitersForFilter.length]);
     const fetchTaskBoardCandidates = useCallback(async (filtersToApply, currentRecruiterFilter) => {
-        var _a;
-        if (sessionStatus !== 'authenticated' || !((_a = session === null || session === void 0 ? void 0 : session.user) === null || _a === void 0 ? void 0 : _a.id)) {
+        if (sessionStatus !== 'authenticated' || !session?.user?.id) {
             setIsLoading(false);
             return;
         }
@@ -219,21 +216,21 @@ export function MyTasksPageClient({ initialCandidates, initialPositions, initial
         <Button onClick={() => fetchTaskBoardCandidates(standardFilters, selectedRecruiterFilter)} className="btn-hover-primary-gradient">Try Again</Button>
       </div>);
     }
-    const pageTitle = ((_b = session === null || session === void 0 ? void 0 : session.user) === null || _b === void 0 ? void 0 : _b.role) === 'Admin'
+    const pageTitle = session?.user?.role === 'Admin'
         ? (selectedRecruiterFilter === ALL_CANDIDATES_ADMIN_VALUE ? "All Candidates Overview" :
             selectedRecruiterFilter === MY_ASSIGNED_VALUE ? "My Assigned Candidates (Admin)" :
-                `Tasks for ${((_c = allRecruitersForFilter.find(r => r.id === selectedRecruiterFilter)) === null || _c === void 0 ? void 0 : _c.name) || 'Recruiter'}`)
+                `Tasks for ${allRecruitersForFilter.find(r => r.id === selectedRecruiterFilter)?.name || 'Recruiter'}`)
         : "My Task Board";
-    const pageDescription = ((_d = session === null || session === void 0 ? void 0 : session.user) === null || _d === void 0 ? void 0 : _d.role) === 'Admin'
+    const pageDescription = session?.user?.role === 'Admin'
         ? (selectedRecruiterFilter === ALL_CANDIDATES_ADMIN_VALUE ? "Overview of all candidates in the system." :
             selectedRecruiterFilter === MY_ASSIGNED_VALUE ? "Candidates assigned to you (Admin)." :
-                `Candidates assigned to ${((_e = allRecruitersForFilter.find(r => r.id === selectedRecruiterFilter)) === null || _e === void 0 ? void 0 : _e.name) || 'the selected recruiter'}.`)
+                `Candidates assigned to ${allRecruitersForFilter.find(r => r.id === selectedRecruiterFilter)?.name || 'the selected recruiter'}.`)
         : "Candidates assigned to you for processing.";
     return (<div className="flex flex-col md:flex-row gap-6 h-full">
         <aside className="w-full md:w-[280px] lg:w-[320px] flex-shrink-0 md:sticky md:top-[calc(var(--header-height,4rem)_+_1rem)] md:max-h-[calc(100vh-var(--header-height,4rem)-2rem)]">
            <ScrollArea className="h-full md:pr-2">
                 <div className="md:hidden mb-3"> 
-                    {((_f = session === null || session === void 0 ? void 0 : session.user) === null || _f === void 0 ? void 0 : _f.role) === 'Admin' && (<div className="w-full">
+                    {session?.user?.role === 'Admin' && (<div className="w-full">
                             <Label htmlFor="recruiter-filter-select-mobile" className="text-xs font-medium">View tasks for:</Label>
                              <Popover>
                                 <PopoverTrigger asChild>
@@ -241,7 +238,7 @@ export function MyTasksPageClient({ initialCandidates, initialPositions, initial
                                         <span className="truncate">
                                             {selectedRecruiterFilter === MY_ASSIGNED_VALUE ? "My Assigned (Admin)" :
                 selectedRecruiterFilter === ALL_CANDIDATES_ADMIN_VALUE ? "All Candidates (Admin)" :
-                    ((_g = allRecruitersForFilter.find(r => r.id === selectedRecruiterFilter)) === null || _g === void 0 ? void 0 : _g.name) || "My Assigned (Admin)"}
+                    allRecruitersForFilter.find(r => r.id === selectedRecruiterFilter)?.name || "My Assigned (Admin)"}
                                         </span>
                                         <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50"/>
                                     </Button>
@@ -277,7 +274,7 @@ export function MyTasksPageClient({ initialCandidates, initialPositions, initial
                 </div>
                 </CardHeader>
                 <CardContent>
-                {((_h = session === null || session === void 0 ? void 0 : session.user) === null || _h === void 0 ? void 0 : _h.role) === 'Admin' && (<div className="mb-4 w-full md:max-w-xs hidden md:block">
+                {session?.user?.role === 'Admin' && (<div className="mb-4 w-full md:max-w-xs hidden md:block">
                         <Label htmlFor="recruiter-filter-select-desktop" className="text-xs font-medium">View tasks for:</Label>
                          <Popover>
                             <PopoverTrigger asChild>
@@ -285,7 +282,7 @@ export function MyTasksPageClient({ initialCandidates, initialPositions, initial
                                     <span className="truncate">
                                         {selectedRecruiterFilter === MY_ASSIGNED_VALUE ? "My Assigned (Admin)" :
                 selectedRecruiterFilter === ALL_CANDIDATES_ADMIN_VALUE ? "All Candidates (Admin)" :
-                    ((_j = allRecruitersForFilter.find(r => r.id === selectedRecruiterFilter)) === null || _j === void 0 ? void 0 : _j.name) || "My Assigned (Admin)"}
+                    allRecruitersForFilter.find(r => r.id === selectedRecruiterFilter)?.name || "My Assigned (Admin)"}
                                     </span>
                                     <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50"/>
                                 </Button>

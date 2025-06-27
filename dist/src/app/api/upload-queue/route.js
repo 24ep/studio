@@ -3,6 +3,7 @@ import { getPool } from '@/lib/db';
 import { v4 as uuidv4 } from 'uuid';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
+import { logAudit } from '@/lib/auditLog';
 /**
  * @openapi
  * /api/upload-queue:
@@ -110,6 +111,8 @@ export async function GET(request) {
     if (!session) {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
+    const actingUserId = session.user.id;
+    const actingUserName = session.user.name || session.user.email || 'System';
     const url = new URL(request.url);
     const limit = parseInt(url.searchParams.get('limit') || '20', 10);
     const offset = parseInt(url.searchParams.get('offset') || '0', 10);
@@ -117,7 +120,17 @@ export async function GET(request) {
     try {
         const dataRes = await client.query('SELECT * FROM upload_queue ORDER BY upload_date DESC LIMIT $1 OFFSET $2', [limit, offset]);
         const countRes = await client.query('SELECT COUNT(*) FROM upload_queue');
+        await logAudit('AUDIT', `Upload queue accessed by ${actingUserName}. Retrieved ${dataRes.rows.length} items.`, 'API:UploadQueue:Get', actingUserId, {
+            limit,
+            offset,
+            totalCount: parseInt(countRes.rows[0].count, 10),
+            returnedCount: dataRes.rows.length
+        });
         return NextResponse.json({ data: dataRes.rows, total: parseInt(countRes.rows[0].count, 10) });
+    }
+    catch (error) {
+        await logAudit('ERROR', `Failed to fetch upload queue by ${actingUserName}. Error: ${error.message}`, 'API:UploadQueue:Get', actingUserId);
+        throw error;
     }
     finally {
         client.release();
@@ -128,9 +141,12 @@ export async function POST(request) {
     if (!session) {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
+    const actingUserId = session.user.id;
+    const actingUserName = session.user.name || session.user.email || 'System';
     const data = await request.json();
     const { file_name, file_size, status, source, upload_id, created_by, file_path } = data;
     if (!file_path) {
+        await logAudit('WARN', `Upload queue entry attempted without file_path by ${actingUserName}`, 'API:UploadQueue:Post', actingUserId, { data });
         return NextResponse.json({ error: 'file_path is required' }, { status: 400 });
     }
     const id = uuidv4();
@@ -139,7 +155,23 @@ export async function POST(request) {
         const res = await client.query(`INSERT INTO upload_queue (id, file_name, file_size, status, source, upload_id, created_by, file_path)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
        RETURNING *`, [id, file_name, file_size, status, source, upload_id, created_by, file_path]);
+        await logAudit('AUDIT', `File '${file_name}' added to upload queue by ${actingUserName}`, 'API:UploadQueue:Post', actingUserId, {
+            queueId: id,
+            fileName: file_name,
+            fileSize: file_size,
+            status,
+            source,
+            uploadId: upload_id,
+            filePath: file_path
+        });
         return NextResponse.json(res.rows[0], { status: 201 });
+    }
+    catch (error) {
+        await logAudit('ERROR', `Failed to add file '${file_name}' to upload queue by ${actingUserName}. Error: ${error.message}`, 'API:UploadQueue:Post', actingUserId, {
+            fileName: file_name,
+            error: error.message
+        });
+        throw error;
     }
     finally {
         client.release();

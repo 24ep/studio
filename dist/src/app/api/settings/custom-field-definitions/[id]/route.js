@@ -49,10 +49,9 @@ function extractIdFromUrl(request) {
  *         description: Server error
  */
 export async function GET(request) {
-    var _a;
     const id = extractIdFromUrl(request);
     const session = await getServerSession(authOptions);
-    if (!((_a = session === null || session === void 0 ? void 0 : session.user) === null || _a === void 0 ? void 0 : _a.id)) {
+    if (!session?.user?.id) {
         return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
     if (!id) {
@@ -116,13 +115,12 @@ export async function GET(request) {
  *         description: Server error
  */
 export async function PUT(request) {
-    var _a, _b;
     const id = extractIdFromUrl(request);
     const session = await getServerSession(authOptions);
-    if (!((_a = session === null || session === void 0 ? void 0 : session.user) === null || _a === void 0 ? void 0 : _a.id)) {
+    if (!session?.user?.id) {
         return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
-    if (session.user.role !== 'Admin' && !((_b = session.user.modulePermissions) === null || _b === void 0 ? void 0 : _b.includes('CUSTOM_FIELDS_MANAGE'))) {
+    if (session.user.role !== 'Admin' && !session.user.modulePermissions?.includes('CUSTOM_FIELDS_MANAGE')) {
         await logAudit('WARN', `Forbidden attempt to update custom field by ${session.user.name}.`, 'API:CustomFields:Update', session.user.id);
         return NextResponse.json({ message: "Forbidden: Insufficient permissions" }, { status: 403 });
     }
@@ -213,13 +211,12 @@ export async function PUT(request) {
  *         description: Server error
  */
 export async function DELETE(request) {
-    var _a, _b;
     const id = extractIdFromUrl(request);
     const session = await getServerSession(authOptions);
-    if (!((_a = session === null || session === void 0 ? void 0 : session.user) === null || _a === void 0 ? void 0 : _a.id)) {
+    if (!session?.user?.id) {
         return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
-    if (session.user.role !== 'Admin' && !((_b = session.user.modulePermissions) === null || _b === void 0 ? void 0 : _b.includes('CUSTOM_FIELDS_MANAGE'))) {
+    if (session.user.role !== 'Admin' && !session.user.modulePermissions?.includes('CUSTOM_FIELDS_MANAGE')) {
         await logAudit('WARN', `Forbidden attempt to delete custom field by ${session.user.name}.`, 'API:CustomFields:Delete', session.user.id);
         return NextResponse.json({ message: "Forbidden: Insufficient permissions" }, { status: 403 });
     }

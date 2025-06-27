@@ -80,11 +80,10 @@ const bulkPositionActionSchema = z.object({
  *         description: Server error
  */
 export async function POST(request) {
-    var _a, _b, _c, _d, _e, _f;
     const session = await getServerSession(authOptions);
-    const actingUserId = (_a = session === null || session === void 0 ? void 0 : session.user) === null || _a === void 0 ? void 0 : _a.id;
-    const actingUserName = ((_b = session === null || session === void 0 ? void 0 : session.user) === null || _b === void 0 ? void 0 : _b.name) || ((_c = session === null || session === void 0 ? void 0 : session.user) === null || _c === void 0 ? void 0 : _c.email) || 'System';
-    if (!actingUserId || (session.user.role !== 'Admin' && !((_d = session.user.modulePermissions) === null || _d === void 0 ? void 0 : _d.includes('POSITIONS_MANAGE')))) {
+    const actingUserId = session?.user?.id;
+    const actingUserName = session?.user?.name || session?.user?.email || 'System';
+    if (!actingUserId || (session.user.role !== 'Admin' && !session.user.modulePermissions?.includes('POSITIONS_MANAGE'))) {
         await logAudit('WARN', `Forbidden attempt to perform bulk position action by ${actingUserName}.`, 'API:Positions:BulkAction', actingUserId);
         return NextResponse.json({ message: "Forbidden: Insufficient permissions." }, { status: 403 });
     }
@@ -119,7 +118,7 @@ export async function POST(request) {
             });
             if (positionsToDelete.length > 0) {
                 const deleteResult = await client.query('DELETE FROM "Position" WHERE id = ANY($1::uuid[]) RETURNING id', [positionsToDelete]);
-                successCount = (_e = deleteResult.rowCount) !== null && _e !== void 0 ? _e : 0;
+                successCount = deleteResult.rowCount ?? 0;
                 if (successCount > 0)
                     cacheInvalidated = true;
             }
@@ -130,7 +129,7 @@ export async function POST(request) {
                 return NextResponse.json({ message: "New 'isOpen' status is required for 'change_status' action." }, { status: 400 });
             }
             const updateResult = await client.query('UPDATE "Position" SET "isOpen" = $1, "updatedAt" = NOW() WHERE id = ANY($2::uuid[]) RETURNING id', [newIsOpenStatus, positionIds]);
-            successCount = (_f = updateResult.rowCount) !== null && _f !== void 0 ? _f : 0;
+            successCount = updateResult.rowCount ?? 0;
             if (successCount > 0)
                 cacheInvalidated = true;
             const updatedIds = updateResult.rows.map(r => r.id);

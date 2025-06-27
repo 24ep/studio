@@ -1,14 +1,3 @@
-var __rest = (this && this.__rest) || function (s, e) {
-    var t = {};
-    for (var p in s) if (Object.prototype.hasOwnProperty.call(s, p) && e.indexOf(p) < 0)
-        t[p] = s[p];
-    if (s != null && typeof Object.getOwnPropertySymbols === "function")
-        for (var i = 0, p = Object.getOwnPropertySymbols(s); i < p.length; i++) {
-            if (e.indexOf(p[i]) < 0 && Object.prototype.propertyIsEnumerable.call(s, p[i]))
-                t[p[i]] = s[p[i]];
-        }
-    return t;
-};
 // src/app/api/users/[id]/route.ts
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
@@ -51,10 +40,9 @@ export const dynamic = "force-dynamic";
  *         description: User not found
  */
 export async function GET(request) {
-    var _a;
     const id = extractIdFromUrl(request);
     const session = await getServerSession(authOptions);
-    if (!((_a = session === null || session === void 0 ? void 0 : session.user) === null || _a === void 0 ? void 0 : _a.id)) {
+    if (!session?.user?.id) {
         return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
     const client = await getPool().connect();
@@ -102,10 +90,9 @@ export async function GET(request) {
  *         description: User not found
  */
 export async function PUT(request) {
-    var _a;
     const id = extractIdFromUrl(request);
     const session = await getServerSession(authOptions);
-    const actingUserId = (_a = session === null || session === void 0 ? void 0 : session.user) === null || _a === void 0 ? void 0 : _a.id;
+    const actingUserId = session?.user?.id;
     if (!actingUserId) {
         return NextResponse.json({ message: "Forbidden" }, { status: 403 });
     }
@@ -120,13 +107,13 @@ export async function PUT(request) {
     if (!validationResult.success) {
         return NextResponse.json({ message: "Invalid input", errors: validationResult.error.flatten().fieldErrors }, { status: 400 });
     }
-    const _b = validationResult.data, { password } = _b, fieldsToUpdate = __rest(_b, ["password"]);
+    const { password, ...fieldsToUpdate } = validationResult.data;
     if (Object.keys(fieldsToUpdate).length === 0 && !password) {
         return NextResponse.json({ message: "No fields to update." }, { status: 400 });
     }
     const client = await getPool().connect();
     try {
-        const updateFields = Object.assign({}, fieldsToUpdate);
+        const updateFields = { ...fieldsToUpdate };
         if (password) {
             const saltRounds = 10;
             updateFields.password = await bcrypt.hash(password, saltRounds);
@@ -174,10 +161,9 @@ export async function PUT(request) {
  *         description: User not found
  */
 export async function DELETE(request) {
-    var _a;
     const id = extractIdFromUrl(request);
     const session = await getServerSession(authOptions);
-    const actingUserId = (_a = session === null || session === void 0 ? void 0 : session.user) === null || _a === void 0 ? void 0 : _a.id;
+    const actingUserId = session?.user?.id;
     if (!actingUserId) {
         return NextResponse.json({ message: "Forbidden" }, { status: 403 });
     }

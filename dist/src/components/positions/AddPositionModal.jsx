@@ -74,10 +74,10 @@ export function AddPositionModal({ isOpen, onOpenChange, onAddPosition }) {
           </div>
           <div>
             <Label htmlFor="description-add">Job Description</Label>
-            <Controller name="description" control={form.control} render={({ field }) => (<ReactQuill id="description-add" theme="snow" value={field.value || ''} onChange={field.onChange} className="mt-1 bg-white" placeholder="Enter job description"/>)}/>
+            <Controller name="description" control={form.control} render={({ field }) => (<ReactQuill id="description-add" theme="snow" value={field.value || ''} onChange={field.onChange} className="mt-1 bg-white" placeholder="Enter job description" style={{ minHeight: 300 }}/>)}/>
           </div>
           <div className="flex items-center space-x-2">
-            <Controller name="isOpen" control={form.control} render={({ field }) => (<Toggle variant="success" checked={field.value} onCheckedChange={field.onChange}/>)}/>
+            <Controller name="isOpen" control={form.control} render={({ field }) => (<Toggle checked={field.value} onCheckedChange={field.onChange}/>)}/>
             <Label htmlFor="isOpen-add">Position is Open</Label>
           </div>
           

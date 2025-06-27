@@ -55,15 +55,14 @@ const reorderSchema = z.object({
  *         description: "Forbidden: Insufficient permissions"
  */
 export async function POST(request) {
-    var _a, _b;
     const session = await getServerSession(authOptions);
-    const actingUserId = (_a = session === null || session === void 0 ? void 0 : session.user) === null || _a === void 0 ? void 0 : _a.id;
+    const actingUserId = session?.user?.id;
     if (!actingUserId) {
         return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
     }
     // Optional: Add permission check for RECRUITMENT_STAGES_MANAGE
     if (session.user.role !== 'Admin' &&
-        !((_b = session.user.modulePermissions) === null || _b === void 0 ? void 0 : _b.includes('RECRUITMENT_STAGES_MANAGE'))) {
+        !session.user.modulePermissions?.includes('RECRUITMENT_STAGES_MANAGE')) {
         return NextResponse.json({ message: 'Forbidden' }, { status: 403 });
     }
     let body;

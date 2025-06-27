@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { useSession } from 'next-auth/react';
 import { useRouter, usePathname } from 'next/navigation';
@@ -50,10 +50,10 @@ export default function WebhookMappingPage() {
         const initialised = TARGET_CANDIDATE_ATTRIBUTES_CONFIG.map(attrConfig => {
             const existingDbMapping = dbMappingsMap.get(attrConfig.path);
             return {
-                id: existingDbMapping === null || existingDbMapping === void 0 ? void 0 : existingDbMapping.id,
+                id: existingDbMapping?.id,
                 targetPath: attrConfig.path,
-                sourcePath: (existingDbMapping === null || existingDbMapping === void 0 ? void 0 : existingDbMapping.sourcePath) || '',
-                notes: (existingDbMapping === null || existingDbMapping === void 0 ? void 0 : existingDbMapping.notes) || attrConfig.defaultNotes || '',
+                sourcePath: existingDbMapping?.sourcePath || '',
+                notes: existingDbMapping?.notes || attrConfig.defaultNotes || '',
             };
         });
         setMappings(initialised);
@@ -86,13 +86,12 @@ export default function WebhookMappingPage() {
         }
     }, [sessionStatus, toast, initializeMappings]);
     useEffect(() => {
-        var _a;
         setIsClient(true);
         if (sessionStatus === 'unauthenticated') {
             return;
         }
         else if (sessionStatus === 'authenticated') {
-            if (session.user.role !== 'Admin' && !((_a = session.user.modulePermissions) === null || _a === void 0 ? void 0 : _a.includes('WEBHOOK_MAPPING_MANAGE'))) {
+            if (session.user.role !== 'Admin' && !session.user.modulePermissions?.includes('WEBHOOK_MAPPING_MANAGE')) {
                 setFetchError("You do not have permission to manage webhook mappings.");
                 setIsLoadingData(false);
                 return;
@@ -107,7 +106,8 @@ export default function WebhookMappingPage() {
     }, [fetchError, toast]);
     const handleMappingChange = (targetPath, field, value) => {
         setMappings(prevMappings => prevMappings.map(mapping => mapping.targetPath === targetPath
-            ? Object.assign(Object.assign({}, mapping), { [field]: value }) : mapping));
+            ? { ...mapping, [field]: value }
+            : mapping));
     };
     const handleSaveConfiguration = async () => {
         if (!isClient)
@@ -176,58 +176,72 @@ export default function WebhookMappingPage() {
                 <Button onClick={fetchMappings} variant="outline"><RefreshCw className="mr-2 h-4 w-4"/>Try Again</Button>}
       </div>);
     }
-    return (<Card className="shadow-lg">
-      <CardHeader className="flex flex-row items-center justify-between">
-        <div className="flex items-center gap-2">
-          <Button onClick={handleSaveConfiguration} className="btn-primary-gradient flex items-center gap-2" disabled={isSaving || isLoadingData || !!fetchError || mappings.length === 0}>
-            {isSaving ? <Loader2 className="h-4 w-4 animate-spin"/> : <Save className="h-4 w-4"/>} {isSaving ? 'Saving...' : 'Save All'}
-          </Button>
-        </div>
-      </CardHeader>
-      <CardContent>
-          <Alert variant="default" className="mb-6 bg-blue-50 border-blue-300 text-blue-800 dark:bg-blue-900/30 dark:border-blue-700 dark:text-blue-300">
-            <Info className="h-5 w-5 text-blue-600 dark:text-blue-400"/>
-            <AlertTitle className="font-semibold text-blue-700 dark:text-blue-300">How This Works</AlertTitle>
-            <AlertDescription>
-              Enter the JSON path from your workflow&#39;s output (e.g., <code className="font-mono text-xs bg-blue-200 dark:bg-blue-800 px-1 rounded">data.profile.firstName</code>) into the &quot;Source JSON Path&quot; field.
-              If a source path is left empty, that CandiTrack attribute will not be populated. For array fields, ensure the source path points to an array of objects with a compatible structure.
-            </AlertDescription>
-          </Alert>
-          
-          {isLoadingData && mappings.length === 0 ? (<div className="flex justify-center items-center py-10">
-                  <Loader2 className="h-8 w-8 animate-spin text-primary"/>
-                  <p className="ml-2 text-muted-foreground">Loading mapping configuration...</p>
-              </div>) : mappings.length === 0 && !fetchError ? (<div className="flex flex-col items-center justify-center py-10 text-center">
-                  <SlidersHorizontal className="h-12 w-12 text-muted-foreground mb-3"/>
-                  <p className="text-muted-foreground mb-2">No mapping configuration found or initialized.</p>
-                  <p className="text-xs text-muted-foreground mb-4">Default target attributes will be shown once loaded or after first save.</p>
-                  <Button onClick={fetchMappings} variant="outline"><RefreshCw className="mr-2 h-4 w-4"/>Reload Configuration</Button>
-              </div>) : (<Accordion type="multiple" defaultValue={groupedMappings.map(g => g.groupName)} className="w-full">
-              {groupedMappings.map(group => (<AccordionItem value={group.groupName} key={group.groupName}>
-                  <AccordionTrigger className="text-lg font-semibold hover:no-underline">{group.groupName}</AccordionTrigger>
-                  <AccordionContent>
-                    <p className="text-sm text-muted-foreground mb-4">{group.description}</p>
-                    <div className="space-y-4">
-                      {group.attributes.map((mapping, index) => {
+    return (<div className="space-y-6 pb-32 p-6">
+      <Card className="shadow-lg">
+        <CardHeader>
+          <CardTitle className="flex items-center text-2xl gap-2">
+            <SlidersHorizontal className="h-7 w-7 text-primary"/>
+            Webhook Field Mapping
+          </CardTitle>
+          <CardDescription className="text-base text-muted-foreground">
+            Configure how data from external webhook services maps to CandiTrack candidate attributes.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+            <Alert variant="default" className="mb-6 bg-blue-50 border-blue-300 text-blue-800 dark:bg-blue-900/30 dark:border-blue-700 dark:text-blue-300">
+              <Info className="h-5 w-5 text-blue-600 dark:text-blue-400"/>
+              <AlertTitle className="font-semibold text-blue-700 dark:text-blue-300">How This Works</AlertTitle>
+              <AlertDescription>
+                Enter the JSON path from your workflow&#39;s output (e.g., <code className="font-mono text-xs bg-blue-200 dark:bg-blue-800 px-1 rounded">data.profile.firstName</code>) into the &quot;Source JSON Path&quot; field.
+                If a source path is left empty, that CandiTrack attribute will not be populated. For array fields, ensure the source path points to an array of objects with a compatible structure.
+              </AlertDescription>
+            </Alert>
+            
+            {isLoadingData && mappings.length === 0 ? (<div className="flex justify-center items-center py-10">
+                    <Loader2 className="h-8 w-8 animate-spin text-primary"/>
+                    <p className="ml-2 text-muted-foreground">Loading mapping configuration...</p>
+                </div>) : mappings.length === 0 && !fetchError ? (<div className="flex flex-col items-center justify-center py-10 text-center">
+                    <SlidersHorizontal className="h-12 w-12 text-muted-foreground mb-3"/>
+                    <p className="text-muted-foreground mb-2">No mapping configuration found or initialized.</p>
+                    <p className="text-xs text-muted-foreground mb-4">Default target attributes will be shown once loaded or after first save.</p>
+                    <Button onClick={fetchMappings} variant="outline"><RefreshCw className="mr-2 h-4 w-4"/>Reload Configuration</Button>
+                </div>) : (<Accordion type="multiple" defaultValue={groupedMappings.map(g => g.groupName)} className="w-full">
+                {groupedMappings.map(group => (<AccordionItem value={group.groupName} key={group.groupName}>
+                    <AccordionTrigger className="text-lg font-semibold hover:no-underline">{group.groupName}</AccordionTrigger>
+                    <AccordionContent>
+                      <p className="text-sm text-muted-foreground mb-4">{group.description}</p>
+                      <div className="space-y-4">
+                        {group.attributes.map((mapping, index) => {
                     const targetAttrInfo = TARGET_CANDIDATE_ATTRIBUTES_CONFIG.find(attr => attr.path === mapping.targetPath);
                     return (<div key={mapping.targetPath} className="p-4 border rounded-md bg-muted/20">
-                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-x-6 gap-y-2">
-                                <div>
-                                  <Label htmlFor={`sourcePath-${mapping.targetPath}`}>Target: <span className="font-semibold text-foreground">{(targetAttrInfo === null || targetAttrInfo === void 0 ? void 0 : targetAttrInfo.label) || mapping.targetPath}</span></Label>
-                                  <div className="text-xs text-muted-foreground mb-1">Path: <code className="text-xs bg-muted/50 px-1 rounded">{mapping.targetPath}</code></div>
-                                  <Input id={`sourcePath-${mapping.targetPath}`} value={mapping.sourcePath || ''} onChange={(e) => handleMappingChange(mapping.targetPath, 'sourcePath', e.target.value)} placeholder={(targetAttrInfo === null || targetAttrInfo === void 0 ? void 0 : targetAttrInfo.example) || "e.g., data.profile.firstName"} className="text-sm"/>
-                                </div>
-                                <div>
-                                  <Label htmlFor={`notes-${mapping.targetPath}`}>Notes</Label>
-                                  <Textarea id={`notes-${mapping.targetPath}`} value={mapping.notes || ''} onChange={(e) => handleMappingChange(mapping.targetPath, 'notes', e.target.value)} placeholder="Optional notes or details about this mapping" className="text-sm min-h-[60px] mt-1" rows={2}/>
-                                </div>
-                            </div>
-                          </div>);
+                              <div className="grid grid-cols-1 lg:grid-cols-2 gap-x-6 gap-y-2">
+                                  <div>
+                                    <Label htmlFor={`sourcePath-${mapping.targetPath}`}>Target: <span className="font-semibold text-foreground">{targetAttrInfo?.label || mapping.targetPath}</span></Label>
+                                    <div className="text-xs text-muted-foreground mb-1">Path: <code className="text-xs bg-muted/50 px-1 rounded">{mapping.targetPath}</code></div>
+                                    <Input id={`sourcePath-${mapping.targetPath}`} value={mapping.sourcePath || ''} onChange={(e) => handleMappingChange(mapping.targetPath, 'sourcePath', e.target.value)} placeholder={targetAttrInfo?.example || "e.g., data.profile.firstName"} className="text-sm"/>
+                                  </div>
+                                  <div>
+                                    <Label htmlFor={`notes-${mapping.targetPath}`}>Notes</Label>
+                                    <Textarea id={`notes-${mapping.targetPath}`} value={mapping.notes || ''} onChange={(e) => handleMappingChange(mapping.targetPath, 'notes', e.target.value)} placeholder="Optional notes or details about this mapping" className="text-sm min-h-[60px] mt-1" rows={2}/>
+                                  </div>
+                              </div>
+                            </div>);
                 })}
-                    </div>
-                  </AccordionContent>
-                </AccordionItem>))}
-            </Accordion>)}
-      </CardContent>
-    </Card>);
+                      </div>
+                    </AccordionContent>
+                  </AccordionItem>))}
+              </Accordion>)}
+        </CardContent>
+      </Card>
+
+      {/* Floating Save/Reset Bar */}
+      <div className="fixed bottom-6 right-6 z-30 bg-background/95 border shadow-lg rounded-xl flex flex-row gap-4 py-3 px-6" style={{ boxShadow: '0 2px 16px 0 rgba(0,0,0,0.10)' }}>
+        <Button onClick={handleSaveConfiguration} disabled={isSaving || isLoadingData || !!fetchError || mappings.length === 0} className="btn-primary-gradient flex items-center gap-2">
+          {isSaving ? <Loader2 className="h-4 w-4 animate-spin"/> : <Save className="h-4 w-4"/>} Save All
+        </Button>
+        <Button variant="outline" onClick={fetchMappings} disabled={isSaving} className="flex items-center gap-2">
+          <RefreshCw className="h-4 w-4"/> Reset
+        </Button>
+      </div>
+    </div>);
 }

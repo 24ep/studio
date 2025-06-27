@@ -23,7 +23,6 @@ export const settingsNavItems = [
     { href: "/settings/logs", label: "Application Logs", icon: ListOrdered, description: "View system and audit logs.", permissionId: 'LOGS_VIEW', adminOnlyOrPermission: true },
 ];
 export default function SettingsLayout({ children }) {
-    var _a, _b;
     const pathname = usePathname();
     const { data: session, status } = useSession();
     const [isClient, setIsClient] = React.useState(false);
@@ -32,7 +31,7 @@ export default function SettingsLayout({ children }) {
         setIsClient(true);
     }, []);
     const canAccess = React.useCallback((item) => {
-        if (!isClient || status !== 'authenticated' || !(session === null || session === void 0 ? void 0 : session.user))
+        if (!isClient || status !== 'authenticated' || !session?.user)
             return false;
         const userRole = session.user.role;
         const modulePermissions = session.user.modulePermissions || [];
@@ -48,7 +47,7 @@ export default function SettingsLayout({ children }) {
         if (item.permissionId && userRole !== 'Admin' && !modulePermissions.includes(item.permissionId))
             return false;
         return true;
-    }, [isClient, status, (_a = session === null || session === void 0 ? void 0 : session.user) === null || _a === void 0 ? void 0 : _a.role, (_b = session === null || session === void 0 ? void 0 : session.user) === null || _b === void 0 ? void 0 : _b.modulePermissions]);
+    }, [isClient, status, session?.user?.role, session?.user?.modulePermissions]);
     const visibleNavItems = React.useMemo(() => {
         // Ensure settingsNavItems is an array before calling filter
         const safeSettingsNavItems = Array.isArray(settingsNavItems) ? settingsNavItems : [];

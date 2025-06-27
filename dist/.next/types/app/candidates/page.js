@@ -1,4 +1,4 @@
-// File: C:\Users\Zenbook\Desktop\repo\studio-3\src\app\candidates\page.tsx
+// File: C:\Users\MD3770\Desktop\repo\studio-3\src\app\candidates\page.tsx
 import * as entry from '../../../../src/app/candidates/page.js';
 // Check that the entry is a valid entry
 checkFields();

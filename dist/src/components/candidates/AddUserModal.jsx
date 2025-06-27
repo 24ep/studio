@@ -104,10 +104,9 @@ export function AddUserModal({ isOpen, onOpenChange, onAddUser }) {
                 <FormLabel className="flex items-center"><ShieldCheck className="mr-2 h-5 w-5 text-primary"/> Module Permissions</FormLabel>
                 <div className="space-y-2 rounded-md border p-4 max-h-48 overflow-y-auto">
                   {PLATFORM_MODULES.map((module) => (<FormField key={module.id} control={form.control} name="modulePermissions" render={({ field }) => {
-                var _a;
                 return (<FormItem className="flex flex-row items-center space-x-3 space-y-0">
                             <FormControl>
-                              <Checkbox className="checkbox-green" checked={(_a = field.value) === null || _a === void 0 ? void 0 : _a.includes(module.id)} onCheckedChange={(checked) => {
+                              <Checkbox className="checkbox-green" checked={field.value?.includes(module.id)} onCheckedChange={(checked) => {
                         return checked
                             ? field.onChange([...(field.value || []), module.id])
                             : field.onChange((field.value || []).filter((value) => value !== module.id));

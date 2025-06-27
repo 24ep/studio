@@ -80,9 +80,8 @@ const userGroupSchema = z.object({
  *         description: "Forbidden: Insufficient permissions"
  */
 export async function GET(request) {
-    var _a;
     const session = await getServerSession(authOptions);
-    if (!((_a = session === null || session === void 0 ? void 0 : session.user) === null || _a === void 0 ? void 0 : _a.id))
+    if (!session?.user?.id)
         return new NextResponse('Unauthorized', { status: 401 });
     const client = await getPool().connect();
     try {
@@ -113,9 +112,8 @@ export async function GET(request) {
     }
 }
 export async function POST(request) {
-    var _a;
     const session = await getServerSession(authOptions);
-    const actingUserId = (_a = session === null || session === void 0 ? void 0 : session.user) === null || _a === void 0 ? void 0 : _a.id;
+    const actingUserId = session?.user?.id;
     if (!actingUserId)
         return new NextResponse('Unauthorized', { status: 401 });
     let body;
@@ -133,7 +131,7 @@ export async function POST(request) {
     const newId = uuidv4();
     const client = await getPool().connect();
     try {
-        const result = await client.query('INSERT INTO "UserGroup" (id, name, description, permissions) VALUES ($1, $2, $3, $4) RETURNING *', [newId, name, description, permissions !== null && permissions !== void 0 ? permissions : []]);
+        const result = await client.query('INSERT INTO "UserGroup" (id, name, description, permissions) VALUES ($1, $2, $3, $4) RETURNING *', [newId, name, description, permissions ?? []]);
         await logAudit('AUDIT', `User group '${name}' created.`, 'API:UserGroups:Create', actingUserId, { groupId: newId });
         return NextResponse.json(result.rows[0], { status: 201 });
     }

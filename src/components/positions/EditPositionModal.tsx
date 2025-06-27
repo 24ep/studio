@@ -164,14 +164,13 @@ export function EditPositionModal({ isOpen, onOpenChange, onEditPosition, positi
                     control={form.control}
                     render={({ field }) => (
                         <Toggle
-                            id="isOpen-edit"
-                            variant="success"
+                            id="is-active"
                             checked={field.value}
                             onCheckedChange={field.onChange}
                         />
                     )}
                 />
-                <Label htmlFor="isOpen-edit">Position is Open</Label>
+                <Label htmlFor="is-active">Position is Open</Label>
               </div>
             </form>
           </ScrollArea>

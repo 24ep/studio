@@ -69,7 +69,6 @@ const addCandidateFormSchema = z.object({
 });
 const PLACEHOLDER_VALUE_NONE = "___NOT_SPECIFIED___";
 export function AddCandidateModal({ isOpen, onOpenChange, onAddCandidate, availablePositions, availableStages }) {
-    var _a, _b, _c, _d, _e;
     const form = useForm({
         resolver: zodResolver(addCandidateFormSchema),
         defaultValues: {
@@ -81,7 +80,7 @@ export function AddCandidateModal({ isOpen, onOpenChange, onAddCandidate, availa
             skills: [{ segment_skill: '', skill_string: '' }],
             job_suitable: [{ suitable_career: '', suitable_job_position: '', suitable_job_level: '', suitable_salary_bath_month: '' }],
             positionId: null,
-            status: ((_a = availableStages.find(s => s.name.toLowerCase() === 'applied')) === null || _a === void 0 ? void 0 : _a.name) || ((_b = availableStages[0]) === null || _b === void 0 ? void 0 : _b.name) || 'Applied',
+            status: availableStages.find(s => s.name.toLowerCase() === 'applied')?.name || availableStages[0]?.name || 'Applied',
             fitScore: 0,
         },
     });
@@ -102,7 +101,6 @@ export function AddCandidateModal({ isOpen, onOpenChange, onAddCandidate, availa
         name: "job_suitable",
     });
     useEffect(() => {
-        var _a, _b;
         if (isOpen) {
             form.reset({
                 cv_language: '',
@@ -113,14 +111,19 @@ export function AddCandidateModal({ isOpen, onOpenChange, onAddCandidate, availa
                 skills: [{ segment_skill: '', skill_string: '' }],
                 job_suitable: [{ suitable_career: '', suitable_job_position: '', suitable_job_level: '', suitable_salary_bath_month: '' }],
                 positionId: null,
-                status: ((_a = availableStages.find(s => s.name.toLowerCase() === 'applied')) === null || _a === void 0 ? void 0 : _a.name) || ((_b = availableStages[0]) === null || _b === void 0 ? void 0 : _b.name) || 'Applied',
+                status: availableStages.find(s => s.name.toLowerCase() === 'applied')?.name || availableStages[0]?.name || 'Applied',
                 fitScore: 0,
             });
         }
     }, [isOpen, form, availableStages]);
     const onSubmit = async (data) => {
-        var _a;
-        const processedData = Object.assign(Object.assign({}, data), { experience: (_a = data.experience) === null || _a === void 0 ? void 0 : _a.map(exp => (Object.assign(Object.assign({}, exp), { postition_level: exp.postition_level === PLACEHOLDER_VALUE_NONE ? null : exp.postition_level }))) });
+        const processedData = {
+            ...data,
+            experience: data.experience?.map(exp => ({
+                ...exp,
+                postition_level: exp.postition_level === PLACEHOLDER_VALUE_NONE ? null : exp.postition_level,
+            }))
+        };
         await onAddCandidate(processedData);
     };
     return (<Dialog open={isOpen} onOpenChange={onOpenChange}>
@@ -149,12 +152,12 @@ export function AddCandidateModal({ isOpen, onOpenChange, onAddCandidate, availa
                   <div>
                     <Label htmlFor="personal_info.firstname">First Name *</Label>
                     <Input id="personal_info.firstname" {...form.register('personal_info.firstname')} className="mt-1"/>
-                    {((_c = form.formState.errors.personal_info) === null || _c === void 0 ? void 0 : _c.firstname) && <p className="text-sm text-destructive mt-1">{form.formState.errors.personal_info.firstname.message}</p>}
+                    {form.formState.errors.personal_info?.firstname && <p className="text-sm text-destructive mt-1">{form.formState.errors.personal_info.firstname.message}</p>}
                   </div>
                   <div>
                     <Label htmlFor="personal_info.lastname">Last Name *</Label>
                     <Input id="personal_info.lastname" {...form.register('personal_info.lastname')} className="mt-1"/>
-                     {((_d = form.formState.errors.personal_info) === null || _d === void 0 ? void 0 : _d.lastname) && <p className="text-sm text-destructive mt-1">{form.formState.errors.personal_info.lastname.message}</p>}
+                     {form.formState.errors.personal_info?.lastname && <p className="text-sm text-destructive mt-1">{form.formState.errors.personal_info.lastname.message}</p>}
                   </div>
                   <div>
                     <Label htmlFor="personal_info.nickname">Nickname</Label>
@@ -176,7 +179,7 @@ export function AddCandidateModal({ isOpen, onOpenChange, onAddCandidate, availa
                 <div>
                   <Label htmlFor="contact_info.email">Email *</Label>
                   <Input id="contact_info.email" type="email" {...form.register('contact_info.email')} className="mt-1"/>
-                  {((_e = form.formState.errors.contact_info) === null || _e === void 0 ? void 0 : _e.email) && <p className="text-sm text-destructive mt-1">{form.formState.errors.contact_info.email.message}</p>}
+                  {form.formState.errors.contact_info?.email && <p className="text-sm text-destructive mt-1">{form.formState.errors.contact_info.email.message}</p>}
                 </div>
                 <div>
                   <Label htmlFor="contact_info.phone">Phone</Label>
@@ -189,9 +192,7 @@ export function AddCandidateModal({ isOpen, onOpenChange, onAddCandidate, availa
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                         <Label htmlFor="positionId">Applying for Position *</Label>
-                        <Controller name="positionId" control={form.control} render={({ field }) => {
-            var _a;
-            return (<Select onValueChange={(value) => field.onChange(value === "___NONE___" ? null : value)} value={(_a = field.value) !== null && _a !== void 0 ? _a : "___NONE___"}>
+                        <Controller name="positionId" control={form.control} render={({ field }) => (<Select onValueChange={(value) => field.onChange(value === "___NONE___" ? null : value)} value={field.value ?? "___NONE___"}>
                                 <SelectTrigger id="positionId" className="mt-1">
                                     <SelectValue placeholder="Select position or None"/>
                                 </SelectTrigger>
@@ -199,8 +200,7 @@ export function AddCandidateModal({ isOpen, onOpenChange, onAddCandidate, availa
                                     <SelectItem value="___NONE___">No specific position / General Application</SelectItem>
                                     {availablePositions.map(pos => (<SelectItem key={pos.id} value={pos.id}>{pos.title}</SelectItem>))}
                                 </SelectContent>
-                                </Select>);
-        }}/>
+                                </Select>)}/>
                         {form.formState.errors.positionId && <p className="text-sm text-destructive mt-1">{form.formState.errors.positionId.message}</p>}
                     </div>
                      <div>
@@ -251,16 +251,13 @@ export function AddCandidateModal({ isOpen, onOpenChange, onAddCandidate, availa
                         <Input placeholder="Position" {...form.register(`experience.${index}.position`)}/>
                         <Input placeholder="Period (e.g., Jan 2022 - Present)" {...form.register(`experience.${index}.period`)}/>
                         <Input placeholder="Duration (e.g., 1y6m)" {...form.register(`experience.${index}.duration`)}/>
-                         <Controller name={`experience.${index}.postition_level`} control={form.control} render={({ field: controllerField }) => {
-                var _a;
-                return (<Select onValueChange={(value) => controllerField.onChange(value === PLACEHOLDER_VALUE_NONE ? null : value)} value={(_a = controllerField.value) !== null && _a !== void 0 ? _a : PLACEHOLDER_VALUE_NONE}>
+                         <Controller name={`experience.${index}.postition_level`} control={form.control} render={({ field: controllerField }) => (<Select onValueChange={(value) => controllerField.onChange(value === PLACEHOLDER_VALUE_NONE ? null : value)} value={controllerField.value ?? PLACEHOLDER_VALUE_NONE}>
                                 <SelectTrigger><SelectValue placeholder="Position Level"/></SelectTrigger>
                                 <SelectContent>
                                     <SelectItem value={PLACEHOLDER_VALUE_NONE}>N/A / Not Specified</SelectItem>
                                     {positionLevelOptions.map(level => <SelectItem key={level} value={level}>{level.charAt(0).toUpperCase() + level.slice(1)}</SelectItem>)}
                                 </SelectContent>
-                                </Select>);
-            }}/>
+                                </Select>)}/>
                         <div className="md:col-span-2 flex items-center space-x-2">
                             <Controller name={`experience.${index}.is_current_position`} control={form.control} render={({ field: controllerField }) => (<Checkbox id={`experience.${index}.is_current_position`} checked={!!controllerField.value} onCheckedChange={controllerField.onChange} className="h-4 w-4"/>)}/>
                             <Label htmlFor={`experience.${index}.is_current_position`}>Current Position</Label>

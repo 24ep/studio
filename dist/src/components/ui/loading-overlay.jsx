@@ -1,15 +1,4 @@
 "use client";
-var __rest = (this && this.__rest) || function (s, e) {
-    var t = {};
-    for (var p in s) if (Object.prototype.hasOwnProperty.call(s, p) && e.indexOf(p) < 0)
-        t[p] = s[p];
-    if (s != null && typeof Object.getOwnPropertySymbols === "function")
-        for (var i = 0, p = Object.getOwnPropertySymbols(s); i < p.length; i++) {
-            if (e.indexOf(p[i]) < 0 && Object.prototype.propertyIsEnumerable.call(s, p[i]))
-                t[p[i]] = s[p[i]];
-        }
-    return t;
-};
 import React from 'react';
 import { cn } from '@/lib/utils';
 import { Loader2 } from 'lucide-react';
@@ -97,8 +86,7 @@ export function PageLoading({ text = 'Loading page...', size = 'lg' }) {
     </div>);
 }
 // Button loading state
-export function LoadingButton(_a) {
-    var { isLoading, children, loadingText = 'Loading...' } = _a, props = __rest(_a, ["isLoading", "children", "loadingText"]);
+export function LoadingButton({ isLoading, children, loadingText = 'Loading...', ...props }) {
     return (<button {...props} disabled={isLoading || props.disabled} className={cn('inline-flex items-center justify-center', 'disabled:opacity-50 disabled:cursor-not-allowed', props.className)}>
       {isLoading && (<Loader2 className="mr-2 h-4 w-4 animate-spin"/>)}
       {isLoading ? loadingText : children}

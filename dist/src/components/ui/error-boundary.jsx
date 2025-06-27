@@ -14,7 +14,6 @@ export class ErrorBoundary extends Component {
         return { hasError: true, error };
     }
     componentDidCatch(error, errorInfo) {
-        var _a, _b;
         console.error('ErrorBoundary caught an error:', error, errorInfo);
         // Log error to monitoring service in production
         if (process.env.NODE_ENV === 'production') {
@@ -26,7 +25,7 @@ export class ErrorBoundary extends Component {
                 timestamp: new Date().toISOString(),
             });
         }
-        (_b = (_a = this.props).onError) === null || _b === void 0 ? void 0 : _b.call(_a, error, errorInfo);
+        this.props.onError?.(error, errorInfo);
     }
     render() {
         if (this.state.hasError) {
@@ -48,8 +47,8 @@ function ErrorFallback({ error }) {
     };
     const handleReportError = () => {
         const errorDetails = {
-            message: error === null || error === void 0 ? void 0 : error.message,
-            stack: error === null || error === void 0 ? void 0 : error.stack,
+            message: error?.message,
+            stack: error?.stack,
             url: window.location.href,
             userAgent: navigator.userAgent,
             timestamp: new Date().toISOString(),
@@ -73,7 +72,7 @@ function ErrorFallback({ error }) {
             <Bug className="h-4 w-4"/>
             <AlertTitle>Unexpected Error</AlertTitle>
             <AlertDescription>
-              {(error === null || error === void 0 ? void 0 : error.message) || 'An unexpected error occurred. Please try again.'}
+              {error?.message || 'An unexpected error occurred. Please try again.'}
             </AlertDescription>
           </Alert>
 
@@ -94,7 +93,7 @@ function ErrorFallback({ error }) {
             </Button>
           </div>
 
-          {process.env.NODE_ENV === 'development' && (error === null || error === void 0 ? void 0 : error.stack) && (<details className="mt-4">
+          {process.env.NODE_ENV === 'development' && error?.stack && (<details className="mt-4">
               <summary className="cursor-pointer text-sm text-muted-foreground">
                 Error Details (Development)
               </summary>
@@ -115,7 +114,7 @@ export function useErrorHandler() {
             console.error('Production error:', {
                 error: error.message,
                 stack: error.stack,
-                componentStack: errorInfo === null || errorInfo === void 0 ? void 0 : errorInfo.componentStack,
+                componentStack: errorInfo?.componentStack,
                 timestamp: new Date().toISOString(),
             });
         }

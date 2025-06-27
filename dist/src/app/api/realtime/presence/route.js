@@ -29,7 +29,7 @@ import { authOptions } from '@/lib/auth';
 export const dynamic = "force-dynamic";
 export async function POST(request) {
     const session = await getServerSession(authOptions);
-    if (!(session === null || session === void 0 ? void 0 : session.user)) {
+    if (!session?.user) {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
     try {
@@ -55,7 +55,7 @@ export async function POST(request) {
 }
 export async function DELETE(request) {
     const session = await getServerSession(authOptions);
-    if (!(session === null || session === void 0 ? void 0 : session.user)) {
+    if (!session?.user) {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
     try {
@@ -77,7 +77,7 @@ export async function DELETE(request) {
 }
 export async function GET() {
     const session = await getServerSession(authOptions);
-    if (!(session === null || session === void 0 ? void 0 : session.user)) {
+    if (!session?.user) {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
     try {

@@ -129,7 +129,7 @@ export const validationUtils = {
             new URL(url);
             return true;
         }
-        catch (_a) {
+        catch {
             return false;
         }
     },
@@ -189,7 +189,10 @@ export function useFormValidation(initialData, validationSchema) {
         const validator = validationSchema[field];
         if (validator) {
             const error = validator(value);
-            setErrors(prev => (Object.assign(Object.assign({}, prev), { [field]: error })));
+            setErrors(prev => ({
+                ...prev,
+                [field]: error
+            }));
             return error;
         }
         return undefined;
@@ -213,7 +216,10 @@ export function useFormValidation(initialData, validationSchema) {
         }
     }, [touched, validateField]);
     const handleFieldBlur = React.useCallback((field) => {
-        setTouched(prev => (Object.assign(Object.assign({}, prev), { [field]: true })));
+        setTouched(prev => ({
+            ...prev,
+            [field]: true
+        }));
     }, []);
     const resetValidation = React.useCallback(() => {
         setErrors({});

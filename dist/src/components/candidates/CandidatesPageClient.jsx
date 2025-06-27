@@ -34,7 +34,6 @@ function downloadFile(content, filename, contentType) {
     URL.revokeObjectURL(url);
 }
 export function CandidatesPageClient({ initialCandidates, initialAvailablePositions, initialAvailableStages, authError: serverAuthError = false, permissionError: serverPermissionError = false, initialFetchError, }) {
-    var _a, _b, _c, _d, _e, _f, _g, _h, _j;
     const [filters, setFilters] = useState({
         minFitScore: 0,
         maxFitScore: 100,
@@ -74,9 +73,9 @@ export function CandidatesPageClient({ initialCandidates, initialAvailablePositi
     const [page, setPage] = useState(1);
     const [pageSize] = useState(20);
     const [total, setTotal] = useState(0);
-    const canImportCandidates = ((_a = session === null || session === void 0 ? void 0 : session.user) === null || _a === void 0 ? void 0 : _a.role) === 'Admin' || ((_c = (_b = session === null || session === void 0 ? void 0 : session.user) === null || _b === void 0 ? void 0 : _b.modulePermissions) === null || _c === void 0 ? void 0 : _c.includes('CANDIDATES_IMPORT'));
-    const canExportCandidates = ((_d = session === null || session === void 0 ? void 0 : session.user) === null || _d === void 0 ? void 0 : _d.role) === 'Admin' || ((_f = (_e = session === null || session === void 0 ? void 0 : session.user) === null || _e === void 0 ? void 0 : _e.modulePermissions) === null || _f === void 0 ? void 0 : _f.includes('CANDIDATES_EXPORT'));
-    const canManageCandidates = ((_g = session === null || session === void 0 ? void 0 : session.user) === null || _g === void 0 ? void 0 : _g.role) === 'Admin' || ((_j = (_h = session === null || session === void 0 ? void 0 : session.user) === null || _h === void 0 ? void 0 : _h.modulePermissions) === null || _j === void 0 ? void 0 : _j.includes('CANDIDATES_MANAGE'));
+    const canImportCandidates = session?.user?.role === 'Admin' || session?.user?.modulePermissions?.includes('CANDIDATES_IMPORT');
+    const canExportCandidates = session?.user?.role === 'Admin' || session?.user?.modulePermissions?.includes('CANDIDATES_EXPORT');
+    const canManageCandidates = session?.user?.role === 'Admin' || session?.user?.modulePermissions?.includes('CANDIDATES_MANAGE');
     const fetchRecruiters = useCallback(async () => {
         if (sessionStatus !== 'authenticated')
             return;
@@ -85,12 +84,12 @@ export function CandidatesPageClient({ initialCandidates, initialAvailablePositi
             if (!response.ok) {
                 const errorData = await response.json().catch(() => ({})); // Default to empty object on JSON parse fail
                 console.error("API error fetching recruiters:", errorData); // Log the object we got
-                let detailedErrorMessage = (errorData === null || errorData === void 0 ? void 0 : errorData.message) || 'Failed to fetch recruiters';
-                if (Object.keys(errorData).length === 0 && !(errorData === null || errorData === void 0 ? void 0 : errorData.message)) {
+                let detailedErrorMessage = errorData?.message || 'Failed to fetch recruiters';
+                if (Object.keys(errorData).length === 0 && !errorData?.message) {
                     // If errorData is empty and has no message, use statusText
                     detailedErrorMessage = `Failed to fetch recruiters. Server responded with status ${response.status}: ${response.statusText || 'No additional error message.'}`;
                 }
-                else if (errorData === null || errorData === void 0 ? void 0 : errorData.error) { // If there's an 'error' property in the JSON
+                else if (errorData?.error) { // If there's an 'error' property in the JSON
                     detailedErrorMessage += ` (Details: ${errorData.error})`;
                 }
                 if (errorData.code) { // If there's a 'code' property
@@ -152,11 +151,11 @@ export function CandidatesPageClient({ initialCandidates, initialAvailablePositi
                 let errorMessageFromServer = null;
                 try {
                     errorData = await response.json();
-                    errorMessageFromServer = (errorData === null || errorData === void 0 ? void 0 : errorData.message) || (errorData === null || errorData === void 0 ? void 0 : errorData.error);
+                    errorMessageFromServer = errorData?.message || errorData?.error;
                 }
                 catch (e) { }
                 let errorMessage = errorMessageFromServer || `Failed to fetch candidates. Server responded with status ${response.status}: ${response.statusText || 'No additional error message.'}`;
-                if (errorData === null || errorData === void 0 ? void 0 : errorData.code) {
+                if (errorData?.code) {
                     errorMessage += ` (Code: ${errorData.code})`;
                 }
                 if (response.status === 401) {
@@ -189,7 +188,6 @@ export function CandidatesPageClient({ initialCandidates, initialAvailablePositi
         }
     }, [sessionStatus]);
     const handleAiSearch = async (aiQuery) => {
-        var _a;
         if (!aiQuery.trim()) {
             toast("Please enter a search query for AI search.");
             return;
@@ -210,7 +208,7 @@ export function CandidatesPageClient({ initialCandidates, initialAvailablePositi
             }
             setAiMatchedCandidateIds(result.matchedCandidateIds || []);
             setAiSearchReasoning(result.aiReasoning || "AI search complete.");
-            if (((_a = result.matchedCandidateIds) === null || _a === void 0 ? void 0 : _a.length) > 0) {
+            if (result.matchedCandidateIds?.length > 0) {
                 toast.success(`Found ${result.matchedCandidateIds.length} potential match(es). ${result.aiReasoning || ''}`);
             }
             else {
@@ -250,7 +248,7 @@ export function CandidatesPageClient({ initialCandidates, initialAvailablePositi
         }
     }, [initialFetchError]);
     const handleFilterChange = (newFilters) => {
-        const combinedFilters = Object.assign(Object.assign(Object.assign({}, filters), newFilters), { aiSearchQuery: undefined });
+        const combinedFilters = { ...filters, ...newFilters, aiSearchQuery: undefined };
         setFilters(combinedFilters);
         setAiMatchedCandidateIds(null);
         setAiSearchReasoning(null);
@@ -328,7 +326,6 @@ export function CandidatesPageClient({ initialCandidates, initialAvailablePositi
         }
     };
     const handleAddCandidateSubmit = async (formData) => {
-        var _a, _b;
         setIsLoading(true);
         try {
             const apiPayload = {
@@ -343,14 +340,14 @@ export function CandidatesPageClient({ initialCandidates, initialAvailablePositi
                     personal_info: formData.personal_info,
                     contact_info: formData.contact_info,
                     education: formData.education,
-                    experience: (_a = formData.experience) === null || _a === void 0 ? void 0 : _a.map(exp => (Object.assign(Object.assign({}, exp), { postition_level: exp.postition_level === "___NOT_SPECIFIED___" ? undefined : exp.postition_level }))),
-                    skills: (_b = formData.skills) === null || _b === void 0 ? void 0 : _b.map(s => {
-                        var _a;
-                        return ({
-                            segment_skill: s.segment_skill,
-                            skill: ((_a = s.skill_string) === null || _a === void 0 ? void 0 : _a.split(',').map(sk => sk.trim()).filter(sk => sk)) || []
-                        });
-                    }),
+                    experience: formData.experience?.map(exp => ({
+                        ...exp,
+                        postition_level: exp.postition_level === "___NOT_SPECIFIED___" ? undefined : exp.postition_level
+                    })),
+                    skills: formData.skills?.map(s => ({
+                        segment_skill: s.segment_skill,
+                        skill: s.skill_string?.split(',').map(sk => sk.trim()).filter(sk => sk) || []
+                    })),
                     job_suitable: formData.job_suitable,
                 }
             };
@@ -419,7 +416,6 @@ export function CandidatesPageClient({ initialCandidates, initialAvailablePositi
         toast.success('A CSV template for candidates has been downloaded.');
     };
     const handleExportToCsv = async () => {
-        var _a, _b;
         setIsLoading(true);
         try {
             const query = new URLSearchParams();
@@ -451,7 +447,7 @@ export function CandidatesPageClient({ initialCandidates, initialAvailablePositi
                 throw new Error(errorData.message);
             }
             const blob = await response.blob();
-            const filename = ((_b = (_a = response.headers.get('content-disposition')) === null || _a === void 0 ? void 0 : _a.split('filename=')[1]) === null || _b === void 0 ? void 0 : _b.replace(/"/g, '')) || 'candidates_export.csv';
+            const filename = response.headers.get('content-disposition')?.split('filename=')[1]?.replace(/"/g, '') || 'candidates_export.csv';
             downloadFile(await blob.text(), filename, blob.type);
             toast.success('Candidates exported as CSV.');
         }
@@ -509,13 +505,12 @@ export function CandidatesPageClient({ initialCandidates, initialAvailablePositi
         return selectedCandidateIds.size === displayedCandidates.length;
     }, [selectedCandidateIds, displayedCandidates]);
     const handleBulkAction = (action) => {
-        var _a, _b, _c;
         setBulkActionType(action);
         if (action === 'change_status') {
-            setBulkNewStatus(((_a = availableStages.find(s => s.name === 'Applied')) === null || _a === void 0 ? void 0 : _a.name) || ((_b = availableStages[0]) === null || _b === void 0 ? void 0 : _b.name) || '');
+            setBulkNewStatus(availableStages.find(s => s.name === 'Applied')?.name || availableStages[0]?.name || '');
         }
         else if (action === 'assign_recruiter') {
-            setBulkNewRecruiterId(((_c = availableRecruiters[0]) === null || _c === void 0 ? void 0 : _c.id) || null);
+            setBulkNewRecruiterId(availableRecruiters[0]?.id || null);
         }
         setBulkTransitionNotes('');
         setIsBulkActionConfirmOpen(true);
@@ -578,13 +573,23 @@ export function CandidatesPageClient({ initialCandidates, initialAvailablePositi
             toast.error(error.message);
         }
     };
+    if (sessionStatus === 'loading') {
+        // Show a loading spinner while session is being established
+        return (<div className="flex h-screen w-screen items-center justify-center bg-background fixed inset-0 z-50">
+        <Loader2 className="h-16 w-16 animate-spin text-primary"/>
+      </div>);
+    }
+    // Prevent any fetches or UI rendering until authenticated or error
+    if (sessionStatus !== 'authenticated') {
+        return null;
+    }
     if (authError) {
         return (<div className="flex flex-col items-center justify-center h-[calc(100vh-10rem)] text-center p-4"> <ShieldAlert className="w-16 h-16 text-destructive mb-4"/> <h2 className="text-2xl font-semibold text-foreground mb-2">Access Denied</h2> <p className="text-muted-foreground mb-4 max-w-md">You need to be signed in to view this page.</p> <Button onClick={() => signIn(undefined, { callbackUrl: pathname })} className="btn-primary-gradient">Sign In</Button> </div>);
     }
     if (permissionError) {
         return (<div className="flex flex-col items-center justify-center h-[calc(100vh-10rem)] text-center p-4"> <ShieldAlert className="w-16 h-16 text-destructive mb-4"/> <h2 className="text-2xl font-semibold text-foreground mb-2">Permission Denied</h2> <p className="text-muted-foreground mb-4 max-w-md">{fetchError || "You do not have sufficient permissions to view this page."}</p> <Button onClick={() => router.push('/')} className="btn-primary-gradient">Go to Dashboard</Button> </div>);
     }
-    if (sessionStatus === 'loading' || (isLoading && allCandidates.length === 0 && !fetchError)) {
+    if (isLoading && allCandidates.length === 0 && !fetchError) {
         return (<div className="flex h-screen w-screen items-center justify-center bg-background fixed inset-0 z-50"><Loader2 className="h-16 w-16 animate-spin text-primary"/></div>);
     }
     if (fetchError && !isLoading) {
@@ -674,7 +679,7 @@ export function CandidatesPageClient({ initialCandidates, initialAvailablePositi
           <AlertDialogHeader>
             <AlertDialogTitle>Confirm Bulk Action</AlertDialogTitle>
             <AlertDialogDescription>
-              You are about to perform <strong>{bulkActionType === null || bulkActionType === void 0 ? void 0 : bulkActionType.replace('_', ' ')}</strong> on <strong>{selectedCandidateIds.size}</strong> selected candidate(s).
+              You are about to perform <strong>{bulkActionType?.replace('_', ' ')}</strong> on <strong>{selectedCandidateIds.size}</strong> selected candidate(s).
               {bulkActionType === 'delete' && " This action cannot be undone."}
             </AlertDialogDescription>
           </AlertDialogHeader>

@@ -77,10 +77,9 @@ export const dynamic = "force-dynamic";
  *         description: Recruitment stage not found
  */
 export async function GET(request) {
-    var _a;
     const id = extractIdFromUrl(request);
     const session = await getServerSession(authOptions);
-    if (!((_a = session === null || session === void 0 ? void 0 : session.user) === null || _a === void 0 ? void 0 : _a.id))
+    if (!session?.user?.id)
         return new NextResponse('Unauthorized', { status: 401 });
     const client = await getPool().connect();
     try {
@@ -99,10 +98,9 @@ export async function GET(request) {
     }
 }
 export async function PUT(request) {
-    var _a;
     const id = extractIdFromUrl(request);
     const session = await getServerSession(authOptions);
-    const actingUserId = (_a = session === null || session === void 0 ? void 0 : session.user) === null || _a === void 0 ? void 0 : _a.id;
+    const actingUserId = session?.user?.id;
     if (!actingUserId)
         return new NextResponse('Unauthorized', { status: 401 });
     let body;
@@ -151,10 +149,9 @@ export async function PUT(request) {
     }
 }
 export async function DELETE(request) {
-    var _a;
     const id = extractIdFromUrl(request);
     const session = await getServerSession(authOptions);
-    const actingUserId = (_a = session === null || session === void 0 ? void 0 : session.user) === null || _a === void 0 ? void 0 : _a.id;
+    const actingUserId = session?.user?.id;
     if (!actingUserId)
         return new NextResponse('Unauthorized', { status: 401 });
     const client = await getPool().connect();

@@ -102,7 +102,6 @@ const editCandidateDetailSchema = z.object({
     parsedData: candidateDetailsEditSchema.optional(),
 });
 const RoleSuggestionSummary = ({ candidate, allDbPositions }) => {
-    var _a, _b;
     if (!candidate || !candidate.parsedData) {
         return (<Card>
         <CardHeader>
@@ -113,7 +112,7 @@ const RoleSuggestionSummary = ({ candidate, allDbPositions }) => {
         </CardContent>
       </Card>);
     }
-    const jobMatches = (_a = candidate.parsedData) === null || _a === void 0 ? void 0 : _a.job_matches;
+    const jobMatches = candidate.parsedData?.job_matches;
     if (!jobMatches || jobMatches.length === 0) {
         return (<Card>
         <CardHeader>
@@ -132,7 +131,7 @@ const RoleSuggestionSummary = ({ candidate, allDbPositions }) => {
     let bestAlternativePositionInDb = null;
     const openPositionsMap = new Map(allDbPositions.filter(p => p.isOpen).map(p => [p.title.toLowerCase(), p]));
     for (const jobMatch of jobMatches) {
-        const jobMatchTitleLower = (_b = jobMatch.job_title) === null || _b === void 0 ? void 0 : _b.toLowerCase(); // job_title can be optional/null
+        const jobMatchTitleLower = jobMatch.job_title?.toLowerCase(); // job_title can be optional/null
         if (!jobMatchTitleLower)
             continue;
         const dbPositionMatch = openPositionsMap.get(jobMatchTitleLower);
@@ -170,7 +169,6 @@ const RoleSuggestionSummary = ({ candidate, allDbPositions }) => {
     </Card>);
 };
 export default function CandidateDetailPage() {
-    var _a, _b, _c, _d, _e, _f;
     const params = useParams();
     const router = useRouter();
     const candidateId = params.id;
@@ -197,7 +195,6 @@ export default function CandidateDetailPage() {
     const { fields: skillsFields, append: appendSkill, remove: removeSkill } = useFieldArray({ control, name: "parsedData.skills" });
     const { fields: jobSuitableFields, append: appendJobSuitable, remove: removeJobSuitable } = useFieldArray({ control, name: "parsedData.job_suitable" });
     const fetchCandidateDetails = useCallback(async () => {
-        var _a, _b, _c, _d;
         if (!candidateId)
             return;
         setIsLoading(true);
@@ -221,12 +218,19 @@ export default function CandidateDetailPage() {
                 recruiterId: data.recruiterId,
                 fitScore: data.fitScore,
                 status: data.status,
-                parsedData: Object.assign(Object.assign({}, data.parsedData), { skills: ((_b = (_a = data.parsedData) === null || _a === void 0 ? void 0 : _a.skills) === null || _b === void 0 ? void 0 : _b.map(s => {
-                        var _a;
-                        return (Object.assign(Object.assign({}, s), { skill_string: ((_a = s.skill) === null || _a === void 0 ? void 0 : _a.join(', ')) || '' }));
-                    })) || [], experience: (((_d = (_c = data.parsedData) === null || _c === void 0 ? void 0 : _c.experience) === null || _d === void 0 ? void 0 : _d.map(exp => (Object.assign(Object.assign({}, exp), { is_current_position: typeof exp.is_current_position === 'string'
+                parsedData: {
+                    ...data.parsedData,
+                    skills: data.parsedData?.skills?.map(s => ({
+                        ...s,
+                        skill_string: s.skill?.join(', ') || ''
+                    })) || [],
+                    experience: (data.parsedData?.experience?.map(exp => ({
+                        ...exp,
+                        is_current_position: typeof exp.is_current_position === 'string'
                             ? exp.is_current_position === 'true'
-                            : !!exp.is_current_position })))) || []) })
+                            : !!exp.is_current_position,
+                    })) || []),
+                }
             });
         }
         catch (error) {
@@ -299,7 +303,7 @@ export default function CandidateDetailPage() {
     };
     const handleTransitionsUpdated = (updatedHistory, newStatus) => {
         if (candidate) {
-            setCandidate(Object.assign(Object.assign({}, candidate), { status: newStatus, transitionHistory: updatedHistory }));
+            setCandidate({ ...candidate, status: newStatus, transitionHistory: updatedHistory });
         }
         fetchCandidateDetails();
     };
@@ -330,7 +334,6 @@ export default function CandidateDetailPage() {
         }
     };
     const handleAssignRecruiter = async (newRecruiterId) => {
-        var _a, _b, _c, _d, _e;
         if (!candidate || isAssigningRecruiter)
             return;
         setIsAssigningRecruiter(true);
@@ -353,14 +356,21 @@ export default function CandidateDetailPage() {
                 recruiterId: updatedCandidate.recruiterId,
                 fitScore: updatedCandidate.fitScore,
                 status: updatedCandidate.status,
-                parsedData: Object.assign(Object.assign({}, updatedCandidate.parsedData), { skills: ((_b = (_a = updatedCandidate.parsedData) === null || _a === void 0 ? void 0 : _a.skills) === null || _b === void 0 ? void 0 : _b.map(s => {
-                        var _a;
-                        return (Object.assign(Object.assign({}, s), { skill_string: ((_a = s.skill) === null || _a === void 0 ? void 0 : _a.join(', ')) || '' }));
-                    })) || [], experience: (((_d = (_c = updatedCandidate.parsedData) === null || _c === void 0 ? void 0 : _c.experience) === null || _d === void 0 ? void 0 : _d.map(exp => (Object.assign(Object.assign({}, exp), { is_current_position: typeof exp.is_current_position === 'string'
+                parsedData: {
+                    ...updatedCandidate.parsedData,
+                    skills: updatedCandidate.parsedData?.skills?.map(s => ({
+                        ...s,
+                        skill_string: s.skill?.join(', ') || ''
+                    })) || [],
+                    experience: (updatedCandidate.parsedData?.experience?.map(exp => ({
+                        ...exp,
+                        is_current_position: typeof exp.is_current_position === 'string'
                             ? exp.is_current_position === 'true'
-                            : !!exp.is_current_position })))) || []) })
+                            : !!exp.is_current_position,
+                    })) || []),
+                }
             });
-            toast(`Candidate assigned to ${((_e = updatedCandidate.recruiter) === null || _e === void 0 ? void 0 : _e.name) || 'Unassigned'}.`);
+            toast(`Candidate assigned to ${updatedCandidate.recruiter?.name || 'Unassigned'}.`);
         }
         catch (error) {
             toast(error.message);
@@ -392,16 +402,22 @@ export default function CandidateDetailPage() {
         }
     };
     const handleSaveDetails = async (data) => {
-        var _a, _b, _c, _d;
         if (!candidate)
             return;
-        const processedData = Object.assign(Object.assign({}, data), { parsedData: Object.assign(Object.assign({}, data.parsedData), { skills: (_b = (_a = data.parsedData) === null || _a === void 0 ? void 0 : _a.skills) === null || _b === void 0 ? void 0 : _b.map(s => {
-                    var _a;
-                    return ({
-                        segment_skill: s.segment_skill,
-                        skill: ((_a = s.skill_string) === null || _a === void 0 ? void 0 : _a.split(',').map(sk => sk.trim()).filter(sk => sk)) || [],
-                    });
-                }), experience: (_d = (_c = data.parsedData) === null || _c === void 0 ? void 0 : _c.experience) === null || _d === void 0 ? void 0 : _d.map(exp => (Object.assign(Object.assign({}, exp), { postition_level: exp.postition_level === PLACEHOLDER_VALUE_NONE ? null : exp.postition_level }))) }) });
+        const processedData = {
+            ...data,
+            parsedData: {
+                ...data.parsedData,
+                skills: data.parsedData?.skills?.map(s => ({
+                    segment_skill: s.segment_skill,
+                    skill: s.skill_string?.split(',').map(sk => sk.trim()).filter(sk => sk) || [],
+                })),
+                experience: data.parsedData?.experience?.map(exp => ({
+                    ...exp,
+                    postition_level: exp.postition_level === PLACEHOLDER_VALUE_NONE ? null : exp.postition_level
+                }))
+            }
+        };
         try {
             const response = await fetch(`/api/candidates/${candidate.id}`, {
                 method: 'PUT',
@@ -420,7 +436,6 @@ export default function CandidateDetailPage() {
         }
     };
     const handleCancelEdit = () => {
-        var _a, _b, _c, _d;
         if (candidate) {
             reset({
                 name: candidate.name,
@@ -430,11 +445,21 @@ export default function CandidateDetailPage() {
                 recruiterId: candidate.recruiterId,
                 fitScore: candidate.fitScore,
                 status: candidate.status,
-                parsedData: Object.assign(Object.assign({}, candidate.parsedData), { skills: ((_b = (_a = candidate.parsedData) === null || _a === void 0 ? void 0 : _a.skills) === null || _b === void 0 ? void 0 : _b.map(s => (Object.assign(Object.assign({}, s), { skill_string: Array.isArray(s.skill)
+                parsedData: {
+                    ...candidate.parsedData,
+                    skills: candidate.parsedData?.skills?.map(s => ({
+                        ...s,
+                        skill_string: Array.isArray(s.skill)
                             ? s.skill.filter((sk) => typeof sk === 'string').join(', ')
-                            : (typeof s.skill_string === 'string' ? s.skill_string : '') })))) || [], experience: (((_d = (_c = candidate.parsedData) === null || _c === void 0 ? void 0 : _c.experience) === null || _d === void 0 ? void 0 : _d.map(exp => (Object.assign(Object.assign({}, exp), { is_current_position: typeof exp.is_current_position === 'string'
+                            : (typeof s.skill_string === 'string' ? s.skill_string : '')
+                    })) || [],
+                    experience: (candidate.parsedData?.experience?.map(exp => ({
+                        ...exp,
+                        is_current_position: typeof exp.is_current_position === 'string'
                             ? exp.is_current_position === 'true'
-                            : !!exp.is_current_position })))) || []) })
+                            : !!exp.is_current_position,
+                    })) || []),
+                }
             });
         }
         setIsEditing(false);
@@ -463,7 +488,7 @@ export default function CandidateDetailPage() {
       </div>);
     }
     const parsed = candidate.parsedData;
-    const personalInfo = parsed === null || parsed === void 0 ? void 0 : parsed.personal_info;
+    const personalInfo = parsed?.personal_info;
     const renderField = (label, value, icon, isLink, linkHref, linkTarget) => {
         if (value === undefined || value === null || String(value).trim() === '' || (typeof value === 'number' && isNaN(value)))
             return null;
@@ -513,7 +538,7 @@ export default function CandidateDetailPage() {
             <CardHeader className="flex flex-row items-start justify-between gap-4">
               <div className="flex items-center gap-4">
                 <Avatar className="h-20 w-20 border-2 border-primary">
-                  <AvatarImage src={(personalInfo === null || personalInfo === void 0 ? void 0 : personalInfo.avatar_url) || `https://placehold.co/80x80.png?text=${candidate.name.charAt(0)}`} alt={candidate.name} data-ai-hint="person avatar"/>
+                  <AvatarImage src={personalInfo?.avatar_url || `https://placehold.co/80x80.png?text=${candidate.name.charAt(0)}`} alt={candidate.name} data-ai-hint="person avatar"/>
                   <AvatarFallback className="text-3xl">{candidate.name.charAt(0).toUpperCase()}</AvatarFallback>
                 </Avatar>
                 <div>
@@ -562,23 +587,20 @@ export default function CandidateDetailPage() {
                         <Label htmlFor="parsedData.cv_language">CV Language</Label>
                         <Input id="parsedData.cv_language" {...register('parsedData.cv_language')}/>
                         <Label htmlFor="positionId">Applied for Position</Label>
-                         <Controller name="positionId" control={control} render={({ field }) => {
-                var _a;
-                return (<Select onValueChange={(value) => field.onChange(value === "___NONE___" ? null : value)} value={(_a = field.value) !== null && _a !== void 0 ? _a : "___NONE___"}>
+                         <Controller name="positionId" control={control} render={({ field }) => (<Select onValueChange={(value) => field.onChange(value === "___NONE___" ? null : value)} value={field.value ?? "___NONE___"}>
                                     <SelectTrigger><SelectValue placeholder="Select Position"/></SelectTrigger>
                                     <SelectContent>
                                         <SelectItem value="___NONE___">N/A - General Application</SelectItem>
                                         {allDbPositions.map(pos => <SelectItem key={pos.id} value={pos.id}>{pos.title}</SelectItem>)}
                                     </SelectContent>
-                                </Select>);
-            }}/>
+                                </Select>)}/>
                     </>) : (<>
-                        {renderField("Applied for", ((_a = candidate.position) === null || _a === void 0 ? void 0 : _a.title) || 'N/A - General Application', Briefcase)}
+                        {renderField("Applied for", candidate.position?.title || 'N/A - General Application', Briefcase)}
                         {renderField("Application Date", candidate.applicationDate ? format(parseISO(candidate.applicationDate), "PPP") : 'N/A', CalendarDays)}
-                        {renderField("CV Language", parsed === null || parsed === void 0 ? void 0 : parsed.cv_language, Tag)}
+                        {renderField("CV Language", parsed?.cv_language, Tag)}
                     </>)}
                 {candidate.resumePath && !isEditing && renderField("Resume", getDisplayFilename(candidate.resumePath), HardDrive, true, `${MINIO_PUBLIC_BASE_URL}/${MINIO_BUCKET}/${candidate.resumePath}`, "_blank")}
-                 {((parsed === null || parsed === void 0 ? void 0 : parsed.associatedMatchDetails) && !isEditing) && (<Card className="mt-4 bg-muted/50 p-3">
+                 {(parsed?.associatedMatchDetails && !isEditing) && (<Card className="mt-4 bg-muted/50 p-3">
                     <CardHeader className="p-0 pb-1">
                       <CardTitle className="text-sm font-semibold flex items-center"><Zap className="mr-2 h-4 w-4 text-orange-500"/> Initial Processed Match</CardTitle>
                     </CardHeader>
@@ -605,10 +627,10 @@ export default function CandidateDetailPage() {
                             <Input id="parsedData.personal_info.title_honorific" {...register('parsedData.personal_info.title_honorific')}/>
                             <Label htmlFor="parsedData.personal_info.firstname">First Name *</Label>
                             <Input id="parsedData.personal_info.firstname" {...register('parsedData.personal_info.firstname')}/>
-                            {((_c = (_b = errors.parsedData) === null || _b === void 0 ? void 0 : _b.personal_info) === null || _c === void 0 ? void 0 : _c.firstname) && <p className="text-sm text-destructive">{errors.parsedData.personal_info.firstname.message}</p>}
+                            {errors.parsedData?.personal_info?.firstname && <p className="text-sm text-destructive">{errors.parsedData.personal_info.firstname.message}</p>}
                             <Label htmlFor="parsedData.personal_info.lastname">Last Name *</Label>
                             <Input id="parsedData.personal_info.lastname" {...register('parsedData.personal_info.lastname')}/>
-                            {((_e = (_d = errors.parsedData) === null || _d === void 0 ? void 0 : _d.personal_info) === null || _e === void 0 ? void 0 : _e.lastname) && <p className="text-sm text-destructive">{errors.parsedData.personal_info.lastname.message}</p>}
+                            {errors.parsedData?.personal_info?.lastname && <p className="text-sm text-destructive">{errors.parsedData.personal_info.lastname.message}</p>}
                             <Label htmlFor="parsedData.personal_info.nickname">Nickname</Label>
                             <Input id="parsedData.personal_info.nickname" {...register('parsedData.personal_info.nickname')}/>
                             <Label htmlFor="parsedData.personal_info.location">Location</Label>
@@ -616,12 +638,12 @@ export default function CandidateDetailPage() {
                             <Label htmlFor="parsedData.personal_info.introduction_aboutme">About Me</Label>
                             <Textarea id="parsedData.personal_info.introduction_aboutme" {...register('parsedData.personal_info.introduction_aboutme')}/>
                         </>) : (<>
-                            {renderField("Title", personalInfo === null || personalInfo === void 0 ? void 0 : personalInfo.title_honorific)}
-                            {renderField("First Name", personalInfo === null || personalInfo === void 0 ? void 0 : personalInfo.firstname)}
-                            {renderField("Last Name", personalInfo === null || personalInfo === void 0 ? void 0 : personalInfo.lastname)}
-                            {renderField("Nickname", personalInfo === null || personalInfo === void 0 ? void 0 : personalInfo.nickname)}
-                            {renderField("Location", personalInfo === null || personalInfo === void 0 ? void 0 : personalInfo.location, MapPin)}
-                            {((_f = (personalInfo)) === null || _f === void 0 ? void 0 : _f.introduction_aboutme) && (<div>
+                            {renderField("Title", personalInfo?.title_honorific)}
+                            {renderField("First Name", personalInfo?.firstname)}
+                            {renderField("Last Name", personalInfo?.lastname)}
+                            {renderField("Nickname", personalInfo?.nickname)}
+                            {renderField("Location", personalInfo?.location, MapPin)}
+                            {(personalInfo)?.introduction_aboutme && (<div>
                                 <h4 className="text-sm font-medium text-muted-foreground mb-1 flex items-center"><Info className="h-4 w-4 mr-2"/>About Me:</h4>
                                 <p className="text-sm text-foreground whitespace-pre-wrap bg-muted/50 p-3 rounded-md">{personalInfo.introduction_aboutme}</p>
                                 </div>)}
@@ -649,7 +671,7 @@ export default function CandidateDetailPage() {
                              <Button type="button" variant="outline" className="mt-2" onClick={() => appendEducation({ university: '', major: '', field: '', campus: '', period: '', duration: '', GPA: '' })}>
                                 <PlusCircle className="mr-2 h-4 w-4"/> Add Education
                             </Button>
-                        </div>) : (((parsed === null || parsed === void 0 ? void 0 : parsed.education) && parsed.education.length > 0) ? (<ul className="space-y-4">
+                        </div>) : ((parsed?.education && parsed.education.length > 0) ? (<ul className="space-y-4">
                                 {parsed.education.map((edu, index) => (<li key={`edu-${index}-${edu.university || index}`} className="p-3 border rounded-md bg-muted/30">
                                     {renderField("University", edu.university)}
                                     {renderField("Major", edu.major)}
@@ -676,16 +698,13 @@ export default function CandidateDetailPage() {
                                     <Textarea placeholder="Description" {...register(`parsedData.experience.${index}.description`)}/>
                                     <Input placeholder="Period" {...register(`parsedData.experience.${index}.period`)}/>
                                     <Input placeholder="Duration" {...register(`parsedData.experience.${index}.duration`)}/>
-                                     <Controller name={`parsedData.experience.${index}.postition_level`} control={control} render={({ field: controllerField }) => {
-                    var _a;
-                    return (<Select onValueChange={(value) => controllerField.onChange(value === PLACEHOLDER_VALUE_NONE ? null : value)} value={(_a = controllerField.value) !== null && _a !== void 0 ? _a : PLACEHOLDER_VALUE_NONE}>
+                                     <Controller name={`parsedData.experience.${index}.postition_level`} control={control} render={({ field: controllerField }) => (<Select onValueChange={(value) => controllerField.onChange(value === PLACEHOLDER_VALUE_NONE ? null : value)} value={controllerField.value ?? PLACEHOLDER_VALUE_NONE}>
                                             <SelectTrigger><SelectValue placeholder="Position Level"/></SelectTrigger>
                                             <SelectContent>
                                                 <SelectItem value={PLACEHOLDER_VALUE_NONE}>N/A / Not Specified</SelectItem>
                                                 {positionLevelOptions.map(level => <SelectItem key={level} value={level}>{level.charAt(0).toUpperCase() + level.slice(1)}</SelectItem>)}
                                             </SelectContent>
-                                            </Select>);
-                }}/>
+                                            </Select>)}/>
                                     <div className="flex items-center space-x-2">
                                         <Controller name={`parsedData.experience.${index}.is_current_position`} control={control} render={({ field: controllerField }) => (<Checkbox id={`experience.${index}.is_current_position`} checked={!!controllerField.value} onCheckedChange={controllerField.onChange}/>)}/>
                                         <Label htmlFor={`experience.${index}.is_current_position`}>Current Position</Label>
@@ -697,7 +716,7 @@ export default function CandidateDetailPage() {
                             <Button type="button" variant="outline" className="mt-2" onClick={() => appendExperience({ company: '', position: '', period: '', duration: '', is_current_position: false, description: '', postition_level: null })}>
                                 <PlusCircle className="mr-2 h-4 w-4"/> Add Experience
                             </Button>
-                        </div>) : (((parsed === null || parsed === void 0 ? void 0 : parsed.experience) && parsed.experience.length > 0) ? (<ul className="space-y-4">
+                        </div>) : ((parsed?.experience && parsed.experience.length > 0) ? (<ul className="space-y-4">
                                 {parsed.experience.map((exp, index) => (<li key={`exp-${index}-${exp.company || index}`} className="p-3 border rounded-md bg-muted/30">
                                     {renderField("Company", exp.company)}
                                     {renderField("Position", exp.position)}
@@ -731,7 +750,7 @@ export default function CandidateDetailPage() {
                         <Button type="button" variant="outline" className="mt-2" onClick={() => appendSkill({ segment_skill: '', skill_string: '' })}>
                             <PlusCircle className="mr-2 h-4 w-4"/> Add Skill Segment
                         </Button>
-                    </div>) : (((parsed === null || parsed === void 0 ? void 0 : parsed.skills) && parsed.skills.length > 0) ? (<ul className="space-y-4">
+                    </div>) : ((parsed?.skills && parsed.skills.length > 0) ? (<ul className="space-y-4">
                             {parsed.skills.map((skillEntry, index) => (<li key={`skill-${index}-${skillEntry.segment_skill || index}`} className="p-3 border rounded-md bg-muted/30">
                                 {renderField("Segment", skillEntry.segment_skill)}
                                 {skillEntry.skill && skillEntry.skill.length > 0 && (<div>
@@ -764,7 +783,7 @@ export default function CandidateDetailPage() {
                         <Button type="button" variant="outline" className="mt-2" onClick={() => appendJobSuitable({ suitable_career: '', suitable_job_position: '', suitable_job_level: '', suitable_salary_bath_month: '' })}>
                             <PlusCircle className="mr-2 h-4 w-4"/> Add Job Suitability
                         </Button>
-                    </div>) : (((parsed === null || parsed === void 0 ? void 0 : parsed.job_suitable) && parsed.job_suitable.length > 0) ? (<ul className="space-y-4">
+                    </div>) : ((parsed?.job_suitable && parsed.job_suitable.length > 0) ? (<ul className="space-y-4">
                             {parsed.job_suitable.map((job, index) => (<li key={`jobsuit-${index}-${job.suitable_career || index}`} className="p-3 border rounded-md bg-muted/30">
                                 {renderField("Career Path", job.suitable_career)}
                                 {renderField("Job Position", job.suitable_job_position)}
@@ -803,7 +822,7 @@ export default function CandidateDetailPage() {
         </div>
 
         <div className="lg:col-span-1 space-y-6">
-          {((parsed === null || parsed === void 0 ? void 0 : parsed.job_matches) && parsed.job_matches.length > 0 && !isEditing) && (<Card>
+          {(parsed?.job_matches && parsed.job_matches.length > 0 && !isEditing) && (<Card>
               <CardHeader>
                 <CardTitle className="flex items-center"><ListChecks className="mr-2 h-5 w-5 text-blue-600"/>Suggested Jobs</CardTitle>
                 <CardDescription>Full list of job matches from automated processing for this candidate.</CardDescription>
@@ -830,7 +849,7 @@ export default function CandidateDetailPage() {
                 </ScrollArea>
               </CardContent>
             </Card>)}
-           {(!isEditing && (!(parsed === null || parsed === void 0 ? void 0 : parsed.job_matches) || parsed.job_matches.length === 0)) && (<Card>
+           {(!isEditing && (!parsed?.job_matches || parsed.job_matches.length === 0)) && (<Card>
                 <CardHeader><CardTitle className="flex items-center"><ListChecks className="mr-2 h-5 w-5 text-blue-600"/>Suggested Jobs</CardTitle></CardHeader>
                 <CardContent><p className="text-sm text-muted-foreground text-center py-4">No automated job match data available.</p></CardContent>
              </Card>)}

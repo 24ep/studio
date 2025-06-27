@@ -10,7 +10,6 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { Users, Bell, Activity, Circle, MessageSquare, Eye, RefreshCw, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 export function RealtimeCollaboration({ className, showOnlineUsers = true, showCollaborationEvents = true, showNotifications = true, maxItems = 10, }) {
-    var _a, _b, _c;
     const { data: session } = useSession();
     const [onlineUsers, setOnlineUsers] = useState([]);
     const [collaborationEvents, setCollaborationEvents] = useState([]);
@@ -20,8 +19,7 @@ export function RealtimeCollaboration({ className, showOnlineUsers = true, showC
     const [lastUpdate, setLastUpdate] = useState(new Date());
     // Update user presence
     const updatePresence = useCallback(async () => {
-        var _a;
-        if (!((_a = session === null || session === void 0 ? void 0 : session.user) === null || _a === void 0 ? void 0 : _a.id))
+        if (!session?.user?.id)
             return;
         try {
             const response = await fetch('/api/realtime/presence', {
@@ -41,11 +39,10 @@ export function RealtimeCollaboration({ className, showOnlineUsers = true, showC
         catch (error) {
             console.error('Error updating presence:', error);
         }
-    }, [session === null || session === void 0 ? void 0 : session.user]);
+    }, [session?.user]);
     // Fetch real-time data
     const fetchRealtimeData = useCallback(async () => {
-        var _a;
-        if (!((_a = session === null || session === void 0 ? void 0 : session.user) === null || _a === void 0 ? void 0 : _a.id))
+        if (!session?.user?.id)
             return;
         setIsLoading(true);
         try {
@@ -74,23 +71,23 @@ export function RealtimeCollaboration({ className, showOnlineUsers = true, showC
         finally {
             setIsLoading(false);
         }
-    }, [(_a = session === null || session === void 0 ? void 0 : session.user) === null || _a === void 0 ? void 0 : _a.id, maxItems]);
+    }, [session?.user?.id, maxItems]);
     // Mark notification as read
     const markNotificationAsRead = useCallback(async (notificationId) => {
-        var _a;
-        if (!((_a = session === null || session === void 0 ? void 0 : session.user) === null || _a === void 0 ? void 0 : _a.id))
+        if (!session?.user?.id)
             return;
         try {
             await fetch(`/api/realtime/notifications/${notificationId}/read`, {
                 method: 'POST',
             });
             setNotifications(prev => prev.map(notification => notification.id === notificationId
-                ? Object.assign(Object.assign({}, notification), { read: true }) : notification));
+                ? { ...notification, read: true }
+                : notification));
         }
         catch (error) {
             console.error('Error marking notification as read:', error);
         }
-    }, [(_b = session === null || session === void 0 ? void 0 : session.user) === null || _b === void 0 ? void 0 : _b.id]);
+    }, [session?.user?.id]);
     // Initialize presence and fetch data
     useEffect(() => {
         updatePresence();
@@ -101,11 +98,10 @@ export function RealtimeCollaboration({ className, showOnlineUsers = true, showC
         const dataInterval = setInterval(fetchRealtimeData, 10000);
         // Cleanup on unmount
         return () => {
-            var _a;
             clearInterval(presenceInterval);
             clearInterval(dataInterval);
             // Remove presence on unmount
-            if ((_a = session === null || session === void 0 ? void 0 : session.user) === null || _a === void 0 ? void 0 : _a.id) {
+            if (session?.user?.id) {
                 fetch('/api/realtime/presence', {
                     method: 'DELETE',
                     headers: { 'Content-Type': 'application/json' },
@@ -113,7 +109,7 @@ export function RealtimeCollaboration({ className, showOnlineUsers = true, showC
                 }).catch(console.error);
             }
         };
-    }, [updatePresence, fetchRealtimeData, (_c = session === null || session === void 0 ? void 0 : session.user) === null || _c === void 0 ? void 0 : _c.id]);
+    }, [updatePresence, fetchRealtimeData, session?.user?.id]);
     // Format timestamp
     const formatTimestamp = (timestamp) => {
         const date = new Date(timestamp);

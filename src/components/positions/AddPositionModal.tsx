@@ -142,7 +142,6 @@ export function AddPositionModal({ isOpen, onOpenChange, onAddPosition }: AddPos
               control={form.control}
               render={({ field }) => (
                 <Toggle
-                  variant="success"
                   checked={field.value}
                   onCheckedChange={field.onChange}
                 />

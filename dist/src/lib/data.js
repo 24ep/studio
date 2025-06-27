@@ -39,7 +39,12 @@ export let mockAppUsers = [
 // These functions below manipulated mockAppUsers. They are no longer directly used by the main User API.
 // Kept for reference or if you need to manipulate the mock list for other testing.
 export const addUserToMockData = (user) => {
-    const newUser = Object.assign(Object.assign({ id: uuidv4() }, user), { avatarUrl: `https://placehold.co/100x100.png?text=${user.name.charAt(0)}`, dataAiHint: "profile person" });
+    const newUser = {
+        id: uuidv4(),
+        ...user,
+        avatarUrl: `https://placehold.co/100x100.png?text=${user.name.charAt(0)}`,
+        dataAiHint: "profile person"
+    };
     mockAppUsers.push(newUser);
     return newUser;
 };
@@ -48,7 +53,7 @@ export const updateUserInMockData = (id, updates) => {
     if (userIndex === -1) {
         return null;
     }
-    mockAppUsers[userIndex] = Object.assign(Object.assign({}, mockAppUsers[userIndex]), updates);
+    mockAppUsers[userIndex] = { ...mockAppUsers[userIndex], ...updates };
     return mockAppUsers[userIndex];
 };
 export const mockCandidates = [

@@ -101,11 +101,10 @@ export default function SystemStatusPage() {
         },
     ];
     const updateStatusItem = (id, updates) => {
-        setStatuses(prev => prev.map(item => item.id === id ? Object.assign(Object.assign({}, item), updates) : item));
+        setStatuses(prev => prev.map(item => item.id === id ? { ...item, ...updates } : item));
     };
     const handleCheckMinioBucket = useCallback(async () => {
-        var _a;
-        if (sessionStatus !== 'authenticated' || ((_a = session === null || session === void 0 ? void 0 : session.user) === null || _a === void 0 ? void 0 : _a.role) !== 'Admin') {
+        if (sessionStatus !== 'authenticated' || session?.user?.role !== 'Admin') {
             toast.error('You must be an Admin to perform this check.');
             return;
         }
@@ -156,7 +155,12 @@ export default function SystemStatusPage() {
         setStatuses(initialStatuses.map(item => {
             if (item.id === 'azure_ad_sso_conceptual') {
                 const conceptualStatus = conceptualSsoEnabled ? 'enabled' : 'disabled';
-                return Object.assign(Object.assign({}, item), { status: conceptualStatus, message: `Conceptual SSO is currently ${conceptualStatus}. Actual SSO functionality depends on server-side environment variables.`, actionLabel: conceptualSsoEnabled ? "Conceptually Disable SSO" : "Conceptually Enable SSO" });
+                return {
+                    ...item,
+                    status: conceptualStatus,
+                    message: `Conceptual SSO is currently ${conceptualStatus}. Actual SSO functionality depends on server-side environment variables.`,
+                    actionLabel: conceptualSsoEnabled ? "Conceptually Disable SSO" : "Conceptually Enable SSO",
+                };
             }
             return item;
         }));
@@ -165,10 +169,10 @@ export default function SystemStatusPage() {
     useEffect(() => {
         setStatuses(prev => prev.map(item => {
             if (item.id === 'minio_bucket_check') {
-                return Object.assign(Object.assign({}, item), { action: handleCheckMinioBucket });
+                return { ...item, action: handleCheckMinioBucket };
             }
             if (item.id === 'azure_ad_sso_conceptual') {
-                return Object.assign(Object.assign({}, item), { action: handleToggleAzureAdSsoConceptual });
+                return { ...item, action: handleToggleAzureAdSsoConceptual };
             }
             return item;
         }));
@@ -228,9 +232,7 @@ export default function SystemStatusPage() {
         </CardHeader>
         <CardContent className="space-y-4">
           {statuses.length === 0 && <p>Loading status checks...</p>}
-          {statuses.map((item) => {
-            var _a, _b;
-            return (<Card key={item.id} className="p-4 shadow-sm bg-card hover:shadow-md transition-shadow">
+          {statuses.map((item) => (<Card key={item.id} className="p-4 shadow-sm bg-card hover:shadow-md transition-shadow">
               <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
                 <h3 className="text-lg font-semibold text-foreground flex items-center">
                   <item.icon className={`mr-2 h-5 w-5 shrink-0 ${getStatusColor(item.status)}`}/>
@@ -246,16 +248,15 @@ export default function SystemStatusPage() {
                     {item.details}
                  </div>)}
               {item.action && item.actionLabel && (<div className="mt-3 ml-7 sm:ml-0">
-                  <Button onClick={item.action} disabled={item.isLoading || (item.id === 'minio_bucket_check' && ((_a = session === null || session === void 0 ? void 0 : session.user) === null || _a === void 0 ? void 0 : _a.role) !== 'Admin')} variant="outline" size="sm" className={cn("btn-hover-primary-gradient", item.id === 'azure_ad_sso_conceptual' && item.status === 'enabled' && 'bg-green-500 hover:bg-green-600 text-white border-green-600', item.id === 'azure_ad_sso_conceptual' && item.status === 'disabled' && 'bg-gray-400 hover:bg-gray-500 text-white border-gray-500')}>
+                  <Button onClick={item.action} disabled={item.isLoading || (item.id === 'minio_bucket_check' && session?.user?.role !== 'Admin')} variant="outline" size="sm" className={cn("btn-hover-primary-gradient", item.id === 'azure_ad_sso_conceptual' && item.status === 'enabled' && 'bg-green-500 hover:bg-green-600 text-white border-green-600', item.id === 'azure_ad_sso_conceptual' && item.status === 'disabled' && 'bg-gray-400 hover:bg-gray-500 text-white border-gray-500')}>
                     {item.isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> :
-                        item.id === 'azure_ad_sso_conceptual' ? getToggleIcon(item.status) :
-                            item.id === 'minio_bucket_check' ? <HardDrive className="mr-2 h-4 w-4"/> : null}
+                    item.id === 'azure_ad_sso_conceptual' ? getToggleIcon(item.status) :
+                        item.id === 'minio_bucket_check' ? <HardDrive className="mr-2 h-4 w-4"/> : null}
                     {item.isLoading ? "Processing..." : item.actionLabel}
                   </Button>
-                   {item.id === 'minio_bucket_check' && ((_b = session === null || session === void 0 ? void 0 : session.user) === null || _b === void 0 ? void 0 : _b.role) !== 'Admin' && (<p className="text-xs text-destructive mt-1">Admin role required to perform this check.</p>)}
+                   {item.id === 'minio_bucket_check' && session?.user?.role !== 'Admin' && (<p className="text-xs text-destructive mt-1">Admin role required to perform this check.</p>)}
                 </div>)}
-            </Card>);
-        })}
+            </Card>))}
         </CardContent>
       </Card>
     </div>);

@@ -31,15 +31,15 @@ function createCandidateSummary(candidate) {
         summaryParts.push(`Email: ${email}`);
     if (phone)
         summaryParts.push(`Phone: ${phone}`);
-    if (position === null || position === void 0 ? void 0 : position.title)
+    if (position?.title)
         summaryParts.push(`Applied for Position: ${position.title} (Fit Score: ${fitScore}%, Status: ${status})`);
     else
         summaryParts.push(`General Application (Status: ${status}, Overall Fit Score: ${fitScore}%)`);
     if (applicationDate)
         summaryParts.push(`Application Date: ${new Date(applicationDate).toLocaleDateString()}`);
-    if (recruiter === null || recruiter === void 0 ? void 0 : recruiter.name)
+    if (recruiter?.name)
         summaryParts.push(`Assigned Recruiter: ${recruiter.name}`);
-    const latestTransition = transitionHistory === null || transitionHistory === void 0 ? void 0 : transitionHistory.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0];
+    const latestTransition = transitionHistory?.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0];
     if (latestTransition) {
         summaryParts.push(`Last Status Update: ${latestTransition.stage} on ${new Date(latestTransition.date).toLocaleDateString()}`);
     }
@@ -186,7 +186,14 @@ export async function searchCandidatesAIChat(input) {
           WHERE th."candidateId" = c.id
         ) AS th_data ON true
     `);
-        allCandidates = candidatesResult.rows.map(row => (Object.assign(Object.assign({}, row), { parsedData: row.parsedData || { personal_info: {}, contact_info: {} }, position: row.positionId ? { id: row.positionId, title: row.positionTitle } : null, recruiter: row.recruiterId ? { id: row.recruiterId, name: row.recruiterName, email: null } : null, transitionHistory: (row.transitionHistory || []), custom_attributes: row.custom_attributes || {} })));
+        allCandidates = candidatesResult.rows.map(row => ({
+            ...row,
+            parsedData: row.parsedData || { personal_info: {}, contact_info: {} },
+            position: row.positionId ? { id: row.positionId, title: row.positionTitle } : null,
+            recruiter: row.recruiterId ? { id: row.recruiterId, name: row.recruiterName, email: null } : null,
+            transitionHistory: (row.transitionHistory || []),
+            custom_attributes: row.custom_attributes || {},
+        }));
         if (allCandidates.length === 0) {
             return { matchedCandidateIds: [], aiReasoning: "No candidates found in the database to search." };
         }

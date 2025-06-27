@@ -13,7 +13,7 @@ async function getMaxConcurrentProcessors() {
         const value = found ? parseInt(found.value, 10) : 5;
         return isNaN(value) ? 5 : value;
     }
-    catch (_a) {
+    catch {
         return 5;
     }
 }

@@ -81,8 +81,8 @@ export function CandidateFilters({ initialFilters = {}, onFilterChange, onAiSear
             education: education || undefined,
             minFitScore: fitScoreRange[0],
             maxFitScore: fitScoreRange[1],
-            applicationDateStart: applicationDateRange === null || applicationDateRange === void 0 ? void 0 : applicationDateRange.from,
-            applicationDateEnd: applicationDateRange === null || applicationDateRange === void 0 ? void 0 : applicationDateRange.to,
+            applicationDateStart: applicationDateRange?.from,
+            applicationDateEnd: applicationDateRange?.to,
             selectedRecruiterIds: selectedRecruiterIds.size > 0 ? Array.from(selectedRecruiterIds) : undefined,
             aiSearchQuery: undefined,
         });
@@ -127,20 +127,19 @@ export function CandidateFilters({ initialFilters = {}, onFilterChange, onAiSear
         });
     };
     const renderMultiSelectTrigger = (placeholder, selectedItems, allItems, itemType) => {
-        var _a, _b, _c;
         if (selectedItems.size === 0)
             return placeholder;
         if (selectedItems.size === 1) {
             const firstId = Array.from(selectedItems)[0];
             let itemName = '';
             if (itemType === 'position') {
-                itemName = ((_a = allItems.find(p => p.id === firstId)) === null || _a === void 0 ? void 0 : _a.title) || placeholder;
+                itemName = allItems.find(p => p.id === firstId)?.title || placeholder;
             }
             else if (itemType === 'status') {
-                itemName = ((_b = allItems.find(s => s.name === firstId)) === null || _b === void 0 ? void 0 : _b.name) || placeholder;
+                itemName = allItems.find(s => s.name === firstId)?.name || placeholder;
             }
             else if (itemType === 'recruiter') {
-                itemName = ((_c = allItems.find(r => r.id === firstId)) === null || _c === void 0 ? void 0 : _c.name) || placeholder;
+                itemName = allItems.find(r => r.id === firstId)?.name || placeholder;
             }
             return itemName;
         }
@@ -316,14 +315,14 @@ export function CandidateFilters({ initialFilters = {}, onFilterChange, onAiSear
             <PopoverTrigger asChild>
               <Button variant="outline" className={cn("w-full justify-start text-left font-normal mt-1", !applicationDateRange && "text-muted-foreground")} disabled={isLoading || isAiSearching}>
                 <CalendarIcon className="mr-2 h-4 w-4"/>
-                {(applicationDateRange === null || applicationDateRange === void 0 ? void 0 : applicationDateRange.from) ? (applicationDateRange.to ? (<>
+                {applicationDateRange?.from ? (applicationDateRange.to ? (<>
                       {format(applicationDateRange.from, "LLL dd, y")} -{" "}
                       {format(applicationDateRange.to, "LLL dd, y")}
                     </>) : (format(applicationDateRange.from, "LLL dd, y"))) : (<span>Pick a date range</span>)}
               </Button>
             </PopoverTrigger>
             <PopoverContent className="w-auto p-0" align="start">
-              <Calendar initialFocus mode="range" defaultMonth={applicationDateRange === null || applicationDateRange === void 0 ? void 0 : applicationDateRange.from} selected={applicationDateRange} onSelect={setApplicationDateRange} numberOfMonths={2} disabled={(date) => date > new Date() || date < new Date("1900-01-01")}/>
+              <Calendar initialFocus mode="range" defaultMonth={applicationDateRange?.from} selected={applicationDateRange} onSelect={setApplicationDateRange} numberOfMonths={2} disabled={(date) => date > new Date() || date < new Date("1900-01-01")}/>
             </PopoverContent>
           </Popover>
         </div>

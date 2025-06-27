@@ -66,6 +66,7 @@ export function AddUserModal({ isOpen, onOpenChange, onAddUser }: AddUserModalPr
   const [availableGroups, setAvailableGroups] = useState<UserGroup[]>([]);
   const [groupSearchOpen, setGroupSearchOpen] = useState(false);
   const [groupSearchQuery, setGroupSearchQuery] = useState('');
+  const [forcePasswordChange, setForcePasswordChange] = useState(false);
 
   const form = useForm<AddUserFormValues>({
     resolver: zodResolver(addUserFormSchema),
@@ -200,7 +201,6 @@ export function AddUserModal({ isOpen, onOpenChange, onAddUser }: AddUserModalPr
                                           <Toggle
                                             checked={checked}
                                             onCheckedChange={(checked) => checked ? field.onChange([...(field.value || []), module.id]) : field.onChange((field.value || []).filter(v => v !== module.id))}
-                                            variant="success"
                                           />
                                         </FormControl>
                                         <div className="flex flex-col">

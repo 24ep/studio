@@ -19,7 +19,6 @@ import { signIn, useSession } from "next-auth/react";
 import { toast } from 'react-hot-toast';
 const userRoleOptionsFilter = ['ALL_ROLES', 'Admin', 'Recruiter', 'Hiring Manager'];
 export default function ManageUsersPage() {
-    var _a, _b;
     const [users, setUsers] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     const { data: session, status: sessionStatus } = useSession();
@@ -72,12 +71,11 @@ export default function ManageUsersPage() {
         }
     }, [sessionStatus, pathname]);
     useEffect(() => {
-        var _a;
         if (sessionStatus === 'unauthenticated') {
             signIn(undefined, { callbackUrl: pathname });
         }
         else if (sessionStatus === 'authenticated') {
-            if (session.user.role !== 'Admin' && !((_a = session.user.modulePermissions) === null || _a === void 0 ? void 0 : _a.includes('USERS_MANAGE'))) {
+            if (session.user.role !== 'Admin' && !session.user.modulePermissions?.includes('USERS_MANAGE')) {
                 setFetchError("You do not have permission to manage users.");
                 setIsLoading(false);
             }
@@ -202,7 +200,7 @@ export default function ManageUsersPage() {
                View, add, edit, and delete application users. Assign roles, permissions, and groups.
             </CardDescription>
           </div>
-          {((_a = session === null || session === void 0 ? void 0 : session.user) === null || _a === void 0 ? void 0 : _a.role) === 'Admin' && (<Button className="w-full sm:w-auto btn-primary-gradient" onClick={() => setIsAddUserModalOpen(true)}> 
+          {session?.user?.role === 'Admin' && (<Button className="w-full sm:w-auto btn-primary-gradient" onClick={() => setIsAddUserModalOpen(true)}> 
               <PlusCircle className="mr-2 h-4 w-4"/> Add New User
               </Button>)}
         </CardHeader>
@@ -240,7 +238,7 @@ export default function ManageUsersPage() {
             </div>) : users.length === 0 && !fetchError ? (<div className="text-center py-10">
               <UsersRound className="mx-auto h-12 w-12 text-muted-foreground"/>
               <p className="mt-4 text-muted-foreground">No users found matching your criteria.</p>
-                {((_b = session === null || session === void 0 ? void 0 : session.user) === null || _b === void 0 ? void 0 : _b.role) === 'Admin' && (<Button className="mt-4 btn-primary-gradient" onClick={() => setIsAddUserModalOpen(true)}> 
+                {session?.user?.role === 'Admin' && (<Button className="mt-4 btn-primary-gradient" onClick={() => setIsAddUserModalOpen(true)}> 
                     <PlusCircle className="mr-2 h-4 w-4"/> Add First User
                 </Button>)}
             </div>) : (<div className="border rounded-lg overflow-hidden">
@@ -255,9 +253,7 @@ export default function ManageUsersPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {users.map((user) => {
-                var _a, _b;
-                return (<TableRow key={user.id}>
+                {users.map((user) => (<TableRow key={user.id}>
                     <TableCell>
                       <div className="flex items-center gap-3">
                         <Avatar className="h-9 w-9">
@@ -275,11 +271,11 @@ export default function ManageUsersPage() {
                     </TableCell>
                     <TableCell className="hidden md:table-cell">
                       {user.groups && user.groups.length > 0
-                        ? user.groups.map(g => <Badge key={g.id} variant="outline" className="mr-1 mb-1">{g.name}</Badge>)
-                        : <span className="text-xs text-muted-foreground">No groups</span>}
+                    ? user.groups.map(g => <Badge key={g.id} variant="outline" className="mr-1 mb-1">{g.name}</Badge>)
+                    : <span className="text-xs text-muted-foreground">No groups</span>}
                     </TableCell>
                     <TableCell className="text-right">
-                      {((_a = session === null || session === void 0 ? void 0 : session.user) === null || _a === void 0 ? void 0 : _a.role) === 'Admin' && (<DropdownMenu>
+                      {session?.user?.role === 'Admin' && (<DropdownMenu>
                           <DropdownMenuTrigger asChild>
                             <Button variant="ghost" size="icon" className="h-8 w-8">
                               <MoreHorizontal className="h-4 w-4"/>
@@ -291,14 +287,13 @@ export default function ManageUsersPage() {
                               <Edit3 className="mr-2 h-4 w-4"/> Edit User
                             </DropdownMenuItem>
                             <DropdownMenuSeparator />
-                            <DropdownMenuItem onClick={() => confirmDeleteUser(user)} disabled={((_b = session === null || session === void 0 ? void 0 : session.user) === null || _b === void 0 ? void 0 : _b.id) === user.id} className="text-destructive hover:!bg-destructive/10 focus:!bg-destructive/10 focus:!text-destructive">
+                            <DropdownMenuItem onClick={() => confirmDeleteUser(user)} disabled={session?.user?.id === user.id} className="text-destructive hover:!bg-destructive/10 focus:!bg-destructive/10 focus:!text-destructive">
                               <Trash2 className="mr-2 h-4 w-4"/> Delete User
                             </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>)}
                     </TableCell>
-                  </TableRow>);
-            })}
+                  </TableRow>))}
               </TableBody>
             </Table>
             </div>)}

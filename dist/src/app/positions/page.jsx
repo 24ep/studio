@@ -13,7 +13,7 @@ export default async function PositionsPageServer() {
         console.log("[BUILD LOG] Before getServerSession");
         session = await getServerSession(authOptions);
         console.log("[BUILD LOG] After getServerSession");
-        if (!(session === null || session === void 0 ? void 0 : session.user)) {
+        if (!session?.user) {
             return <PositionsPageClient initialPositions={[]} initialAvailableDepartments={[]} authError={true}/>;
         }
         // Check for general view permission if applicable

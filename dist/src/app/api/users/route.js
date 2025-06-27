@@ -53,9 +53,8 @@ const createUserSchema = z.object({
     groupIds: z.array(z.string().uuid()).optional().default([]),
 });
 export async function GET(request) {
-    var _a, _b, _c, _d, _e, _f, _g;
     const session = await getServerSession(authOptions);
-    if (!((_a = session === null || session === void 0 ? void 0 : session.user) === null || _a === void 0 ? void 0 : _a.id)) {
+    if (!session?.user?.id) {
         return NextResponse.json({ message: "Unauthorized: User session required." }, { status: 401 });
     }
     const userRole = session.user.role;
@@ -78,7 +77,7 @@ export async function GET(request) {
     const queryParams = [];
     let paramIndex = 1;
     const conditions = [];
-    const canManageUsers = userRole === 'Admin' || ((_c = (_b = session.user.modulePermissions) === null || _b === void 0 ? void 0 : _b.includes('USERS_MANAGE')) !== null && _c !== void 0 ? _c : false);
+    const canManageUsers = userRole === 'Admin' || (session.user.modulePermissions?.includes('USERS_MANAGE') ?? false);
     if (canManageUsers) {
         if (filterRoleInput && filterRoleInput !== "ALL_ROLES") {
             conditions.push(`u.role = $${paramIndex++}`);
@@ -92,7 +91,7 @@ export async function GET(request) {
         }
     }
     else {
-        const userNameForLog = ((_d = session === null || session === void 0 ? void 0 : session.user) === null || _d === void 0 ? void 0 : _d.name) || ((_e = session === null || session === void 0 ? void 0 : session.user) === null || _e === void 0 ? void 0 : _e.email) || 'Unknown User';
+        const userNameForLog = session?.user?.name || session?.user?.email || 'Unknown User';
         await logAudit('WARN', `Forbidden attempt to list users by ${userNameForLog} (Role: ${userRole}). Lacks USERS_MANAGE.`, 'API:Users:Get', session.user.id);
         return NextResponse.json({ message: "Forbidden: Insufficient permissions to list users." }, { status: 403 });
     }
@@ -113,12 +112,16 @@ export async function GET(request) {
   `;
     try {
         const result = await getPool().query(query, queryParams);
-        const usersToReturn = result.rows.map(user => (Object.assign(Object.assign({}, user), { modulePermissions: Array.isArray(user.modulePermissions) ? user.modulePermissions : (user.modulePermissions ? JSON.parse(user.modulePermissions) : []), groups: user.groups || [] })));
+        const usersToReturn = result.rows.map(user => ({
+            ...user,
+            modulePermissions: Array.isArray(user.modulePermissions) ? user.modulePermissions : (user.modulePermissions ? JSON.parse(user.modulePermissions) : []),
+            groups: user.groups || [],
+        }));
         return NextResponse.json(usersToReturn, { status: 200 });
     }
     catch (error) {
         console.error("Failed to fetch users (SQL Error):", error);
-        const userNameForLog = ((_f = session === null || session === void 0 ? void 0 : session.user) === null || _f === void 0 ? void 0 : _f.name) || ((_g = session === null || session === void 0 ? void 0 : session.user) === null || _g === void 0 ? void 0 : _g.email) || 'Unknown User';
+        const userNameForLog = session?.user?.name || session?.user?.email || 'Unknown User';
         await logAudit('ERROR', `Failed to fetch users by ${userNameForLog}. SQL Error: ${error.message}`, 'API:Users:Get', session.user.id, { sqlState: error.code, constraint: error.constraint });
         return NextResponse.json({
             message: "Error fetching users due to a server-side database error.",
@@ -128,10 +131,9 @@ export async function GET(request) {
     }
 }
 export async function POST(request) {
-    var _a, _b, _c, _d, _e, _f;
     const session = await getServerSession(authOptions);
-    if (!session || ((_a = session.user) === null || _a === void 0 ? void 0 : _a.role) !== 'Admin') {
-        await logAudit('WARN', `Forbidden attempt to create user by ${((_b = session === null || session === void 0 ? void 0 : session.user) === null || _b === void 0 ? void 0 : _b.email) || 'Unknown'} (ID: ${((_c = session === null || session === void 0 ? void 0 : session.user) === null || _c === void 0 ? void 0 : _c.id) || 'N/A'}). Required role: Admin.`, 'API:Users:Create', (_d = session === null || session === void 0 ? void 0 : session.user) === null || _d === void 0 ? void 0 : _d.id);
+    if (!session || session.user?.role !== 'Admin') {
+        await logAudit('WARN', `Forbidden attempt to create user by ${session?.user?.email || 'Unknown'} (ID: ${session?.user?.id || 'N/A'}). Required role: Admin.`, 'API:Users:Create', session?.user?.id);
         return NextResponse.json({ message: "Forbidden: You must be an Admin to create users." }, { status: 403 });
     }
     let body;
@@ -196,7 +198,7 @@ export async function POST(request) {
       GROUP BY u.id, u.name, u.email, u.role, u."avatarUrl", u."dataAiHint", u."modulePermissions", u."createdAt", u."updatedAt";
     `;
         const finalUserResult = await getPool().query(finalUserQuery, [newUserId]);
-        newUser = Object.assign(Object.assign({}, finalUserResult.rows[0]), { modulePermissions: finalUserResult.rows[0].modulePermissions || [], groups: finalUserResult.rows[0].groups || [] });
+        newUser = { ...finalUserResult.rows[0], modulePermissions: finalUserResult.rows[0].modulePermissions || [], groups: finalUserResult.rows[0].groups || [] };
         await getPool().query('COMMIT');
         const redisClient = await getRedisClient();
         if (redisClient) {
@@ -209,7 +211,7 @@ export async function POST(request) {
     catch (error) {
         await getPool().query('ROLLBACK');
         console.error("Failed to create user:", error);
-        const userNameForLog = ((_e = session === null || session === void 0 ? void 0 : session.user) === null || _e === void 0 ? void 0 : _e.name) || ((_f = session === null || session === void 0 ? void 0 : session.user) === null || _f === void 0 ? void 0 : _f.email) || 'Unknown User';
+        const userNameForLog = session?.user?.name || session?.user?.email || 'Unknown User';
         await logAudit('ERROR', `Failed to create user ${email} by ${userNameForLog}. Error: ${error.message}. SQL State: ${error.code}, Constraint: ${error.constraint}`, 'API:Users:Create', session.user.id, { sqlState: error.code, constraint: error.constraint });
         if (error.code === '23505' && error.constraint === 'User_email_key') {
             return NextResponse.json({ message: "User with this email already exists." }, { status: 409 });

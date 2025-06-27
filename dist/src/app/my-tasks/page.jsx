@@ -6,9 +6,8 @@ import { MyTasksPageClient } from '@/components/tasks/MyTasksPageClient';
 import { fetchAllPositionsDb, fetchAllRecruitmentStagesDb } from '@/lib/apiUtils';
 import { authOptions } from '@/lib/auth';
 async function getInitialTaskBoardData(session) {
-    var _a, _b;
-    const userRole = (_a = session === null || session === void 0 ? void 0 : session.user) === null || _a === void 0 ? void 0 : _a.role;
-    const userId = (_b = session === null || session === void 0 ? void 0 : session.user) === null || _b === void 0 ? void 0 : _b.id;
+    const userRole = session?.user?.role;
+    const userId = session?.user?.id;
     if (!userId) {
         return { initialCandidates: [], initialPositions: [], initialStages: [], initialRecruiters: [], authError: true, error: "User session required." };
     }
@@ -35,8 +34,8 @@ async function getInitialTaskBoardData(session) {
       p.title as "positionTitle", p.department as "positionDepartment", p.position_level as "positionLevel",
       rec_user.name as "recruiterName",
       COALESCE(th_data.history, '[]'::json) as "transitionHistory"
-    FROM "candidates" c
-    LEFT JOIN "positions" p ON c."positionId" = p.id
+    FROM "Candidate" c
+    LEFT JOIN "Position" p ON c."positionId" = p.id
     LEFT JOIN "User" rec_user ON c."recruiterId" = rec_user.id
     LEFT JOIN LATERAL (
       SELECT json_agg(json_build_object('id', th.id, 'candidateId', th."candidateId", 'date', th.date, 'stage', th.stage, 'notes', th.notes, 'actingUserId', th."actingUserId", 'actingUserName', u_th.name, 'createdAt', th."createdAt", 'updatedAt', th."updatedAt")) AS history FROM "TransitionRecord" th LEFT JOIN "User" u_th ON th."actingUserId" = u_th.id WHERE th."candidateId" = c.id
@@ -61,7 +60,6 @@ async function getInitialTaskBoardData(session) {
     }
     else {
         accumulatedError += "Failed to load positions. ";
-        console.error("MyTasksPageServer fetchAllPositionsDb Error:", positionsResult.reason);
     }
     let initialStages = [];
     if (stagesResult.status === 'fulfilled') {
@@ -72,7 +70,6 @@ async function getInitialTaskBoardData(session) {
     }
     else {
         accumulatedError += "Failed to load stages. ";
-        console.error("MyTasksPageServer fetchAllRecruitmentStagesDb Error:", stagesResult.reason);
     }
     let initialRecruiters = [];
     if (recruitersQueryResult.status === 'fulfilled') {
@@ -80,28 +77,29 @@ async function getInitialTaskBoardData(session) {
     }
     else {
         accumulatedError += "Failed to load recruiters. ";
-        console.error("MyTasksPageServer fetch recruiters Error:", recruitersQueryResult.reason);
     }
     let initialCandidates = [];
     if (candidatesQueryResult.status === 'fulfilled') {
-        initialCandidates = candidatesQueryResult.value.rows.map(row => (Object.assign(Object.assign({}, row), { parsedData: row.parsedData || { personal_info: {}, contact_info: {} }, customAttributes: row.customAttributes || {}, position: row.positionId ? { id: row.positionId, title: row.positionTitle, department: row.department, position_level: row.positionLevel } : null, recruiter: row.recruiterId ? { id: row.recruiterId, name: row.recruiterName, email: null } : null, transitionHistory: row.transitionHistory || [] })));
+        initialCandidates = candidatesQueryResult.value.rows.map(row => ({
+            ...row,
+            parsedData: row.parsedData || { personal_info: {}, contact_info: {} },
+            customAttributes: row.customAttributes || {},
+            position: row.positionId ? { id: row.positionId, title: row.positionTitle, department: row.department, position_level: row.positionLevel } : null,
+            recruiter: row.recruiterId ? { id: row.recruiterId, name: row.recruiterName, email: null } : null,
+            transitionHistory: row.transitionHistory || [],
+        }));
     }
     else {
         accumulatedError += `Failed to load initial candidates: ${candidatesQueryResult.reason.message}. `;
-        console.error("MyTasksPageServer fetch initial candidates Error:", candidatesQueryResult.reason);
     }
     return { initialCandidates, initialPositions, initialStages, initialRecruiters, error: accumulatedError.trim() || undefined };
 }
 export default async function MyTasksPageServer() {
-    console.log("[BUILD LOG] Before getServerSession");
     const session = await getServerSession(authOptions);
-    console.log("[BUILD LOG] After getServerSession");
-    if (!(session === null || session === void 0 ? void 0 : session.user)) {
+    if (!session?.user) {
         return <MyTasksPageClient initialCandidates={[]} initialPositions={[]} initialStages={[]} initialRecruiters={[]} authError={true}/>;
     }
-    console.log("[BUILD LOG] Before getInitialTaskBoardData");
     const { initialCandidates, initialPositions, initialStages, initialRecruiters, error, authError, permissionError } = await getInitialTaskBoardData(session);
-    console.log("[BUILD LOG] After getInitialTaskBoardData");
     if (authError || permissionError) {
         return <MyTasksPageClient initialCandidates={[]} initialPositions={initialPositions} initialStages={initialStages} initialRecruiters={initialRecruiters} authError={authError} permissionError={permissionError} initialFetchError={error}/>;
     }

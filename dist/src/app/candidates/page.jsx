@@ -7,13 +7,12 @@ import { fetchAllPositionsDb, fetchAllRecruitmentStagesDb } from '@/lib/apiUtils
 import { authOptions } from '@/lib/auth';
 import { CandidateQueueProvider } from "@/components/candidates/CandidateImportUploadQueue";
 async function getInitialCandidatesData(session) {
-    var _a, _b, _c, _d, _e, _f;
-    const userRole = (_a = session === null || session === void 0 ? void 0 : session.user) === null || _a === void 0 ? void 0 : _a.role;
-    const userId = (_b = session === null || session === void 0 ? void 0 : session.user) === null || _b === void 0 ? void 0 : _b.id;
+    const userRole = session?.user?.role;
+    const userId = session?.user?.id;
     if (!userId) {
         return { candidates: [], authError: true, error: "User session required." };
     }
-    if (userRole !== 'Admin' && !((_d = (_c = session === null || session === void 0 ? void 0 : session.user) === null || _c === void 0 ? void 0 : _c.modulePermissions) === null || _d === void 0 ? void 0 : _d.includes('CANDIDATES_VIEW'))) {
+    if (userRole !== 'Admin' && !session?.user?.modulePermissions?.includes('CANDIDATES_VIEW')) {
         return { candidates: [], permissionError: true, error: "You do not have permission to view candidates." };
     }
     let initialQuery = `
@@ -24,8 +23,8 @@ async function getInitialCandidatesData(session) {
       p.title as "positionTitle", p.department as "positionDepartment", p.position_level as "positionLevel",
       rec.name as "recruiterName",
       COALESCE(th_data.history, '[]'::json) as "transitionHistory"
-    FROM "candidates" c
-    LEFT JOIN "positions" p ON c."positionId" = p.id
+    FROM "Candidate" c
+    LEFT JOIN "Position" p ON c."positionId" = p.id
     LEFT JOIN "User" rec ON c."recruiterId" = rec.id
     LEFT JOIN LATERAL (
       SELECT json_agg(
@@ -43,7 +42,7 @@ async function getInitialCandidatesData(session) {
     const queryParams = [];
     let paramIndex = 1;
     const conditions = [];
-    if (userRole === 'Recruiter' && !((_f = (_e = session === null || session === void 0 ? void 0 : session.user) === null || _e === void 0 ? void 0 : _e.modulePermissions) === null || _f === void 0 ? void 0 : _f.includes('CANDIDATES_VIEW'))) {
+    if (userRole === 'Recruiter' && !session?.user?.modulePermissions?.includes('CANDIDATES_VIEW')) {
         conditions.push(`c."recruiterId" = $${paramIndex++}`);
         queryParams.push(userId);
     }
@@ -53,16 +52,23 @@ async function getInitialCandidatesData(session) {
     initialQuery += ' ORDER BY c."createdAt" DESC LIMIT 50;';
     try {
         const result = await getPool().query(initialQuery, queryParams);
-        const candidates = result.rows.map(row => (Object.assign(Object.assign({}, row), { parsedData: row.parsedData || { personal_info: {}, contact_info: {} }, customAttributes: row.customAttributes || {}, position: row.positionId ? {
+        const candidates = result.rows.map(row => ({
+            ...row,
+            parsedData: row.parsedData || { personal_info: {}, contact_info: {} },
+            customAttributes: row.customAttributes || {},
+            position: row.positionId ? {
                 id: row.positionId,
                 title: row.positionTitle,
                 department: row.positionDepartment,
                 position_level: row.positionLevel,
-            } : null, recruiter: row.recruiterId ? {
+            } : null,
+            recruiter: row.recruiterId ? {
                 id: row.recruiterId,
                 name: row.recruiterName,
                 email: null
-            } : null, transitionHistory: row.transitionHistory || [] })));
+            } : null,
+            transitionHistory: row.transitionHistory || [],
+        }));
         return { candidates };
     }
     catch (error) {
@@ -74,7 +80,7 @@ export default async function CandidatesPageServer() {
     console.log("[BUILD LOG] Before getServerSession");
     const session = await getServerSession(authOptions);
     console.log("[BUILD LOG] After getServerSession");
-    if (!(session === null || session === void 0 ? void 0 : session.user)) {
+    if (!session?.user) {
         return <CandidatesPageClient initialCandidates={[]} initialAvailablePositions={[]} initialAvailableStages={[]} authError={true}/>;
     }
     console.log("[BUILD LOG] Before getInitialCandidatesData, fetchAllPositionsDb, fetchAllRecruitmentStagesDb");

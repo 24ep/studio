@@ -91,7 +91,7 @@ export function EditPositionModal({ isOpen, onOpenChange, onEditPosition, positi
       <DialogContent className="sm:max-w-3xl max-h-[90vh] flex flex-col p-0"> {/* Changed p-0 to allow cards to manage padding */}
         <DialogHeader className="p-6 pb-4 border-b"> {/* Added padding and border */}
           <DialogTitle className="flex items-center">
-            <Edit3 className="mr-2 h-5 w-5 text-primary"/> Edit Position: {position === null || position === void 0 ? void 0 : position.title}
+            <Edit3 className="mr-2 h-5 w-5 text-primary"/> Edit Position: {position?.title}
           </DialogTitle>
           <DialogDescription>
             Update the details for this job position.
@@ -122,8 +122,8 @@ export function EditPositionModal({ isOpen, onOpenChange, onEditPosition, positi
                 <Controller name="description" control={form.control} render={({ field }) => (<ReactQuill id="description-edit" theme="snow" value={field.value || ''} onChange={field.onChange} className="mt-1 bg-white" placeholder="Enter job description"/>)}/>
               </div>
               <div className="flex items-center space-x-2 pt-2">
-                <Controller name="isOpen" control={form.control} render={({ field }) => (<Toggle id="isOpen-edit" variant="success" checked={field.value} onCheckedChange={field.onChange}/>)}/>
-                <Label htmlFor="isOpen-edit">Position is Open</Label>
+                <Controller name="isOpen" control={form.control} render={({ field }) => (<Toggle id="is-active" checked={field.value} onCheckedChange={field.onChange}/>)}/>
+                <Label htmlFor="is-active">Position is Open</Label>
               </div>
             </form>
           </ScrollArea>

@@ -70,7 +70,7 @@ export default function RolesPermissionsPage() {
             if (roleIdToSelect) {
                 const roleToReselect = data.find(r => r.id === roleIdToSelect);
                 setSelectedRole(roleToReselect || (data.length > 0 ? data[0] : null));
-                selectedRoleIdRef.current = (roleToReselect === null || roleToReselect === void 0 ? void 0 : roleToReselect.id) || (data.length > 0 ? data[0].id : null);
+                selectedRoleIdRef.current = roleToReselect?.id || (data.length > 0 ? data[0].id : null);
             }
             else if (data.length > 0 && !selectedRoleIdRef.current) { // Use ref instead of selectedRole
                 setSelectedRole(data[0]);
@@ -91,7 +91,6 @@ export default function RolesPermissionsPage() {
         }
     }, [sessionStatus, pathname]); // Removed selectedRole from dependencies
     useEffect(() => {
-        var _a;
         // Debug: Log session and permissions
         if (session) {
             console.log('[DEBUG] Session:', session);
@@ -102,7 +101,7 @@ export default function RolesPermissionsPage() {
             signIn(undefined, { callbackUrl: pathname });
         }
         else if (sessionStatus === 'authenticated') {
-            if (session.user.role !== 'Admin' && !((_a = session.user.modulePermissions) === null || _a === void 0 ? void 0 : _a.includes('USER_GROUPS_MANAGE'))) {
+            if (session.user.role !== 'Admin' && !session.user.modulePermissions?.includes('USER_GROUPS_MANAGE')) {
                 setFetchError("You do not have permission to manage roles & permissions.");
                 setIsLoading(false);
             }
@@ -165,8 +164,8 @@ export default function RolesPermissionsPage() {
                 throw new Error(result.message || "Failed to update role permissions.");
             toast.success(`Permissions for role "${role.name}" updated.`);
             // Update local state for immediate UI feedback
-            setSelectedRole(prev => prev ? Object.assign(Object.assign({}, prev), { permissions: newPermissions }) : null);
-            setRoles(prevRoles => prevRoles.map(r => r.id === role.id ? Object.assign(Object.assign({}, r), { permissions: newPermissions }) : r));
+            setSelectedRole(prev => prev ? { ...prev, permissions: newPermissions } : null);
+            setRoles(prevRoles => prevRoles.map(r => r.id === role.id ? { ...r, permissions: newPermissions } : r));
         }
         catch (error) {
             toast.error(error.message);
@@ -227,7 +226,7 @@ export default function RolesPermissionsPage() {
           <CardContent className="p-0">
             <ScrollArea className="h-[calc(100vh-16rem)]"> {/* Adjust height as needed */}
               {isLoading && roles.length === 0 ? (<div className="p-4 text-sm text-muted-foreground text-center"><Loader2 className="h-5 w-5 animate-spin inline mr-2"/>Loading roles...</div>) : roles.length === 0 ? (<p className="p-4 text-sm text-muted-foreground text-center">No roles defined.</p>) : (<div className="space-y-0">
-                  {roles.map((role) => (<Button key={role.id} variant="ghost" onClick={() => handleSelectRole(role)} className={cn("w-full justify-start rounded-none p-4 text-left h-auto border-b border-border last:border-b-0", (selectedRole === null || selectedRole === void 0 ? void 0 : selectedRole.id) === role.id && "bg-primary/10 text-primary font-semibold ")}>
+                  {roles.map((role) => (<Button key={role.id} variant="ghost" onClick={() => handleSelectRole(role)} className={cn("w-full justify-start rounded-none p-4 text-left h-auto border-b border-border last:border-b-0", selectedRole?.id === role.id && "bg-primary/10 text-primary font-semibold ")}>
                       <div className="flex-1">
                         <div className="flex justify-between items-center">
                             <span className="font-medium">{role.name} {role.is_system_role && <Badge variant="secondary" className="ml-1 text-xs">System</Badge>}</span>
@@ -267,7 +266,7 @@ export default function RolesPermissionsPage() {
                               <Label htmlFor={`${selectedRole.id}-${perm.id}`} className="font-medium text-sm">{perm.label}</Label>
                               <p className="text-xs text-muted-foreground">{perm.description}</p>
                             </div>
-                            <Toggle checked={(selectedRole.permissions || []).includes(perm.id)} onCheckedChange={() => handlePermissionToggle(perm.id, selectedRole)} variant="success"/>
+                            <Toggle checked={(selectedRole.permissions || []).includes(perm.id)} onCheckedChange={() => handlePermissionToggle(perm.id, selectedRole)}/>
                           </div>))}
                       </div>
                     </div>))}
@@ -284,7 +283,7 @@ export default function RolesPermissionsPage() {
         <DialogContent className="sm:max-w-lg">
           <DialogHeader>
             <div className="flex items-center gap-2 mb-4">
-              <Button type="submit" disabled={form.formState.isSubmitting || ((editingRole === null || editingRole === void 0 ? void 0 : editingRole.is_system_role) && form.getValues("name") === editingRole.name && !form.getFieldState("description").isDirty && !form.getFieldState("is_default").isDirty)} className="btn-primary-gradient flex items-center gap-2">
+              <Button type="submit" disabled={form.formState.isSubmitting || (editingRole?.is_system_role && form.getValues("name") === editingRole.name && !form.getFieldState("description").isDirty && !form.getFieldState("is_default").isDirty)} className="btn-primary-gradient flex items-center gap-2">
                 {form.formState.isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Save className="mr-2 h-4 w-4"/>}
                 {editingRole ? 'Save Changes' : 'Create Role'}
               </Button>
@@ -298,18 +297,15 @@ export default function RolesPermissionsPage() {
             <form onSubmit={form.handleSubmit(handleRoleFormSubmit)} className="space-y-4 py-2">
               <FormField control={form.control} name="name" render={({ field }) => (<FormItem>
                   <FormLabel>Role Name *</FormLabel>
-                  <FormControl><Input {...field} disabled={editingRole === null || editingRole === void 0 ? void 0 : editingRole.is_system_role}/></FormControl>
+                  <FormControl><Input {...field} disabled={editingRole?.is_system_role}/></FormControl>
                   <FormMessage />
-                   {(editingRole === null || editingRole === void 0 ? void 0 : editingRole.is_system_role) && <p className="text-xs text-muted-foreground">System role names cannot be changed.</p>}
+                   {editingRole?.is_system_role && <p className="text-xs text-muted-foreground">System role names cannot be changed.</p>}
                 </FormItem>)}/>
-              <FormField control={form.control} name="description" render={({ field }) => {
-            var _a;
-            return (<FormItem>
+              <FormField control={form.control} name="description" render={({ field }) => (<FormItem>
                   <FormLabel>Description</FormLabel>
-                  <FormControl><Textarea {...field} value={(_a = field.value) !== null && _a !== void 0 ? _a : ''}/></FormControl>
+                  <FormControl><Textarea {...field} value={field.value ?? ''}/></FormControl>
                   <FormMessage />
-                </FormItem>);
-        }}/>
+                </FormItem>)}/>
               <FormField control={form.control} name="is_default" render={({ field }) => (<FormItem className="flex flex-row items-center space-x-3 space-y-0 pt-2">
                   <FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange}/></FormControl>
                   <FormLabel className="font-normal">Set as Default Role</FormLabel>

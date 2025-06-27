@@ -438,8 +438,7 @@ export function EditUserModal({ isOpen, onOpenChange, onEditUser, user, isSelfEd
                                             <Toggle
                                               checked={checked}
                                               onCheckedChange={(checked) => checked ? field.onChange([...(field.value || []), module.id]) : field.onChange((field.value || []).filter(v => v !== module.id))}
-                                              variant="success"
-                                              className="mt-1"
+                                              className="ml-2"
                                             />
                                           </FormControl>
                                           <div className="flex flex-col flex-1">
