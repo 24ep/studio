@@ -265,19 +265,19 @@ export default function DashboardPageClient({
             { title: "Hired This Month", value: hiredThisMonthAdmin, icon: CheckCircle2, color: "text-green-500", bgColor: "bg-green-500/10" },
             { title: "Active Recruiters", value: totalActiveRecruiters, icon: Users2, color: "text-purple-500", bgColor: "bg-purple-500/10"},
             { title: "Unassigned Candidates", value: unassignedCandidatesCount, icon: UserRoundSearch, color: "text-orange-500", bgColor: "bg-orange-500/10"}
-          ].map(stat => (
+        ].map(stat => (
             <Card key={stat.title} className="shadow-sm hover:shadow-md transition-all duration-200">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">{stat.title}</CardTitle>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">{stat.title}</CardTitle>
                 <div className={`p-2 rounded-lg ${stat.bgColor}`}>
-                  <stat.icon className={`h-5 w-5 ${stat.color}`} />
+              <stat.icon className={`h-5 w-5 ${stat.color}`} />
                 </div>
-              </CardHeader>
+            </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold text-foreground">{stat.value}</div>
               </CardContent>
-            </Card>
-          ))}
+          </Card>
+        ))}
         </div>
       </div>
 
@@ -315,7 +315,7 @@ export default function DashboardPageClient({
                 </div>
               </CardHeader>
               <CardContent><div className="text-2xl font-bold text-foreground">{newCandidatesAssignedToMeTodayList.length}</div></CardContent>
-            </Card>
+        </Card>
           </div>
         </div>
       )}
@@ -373,7 +373,7 @@ export default function DashboardPageClient({
                 </div>
               </CardHeader>
               <CardContent><div className="text-2xl font-bold text-foreground">{stage.count}</div></CardContent>
-            </Card>
+        </Card>
           ))}
         </div>
       </div>

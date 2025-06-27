@@ -75,7 +75,7 @@ services:
     # The command to run the application is typically defined in the Dockerfile's CMD instruction.
     # For Next.js, this is often `npm run start` (which runs `next start`).
     # You can override it here if needed, but it's usually better to keep it in the Dockerfile.
-    command: sh -c "echo 'Starting application...' && sleep 5 && echo 'Running database migrations...' && npx prisma migrate deploy && echo 'Seeding database...' && npx prisma db seed && echo 'Starting Next.js application...' && npm start"
+    command: sh -c "echo 'Starting application...' && sleep 5 && echo 'Creating initial migration...' && npx prisma migrate dev --name init --create-only && echo 'Applying migrations...' && npx prisma migrate deploy && echo 'Seeding database...' && npx prisma db seed && echo 'Starting Next.js application...' && npm start"
 
   postgres:
     image: postgres:14-alpine
