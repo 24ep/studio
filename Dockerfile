@@ -84,7 +84,7 @@ COPY --chown=node:node --from=builder /app/.next ./.next
 COPY --chown=node:node --from=builder /app/package.json ./package.json
 COPY --chown=node:node --from=builder /app/process-upload-queue.mjs ./process-upload-queue.mjs
 COPY --chown=node:node --from=builder /app/prisma ./prisma
-COPY --chown=node:node --from=builder /app/ws-queue-bridge.js ./ws-queue-bridge.js
+COPY --chown=node:node ws-queue-bridge.js ./ws-queue-bridge.js
 COPY --chown=node:node wait-for-db.sh ./wait-for-db.sh
 RUN chmod +x ./wait-for-db.sh
 
