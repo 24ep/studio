@@ -52,6 +52,9 @@ COPY components.json ./
 # Generate Prisma client with memory optimization
 RUN ls -la prisma/ && npx prisma generate --schema=./prisma/schema.prisma
 
+# Debug: Check if seed.js exists
+RUN ls -la prisma/ && echo "Seed.js exists:" && test -f prisma/seed.js && echo "✅ seed.js found" || echo "❌ seed.js not found"
+
 # Build the Next.js application with memory optimization and faster build
 RUN ls -la && echo "Starting build..." && cat package.json | grep -A 5 -B 5 "build" && echo "Running npm run build..." && npm run build 2>&1 || (echo "Build failed with exit code $?" && echo "Checking current directory contents:" && ls -la && echo "Checking for .next directory..." && ls -la .next 2>/dev/null || echo "No .next directory found")
 
@@ -90,7 +93,7 @@ COPY --chown=node:node process-upload-queue.mjs ./process-upload-queue.mjs
 COPY --chown=node:node --from=builder /app/prisma ./prisma
 COPY --chown=node:node ws-queue-bridge.js ./ws-queue-bridge.js
 COPY --chown=node:node wait-for-db.sh ./wait-for-db.sh
-RUN chmod +x ./wait-for-db.sh && ls -la && echo "Files copied successfully"
+RUN chmod +x ./wait-for-db.sh && ls -la prisma/ && echo "Files copied successfully"
 
 # Expose the port the app will run on
 EXPOSE 9846
