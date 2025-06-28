@@ -1,7 +1,7 @@
 // src/app/settings/custom-fields/page.tsx
 "use client";
 
-import { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Button, buttonVariants } from '@/components/ui/button';
 import {
   Table,
@@ -62,6 +62,11 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { toast } from 'react-hot-toast';
+import CustomFieldTable from '@/components/settings/CustomFieldTable';
+import CustomFieldForm from '@/components/settings/CustomFieldForm';
+import CustomFieldDialog from '@/components/settings/CustomFieldDialog';
+import CustomFieldAlertDialog from '@/components/settings/CustomFieldAlertDialog';
+import CustomFieldModals from '@/components/settings/CustomFieldModals';
 
 const customFieldOptionSchemaClient = z.object({
   value: z.string().min(1, "Option value is required"),
@@ -268,188 +273,30 @@ export default function CustomFieldsPage() {
             <p className="text-muted-foreground text-center py-8">No custom field definitions yet.</p>
           ) : (
             <div className="border rounded-lg overflow-hidden">
-              <Table>
-                <TableHeader><TableRow><TableHead>Label</TableHead><TableHead className="hidden sm:table-cell">Model</TableHead><TableHead>Field Key</TableHead><TableHead className="hidden md:table-cell">Type</TableHead><TableHead className="hidden md:table-cell">Required</TableHead><TableHead className="hidden md:table-cell">Order</TableHead><TableHead className="text-right">Actions</TableHead></TableRow></TableHeader>
-                <TableBody>
-                  {definitions.map((def) => (
-                    <TableRow key={def.id}>
-                      <TableCell className="font-medium">{def.label}</TableCell>
-                      <TableCell className="hidden sm:table-cell"><Badge variant="outline">{def.model_name}</Badge></TableCell>
-                      <TableCell><code className="text-xs bg-muted/50 px-1 rounded">{def.field_key}</code></TableCell>
-                      <TableCell className="hidden md:table-cell">{def.field_type}</TableCell>
-                      <TableCell className="hidden md:table-cell">{def.is_required ? 'Yes' : 'No'}</TableCell>
-                      <TableCell className="hidden md:table-cell">{def.sort_order}</TableCell>
-                      <TableCell className="text-right">
-                        <Button variant="ghost" size="icon" onClick={() => handleOpenModal(def)} className="mr-1 h-8 w-8">
-                          <Edit3 className="h-4 w-4" />
-                        </Button>
-                        <AlertDialog>
-                            <AlertDialogTrigger asChild><Button variant="ghost" size="icon" className="text-destructive hover:text-destructive h-8 w-8" onClick={() => confirmDelete(def)}><Trash2 className="h-4 w-4" /></Button></AlertDialogTrigger>
-                            {definitionToDelete?.id === def.id && (
-                                <AlertDialogContent>
-                                    <AlertDialogHeader><AlertDialogTitle>Are you sure?</AlertDialogTitle><AlertDialogDescription>This will delete the custom field definition &quot;<strong>{def.label}</strong>&quot;. This does not delete data already stored, but the definition will be removed.</AlertDialogDescription></AlertDialogHeader>
-                                    <AlertDialogFooter><AlertDialogCancel onClick={() => setDefinitionToDelete(null)}>Cancel</AlertDialogCancel><AlertDialogAction onClick={handleDelete} className={buttonVariants({ variant: "destructive" })}>Delete Definition</AlertDialogAction></AlertDialogFooter>
-                                </AlertDialogContent>
-                            )}
-                        </AlertDialog>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+              <CustomFieldTable
+                fields={definitions}
+                isLoading={isLoading}
+                onEdit={handleOpenModal}
+                onDelete={setDefinitionToDelete}
+              />
             </div>
           )}
         </CardContent>
       </Card>
 
-      <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-        <DialogContent className="sm:max-w-2xl max-h-[90vh] flex flex-col">
-          <DialogHeader>
-            <div className="flex items-center gap-2 mb-4">
-              <Button type="submit" disabled={form.formState.isSubmitting} className="btn-primary-gradient flex items-center gap-2">
-                {form.formState.isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-                {editingDefinition ? 'Save Changes' : 'Create Definition'}
-              </Button>
-            </div>
-            <DialogTitle>{editingDefinition ? 'Edit' : 'Add New'} Custom Field Definition</DialogTitle>
-            <DialogDescription>
-              Define a new custom field. The &apos;Field Key&apos; should be unique for the selected model.
-            </DialogDescription>
-          </DialogHeader>
-          <ScrollArea className="flex-grow pr-2">
-            <Form {...form}>
-              <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-4 py-2 pl-1">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <FormField
-                    control={form.control}
-                    name="model_name"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Model *</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value} disabled={!!editingDefinition}>
-                          <FormControl><SelectTrigger><SelectValue placeholder="Select model" /></SelectTrigger></FormControl>
-                          <SelectContent>
-                            <SelectItem value="Candidate">Candidate</SelectItem>
-                            <SelectItem value="Position">Position</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                        {!!editingDefinition && <p className="text-xs text-muted-foreground">Model cannot be changed after creation.</p>}
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="field_key"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Field Key *</FormLabel>
-                        <FormControl><Input {...field} placeholder="e.g., linkedin_url" disabled={!!editingDefinition} /></FormControl>
-                        <FormMessage />
-                        {!!editingDefinition && <p className="text-xs text-muted-foreground">Field key cannot be changed after creation.</p>}
-                      </FormItem>
-                    )}
-                  />
-                </div>
-                <FormField
-                  control={form.control}
-                  name="label"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Label *</FormLabel>
-                      <FormControl><Input {...field} placeholder="e.g., LinkedIn Profile URL" /></FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <FormField
-                    control={form.control}
-                    name="field_type"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Field Type *</FormLabel>
-                        <Select onValueChange={(value) => {
-                            field.onChange(value);
-                            if (!['select_single', 'select_multiple'].includes(value)) {
-                                replaceOptions([]); 
-                            }
-                        }} value={field.value}>
-                          <FormControl><SelectTrigger><SelectValue placeholder="Select field type" /></SelectTrigger></FormControl>
-                          <SelectContent>
-                            {CUSTOM_FIELD_TYPES.map(type => <SelectItem key={type} value={type}>{type}</SelectItem>)}
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                      control={form.control}
-                      name="sort_order"
-                      render={({ field }) => (
-                          <FormItem>
-                          <FormLabel>Sort Order</FormLabel>
-                          <FormControl><Input type="number" {...field} /></FormControl>
-                          <FormMessage />
-                          </FormItem>
-                      )}
-                  />
-                </div>
-
-                {['select_single', 'select_multiple'].includes(watchFieldType) && (
-                  <div className="space-y-3 border p-3 rounded-md">
-                    <Label className="text-sm font-medium">Options for Select</Label>
-                    {optionsFields.map((optionField, index) => (
-                      <div key={optionField.id} className="flex items-end gap-2 p-2 border rounded bg-muted/30">
-                        <FormField
-                          control={form.control}
-                          name={`options.${index}.value`}
-                          render={({ field }) => (
-                            <FormItem className="flex-1">
-                              <FormLabel htmlFor={`option-value-${index}`} className="text-xs">Value</FormLabel>
-                              <FormControl><Input id={`option-value-${index}`} {...field} placeholder="Option Value" className="text-xs h-8" /></FormControl>
-                              <FormMessage className="text-xs" />
-                            </FormItem>
-                          )}
-                        />
-                        <FormField
-                          control={form.control}
-                          name={`options.${index}.label`}
-                          render={({ field }) => (
-                            <FormItem className="flex-1">
-                              <FormLabel htmlFor={`option-label-${index}`} className="text-xs">Label</FormLabel>
-                              <FormControl><Input id={`option-label-${index}`} {...field} placeholder="Option Label" className="text-xs h-8" /></FormControl>
-                              <FormMessage className="text-xs" />
-                            </FormItem>
-                          )}
-                        />
-                        <Button type="button" variant="ghost" size="icon" className="h-8 w-8 shrink-0" onClick={() => removeOption(index)}>
-                          <Trash2 className="h-4 w-4 text-destructive" />
-                        </Button>
-                      </div>
-                    ))}
-                    <Button type="button" variant="outline" size="sm" onClick={() => appendOption({ value: '', label: '' })}>
-                      <PlusCircle className="mr-2 h-4 w-4" /> Add Option
-                    </Button>
-                  </div>
-                )}
-
-                <FormField
-                  control={form.control}
-                  name="is_required"
-                  render={({ field }) => (
-                    <FormItem className="flex flex-row items-center space-x-2 pt-2">
-                      <FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange} /></FormControl>
-                      <FormLabel className="font-normal">Field is Required</FormLabel>
-                    </FormItem>
-                  )}
-                />
-              </form>
-            </Form>
-          </ScrollArea>
-        </DialogContent>
-      </Dialog>
+      <CustomFieldForm
+        open={isModalOpen}
+        definition={editingDefinition}
+        onClose={() => setIsModalOpen(false)}
+        onSubmit={handleFormSubmit}
+      />
+      <CustomFieldAlertDialog
+        open={!!definitionToDelete}
+        onConfirm={handleDelete}
+        onCancel={() => setDefinitionToDelete(null)}
+        definition={definitionToDelete}
+      />
+      <CustomFieldModals />
     </div>
   );
 }

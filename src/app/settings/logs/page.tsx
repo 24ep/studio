@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
@@ -14,13 +14,15 @@ import { format } from 'date-fns';
 import parseISO from 'date-fns/parseISO';
 import { ListOrdered, ServerCrash, ShieldAlert, Info, RefreshCw, ChevronsLeft, ChevronLeft, ChevronRight, ChevronsRight, AlertTriangle, Loader2, Search, CalendarIcon, UserCircle, FilterX, ChevronsUpDown, Check } from "lucide-react";
 import type { LogEntry, LogLevel, UserProfile } from '@/lib/types';
-import { useSession } from "next-auth/react";
+import { useSession, signIn } from "next-auth/react";
 import { useRouter, usePathname } from 'next/navigation';
 import { cn } from "@/lib/utils";
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { toast } from 'react-hot-toast';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { signIn } from "next-auth/react";
+import LogsTable from '@/components/settings/LogsTable';
+import LogsForm from '@/components/settings/LogsForm';
+import LogsModal from '@/components/settings/LogsModal';
 
 const getLogLevelBadgeVariant = (level: LogLevel): "default" | "secondary" | "destructive" | "outline" => {
   switch (level) {
@@ -47,6 +49,7 @@ const getLogLevelIcon = (level: LogLevel) => {
 const ITEMS_PER_PAGE = 20;
 
 export default function ApplicationLogsPage() {
+  const { data: session, status } = useSession();
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [fetchError, setFetchError] = useState<string | null>(null);
@@ -63,9 +66,10 @@ export default function ApplicationLogsPage() {
   
   const [userSearch, setUserSearch] = useState('');
   const [userPopoverOpen, setUserPopoverOpen] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingLog, setEditingLog] = useState<LogEntry | null>(null);
+  const [formData, setFormData] = useState<any>({});
 
-
-  const { data: session, status: sessionStatus } = useSession();
   const router = useRouter();
   const pathname = usePathname();
 
@@ -87,7 +91,7 @@ export default function ApplicationLogsPage() {
   }, []);
 
   const fetchLogs = useCallback(async (page: number, filters: { level: LogLevel | "ALL", search: string, userId: string, start?: Date, end?: Date }) => {
-    if (sessionStatus !== 'authenticated') {
+    if (status !== 'authenticated') {
         setIsLoading(false);
         return;
     }
@@ -131,13 +135,13 @@ export default function ApplicationLogsPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [sessionStatus, toast, pathname]);
+  }, [status, toast, pathname]);
 
   useEffect(() => {
     setIsClient(true);
-    if (sessionStatus === 'unauthenticated') {
+    if (status === 'unauthenticated') {
       signIn(undefined, { callbackUrl: pathname });
-    } else if (sessionStatus === 'authenticated') {
+    } else if (status === 'authenticated') {
       if (session.user.role !== 'Admin' && !session.user.modulePermissions?.includes('LOGS_VIEW')) {
         setFetchError("You do not have permission to view logs.");
         setIsLoading(false);
@@ -147,7 +151,7 @@ export default function ApplicationLogsPage() {
       }
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sessionStatus, session, currentPage, levelFilter, searchQuery, actingUserIdFilter, startDate, endDate, pathname, fetchLogUsers]);
+  }, [status, session, currentPage, levelFilter, searchQuery, actingUserIdFilter, startDate, endDate, pathname, fetchLogUsers]);
 
   useEffect(() => {
     if (fetchError) {
@@ -172,8 +176,21 @@ export default function ApplicationLogsPage() {
   
   const filteredUsersForDropdown = allUsers.filter(user => user.name.toLowerCase().includes(userSearch.toLowerCase()));
 
+  const handleModalOpen = (log: LogEntry | null = null) => {
+    setEditingLog(log);
+    setIsModalOpen(true);
+  };
+  const handleModalClose = () => {
+    setIsModalOpen(false);
+    setEditingLog(null);
+  };
+  const handleSubmit = async (data: any) => {
+    // Implement submit logic
+    setIsModalOpen(false);
+    fetchLogs(currentPage, { level: levelFilter, search: searchQuery, userId: actingUserIdFilter, start: startDate, end: endDate });
+  };
 
-  if (sessionStatus === 'loading' || (isLoading && !fetchError && !isClient && logs.length === 0)) {
+  if (status === 'loading' || (isLoading && !fetchError && !isClient && logs.length === 0)) {
     return ( <div className="flex h-full items-center justify-center"> <Loader2 className="h-16 w-16 animate-spin text-primary" /> </div> );
   }
 
@@ -259,28 +276,11 @@ export default function ApplicationLogsPage() {
           <div className="text-center py-10"> <ListOrdered className="mx-auto h-12 w-12 text-muted-foreground" /> <p className="mt-4 text-muted-foreground">No log entries found for the selected filter or search query.</p> </div>
         ) : (
           <>
-          <div className="border rounded-lg overflow-hidden">
-            <Table>
-              <TableHeader><TableRow><TableHead className="w-[200px]">Timestamp</TableHead><TableHead className="w-[120px]">Level</TableHead><TableHead>Message</TableHead><TableHead className="w-[150px] hidden md:table-cell">Source</TableHead><TableHead className="w-[180px] hidden lg:table-cell">Acting User</TableHead></TableRow></TableHeader>
-              <TableBody>
-                {logs.map((log) => (
-                  <TableRow key={log.id} className="hover:bg-muted/50 transition-colors">
-                    <TableCell className="text-xs text-muted-foreground"> {log.timestamp ? format(parseISO(log.timestamp), "MMM d, yyyy, HH:mm:ss.SSS") : 'Invalid Date'} </TableCell>
-                    <TableCell> <Badge variant={getLogLevelBadgeVariant(log.level)} className="text-xs capitalize items-center"> {getLogLevelIcon(log.level)} {log.level} </Badge> </TableCell>
-                    <TableCell className="text-sm break-all">{log.message}</TableCell>
-                    <TableCell className="text-xs text-muted-foreground hidden md:table-cell">{log.source || 'N/A'}</TableCell>
-                    <TableCell className="text-xs text-muted-foreground hidden lg:table-cell">
-                      {log.actingUserName ? (
-                          <div className="flex items-center gap-1.5"> <UserCircle className="h-3.5 w-3.5"/> {log.actingUserName} </div>
-                      ) : log.actingUserId ? (
-                          <div className="flex items-center gap-1.5"> <UserCircle className="h-3.5 w-3.5"/> <span title={log.actingUserId}>User ID: ...{log.actingUserId.slice(-6)}</span> </div>
-                      ) : 'N/A'}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
+          <LogsTable
+            logs={logs}
+            isLoading={isLoading}
+            onEdit={handleModalOpen}
+          />
           {totalPages > 1 && (
               <div className="flex items-center justify-end space-x-2 py-4">
                   <Button variant="outline" size="sm" onClick={() => setCurrentPage(1)} disabled={currentPage === 1 || isLoading}> <ChevronsLeft className="h-4 w-4" /> </Button>
@@ -293,6 +293,13 @@ export default function ApplicationLogsPage() {
           </>
         )}
       </CardContent>
+      <LogsForm
+        open={isModalOpen}
+        log={editingLog}
+        onClose={handleModalClose}
+        onSubmit={handleSubmit}
+      />
+      <LogsModal />
     </Card>
   );
 }

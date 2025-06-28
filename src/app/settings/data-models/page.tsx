@@ -1,7 +1,11 @@
 "use client";
 
-import { useState, useEffect, useCallback } from 'react';
-import { Button } from '@/components/ui/button';
+import React, { useState, useEffect, useCallback } from 'react';
+import { useSession, signIn } from 'next-auth/react';
+import { toast } from 'react-hot-toast';
+import DataModelTable from '@/components/settings/DataModelTable';
+import DataModelForm from '@/components/settings/DataModelForm';
+import DataModelModal from '@/components/settings/DataModelModal';
 import {
   Dialog,
   DialogContent,
@@ -31,7 +35,6 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { signIn, useSession } from 'next-auth/react';
 import {
   PlusCircle,
   Edit,
@@ -44,7 +47,7 @@ import {
 } from 'lucide-react';
 import { z } from 'zod';
 import { Badge } from '@/components/ui/badge';
-import { toast } from 'react-hot-toast';
+import { Button } from '@/components/ui/button';
 
 // Define the types matching the Prisma schema
 type FieldType = 'TEXT' | 'TEXTAREA' | 'NUMBER' | 'DATE' | 'BOOLEAN' | 'SELECT' | 'MULTISELECT';
@@ -75,7 +78,6 @@ const fieldSchema = z.object({
     isFilterable: z.boolean().default(false),
 });
 
-
 export default function DataModelsPage() {
     const { data: session, status } = useSession();
     const [definitions, setDefinitions] = useState<CustomFieldDefinition[]>([]);
@@ -85,13 +87,7 @@ export default function DataModelsPage() {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingField, setEditingField] = useState<CustomFieldDefinition | null>(null);
     const [currentModel, setCurrentModel] = useState<'Candidate' | 'Position'>('Candidate');
-    const [formData, setFormData] = useState<z.infer<typeof fieldSchema>>({
-        name: '',
-        label: '',
-        type: 'TEXT',
-        isRequired: false,
-        isFilterable: false,
-    });
+    const [formData, setFormData] = useState<any>({});
     const [formErrors, setFormErrors] = useState<z.ZodError | null>(null);
 
     const fetchDefinitions = useCallback(async () => {
@@ -128,30 +124,6 @@ export default function DataModelsPage() {
     const handleModalOpen = (field: CustomFieldDefinition | null = null, model: 'Candidate' | 'Position' = 'Candidate') => {
         setEditingField(field);
         setCurrentModel(model);
-        if (field) {
-            setFormData({
-                name: field.name,
-                label: field.label,
-                type: field.type,
-                options: field.options?.join(', '),
-                placeholder: field.placeholder || '',
-                defaultValue: field.defaultValue || '',
-                isRequired: field.isRequired,
-                isFilterable: field.isFilterable,
-            });
-        } else {
-            setFormData({
-                name: '',
-                label: '',
-                type: 'TEXT',
-                isRequired: false,
-                isFilterable: false,
-                options: '',
-                placeholder: '',
-                defaultValue: '',
-            });
-        }
-        setFormErrors(null);
         setIsModalOpen(true);
     };
 
@@ -160,56 +132,9 @@ export default function DataModelsPage() {
         setEditingField(null);
     };
     
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-        setFormErrors(null);
-        setIsSaving(true);
-    
-        const validation = fieldSchema.safeParse(formData);
-        if (!validation.success) {
-            setFormErrors(validation.error);
-            setIsSaving(false);
-            return;
-        }
-
-        const payload: any = {
-            ...validation.data,
-            model: currentModel,
-        };
-
-        if (payload.options) {
-            payload.options = payload.options.split(',').map((opt: string) => opt.trim());
-        }
-
-        const url = editingField
-            ? `/api/settings/custom-field-definitions/${editingField.id}`
-            : '/api/settings/custom-field-definitions';
-        const method = editingField ? 'PUT' : 'POST';
-
-        try {
-            const response = await fetch(url, {
-                method,
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(payload),
-            });
-
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.error || 'Failed to save field');
-            }
-
-            toast.success(`Field has been ${editingField ? 'updated' : 'created'}.`);
-            
-            handleModalClose();
-            fetchDefinitions(); // Refresh data
-        } catch (e: any) {
-            console.error('Error in settings/data-models:', e);
-            toast.error(e.message);
-        } finally {
-            setIsSaving(false);
-        }
+    const handleSubmit = async (data: any) => {
+        setIsModalOpen(false);
+        fetchDefinitions();
     };
     
     const handleDelete = async (fieldId: string) => {
@@ -340,76 +265,13 @@ export default function DataModelsPage() {
                 </TabsContent>
             </Tabs>
             
-            <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-                <DialogContent className="sm:max-w-2xl">
-                    <DialogHeader>
-                        <DialogTitle>{editingField ? 'Edit Field' : 'Add New Field'}</DialogTitle>
-                        <DialogDescription>
-                            Define the properties for this field. The &quot;Name (Key)&quot; is used programmatically and cannot be changed after creation.
-                        </DialogDescription>
-                    </DialogHeader>
-                    <form onSubmit={handleSubmit} className="space-y-4">
-                        <div>
-                            <Label htmlFor="label">Label</Label>
-                            <Input id="label" value={formData.label} onChange={e => setFormData({...formData, label: e.target.value})} />
-                            {formErrors?.flatten().fieldErrors.label && <p className="text-red-500 text-sm mt-1">{formErrors.flatten().fieldErrors.label}</p>}
-                        </div>
-                        <div>
-                            <Label htmlFor="name">Name (Key)</Label>
-                            <Input id="name" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} disabled={!!editingField} />
-                             {formErrors?.flatten().fieldErrors.name && <p className="text-red-500 text-sm mt-1">{formErrors.flatten().fieldErrors.name}</p>}
-                        </div>
-                        <div>
-                            <Label htmlFor="type">Field Type</Label>
-                            <Select value={formData.type} onValueChange={(value: FieldType) => setFormData({...formData, type: value})}>
-                                <SelectTrigger>
-                                    <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="TEXT">Text</SelectItem>
-                                    <SelectItem value="TEXTAREA">Text Area</SelectItem>
-                                    <SelectItem value="NUMBER">Number</SelectItem>
-                                    <SelectItem value="DATE">Date</SelectItem>
-                                    <SelectItem value="BOOLEAN">Yes/No (Boolean)</SelectItem>
-                                    <SelectItem value="SELECT">Select</SelectItem>
-                                    <SelectItem value="MULTISELECT">Multi-Select</SelectItem>
-                                </SelectContent>
-                            </Select>
-                        </div>
-                        {(formData.type === 'SELECT' || formData.type === 'MULTISELECT') && (
-                            <div>
-                                <Label htmlFor="options">Options (comma-separated)</Label>
-                                <Input id="options" value={formData.options} onChange={e => setFormData({...formData, options: e.target.value})} />
-                            </div>
-                        )}
-                        <div>
-                            <Label htmlFor="placeholder">Placeholder</Label>
-                            <Input id="placeholder" value={formData.placeholder} onChange={e => setFormData({...formData, placeholder: e.target.value})} />
-                        </div>
-                        <div>
-                            <Label htmlFor="defaultValue">Default Value</Label>
-                            <Input id="defaultValue" value={formData.defaultValue} onChange={e => setFormData({...formData, defaultValue: e.target.value})} />
-                        </div>
-                        <div className="flex items-center space-x-2">
-                            <Toggle checked={formData.isRequired} onCheckedChange={checked => setFormData({...formData, isRequired: checked})} />
-                            <Label htmlFor="isRequired">Is Required?</Label>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                            <Toggle checked={formData.isFilterable} onCheckedChange={checked => setFormData({...formData, isFilterable: checked})} />
-                            <Label htmlFor="isFilterable">Is Filterable?</Label>
-                        </div>
-                        <DialogFooter>
-                            <Button type="button" variant="outline" onClick={handleModalClose}>
-                                Cancel
-                            </Button>
-                            <Button type="submit" disabled={isSaving} className="btn-primary-gradient flex items-center gap-2">
-                                {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-                                {editingField ? 'Save Changes' : 'Create Field'}
-                            </Button>
-                        </DialogFooter>
-                    </form>
-                </DialogContent>
-            </Dialog>
+            <DataModelForm
+                open={isModalOpen}
+                definition={editingField}
+                onClose={handleModalClose}
+                onSubmit={handleSubmit}
+            />
+            <DataModelModal />
         </div>
     );
 }

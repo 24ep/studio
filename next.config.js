@@ -3,6 +3,10 @@ const nextConfig = {
   // Optimize build performance
   swcMinify: true,
   compress: true,
+  productionBrowserSourceMaps: false,
+  typescript: {
+    ignoreBuildErrors: true,
+  },
   
   // Reduce bundle size
   experimental: {

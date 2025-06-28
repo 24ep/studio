@@ -1,14 +1,14 @@
 // src/app/settings/webhook-mapping/page.tsx
 "use client";
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { useSession } from 'next-auth/react';
+import { useSession, signIn } from 'next-auth/react';
 import { useRouter, usePathname } from 'next/navigation';
 import { Save, SlidersHorizontal, Info, Loader2, ShieldAlert, ServerCrash, RefreshCw } from 'lucide-react';
 import type { WebhookFieldMapping } from '@/lib/types';
@@ -20,6 +20,9 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import { toast } from 'react-hot-toast';
+import WebhookMappingsTable from '@/components/settings/WebhookMappingsTable';
+import WebhookMappingsForm from '@/components/settings/WebhookMappingsForm';
+import WebhookMappingsModal from '@/components/settings/WebhookMappingsModal';
 
 const TARGET_CANDIDATE_ATTRIBUTES_CONFIG: { path: string; label: string; type: string; example?: string, defaultNotes?: string }[] = [
   { path: 'candidate_info.cv_language', label: 'CV Language', type: 'string', example: 'payload.language', defaultNotes: 'Language code of the resume (e.g., EN, TH).' },
@@ -63,6 +66,9 @@ export default function WebhookMappingPage() {
   const [fetchError, setFetchError] = useState<string | null>(null);
   
   const [mappings, setMappings] = useState<WebhookFieldMapping[]>([]);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingMapping, setEditingMapping] = useState<WebhookFieldMapping | null>(null);
+  const [formData, setFormData] = useState<any>({});
 
   const initializeMappings = useCallback((dbMappings: WebhookFieldMapping[]) => {
     const dbMappingsMap = new Map(dbMappings.map(m => [m.targetPath, m]));
@@ -186,6 +192,20 @@ export default function WebhookMappingPage() {
     return Object.values(groups).filter(g => g.attributes.length > 0);
   }, [mappings]);
   
+  const handleModalOpen = (mapping: WebhookFieldMapping | null = null) => {
+    setEditingMapping(mapping);
+    setIsModalOpen(true);
+  };
+  const handleModalClose = () => {
+    setIsModalOpen(false);
+    setEditingMapping(null);
+  };
+  const handleSubmit = async (data: any) => {
+    // Implement submit logic
+    setIsModalOpen(false);
+    fetchMappings();
+  };
+
   if (sessionStatus === 'loading' || (isLoadingData && !fetchError && !isClient && mappings.length === 0)) {
     return ( <div className="flex h-full items-center justify-center"><Loader2 className="h-16 w-16 animate-spin text-primary" /></div> );
   }
@@ -295,6 +315,19 @@ export default function WebhookMappingPage() {
           <RefreshCw className="h-4 w-4" /> Reset
         </Button>
       </div>
+
+      <WebhookMappingsTable
+        mappings={mappings}
+        isLoading={isLoadingData}
+        onEdit={handleModalOpen}
+      />
+      <WebhookMappingsForm
+        open={isModalOpen}
+        mapping={editingMapping}
+        onClose={handleModalClose}
+        onSubmit={handleSubmit}
+      />
+      <WebhookMappingsModal />
     </div>
   );
 }

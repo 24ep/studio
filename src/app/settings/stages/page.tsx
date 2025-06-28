@@ -1,7 +1,7 @@
 // src/app/settings/stages/page.tsx
 "use client";
 
-import { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Button, buttonVariants } from '@/components/ui/button';
 import {
   Table,
@@ -52,6 +52,9 @@ import {
 import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
 import { toast } from 'react-hot-toast';
 import { Session } from 'next-auth';
+import StagesTable from '@/components/settings/StagesTable';
+import StagesForm from '@/components/settings/StagesForm';
+import StagesModal from '@/components/settings/StagesModal';
 
 
 const stageFormSchema = z.object({
@@ -325,31 +328,15 @@ export default function RecruitmentStagesPage() {
         </CardContent>
       </Card>
 
-      <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <div className="flex items-center gap-2 mb-4">
-              <Button type="submit" disabled={form.formState.isSubmitting} className="btn-primary-gradient flex items-center gap-2">
-                {form.formState.isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-                {editingStage ? 'Save Changes' : 'Create Stage'}
-              </Button>
-            </div>
-            <DialogTitle>{editingStage ? 'Edit' : 'Add New'} Recruitment Stage</DialogTitle>
-            <DialogDescription>{editingStage ? 'Update the details of this stage.' : 'Define a new stage for your recruitment pipeline.'}</DialogDescription>
-          </DialogHeader>
-          <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-4 py-2">
-            <div>
-              <Label htmlFor="name">Name *</Label>
-              <Input id="name" {...form.register('name')} disabled={!!editingStage?.is_system} />
-              {form.formState.errors?.name && <p className="text-sm text-destructive mt-1">{form.formState.errors.name.message}</p>}
-              {editingStage?.is_system && <p className="text-xs text-muted-foreground mt-1">System stage names cannot be changed.</p>}
-            </div>
-            <div><Label htmlFor="description">Description</Label><Textarea id="description" {...form.register('description')} /></div>
-            <div><Label htmlFor="sort_order">Sort Order</Label><Input id="sort_order" type="number" {...form.register('sort_order')} /></div>
-            <DialogFooter className="pt-4"><DialogClose asChild><Button type="button" variant="outline">Cancel</Button></DialogClose></DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
+      <StagesForm
+        open={isModalOpen}
+        stage={editingStage}
+        onClose={() => {
+          setIsModalOpen(false);
+          setEditingStage(null);
+        }}
+        onSubmit={handleFormSubmit}
+      />
 
       <AlertDialog open={isReplacementModalOpen} onOpenChange={(open) => {
         setIsReplacementModalOpen(open);
@@ -387,6 +374,8 @@ export default function RecruitmentStagesPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <StagesModal />
     </div>
   );
 }
