@@ -48,8 +48,6 @@ COPY tailwind.config.ts ./
 COPY postcss.config.mjs ./
 COPY tsconfig.json ./
 COPY components.json ./
-COPY middleware.ts ./
-COPY swagger.ts ./
 
 # Generate Prisma client with memory optimization
 RUN ls -la prisma/ && npx prisma generate --schema=./prisma/schema.prisma
