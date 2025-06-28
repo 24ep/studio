@@ -53,7 +53,6 @@ export async function POST(request: NextRequest) {
   
   const client = await getPool().connect();
   let job;
-  let payload: any = null;
   try {
     // 1. Atomically pick and mark the oldest queued job as 'processing'
     const res = await client.query(
@@ -103,96 +102,105 @@ export async function POST(request: NextRequest) {
     for await (const chunk of fileStream) {
       chunks.push(chunk);
     }
-    const fileBuffer = Buffer.concat(chunks);
+    let fileBuffer: Buffer | null = Buffer.concat(chunks);
     // 3. POST to the configured webhook endpoint (any compatible service)
     let resumeWebhookUrl = await getSystemSetting('resumeProcessingWebhookUrl');
     if (!resumeWebhookUrl) {
-      resumeWebhookUrl = process.env.RESUME_PROCESSING_WEBHOOK_URL || 'http://localhost:5678/webhook';
+      resumeWebhookUrl = process.env.RESUME_PROCESSING_WEBHOOK_URL || '';
     }
-    // Convert fileBuffer to base64
-    const fileBase64 = fileBuffer.toString('base64');
-    // Optionally include applied_job if job has position info
-    let appliedJob = undefined;
-    if (job.position_id || job.position_title || job.position_description || job.position_level) {
-      appliedJob = {
-        id: job.position_id,
-        title: job.position_title,
-        description: job.position_description,
-        level: job.position_level
-      };
-    }
-    payload = {
-      inputs: {
-        file: fileBase64,
-        fileName: job.file_name,
-        mimeType: job.file_name.split('.').pop() === 'pdf' ? 'application/pdf' : undefined,
-        jobId: job.id,
-        filePath: job.file_path,
-        applied_job: appliedJob
-        // Add any other job fields you want to forward
-      },
-      response_mode: 'streaming',
-      user: 'cv_screening'
-    };
-    let webhookRes;
-    try {
-      webhookRes = await fetch(resumeWebhookUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      });
-    } catch (fetchErr) {
-      console.error('Fetch to webhook URL failed:', fetchErr);
-      await logAudit('ERROR', `Upload queue job failed - webhook fetch error for job ${job.id}`, 'API:UploadQueue:Process', null, { 
-        jobId: job.id,
-        fileName: job.file_name,
-        webhookUrl: resumeWebhookUrl,
-        error: (fetchErr as Error).message 
-      });
-      throw fetchErr;
-    }
-    let errorText = null;
-    if (!webhookRes.ok) {
-      errorText = await webhookRes.text();
-      console.error('Webhook POST failed:', webhookRes.status, errorText);
-    }
+    let webhookRes = null;
+    let webhookError = null;
     let status = 'success';
     let error = null;
     let error_details = null;
-    if (!webhookRes.ok) {
-      status = 'error';
-      error = `Webhook responded with status ${webhookRes.status}`;
-      error_details = errorText;
+    let payload = null;
+    let appliedJob = undefined;
+    if (resumeWebhookUrl && resumeWebhookUrl.startsWith('http')) {
+      // Only build payload and convert file if webhook is valid
+      const fileBase64 = fileBuffer?.toString('base64');
+      if (job.position_id || job.position_title || job.position_description || job.position_level) {
+        appliedJob = {
+          id: job.position_id,
+          title: job.position_title,
+          description: job.position_description,
+          level: job.position_level,
+        };
+      }
+      payload = {
+        file: fileBase64,
+        filename: job.filename,
+        mimetype: job.mimetype,
+        candidate_id: job.candidate_id,
+        applied_job: appliedJob,
+        job_id: job.id,
+        meta: job.meta,
+      };
+      try {
+        webhookRes = await fetch(resumeWebhookUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+        if (!webhookRes.ok) {
+          webhookError = `Webhook responded with status ${webhookRes.status}`;
+        }
+      } catch (err) {
+        if (err && typeof err === 'object' && 'message' in err && typeof (err as any).message === 'string') {
+          webhookError = (err as any).message;
+        } else {
+          webhookError = 'Unknown error calling webhook';
+        }
+      }
+      if (webhookRes && !webhookRes.ok) {
+        status = 'error';
+        error = `Webhook responded with status ${webhookRes.status}`;
+        error_details = webhookError;
+      }
+    } else {
+      // Webhook not set, skip file processing for webhook
+      webhookError = 'Webhook URL not set or invalid, skipping webhook file send.';
+      console.warn('[Webhook Skipped]', webhookError);
+      // Optionally, set status to 'skipped' if you want to track this
+      // status = 'skipped';
     }
     // 4. Update job status
     await client.query(
       `UPDATE upload_queue SET status = $1, error = $2, error_details = $3, completed_date = now(), updated_at = now(), webhook_payload = $4, webhook_response = $5 WHERE id = $6`,
-      [status, error, error_details, payload, { status: webhookRes.status, response: errorText || 'Success' }, job.id]
+      [status, error, error_details, payload, { status: webhookRes && 'status' in webhookRes ? webhookRes.status : null, response: webhookError || 'Success' }, job.id]
     );
     // Publish queue update event
     const redisClient = await import('@/lib/redis').then(m => m.getRedisClient());
     if (redisClient) {
       await redisClient.publish('candidate_upload_queue', JSON.stringify({ type: 'queue_updated' }));
     }
+
+    // Explicitly nullify large objects to help GC
+    fileBuffer = null;
+    // If chunks is still in scope, nullify it too
+    // chunks = null;
+    // Optionally force GC if available (for debugging only)
+    if (typeof global !== 'undefined' && typeof global.gc === 'function') {
+      global.gc();
+    }
     
     if (status === 'success') {
       await logAudit('AUDIT', `Upload queue job '${job.file_name}' processed successfully`, 'API:UploadQueue:Process', null, { 
         jobId: job.id,
         fileName: job.file_name,
-        webhookStatus: webhookRes.status,
+        webhookStatus: webhookRes && 'status' in webhookRes ? webhookRes.status : null,
         hasAppliedJob: !!appliedJob 
       });
     } else {
       await logAudit('ERROR', `Upload queue job '${job.file_name}' failed with webhook error`, 'API:UploadQueue:Process', null, { 
         jobId: job.id,
         fileName: job.file_name,
-        webhookStatus: webhookRes.status,
+        webhookStatus: webhookRes && 'status' in webhookRes ? webhookRes.status : null,
         error,
         errorDetails: error_details 
       });
     }
     
-    return NextResponse.json({ job: { ...job, status, error, error_details }, automation_status: webhookRes.status });
+    return NextResponse.json({ job: { ...job, status, error, error_details }, automation_status: webhookRes && 'status' in webhookRes ? webhookRes.status : null });
   } catch (err) {
     if (job) {
       await client.query(
