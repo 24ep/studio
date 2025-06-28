@@ -5,7 +5,7 @@ FROM node:20 AS builder
 
 WORKDIR /app
 
-# Limit Node.js memory usage during build (reduced from 2048MB to 1024MB)
+# Limit Node.js memory usage during build (1GB limit to prevent excessive usage)
 ENV NODE_OPTIONS=--max-old-space-size=1024
 
 # Install netcat and clean up apt cache in one layer
@@ -35,7 +35,7 @@ COPY package.json ./
 COPY package-lock.json ./
 
 # Install dependencies with memory optimization and caching
-RUN npm ci --only=production --no-audit --no-fund --prefer-offline --cache /tmp/.npm
+RUN npm ci --only=production --no-audit --no-fund --prefer-offline --cache /tmp/.npm --maxsockets 1
 
 # Copy source code (including prisma/schema.prisma)
 COPY . .
