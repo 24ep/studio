@@ -30,6 +30,7 @@ ENV GOOGLE_API_KEY=$GOOGLE_API_KEY
 ENV NEXT_PUBLIC_GOOGLE_FONTS_API_KEY=$NEXT_PUBLIC_GOOGLE_FONTS_API_KEY
 ENV DATABASE_URL=$DATABASE_URL
 ENV NODE_ENV=development
+ENV NEXT_TELEMETRY_DISABLED=1
 
 # Copy dependency files first for better caching
 COPY package.json package-lock.json ./
@@ -40,6 +41,7 @@ RUN npm ci --no-audit --no-fund --prefer-offline --cache /tmp/.npm --maxsockets 
 # Copy only necessary files for build (exclude node_modules, .git, etc.)
 COPY prisma ./prisma
 COPY src ./src
+COPY lib ./lib
 COPY next.config.js ./
 COPY tailwind.config.ts ./
 COPY postcss.config.mjs ./
@@ -50,7 +52,7 @@ COPY components.json ./
 RUN ls -la prisma/ && npx prisma generate --schema=./prisma/schema.prisma
 
 # Build the Next.js application with memory optimization and faster build
-RUN ls -la && echo "Starting build..." && npm run build
+RUN ls -la && echo "Starting build..." && cat package.json | grep -A 5 -B 5 "build" && npm run build || (echo "Build failed, checking logs..." && cat /app/.next/build-manifest.json 2>/dev/null || echo "No build manifest found")
 
 # Prune dev dependencies for smaller production image
 RUN npm prune --production --silent
