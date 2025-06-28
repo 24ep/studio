@@ -88,9 +88,10 @@ COPY --chown=node:node --from=builder /app/node_modules/.prisma /app/node_module
 COPY --chown=node:node --from=builder /app/.next ./.next
 COPY --chown=node:node --from=builder /app/package.json ./package.json
 COPY --chown=node:node --from=builder /app/process-upload-queue.mjs ./process-upload-queue.mjs
-COPY --chown=node:node --from=builder /app/process-upload-queue.ts ./process-upload-queue.ts
 COPY --chown=node:node --from=builder /app/prisma ./prisma
 COPY --chown=node:node --from=builder /app/ws-queue-bridge.js ./ws-queue-bridge.js
+COPY --chown=node:node /app/wait-for-db.sh ./wait-for-db.sh
+RUN chmod +x ./wait-for-db.sh
 
 # Expose the port the app will run on
 EXPOSE 9846
@@ -99,5 +100,5 @@ EXPOSE 9846
 HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
   CMD curl -f http://localhost:9846/api/health || exit 1
 
-# Start the app with migrations and seeding
-CMD npx prisma migrate deploy && npx prisma db:seed && npm run start
+# Start the app with migrations and seeding, waiting for DB first
+CMD ./wait-for-db.sh "$DB_HOST:$DB_PORT" -- npx prisma migrate deploy && npx prisma db:seed && npm run start
