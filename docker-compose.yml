@@ -180,6 +180,8 @@ services:
       redis:
         condition: service_healthy
     restart: unless-stopped
+    mem_limit: 1g
+    cpus: 0.5
 
   ws-queue-bridge:
     build:

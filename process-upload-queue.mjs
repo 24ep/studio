@@ -11,6 +11,11 @@ if (!API_KEY) {
 }
 
 async function getMaxConcurrentProcessors() {
+    // Allow override by environment variable
+    if (process.env.MAX_CONCURRENT_PROCESSORS) {
+        const envValue = parseInt(process.env.MAX_CONCURRENT_PROCESSORS, 10);
+        if (!isNaN(envValue) && envValue > 0) return envValue;
+    }
     try {
         const res = await fetch('http://app:9846/api/settings/system-settings');
         if (!res.ok)
