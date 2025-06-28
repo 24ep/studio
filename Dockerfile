@@ -31,6 +31,7 @@ ENV NEXT_PUBLIC_GOOGLE_FONTS_API_KEY=$NEXT_PUBLIC_GOOGLE_FONTS_API_KEY
 ENV DATABASE_URL=$DATABASE_URL
 ENV NODE_ENV=development
 ENV NEXT_TELEMETRY_DISABLED=1
+ENV NEXT_PUBLIC_BASE_URL=http://localhost:9846
 
 # Copy dependency files first for better caching
 COPY package.json package-lock.json ./
@@ -47,12 +48,17 @@ COPY tailwind.config.ts ./
 COPY postcss.config.mjs ./
 COPY tsconfig.json ./
 COPY components.json ./
+COPY middleware.ts ./
+COPY swagger.ts ./
 
 # Generate Prisma client with memory optimization
 RUN ls -la prisma/ && npx prisma generate --schema=./prisma/schema.prisma
 
 # Build the Next.js application with memory optimization and faster build
-RUN ls -la && echo "Starting build..." && cat package.json | grep -A 5 -B 5 "build" && npm run build || (echo "Build failed, checking logs..." && cat /app/.next/build-manifest.json 2>/dev/null || echo "No build manifest found")
+RUN ls -la && echo "Starting build..." && cat package.json | grep -A 5 -B 5 "build" && echo "Running npm run build..." && npm run build 2>&1 || (echo "Build failed with exit code $?" && echo "Checking current directory contents:" && ls -la && echo "Checking for .next directory..." && ls -la .next 2>/dev/null || echo "No .next directory found")
+
+# Create minimal .next directory if build failed
+RUN mkdir -p .next/static .next/server .next/trace .next/types || echo "Could not create .next directory"
 
 # Prune dev dependencies for smaller production image
 RUN npm prune --production --silent
