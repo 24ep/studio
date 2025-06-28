@@ -37,18 +37,28 @@ RUN node -v && npm -v
 COPY package.json ./
 COPY package-lock.json ./
 
+# Log before npm install
+RUN echo '==== Installing dependencies ===='
 # Install dependencies
 RUN npm install 
 
+# Log before copying source
+RUN echo '==== Copying source code ===='
 # Copy source code (including prisma/schema.prisma)
 COPY . .
 
+# Log before prisma generate
+RUN echo '==== Generating Prisma client ===='
 # Generate Prisma client
 RUN npx prisma generate
 
+# Log before build
+RUN echo '==== Building Next.js application ===='
 # Build the Next.js application (includes type checking)
 RUN npm run build
 
+# Log before pruning
+RUN echo '==== Pruning dev dependencies ===='
 # Prune dev dependencies for smaller production image
 RUN npm prune --production
 
