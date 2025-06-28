@@ -6,7 +6,7 @@ services:
       context: .
       dockerfile: Dockerfile
       args:
-        DATABASE_URL: "postgresql://devuser:devpassword@postgres:5432/canditrack_db"
+        DATABASE_URL: "${DATABASE_URL}"
         NEXTAUTH_URL: "${NEXTAUTH_URL}"
         NEXTAUTH_SECRET: "${NEXTAUTH_SECRET}"
         AZURE_AD_CLIENT_ID: "${AZURE_AD_CLIENT_ID}"
