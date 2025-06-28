@@ -90,6 +90,7 @@ COPY --chown=node:node process-upload-queue.mjs ./process-upload-queue.mjs
 COPY --chown=node:node --from=builder /app/prisma ./prisma
 COPY --chown=node:node ws-queue-bridge.js ./ws-queue-bridge.js
 COPY --chown=node:node wait-for-db.sh ./wait-for-db.sh
+COPY --chown=node:node prisma/seed.js ./prisma/seed.js
 RUN chmod +x ./wait-for-db.sh && ls -la && echo "Files copied successfully"
 
 # Expose the port the app will run on
