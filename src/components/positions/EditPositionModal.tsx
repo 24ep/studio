@@ -24,8 +24,16 @@ import { Edit3, Users, Loader2, Save } from 'lucide-react';
 import type { Position, Candidate } from '@/lib/types';
 import { toast } from 'react-hot-toast';
 import Link from 'next/link';
-import ReactQuill from 'react-quill';
-import 'react-quill/dist/quill.snow.css';
+import dynamic from 'next/dynamic';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Checkbox } from '@/components/ui/checkbox';
+import { useToast } from '@/hooks/use-toast';
+
+// Dynamically import ReactQuill to prevent build-time loading
+const ReactQuill = dynamic(() => import('react-quill'), {
+  ssr: false,
+  loading: () => <div className="h-32 bg-muted animate-pulse rounded" />
+});
 
 const editPositionFormSchema = z.object({
   title: z.string().min(1, "Title is required"),

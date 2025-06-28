@@ -1,6 +1,6 @@
 "use client"
 
-import { Bar, BarChart, CartesianGrid, XAxis, YAxis, ResponsiveContainer, LabelList } from "recharts"
+import dynamic from 'next/dynamic';
 import {
   ChartContainer,
   ChartTooltip,
@@ -11,6 +11,15 @@ import {
 import type { ChartConfig } from "@/components/ui/chart"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import type { Candidate, Position } from "@/lib/types"
+
+// Dynamically import recharts components to prevent build-time loading
+const BarChart = dynamic(() => import('recharts').then(mod => ({ default: mod.BarChart })), { ssr: false });
+const Bar = dynamic(() => import('recharts').then(mod => ({ default: mod.Bar })), { ssr: false });
+const CartesianGrid = dynamic(() => import('recharts').then(mod => ({ default: mod.CartesianGrid })), { ssr: false });
+const XAxis = dynamic(() => import('recharts').then(mod => ({ default: mod.XAxis })), { ssr: false });
+const YAxis = dynamic(() => import('recharts').then(mod => ({ default: mod.YAxis })), { ssr: false });
+const ResponsiveContainer = dynamic(() => import('recharts').then(mod => ({ default: mod.ResponsiveContainer })), { ssr: false });
+const LabelList = dynamic(() => import('recharts').then(mod => ({ default: mod.LabelList })), { ssr: false });
 
 interface CandidatesPerPositionChartProps {
   candidates: Candidate[];
@@ -72,7 +81,11 @@ export function CandidatesPerPositionChart({ candidates, positions }: Candidates
                 tickLine={false}
                 tickMargin={10}
                 axisLine={false}
-                
+                angle={-45}
+                textAnchor="end"
+                height={80}
+                interval={0}
+                tick={{ fontSize: 12 }}
               />
               <YAxis 
                 tickLine={false}

@@ -12,7 +12,9 @@
     "start": "next start -p 9846",
     "lint": "next lint",
     "processor": "tsx process-upload-queue.ts",
-    "clean": "rimraf dist src/**/*.js src/**/*.jsx prisma/seed.js tailwind.config.js"
+    "clean": "rimraf dist src/**/*.js src/**/*.jsx prisma/seed.js tailwind.config.js",
+    "optimize": "node scripts/optimize-build.js",
+    "build:optimized": "npm run optimize && npm run build"
   },
   "dependencies": {
     "@genkit-ai/googleai": "^1.13.0",

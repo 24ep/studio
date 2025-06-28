@@ -1,4 +1,3 @@
-console.log(">>> [BUILD] next.config.js loaded");
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   // Optimize build performance
@@ -29,8 +28,20 @@ const nextConfig = {
       '@radix-ui/react-tooltip',
       'lucide-react',
       'date-fns',
-      'recharts'
+      'recharts',
+      'react-quill',
+      'genkit',
+      '@genkit-ai/googleai'
     ],
+    // Additional optimizations
+    turbo: {
+      rules: {
+        '*.svg': {
+          loaders: ['@svgr/webpack'],
+          as: '*.js',
+        },
+      },
+    },
   },
 
   images: {
@@ -63,10 +74,46 @@ const nextConfig = {
               chunks: 'all',
               priority: 10,
             },
+            recharts: {
+              test: /[\\/]node_modules[\\/]recharts[\\/]/,
+              name: 'recharts',
+              chunks: 'all',
+              priority: 10,
+            },
+            genkit: {
+              test: /[\\/]node_modules[\\/](genkit|@genkit-ai)[\\/]/,
+              name: 'genkit',
+              chunks: 'all',
+              priority: 10,
+            },
+            reactQuill: {
+              test: /[\\/]node_modules[\\/]react-quill[\\/]/,
+              name: 'react-quill',
+              chunks: 'all',
+              priority: 10,
+            },
           },
         },
+        // Additional optimizations
+        minimize: true,
+        minimizer: [
+          '...',
+          // Add terser options for better minification
+          new (require('terser-webpack-plugin'))({
+            terserOptions: {
+              compress: {
+                drop_console: true,
+                drop_debugger: true,
+              },
+            },
+          }),
+        ],
       };
     }
+
+    // Tree shaking optimizations
+    config.optimization.usedExports = true;
+    config.optimization.sideEffects = false;
 
     if (!isServer) {
       config.resolve = config.resolve || {};

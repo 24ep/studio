@@ -18,9 +18,18 @@ import {
   DialogFooter,
   DialogClose,
 } from '@/components/ui/dialog';
-import { Briefcase } from 'lucide-react';
-import ReactQuill from 'react-quill';
-import 'react-quill/dist/quill.snow.css';
+import { Briefcase, Loader2 } from 'lucide-react';
+import dynamic from 'next/dynamic';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Checkbox } from '@/components/ui/checkbox';
+import { useToast } from '@/hooks/use-toast';
+import type { Position } from '@/lib/types';
+
+// Dynamically import ReactQuill to prevent build-time loading
+const ReactQuill = dynamic(() => import('react-quill'), {
+  ssr: false,
+  loading: () => <div className="h-32 bg-muted animate-pulse rounded" />
+});
 
 const addPositionFormSchema = z.object({
   title: z.string().min(1, "Title is required"),
