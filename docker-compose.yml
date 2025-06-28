@@ -66,12 +66,9 @@ services:
       DB_HOST: postgres
       DB_PORT: 5432
     depends_on:
-      postgres:
-        condition: service_healthy
-      minio:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
+      - postgres
+      - minio
+      - redis
     restart: unless-stopped
     # Strict resource limits for runtime
     mem_limit: 1g
@@ -84,12 +81,6 @@ services:
         reservations:
           memory: 512M
           cpus: '0.25'
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:9846/api/health" ]
-      interval: 30s
-      timeout: 20s
-      retries: 5
-      start_period: 180s
     # The command to run the application is defined in the Dockerfile's CMD instruction
     # which uses wait-for-db.sh for optimized startup
 
@@ -109,12 +100,6 @@ services:
     # Resource limits
     mem_limit: 512m
     cpus: 0.25
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 30s
 
   minio:
     image: minio/minio:latest
@@ -133,12 +118,6 @@ services:
     # Resource limits
     mem_limit: 512m
     cpus: 0.25
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 30s
 
   redis:
     image: redis:alpine
@@ -150,12 +129,6 @@ services:
     # Resource limits
     mem_limit: 256m
     cpus: 0.1
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 30s
 
   upload-queue-processor:
     build:
@@ -190,14 +163,10 @@ services:
       PROCESSOR_URL: ${PROCESSOR_URL}
       PROCESSOR_API_KEY: ${PROCESSOR_API_KEY}
     depends_on:
-      app:
-        condition: service_healthy
-      postgres:
-        condition: service_healthy
-      minio:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
+      - app
+      - postgres
+      - minio
+      - redis
     restart: unless-stopped
     mem_limit: 1g
     cpus: 0.5
@@ -215,8 +184,7 @@ services:
     ports:
       - "${WS_QUEUE_BRIDGE_PORT:-3002}:3002"
     depends_on:
-      redis:
-        condition: service_healthy
+      - redis
     restart: unless-stopped
     # Resource limits
     mem_limit: 256m
