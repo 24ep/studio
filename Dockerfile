@@ -103,4 +103,4 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
   CMD curl -f http://localhost:9846/api/health || exit 1
 
 # Start the app with migrations and seeding, waiting for DB first
-CMD ./wait-for-db.sh "$DB_HOST:$DB_PORT" -- sh -c "echo 'Database is ready, running migrations...' && npx prisma migrate deploy && echo 'Migrations complete, running seed...' && npx prisma db seed && echo 'Seed complete, starting app...' && npm run start"
+CMD ./wait-for-db.sh "$DB_HOST:$DB_PORT" -- sh -c "echo 'Database is ready, running migrations...' && npx prisma migrate deploy && echo 'Migrations complete, skipping seed for now...' && echo 'Starting app...' && npm run start"
