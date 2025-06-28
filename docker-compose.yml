@@ -85,7 +85,7 @@ services:
     # which uses wait-for-db.sh for optimized startup
 
   postgres:
-    image: postgres:14
+    image: postgres
     ports:
       - "${POSTGRES_PORT:-5432}:5432"
     environment:
@@ -102,7 +102,7 @@ services:
     cpus: 0.25
 
   minio:
-    image: minio/minio
+    image: minio
     ports:
       - "${MINIO_API_PORT:-9847}:9000" # MinIO API port
       - "${MINIO_CONSOLE_PORT:-9848}:9001" # MinIO Console port
