@@ -86,10 +86,10 @@ services:
           cpus: '0.25'
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:9846/api/health" ]
-      interval: 60s
-      timeout: 15s
-      retries: 3
-      start_period: 120s
+      interval: 30s
+      timeout: 20s
+      retries: 5
+      start_period: 180s
     # The command to run the application is defined in the Dockerfile's CMD instruction
     # which uses wait-for-db.sh for optimized startup
 
