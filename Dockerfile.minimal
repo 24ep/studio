@@ -1,0 +1,21 @@
+# =================================================================
+# == Minimal Dockerfile using pre-built image
+# =================================================================
+FROM 24ep/studio:dev
+
+# Limit Node.js memory usage (1GB limit to prevent excessive usage)
+ENV NODE_OPTIONS=--max-old-space-size=1024
+
+# Set NODE_ENV for production
+ENV NODE_ENV=production
+ENV NEXT_TELEMETRY_DISABLED=1
+
+# Expose the port the app will run on
+EXPOSE 9846
+
+# Healthcheck for container health
+HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
+  CMD curl -f http://localhost:9846/api/health || exit 1
+
+# Start the app (assuming the base image has the correct CMD)
+# The base image should already have the correct startup command 
