@@ -33,8 +33,8 @@ ENV DATABASE_URL=$DATABASE_URL
 # Copy dependency files first for better caching
 COPY package.json package-lock.json ./
 
-# Install dependencies with aggressive optimization
-RUN npm ci --only=production --no-audit --no-fund --prefer-offline --cache /tmp/.npm --maxsockets 1 --silent
+# Install dependencies with aggressive optimization (include dev deps for Prisma)
+RUN npm ci --no-audit --no-fund --prefer-offline --cache /tmp/.npm --maxsockets 1 --silent
 
 # Copy only necessary files for build (exclude node_modules, .git, etc.)
 COPY prisma ./prisma
@@ -46,7 +46,7 @@ COPY tsconfig.json ./
 COPY components.json ./
 
 # Generate Prisma client with memory optimization
-RUN npx prisma generate --schema=./prisma/schema.prisma --silent
+RUN ls -la prisma/ && npx prisma generate --schema=./prisma/schema.prisma
 
 # Build the Next.js application with memory optimization and faster build
 RUN npm run build
