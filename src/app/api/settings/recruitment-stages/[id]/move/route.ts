@@ -6,8 +6,6 @@ import { logAudit } from '@/lib/auditLog';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
 
-export const dynamic = "force-dynamic";
-
 const moveStageSchema = z.object({
   direction: z.enum(['up', 'down']),
 });

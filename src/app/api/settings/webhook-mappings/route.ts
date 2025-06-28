@@ -7,8 +7,6 @@ import { logAudit } from '@/lib/auditLog';
 import { getPool } from '@/lib/db';
 import { authOptions } from '@/lib/auth';
 
-export const dynamic = "force-dynamic";
-
 const webhookFieldMappingSchema = z.object({
   targetPath: z.string().min(1, "Target path is required"),
   sourcePath: z.string().optional().nullable(), // Allow empty string or null for no mapping

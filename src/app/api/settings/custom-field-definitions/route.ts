@@ -8,8 +8,6 @@ import { v4 as uuidv4 } from 'uuid';
 import type { CustomFieldType } from '@/lib/types';
 import { authOptions } from '@/lib/auth';
 
-export const dynamic = "force-dynamic";
-
 const createCustomFieldSchema = z.object({
   model: z.enum(['Candidate', 'Position']),
   name: z.string().min(1, "Field name is required"),

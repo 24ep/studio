@@ -7,8 +7,6 @@ import { authOptions } from '@/lib/auth';
 // For actual Excel generation, you would use a library like 'xlsx'
 // import * as XLSX from 'xlsx';
 
-export const dynamic = "force-dynamic";
-
 /**
  * @openapi
  * /api/positions/export:

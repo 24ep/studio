@@ -28,8 +28,6 @@ import { authOptions } from '@/lib/auth';
  *                   ok: true
  */
 
-export const dynamic = "force-dynamic";
-
 // Helper function to convert JSON object to CSV row
 function escapeCsvValue(value: any): string {
   if (value === null || value === undefined) {

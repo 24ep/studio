@@ -36,8 +36,6 @@ import { authOptions } from '@/lib/auth';
  *               type: object
  */
 
-export const dynamic = "force-dynamic";
-
 const systemSettingKeyEnum = z.enum([
     'appName', 'appLogoDataUrl', 'appThemePreference',
     'primaryGradientStart', 'primaryGradientEnd',

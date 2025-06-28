@@ -6,8 +6,6 @@ import { getPool } from '../../../lib/db';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
 
-export const dynamic = "force-dynamic";
-
 const logLevelValues: [LogLevel, ...LogLevel[]] = ['INFO', 'WARN', 'ERROR', 'DEBUG', 'AUDIT'];
 
 const createLogEntrySchema = z.object({

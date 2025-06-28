@@ -6,7 +6,7 @@ const nextConfig = {
   
   // Reduce bundle size
   experimental: {
-    optimizeCss: true,
+    optimizeCss: false,
     optimizePackageImports: [
       '@radix-ui/react-accordion',
       '@radix-ui/react-alert-dialog',
@@ -33,15 +33,6 @@ const nextConfig = {
       'genkit',
       '@genkit-ai/googleai'
     ],
-    // Additional optimizations
-    turbo: {
-      rules: {
-        '*.svg': {
-          loaders: ['@svgr/webpack'],
-          as: '*.js',
-        },
-      },
-    },
   },
 
   images: {
@@ -94,26 +85,8 @@ const nextConfig = {
             },
           },
         },
-        // Additional optimizations
-        minimize: true,
-        minimizer: [
-          '...',
-          // Add terser options for better minification
-          new (require('terser-webpack-plugin'))({
-            terserOptions: {
-              compress: {
-                drop_console: true,
-                drop_debugger: true,
-              },
-            },
-          }),
-        ],
       };
     }
-
-    // Tree shaking optimizations
-    config.optimization.usedExports = true;
-    config.optimization.sideEffects = false;
 
     if (!isServer) {
       config.resolve = config.resolve || {};

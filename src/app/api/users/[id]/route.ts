@@ -22,8 +22,6 @@ function extractIdFromUrl(request: NextRequest): string | null {
   return match ? match[1] : null;
 }
 
-export const dynamic = "force-dynamic";
-
 /**
  * @openapi
  * /api/users/{id}:

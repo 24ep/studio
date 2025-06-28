@@ -6,8 +6,6 @@ import { authOptions } from '@/lib/auth';
 import { getRedisClient, CACHE_KEY_POSITIONS } from '@/lib/redis';
 import { getPool } from '@/lib/db';
 
-export const dynamic = "force-dynamic";
-
 /**
  * @openapi
  * /api/positions/{id}:

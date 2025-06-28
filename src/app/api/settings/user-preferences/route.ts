@@ -7,8 +7,6 @@ import { logAudit } from '@/lib/auditLog';
 import { getPool } from '@/lib/db';
 import { authOptions } from '@/lib/auth';
 
-export const dynamic = "force-dynamic";
-
 const UI_DISPLAY_PREFERENCES_SERVER: [UIDisplayPreference, ...UIDisplayPreference[]] = ["Standard", "Emphasized", "Hidden"];
 
 const userPreferenceSchema = z.object({

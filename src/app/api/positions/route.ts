@@ -30,8 +30,6 @@
  *             schema:
  *               $ref: '#/components/schemas/Position'
  */
-export const dynamic = "force-dynamic";
-
 import { NextResponse, type NextRequest } from 'next/server';
 import { z } from 'zod';
 import { logAudit } from '@/lib/auditLog';

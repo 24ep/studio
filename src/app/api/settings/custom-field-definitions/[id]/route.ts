@@ -6,8 +6,6 @@ import { logAudit } from '@/lib/auditLog';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
 
-export const dynamic = "force-dynamic";
-
 const customFieldOptionSchema = z.object({
   value: z.string(),
   label: z.string(),

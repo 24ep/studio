@@ -6,8 +6,6 @@ import { logAudit } from '@/lib/auditLog';
 import { z } from 'zod';
 import { deleteCache, CACHE_KEY_RECRUITMENT_STAGES } from '@/lib/redis';
 
-export const dynamic = "force-dynamic";
-
 const reorderSchema = z.object({
   stageIds: z.array(z.string().uuid()),
 });

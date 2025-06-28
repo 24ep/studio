@@ -7,8 +7,6 @@ import { logAudit } from '@/lib/auditLog';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
 
-export const dynamic = "force-dynamic";
-
 const userGroupSchema = z.object({
   name: z.string().min(1, 'Group name cannot be empty.'),
   description: z.string().optional().nullable(),

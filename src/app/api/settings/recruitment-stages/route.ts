@@ -8,8 +8,6 @@ import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
 import { deleteCache, CACHE_KEY_RECRUITMENT_STAGES } from '@/lib/redis';
 
-export const dynamic = "force-dynamic";
-
 const recruitmentStageSchema = z.object({
   name: z.string().min(1, 'Stage name cannot be empty.'),
   description: z.string().optional().nullable(),

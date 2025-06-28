@@ -44,8 +44,6 @@ import { authOptions } from '@/lib/auth';
  *               $ref: '#/components/schemas/User'
  */
 
-export const dynamic = "force-dynamic";
-
 const platformModuleIds = PLATFORM_MODULES.map(m => m.id) as [PlatformModuleId, ...PlatformModuleId[]];
 
 const userRoleEnum = z.enum(['Admin', 'Recruiter', 'Hiring Manager']);
