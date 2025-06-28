@@ -2,22 +2,8 @@ version: '3.8'
 
 services:
   app:
-    build:
-      context: .
-      dockerfile: Dockerfile
-      args:
-        DATABASE_URL: "postgresql://devuser:devpassword@postgres:5432/canditrack_db"
-        NEXTAUTH_URL: "${NEXTAUTH_URL}"
-        NEXTAUTH_SECRET: "${NEXTAUTH_SECRET}"
-        AZURE_AD_CLIENT_ID: "${AZURE_AD_CLIENT_ID}"
-        AZURE_AD_CLIENT_SECRET: "${AZURE_AD_CLIENT_SECRET}"
-        AZURE_AD_TENANT_ID: "${AZURE_AD_TENANT_ID}"
-        GOOGLE_API_KEY: "${GOOGLE_API_KEY}"
-        NEXT_PUBLIC_GOOGLE_FONTS_API_KEY: "${NEXT_PUBLIC_GOOGLE_FONTS_API_KEY}"
-      # Build resource limits
-      shm_size: '2gb'
-      # Note: Docker Compose doesn't support CPU/memory limits during build
-      # These are applied at runtime only
+    # Use pre-built image from Docker Hub
+    image: yourusername/cv-screening:latest
     ports:
       - "${APP_PORT:-9846}:9846"
     # For production deployments, you typically want the application code to be self-contained
@@ -91,6 +77,23 @@ services:
       start_period: 120s
     # The command to run the application is defined in the Dockerfile's CMD instruction
     # which uses wait-for-db.sh for optimized startup
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        DATABASE_URL: "postgresql://devuser:devpassword@postgres:5432/canditrack_db"
+        NEXTAUTH_URL: "${NEXTAUTH_URL}"
+        NEXTAUTH_SECRET: "${NEXTAUTH_SECRET}"
+        AZURE_AD_CLIENT_ID: "${AZURE_AD_CLIENT_ID}"
+        AZURE_AD_CLIENT_SECRET: "${AZURE_AD_CLIENT_SECRET}"
+        AZURE_AD_TENANT_ID: "${AZURE_AD_TENANT_ID}"
+        GOOGLE_API_KEY: "${GOOGLE_API_KEY}"
+        NEXT_PUBLIC_GOOGLE_FONTS_API_KEY: "${NEXT_PUBLIC_GOOGLE_FONTS_API_KEY}"
+      # Build optimizations
+      cache_from:
+        - node:20-alpine
+      # Build with no cache for fresh builds (comment out for faster builds)
+      # no_cache: true
 
   postgres:
     image: postgres:14-alpine

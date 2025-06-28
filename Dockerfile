@@ -1,15 +1,15 @@
 # =================================================================
 # == Stage 1: Build Stage
 # =================================================================
-FROM node:20 AS builder
+FROM node:20-alpine AS builder
 
 WORKDIR /app
 
 # Limit Node.js memory usage during build (1GB limit to prevent excessive usage)
 ENV NODE_OPTIONS=--max-old-space-size=1024
 
-# Install netcat and clean up apt cache in one layer
-RUN apt-get update && apt-get install -y netcat-openbsd curl && rm -rf /var/lib/apt/lists/*
+# Install only essential build tools
+RUN apk add --no-cache curl
 
 # Declare and set build-time environment variables
 ARG DATABASE_URL
@@ -31,36 +31,41 @@ ENV NEXT_PUBLIC_GOOGLE_FONTS_API_KEY=$NEXT_PUBLIC_GOOGLE_FONTS_API_KEY
 ENV DATABASE_URL=$DATABASE_URL
 
 # Copy dependency files first for better caching
-COPY package.json ./
-COPY package-lock.json ./
+COPY package.json package-lock.json ./
 
-# Install dependencies with memory optimization and caching
-RUN npm ci --only=production --no-audit --no-fund --prefer-offline --cache /tmp/.npm --maxsockets 1
+# Install dependencies with aggressive optimization
+RUN npm ci --only=production --no-audit --no-fund --prefer-offline --cache /tmp/.npm --maxsockets 1 --silent
 
-# Copy source code (including prisma/schema.prisma)
-COPY . .
+# Copy only necessary files for build (exclude node_modules, .git, etc.)
+COPY prisma ./prisma
+COPY src ./src
+COPY next.config.js ./
+COPY tailwind.config.ts ./
+COPY postcss.config.mjs ./
+COPY tsconfig.json ./
+COPY components.json ./
 
 # Generate Prisma client with memory optimization
-RUN npx prisma generate --schema=./prisma/schema.prisma
+RUN npx prisma generate --schema=./prisma/schema.prisma --silent
 
 # Build the Next.js application with memory optimization and faster build
 RUN npm run build
 
 # Prune dev dependencies for smaller production image
-RUN npm prune --production
+RUN npm prune --production --silent
 
 # =================================================================
 # == Stage 2: Production Stage
 # =================================================================
-FROM node:20
+FROM node:20-alpine
 
 WORKDIR /app
 
-# Limit Node.js memory usage in production (reduced from 2048MB to 1024MB)
+# Limit Node.js memory usage in production (1GB limit to prevent excessive usage)
 ENV NODE_OPTIONS=--max-old-space-size=1024
 
-# Install netcat and clean up apt cache in one layer
-RUN apt-get update && apt-get install -y netcat-openbsd curl && rm -rf /var/lib/apt/lists/*
+# Install only runtime dependencies
+RUN apk add --no-cache curl
 
 # Don't run production as root
 USER node

@@ -45,10 +45,37 @@ src/**/*.jsx
 tailwind.config.js
 prisma/seed.js
 
-# Additional changes from the code block
+# Additional changes from the codeblock
 *.log
 test
 coverage
 .env*
 npm-debug.log
 yarn-error.log
+
+# Build optimization - exclude unnecessary files
+.github
+scripts
+docs
+*.md
+.git
+.gitignore
+README.md
+BRD.md
+SRS.md
+TestCases.md
+BUILD_OPTIMIZATION.md
+BUILD_OPTIMIZATION_FIXES.md
+ADVANCED_BUILD_OPTIMIZATIONS.md
+JENKINS_SETUP.md
+GITLAB_REGISTRY_SETUP.md
+Jenkinsfile*
+deploy-to-portainer.sh
+start.sh
+run-migration.ps1
+test-minio-config.js
+troubleshoot-postgres.js
+ws-queue-bridge.js
+process-upload-queue.ts
+process-upload-queue.mjs
+wait-for-db.sh
