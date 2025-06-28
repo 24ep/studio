@@ -5,8 +5,8 @@ FROM node:20 AS builder
 
 WORKDIR /app
 
-# Limit Node.js memory usage during build
-ENV NODE_OPTIONS=--max-old-space-size=2048
+# Limit Node.js memory usage during build (reduced from 2048MB to 1024MB)
+ENV NODE_OPTIONS=--max-old-space-size=1024
 
 # Install netcat and clean up apt cache in one layer
 RUN apt-get update && apt-get install -y netcat-openbsd curl && rm -rf /var/lib/apt/lists/*
@@ -30,35 +30,22 @@ ENV GOOGLE_API_KEY=$GOOGLE_API_KEY
 ENV NEXT_PUBLIC_GOOGLE_FONTS_API_KEY=$NEXT_PUBLIC_GOOGLE_FONTS_API_KEY
 ENV DATABASE_URL=$DATABASE_URL
 
-# Show node and npm versions for debugging
-RUN node -v && npm -v
-
 # Copy dependency files first for better caching
 COPY package.json ./
 COPY package-lock.json ./
 
-# Log before npm install
-RUN echo '==== Installing dependencies ===='
-# Install dependencies
-RUN npm install 
+# Install dependencies with memory optimization
+RUN npm ci --only=production --no-audit --no-fund --prefer-offline
 
-# Log before copying source
-RUN echo '==== Copying source code ===='
 # Copy source code (including prisma/schema.prisma)
 COPY . .
 
-# Log before prisma generate
-RUN echo '==== Generating Prisma client ===='
-# Generate Prisma client
-RUN npx prisma generate
+# Generate Prisma client with memory optimization
+RUN npx prisma generate --schema=./prisma/schema.prisma
 
-# Log before build
-RUN echo '==== Building Next.js application ===='
-# Build the Next.js application (includes type checking)
+# Build the Next.js application with memory optimization
 RUN npm run build
 
-# Log before pruning
-RUN echo '==== Pruning dev dependencies ===='
 # Prune dev dependencies for smaller production image
 RUN npm prune --production
 
@@ -69,8 +56,8 @@ FROM node:20
 
 WORKDIR /app
 
-# Limit Node.js memory usage in production
-ENV NODE_OPTIONS=--max-old-space-size=2048
+# Limit Node.js memory usage in production (reduced from 2048MB to 1024MB)
+ENV NODE_OPTIONS=--max-old-space-size=1024
 
 # Install netcat and clean up apt cache in one layer
 RUN apt-get update && apt-get install -y netcat-openbsd curl && rm -rf /var/lib/apt/lists/*
