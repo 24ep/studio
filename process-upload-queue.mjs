@@ -1,6 +1,7 @@
 // To run as ESM: rename this file to .mjs or set "type": "module" in package.json
 import fetch from 'node-fetch';
-const INTERVAL_MS = parseInt(process.env.PROCESSOR_INTERVAL_MS || '5000'); // 5 seconds default
+const BASE_INTERVAL_MS = parseInt(process.env.PROCESSOR_INTERVAL_MS || '5000');
+const MAX_BACKOFF_MS = 60000; // 1 minute max
 const PROCESS_URL = process.env.PROCESSOR_URL || 'http://app:9846/api/upload-queue/process';
 const API_KEY = process.env.PROCESSOR_API_KEY;
 
@@ -66,10 +67,9 @@ async function processJob() {
 }
 
 async function runProcessorLoop() {
-    console.log(`Starting background processor with interval: ${INTERVAL_MS}ms`);
-    console.log(`Processor URL: ${PROCESS_URL}`);
-    console.log(`API Key configured: ${API_KEY ? 'Yes' : 'No'}`);
+    let backoff = BASE_INTERVAL_MS;
     while (true) {
+        let hadError = false;
         // Log memory usage at the start of each loop
         const mem = process.memoryUsage();
         console.log('[Memory Usage]', `rss: ${(mem.rss/1024/1024).toFixed(2)} MB, heapUsed: ${(mem.heapUsed/1024/1024).toFixed(2)} MB, heapTotal: ${(mem.heapTotal/1024/1024).toFixed(2)} MB, external: ${(mem.external/1024/1024).toFixed(2)} MB`);
@@ -77,12 +77,17 @@ async function runProcessorLoop() {
             const maxConcurrent = await getMaxConcurrentProcessors();
             console.log('Max concurrent processors:', maxConcurrent);
             const jobs = Array.from({ length: maxConcurrent });
-            // Do not accumulate results in memory; just await Promise.all
             await Promise.all(jobs.map(() => processJob()));
+            backoff = BASE_INTERVAL_MS; // Reset backoff on success
         } catch (err) {
+            hadError = true;
             console.error('Background processor error:', err);
+            backoff = Math.min(backoff * 2, MAX_BACKOFF_MS); // Exponential backoff
         }
-        await new Promise(resolve => setTimeout(resolve, INTERVAL_MS));
+        await new Promise(resolve => setTimeout(resolve, backoff));
+        if (hadError) {
+            console.log(`Backing off for ${backoff}ms due to error...`);
+        }
     }
 }
 // Handle graceful shutdown
