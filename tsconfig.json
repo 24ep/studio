@@ -9,10 +9,10 @@
     "allowJs": true,
     "skipLibCheck": true,
     "strict": true,
-    "noEmit": false,
+    "noEmit": true,
     "esModuleInterop": true,
     "module": "esnext",
-    "moduleResolution": "node",
+    "moduleResolution": "bundler",
     "resolveJsonModule": true,
     "isolatedModules": true,
     "jsx": "preserve",
@@ -29,8 +29,7 @@
     },
     "types": [
       "react"
-    ],
-    "outDir": "dist"
+    ]
   },
   "include": [
     "next-env.d.ts",

@@ -13,60 +13,97 @@ import { authOptions } from "@/lib/auth"
 
 console.log(">>> [BUILD] src/app/layout.tsx loaded");
 
-export const dynamic = "force-dynamic";
+// Remove force-dynamic to allow static optimization
+// export const dynamic = "force-dynamic";
 
 const poppins = Poppins({
   subsets: ['latin'],
   variable: '--font-poppins',
   display: 'swap',
-  weight: ['100', '200', '300', '400', '500', '600', '700', '800', '900'],
+  
 });
 
-const DEFAULT_APP_NAME = 'CandiTrack';
-const DEFAULT_DESCRIPTION = 'Streamline your hiring process with Candidate Matching.';
-
 export async function generateMetadata(): Promise<Metadata> {
-  let appName = DEFAULT_APP_NAME;
-  let description = DEFAULT_DESCRIPTION;
-  try {
-    console.log("[BUILD LOG] Before fetch system-settings in generateMetadata");
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || '';
-    const res = await fetch(baseUrl + '/api/settings/system-settings', { cache: 'no-store' });
-    console.log("[BUILD LOG] After fetch system-settings in generateMetadata");
-    if (res.ok) {
-      const settings = await res.json();
-      const appNameSetting = settings.find((s: any) => s.key === 'appName');
-      if (appNameSetting && appNameSetting.value) appName = appNameSetting.value;
-      // Optionally, you could add a description setting as well
-    }
-  } catch {}
+  // Remove build-time database calls
+  const defaultTitle = "CandiTrack - Recruitment Management System";
+  const defaultDescription = "Comprehensive recruitment management system for tracking candidates, positions, and hiring processes.";
+  
   return {
-    title: appName,
-    description,
+    title: {
+      default: defaultTitle,
+      template: '%s | CandiTrack'
+    },
+    description: defaultDescription,
+    keywords: ['recruitment', 'hiring', 'candidates', 'positions', 'HR'],
+    authors: [{ name: 'CandiTrack Team' }],
+    creator: 'CandiTrack',
+    publisher: 'CandiTrack',
+    formatDetection: {
+      email: false,
+      address: false,
+      telephone: false,
+    },
+    metadataBase: new URL(process.env.NEXTAUTH_URL || 'http://localhost:9846'),
+    alternates: {
+      canonical: '/',
+    },
+    openGraph: {
+      type: 'website',
+      locale: 'en_US',
+      url: '/',
+      title: defaultTitle,
+      description: defaultDescription,
+      siteName: 'CandiTrack',
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: defaultTitle,
+      description: defaultDescription,
+    },
+    robots: {
+      index: true,
+      follow: true,
+      googleBot: {
+        index: true,
+        follow: true,
+        'max-video-preview': -1,
+        'max-image-preview': 'large',
+        'max-snippet': -1,
+      },
+    },
   };
 }
 
-export default async function RootLayout({ // Note: 'async' if using getServerSession
+export default async function RootLayout({
   children,
-}: Readonly<{
+}: {
   children: React.ReactNode;
-}>) {
+}) {
   console.log(">>> [BUILD] RootLayout function called");
-  console.log("[BUILD LOG] Before getServerSession in RootLayout");
-  const session = await getServerSession(authOptions); 
-  console.log("[BUILD LOG] After getServerSession in RootLayout");
-
-  // Only use Poppins font
-  let fontVar = poppins.variable;
+  
+  // Remove build-time session fetching
+  // console.log("[BUILD LOG] Before getServerSession in RootLayout");
+  // const session = await getServerSession(authOptions);
+  // console.log("[BUILD LOG] After getServerSession in RootLayout");
 
   return (
-    <html lang="en" suppressHydrationWarning>
-      <body className={`${fontVar} font-sans antialiased`}>
-        <AuthProvider session={session}> {/* Pass session={session} if using getServerSession */}
-          <Toaster position="top-center" />
+    <html lang="en" className={poppins.variable}>
+      <body className="min-h-screen bg-background font-sans antialiased">
+        <AuthProvider>
           <AppLayout>
             {children}
           </AppLayout>
+          <Toaster 
+            position="top-right"
+            toastOptions={{
+              duration: 4000,
+              style: {
+                background: 'hsl(var(--background))',
+                color: 'hsl(var(--foreground))',
+                border: '1px solid hsl(var(--border))',
+              },
+            }}
+          />
         </AuthProvider>
       </body>
     </html>

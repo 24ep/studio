@@ -1,7 +1,9 @@
 import { NextRequest } from 'next/server';
-import swaggerSpec from '@/swagger';
 
 export async function GET(req: NextRequest) {
+  // Lazy load swagger spec only when requested
+  const swaggerSpec = await import('@/swagger').then(m => m.default);
+  
   return new Response(JSON.stringify(swaggerSpec, null, 2), {
     headers: { 
       'Content-Type': 'application/json',
