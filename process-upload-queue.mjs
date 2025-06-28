@@ -70,14 +70,15 @@ async function runProcessorLoop() {
     console.log(`Processor URL: ${PROCESS_URL}`);
     console.log(`API Key configured: ${API_KEY ? 'Yes' : 'No'}`);
     while (true) {
+        // Log memory usage at the start of each loop
+        const mem = process.memoryUsage();
+        console.log('[Memory Usage]', `rss: ${(mem.rss/1024/1024).toFixed(2)} MB, heapUsed: ${(mem.heapUsed/1024/1024).toFixed(2)} MB, heapTotal: ${(mem.heapTotal/1024/1024).toFixed(2)} MB, external: ${(mem.external/1024/1024).toFixed(2)} MB`);
         try {
             const maxConcurrent = await getMaxConcurrentProcessors();
             console.log('Max concurrent processors:', maxConcurrent);
             const jobs = Array.from({ length: maxConcurrent });
-            const results = await Promise.all(jobs.map(() => processJob()));
-            if (results.every(r => r === false)) {
-                console.log('No queued jobs found, waiting...');
-            }
+            // Do not accumulate results in memory; just await Promise.all
+            await Promise.all(jobs.map(() => processJob()));
         } catch (err) {
             console.error('Background processor error:', err);
         }
