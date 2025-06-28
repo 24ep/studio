@@ -44,7 +44,7 @@ COPY . .
 RUN npx prisma generate --schema=./prisma/schema.prisma
 
 # Build the Next.js application with memory optimization and faster build
-RUN npm run build:fast
+RUN npm run build
 
 # Prune dev dependencies for smaller production image
 RUN npm prune --production
