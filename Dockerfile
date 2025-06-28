@@ -5,6 +5,9 @@ FROM node:20 AS builder
 
 WORKDIR /app
 
+# Limit Node.js memory usage during build
+ENV NODE_OPTIONS=--max-old-space-size=2048
+
 # Install netcat and clean up apt cache in one layer
 RUN apt-get update && apt-get install -y netcat-openbsd curl && rm -rf /var/lib/apt/lists/*
 
@@ -18,7 +21,6 @@ ARG AZURE_AD_TENANT_ID
 ARG GOOGLE_API_KEY
 ARG NEXT_PUBLIC_GOOGLE_FONTS_API_KEY
 
-# ENV DATABASE_URL=$DATABASE_URL
 ENV NEXTAUTH_URL=$NEXTAUTH_URL
 ENV NEXTAUTH_SECRET=$NEXTAUTH_SECRET
 ENV AZURE_AD_CLIENT_ID=$AZURE_AD_CLIENT_ID
@@ -47,12 +49,18 @@ RUN npx prisma generate
 # Build the Next.js application (includes type checking)
 RUN npm run build
 
+# Prune dev dependencies for smaller production image
+RUN npm prune --production
+
 # =================================================================
 # == Stage 2: Production Stage
 # =================================================================
 FROM node:20
 
 WORKDIR /app
+
+# Limit Node.js memory usage in production
+ENV NODE_OPTIONS=--max-old-space-size=2048
 
 # Install netcat and clean up apt cache in one layer
 RUN apt-get update && apt-get install -y netcat-openbsd curl && rm -rf /var/lib/apt/lists/*
@@ -76,6 +84,10 @@ COPY --chown=node:node --from=builder /app/ws-queue-bridge.js ./ws-queue-bridge.
 
 # Expose the port the app will run on
 EXPOSE 9846
+
+# Healthcheck for container health
+HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
+  CMD curl -f http://localhost:9846/api/health || exit 1
 
 # Start the app with migrations and seeding
 CMD npx prisma migrate deploy && npx prisma db:seed && npm run start

@@ -44,3 +44,11 @@ src/**/*.jsx
 # Ignore legacy configs
 tailwind.config.js
 prisma/seed.js
+
+# Additional changes from the code block
+*.log
+test
+coverage
+.env*
+npm-debug.log
+yarn-error.log
