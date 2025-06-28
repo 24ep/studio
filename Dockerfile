@@ -29,6 +29,7 @@ ENV AZURE_AD_TENANT_ID=$AZURE_AD_TENANT_ID
 ENV GOOGLE_API_KEY=$GOOGLE_API_KEY
 ENV NEXT_PUBLIC_GOOGLE_FONTS_API_KEY=$NEXT_PUBLIC_GOOGLE_FONTS_API_KEY
 ENV DATABASE_URL=$DATABASE_URL
+ENV NODE_ENV=development
 
 # Copy dependency files first for better caching
 COPY package.json package-lock.json ./
@@ -44,12 +45,17 @@ COPY tailwind.config.ts ./
 COPY postcss.config.mjs ./
 COPY tsconfig.json ./
 COPY components.json ./
+COPY public ./public
+COPY lib ./lib
+COPY middleware.ts ./
+COPY swagger.ts ./
+COPY types ./types
 
 # Generate Prisma client with memory optimization
 RUN ls -la prisma/ && npx prisma generate --schema=./prisma/schema.prisma
 
 # Build the Next.js application with memory optimization and faster build
-RUN npm run build
+RUN ls -la && echo "Starting build..." && npm run build
 
 # Prune dev dependencies for smaller production image
 RUN npm prune --production --silent
