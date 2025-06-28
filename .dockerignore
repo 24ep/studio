@@ -78,4 +78,3 @@ troubleshoot-postgres.js
 ws-queue-bridge.js
 process-upload-queue.ts
 process-upload-queue.mjs
-wait-for-db.sh
