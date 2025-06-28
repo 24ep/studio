@@ -34,8 +34,8 @@ ENV DATABASE_URL=$DATABASE_URL
 COPY package.json ./
 COPY package-lock.json ./
 
-# Install dependencies with memory optimization
-RUN npm ci --only=production --no-audit --no-fund --prefer-offline
+# Install dependencies with memory optimization and caching
+RUN npm ci --only=production --no-audit --no-fund --prefer-offline --cache /tmp/.npm
 
 # Copy source code (including prisma/schema.prisma)
 COPY . .
@@ -43,8 +43,8 @@ COPY . .
 # Generate Prisma client with memory optimization
 RUN npx prisma generate --schema=./prisma/schema.prisma
 
-# Build the Next.js application with memory optimization
-RUN npm run build
+# Build the Next.js application with memory optimization and faster build
+RUN npm run build:fast
 
 # Prune dev dependencies for smaller production image
 RUN npm prune --production
