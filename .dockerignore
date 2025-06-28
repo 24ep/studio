@@ -75,6 +75,5 @@ start.sh
 run-migration.ps1
 test-minio-config.js
 troubleshoot-postgres.js
-ws-queue-bridge.js
 process-upload-queue.ts
 process-upload-queue.mjs
