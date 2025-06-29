@@ -152,7 +152,7 @@ export default function PreferencesPage() {
                   <div key={attr.key} className="flex items-center justify-between gap-4">
                     <span>{attr.label}</span>
                     <Select
-                      value={candidatePrefs[attr.key]}
+                      value={UI_DISPLAY_PREFERENCES.some(opt => opt.value === candidatePrefs[attr.key]) ? candidatePrefs[attr.key] : 'Standard'}
                       onValueChange={val => handleCandidatePrefChange(attr.key, val)}
                     >
                       <SelectTrigger className="w-40">
@@ -175,7 +175,7 @@ export default function PreferencesPage() {
                   <div key={attr.key} className="flex items-center justify-between gap-4">
                     <span>{attr.label}</span>
                     <Select
-                      value={positionPrefs[attr.key]}
+                      value={UI_DISPLAY_PREFERENCES.some(opt => opt.value === positionPrefs[attr.key]) ? positionPrefs[attr.key] : 'Standard'}
                       onValueChange={val => handlePositionPrefChange(attr.key, val)}
                     >
                       <SelectTrigger className="w-40">
