@@ -60,18 +60,15 @@ body {
     --chart-4: 195 100% 65%; 
     --chart-5: 220 14% 60%;
 
-    /* Sidebar Light Theme Variables (configurable) */
-    --sidebar-bg-start-l: 220 25% 97%; 
-    --sidebar-bg-end-l: 220 20% 94%;   
-    --sidebar-text-l: 220 25% 30%;    
-    --sidebar-active-bg-start-l: hsl(var(--primary-gradient-start-l)); 
-    --sidebar-active-bg-end-l: hsl(var(--primary-gradient-end-l));     
-    --sidebar-active-text-l: hsl(var(--primary-foreground));          
-    --sidebar-hover-bg-l: 220 10% 92%;      
-    --sidebar-hover-text-l: 220 25% 25%;   
-    --sidebar-border-l: 220 15% 85%;     
-    --sidebar-ring-l: hsl(var(--ring));
-
+    /* Sidebar CSS Variables (will be set by JavaScript from settings) */
+    --sidebar-background: 220 25% 97%;
+    --sidebar-foreground: 220 25% 30%;
+    --sidebar-primary: hsl(var(--primary-gradient-start-l));
+    --sidebar-primary-foreground: hsl(var(--primary-foreground));
+    --sidebar-accent: 220 10% 92%;
+    --sidebar-accent-foreground: 220 25% 25%;
+    --sidebar-border: 220 15% 85%;
+    --sidebar-ring: hsl(var(--ring));
 
     /* Green color for specific checked states */
     --custom-green-checked: 142 76% 36%;
@@ -80,7 +77,7 @@ body {
 
     /* Preferences Page Specific Gradient */
     --preferences-left-panel-gradient-start: 220 60% 25%; 
-    --preferences-left-panel-gradient-end: 230 50% 45%; 
+    --preferences-left-panel-gradient-end: 230 50% 45%;
 
 
   }
@@ -135,23 +132,20 @@ body {
     --chart-4: 195 100% 65%;
     --chart-5: 220 15% 50%;
 
-    /* Sidebar Dark Theme Variables (configurable) */
-    --sidebar-bg-start-d: 220 15% 12%;  
-    --sidebar-bg-end-d: 220 15% 9%;    
-    --sidebar-text-d: 210 30% 85%;     
-    --sidebar-active-bg-start-d: hsl(var(--primary-gradient-start-d)); 
-    --sidebar-active-bg-end-d: hsl(var(--primary-gradient-end-d));   
-    --sidebar-active-text-d: hsl(var(--primary-foreground));                         
-    --sidebar-hover-bg-d: 220 15% 20%;    
-    --sidebar-hover-text-d: 210 30% 90%; 
-    --sidebar-border-d: 220 15% 18%;   
-    --sidebar-ring-d: hsl(var(--primary-gradient-start-d));
-
+    /* Sidebar CSS Variables (will be set by JavaScript from settings) */
+    --sidebar-background: 220 15% 12%;
+    --sidebar-foreground: 210 30% 85%;
+    --sidebar-primary: hsl(var(--primary-gradient-start-d));
+    --sidebar-primary-foreground: hsl(var(--primary-foreground));
+    --sidebar-accent: 220 15% 20%;
+    --sidebar-accent-foreground: 210 30% 90%;
+    --sidebar-border: 220 15% 18%;
+    --sidebar-ring: hsl(var(--primary-gradient-start-d));
 
      /* Green color for specific checked states */
     --custom-green-checked: 147 80% 40%;
     --custom-green-checked-foreground: 0 0% 100%; 
-    --custom-green-checked-icon: 147 80% 40%; 
+    --custom-green-checked-icon: 147 80% 40%;
 
     /* Preferences Page Specific Gradient - Dark Mode */
     --preferences-left-panel-gradient-start: 220 70% 30%; 
@@ -175,54 +169,26 @@ body {
 
 /* Updated styles for sidebar and active menu item */
 @layer components {
-  /* Sidebar base style for light theme */
-  :root:not(.dark) [data-sidebar="sidebar"] {
-    background-image: linear-gradient(to bottom, hsl(var(--sidebar-bg-start-l)), hsl(var(--sidebar-bg-end-l)));
-    color: hsl(var(--sidebar-text-l));
-    border-right: 1px solid hsl(var(--sidebar-border-l));
+  /* Sidebar base style - Tailwind handles most styling via bg-sidebar, text-sidebar-foreground, etc. */
+  [data-sidebar="sidebar"] {
+    /* Additional custom styling can be added here if needed */
   }
-  /* Light theme: Hover on non-active items */
-  :root:not(.dark) [data-sidebar="menu-button"]:not([data-active="true"]):hover {
-    background-color: hsl(var(--sidebar-hover-bg-l));
-    color: hsl(var(--sidebar-hover-text-l));
+
+  /* Active menu item style */
+  [data-sidebar="menu-button"][data-active="true"] { 
+    background-color: hsl(var(--sidebar-primary));
+    color: hsl(var(--sidebar-primary-foreground)) !important;
+    box-shadow: 0 2px 8px -2px hsla(var(--sidebar-primary), 0.3);
   }
-  /* Light theme: Active menu item style */
- :root:not(.dark) [data-sidebar="menu-button"][data-active="true"] { 
-    background-image: linear-gradient(to right, hsl(var(--sidebar-active-bg-start-l)), hsl(var(--sidebar-active-bg-end-l)));
-    color: hsl(var(--sidebar-active-text-l)) !important; /* Ensure text color is applied */
-    box-shadow: 0 2px 8px -2px hsla(var(--sidebar-active-bg-start-l), 0.3);
-  }
-   /* Light theme: Hover on active menu item */
-  :root:not(.dark) [data-sidebar="menu-button"][data-active="true"]:hover {
+
+  /* Hover on active menu item */
+  [data-sidebar="menu-button"][data-active="true"]:hover {
     filter: brightness(1.05);
-  }
-
-
-  /* Sidebar base style for dark theme */
-  .dark [data-sidebar="sidebar"] {
-    background-image: linear-gradient(to bottom, hsl(var(--sidebar-bg-start-d)), hsl(var(--sidebar-bg-end-d)));
-    color: hsl(var(--sidebar-text-d));
-    border-right: 1px solid hsl(var(--sidebar-border-d));
-  }
-  /* Dark theme: Hover on non-active items */
-  .dark [data-sidebar="menu-button"]:not([data-active="true"]):hover {
-    background-color: hsl(var(--sidebar-hover-bg-d));
-    color: hsl(var(--sidebar-hover-text-d));
-  }
-  /* Dark theme: Active menu item style */
-  .dark [data-sidebar="menu-button"][data-active="true"] { 
-    background-image: linear-gradient(to right, hsl(var(--sidebar-active-bg-start-d)), hsl(var(--sidebar-active-bg-end-d)));
-    color: hsl(var(--sidebar-active-text-d)) !important; /* Ensure text color is applied */
-    box-shadow: 0 2px 10px -3px hsla(var(--sidebar-active-bg-start-d), 0.4);
-  }
-  /* Dark theme: Hover on active menu item */
-  .dark [data-sidebar="menu-button"][data-active="true"]:hover {
-    filter: brightness(1.1);
   }
 
   /* General menu button transitions */
   [data-sidebar="menu-button"] {
-    transition: background-color 0.15s ease-in-out, color 0.15s ease-in-out, box-shadow 0.15s ease-in-out, background-image 0.15s ease-in-out, filter 0.15s ease-in-out;
+    transition: background-color 0.15s ease-in-out, color 0.15s ease-in-out, box-shadow 0.15s ease-in-out, filter 0.15s ease-in-out;
   }
 
   /* Primary buttons to use the new gradient */
@@ -305,7 +271,141 @@ body {
 
   /* Preferences Page Specific Gradient Utility */
   .bg-preferences-gradient {
-    background-image: linear-gradient(to bottom right, hsl(var(--preferences-left-panel-gradient-start)), hsl(var(--preferences-left-panel-gradient-end)));
+    background-image: linear-gradient(135deg, hsl(var(--preferences-left-panel-gradient-start)), hsl(var(--preferences-left-panel-gradient-end)));
   }
+}
+
+/* ReactQuill Editor Styles */
+.ql-editor {
+  background-color: hsl(var(--background));
+  color: hsl(var(--foreground));
+  border: none;
+  outline: none;
+  min-height: 150px;
+  font-family: inherit;
+}
+
+.ql-toolbar {
+  background-color: hsl(var(--muted));
+  border: 1px solid hsl(var(--border));
+  border-bottom: none;
+  border-radius: 0.375rem 0.375rem 0 0;
+}
+
+.ql-container {
+  border: 1px solid hsl(var(--border));
+  border-top: none;
+  border-radius: 0 0 0.375rem 0.375rem;
+}
+
+.ql-editor.ql-blank::before {
+  color: hsl(var(--muted-foreground));
+  font-style: italic;
+}
+
+.dark .ql-editor {
+  background-color: hsl(var(--background));
+  color: hsl(var(--foreground));
+}
+
+.dark .ql-toolbar {
+  background-color: hsl(var(--muted));
+  border-color: hsl(var(--border));
+}
+
+.dark .ql-container {
+  border-color: hsl(var(--border));
+}
+
+.dark .ql-editor.ql-blank::before {
+  color: hsl(var(--muted-foreground));
+}
+
+.ql-toolbar button,
+.ql-toolbar .ql-picker {
+  color: hsl(var(--foreground));
+}
+
+.ql-toolbar button:hover,
+.ql-toolbar .ql-picker:hover {
+  color: hsl(var(--primary));
+}
+
+.ql-toolbar button.ql-active,
+.ql-toolbar .ql-picker.ql-active {
+  color: hsl(var(--primary));
+}
+
+.ql-picker-options {
+  background-color: hsl(var(--popover));
+  border: 1px solid hsl(var(--border));
+  border-radius: 0.375rem;
+}
+
+.dark .ql-picker-options {
+  background-color: hsl(var(--popover));
+  border-color: hsl(var(--border));
+}
+
+/* Login Page Specific Styles */
+.bg-grid-white {
+  background-image: 
+    linear-gradient(rgba(255, 255, 255, 0.1) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.1) 1px, transparent 1px);
+}
+
+.dark .bg-grid-white {
+  background-image: 
+    linear-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+}
+
+/* Login page backdrop blur and glass effect */
+.login-glass {
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.dark .login-glass {
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Smooth transitions for login page elements */
+.login-transition {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Professional gradient backgrounds */
+.login-gradient-light {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.login-gradient-dark {
+  background: linear-gradient(135deg, #1e3a8a 0%, #7c3aed 100%);
+}
+
+/* Feature icon animations */
+.feature-icon {
+  transition: transform 0.2s ease-in-out;
+}
+
+.feature-icon:hover {
+  transform: scale(1.05);
+}
+
+/* Professional card shadows */
+.pro-card-shadow {
+  box-shadow: 
+    0 20px 25px -5px rgba(0, 0, 0, 0.1),
+    0 10px 10px -5px rgba(0, 0, 0, 0.04);
+}
+
+.dark .pro-card-shadow {
+  box-shadow: 
+    0 20px 25px -5px rgba(0, 0, 0, 0.3),
+    0 10px 10px -5px rgba(0, 0, 0, 0.2);
 }
     

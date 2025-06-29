@@ -200,6 +200,40 @@ async function main() {
     }
     console.log('✅ Notification events created/updated');
 
+    // Seed default system settings
+    console.log('Creating default system settings...');
+    const systemSettings = [
+      { key: 'appName', value: 'CandiTrack' },
+      { key: 'appThemePreference', value: 'system' },
+      { key: 'primaryGradientStart', value: '179 67% 66%' },
+      { key: 'primaryGradientEnd', value: '238 74% 61%' },
+      { key: 'loginPageLayoutType', value: '2column' },
+      // Sidebar Light Theme
+      { key: 'sidebarBgStartL', value: '220 25% 97%' },
+      { key: 'sidebarTextL', value: '220 25% 30%' },
+      { key: 'sidebarBorderL', value: '220 15% 85%' },
+      { key: 'sidebarActiveBgStartL', value: '179 67% 66%' },
+      { key: 'sidebarActiveTextL', value: '0 0% 100%' },
+      { key: 'sidebarHoverBgL', value: '220 10% 92%' },
+      { key: 'sidebarHoverTextL', value: '220 25% 25%' },
+      // Sidebar Dark Theme
+      { key: 'sidebarBgStartD', value: '220 15% 12%' },
+      { key: 'sidebarTextD', value: '210 30% 85%' },
+      { key: 'sidebarBorderD', value: '220 15% 18%' },
+      { key: 'sidebarActiveBgStartD', value: '179 67% 66%' },
+      { key: 'sidebarActiveTextD', value: '0 0% 100%' },
+      { key: 'sidebarHoverBgD', value: '220 15% 20%' },
+      { key: 'sidebarHoverTextD', value: '210 30% 90%' },
+    ];
+    for (const setting of systemSettings) {
+      await prisma.systemSetting.upsert({
+        where: { key: setting.key },
+        update: { value: setting.value },
+        create: setting
+      });
+    }
+    console.log('✅ System settings created/updated');
+
     console.log('🎉 Database seeding completed successfully!');
   } catch (error) {
     console.error('❌ Error during seeding:', error);

@@ -291,19 +291,150 @@ export default function SignInClient({ initialSettings }: SignInClientProps) {
   if (loginLayoutType === '2column') {
     return (
       <div style={loginPageStyle} className="min-h-screen flex flex-row">
-        {/* Left column: Welcome/marketing content (70%) */}
-        <div className="hidden md:flex flex-col items-center justify-center relative basis-[70%] max-w-[70%]">
-          <div className="text-center text-muted-foreground">
-            <h2 className="text-3xl font-bold mb-4">Welcome to {currentAppName}</h2>
-            <p className="text-lg">Your comprehensive recruitment management solution</p>
+        {/* Left column: Welcome/marketing content (60%) */}
+        <div className="hidden lg:flex flex-col items-center justify-center relative basis-[60%] max-w-[60%] bg-gradient-to-br from-primary/10 via-primary/5 to-background">
+          <div className="absolute inset-0 bg-grid-white/[0.02] bg-[size:60px_60px]" />
+          <div className="relative z-10 text-center max-w-2xl mx-auto px-8">
+            {/* Logo and Brand */}
+            <div className="mb-8 login-transition">
+              {isClient && appLogoUrl ? (
+                <Image
+                  src={appLogoUrl}
+                  alt="Application Logo"
+                  width={120}
+                  height={120}
+                  className="rounded-2xl shadow-lg mx-auto mb-6 feature-icon"
+                />
+              ) : (
+                <div className="w-24 h-24 bg-gradient-to-br from-primary to-primary/80 rounded-2xl shadow-lg mx-auto mb-6 flex items-center justify-center feature-icon">
+                  <span className="text-3xl font-bold text-primary-foreground">CT</span>
+                </div>
+              )}
+              <h1 className="text-5xl font-bold bg-gradient-to-r from-foreground to-foreground/80 bg-clip-text text-transparent mb-4">
+                {currentAppName}
+              </h1>
+              <p className="text-xl text-muted-foreground font-medium">
+                Professional Recruitment Management
+              </p>
+            </div>
+
+            {/* Feature highlights */}
+            <div className="grid grid-cols-1 gap-6 mt-12">
+              <div className="flex items-start space-x-4 login-transition hover:transform hover:scale-105">
+                <div className="flex-shrink-0 w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center feature-icon">
+                  <svg className="w-6 h-6 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                  </svg>
+                </div>
+                <div className="text-left">
+                  <h3 className="text-lg font-semibold text-foreground mb-1">Smart Candidate Management</h3>
+                  <p className="text-muted-foreground">Streamline your hiring process with intelligent candidate tracking and automated workflows.</p>
+                </div>
+              </div>
+
+              <div className="flex items-start space-x-4 login-transition hover:transform hover:scale-105">
+                <div className="flex-shrink-0 w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center feature-icon">
+                  <svg className="w-6 h-6 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                  </svg>
+                </div>
+                <div className="text-left">
+                  <h3 className="text-lg font-semibold text-foreground mb-1">Advanced Analytics</h3>
+                  <p className="text-muted-foreground">Get insights into your recruitment performance with comprehensive reporting and analytics.</p>
+                </div>
+              </div>
+
+              <div className="flex items-start space-x-4 login-transition hover:transform hover:scale-105">
+                <div className="flex-shrink-0 w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center feature-icon">
+                  <svg className="w-6 h-6 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                  </svg>
+                </div>
+                <div className="text-left">
+                  <h3 className="text-lg font-semibold text-foreground mb-1">Lightning Fast</h3>
+                  <p className="text-muted-foreground">Built for speed and efficiency, helping you make better hiring decisions faster.</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Trust indicators */}
+            <div className="mt-12 pt-8 border-t border-border/50">
+              <p className="text-sm text-muted-foreground mb-4">Trusted by leading companies worldwide</p>
+              <div className="flex justify-center space-x-6 opacity-60">
+                <div className="w-16 h-8 bg-muted rounded"></div>
+                <div className="w-16 h-8 bg-muted rounded"></div>
+                <div className="w-16 h-8 bg-muted rounded"></div>
+              </div>
+            </div>
           </div>
         </div>
-        {/* Right column: Login panel (30%) */}
-        <div className="w-full md:basis-[30%] md:max-w-[30%] flex flex-col justify-center items-center bg-card/80 dark:bg-card/80 border-l border-border shadow-2xl p-8">
-          {loginPageContent && (
-            <div style={{ marginBottom: 24 }} dangerouslySetInnerHTML={{ __html: loginPageContent }} />
-          )}
-          {renderLoginForm()}
+
+        {/* Right column: Login panel (40%) */}
+        <div className="w-full lg:basis-[40%] lg:max-w-[40%] flex flex-col justify-center items-center bg-background/95 backdrop-blur-sm border-l border-border/50 shadow-2xl p-8 lg:p-12">
+          <div className="w-full max-w-md">
+            {loginPageContent && (
+              <div className="mb-8 text-center" dangerouslySetInnerHTML={{ __html: loginPageContent }} />
+            )}
+            
+            {/* Mobile logo for smaller screens */}
+            <div className="lg:hidden text-center mb-8">
+              {isClient && appLogoUrl ? (
+                <Image
+                  src={appLogoUrl}
+                  alt="Application Logo"
+                  width={80}
+                  height={80}
+                  className="rounded-xl shadow-lg mx-auto mb-4 feature-icon"
+                />
+              ) : (
+                <div className="w-20 h-20 bg-gradient-to-br from-primary to-primary/80 rounded-xl shadow-lg mx-auto mb-4 flex items-center justify-center feature-icon">
+                  <span className="text-2xl font-bold text-primary-foreground">CT</span>
+                </div>
+              )}
+              <h2 className="text-2xl font-bold text-foreground">{currentAppName}</h2>
+            </div>
+
+            <Card className="w-full bg-card/50 backdrop-blur-sm border border-border/50 pro-card-shadow login-transition">
+              <CardHeader className="text-center pb-6">
+                <CardTitle className="text-2xl font-bold text-foreground">Welcome back</CardTitle>
+                <CardDescription className="text-muted-foreground">
+                  Sign in to your account to continue
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                {errorMessage && (
+                  <Alert variant="destructive" className="border-red-200 bg-red-50 dark:bg-red-950/50 dark:border-red-800">
+                    <AlertTriangle className="h-4 w-4" />
+                    <AlertTitle>Authentication Error</AlertTitle>
+                    <AlertDescription>{errorMessage}</AlertDescription>
+                  </Alert>
+                )}
+                
+                {isAzureAdConfigured && (
+                  <div className="space-y-4">
+                    <AzureAdSignInButton />
+                    <div className="relative">
+                      <div className="absolute inset-0 flex items-center">
+                        <span className="w-full border-t border-border/50" />
+                      </div>
+                      <div className="relative flex justify-center text-xs uppercase">
+                        <span className="bg-card/50 px-2 text-muted-foreground">Or continue with</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+                
+                <CredentialsSignInForm />
+              </CardContent>
+            </Card>
+
+            {/* Footer */}
+            <div className="mt-8 text-center">
+              <p className="text-xs text-muted-foreground">
+                By signing in, you agree to our Terms of Service and Privacy Policy
+              </p>
+            </div>
+          </div>
         </div>
       </div>
     );
@@ -311,11 +442,76 @@ export default function SignInClient({ initialSettings }: SignInClientProps) {
 
   // Default: center box layout
   return (
-    <div style={loginPageStyle}>
-      {loginPageContent && (
-        <div style={{ marginBottom: 24 }} dangerouslySetInnerHTML={{ __html: loginPageContent }} />
-      )}
-      {renderLoginForm()}
+    <div style={loginPageStyle} className="min-h-screen flex flex-col items-center justify-center p-4">
+      <div className="w-full max-w-md">
+        {loginPageContent && (
+          <div className="mb-8 text-center" dangerouslySetInnerHTML={{ __html: loginPageContent }} />
+        )}
+        
+        {/* Logo and Brand */}
+        <div className="text-center mb-8 login-transition">
+          {isClient && appLogoUrl ? (
+            <Image
+              src={appLogoUrl}
+              alt="Application Logo"
+              width={100}
+              height={100}
+              className="rounded-2xl shadow-lg mx-auto mb-6 feature-icon"
+            />
+          ) : (
+            <div className="w-24 h-24 bg-gradient-to-br from-primary to-primary/80 rounded-2xl shadow-lg mx-auto mb-6 flex items-center justify-center feature-icon">
+              <span className="text-3xl font-bold text-primary-foreground">CT</span>
+            </div>
+          )}
+          <h1 className="text-4xl font-bold bg-gradient-to-r from-foreground to-foreground/80 bg-clip-text text-transparent mb-2">
+            {currentAppName}
+          </h1>
+          <p className="text-lg text-muted-foreground">
+            Professional Recruitment Management
+          </p>
+        </div>
+
+        <Card className="w-full bg-card/50 backdrop-blur-sm border border-border/50 pro-card-shadow login-transition">
+          <CardHeader className="text-center pb-6">
+            <CardTitle className="text-2xl font-bold text-foreground">Welcome back</CardTitle>
+            <CardDescription className="text-muted-foreground">
+              Sign in to your account to continue
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            {errorMessage && (
+              <Alert variant="destructive" className="border-red-200 bg-red-50 dark:bg-red-950/50 dark:border-red-800">
+                <AlertTriangle className="h-4 w-4" />
+                <AlertTitle>Authentication Error</AlertTitle>
+                <AlertDescription>{errorMessage}</AlertDescription>
+              </Alert>
+            )}
+            
+            {isAzureAdConfigured && (
+              <div className="space-y-4">
+                <AzureAdSignInButton />
+                <div className="relative">
+                  <div className="absolute inset-0 flex items-center">
+                    <span className="w-full border-t border-border/50" />
+                  </div>
+                  <div className="relative flex justify-center text-xs uppercase">
+                    <span className="bg-card/50 px-2 text-muted-foreground">Or continue with</span>
+                  </div>
+                </div>
+              </div>
+            )}
+            
+            <CredentialsSignInForm />
+          </CardContent>
+        </Card>
+
+        {/* Footer */}
+        <div className="mt-8 text-center">
+          <p className="text-xs text-muted-foreground">
+            By signing in, you agree to our Terms of Service and Privacy Policy
+          </p>
+        </div>
+      </div>
     </div>
   );
 } 

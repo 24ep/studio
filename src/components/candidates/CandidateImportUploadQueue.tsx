@@ -119,9 +119,30 @@ export const CandidateImportUploadQueue: React.FC = () => {
   }, [fetchJobs]);
 
   useEffect(() => {
-    // Use NEXT_PUBLIC_WS_QUEUE_BRIDGE_URL for Docker/production, fallback to localhost for local dev
-    const wsUrl = process.env.NEXT_PUBLIC_WS_QUEUE_BRIDGE_URL || 'ws://localhost:3002';
+    // Determine WebSocket URL based on environment
+    let wsUrl;
+    if (process.env.NEXT_PUBLIC_WS_QUEUE_BRIDGE_URL) {
+      // Use environment variable if set
+      wsUrl = process.env.NEXT_PUBLIC_WS_QUEUE_BRIDGE_URL;
+    } else if (typeof window !== 'undefined') {
+      // In browser, use current hostname with WebSocket bridge port
+      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      wsUrl = `${protocol}//${window.location.hostname}:3002`;
+    } else {
+      // Fallback for server-side rendering
+      wsUrl = 'ws://localhost:3002';
+    }
+    
     const ws = new window.WebSocket(wsUrl);
+    
+    ws.onopen = () => {
+      console.log('WebSocket connected to upload queue bridge');
+    };
+    
+    ws.onerror = (error) => {
+      console.warn('WebSocket connection error:', error);
+    };
+    
     ws.onmessage = (event) => {
       try {
         const msg = JSON.parse(event.data);
@@ -129,9 +150,16 @@ export const CandidateImportUploadQueue: React.FC = () => {
           // Re-fetch jobs when the queue is updated
           fetchJobs();
         }
-      } catch {}
+      } catch (error) {
+        console.warn('Error parsing WebSocket message:', error);
+      }
     };
-    return () => ws.close();
+    
+    return () => {
+      if (ws.readyState === WebSocket.OPEN) {
+        ws.close();
+      }
+    };
   }, [fetchJobs]);
 
   function formatBytes(bytes: number) {
@@ -272,40 +300,20 @@ export const CandidateImportUploadQueue: React.FC = () => {
             </CardContent>
           </Card>
         </div>
-        
-        {/* Date Range Filter */}
-        <div className="flex flex-col gap-1">
-          <label className="text-sm font-medium">Date Range (for Success/Error counts):</label>
-          <div className="flex gap-2 items-center">
-            <input
-              type="date"
-              value={format(dateRange.start, 'yyyy-MM-dd')}
-              onChange={e => setDateRange(r => ({ ...r, start: new Date(e.target.value) }))}
-              className="border rounded px-2 py-1 text-sm"
-            />
-            <span>-</span>
-            <input
-              type="date"
-              value={format(dateRange.end, 'yyyy-MM-dd')}
-              onChange={e => setDateRange(r => ({ ...r, end: new Date(e.target.value) }))}
-              className="border rounded px-2 py-1 text-sm"
-            />
-          </div>
-        </div>
       </div>
       
       <div className="mb-2 font-semibold">All Upload Jobs: {totalBulkJobs}</div>
-      <div className="flex flex-col md:flex-row md:items-center gap-2 mb-4">
+      <div className="flex flex-row flex-wrap items-center gap-2 mb-4">
         <Input
           placeholder="Filter by file name..."
           value={filter}
           onChange={e => setFilter(e.target.value)}
-          className="max-w-xs"
+          className="min-w-[200px] max-w-xs"
         />
         <select
           value={statusFilter}
           onChange={e => setStatusFilter(e.target.value)}
-          className="border rounded-md px-2 py-2 text-sm bg-background text-foreground max-w-xs"
+          className="border rounded-md px-2 py-2 text-sm bg-background text-foreground min-w-[150px] max-w-xs"
         >
           <option value="">All Statuses</option>
           <option value="queued">Queued</option>
@@ -316,6 +324,22 @@ export const CandidateImportUploadQueue: React.FC = () => {
           <option value="error">Error</option>
           <option value="cancelled">Cancelled</option>
         </select>
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-muted-foreground whitespace-nowrap">Date:</span>
+          <input
+            type="date"
+            value={format(dateRange.start, 'yyyy-MM-dd')}
+            onChange={e => setDateRange(r => ({ ...r, start: new Date(e.target.value) }))}
+            className="border rounded px-2 py-1 text-sm"
+          />
+          <span className="text-sm text-muted-foreground">-</span>
+          <input
+            type="date"
+            value={format(dateRange.end, 'yyyy-MM-dd')}
+            onChange={e => setDateRange(r => ({ ...r, end: new Date(e.target.value) }))}
+            className="border rounded px-2 py-1 text-sm"
+          />
+        </div>
       </div>
       <div className="flex items-center gap-2 mb-2">
         <input

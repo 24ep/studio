@@ -166,7 +166,7 @@ export async function GET(request: NextRequest) {
   const filters: { [key: string]: string | undefined } = {
     status: searchParams.get('status') || undefined,
     positionId: searchParams.get('positionId') || undefined,
-    recruiterId: searchParams.get('recruiterId') || undefined,
+    recruiterId: searchParams.get('recruiterId') || searchParams.get('assignedRecruiterId') || undefined,
     searchTerm: searchParams.get('searchTerm') || undefined,
   };
 

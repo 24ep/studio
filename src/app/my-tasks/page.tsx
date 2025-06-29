@@ -105,7 +105,7 @@ async function getInitialTaskBoardData(session: any): Promise<{
       ...row,
       parsedData: row.parsedData || { personal_info: {}, contact_info: {} },
       customAttributes: row.customAttributes || {},
-      position: row.positionId ? { id: row.positionId, title: row.positionTitle, department: row.department, position_level: row.positionLevel } : null,
+      position: row.positionId ? { id: row.positionId, title: row.positionTitle, department: row.positionDepartment, position_level: row.positionLevel } : null,
       recruiter: row.recruiterId ? { id: row.recruiterId, name: row.recruiterName, email: null } : null,
       transitionHistory: row.transitionHistory || [],
     }));

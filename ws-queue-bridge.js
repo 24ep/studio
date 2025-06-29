@@ -28,4 +28,4 @@ wss.on('connection', (ws, req) => {
   });
 });
 
-console.error(`WebSocket bridge server running on ws://localhost:${PORT}`); 
+console.log(`WebSocket bridge server running on ws://localhost:${PORT}`); 

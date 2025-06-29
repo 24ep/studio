@@ -153,9 +153,18 @@ export function MyTasksPageClient({
        if (initialFetchError) setFetchError(initialFetchError);
        if (serverAuthError) setAuthError(true);
        if (serverPermissionError) setPermissionError(true);
-       if (initialCandidates.length > 0 || initialFetchError) setIsLoading(false); // Stop loading if we got data or an error
+       if (initialCandidates.length > 0 || initialFetchError) {
+         setIsLoading(false); // Stop loading if we got data or an error
+       } else {
+         // If no initial data and no error, we should still stop loading after a reasonable time
+         const timeout = setTimeout(() => {
+           setIsLoading(false);
+         }, 5000); // 5 second timeout
+         
+         return () => clearTimeout(timeout);
+       }
     }
-  }, [sessionStatus, serverAuthError, serverPermissionError, initialFetchError, initialCandidates.length, fetchRecruitersForAdminFilter, pathname]);
+  }, [sessionStatus, serverAuthError, serverPermissionError, initialFetchError, initialCandidates.length, pathname]);
   
   const handleRecruiterFilterChange = (newFilter: string) => {
     setSelectedRecruiterFilter(newFilter);
@@ -214,7 +223,7 @@ export function MyTasksPageClient({
     if (initialFetchError) {
       toast.error(initialFetchError);
     }
-  }, [initialFetchError, toast]);
+  }, [initialFetchError]);
 
   if (sessionStatus === 'loading' || (isLoading && !fetchError && !authError && !permissionError && !pathname.startsWith('/auth/signin'))) {
     return (

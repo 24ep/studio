@@ -62,10 +62,38 @@ const SIDEBAR_COLOR_KEYS = [
 function setSidebarCSSVars(settings: Record<string, string>) {
   if (typeof window === 'undefined') return;
   const root = document.documentElement;
+  
+  // Map settings keys to Tailwind CSS variable names
+  const cssVarMapping: Record<string, string> = {
+    // Light theme
+    'sidebarBgStartL': '--sidebar-background',
+    'sidebarTextL': '--sidebar-foreground',
+    'sidebarBorderL': '--sidebar-border',
+    'sidebarActiveBgStartL': '--sidebar-primary',
+    'sidebarActiveTextL': '--sidebar-primary-foreground',
+    'sidebarHoverBgL': '--sidebar-accent',
+    'sidebarHoverTextL': '--sidebar-accent-foreground',
+    
+    // Dark theme
+    'sidebarBgStartD': '--sidebar-background',
+    'sidebarTextD': '--sidebar-foreground',
+    'sidebarBorderD': '--sidebar-border',
+    'sidebarActiveBgStartD': '--sidebar-primary',
+    'sidebarActiveTextD': '--sidebar-primary-foreground',
+    'sidebarHoverBgD': '--sidebar-accent',
+    'sidebarHoverTextD': '--sidebar-accent-foreground',
+  };
+
+  // Set CSS variables based on current theme
+  const isDark = document.documentElement.classList.contains('dark');
+  const themeSuffix = isDark ? 'D' : 'L';
+  
   SIDEBAR_COLOR_KEYS.forEach(key => {
-    const cssVar = key.replace(/([A-Z])/g, "-$1").toLowerCase();
-    if (settings[key]) {
-      root.style.setProperty(`--${cssVar}`, settings[key]);
+    if (key.endsWith(themeSuffix) && settings[key]) {
+      const cssVarName = cssVarMapping[key];
+      if (cssVarName) {
+        root.style.setProperty(cssVarName, settings[key]);
+      }
     }
   });
 }
@@ -176,15 +204,41 @@ const SidebarNavComponent = function SidebarNav() {
         setSidebarCSSVars(settings);
       } catch {}
     }
+    
+    function updateColors() {
+      fetchSidebarColors();
+    }
+    
     fetchSidebarColors();
+    
     // Listen for appConfigChanged event to update sidebar colors live
-    const handler = () => fetchSidebarColors();
-    window.addEventListener('appConfigChanged', handler);
-    return () => window.removeEventListener('appConfigChanged', handler);
+    window.addEventListener('appConfigChanged', updateColors);
+    
+    // Listen for theme changes
+    const observer = new MutationObserver((mutations) => {
+      mutations.forEach((mutation) => {
+        if (mutation.type === 'attributes' && mutation.attributeName === 'class') {
+          const target = mutation.target as HTMLElement;
+          if (target.classList.contains('dark') !== target.classList.contains('dark')) {
+            updateColors();
+          }
+        }
+      });
+    });
+    
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ['class']
+    });
+    
+    return () => {
+      window.removeEventListener('appConfigChanged', updateColors);
+      observer.disconnect();
+    };
   }, []);
 
   return (
-      <SidebarMenu className="bg-background  py-6 px-2 flex flex-col gap-2">
+      <SidebarMenu className="bg-sidebar py-6 px-2 flex flex-col gap-2">
         {/* Main Navigation */}
         <div className="mb-2">
           <div className="text-xs font-semibold text-muted-foreground px-4 mb-2 tracking-widest uppercase">Main</div>
@@ -201,8 +255,8 @@ const SidebarNavComponent = function SidebarNav() {
                   className={cn(
                     "w-full justify-start rounded-md px-4 py-2 my-1 transition-all flex items-center gap-3 text-base",
                     isActive
-                      ? "bg-primary/90 text-white font-bold shadow-lg scale-105"
-                      : "hover:bg-primary/10 hover:text-primary text-muted-foreground"
+                      ? "font-bold shadow-lg scale-105"
+                      : "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground text-sidebar-foreground"
                   )}
                   tooltip={item.label}
                   onClick={() => {
@@ -240,8 +294,8 @@ const SidebarNavComponent = function SidebarNav() {
                 className={cn(
                   "w-full justify-start rounded-md px-4 py-2 my-1 transition-all flex items-center gap-3 text-base",
                   isMyTaskBoardActive
-                    ? "bg-primary/90 text-white font-bold shadow-lg scale-105"
-                    : "hover:bg-primary/10 hover:text-primary text-muted-foreground"
+                    ? "font-bold shadow-lg scale-105"
+                    : "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground text-sidebar-foreground"
                 )}
                 tooltip={myTaskBoardNavItem.label}
                 onClick={() => {

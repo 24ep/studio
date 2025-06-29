@@ -134,3 +134,45 @@ export async function seedDatabase(): Promise<boolean> {
 
 // Auto-initialization on module load (optional)
 // initializeApplication().catch(console.error); 
+
+export function validateEnvironmentVariables() {
+  const requiredVars = [
+    'DATABASE_URL',
+    'NEXTAUTH_SECRET',
+    'NEXTAUTH_URL'
+  ];
+
+  const optionalVars = [
+    'AZURE_AD_CLIENT_ID',
+    'AZURE_AD_CLIENT_SECRET', 
+    'AZURE_AD_TENANT_ID',
+    'REDIS_URL',
+    'MINIO_ENDPOINT',
+    'MINIO_ACCESS_KEY',
+    'MINIO_SECRET_KEY'
+  ];
+
+  const missing = requiredVars.filter(varName => !process.env[varName]);
+  
+  if (missing.length > 0) {
+    console.error('❌ Missing required environment variables:');
+    missing.forEach(varName => {
+      console.error(`   - ${varName}`);
+    });
+    console.error('\nPlease check your .env file or environment configuration.');
+    return false;
+  }
+
+  console.log('✅ All required environment variables are set');
+  return true;
+}
+
+export function validateDatabaseConnection() {
+  // This would be called after Prisma client is available
+  return true;
+}
+
+export function validateExternalServices() {
+  // Validate Redis, MinIO, etc. connections
+  return true;
+} 

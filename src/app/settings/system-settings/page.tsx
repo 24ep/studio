@@ -89,6 +89,21 @@ export default function SystemSettingsPage() {
       toast.success('System settings updated successfully');
       setIsModalOpen(false);
       fetchSettings();
+      
+      // Trigger app config change event to update sidebar colors and other UI elements
+      if (typeof window !== 'undefined') {
+        const event = new CustomEvent('appConfigChanged', {
+          detail: {
+            sidebarColors: data.reduce((acc, setting) => {
+              if (setting.key.startsWith('sidebar') && setting.value !== null) {
+                acc[setting.key] = setting.value;
+              }
+              return acc;
+            }, {} as Record<string, string>)
+          }
+        });
+        window.dispatchEvent(event);
+      }
     } catch (e: any) {
       toast.error(e.message);
     } finally {

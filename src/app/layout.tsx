@@ -5,6 +5,7 @@ import './globals.css';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Toaster } from 'react-hot-toast';
 import { AuthProvider } from '@/components/auth/AuthProvider';
+import { ErrorBoundary } from '@/components/ui/error-boundary';
 import { getServerSession } from "next-auth/next"
 import { authOptions } from "@/lib/auth"
 // If you need to pass server-side session for initial render optimization:
@@ -92,9 +93,11 @@ export default async function RootLayout({
     <html lang="en" className={poppins.variable}>
       <body className="min-h-screen bg-background font-sans antialiased">
         <AuthProvider>
-          <AppLayout>
-            {children}
-          </AppLayout>
+          <ErrorBoundary>
+            <AppLayout>
+              {children}
+            </AppLayout>
+          </ErrorBoundary>
           <Toaster 
             position="top-right"
             toastOptions={{

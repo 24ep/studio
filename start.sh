@@ -3,6 +3,25 @@ set -e
 
 echo "🚀 Starting CandiTrack application..."
 
+# Validate environment variables
+echo "🔍 Validating environment variables..."
+if [ -z "$DATABASE_URL" ]; then
+    echo "❌ Error: DATABASE_URL environment variable is required"
+    exit 1
+fi
+
+if [ -z "$NEXTAUTH_SECRET" ]; then
+    echo "❌ Error: NEXTAUTH_SECRET environment variable is required"
+    exit 1
+fi
+
+if [ -z "$NEXTAUTH_URL" ]; then
+    echo "❌ Error: NEXTAUTH_URL environment variable is required"
+    exit 1
+fi
+
+echo "✅ Environment variables validated"
+
 # Wait for database to be ready
 echo "⏳ Waiting for database..."
 ./wait-for-db.sh "$DB_HOST:$DB_PORT" -- echo "✅ Database is ready"

@@ -37,7 +37,30 @@ export function setThemeAndColors({
 
   // Set sidebar color variables
   Object.entries(sidebarColors).forEach(([key, value]) => {
-    const cssVar = key.replace(/([A-Z])/g, "-$1").toLowerCase();
-    root.style.setProperty(`--${cssVar}`, value);
+    // Map settings keys to Tailwind CSS variable names
+    const cssVarMapping: Record<string, string> = {
+      // Light theme
+      'sidebarBgStartL': '--sidebar-background',
+      'sidebarTextL': '--sidebar-foreground',
+      'sidebarBorderL': '--sidebar-border',
+      'sidebarActiveBgStartL': '--sidebar-primary',
+      'sidebarActiveTextL': '--sidebar-primary-foreground',
+      'sidebarHoverBgL': '--sidebar-accent',
+      'sidebarHoverTextL': '--sidebar-accent-foreground',
+      
+      // Dark theme
+      'sidebarBgStartD': '--sidebar-background',
+      'sidebarTextD': '--sidebar-foreground',
+      'sidebarBorderD': '--sidebar-border',
+      'sidebarActiveBgStartD': '--sidebar-primary',
+      'sidebarActiveTextD': '--sidebar-primary-foreground',
+      'sidebarHoverBgD': '--sidebar-accent',
+      'sidebarHoverTextD': '--sidebar-accent-foreground',
+    };
+
+    const cssVarName = cssVarMapping[key];
+    if (cssVarName) {
+      root.style.setProperty(cssVarName, value);
+    }
   });
 } 

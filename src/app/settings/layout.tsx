@@ -29,7 +29,6 @@ import { Button } from '@/components/ui/button';
 export const settingsNavItems: SettingsNavigationItem[] = [
   { href: "/settings/system-settings", label: "System Settings", icon: Settings, description: "System-wide configuration.", permissionId: 'SYSTEM_SETTINGS_MANAGE' as PlatformModuleId, adminOnlyOrPermission: true },
   { href: "/settings/preferences", label: "Preferences", icon: Palette, description: "App name, logo, and theme.", permissionId: 'SYSTEM_SETTINGS_MANAGE' as PlatformModuleId, adminOnlyOrPermission: true },
-  { href: "/settings/system-settings", label: "System Settings", icon: Zap, description: "SMTP, webhooks, and processor concurrency.", permissionId: 'SYSTEM_SETTINGS_MANAGE' as PlatformModuleId, adminOnlyOrPermission: true },
   { href: "/settings/stages", label: "Recruitment Stages", icon: KanbanSquare, description: "Define your hiring pipeline.", permissionId: 'RECRUITMENT_STAGES_MANAGE' as PlatformModuleId, adminOnlyOrPermission: true },
   { href: "/settings/data-models", label: "Data Model UI", icon: DatabaseZap, description: "Customize UI for data attributes.", permissionId: 'USER_PREFERENCES_MANAGE' as PlatformModuleId, adminOnlyOrPermission: true },
   { href: "/settings/custom-fields", label: "Custom Fields", icon: CustomFieldsIcon, description: "Define custom fields for entities.", permissionId: 'CUSTOM_FIELDS_MANAGE' as PlatformModuleId, adminOnlyOrPermission: true },
@@ -53,7 +52,7 @@ export default function SettingsLayout({ children }: { children: ReactNode }) {
 
   const canAccess = React.useCallback((item: SettingsNavigationItem) => {
     if (!isClient || status !== 'authenticated' || !session?.user) return false;
-    const userRole = session.user.role;
+    const userRole = session.user.role || 'Recruiter'; // Default fallback
     const modulePermissions = session.user.modulePermissions || [];
 
     if (item.adminOnly && userRole !== 'Admin') return false;
@@ -87,7 +86,7 @@ export default function SettingsLayout({ children }: { children: ReactNode }) {
   
   // Check if user has access to ANY settings page. If not, redirect.
   const canAccessAnySettings = visibleNavItems.length > 0;
-  if (status === "authenticated" && isClient && !canAccessAnySettings) {
+  if (status === "authenticated" && isClient && !canAccessAnySettings && session?.user) {
       // If the user is on a settings page but shouldn't be, redirect them.
       if (pathname.startsWith("/settings")) {
           router.replace("/?message=NoSettingsAccess");

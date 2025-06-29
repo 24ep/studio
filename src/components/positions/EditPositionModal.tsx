@@ -32,7 +32,7 @@ import { useToast } from '@/hooks/use-toast';
 // Dynamically import ReactQuill to prevent build-time loading
 const ReactQuill = dynamic(() => import('react-quill'), {
   ssr: false,
-  loading: () => <div className="h-32 bg-muted animate-pulse rounded" />
+  loading: () => <div className="h-32 bg-muted animate-pulse rounded border border-input" />
 });
 
 const editPositionFormSchema = z.object({
@@ -155,14 +155,46 @@ export function EditPositionModal({ isOpen, onOpenChange, onEditPosition, positi
                   name="description"
                   control={form.control}
                   render={({ field }) => (
-                    <ReactQuill
-                      id="description-edit"
-                      theme="snow"
-                      value={field.value || ''}
-                      onChange={field.onChange}
-                      className="mt-1 bg-white"
-                      placeholder="Enter job description"
-                    />
+                    <div className="mt-1">
+                      <ReactQuill
+                        id="description-edit"
+                        theme="snow"
+                        value={field.value || ''}
+                        onChange={(content, delta, source, editor) => {
+                          // Only update if the change is from user input, not from programmatic changes
+                          if (source === 'user') {
+                            field.onChange(content);
+                          }
+                        }}
+                        className="bg-background border border-input rounded-md"
+                        placeholder="Enter job description"
+                        style={{ height: '200px' }}
+                        modules={{
+                          toolbar: [
+                            [{ 'header': [1, 2, 3, false] }],
+                            ['bold', 'italic', 'underline', 'strike'],
+                            [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+                            [{ 'color': [] }, { 'background': [] }],
+                            ['link'],
+                            ['clean']
+                          ],
+                          clipboard: {
+                            matchVisual: false
+                          }
+                        }}
+                        formats={[
+                          'header',
+                          'bold', 'italic', 'underline', 'strike',
+                          'list', 'bullet',
+                          'color', 'background',
+                          'link'
+                        ]}
+                        preserveWhitespace={true}
+                      />
+                      {form.formState.errors.description && (
+                        <p className="text-sm text-destructive mt-1">{form.formState.errors.description.message}</p>
+                      )}
+                    </div>
                   )}
                 />
               </div>
