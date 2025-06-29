@@ -6,12 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Loader2, Save, X } from 'lucide-react';
-
-interface SystemSetting {
-  key: string;
-  value: string | null;
-  updatedAt?: string;
-}
+import type { SystemSetting } from "@/lib/types";
 
 interface SystemSettingsFormProps {
   open: boolean;

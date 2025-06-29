@@ -4,12 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Edit, Settings } from 'lucide-react';
-
-interface SystemSetting {
-  key: string;
-  value: string | null;
-  updatedAt?: string;
-}
+import type { SystemSetting } from "@/lib/types";
 
 interface SystemSettingsTableProps {
   settings: SystemSetting[];

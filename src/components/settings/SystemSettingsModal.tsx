@@ -2,12 +2,7 @@ import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Plus } from 'lucide-react';
 import SystemSettingsForm from './SystemSettingsForm';
-
-interface SystemSetting {
-  key: string;
-  value: string | null;
-  updatedAt?: string;
-}
+import type { SystemSetting } from "@/lib/types";
 
 interface SystemSettingsModalProps {
   onSettingsUpdate?: (settings: SystemSetting[]) => void;
