@@ -14,6 +14,9 @@ COPY package.json package-lock.json ./
 # Install dependencies
 RUN npm ci --no-audit --no-fund --prefer-offline
 
+# Copy startup scripts first
+COPY start-app.sh wait-for-db.sh ./
+
 # Copy source files
 COPY . .
 
