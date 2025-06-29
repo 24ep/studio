@@ -21,6 +21,28 @@ interface SystemSettingsFormProps {
   isSaving?: boolean;
 }
 
+// Allowed system setting keys (must match backend systemSettingKeyEnum)
+const ALLOWED_SYSTEM_SETTING_KEYS = [
+  'appName', 'appLogoDataUrl', 'appThemePreference',
+  'primaryGradientStart', 'primaryGradientEnd',
+  'smtpHost', 'smtpPort', 'smtpUser', 'smtpSecure', 'smtpFromEmail',
+  'generalPdfWebhookUrl', 'geminiApiKey',
+  'loginPageBackgroundType', 'loginPageBackgroundImageUrl', 
+  'loginPageBackgroundColor1', 'loginPageBackgroundColor2',
+  'loginPageLayoutType',
+  // Sidebar Light Theme
+  'sidebarBgStartL', 'sidebarBgEndL', 'sidebarTextL',
+  'sidebarActiveBgStartL', 'sidebarActiveBgEndL', 'sidebarActiveTextL',
+  'sidebarHoverBgL', 'sidebarHoverTextL', 'sidebarBorderL',
+  // Sidebar Dark Theme
+  'sidebarBgStartD', 'sidebarBgEndD', 'sidebarTextD',
+  'sidebarActiveBgStartD', 'sidebarActiveBgEndD', 'sidebarActiveTextD',
+  'sidebarHoverBgD', 'sidebarHoverTextD', 'sidebarBorderD',
+  'appFontFamily',
+  'loginPageContent',
+  'maxConcurrentProcessors',
+];
+
 const SystemSettingsForm: React.FC<SystemSettingsFormProps> = ({ 
   open, 
   setting, 
@@ -69,14 +91,31 @@ const SystemSettingsForm: React.FC<SystemSettingsFormProps> = ({
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="key">Setting Key</Label>
-            <Input
-              id="key"
-              value={formData.key}
-              onChange={(e) => handleInputChange('key', e.target.value)}
-              placeholder="e.g., appName, smtpHost"
-              disabled={!!setting} // Can't edit key for existing settings
-              required
-            />
+            {setting ? (
+              <Input
+                id="key"
+                value={formData.key}
+                onChange={(e) => handleInputChange('key', e.target.value)}
+                placeholder="e.g., appName, smtpHost"
+                disabled={!!setting} // Can't edit key for existing settings
+                required
+              />
+            ) : (
+              <Select
+                value={formData.key}
+                onValueChange={(value) => handleInputChange('key', value)}
+                required
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select setting key" />
+                </SelectTrigger>
+                <SelectContent>
+                  {ALLOWED_SYSTEM_SETTING_KEYS.map((key) => (
+                    <SelectItem key={key} value={key}>{key}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
           </div>
 
           <div className="space-y-2">

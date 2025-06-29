@@ -7,8 +7,8 @@ import { v4 as uuidv4 } from 'uuid';
 import type { CandidateStatus, CandidateDetails, PersonalInfo, ContactInfo } from '@/lib/types';
 import { logAudit } from '@/lib/auditLog';
 import { authOptions } from '@/lib/auth';
-// For actual Excel parsing, you would uncomment and use a library like 'xlsx'
-// import * as XLSX from 'xlsx';
+import * as XLSX from 'xlsx';
+import { Readable } from 'stream';
 
 export const dynamic = "force-dynamic";
 
@@ -93,19 +93,46 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ message: 'Forbidden: Insufficient permissions to import candidates' }, { status: 403 });
   }
 
-  let body;
-  try {
-    body = await request.json();
-  } catch {
-    return NextResponse.json({ message: 'Invalid JSON body' }, { status: 400 });
+  let candidates: any[] = [];
+  const contentType = request.headers.get('content-type') || '';
+  if (contentType.includes('multipart/form-data')) {
+    // Parse multipart form data
+    const formData = await request.formData();
+    const file = formData.get('file');
+    if (!file || typeof file === 'string') {
+      return NextResponse.json({ message: 'No file uploaded' }, { status: 400 });
+    }
+    // Read file buffer
+    const arrayBuffer = await file.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
+    // Parse Excel file
+    let workbook;
+    try {
+      workbook = XLSX.read(buffer, { type: 'buffer' });
+    } catch (e) {
+      return NextResponse.json({ message: 'Failed to parse Excel file' }, { status: 400 });
+    }
+    const sheetName = workbook.SheetNames[0];
+    const sheet = workbook.Sheets[sheetName];
+    const json = XLSX.utils.sheet_to_json(sheet, { defval: '' });
+    candidates = json;
+  } else {
+    // Fallback: try to parse JSON body
+    let body;
+    try {
+      body = await request.json();
+    } catch {
+      return NextResponse.json({ message: 'Invalid JSON body' }, { status: 400 });
+    }
+    candidates = body;
   }
 
-  const validationResult = importCandidatesArraySchema.safeParse(body);
+  // Validate candidates
+  const validationResult = importCandidatesArraySchema.safeParse(candidates);
   if (!validationResult.success) {
     return NextResponse.json({ message: 'Invalid input', errors: validationResult.error.flatten().fieldErrors }, { status: 400 });
   }
-
-  const candidates = validationResult.data;
+  candidates = validationResult.data;
 
   const client = await getPool().connect();
   try {
@@ -166,7 +193,7 @@ export async function POST(request: NextRequest) {
 
   } catch (error: any) {
     await client.query('ROLLBACK');
-    await logAudit('ERROR', `Bulk import failed. Error: ${error.message}`, 'API:Candidates:Import', actingUserId, { input: body });
+    await logAudit('ERROR', `Bulk import failed. Error: ${error.message}`, 'API:Candidates:Import', actingUserId, { input: candidates });
     return NextResponse.json({ message: 'Error during import', error: error.message }, { status: 500 });
   } finally {
     client.release();

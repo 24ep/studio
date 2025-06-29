@@ -74,23 +74,33 @@ export function ImageUpload({
     setIsUploading(true);
 
     try {
-      // Convert to data URL for preview and storage
+      // For preview: convert to data URL
       const reader = new FileReader();
       reader.onload = (e) => {
         const dataUrl = e.target?.result as string;
-        onChange(dataUrl);
         setPreviewUrl(dataUrl);
-        setIsUploading(false);
-        toast.success('Image uploaded successfully');
-      };
-      reader.onerror = () => {
-        toast.error('Failed to read image file');
-        setIsUploading(false);
       };
       reader.readAsDataURL(file);
+
+      // For saving: upload to server and get URL
+      const formData = new FormData();
+      formData.append('file', file);
+      const res = await fetch('/api/settings/upload-image', {
+        method: 'PUT',
+        body: formData,
+      });
+      if (!res.ok) {
+        toast.error('Failed to upload image');
+        setIsUploading(false);
+        return;
+      }
+      const { url } = await res.json();
+      onChange(url);
+      toast.success('Image uploaded successfully');
     } catch (error) {
       console.error('Error processing image:', error);
       toast.error('Failed to process image');
+    } finally {
       setIsUploading(false);
     }
   }, [maxSize, onChange]);

@@ -10,7 +10,7 @@ export default function SettingsPage() {
 
   useEffect(() => {
     // Redirect to preferences page as the default settings page
-    router.replace('/settings/preferences');
+    // router.replace('/settings/preferences');
   }, [router]);
 
   return (

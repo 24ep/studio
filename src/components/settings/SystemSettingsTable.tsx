@@ -17,6 +17,28 @@ interface SystemSettingsTableProps {
   onEdit: (setting: SystemSetting) => void;
 }
 
+// Allowed system setting keys (must match backend systemSettingKeyEnum)
+const ALLOWED_SYSTEM_SETTING_KEYS = [
+  'appName', 'appLogoDataUrl', 'appThemePreference',
+  'primaryGradientStart', 'primaryGradientEnd',
+  'smtpHost', 'smtpPort', 'smtpUser', 'smtpSecure', 'smtpFromEmail',
+  'generalPdfWebhookUrl', 'geminiApiKey',
+  'loginPageBackgroundType', 'loginPageBackgroundImageUrl', 
+  'loginPageBackgroundColor1', 'loginPageBackgroundColor2',
+  'loginPageLayoutType',
+  // Sidebar Light Theme
+  'sidebarBgStartL', 'sidebarBgEndL', 'sidebarTextL',
+  'sidebarActiveBgStartL', 'sidebarActiveBgEndL', 'sidebarActiveTextL',
+  'sidebarHoverBgL', 'sidebarHoverTextL', 'sidebarBorderL',
+  // Sidebar Dark Theme
+  'sidebarBgStartD', 'sidebarBgEndD', 'sidebarTextD',
+  'sidebarActiveBgStartD', 'sidebarActiveBgEndD', 'sidebarActiveTextD',
+  'sidebarHoverBgD', 'sidebarHoverTextD', 'sidebarBorderD',
+  'appFontFamily',
+  'loginPageContent',
+  'maxConcurrentProcessors',
+];
+
 const SystemSettingsTable: React.FC<SystemSettingsTableProps> = ({ settings, isLoading, onEdit }) => {
   if (isLoading) {
     return (
@@ -36,7 +58,10 @@ const SystemSettingsTable: React.FC<SystemSettingsTableProps> = ({ settings, isL
     );
   }
 
-  if (!settings || settings.length === 0) {
+  // Filter settings to only allowed keys
+  const filteredSettings = settings.filter(setting => ALLOWED_SYSTEM_SETTING_KEYS.includes(setting.key));
+
+  if (!filteredSettings || filteredSettings.length === 0) {
     return (
       <Card>
         <CardHeader>
@@ -77,7 +102,7 @@ const SystemSettingsTable: React.FC<SystemSettingsTableProps> = ({ settings, isL
   };
 
   // Group settings by category
-  const groupedSettings = settings.reduce((acc, setting) => {
+  const groupedSettings = filteredSettings.reduce((acc, setting) => {
     const category = getSettingCategory(setting.key);
     if (!acc[category]) {
       acc[category] = [];
