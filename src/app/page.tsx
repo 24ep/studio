@@ -3,6 +3,8 @@ import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
 import DashboardPageClient from '@/components/dashboard/DashboardPageClient';
 import type { Candidate, Position, UserProfile } from '@/lib/types';
+import { Suspense } from 'react';
+import { ErrorBoundary } from '@/components/ui/error-boundary';
 
 export default async function DashboardPageServer() {
   let session: any = null;

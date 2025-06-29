@@ -26,37 +26,33 @@ interface ResponsiveState {
 }
 
 export function useResponsive(): ResponsiveState {
-  const [state, setState] = useState<ResponsiveState>({
+  const [state, setState] = useState<ResponsiveState>(() => ({
     isMobile: false,
     isTablet: false,
     isDesktop: false,
     isLargeDesktop: false,
-    currentBreakpoint: 'xs',
+    currentBreakpoint: 'md',
     width: 0,
     height: 0,
     orientation: 'portrait',
-  });
+  }));
 
   const updateState = useCallback(() => {
     const width = window.innerWidth;
     const height = window.innerHeight;
-    
-    // Determine current breakpoint
-    let currentBreakpoint: Breakpoint = 'xs';
-    for (const [breakpoint, minWidth] of Object.entries(BREAKPOINTS)) {
-      if (width >= minWidth) {
-        currentBreakpoint = breakpoint as Breakpoint;
-      }
-    }
-
-    // Determine device type
-    const isMobile = width < BREAKPOINTS.md;
-    const isTablet = width >= BREAKPOINTS.md && width < BREAKPOINTS.lg;
-    const isDesktop = width >= BREAKPOINTS.lg && width < BREAKPOINTS['2xl'];
-    const isLargeDesktop = width >= BREAKPOINTS['2xl'];
-
-    // Determine orientation
     const orientation = width > height ? 'landscape' : 'portrait';
+
+    const isMobile = width < BREAKPOINTS.sm;
+    const isTablet = width >= BREAKPOINTS.sm && width < BREAKPOINTS.lg;
+    const isDesktop = width >= BREAKPOINTS.lg && width < BREAKPOINTS.xl;
+    const isLargeDesktop = width >= BREAKPOINTS.xl;
+
+    let currentBreakpoint: Breakpoint = 'md';
+    if (width < BREAKPOINTS.sm) currentBreakpoint = 'xs';
+    else if (width < BREAKPOINTS.md) currentBreakpoint = 'sm';
+    else if (width < BREAKPOINTS.lg) currentBreakpoint = 'md';
+    else if (width < BREAKPOINTS.xl) currentBreakpoint = 'lg';
+    else currentBreakpoint = 'xl';
 
     setState({
       isMobile,
