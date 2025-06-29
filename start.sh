@@ -1,59 +1,34 @@
-#!/bin/bash
+#!/bin/sh
+set -e
 
-# Script to build and start Docker Compose services in detached mode.
+echo "🚀 Starting CandiTrack application..."
 
-REINIT_DB=false
+# Wait for database to be ready
+echo "⏳ Waiting for database..."
+./wait-for-db.sh "$DB_HOST:$DB_PORT" -- echo "✅ Database is ready"
 
-# Check for --reinit flag
-if [ "$1" == "--reinit" ]; then
-    REINIT_DB=true
-fi
+# Generate Prisma client
+echo "🔧 Generating Prisma client..."
+npx prisma generate
 
-echo "Ensuring .env.local exists or providing a warning..."
-if [ ! -f .env.local ]; then
-    echo "WARNING: .env.local file not found. Using default environment variables from docker-compose.yml."
-    echo "It's HIGHLY recommended to create a .env.local file from .env.example and customize it."
-    echo "Pay special attention to NEXTAUTH_URL - it should be http://localhost:9846 if using default docker-compose port mapping."
-    echo "The default admin credentials are admin@ncc.com / nccadmin (defined in pg-init-scripts/init-db.sql)."
-    echo "Make sure to update the bcrypt hash in init-db.sql if you change the default admin password BEFORE first run."
-    echo "" # Adding a blank line for readability
-fi
-
-if [ "$REINIT_DB" = true ]; then
-    echo "--- Re-initializing Database and Volumes ---"
-    echo "WARNING: The --reinit flag was provided."
-    echo "This will REMOVE ALL DOCKER VOLUMES (database, MinIO files, etc.) and then restart the services."
-    echo "The init-db.sql script will run, creating a fresh database schema and default admin user."
-    read -p "Are you sure you want to continue? (y/N): " confirmation
-    if [[ "$confirmation" != "y" && "$confirmation" != "Y" ]]; then
-        echo "Re-initialization cancelled."
-        exit 0
-    fi
-    echo "Stopping services and removing volumes..."
-    docker-compose down -v
-    if [ $? -ne 0 ]; then
-        echo "Failed to stop services and remove volumes. Please check Docker Compose output."
-        exit 1
-    fi
-    echo "Volumes removed."
-    echo "" # Adding a blank line for readability
-fi
-
-echo "Building and starting Candidate Matching services..."
-if [ "$REINIT_DB" = false ]; then
-    echo "Note: The database schema (init-db.sql) is applied by PostgreSQL only if the database volume is new or empty."
-    echo "      For a forced database re-initialization (which will delete existing data), use './start.sh --reinit'."
-    echo "" # Adding a blank line for readability
-fi
-docker-compose up --build -d
-
-if [ $? -eq 0 ]; then
-    echo "Candidate Matching services started successfully."
-    if [ "$REINIT_DB" = true ]; then
-        echo "Database has been re-initialized."
-    fi
-    echo "Application should be available at http://localhost:9846 (or your configured NEXTAUTH_URL)."
-    echo "MinIO Console (if defaults used): http://localhost:9848"
+# Push database schema
+echo "📊 Pushing database schema..."
+if npx prisma db push --accept-data-loss; then
+    echo "✅ Schema pushed successfully"
 else
-    echo "Failed to start Candidate Matching services. Check Docker Compose logs."
+    echo "⚠️  Schema push failed, trying reset..."
+    npx prisma db push --force-reset --accept-data-loss
+    echo "✅ Schema reset and pushed successfully"
 fi
+
+# Seed database
+echo "🌱 Seeding database..."
+if npx prisma db seed; then
+    echo "✅ Database seeded successfully"
+else
+    echo "⚠️  Seeding failed or already seeded, continuing..."
+fi
+
+# Start the application
+echo "🚀 Starting application..."
+exec npm run start

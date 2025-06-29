@@ -34,7 +34,7 @@ FROM node:20-alpine
 WORKDIR /app
 
 # Install only runtime dependencies
-RUN apk add --no-cache curl
+RUN apk add --no-cache curl netcat-openbsd
 
 # Don't run production as root
 USER node
@@ -51,7 +51,11 @@ COPY --chown=node:node --from=builder /app/prisma ./prisma
 COPY --chown=node:node --from=builder /app/process-upload-queue.mjs ./process-upload-queue.mjs
 COPY --chown=node:node --from=builder /app/ws-queue-bridge.js ./ws-queue-bridge.js
 COPY --chown=node:node --from=builder /app/wait-for-db.sh ./wait-for-db.sh
-RUN chmod +x ./wait-for-db.sh
+COPY --chown=node:node --from=builder /app/start.sh ./start.sh
+RUN chmod +x ./wait-for-db.sh ./start.sh
+
+# Generate Prisma client in production stage
+RUN npx prisma generate
 
 # Expose the port the app will run on
 EXPOSE 9846
@@ -60,5 +64,5 @@ EXPOSE 9846
 HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
   CMD curl -f http://localhost:9846/api/health || exit 1
 
-# Start the app with database initialization and seeding
-CMD ./wait-for-db.sh "$DB_HOST:$DB_PORT" -- sh -c "echo 'Database ready. Initializing schema...' && npx prisma generate && (npx prisma db push --accept-data-loss || (echo 'Push failed, trying reset...' && npx prisma db push --force-reset --accept-data-loss)) && echo 'Schema initialized. Seeding database...' && (npx prisma db seed || echo 'Seeding failed or already seeded') && echo 'Database ready. Starting app...' && npm run start"
+# Start the app with the startup script
+CMD ["./start.sh"]

@@ -1,47 +1,59 @@
 #!/bin/bash
 
-set -e
+# Script to build and start Docker Compose services in detached mode.
 
-echo "Starting CandiTrack application..."
+REINIT_DB=false
 
-# Wait for database
-echo "Waiting for database at $DB_HOST:$DB_PORT..."
-./wait-for-db.sh "$DB_HOST:$DB_PORT"
-
-echo "Database is ready!"
-
-# Check if DATABASE_URL is set
-if [ -z "$DATABASE_URL" ]; then
-    echo "ERROR: DATABASE_URL environment variable is not set"
-    exit 1
+# Check for --reinit flag
+if [ "$1" == "--reinit" ]; then
+    REINIT_DB=true
 fi
 
-echo "DATABASE_URL is set: ${DATABASE_URL:0:20}..."
+echo "Ensuring .env.local exists or providing a warning..."
+if [ ! -f .env.local ]; then
+    echo "WARNING: .env.local file not found. Using default environment variables from docker-compose.yml."
+    echo "It's HIGHLY recommended to create a .env.local file from .env.example and customize it."
+    echo "Pay special attention to NEXTAUTH_URL - it should be http://localhost:9846 if using default docker-compose port mapping."
+    echo "The default admin credentials are admin@ncc.com / nccadmin (defined in pg-init-scripts/init-db.sql)."
+    echo "Make sure to update the bcrypt hash in init-db.sql if you change the default admin password BEFORE first run."
+    echo "" # Adding a blank line for readability
+fi
 
-# Generate Prisma client
-echo "Generating Prisma client..."
-npx prisma generate
-
-# Push schema to database
-echo "Pushing schema to database..."
-if npx prisma db push --accept-data-loss; then
-    echo "Schema push successful!"
-else
-    echo "Schema push failed, trying alternative approach..."
-    # Try to create tables manually if push fails
-    echo "Creating tables manually..."
-    npx prisma db push --force-reset --accept-data-loss || {
-        echo "ERROR: Failed to create database schema"
+if [ "$REINIT_DB" = true ]; then
+    echo "--- Re-initializing Database and Volumes ---"
+    echo "WARNING: The --reinit flag was provided."
+    echo "This will REMOVE ALL DOCKER VOLUMES (database, MinIO files, etc.) and then restart the services."
+    echo "The init-db.sql script will run, creating a fresh database schema and default admin user."
+    read -p "Are you sure you want to continue? (y/N): " confirmation
+    if [[ "$confirmation" != "y" && "$confirmation" != "Y" ]]; then
+        echo "Re-initialization cancelled."
+        exit 0
+    fi
+    echo "Stopping services and removing volumes..."
+    docker-compose down -v
+    if [ $? -ne 0 ]; then
+        echo "Failed to stop services and remove volumes. Please check Docker Compose output."
         exit 1
-    }
+    fi
+    echo "Volumes removed."
+    echo "" # Adding a blank line for readability
 fi
 
-# Verify tables exist
-echo "Verifying database tables..."
-npx prisma db execute --stdin <<< "SELECT table_name FROM information_schema.tables WHERE table_schema = 'public';"
+echo "Building and starting Candidate Matching services..."
+if [ "$REINIT_DB" = false ]; then
+    echo "Note: The database schema (init-db.sql) is applied by PostgreSQL only if the database volume is new or empty."
+    echo "      For a forced database re-initialization (which will delete existing data), use './start-app.sh --reinit'."
+    echo "" # Adding a blank line for readability
+fi
+docker-compose up --build -d
 
-echo "Database setup complete!"
-
-# Start the application
-echo "Starting Next.js application..."
-exec npm run start 
+if [ $? -eq 0 ]; then
+    echo "Candidate Matching services started successfully."
+    if [ "$REINIT_DB" = true ]; then
+        echo "Database has been re-initialized."
+    fi
+    echo "Application should be available at http://localhost:9846 (or your configured NEXTAUTH_URL)."
+    echo "MinIO Console (if defaults used): http://localhost:9848"
+else
+    echo "Failed to start Candidate Matching services. Check Docker Compose logs."
+fi 
