@@ -399,3 +399,14 @@ model Account {
   @@unique([provider, providerAccountId])
   @@index([userId])
 }
+
+model DataModel {
+  id          String   @id @default(uuid())
+  name        String
+  modelType   String
+  description String?
+  schema      Json?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}

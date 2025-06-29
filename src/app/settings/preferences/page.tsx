@@ -28,6 +28,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Textarea } from '@/components/ui/textarea';
 import type { SystemSetting, LoginPageBackgroundType, LoginPageLayoutType } from '@/lib/types';
 import { ImageUpload } from '@/components/ui/image-upload';
+import PreferencesTable from '@/components/settings/PreferencesTable';
 
 interface SystemSettings {
   appName?: string;
@@ -64,9 +65,15 @@ interface SystemSettings {
   loginPageContent?: string;
 }
 
+interface DataModelPreferences {
+  candidateAttributes: Record<string, any>;
+  positionAttributes: Record<string, any>;
+}
+
 export default function PreferencesPage() {
   const { data: session, status } = useSession();
   const [settings, setSettings] = useState<SystemSettings>({});
+  const [preferences, setPreferences] = useState<DataModelPreferences>({ candidateAttributes: {}, positionAttributes: {} });
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -92,13 +99,34 @@ export default function PreferencesPage() {
     }
   }, []);
 
+  const fetchPreferences = useCallback(async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const response = await fetch('/api/settings/preferences');
+      if (!response.ok) {
+        throw new Error(`Failed to fetch preferences: ${response.status} ${response.statusText}`);
+      }
+      const data = await response.json();
+      setPreferences(data);
+    } catch (e: any) {
+      const errorMessage = e.message || 'Failed to fetch preferences';
+      setError(errorMessage);
+      toast.error(errorMessage);
+      console.error('Error fetching preferences:', e);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     if (status === 'authenticated') {
       fetchSettings();
+      fetchPreferences();
     } else if (status === 'unauthenticated') {
       signIn();
     }
-  }, [status, fetchSettings]);
+  }, [status, fetchSettings, fetchPreferences]);
 
   useEffect(() => {
     if (error) {
@@ -147,6 +175,27 @@ export default function PreferencesPage() {
         });
         window.dispatchEvent(event);
       }
+    } catch (e: any) {
+      toast.error(e.message);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleSavePreferences = async (newPrefs?: DataModelPreferences) => {
+    setIsSaving(true);
+    try {
+      const prefsToSave = newPrefs || preferences;
+      const response = await fetch('/api/settings/preferences', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(prefsToSave),
+      });
+      if (!response.ok) {
+        throw new Error('Failed to save preferences');
+      }
+      setPreferences(prefsToSave);
+      toast.success('Preferences saved successfully');
     } catch (e: any) {
       toast.error(e.message);
     } finally {
@@ -597,6 +646,30 @@ export default function PreferencesPage() {
               <LoginPageSettings />
             </TabsContent>
           </Tabs>
+
+          {/* Preferences Table */}
+          <div className="mt-8">
+            <PreferencesTable
+              preferences={[
+                ...Object.entries(preferences.candidateAttributes || {}).map(([key, value]) => ({
+                  id: `candidate-${key}`,
+                  userId: session?.user?.id || '',
+                  key,
+                  value: typeof value === 'string' ? value : JSON.stringify(value),
+                  modelType: 'Candidate'
+                })),
+                ...Object.entries(preferences.positionAttributes || {}).map(([key, value]) => ({
+                  id: `position-${key}`,
+                  userId: session?.user?.id || '',
+                  key,
+                  value: typeof value === 'string' ? value : JSON.stringify(value),
+                  modelType: 'Position'
+                }))
+              ]}
+              isLoading={isLoading}
+              onEdit={() => {}}
+            />
+          </div>
 
           <div className="flex justify-end mt-6 pt-6 border-t">
             <Button 

@@ -23,6 +23,15 @@ interface PreferencesTableProps {
   onEdit: (preference: UserPreference | null) => void;
 }
 
+// Utility to check if a string is a color
+function isColor(value: string) {
+  return (
+    /^#([0-9a-f]{3}){1,2}$/i.test(value) ||
+    /^rgb(a)?\(/i.test(value) ||
+    /^hsl(a)?\(/i.test(value)
+  );
+}
+
 const PreferencesTable: React.FC<PreferencesTableProps> = ({ preferences, isLoading, onEdit }) => {
   if (isLoading) {
     return (
@@ -85,15 +94,16 @@ const PreferencesTable: React.FC<PreferencesTableProps> = ({ preferences, isLoad
     return <Settings className="h-4 w-4" />;
   };
 
-  const formatValue = (value: string): string => {
+  const formatValue = (value: string | undefined | null): string => {
+    if (value === undefined || value === null) return '';
     try {
       const parsed = JSON.parse(value);
-      if (typeof parsed === 'object') {
+      if (typeof parsed === 'object' && parsed !== null) {
         return JSON.stringify(parsed, null, 2);
       }
       return String(parsed);
     } catch {
-      return value;
+      return String(value);
     }
   };
 
@@ -141,10 +151,15 @@ const PreferencesTable: React.FC<PreferencesTableProps> = ({ preferences, isLoad
                       </div>
                     </TableCell>
                     <TableCell>
-                      <div className="max-w-md">
-                        <div className="text-sm font-mono bg-muted px-2 py-1 rounded truncate" title={formatValue(preference.value)}>
-                          {formatValue(preference.value)}
-                        </div>
+                      <div className="flex items-center gap-2">
+                        {isColor(preference.value) && (
+                          <span
+                            className="inline-block w-6 h-6 rounded border"
+                            style={{ background: preference.value }}
+                            title={preference.value}
+                          />
+                        )}
+                        <span>{typeof preference.value === 'string' || typeof preference.value === 'number' ? formatValue(preference.value) : ''}</span>
                       </div>
                     </TableCell>
                     <TableCell>

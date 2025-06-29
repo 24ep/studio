@@ -5,7 +5,7 @@ import bcrypt from 'bcryptjs';
 import { logAudit } from '@/lib/auditLog';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
-import prisma from '../../../../../lib/prisma';
+import prisma from '@/lib/prisma';
 
 const updateUserSchema = z.object({
   name: z.string().min(1, "Name is required").optional(),
