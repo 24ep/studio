@@ -43,7 +43,6 @@ src/**/*.js
 src/**/*.jsx
 # Ignore legacy configs
 tailwind.config.js
-prisma/seed.js
 
 # Additional changes from the codeblock
 *.log
