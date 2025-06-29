@@ -51,7 +51,8 @@ COPY --chown=node:node --from=builder /app/prisma ./prisma
 COPY --chown=node:node --from=builder /app/process-upload-queue.mjs ./process-upload-queue.mjs
 COPY --chown=node:node --from=builder /app/ws-queue-bridge.js ./ws-queue-bridge.js
 COPY --chown=node:node --from=builder /app/wait-for-db.sh ./wait-for-db.sh
-RUN chmod +x ./wait-for-db.sh
+COPY --chown=node:node --from=builder /app/start-app.sh ./start-app.sh
+RUN chmod +x ./wait-for-db.sh ./start-app.sh
 
 # Expose the port the app will run on
 EXPOSE 9846
@@ -60,5 +61,5 @@ EXPOSE 9846
 HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
   CMD curl -f http://localhost:9846/api/health || exit 1
 
-# Start the app with schema sync and seeding, waiting for DB first
-CMD ./wait-for-db.sh "$DB_HOST:$DB_PORT" -- sh -c "echo 'Database is ready, syncing schema...' && npx prisma db push && echo 'Schema sync complete, skipping seed for now...' && echo 'Starting app...' && npm run start"
+# Start the app using the startup script
+CMD ["./start-app.sh"]
