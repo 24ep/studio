@@ -13,9 +13,9 @@ import { authOptions } from '@/lib/auth';
 // );
 
 const preferenceSchema = z.object({
-  defaultTheme: z.string(),
-  defaultCandidateView: z.string(),
-  defaultLanguage: z.string(),
+  themePreference: z.enum(["light", "dark", "system"]),
+  appName: z.string(),
+  appLogoDataUrl: z.string().nullable().optional(),
 });
 
 export async function GET(request: NextRequest) {

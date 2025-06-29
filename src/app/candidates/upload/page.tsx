@@ -179,12 +179,12 @@ function UploadPageContent() {
           <div className="space-y-4 py-2">
             <div>
               <Label htmlFor="position-select">Assign to Position (optional)</Label>
-              <Select value={selectedPositionId} onValueChange={setSelectedPositionId}>
+              <Select value={selectedPositionId === "" ? "__NONE__" : selectedPositionId} onValueChange={value => setSelectedPositionId(value === "__NONE__" ? "" : value)}>
                 <SelectTrigger id="position-select" className="mt-2">
                   <SelectValue placeholder="Select a position..." />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">None (General Application)</SelectItem>
+                  <SelectItem value="__NONE__">None (General Application)</SelectItem>
                   {availablePositions.map(pos => (
                     <SelectItem key={pos.id} value={pos.id}>{pos.title}</SelectItem>
                   ))}

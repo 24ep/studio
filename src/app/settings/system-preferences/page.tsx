@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState, type ChangeEvent } from "react";
-import { Loader2, Save, X, Palette, ImageUp, Trash2, XCircle, PenSquare } from "lucide-react";
+import { Loader2, Save, X, Palette, ImageUp, Trash2, XCircle, PenSquare, Sun, Moon, RotateCcw } from "lucide-react";
 import { useSession } from "next-auth/react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,6 +13,13 @@ import { useToast } from "@/hooks/use-toast";
 import Image from "next/image";
 import { signIn } from "next-auth/react";
 import { useRouter, usePathname } from "next/navigation";
+import { cn } from "@/lib/utils";
+import { setThemeAndColors } from "@/lib/themeUtils";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Separator } from '@/components/ui/separator';
+import { Badge } from '@/components/ui/badge';
+import { toast } from 'react-hot-toast';
 
 const DEFAULT_APP_NAME = "CandiTrack";
 const DEFAULT_THEME: ThemePreference = "system";
@@ -24,8 +31,107 @@ const APP_NAME_KEY = 'appName';
 
 type ThemePreference = "light" | "dark" | "system";
 
+// --- Sidebar color keys/types/utilities ---
+const DEFAULT_PRIMARY_GRADIENT_START = "179 67% 66%";
+const DEFAULT_PRIMARY_GRADIENT_END = "238 74% 61%";
+const DEFAULT_SIDEBAR_COLORS_BASE = {
+  sidebarBgStartL: "220 25% 97%", sidebarBgEndL: "220 20% 94%", sidebarTextL: "220 25% 30%",
+  sidebarActiveBgStartL: DEFAULT_PRIMARY_GRADIENT_START, sidebarActiveBgEndL: DEFAULT_PRIMARY_GRADIENT_END, sidebarActiveTextL: "0 0% 100%",      
+  sidebarHoverBgL: "220 10% 92%", sidebarHoverTextL: "220 25% 25%", sidebarBorderL: "220 15% 85%",
+  sidebarBgStartD: "220 15% 12%", sidebarBgEndD: "220 15% 9%", sidebarTextD: "210 30% 85%",
+  sidebarActiveBgStartD: DEFAULT_PRIMARY_GRADIENT_START, sidebarActiveBgEndD: DEFAULT_PRIMARY_GRADIENT_END, sidebarActiveTextD: "0 0% 100%",      
+  sidebarHoverBgD: "220 15% 20%", sidebarHoverTextD: "210 30% 90%", sidebarBorderD: "220 15% 18%"
+};
+const SIDEBAR_COLOR_KEYS = [
+  'sidebarBgStartL', 'sidebarBgEndL', 'sidebarTextL',
+  'sidebarActiveBgStartL', 'sidebarActiveBgEndL', 'sidebarActiveTextL',
+  'sidebarHoverBgL', 'sidebarHoverTextL', 'sidebarBorderL',
+  'sidebarBgStartD', 'sidebarBgEndD', 'sidebarTextD',
+  'sidebarActiveBgStartD', 'sidebarActiveBgEndD', 'sidebarActiveTextD',
+  'sidebarHoverBgD', 'sidebarHoverTextD', 'sidebarBorderD',
+];
+function parseHslString(hslString: string): { h: number; s: number; l: number } | null {
+  const match = hslString?.match(/^([\d.]+)\s+([\d.]+)%\s+([\d.]+)%$/);
+  if (!match) return null;
+  return {
+    h: parseFloat(match[1]),
+    s: parseFloat(match[2]) / 100,
+    l: parseFloat(match[3]) / 100,
+  };
+}
+function hslToHex(h: number, s: number, l: number): string {
+  const k = (n: number) => (n + h / 30) % 12;
+  const a = s * Math.min(l, 1 - l);
+  const f = (n: number) => l - a * Math.max(-1, Math.min(k(n) - 3, Math.min(9 - k(n), 1)));
+  const toHex = (x: number) => Math.round(x * 255).toString(16).padStart(2, '0');
+  return `#${toHex(f(0))}${toHex(f(8))}${toHex(f(4))}`;
+}
+function hexToHslString(hex: string): string {
+  let r = 0, g = 0, b = 0;
+  if (hex.startsWith('#')) hex = hex.substring(1);
+  if (hex.length === 3) {
+    r = parseInt(hex[0] + hex[0], 16);
+    g = parseInt(hex[1] + hex[1], 16);
+    b = parseInt(hex[2] + hex[2], 16);
+  } else if (hex.length === 6) {
+    r = parseInt(hex.substring(0, 2), 16);
+    g = parseInt(hex.substring(2, 4), 16);
+    b = parseInt(hex.substring(4, 6), 16);
+  } else { return "0 0% 0%"; } 
+  r /= 255; g /= 255; b /= 255;
+  const max = Math.max(r, g, b), min = Math.min(r, g, b);
+  let h = 0, s = 0;
+  const l = (max + min) / 2;
+  if (max !== min) {
+    const d = max - min;
+    s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+    switch (max) {
+      case r: h = (g - b) / d + (g < b ? 6 : 0); break;
+      case g: h = (b - r) / d + 2; break;
+      case b: h = (r - g) / d + 4; break;
+    }
+    h /= 6;
+  }
+  h = Math.round(h * 360);
+  s = Math.round(s * 100);
+  const lPercent = Math.round(l * 100);
+  return `${h} ${s}% ${lPercent}%`;
+}
+function convertHslStringToHex(hslString: string | null | undefined): string {
+  if (!hslString) return '#000000';
+  const hslObj = parseHslString(hslString);
+  if (!hslObj) return '#000000';
+  return hslToHex(hslObj.h, hslObj.s, hslObj.l);
+}
+
+interface SidebarColors {
+  sidebarBgStartL: string; sidebarBgEndL: string; sidebarTextL: string;
+  sidebarActiveBgStartL: string; sidebarActiveBgEndL: string; sidebarActiveTextL: string;
+  sidebarHoverBgL: string; sidebarHoverTextL: string; sidebarBorderL: string;
+  sidebarBgStartD: string; sidebarBgEndD: string; sidebarTextD: string;
+  sidebarActiveBgStartD: string; sidebarActiveBgEndD: string; 
+  sidebarActiveTextD: string;
+  sidebarHoverBgD: string; sidebarHoverTextD: string; sidebarBorderD: string;
+  [key: string]: string;
+}
+
+function setSidebarCSSVars(settings: SidebarColors) {
+  if (typeof window === 'undefined') return;
+  const root = document.documentElement;
+  SIDEBAR_COLOR_KEYS.forEach((key: keyof SidebarColors) => {
+    const cssVar = key.replace(/([A-Z])/g, "-$1").toLowerCase();
+    if (settings[key]) {
+      root.style.setProperty(`--${cssVar}`, settings[key]);
+    }
+  });
+}
+function createInitialSidebarColors() {
+  return { ...DEFAULT_SIDEBAR_COLORS_BASE };
+}
+// --- End sidebar color utilities ---
+
 export default function SystemPreferencesPage() {
-  const { toast } = useToast();
+  const { success, error } = useToast();
   const [isClient, setIsClient] = useState(false);
   const { data: session, status: sessionStatus } = useSession();
   const router = useRouter();
@@ -41,8 +147,11 @@ export default function SystemPreferencesPage() {
   // Loading/saving/error
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [successMsg, setSuccessMsg] = useState(false);
+
+  // Sidebar color state
+  const [sidebarColors, setSidebarColors] = useState(() => createInitialSidebarColors());
 
   const canEdit =
     session?.user?.role === "Admin" ||
@@ -56,7 +165,7 @@ export default function SystemPreferencesPage() {
       // Fetch from backend
       async function fetchPrefs() {
         setLoading(true);
-        setError(null);
+        setErrorMsg(null);
         try {
           const res = await fetch('/api/settings/system-preferences');
           if (!res.ok) throw new Error('Failed to load system preferences');
@@ -65,8 +174,15 @@ export default function SystemPreferencesPage() {
           setAppName(data[APP_NAME_KEY] || DEFAULT_APP_NAME);
           setSavedLogoDataUrl(data[APP_LOGO_DATA_URL_KEY] || null);
           setLogoPreviewUrl(data[APP_LOGO_DATA_URL_KEY] || null);
+          // Load sidebar colors
+          const newSidebarColors = createInitialSidebarColors();
+          Object.keys(newSidebarColors).forEach(key => {
+            if (data[key]) newSidebarColors[key] = data[key];
+          });
+          setSidebarColors(newSidebarColors);
+          setSidebarCSSVars(newSidebarColors);
         } catch (e: any) {
-          setError(e.message);
+          setErrorMsg(e.message);
         } finally {
           setLoading(false);
         }
@@ -75,12 +191,16 @@ export default function SystemPreferencesPage() {
     }
   }, [sessionStatus, router, pathname, signIn]);
 
+  useEffect(() => {
+    setSidebarCSSVars(sidebarColors);
+  }, [sidebarColors]);
+
   const handleLogoFileChange = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
       if (file.type.startsWith('image/')) {
         if (file.size > 100 * 1024) { // Max 100KB
-            toast({ title: "Logo Too Large", description: "Please select an image smaller than 100KB.", variant: "destructive" });
+            error("Logo Too Large: Please select an image smaller than 100KB.");
             setSelectedLogoFile(null);
             setLogoPreviewUrl(savedLogoDataUrl);
             event.target.value = '';
@@ -93,7 +213,7 @@ export default function SystemPreferencesPage() {
         };
         reader.readAsDataURL(file);
       } else {
-        toast({ title: "Invalid File Type", description: "Please select an image file (e.g., PNG, JPG, SVG).", variant: "destructive" });
+        error("Invalid File Type: Please select an image file (e.g., PNG, JPG, SVG).");
         setSelectedLogoFile(null);
         setLogoPreviewUrl(savedLogoDataUrl);
         event.target.value = '';
@@ -113,7 +233,7 @@ export default function SystemPreferencesPage() {
     if (clearSaved) {
         setSavedLogoDataUrl(null);
         setLogoPreviewUrl(null);
-        toast({ title: "Logo Cleared", description: "The application logo has been reset to default." });
+        success("Logo Cleared: The application logo has been reset to default.");
     } else {
         setLogoPreviewUrl(savedLogoDataUrl);
     }
@@ -122,13 +242,14 @@ export default function SystemPreferencesPage() {
   const handleSavePreferences = async () => {
     if (!isClient || !canEdit) return;
     setSaving(true);
-    setError(null);
-    setSuccess(false);
+    setErrorMsg(null);
+    setSuccessMsg(false);
     try {
-      const payload: Record<string, string | null> = {
+      const payload = {
         [APP_THEME_KEY]: themePreference,
         [APP_NAME_KEY]: appName || DEFAULT_APP_NAME,
         [APP_LOGO_DATA_URL_KEY]: logoPreviewUrl || '',
+        ...sidebarColors,
       };
       const res = await fetch('/api/settings/system-preferences', {
         method: 'POST',
@@ -141,14 +262,15 @@ export default function SystemPreferencesPage() {
       }
       setSavedLogoDataUrl(logoPreviewUrl || null);
       setSelectedLogoFile(null);
-      setSuccess(true);
-      toast({ title: 'Preferences Saved', description: 'System preferences have been updated.' });
+      setSuccessMsg(true);
+      setThemeAndColors({ themePreference, sidebarColors });
+      toast.success('Preferences Saved: System preferences have been updated.');
     } catch (e: any) {
-      setError(e.message);
-      toast({ title: 'Error', description: e.message, variant: 'destructive' });
+      setErrorMsg(e.message);
+      toast.error('Error: ' + e.message);
     } finally {
       setSaving(false);
-      setTimeout(() => setSuccess(false), 2000);
+      setTimeout(() => setSuccessMsg(false), 2000);
     }
   };
 
@@ -160,11 +282,11 @@ export default function SystemPreferencesPage() {
     );
   }
 
-  if (error) {
+  if (errorMsg) {
     return (
       <div className="flex h-full items-center justify-center">
         <div className="text-center">
-          <p className="text-destructive font-semibold mb-2">{error}</p>
+          <p className="text-destructive font-semibold mb-2">{errorMsg}</p>
           <Button onClick={() => window.location.reload()}>Retry</Button>
         </div>
       </div>
@@ -265,15 +387,163 @@ export default function SystemPreferencesPage() {
               </p>
             </div>
           </section>
+
+          <section>
+            <h3 className="text-lg font-semibold text-foreground mb-2 flex items-center">
+              <Palette className="mr-2 h-5 w-5" /> Sidebar Color
+            </h3>
+            <div className="flex flex-wrap gap-3 items-center mb-2">
+              {SIDEBAR_COLOR_KEYS.map((swatch) => (
+                <button
+                  key={swatch}
+                  type="button"
+                  className={cn(
+                    "w-8 h-8 rounded-full border-2 flex items-center justify-center focus:outline-none transition-all",
+                    sidebarColors[swatch] === swatch
+                      ? "border-primary ring-2 ring-primary"
+                      : "border-muted"
+                  )}
+                  style={{ backgroundColor: `hsl(${swatch})` }}
+                  onClick={() => { setSidebarColors(prev => ({ ...prev, [swatch]: swatch })); }}
+                  aria-label={swatch}
+                  disabled={!canEdit}
+                >
+                  {sidebarColors[swatch] === swatch && (
+                    <span className="block w-3 h-3 rounded-full bg-white border border-primary" />
+                  )}
+                </button>
+              ))}
+              {/* Custom color input */}
+              <input
+                type="text"
+                className="w-32 h-8 rounded border ml-2 px-2 text-sm"
+                placeholder="#hex or hsl( )"
+                value={sidebarColors['sidebarBgStartL']}
+                onChange={e => {
+                  setSidebarColors(prev => ({ ...prev, ['sidebarBgStartL']: e.target.value }));
+                }}
+                disabled={!canEdit}
+                aria-label="Custom sidebar color"
+              />
+              <span className="text-xs ml-2">Custom</span>
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">
+              Select a color for the left menu (sidebar) background. Default is HSL blue. You can enter a custom HSL or hex code (e.g. <code>221 83% 53%</code> or <code>#2563eb</code> or <code>hsl(221 83% 53%)</code>).
+            </p>
+            <div className="mt-2 flex items-center gap-2">
+              <span className="text-xs">Current:</span>
+              <span className="w-6 h-6 rounded-full border" style={{ background: sidebarColors['sidebarBgStartL'].startsWith('#') ? sidebarColors['sidebarBgStartL'] : sidebarColors['sidebarBgStartL'].startsWith('hsl') ? sidebarColors['sidebarBgStartL'] : `hsl(${sidebarColors['sidebarBgStartL']})` }} />
+              <span className="text-xs font-mono">{sidebarColors['sidebarBgStartL']}</span>
+            </div>
+          </section>
         </CardContent>
         <CardFooter>
           <Button onClick={handleSavePreferences} className="btn-primary-gradient" disabled={saving || !canEdit}>
             {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
             {saving ? "Saving..." : "Save Preferences"}
           </Button>
-          {success && <span className="ml-4 text-green-600">Preferences saved!</span>}
+          {successMsg && <span className="ml-4 text-green-600">Preferences saved!</span>}
         </CardFooter>
+      </Card>
+      <Card className="lg:col-span-3">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <SidebarIcon className="h-5 w-5 text-primary" />
+            Sidebar Colors
+          </CardTitle>
+          <CardDescription>
+            Customize the sidebar appearance for light and dark themes
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Tabs defaultValue="light-sidebar" className="w-full">
+            <TabsList className="grid w-full grid-cols-2 mb-6">
+              <TabsTrigger value="light-sidebar" className="flex items-center gap-2">
+                <Sun className="h-4 w-4" />
+                Light Theme
+              </TabsTrigger>
+              <TabsTrigger value="dark-sidebar" className="flex items-center gap-2">
+                <Moon className="h-4 w-4" />
+                Dark Theme
+              </TabsTrigger>
+            </TabsList>
+            <TabsContent value="light-sidebar" className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {renderSidebarColorInputs('Light')}
+              </div>
+              <Button variant="outline" size="sm" onClick={() => resetSidebarColors('Light')}>
+                <RotateCcw className="mr-2 h-4 w-4" />
+                Reset Light Theme Colors
+              </Button>
+            </TabsContent>
+            <TabsContent value="dark-sidebar" className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {renderSidebarColorInputs('Dark')}
+              </div>
+              <Button variant="outline" size="sm" onClick={() => resetSidebarColors('Dark')}>
+                <RotateCcw className="mr-2 h-4 w-4" />
+                Reset Dark Theme Colors
+              </Button>
+            </TabsContent>
+          </Tabs>
+        </CardContent>
       </Card>
     </div>
   );
+}
+
+function renderSidebarColorInputs(theme: 'Light' | 'Dark') {
+  const suffix = theme === 'Light' ? 'L' : 'D';
+  const keys: (keyof SidebarColors)[] = [
+    `sidebarBgStart${suffix}` as keyof SidebarColors,
+    `sidebarBgEnd${suffix}` as keyof SidebarColors,
+    `sidebarText${suffix}` as keyof SidebarColors,
+    `sidebarActiveBgStart${suffix}` as keyof SidebarColors,
+    `sidebarActiveBgEnd${suffix}` as keyof SidebarColors,
+    `sidebarActiveText${suffix}` as keyof SidebarColors,
+    `sidebarHoverBg${suffix}` as keyof SidebarColors,
+    `sidebarHoverText${suffix}` as keyof SidebarColors,
+    `sidebarBorder${suffix}` as keyof SidebarColors,
+  ];
+  const labels: Record<string, string> = {
+    [`sidebarBgStart${suffix}`]: "Background Start",
+    [`sidebarBgEnd${suffix}`]: "Background End",
+    [`sidebarText${suffix}`]: "Text Color",
+    [`sidebarActiveBgStart${suffix}`]: "Active BG Start",
+    [`sidebarActiveBgEnd${suffix}`]: "Active BG End",
+    [`sidebarActiveText${suffix}`]: "Active Text",
+    [`sidebarHoverBg${suffix}`]: "Hover Background",
+    [`sidebarHoverText${suffix}`]: "Hover Text",
+    [`sidebarBorder${suffix}`]: "Border Color",
+  };
+  return keys.map((key) => (
+    <div key={key} className="space-y-2">
+      <Label htmlFor={String(key)} className="text-sm font-medium">
+        {labels[String(key)]}
+      </Label>
+      <div className="flex items-center gap-2">
+        <Input
+          id={String(key)}
+          type="text"
+          value={sidebarColors[key] || ''}
+          onChange={e => setSidebarColors(prev => ({ ...prev, [key]: e.target.value }))}
+          placeholder="220 25% 97%"
+          className="text-sm"
+        />
+        <Input
+          type="color"
+          value={convertHslStringToHex(sidebarColors[key])}
+          onChange={e => setSidebarColors(prev => ({ ...prev, [key]: hexToHslString(e.target.value) }))}
+          className="w-10 h-9 p-1 rounded-md border"
+        />
+      </div>
+    </div>
+  ));
+}
+
+function resetSidebarColors(theme: 'Light' | 'Dark') {
+  const suffix = theme === 'Light' ? 'L' : 'D';
+  const newSidebarColors = createInitialSidebarColors();
+  setSidebarColors(newSidebarColors);
+  setSidebarCSSVars(newSidebarColors);
 } 
