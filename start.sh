@@ -23,7 +23,7 @@ fi
 
 # Seed database
 echo "🌱 Seeding database..."
-if npx prisma db seed; then
+if npx tsx prisma/seed.ts; then
     echo "✅ Database seeded successfully"
 else
     echo "⚠️  Seeding failed or already seeded, continuing..."
