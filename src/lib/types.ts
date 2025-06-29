@@ -516,3 +516,14 @@ export interface PositionBulkActionPayload {
   positionIds: string[];
   newIsOpenStatus?: boolean; // For 'change_status'
 }
+
+export interface DataModel {
+  id: string;
+  name: string;
+  modelType: string;
+  description?: string;
+  schema?: any;
+  isActive: boolean;
+  createdAt?: Date;
+  updatedAt?: Date;
+}

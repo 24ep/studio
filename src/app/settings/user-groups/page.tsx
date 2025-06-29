@@ -5,14 +5,7 @@ import { toast } from 'react-hot-toast';
 import UserGroupsTable from '@/components/settings/UserGroupsTable';
 import UserGroupsForm from '@/components/settings/UserGroupsForm';
 import UserGroupsModal from '@/components/settings/UserGroupsModal';
-
-// Define the types matching your user groups schema
-interface UserGroup {
-  id: string;
-  name: string;
-  description?: string;
-  members: string[];
-}
+import type { UserGroup } from '@/lib/types';
 
 export default function UserGroupsPage() {
   const { data: session, status } = useSession();
@@ -27,16 +20,25 @@ export default function UserGroupsPage() {
 
   const fetchGroups = useCallback(async () => {
     setIsLoading(true);
+    setError(null);
     try {
       const response = await fetch('/api/settings/user-groups');
       if (!response.ok) {
-        throw new Error('Failed to fetch user groups');
+        throw new Error(`Failed to fetch user groups: ${response.status} ${response.statusText}`);
       }
       const data = await response.json();
+      
+      // Validate that data is an array
+      if (!Array.isArray(data)) {
+        throw new Error('Invalid response format: expected array of user groups');
+      }
+      
       setGroups(data);
     } catch (e: any) {
-      setError(e.message);
-      toast.error(e.message);
+      const errorMessage = e.message || 'Failed to fetch user groups';
+      setError(errorMessage);
+      toast.error(errorMessage);
+      console.error('Error fetching user groups:', e);
     } finally {
       setIsLoading(false);
     }
@@ -115,6 +117,21 @@ export default function UserGroupsPage() {
     setIsDeleteModalOpen(false);
     setDeletingGroup(null);
   };
+
+  // Show error state if there's an error and no groups
+  if (error && !isLoading && groups.length === 0) {
+    return (
+      <div className="text-center py-8">
+        <p className="text-red-600 mb-4">Error loading user groups: {error}</p>
+        <button 
+          onClick={fetchGroups}
+          className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+        >
+          Retry
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div>

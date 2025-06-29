@@ -1,11 +1,5 @@
 import React, { useState, useEffect } from 'react';
-
-interface UserGroup {
-  id: string;
-  name: string;
-  description?: string;
-  members: string[];
-}
+import type { UserGroup } from '@/lib/types';
 
 interface UserGroupsFormProps {
   open: boolean;
@@ -41,7 +35,12 @@ const UserGroupsForm: React.FC<UserGroupsFormProps> = ({ open, group, onClose, o
       return;
     }
     setError(null);
-    onSubmit({ ...group, ...formState, members: group?.members || [], id: group?.id || '' });
+    onSubmit({ 
+      ...group, 
+      ...formState, 
+      permissions: group?.permissions || [], 
+      id: group?.id || '' 
+    });
   };
 
   return (

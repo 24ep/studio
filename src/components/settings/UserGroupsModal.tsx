@@ -1,9 +1,5 @@
 import React from 'react';
-
-interface UserGroup {
-  id: string;
-  name: string;
-}
+import type { UserGroup } from '@/lib/types';
 
 interface UserGroupsModalProps {
   open: boolean;

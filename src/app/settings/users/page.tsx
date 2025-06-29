@@ -12,7 +12,7 @@ import type { UserProfile } from '@/lib/types';
 import UserTable from '@/components/settings/UserTable';
 import UserFilters from '@/components/settings/UserFilters';
 import AddUserModal from '@/components/settings/AddUserModal';
-import EditUserModal from '@/components/settings/EditUserModal';
+import EditUserModal from '@/components/users/EditUserModal';
 import UserAlertDialog from '@/components/settings/UserAlertDialog';
 
 const userRoleOptionsFilter: (UserProfile['role'] | "ALL_ROLES")[] = ['ALL_ROLES', 'Admin', 'Recruiter', 'Hiring Manager'];

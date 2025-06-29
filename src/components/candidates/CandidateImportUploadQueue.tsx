@@ -114,6 +114,11 @@ export const CandidateImportUploadQueue: React.FC = () => {
     return () => { isMounted = false; };
   }, [page, pageSize]);
 
+  // Manual refresh function
+  const handleManualRefresh = useCallback(async () => {
+    await fetchJobs();
+  }, [fetchJobs]);
+
   useEffect(() => {
     fetchJobs();
   }, [fetchJobs]);
@@ -340,6 +345,15 @@ export const CandidateImportUploadQueue: React.FC = () => {
             className="border rounded px-2 py-1 text-sm"
           />
         </div>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={handleManualRefresh}
+          className="ml-auto"
+        >
+          <RotateCcw className="h-4 w-4 mr-2" />
+          Refresh
+        </Button>
       </div>
       <div className="flex items-center gap-2 mb-2">
         <input

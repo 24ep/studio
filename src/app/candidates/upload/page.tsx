@@ -1,18 +1,19 @@
 "use client";
 
-import React, { useRef, useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardFooter } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Loader2, XCircle, CheckCircle, FileText, RotateCcw, ExternalLink, AlertCircle, Eye } from "lucide-react";
-import Link from "next/link";
-import { CandidateQueueProvider, CandidateImportUploadQueue, useCandidateQueue } from "@/components/candidates/CandidateImportUploadQueue";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Loader2, XCircle, FileText, Plus, Trash2, UploadCloud } from "lucide-react";
+import { CandidateQueueProvider, CandidateImportUploadQueue } from "@/components/candidates/CandidateImportUploadQueue";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogClose, DialogFooter } from "@/components/ui/dialog";
 import { v4 as uuidv4 } from 'uuid';
-import { useToast } from '../../../hooks/use-toast';
+import { toast } from 'react-hot-toast';
+import type { Position } from '@/lib/types';
 
 const MAX_FILE_SIZE = 500 * 1024 * 1024; // 500MB
-const ACCEPTED_FILE_TYPES = ["application/pdf"];
 
 function formatBytes(bytes: number) {
   if (bytes === 0) return "0 Bytes";
@@ -22,61 +23,136 @@ function formatBytes(bytes: number) {
   return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
 }
 
+interface UploadSet {
+  id: string;
+  files: File[];
+  selectedPositionId: string;
+  selectedPositionTitle?: string;
+}
+
 function UploadPageContent() {
-  const { addJob } = useCandidateQueue();
-  const { error } = useToast();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [dragActive, setDragActive] = useState(false);
-  const [stagedFiles, setStagedFiles] = useState<File[]>([]);
-  const [invalidFiles, setInvalidFiles] = useState<{ name: string; reason: string }[]>([]);
-  const [uploadBatchId, setUploadBatchId] = useState<string | null>(null);
+  const [uploadSets, setUploadSets] = useState<UploadSet[]>([]);
+  const [availablePositions, setAvailablePositions] = useState<Position[]>([]);
   const [uploading, setUploading] = useState(false);
+  const [currentSetId, setCurrentSetId] = useState<string | null>(null);
 
-  // Handle file selection (from input or drop)
-  const handleFiles = (files: FileList | null) => {
+  // Fetch available positions
+  useEffect(() => {
+    const fetchPositions = async () => {
+      try {
+        const response = await fetch('/api/positions?isOpen=true');
+        if (!response.ok) {
+          throw new Error('Failed to fetch positions');
+        }
+        const result = await response.json();
+        const data = Array.isArray(result) ? result : (result.data || []);
+        setAvailablePositions(Array.isArray(data) ? data : []);
+      } catch (error) {
+        console.error("Error fetching positions:", error);
+        toast.error("Could not load positions for selection.");
+      }
+    };
+    fetchPositions();
+  }, []);
+
+  // Handle file selection
+  const handleFiles = (files: FileList | null, setId?: string) => {
     if (!files) return;
+    const targetSetId = setId || currentSetId;
+    if (!targetSetId) return;
+
     const newFiles: File[] = [];
-    const newInvalidFiles: { name: string; reason: string }[] = [];
+    const invalidFiles: { name: string; reason: string }[] = [];
+
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
       if (file.type !== "application/pdf") {
-        newInvalidFiles.push({ name: file.name, reason: "Invalid file type" });
-        error(`${file.name}: Invalid file type`);
-      } else if (file.size > 500 * 1024 * 1024) {
-        newInvalidFiles.push({ name: file.name, reason: "File too large (max 500MB)" });
-        error(`${file.name}: File too large (max 500MB)`);
-      } else if (stagedFiles.some(f => f.name === file.name && f.size === file.size)) {
-        newInvalidFiles.push({ name: file.name, reason: "Duplicate file" });
-        error(`${file.name}: Duplicate file`);
+        invalidFiles.push({ name: file.name, reason: "Invalid file type" });
+        toast.error(`${file.name}: Invalid file type`);
+      } else if (file.size > MAX_FILE_SIZE) {
+        invalidFiles.push({ name: file.name, reason: `File too large (max ${MAX_FILE_SIZE / (1024*1024)}MB)` });
+        toast.error(`${file.name}: File too large (max ${MAX_FILE_SIZE / (1024*1024)}MB)`);
       } else {
         newFiles.push(file);
       }
     }
-    setStagedFiles(prev => [...prev, ...newFiles]);
-    setInvalidFiles(newInvalidFiles);
+
+    setUploadSets(prev => prev.map(set => 
+      set.id === targetSetId 
+        ? { ...set, files: [...set.files, ...newFiles] }
+        : set
+    ));
+
+    if (invalidFiles.length > 0) {
+      toast.error(`${invalidFiles.length} file(s) were invalid and not added.`);
+    }
   };
 
   // Drag-and-drop handlers
   const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     setDragActive(false);
-    handleFiles(e.dataTransfer.files);
+    if (currentSetId) {
+      handleFiles(e.dataTransfer.files, currentSetId);
+    }
   };
+
   const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     setDragActive(true);
   };
+
   const handleDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     setDragActive(false);
   };
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    handleFiles(e.target.files);
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>, setId?: string) => {
+    handleFiles(e.target.files, setId);
   };
 
-  // Remove a staged file
-  const removeStagedFile = (file: File) => {
-    setStagedFiles(prev => prev.filter(f => !(f.name === file.name && f.size === file.size)));
+  // Add new upload set
+  const addUploadSet = () => {
+    const newSet: UploadSet = {
+      id: uuidv4(),
+      files: [],
+      selectedPositionId: "",
+    };
+    setUploadSets(prev => [...prev, newSet]);
+    setCurrentSetId(newSet.id);
+  };
+
+  // Remove upload set
+  const removeUploadSet = (setId: string) => {
+    setUploadSets(prev => prev.filter(set => set.id !== setId));
+    if (currentSetId === setId) {
+      setCurrentSetId(uploadSets.length > 1 ? uploadSets[0].id : null);
+    }
+  };
+
+  // Remove file from set
+  const removeFileFromSet = (setId: string, file: File) => {
+    setUploadSets(prev => prev.map(set => 
+      set.id === setId 
+        ? { ...set, files: set.files.filter(f => f !== file) }
+        : set
+    ));
+  };
+
+  // Update position selection for a set
+  const updateSetPosition = (setId: string, positionId: string) => {
+    const selectedPosition = availablePositions.find(p => p.id === positionId);
+    setUploadSets(prev => prev.map(set => 
+      set.id === setId 
+        ? { 
+            ...set, 
+            selectedPositionId: positionId,
+            selectedPositionTitle: selectedPosition?.title
+          }
+        : set
+    ));
   };
 
   // Confirm upload
@@ -84,120 +160,244 @@ function UploadPageContent() {
     setUploading(true);
     const batchId = uuidv4();
     const now = new Date().toISOString();
+
     try {
-      // 1. Upload all files in a single request
-      const formData = new FormData();
-      stagedFiles.forEach((file) => {
-        formData.append('files', file);
-      });
-      const uploadRes = await fetch('/api/upload-queue/upload-file', {
-        method: 'POST',
-        body: formData
-      });
-      if (!uploadRes.ok) {
-        error('File upload failed');
-        return;
-      }
-      const { results } = await uploadRes.json();
-      // 2. For each successful upload, POST metadata to queue
-      await Promise.all(results.map(async (result: any, idx: number) => {
-        if (result.status === 'success') {
-          await fetch('/api/upload-queue', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
+      // Process each set
+      for (const set of uploadSets) {
+        if (set.files.length === 0) continue;
+
+        // Upload files for this set
+        const formData = new FormData();
+        set.files.forEach((file) => {
+          formData.append('files', file);
+        });
+
+        const uploadRes = await fetch('/api/upload-queue/upload-file', {
+          method: 'POST',
+          body: formData
+        });
+
+        if (!uploadRes.ok) {
+          throw new Error(`File upload failed for set ${set.id}`);
+        }
+
+        const { results } = await uploadRes.json();
+
+        // Create queue entries for each file with position info
+        await Promise.all(results.map(async (result: any, idx: number) => {
+          if (result.status === 'success') {
+            const queueData = {
               file_name: result.file_name,
-              file_size: stagedFiles[idx]?.size || 0,
+              file_size: set.files[idx]?.size || 0,
               status: 'queued',
               source: 'bulk',
               upload_id: batchId,
               upload_date: now,
-              file_path: result.file_path
-            })
-          });
-        } else {
-          error(`${result.file_name}: ${result.error || 'Upload failed'}`);
-        }
-      }));
-      setStagedFiles([]);
+              file_path: result.file_path,
+              webhook_payload: {
+                targetPositionId: set.selectedPositionId || null,
+                targetPositionTitle: set.selectedPositionTitle || null,
+                uploadSetId: set.id
+              }
+            };
+
+            await fetch('/api/upload-queue', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(queueData)
+            });
+          } else {
+            toast.error(`${result.file_name}: ${result.error || 'Upload failed'}`);
+          }
+        }));
+      }
+
+      setUploadSets([]);
       setDialogOpen(false);
-      setUploadBatchId(batchId);
+      toast.success('Bulk upload completed successfully');
+    } catch (error) {
+      console.error('Bulk upload error:', error);
+      toast.error('Bulk upload failed');
     } finally {
       setUploading(false);
     }
   };
 
+  const totalFiles = uploadSets.reduce((sum, set) => sum + set.files.length, 0);
+
   return (
-    <div className="max-w-4xl mx-auto py-10">
+    <div className="max-w-6xl mx-auto py-10">
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold">Bulk Upload Candidate CVs</h1>
         <Button onClick={() => setDialogOpen(true)}>
-          Upload CV
+          <UploadCloud className="mr-2 h-4 w-4" />
+          Upload CVs
         </Button>
       </div>
-      {/* Filter and Table will be handled in the queue component */}
+      
       <CandidateImportUploadQueue />
+      
       <Dialog open={dialogOpen} onOpenChange={open => {
         setDialogOpen(open);
-        if (!open) setStagedFiles([]);
+        if (!open) {
+          setUploadSets([]);
+          setCurrentSetId(null);
+        }
       }}>
-        <DialogContent>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Upload Candidate CVs (PDF)</DialogTitle>
+            <DialogTitle>Bulk Upload Candidate CVs</DialogTitle>
             <DialogDescription>
-              Drag and drop PDF files here, or click to select files. Max 10MB each.
+              Upload multiple PDF files with position assignments. You can create multiple sets with different position targets.
             </DialogDescription>
           </DialogHeader>
-          <div
-            className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${dragActive ? "border-primary bg-primary/10" : "border-input"}`}
-            onDrop={handleDrop}
-            onDragOver={handleDragOver}
-            onDragLeave={handleDragLeave}
-            onClick={() => document.getElementById("bulk-upload-input")?.click()}
-            style={{ cursor: "pointer" }}
-          >
-            <Input
-              id="bulk-upload-input"
-              type="file"
-              accept="application/pdf"
-              multiple
-              className="hidden"
-              onChange={handleInputChange}
-            />
-            <p className="text-muted-foreground">Drop PDF files here or click to select</p>
+
+          <div className="space-y-6">
+            {/* Upload Sets */}
+            {uploadSets.length === 0 ? (
+              <div className="text-center py-8">
+                <p className="text-muted-foreground mb-4">No upload sets created yet.</p>
+                <Button onClick={addUploadSet}>
+                  <Plus className="mr-2 h-4 w-4" />
+                  Create First Upload Set
+                </Button>
+              </div>
+            ) : (
+              uploadSets.map((set, setIndex) => (
+                <Card key={set.id} className={`${currentSetId === set.id ? 'ring-2 ring-primary' : ''}`}>
+                  <CardHeader className="pb-3">
+                    <div className="flex items-center justify-between">
+                      <CardTitle className="text-lg">Upload Set {setIndex + 1}</CardTitle>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setCurrentSetId(set.id)}
+                          disabled={currentSetId === set.id}
+                        >
+                          Select Files
+                        </Button>
+                        {uploadSets.length > 1 && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => removeUploadSet(set.id)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    {/* Position Selection */}
+                    <div>
+                      <Label htmlFor={`position-${set.id}`}>Target Position (Optional)</Label>
+                      <Select 
+                        value={set.selectedPositionId} 
+                        onValueChange={(value) => updateSetPosition(set.id, value)}
+                      >
+                        <SelectTrigger id={`position-${set.id}`} className="mt-1">
+                          <SelectValue placeholder="Select a position to apply to..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="">None (General Application)</SelectItem>
+                          {availablePositions.map(pos => (
+                            <SelectItem key={pos.id} value={pos.id}>{pos.title}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {/* File Upload Area */}
+                    {currentSetId === set.id && (
+                      <div
+                        className={`border-2 border-dashed rounded-lg p-6 text-center transition-colors ${
+                          dragActive ? "border-primary bg-primary/10" : "border-input"
+                        }`}
+                        onDrop={handleDrop}
+                        onDragOver={handleDragOver}
+                        onDragLeave={handleDragLeave}
+                        onClick={() => document.getElementById(`file-input-${set.id}`)?.click()}
+                        style={{ cursor: "pointer" }}
+                      >
+                        <Input
+                          id={`file-input-${set.id}`}
+                          type="file"
+                          accept="application/pdf"
+                          multiple
+                          className="hidden"
+                          onChange={(e) => handleInputChange(e, set.id)}
+                        />
+                        <UploadCloud className="mx-auto h-8 w-8 text-muted-foreground mb-2" />
+                        <p className="text-muted-foreground">Drop PDF files here or click to select</p>
+                        <p className="text-xs text-muted-foreground mt-1">Max {MAX_FILE_SIZE / (1024*1024)}MB per file</p>
+                      </div>
+                    )}
+
+                    {/* Files List */}
+                    {set.files.length > 0 && (
+                      <div>
+                        <h4 className="font-semibold mb-2">Files in this set ({set.files.length}):</h4>
+                        <div className="space-y-2 max-h-40 overflow-y-auto">
+                          {set.files.map((file, idx) => (
+                            <div key={`${file.name}-${idx}`} className="flex items-center justify-between bg-muted/50 rounded px-3 py-2">
+                              <div className="flex items-center gap-2 truncate">
+                                <FileText className="h-4 w-4 text-primary shrink-0" />
+                                <span className="truncate" title={file.name}>{file.name}</span>
+                                <span className="text-xs text-muted-foreground whitespace-nowrap">
+                                  ({formatBytes(file.size)})
+                                </span>
+                              </div>
+                              <Button 
+                                type="button" 
+                                size="icon" 
+                                variant="ghost" 
+                                onClick={() => removeFileFromSet(set.id, file)}
+                              >
+                                <XCircle className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              ))
+            )}
+
+            {/* Add New Set Button */}
+            <Button 
+              variant="outline" 
+              onClick={addUploadSet}
+              className="w-full"
+            >
+              <Plus className="mr-2 h-4 w-4" />
+              Add Another Upload Set
+            </Button>
           </div>
-          {invalidFiles.length > 0 && (
-            <div className="mt-4">
-              <h4 className="font-semibold mb-2 text-destructive">Invalid files:</h4>
-              <ul className="space-y-1">
-                {invalidFiles.map((file, idx) => (
-                  <li key={file.name + idx} className="flex items-center text-destructive text-sm">
-                    <XCircle className="mr-2 w-4 h-4" />
-                    <span>{file.name} - {file.reason}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-          {stagedFiles.length > 0 && (
-            <div className="mt-4">
-              <h4 className="font-semibold mb-2">Files to upload:</h4>
-              <ul className="space-y-2">
-                {stagedFiles.map((file, idx) => (
-                  <li key={file.name + file.size + idx} className="flex items-center justify-between bg-muted/50 rounded px-3 py-2">
-                    <span className="truncate max-w-xs" title={file.name}>{file.name} <span className="text-xs text-muted-foreground">({(file.size / 1024 / 1024).toFixed(2)} MB)</span></span>
-                    <Button type="button" size="icon" variant="ghost" onClick={() => removeStagedFile(file)}><span className="sr-only">Remove</span>✕</Button>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-          <DialogFooter>
+
+          <DialogFooter className="mt-6">
             <DialogClose asChild>
-              <Button type="button" variant="outline" onClick={() => setStagedFiles([])}>Cancel</Button>
+              <Button type="button" variant="outline">Cancel</Button>
             </DialogClose>
-            <Button type="button" onClick={handleConfirmUpload} disabled={stagedFiles.length === 0 || uploading}>
-              {uploading ? 'Uploading...' : 'Confirm Upload'}
+            <Button 
+              type="button" 
+              onClick={handleConfirmUpload} 
+              disabled={totalFiles === 0 || uploading}
+            >
+              {uploading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Uploading...
+                </>
+              ) : (
+                <>
+                  <UploadCloud className="mr-2 h-4 w-4" />
+                  Upload {totalFiles} File{totalFiles !== 1 ? 's' : ''}
+                </>
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>

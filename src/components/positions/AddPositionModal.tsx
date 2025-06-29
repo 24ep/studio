@@ -138,9 +138,30 @@ export function AddPositionModal({ isOpen, onOpenChange, onAddPosition }: AddPos
                   theme="snow"
                   value={field.value || ''}
                   onChange={field.onChange}
-                  className="mt-1 bg-white"
+                  className="mt-1 bg-background border border-input rounded-md"
                   placeholder="Enter job description"
-                  style={{ minHeight: 300 }}
+                  style={{ minHeight: 200 }}
+                  modules={{
+                    toolbar: [
+                      [{ 'header': [1, 2, 3, false] }],
+                      ['bold', 'italic', 'underline', 'strike'],
+                      [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+                      [{ 'color': [] }, { 'background': [] }],
+                      ['link'],
+                      ['clean']
+                    ],
+                    clipboard: {
+                      matchVisual: false
+                    }
+                  }}
+                  formats={[
+                    'header',
+                    'bold', 'italic', 'underline', 'strike',
+                    'list', 'bullet',
+                    'color', 'background',
+                    'link'
+                  ]}
+                  preserveWhitespace={true}
                 />
               )}
             />

@@ -3,276 +3,176 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useSession, signIn } from 'next-auth/react';
 import { toast } from 'react-hot-toast';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Database, Loader2, ServerCrash } from 'lucide-react';
 import DataModelTable from '@/components/settings/DataModelTable';
 import DataModelForm from '@/components/settings/DataModelForm';
 import DataModelModal from '@/components/settings/DataModelModal';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import { Toggle } from '@/components/ui/toggle';
-import { Textarea } from '@/components/ui/textarea';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import {
-  PlusCircle,
-  Edit,
-  Trash2,
-  DatabaseZap,
-  Loader2,
-  AlertCircle,
-  Shield,
-  Save,
-} from 'lucide-react';
-import { z } from 'zod';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-
-// Define the types matching the Prisma schema
-type FieldType = 'TEXT' | 'TEXTAREA' | 'NUMBER' | 'DATE' | 'BOOLEAN' | 'SELECT' | 'MULTISELECT';
-
-interface CustomFieldDefinition {
-  id: string;
-  model: 'Candidate' | 'Position';
-  name: string;
-  label: string;
-  type: FieldType;
-  options: string[];
-  placeholder?: string | null;
-  defaultValue?: string | null;
-  isRequired: boolean;
-  isFilterable: boolean;
-  isSystemField: boolean;
-  order: number;
-}
-
-const fieldSchema = z.object({
-    name: z.string().min(3, 'Name must be at least 3 characters').regex(/^[a-z0-9_]+$/, 'Name must be lowercase alphanumeric with underscores.'),
-    label: z.string().min(3, 'Label is required'),
-    type: z.enum(['TEXT', 'TEXTAREA', 'NUMBER', 'DATE', 'BOOLEAN', 'SELECT', 'MULTISELECT']),
-    options: z.string().optional(),
-    placeholder: z.string().optional(),
-    defaultValue: z.string().optional(),
-    isRequired: z.boolean().default(false),
-    isFilterable: z.boolean().default(false),
-});
+import type { DataModel } from '@/lib/types';
 
 export default function DataModelsPage() {
-    const { data: session, status } = useSession();
-    const [definitions, setDefinitions] = useState<CustomFieldDefinition[]>([]);
-    const [isLoading, setIsLoading] = useState(true);
-    const [isSaving, setIsSaving] = useState(false);
-    const [error, setError] = useState<string | null>(null);
-    const [isModalOpen, setIsModalOpen] = useState(false);
-    const [editingField, setEditingField] = useState<CustomFieldDefinition | null>(null);
-    const [currentModel, setCurrentModel] = useState<'Candidate' | 'Position'>('Candidate');
-    const [formData, setFormData] = useState<any>({});
-    const [formErrors, setFormErrors] = useState<z.ZodError | null>(null);
+  const { data: session, status } = useSession();
+  const [dataModels, setDataModels] = useState<DataModel[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingDataModel, setEditingDataModel] = useState<DataModel | null>(null);
 
-    const fetchDefinitions = useCallback(async () => {
-        setIsLoading(true);
-        try {
-            const response = await fetch('/api/settings/custom-field-definitions');
-            if (!response.ok) {
-                throw new Error('Failed to fetch data models');
-            }
-            const data = await response.json();
-            setDefinitions(data);
-        } catch (e: any) {
-            setError(e.message);
-            toast.error(e.message);
-        } finally {
-            setIsLoading(false);
-        }
-    }, []);
+  const fetchDataModels = useCallback(async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const response = await fetch('/api/settings/data-models');
+      if (!response.ok) {
+        throw new Error(`Failed to fetch data models: ${response.status} ${response.statusText}`);
+      }
+      const data = await response.json();
+      
+      // Validate that data is an array
+      if (!Array.isArray(data)) {
+        throw new Error('Invalid response format: expected array of data models');
+      }
+      
+      setDataModels(data);
+    } catch (e: any) {
+      const errorMessage = e.message || 'Failed to fetch data models';
+      setError(errorMessage);
+      toast.error(errorMessage);
+      console.error('Error fetching data models:', e);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
 
-    useEffect(() => {
-        if (status === 'authenticated') {
-            fetchDefinitions();
-        } else if (status === 'unauthenticated') {
-            signIn();
-        }
-    }, [status, fetchDefinitions]);
+  useEffect(() => {
+    if (status === 'authenticated') {
+      fetchDataModels();
+    } else if (status === 'unauthenticated') {
+      signIn();
+    }
+  }, [status, fetchDataModels]);
 
-    useEffect(() => {
-        if (error) {
-            toast.error(error);
-        }
-    }, [error]);
-    
-    const handleModalOpen = (field: CustomFieldDefinition | null = null, model: 'Candidate' | 'Position' = 'Candidate') => {
-        setEditingField(field);
-        setCurrentModel(model);
-        setIsModalOpen(true);
-    };
+  useEffect(() => {
+    if (error) {
+      toast.error(error);
+    }
+  }, [error]);
 
-    const handleModalClose = () => {
-        setIsModalOpen(false);
-        setEditingField(null);
-    };
-    
-    const handleSubmit = async (data: any) => {
-        setIsModalOpen(false);
-        fetchDefinitions();
-    };
-    
-    const handleDelete = async (fieldId: string) => {
-        if (!confirm('Are you sure you want to delete this field? This action cannot be undone.')) {
-            return;
-        }
+  const handleModalOpen = (dataModel: DataModel | null = null) => {
+    setEditingDataModel(dataModel);
+    setIsModalOpen(true);
+  };
 
-        try {
-            const response = await fetch(`/api/settings/custom-field-definitions/${fieldId}`, {
-                method: 'DELETE',
-            });
+  const handleModalClose = () => {
+    setIsModalOpen(false);
+    setEditingDataModel(null);
+  };
 
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.error || 'Failed to delete field');
-            }
+  const handleSubmit = async (dataModel: DataModel) => {
+    setIsSaving(true);
+    try {
+      const url = dataModel.id ? `/api/settings/data-models/${dataModel.id}` : '/api/settings/data-models';
+      const method = dataModel.id ? 'PUT' : 'POST';
+      
+      const response = await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(dataModel),
+      });
 
-            toast.success('Field has been deleted.');
-            fetchDefinitions(); // Refresh data
-        } catch (e: any) {
-            console.error('Error in settings/data-models:', e);
-            toast.error(e.message);
-        }
-    };
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || 'Failed to save data model');
+      }
 
-    const renderTable = (model: 'Candidate' | 'Position') => {
-        const filteredDefs = definitions.filter(def => def.model === model);
+      toast.success(`Data model ${dataModel.id ? 'updated' : 'created'} successfully`);
+      setIsModalOpen(false);
+      setEditingDataModel(null);
+      fetchDataModels();
+    } catch (e: any) {
+      toast.error(e.message);
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
-        return (
-            <div>
-                <div className="flex justify-end mb-4">
-                    <Button onClick={() => handleModalOpen(null, model)}>
-                        <PlusCircle className="mr-2 h-4 w-4" /> Add New Field
-                    </Button>
-                </div>
-                <div className="border rounded-md">
-                    <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead>Label</TableHead>
-                                <TableHead>Name (Key)</TableHead>
-                                <TableHead>Type</TableHead>
-                                <TableHead>Required</TableHead>
-                                <TableHead>System</TableHead>
-                                <TableHead>Actions</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {isLoading ? (
-                                <TableRow>
-                                    <TableCell colSpan={6} className="text-center">
-                                        <Loader2 className="inline-block animate-spin mr-2" /> Loading...
-                                    </TableCell>
-                                </TableRow>
-                            ) : filteredDefs.length === 0 ? (
-                                <TableRow>
-                                    <TableCell colSpan={6} className="text-center text-muted-foreground">
-                                        No custom fields defined for {model}s yet.
-                                    </TableCell>
-                                </TableRow>
-                            ) : filteredDefs.map(def => (
-                                <TableRow key={def.id}>
-                                    <TableCell className="font-medium">{def.label}</TableCell>
-                                    <TableCell>
-                                        <span className="inline-block border rounded px-2 py-0.5 text-xs font-mono bg-muted">{def.name}</span>
-                                    </TableCell>
-                                    <TableCell>{def.type}</TableCell>
-                                    <TableCell>{def.isRequired ? 'Yes' : 'No'}</TableCell>
-                                    <TableCell>
-                                        {def.isSystemField ? (
-                                            <Shield className="h-5 w-5 text-blue-500" />
-                                        ) : (
-                                            <span className="text-gray-400">-</span>
-                                        )}
-                                    </TableCell>
-                                    <TableCell>
-                                        <Button variant="ghost" size="icon" onClick={() => handleModalOpen(def, model)} disabled={def.isSystemField}>
-                                            <Edit className="h-4 w-4" />
-                                        </Button>
-                                        <Button variant="ghost" size="icon" onClick={() => handleDelete(def.id)} disabled={def.isSystemField}>
-                                            <Trash2 className="h-4 w-4 text-red-500" />
-                                        </Button>
-                                    </TableCell>
-                                </TableRow>
-                            ))}
-                        </TableBody>
-                    </Table>
-                </div>
-            </div>
-        );
-    };
-
-    if (status !== 'authenticated') {
-        return <div className="flex items-center justify-center h-full"><Loader2 className="h-8 w-8 animate-spin" /></div>;
+  const handleDelete = async (dataModelId: string) => {
+    if (!confirm('Are you sure you want to delete this data model? This action cannot be undone.')) {
+      return;
     }
 
-    if (session.user.role !== 'Admin') {
-        return (
-            <div className="flex items-center justify-center h-full text-red-500">
-                <AlertCircle className="mr-2" />
-                You do not have permission to access this page.
-            </div>
-        );
+    try {
+      const response = await fetch(`/api/settings/data-models/${dataModelId}`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to delete data model');
+      }
+
+      toast.success('Data model deleted successfully');
+      fetchDataModels();
+    } catch (e: any) {
+      toast.error(e.message);
     }
-    
+  };
+
+  const handleAddNewDataModel = async (data: DataModel) => {
+    await handleSubmit(data);
+  };
+
+  if (status === 'loading') {
     return (
-        <div className="p-4 md:p-8">
-            <header className="mb-8">
-                <h1 className="text-3xl font-bold flex items-center">
-                    <DatabaseZap className="mr-3 text-blue-500" />
-                    Data Model Management
-                </h1>
-                <p className="text-muted-foreground mt-1">
-                    Define and manage the data attributes for your Candidates and Positions.
-                </p>
-            </header>
-
-            <Tabs defaultValue="candidates">
-                <TabsList>
-                    <TabsTrigger value="candidates">Candidates</TabsTrigger>
-                    <TabsTrigger value="positions">Positions</TabsTrigger>
-                </TabsList>
-                <TabsContent value="candidates" className="mt-4">
-                    {renderTable('Candidate')}
-                </TabsContent>
-                <TabsContent value="positions" className="mt-4">
-                    {renderTable('Position')}
-                </TabsContent>
-            </Tabs>
-            
-            <DataModelForm
-                open={isModalOpen}
-                definition={editingField}
-                onClose={handleModalClose}
-                onSubmit={handleSubmit}
-            />
-            <DataModelModal />
-        </div>
+      <div className="flex h-full items-center justify-center">
+        <Loader2 className="h-16 w-16 animate-spin text-primary" />
+      </div>
     );
+  }
+
+  if (error && !isLoading) {
+    return (
+      <div className="flex flex-col items-center justify-center h-full text-center p-4">
+        <ServerCrash className="w-16 h-16 text-destructive mb-4" />
+        <h2 className="text-2xl font-semibold text-foreground mb-2">Error Loading Data Models</h2>
+        <p className="text-muted-foreground mb-4 max-w-md">{error}</p>
+        <Button onClick={fetchDataModels} className="btn-hover-primary-gradient">Try Again</Button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6 p-6">
+      <Card className="shadow-lg">
+        <CardHeader>
+          <CardTitle className="flex items-center text-2xl">
+            <Database className="mr-3 h-6 w-6 text-primary" /> Data Models
+          </CardTitle>
+          <CardDescription>
+            Define and manage data models for candidates, positions, and other entities in your system.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <DataModelModal onDataModelUpdate={handleAddNewDataModel} />
+          
+          <DataModelTable
+            dataModels={dataModels}
+            isLoading={isLoading}
+            onEdit={handleModalOpen}
+            onDelete={handleDelete}
+          />
+          
+          <DataModelForm
+            open={isModalOpen}
+            dataModel={editingDataModel}
+            onClose={handleModalClose}
+            onSubmit={handleSubmit}
+            isSaving={isSaving}
+          />
+        </CardContent>
+      </Card>
+    </div>
+  );
 }
 

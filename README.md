@@ -96,7 +96,7 @@ A comprehensive, enterprise-grade Applicant Tracking System (ATS) built with Nex
    ```
 
 3. **Deploy with Docker Compose:**
-   ```bash
+    ```bash
    docker-compose up -d
    ```
 
@@ -208,7 +208,7 @@ The application automatically initializes the database on first startup:
 ## 🚀 Deployment Options
 
 ### 1. **Docker Compose** (Recommended)
-```bash
+    ```bash
 docker-compose up -d
 ```
 
@@ -218,7 +218,7 @@ docker-compose up -d
 - Deploy the stack
 
 ### 3. **Manual Docker**
-```bash
+        ```bash
 # Build the image
 docker build -t candidatrack .
 
@@ -240,12 +240,12 @@ For production environments, consider:
 ## 🔧 Development
 
 ### Local Development Setup
-```bash
+        ```bash
 # Install dependencies
 npm install
 
 # Set up environment
-cp .env.example .env
+        cp .env.example .env
 
 # Run database migrations
 npx prisma db push
@@ -298,7 +298,7 @@ Access the interactive API documentation at:
 ## 🔄 Backup & Recovery
 
 ### Database Backup
-```bash
+            ```bash
 # Create backup
 docker exec postgres pg_dump -U user database > backup.sql
 
@@ -308,7 +308,7 @@ docker exec -i postgres psql -U user database < backup.sql
 
 ### File Storage Backup
 MinIO data is stored in Docker volumes. Backup the volume:
-```bash
+        ```bash
 docker run --rm -v candidatrack_minio_data:/data -v $(pwd):/backup alpine tar czf /backup/minio-backup.tar.gz -C /data .
 ```
 
@@ -339,14 +339,14 @@ For support and questions:
 If you encounter errors like `column u.authenticationMethod does not exist`, it means the database schema is out of sync with the Prisma schema.
 
 #### **Quick Fix (Recommended)**
-```bash
+        ```bash
 # Run the schema fix script
 chmod +x fix-db-schema.sh
 ./fix-db-schema.sh
 ```
 
 #### **Manual Fix**
-```bash
+    ```bash
 # Generate Prisma client
 npx prisma generate
 

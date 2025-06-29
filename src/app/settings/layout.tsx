@@ -27,7 +27,7 @@ import { useSession, signIn } from 'next-auth/react';
 import { Button } from '@/components/ui/button';
 
 export const settingsNavItems: SettingsNavigationItem[] = [
-  { href: "/settings/system-settings", label: "System Settings", icon: Settings, description: "System-wide configuration.", permissionId: 'SYSTEM_SETTINGS_MANAGE' as PlatformModuleId, adminOnlyOrPermission: true },
+  // { href: "/settings/system-settings", label: "System Settings", icon: Settings, description: "System-wide configuration.", permissionId: 'SYSTEM_SETTINGS_MANAGE' as PlatformModuleId, adminOnlyOrPermission: true },
   { href: "/settings/preferences", label: "Preferences", icon: Palette, description: "App name, logo, and theme.", permissionId: 'SYSTEM_SETTINGS_MANAGE' as PlatformModuleId, adminOnlyOrPermission: true },
   { href: "/settings/stages", label: "Recruitment Stages", icon: KanbanSquare, description: "Define your hiring pipeline.", permissionId: 'RECRUITMENT_STAGES_MANAGE' as PlatformModuleId, adminOnlyOrPermission: true },
   { href: "/settings/data-models", label: "Data Model UI", icon: DatabaseZap, description: "Customize UI for data attributes.", permissionId: 'USER_PREFERENCES_MANAGE' as PlatformModuleId, adminOnlyOrPermission: true },

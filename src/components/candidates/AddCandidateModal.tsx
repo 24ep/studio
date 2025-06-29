@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useEffect } from 'react';
@@ -89,7 +88,7 @@ const addCandidateFormSchema = z.object({
   experience: z.array(experienceEntryFormSchema).optional(),
   skills: z.array(skillEntryFormSchema).optional(),
   job_suitable: z.array(jobSuitableEntryFormSchema).optional(),
-  positionId: z.string().uuid("Position is required").nullable(),
+  positionId: z.union([z.string().uuid(), z.null()]).optional(),
   status: z.string().min(1, "Status is required").default('Applied'), // Changed from enum
   fitScore: z.number().min(0).max(100).optional().default(0),
 });

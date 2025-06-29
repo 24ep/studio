@@ -47,8 +47,11 @@ export function CreateCandidateViaAutomationModal({ isOpen, onOpenChange, onProc
           if (!response.ok) {
             throw new Error('Failed to fetch positions');
           }
-          const data: Position[] = await response.json();
+          const result = await response.json();
+          // Handle both array and object with data property
+          const data = Array.isArray(result) ? result : (result.data || []);
           setAvailablePositions(Array.isArray(data) ? data : []);
+          console.log('Fetched positions for automation modal:', data);
         } catch (error) {
           console.error("Error fetching positions for modal:", error);
           toast.error("Could not load positions for selection.");
