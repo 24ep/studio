@@ -332,6 +332,72 @@ For support and questions:
 - Check application logs for error details
 - Ensure all environment variables are properly configured
 
+## 🔧 Troubleshooting
+
+### Database Schema Issues
+
+If you encounter errors like `column u.authenticationMethod does not exist`, it means the database schema is out of sync with the Prisma schema.
+
+#### **Quick Fix (Recommended)**
+```bash
+# Run the schema fix script
+chmod +x fix-db-schema.sh
+./fix-db-schema.sh
+```
+
+#### **Manual Fix**
+```bash
+# Generate Prisma client
+npx prisma generate
+
+# Force reset database schema
+npx prisma db push --force-reset --accept-data-loss
+
+# Seed the database
+npx prisma db seed
+```
+
+#### **Windows PowerShell**
+```powershell
+# Run the PowerShell fix script
+.\fix-db-schema.ps1
+```
+
+### Common Issues
+
+1. **"Prisma client did not initialize yet"**
+   - Run `npx prisma generate`
+   - Restart the application
+
+2. **"Database connection failed"**
+   - Check `DATABASE_URL` environment variable
+   - Ensure PostgreSQL is running
+   - Verify network connectivity
+
+3. **"MinIO connection failed"**
+   - Check MinIO service status
+   - Verify `MINIO_ROOT_USER` and `MINIO_ROOT_PASSWORD`
+   - Check MinIO endpoint configuration
+
+4. **"Redis connection failed"**
+   - Check Redis service status
+   - Verify `REDIS_URL` environment variable
+   - Ensure Redis is accessible
+
+### Log Analysis
+
+Check application logs for detailed error information:
+```bash
+# Docker Compose logs
+docker-compose logs -f app
+
+# Container logs
+docker logs <container-name>
+
+# Application logs
+tail -f logs/app.log
+```
+
 ## 🔄 Changelog
 
 ### Latest Updates

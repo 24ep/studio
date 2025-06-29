@@ -70,7 +70,6 @@ JENKINS_SETUP.md
 GITLAB_REGISTRY_SETUP.md
 Jenkinsfile*
 deploy-to-portainer.sh
-start.sh
 run-migration.ps1
 test-minio-config.js
 troubleshoot-postgres.js

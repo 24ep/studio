@@ -1,11 +1,11 @@
 // src/app/api/users/[id]/route.ts
 import { NextResponse, type NextRequest } from 'next/server';
 import { z } from 'zod';
-import { getPool } from '@/lib/db';
+import bcrypt from 'bcryptjs';
 import { logAudit } from '@/lib/auditLog';
 import { getServerSession } from 'next-auth/next';
-import bcrypt from 'bcryptjs';
 import { authOptions } from '@/lib/auth';
+import prisma from '../../../../../lib/prisma';
 
 const updateUserSchema = z.object({
   name: z.string().min(1, "Name is required").optional(),
@@ -51,18 +51,29 @@ export async function GET(request: NextRequest) {
         return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
 
-    const client = await getPool().connect();
     try {
-        const result = await client.query('SELECT id, name, email, role, "avatarUrl", "authenticationMethod", "forcePasswordChange" FROM "User" WHERE id = $1', [id]);
-        if (result.rows.length === 0) {
+        const user = await prisma.user.findUnique({
+            where: { id },
+            select: {
+                id: true,
+                name: true,
+                email: true,
+                role: true,
+                avatarUrl: true,
+                authenticationMethod: true,
+                forcePasswordChange: true,
+                createdAt: true,
+                updatedAt: true
+            }
+        });
+
+        if (!user) {
             return NextResponse.json({ message: "User not found" }, { status: 404 });
         }
-        return NextResponse.json(result.rows[0], { status: 200 });
+        return NextResponse.json(user, { status: 200 });
     } catch (error: any) {
         console.error(`Failed to fetch user ${id}:`, error);
         return NextResponse.json({ message: "Error fetching user", error: error.message }, { status: 500 });
-    } finally {
-        client.release();
     }
 }
 
@@ -120,46 +131,47 @@ export async function PUT(request: NextRequest) {
         return NextResponse.json({ message: "No fields to update." }, { status: 400 });
     }
     
-    const client = await getPool().connect();
     try {
-        const updateFields: any = { ...fieldsToUpdate };
+        const updateData: any = { ...fieldsToUpdate };
         
         // Handle password updates
         if (password) {
             const saltRounds = 10;
-            updateFields.password = await bcrypt.hash(password, saltRounds);
+            updateData.password = await bcrypt.hash(password, saltRounds);
         }
         
         if (newPassword) {
             const saltRounds = 10;
-            updateFields.password = await bcrypt.hash(newPassword, saltRounds);
+            updateData.password = await bcrypt.hash(newPassword, saltRounds);
         }
 
-        const setClauses = Object.keys(updateFields).map((key, index) => `"${key}" = $${index + 1}`);
-        const queryParams = Object.values(updateFields);
+        const updatedUser = await prisma.user.update({
+            where: { id },
+            data: updateData,
+            select: {
+                id: true,
+                name: true,
+                email: true,
+                role: true,
+                authenticationMethod: true,
+                forcePasswordChange: true,
+                createdAt: true,
+                updatedAt: true
+            }
+        });
 
-        const updateQuery = `
-            UPDATE "User"
-            SET ${setClauses.join(', ')}, "updatedAt" = NOW()
-            WHERE id = $${queryParams.length + 1}
-            RETURNING id, name, email, role, "authenticationMethod", "forcePasswordChange";
-        `;
-
-        const result = await client.query(updateQuery, [...queryParams, id]);
-
-        if (result.rowCount === 0) {
-            return NextResponse.json({ message: "User not found" }, { status: 404 });
-        }
-        
-        await logAudit('AUDIT', `User '${result.rows[0].name}' (ID: ${id}) was updated.`, 'API:Users:Update', actingUserId, { targetUserId: id, changes: validationResult.data });
-        return NextResponse.json(result.rows[0], { status: 200 });
+        await logAudit('AUDIT', `User '${updatedUser.name}' (ID: ${id}) was updated.`, 'API:Users:Update', actingUserId, { targetUserId: id, changes: validationResult.data });
+        return NextResponse.json(updatedUser, { status: 200 });
 
     } catch (error: any) {
         console.error(`Failed to update user ${id}:`, error);
         await logAudit('ERROR', `Failed to update user (ID: ${id}). Error: ${error.message}`, 'API:Users:Update', actingUserId, { targetUserId: id, input: body });
+        
+        if (error.code === 'P2025') {
+            return NextResponse.json({ message: "User not found" }, { status: 404 });
+        }
+        
         return NextResponse.json({ message: "Error updating user", error: error.message }, { status: 500 });
-    } finally {
-        client.release();
     }
 }
 
@@ -189,19 +201,25 @@ export async function DELETE(request: NextRequest) {
         return NextResponse.json({ message: "Forbidden" }, { status: 403 });
     }
 
-    const client = await getPool().connect();
     try {
-        const result = await client.query('DELETE FROM "User" WHERE id = $1 RETURNING name', [id]);
-        if (result.rowCount === 0) {
-            return NextResponse.json({ message: "User not found" }, { status: 404 });
-        }
-        await logAudit('AUDIT', `User '${result.rows[0].name}' (ID: ${id}) was deleted.`, 'API:Users:Delete', actingUserId, { targetUserId: id });
+        const deletedUser = await prisma.user.delete({
+            where: { id },
+            select: {
+                id: true,
+                name: true
+            }
+        });
+
+        await logAudit('AUDIT', `User '${deletedUser.name}' (ID: ${id}) was deleted.`, 'API:Users:Delete', actingUserId, { targetUserId: id });
         return NextResponse.json({ message: "User deleted successfully" }, { status: 200 });
     } catch (error: any) {
         console.error(`Failed to delete user ${id}:`, error);
         await logAudit('ERROR', `Failed to delete user (ID: ${id}). Error: ${error.message}`, 'API:Users:Delete', actingUserId, { targetUserId: id });
+        
+        if (error.code === 'P2025') {
+            return NextResponse.json({ message: "User not found" }, { status: 404 });
+        }
+        
         return NextResponse.json({ message: "Error deleting user", error: error.message }, { status: 500 });
-    } finally {
-        client.release();
     }
 }

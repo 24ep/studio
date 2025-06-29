@@ -8,8 +8,8 @@ import bcrypt from 'bcryptjs';
 import { logAudit } from '@/lib/auditLog';
 import { getServerSession } from 'next-auth/next';
 import { getRedisClient, CACHE_KEY_USERS } from '@/lib/redis';
-import { getPool } from '@/lib/db';
 import { authOptions } from '@/lib/auth';
+import prisma from '../../../../lib/prisma';
 
 /**
  * @openapi
@@ -71,74 +71,69 @@ export async function GET(request: NextRequest) {
   const filterEmailInput = searchParams.get('email');
   const filterRoleInput = searchParams.get('role');
 
-  let query = `
-    SELECT 
-      u.id, u.name, u.email, u.role, u."avatarUrl", u."dataAiHint", u."modulePermissions", 
-      u."authenticationMethod", u."forcePasswordChange", u."createdAt", u."updatedAt",
-      COALESCE(
-        jsonb_agg(DISTINCT jsonb_build_object('id', g.id, 'name', g.name)) FILTER (WHERE g.id IS NOT NULL), 
-        '[]'::jsonb
-      )::json as groups
-    FROM "User" u
-    LEFT JOIN "User_UserGroup" ugg ON u.id = ugg."userId"
-    LEFT JOIN "UserGroup" g ON ugg."groupId" = g.id
-  `;
-  const queryParams = [];
-  let paramIndex = 1;
-  const conditions = [];
-
   const canManageUsers = userRole === 'Admin' || (session.user.modulePermissions?.includes('USERS_MANAGE') ?? false);
 
-  if (canManageUsers) {
-    if (filterRoleInput && filterRoleInput !== "ALL_ROLES") {
-      conditions.push(`u.role = $${paramIndex++}`);
-      queryParams.push(filterRoleInput);
-    }
-  } else if (userRole === 'Recruiter') {
-    conditions.push(`u.role = 'Recruiter'`);
-    if (filterRoleInput && filterRoleInput !== "ALL_ROLES" && filterRoleInput !== "Recruiter") {
-        conditions.push(`1=0`); 
-    }
-  } else {
+  if (!canManageUsers && userRole !== 'Recruiter') {
     const userNameForLog = session?.user?.name || session?.user?.email || 'Unknown User';
     await logAudit('WARN', `Forbidden attempt to list users by ${userNameForLog} (Role: ${userRole}). Lacks USERS_MANAGE.`, 'API:Users:Get', session.user.id);
     return NextResponse.json({ message: "Forbidden: Insufficient permissions to list users." }, { status: 403 });
   }
 
-  if (filterNameInput) {
-    conditions.push(`u.name ILIKE $${paramIndex++}`);
-    queryParams.push(`%${filterNameInput}%`);
-  }
-  if (filterEmailInput) {
-    conditions.push(`u.email ILIKE $${paramIndex++}`);
-    queryParams.push(`%${filterEmailInput}%`);
-  }
-  
-  if (conditions.length > 0) {
-    query += ' WHERE ' + conditions.join(' AND ');
-  }
-  
-  query += `
-    GROUP BY u.id, u.name, u.email, u.role, u."avatarUrl", u."dataAiHint", u."modulePermissions", u."authenticationMethod", u."forcePasswordChange", u."createdAt", u."updatedAt"
-    ORDER BY u.name ASC
-  `;
-
   try {
-    const result = await getPool().query(query, queryParams);
-    const usersToReturn = result.rows.map(user => ({
+    // Build where conditions
+    const whereConditions: any = {};
+    
+    if (canManageUsers) {
+      if (filterRoleInput && filterRoleInput !== "ALL_ROLES") {
+        whereConditions.role = filterRoleInput;
+      }
+    } else if (userRole === 'Recruiter') {
+      whereConditions.role = 'Recruiter';
+      if (filterRoleInput && filterRoleInput !== "ALL_ROLES" && filterRoleInput !== "Recruiter") {
+        // Return empty result for non-recruiter roles when user is recruiter
+        return NextResponse.json([], { status: 200 });
+      }
+    }
+
+    if (filterNameInput) {
+      whereConditions.name = { contains: filterNameInput, mode: 'insensitive' };
+    }
+    if (filterEmailInput) {
+      whereConditions.email = { contains: filterEmailInput, mode: 'insensitive' };
+    }
+
+    const users = await prisma.user.findMany({
+      where: whereConditions,
+      include: {
+        userGroups: {
+          include: {
+            group: {
+              select: {
+                id: true,
+                name: true
+              }
+            }
+          }
+        }
+      },
+      orderBy: {
+        name: 'asc'
+      }
+    });
+
+    const usersToReturn = users.map((user: any) => ({
       ...user,
-      modulePermissions: Array.isArray(user.modulePermissions) ? user.modulePermissions : (user.modulePermissions ? JSON.parse(user.modulePermissions) : []),
-      groups: user.groups || [], 
+      groups: user.userGroups.map((ug: any) => ug.group)
     }));
+
     return NextResponse.json(usersToReturn, { status: 200 });
   } catch (error) {
-    console.error("Failed to fetch users (SQL Error):", error);
+    console.error("Failed to fetch users (Prisma Error):", error);
     const userNameForLog = session?.user?.name || session?.user?.email || 'Unknown User';
-    await logAudit('ERROR', `Failed to fetch users by ${userNameForLog}. SQL Error: ${(error as Error).message}`, 'API:Users:Get', session.user.id, { sqlState: (error as any).code, constraint: (error as any).constraint });
+    await logAudit('ERROR', `Failed to fetch users by ${userNameForLog}. Prisma Error: ${(error as Error).message}`, 'API:Users:Get', session.user.id);
     return NextResponse.json({ 
         message: "Error fetching users due to a server-side database error.", 
-        error: (error as Error).message, 
-        code: (error as any).code 
+        error: (error as Error).message
     }, { status: 500 });
   }
 }
@@ -182,56 +177,44 @@ export async function POST(request: NextRequest) {
   }
   
   try {
-    await getPool().query('BEGIN');
-    const checkEmailQuery = 'SELECT id FROM "User" WHERE email = $1';
-    const emailCheckResult = await getPool().query(checkEmailQuery, [email]);
-    if (emailCheckResult.rows.length > 0) {
-      await getPool().query('ROLLBACK');
-      return NextResponse.json({ message: "User with this email already exists." }, { status: 409 });
-    }
-
     const defaultAvatarUrl = `https://placehold.co/100x100.png?text=${name.charAt(0).toUpperCase()}`;
     const defaultDataAiHint = "profile person";
-    const newUserId = uuidv4();
 
-    const insertUserQuery = `
-      INSERT INTO "User" (id, name, email, password, role, "avatarUrl", "dataAiHint", "modulePermissions", "authenticationMethod", "forcePasswordChange", "createdAt", "updatedAt")
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW(), NOW())
-      RETURNING id, name, email, role, "avatarUrl", "dataAiHint", "modulePermissions", "authenticationMethod", "forcePasswordChange", "createdAt", "updatedAt";
-    `;
-    const insertUserParams = [
-      newUserId, name, email, hashedPassword, role, defaultAvatarUrl, defaultDataAiHint, 
-      JSON.stringify(modulePermissions), authenticationMethod, forcePasswordChange
-    ];
-    const userResult = await getPool().query(insertUserQuery, insertUserParams);
-    let newUser = userResult.rows[0];
+    const newUser = await prisma.user.create({
+      data: {
+        name,
+        email,
+        password: hashedPassword,
+        role,
+        avatarUrl: defaultAvatarUrl,
+        dataAiHint: defaultDataAiHint,
+        modulePermissions,
+        authenticationMethod,
+        forcePasswordChange,
+        userGroups: groupIds && groupIds.length > 0 ? {
+          create: groupIds.map(groupId => ({
+            groupId
+          }))
+        } : undefined
+      },
+      include: {
+        userGroups: {
+          include: {
+            group: {
+              select: {
+                id: true,
+                name: true
+              }
+            }
+          }
+        }
+      }
+    });
 
-    if (groupIds && groupIds.length > 0) {
-      const insertGroupPromises = groupIds.map(groupId => {
-        return getPool().query('INSERT INTO "User_UserGroup" ("userId", "groupId") VALUES ($1, $2)', [newUserId, groupId]);
-      });
-      await Promise.all(insertGroupPromises);
-    }
-
-    const finalUserQuery = `
-      SELECT 
-        u.id, u.name, u.email, u.role, u."avatarUrl", u."dataAiHint", u."modulePermissions", 
-        u."authenticationMethod", u."forcePasswordChange", u."createdAt", u."updatedAt",
-        COALESCE(
-          jsonb_agg(DISTINCT jsonb_build_object('id', g.id, 'name', g.name)) FILTER (WHERE g.id IS NOT NULL), 
-          '[]'::jsonb
-        )::json as groups
-      FROM "User" u
-      LEFT JOIN "User_UserGroup" ugg ON u.id = ugg."userId"
-      LEFT JOIN "UserGroup" g ON ugg."groupId" = g.id
-      WHERE u.id = $1
-      GROUP BY u.id, u.name, u.email, u.role, u."avatarUrl", u."dataAiHint", u."modulePermissions", u."authenticationMethod", u."forcePasswordChange", u."createdAt", u."updatedAt";
-    `;
-    const finalUserResult = await getPool().query(finalUserQuery, [newUserId]);
-    newUser = { ...finalUserResult.rows[0], modulePermissions: finalUserResult.rows[0].modulePermissions || [], groups: finalUserResult.rows[0].groups || [] };
-
-
-    await getPool().query('COMMIT');
+    const userToReturn = {
+      ...newUser,
+      groups: newUser.userGroups.map((ug: any) => ug.group)
+    };
 
     const redisClient = await getRedisClient();
     if (redisClient) {
@@ -239,17 +222,18 @@ export async function POST(request: NextRequest) {
         console.log('Users cache invalidated due to new user creation.');
     }
     
-    await logAudit('AUDIT', `User account '${newUser.name}' (ID: ${newUser.id}) created by ${session.user.name}.`, 'API:Users:Create', session.user.id, { targetUserId: newUser.id, role: newUser.role, permissions: newUser.modulePermissions, groups: groupIds });
-    return NextResponse.json(newUser, { status: 201 });
+    await logAudit('AUDIT', `User account '${userToReturn.name}' (ID: ${userToReturn.id}) created by ${session.user.name}.`, 'API:Users:Create', session.user.id, { targetUserId: userToReturn.id, role: userToReturn.role, permissions: userToReturn.modulePermissions, groups: groupIds });
+    return NextResponse.json(userToReturn, { status: 201 });
 
   } catch (error: any) {
-    await getPool().query('ROLLBACK');
     console.error("Failed to create user:", error);
     const userNameForLog = session?.user?.name || session?.user?.email || 'Unknown User';
-    await logAudit('ERROR', `Failed to create user ${email} by ${userNameForLog}. Error: ${error.message}. SQL State: ${error.code}, Constraint: ${error.constraint}`, 'API:Users:Create', session.user.id, {sqlState: error.code, constraint: error.constraint});
-    if (error.code === '23505' && error.constraint === 'User_email_key') {
+    await logAudit('ERROR', `Failed to create user ${email} by ${userNameForLog}. Error: ${error.message}.`, 'API:Users:Create', session.user.id);
+    
+    if (error.code === 'P2002' && error.meta?.target?.includes('email')) {
       return NextResponse.json({ message: "User with this email already exists." }, { status: 409 });
     }
-    return NextResponse.json({ message: "Error creating user", error: error.message, code: error.code }, { status: 500 });
+    
+    return NextResponse.json({ message: "Error creating user", error: error.message }, { status: 500 });
   }
 }

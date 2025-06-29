@@ -1,7 +1,7 @@
 -- Initialize CandiTrack database with default data
 
 -- Create default admin user (password: nccadmin)
-INSERT INTO "User" (id, name, email, password, role, "modulePermissions", "createdAt", "updatedAt") 
+INSERT INTO "User" (id, name, email, password, role, "modulePermissions", "authenticationMethod", "forcePasswordChange", "createdAt", "updatedAt") 
 VALUES (
   gen_random_uuid(),
   'Admin User',
@@ -9,6 +9,8 @@ VALUES (
   '$2a$10$dwiCxbUtCqnXeB2O8BmiyeWHL0e7rOqahafQAUACsnD4EZ9nGqPx2',
   'Admin',
   ARRAY['CANDIDATES_VIEW','CANDIDATES_MANAGE','CANDIDATES_IMPORT','CANDIDATES_EXPORT','POSITIONS_VIEW','POSITIONS_MANAGE','POSITIONS_IMPORT','POSITIONS_EXPORT','USERS_MANAGE','USER_GROUPS_MANAGE','SYSTEM_SETTINGS_MANAGE','USER_PREFERENCES_MANAGE','RECRUITMENT_STAGES_MANAGE','CUSTOM_FIELDS_MANAGE','WEBHOOK_MAPPING_MANAGE','NOTIFICATION_SETTINGS_MANAGE','LOGS_VIEW'],
+  'basic',
+  false,
   NOW(),
   NOW()
 ) ON CONFLICT (email) DO NOTHING;

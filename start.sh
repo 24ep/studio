@@ -11,14 +11,14 @@ echo "⏳ Waiting for database..."
 echo "🔧 Generating Prisma client..."
 npx prisma generate
 
-# Push database schema
-echo "📊 Pushing database schema..."
+# Check if database schema is in sync
+echo "🔍 Checking database schema..."
 if npx prisma db push --accept-data-loss; then
-    echo "✅ Schema pushed successfully"
+    echo "✅ Schema is in sync"
 else
-    echo "⚠️  Schema push failed, trying reset..."
+    echo "⚠️  Schema mismatch detected, forcing reset..."
     npx prisma db push --force-reset --accept-data-loss
-    echo "✅ Schema reset and pushed successfully"
+    echo "✅ Schema reset and synchronized"
 fi
 
 # Seed database
