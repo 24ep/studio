@@ -20,10 +20,12 @@ model User {
   password          String
   role              String
   avatarUrl         String?
+  image             String?
   dataAiHint        String?
   modulePermissions String[] @default([])
   authenticationMethod String? @default("basic") @map("authentication_method")
   forcePasswordChange Boolean @default(false) @map("force_password_change")
+  emailVerified     DateTime?
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
   
@@ -34,6 +36,8 @@ model User {
   resumeHistory     ResumeHistory[] @relation("UserResumeHistory")
   logEntries        LogEntry[] @relation("UserLogEntries")
   uploadQueue       UploadQueue[] @relation("UserUploadQueue")
+  accounts          Account[]
+  userPreferences   UserUIDisplayPreference[]
   
   // Indexes
   @@index([email])
@@ -110,6 +114,7 @@ model RecruitmentStage {
 model TransitionRecord {
   id            String   @id @default(uuid()) @db.Uuid
   candidateId   String   @db.Uuid
+  positionId    String?  @db.Uuid
   date          DateTime @default(now())
   stage         String
   notes         String?
@@ -126,6 +131,7 @@ model TransitionRecord {
   @@index([actingUserId])
   @@index([date])
   @@index([stage])
+  @@index([positionId])
 }
 
 model LogEntry {
@@ -146,6 +152,27 @@ model LogEntry {
   @@index([level])
   @@index([source])
   @@index([actingUserId])
+}
+
+model AuditLog {
+  id          String   @id @default(uuid()) @db.Uuid
+  level       String
+  message     String
+  source      String?
+  actingUserId String?  @db.Uuid
+  details     Json?
+  timestamp   DateTime @default(now())
+  user_id     String?  @db.Uuid
+  action      String?
+  entity      String?
+  entity_id   String?
+  
+  // Indexes
+  @@index([timestamp])
+  @@index([level])
+  @@index([source])
+  @@index([actingUserId])
+  @@index([user_id])
 }
 
 model UserGroup {
@@ -311,6 +338,7 @@ model UploadQueue {
   @@index([completedDate])
   @@index([createdBy])
   @@index([source])
+  @@map("upload_queue")
 }
 
 model ResumeHistory {
@@ -330,4 +358,44 @@ model ResumeHistory {
   @@index([candidateId])
   @@index([uploadedAt])
   @@index([uploadedByUserId])
+}
+
+model UserUIDisplayPreference {
+  id            String   @id @default(uuid()) @db.Uuid
+  userId        String   @db.Uuid @map("userId")
+  modelType     String   @map("model_type")
+  attributeKey  String   @map("attribute_key")
+  uiPreference  String   @map("ui_preference")
+  customNote    String?  @map("custom_note")
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  
+  // Relations
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  // Indexes
+  @@index([userId])
+  @@index([modelType])
+  @@index([attributeKey])
+  @@unique([userId, modelType, attributeKey])
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String  @db.Uuid
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
 }
