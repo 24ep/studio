@@ -1252,6 +1252,83 @@ const swaggerSpec = {
         }
       }
     },
+    '/api/settings/system-preferences': {
+      get: {
+        summary: 'Get global system preferences',
+        description: 'Returns global system preferences for branding and theme. Requires authentication.',
+        tags: ['Settings'],
+        responses: {
+          '200': {
+            description: 'System preferences',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    appName: { type: 'string', description: 'Application name' },
+                    themePreference: { type: 'string', enum: ['light', 'dark', 'system'], description: 'Theme preference' },
+                    appLogoDataUrl: { type: 'string', nullable: true, description: 'Base64-encoded logo image data URL' },
+                  },
+                  example: {
+                    appName: 'CandiTrack',
+                    themePreference: 'system',
+                    appLogoDataUrl: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUg...'
+                  }
+                }
+              }
+            }
+          },
+          '401': { description: 'Unauthorized' },
+          '500': { description: 'Server error' }
+        }
+      },
+      post: {
+        summary: 'Update global system preferences',
+        description: 'Updates global system preferences (branding, theme, logo). Requires Admin or SYSTEM_SETTINGS_MANAGE permission.',
+        tags: ['Settings'],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  appName: { type: 'string', description: 'Application name' },
+                  themePreference: { type: 'string', enum: ['light', 'dark', 'system'], description: 'Theme preference' },
+                  appLogoDataUrl: { type: 'string', nullable: true, description: 'Base64-encoded logo image data URL' },
+                },
+                required: ['appName', 'themePreference']
+              },
+              example: {
+                appName: 'CandiTrack',
+                themePreference: 'dark',
+                appLogoDataUrl: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUg...'
+              }
+            }
+          }
+        },
+        responses: {
+          '200': {
+            description: 'System preferences updated',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    message: { type: 'string' }
+                  },
+                  example: { message: 'System preferences updated' }
+                }
+              }
+            }
+          },
+          '400': { description: 'Invalid input' },
+          '401': { description: 'Unauthorized' },
+          '403': { description: 'Forbidden: Insufficient permissions' },
+          '500': { description: 'Server error' }
+        }
+      }
+    },
     '/api/settings/user-preferences': {
       get: {
         summary: 'Get user preferences',
