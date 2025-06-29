@@ -36,7 +36,7 @@ function UploadPageContent() {
   useEffect(() => {
     const fetchPositions = async () => {
       try {
-        const response = await fetch('/api/positions?isOpen=true');
+        const response = await fetch('/api/positions');
         if (!response.ok) {
           throw new Error('Failed to fetch positions');
         }

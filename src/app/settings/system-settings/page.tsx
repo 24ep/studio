@@ -143,11 +143,11 @@ export default function SystemSettingsPage() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4 pt-6">
-          <div>
+        <div>
             <Label htmlFor="gemini-api-key">Gemini API Key</Label>
             <Input id="gemini-api-key" type="password" placeholder="Enter your Gemini API Key" value={geminiApiKey} onChange={(e) => setGeminiApiKey(e.target.value)} className="mt-1" disabled={isSaving}/>
             <p className="text-xs text-muted-foreground mt-1">This key is stored securely on the server. For Genkit to use this, ensure it&apos;s also available as the GOOGLE_API_KEY environment variable where your Next.js server runs, or ensure your Genkit flows dynamically fetch it.</p>
-          </div>
+        </div>
         </CardContent>
       </Card>
       {/* Webhook Automation + Max Concurrent Processors */}
@@ -166,7 +166,7 @@ export default function SystemSettingsPage() {
             <Label htmlFor="resume-processing-webhook">Resume Processing Webhook URL (Any Service)</Label>
             <Input id="resume-processing-webhook" type="url" placeholder="https://your-webhook-endpoint/receive-resume" value={resumeProcessingWebhookUrl} onChange={(e) => setResumeProcessingWebhookUrl(e.target.value)} className="mt-1" disabled={isSaving}/>
             <p className="text-xs text-muted-foreground mt-1">This URL will receive a POST request with the uploaded resume file (as FormData). You can use any compatible webhook service (Zapier, Make, custom API, etc.).</p>
-          </div>
+      </div>
           <Separator />
           <div>
             <Label htmlFor="general-pdf-webhook">New Candidate PDF Webhook URL</Label>
@@ -183,8 +183,8 @@ export default function SystemSettingsPage() {
               value={maxConcurrentProcessors}
               onChange={(e: React.ChangeEvent<HTMLInputElement>) => setMaxConcurrentProcessors(Number(e.target.value))}
               style={{ marginBottom: 16, width: 80 }}
-            />
-          </div>
+          />
+        </div>
         </CardContent>
       </Card>
       {/* SMTP Configuration */}

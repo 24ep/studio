@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState, type ChangeEvent } from "react";
-import { Loader2, Save, X, Palette, ImageUp, Trash2, XCircle, PenSquare, Sun, Moon, RotateCcw } from "lucide-react";
+import { Loader2, Save, X, Palette, ImageUp, Trash2, XCircle, PenSquare, Sun, Moon, RotateCcw, Sidebar as SidebarIcon } from "lucide-react";
 import { useSession } from "next-auth/react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -119,7 +119,7 @@ function setSidebarCSSVars(settings: SidebarColors) {
   if (typeof window === 'undefined') return;
   const root = document.documentElement;
   SIDEBAR_COLOR_KEYS.forEach((key: keyof SidebarColors) => {
-    const cssVar = key.replace(/([A-Z])/g, "-$1").toLowerCase();
+    const cssVar = (key as string).replace(/([A-Z])/g, "-$1").toLowerCase();
     if (settings[key]) {
       root.style.setProperty(`--${cssVar}`, settings[key]);
     }
@@ -151,7 +151,7 @@ export default function SystemPreferencesPage() {
   const [successMsg, setSuccessMsg] = useState(false);
 
   // Sidebar color state
-  const [sidebarColors, setSidebarColors] = useState(() => createInitialSidebarColors());
+  const [sidebarColors, setSidebarColors] = useState<SidebarColors>(DEFAULT_SIDEBAR_COLORS_BASE);
 
   const canEdit =
     session?.user?.role === "Admin" ||
@@ -273,6 +273,62 @@ export default function SystemPreferencesPage() {
       setTimeout(() => setSuccessMsg(false), 2000);
     }
   };
+
+  function renderSidebarColorInputs(theme: 'Light' | 'Dark') {
+    const suffix = theme === 'Light' ? 'L' : 'D';
+    const keys: (keyof SidebarColors)[] = [
+      `sidebarBgStart${suffix}` as keyof SidebarColors,
+      `sidebarBgEnd${suffix}` as keyof SidebarColors,
+      `sidebarText${suffix}` as keyof SidebarColors,
+      `sidebarActiveBgStart${suffix}` as keyof SidebarColors,
+      `sidebarActiveBgEnd${suffix}` as keyof SidebarColors,
+      `sidebarActiveText${suffix}` as keyof SidebarColors,
+      `sidebarHoverBg${suffix}` as keyof SidebarColors,
+      `sidebarHoverText${suffix}` as keyof SidebarColors,
+      `sidebarBorder${suffix}` as keyof SidebarColors,
+    ];
+    const labels: Record<string, string> = {
+      [`sidebarBgStart${suffix}`]: "Background Start",
+      [`sidebarBgEnd${suffix}`]: "Background End",
+      [`sidebarText${suffix}`]: "Text Color",
+      [`sidebarActiveBgStart${suffix}`]: "Active BG Start",
+      [`sidebarActiveBgEnd${suffix}`]: "Active BG End",
+      [`sidebarActiveText${suffix}`]: "Active Text",
+      [`sidebarHoverBg${suffix}`]: "Hover Background",
+      [`sidebarHoverText${suffix}`]: "Hover Text",
+      [`sidebarBorder${suffix}`]: "Border Color",
+    };
+    return keys.map((key) => (
+      <div key={key} className="space-y-2">
+        <Label htmlFor={String(key)} className="text-sm font-medium">
+          {labels[String(key)]}
+        </Label>
+        <div className="flex items-center gap-2">
+          <Input
+            id={String(key)}
+            type="text"
+            value={sidebarColors[key] || ''}
+            onChange={e => setSidebarColors((prev: SidebarColors) => ({ ...prev, [key]: e.target.value }))}
+            placeholder="220 25% 97%"
+            className="text-sm"
+          />
+          <Input
+            type="color"
+            value={convertHslStringToHex(sidebarColors[key])}
+            onChange={e => setSidebarColors((prev: SidebarColors) => ({ ...prev, [key]: hexToHslString(e.target.value) }))}
+            className="w-10 h-9 p-1 rounded-md border"
+          />
+        </div>
+      </div>
+    ));
+  }
+
+  function resetSidebarColors(theme: 'Light' | 'Dark') {
+    const suffix = theme === 'Light' ? 'L' : 'D';
+    const newSidebarColors = createInitialSidebarColors();
+    setSidebarColors(newSidebarColors);
+    setSidebarCSSVars(newSidebarColors);
+  }
 
   if (loading || sessionStatus === 'loading' || (sessionStatus === 'unauthenticated' && pathname !== '/auth/signin' && !pathname.startsWith('/_next/')) || !isClient) {
     return (
@@ -399,16 +455,16 @@ export default function SystemPreferencesPage() {
                   type="button"
                   className={cn(
                     "w-8 h-8 rounded-full border-2 flex items-center justify-center focus:outline-none transition-all",
-                    sidebarColors[swatch] === swatch
+                    sidebarColors[swatch as keyof SidebarColors] === swatch
                       ? "border-primary ring-2 ring-primary"
                       : "border-muted"
                   )}
                   style={{ backgroundColor: `hsl(${swatch})` }}
-                  onClick={() => { setSidebarColors(prev => ({ ...prev, [swatch]: swatch })); }}
+                  onClick={() => { setSidebarColors(prev => ({ ...prev, [swatch as keyof SidebarColors]: swatch })); }}
                   aria-label={swatch}
                   disabled={!canEdit}
                 >
-                  {sidebarColors[swatch] === swatch && (
+                  {sidebarColors[swatch as keyof SidebarColors] === swatch && (
                     <span className="block w-3 h-3 rounded-full bg-white border border-primary" />
                   )}
                 </button>
@@ -418,9 +474,9 @@ export default function SystemPreferencesPage() {
                 type="text"
                 className="w-32 h-8 rounded border ml-2 px-2 text-sm"
                 placeholder="#hex or hsl( )"
-                value={sidebarColors['sidebarBgStartL']}
+                value={sidebarColors['sidebarBgStartL' as keyof SidebarColors]}
                 onChange={e => {
-                  setSidebarColors(prev => ({ ...prev, ['sidebarBgStartL']: e.target.value }));
+                  setSidebarColors((prev: SidebarColors) => ({ ...prev, ['sidebarBgStartL' as keyof SidebarColors]: e.target.value }));
                 }}
                 disabled={!canEdit}
                 aria-label="Custom sidebar color"
@@ -432,8 +488,8 @@ export default function SystemPreferencesPage() {
             </p>
             <div className="mt-2 flex items-center gap-2">
               <span className="text-xs">Current:</span>
-              <span className="w-6 h-6 rounded-full border" style={{ background: sidebarColors['sidebarBgStartL'].startsWith('#') ? sidebarColors['sidebarBgStartL'] : sidebarColors['sidebarBgStartL'].startsWith('hsl') ? sidebarColors['sidebarBgStartL'] : `hsl(${sidebarColors['sidebarBgStartL']})` }} />
-              <span className="text-xs font-mono">{sidebarColors['sidebarBgStartL']}</span>
+              <span className="w-6 h-6 rounded-full border" style={{ background: (sidebarColors['sidebarBgStartL' as keyof SidebarColors] || '').startsWith('#') ? sidebarColors['sidebarBgStartL' as keyof SidebarColors] : (sidebarColors['sidebarBgStartL' as keyof SidebarColors] || '').startsWith('hsl') ? sidebarColors['sidebarBgStartL' as keyof SidebarColors] : `hsl(${sidebarColors['sidebarBgStartL' as keyof SidebarColors]})` }} />
+              <span className="text-xs font-mono">{sidebarColors['sidebarBgStartL' as keyof SidebarColors]}</span>
             </div>
           </section>
         </CardContent>
@@ -490,60 +546,4 @@ export default function SystemPreferencesPage() {
       </Card>
     </div>
   );
-}
-
-function renderSidebarColorInputs(theme: 'Light' | 'Dark') {
-  const suffix = theme === 'Light' ? 'L' : 'D';
-  const keys: (keyof SidebarColors)[] = [
-    `sidebarBgStart${suffix}` as keyof SidebarColors,
-    `sidebarBgEnd${suffix}` as keyof SidebarColors,
-    `sidebarText${suffix}` as keyof SidebarColors,
-    `sidebarActiveBgStart${suffix}` as keyof SidebarColors,
-    `sidebarActiveBgEnd${suffix}` as keyof SidebarColors,
-    `sidebarActiveText${suffix}` as keyof SidebarColors,
-    `sidebarHoverBg${suffix}` as keyof SidebarColors,
-    `sidebarHoverText${suffix}` as keyof SidebarColors,
-    `sidebarBorder${suffix}` as keyof SidebarColors,
-  ];
-  const labels: Record<string, string> = {
-    [`sidebarBgStart${suffix}`]: "Background Start",
-    [`sidebarBgEnd${suffix}`]: "Background End",
-    [`sidebarText${suffix}`]: "Text Color",
-    [`sidebarActiveBgStart${suffix}`]: "Active BG Start",
-    [`sidebarActiveBgEnd${suffix}`]: "Active BG End",
-    [`sidebarActiveText${suffix}`]: "Active Text",
-    [`sidebarHoverBg${suffix}`]: "Hover Background",
-    [`sidebarHoverText${suffix}`]: "Hover Text",
-    [`sidebarBorder${suffix}`]: "Border Color",
-  };
-  return keys.map((key) => (
-    <div key={key} className="space-y-2">
-      <Label htmlFor={String(key)} className="text-sm font-medium">
-        {labels[String(key)]}
-      </Label>
-      <div className="flex items-center gap-2">
-        <Input
-          id={String(key)}
-          type="text"
-          value={sidebarColors[key] || ''}
-          onChange={e => setSidebarColors(prev => ({ ...prev, [key]: e.target.value }))}
-          placeholder="220 25% 97%"
-          className="text-sm"
-        />
-        <Input
-          type="color"
-          value={convertHslStringToHex(sidebarColors[key])}
-          onChange={e => setSidebarColors(prev => ({ ...prev, [key]: hexToHslString(e.target.value) }))}
-          className="w-10 h-9 p-1 rounded-md border"
-        />
-      </div>
-    </div>
-  ));
-}
-
-function resetSidebarColors(theme: 'Light' | 'Dark') {
-  const suffix = theme === 'Light' ? 'L' : 'D';
-  const newSidebarColors = createInitialSidebarColors();
-  setSidebarColors(newSidebarColors);
-  setSidebarCSSVars(newSidebarColors);
 } 

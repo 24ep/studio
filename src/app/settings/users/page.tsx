@@ -244,7 +244,7 @@ export default function ManageUsersPage() {
         </CardHeader>
         <CardContent>
           {/* Filters Section */}
-          <div className="mb-6 p-4 border rounded-lg bg-muted/30 shadow-sm">
+          <div className="mb-6">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
               <div className="space-y-1">
                 <Label htmlFor="name-filter">Name</Label>
