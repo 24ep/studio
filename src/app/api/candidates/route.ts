@@ -120,8 +120,8 @@ export async function POST(request: NextRequest) {
     const newCandidate = candidateResult.rows[0];
     // Create initial transition record
     const insertTransitionQuery = `
-      INSERT INTO "TransitionRecord" (id, "candidateId", "positionId", stage, notes, "actingUserId", date)
-      VALUES ($1, $2, $3, $4, $5, $6, NOW());
+      INSERT INTO "TransitionRecord" (id, "candidateId", "positionId", stage, notes, "actingUserId", date, "createdAt", "updatedAt")
+      VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW(), NOW());
     `;
     await client.query(insertTransitionQuery, [
       uuidv4(), newCandidateId, positionId, status, 'Initial creation', actingUserId

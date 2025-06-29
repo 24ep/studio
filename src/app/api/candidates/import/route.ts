@@ -142,11 +142,11 @@ export async function POST(request: NextRequest) {
 
         // Create initial transition record
         const insertTransitionQuery = `
-          INSERT INTO "TransitionRecord" (id, "candidateId", "positionId", stage, notes, "actingUserId", date)
-          VALUES ($1, $2, $3, $4, $5, $6, NOW());
+          INSERT INTO "TransitionRecord" (id, "candidateId", "positionId", stage, notes, "actingUserId", date, "createdAt", "updatedAt")
+          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9);
         `;
         await client.query(insertTransitionQuery, [
-          uuidv4(), candidateId, candidate.positionId, candidate.status, 'Imported via bulk import', actingUserId
+          uuidv4(), candidateId, candidate.positionId, candidate.status, 'Imported via bulk import', actingUserId, new Date(), new Date()
         ]);
 
         results.success++;

@@ -26,7 +26,7 @@ export default function ApiDocsPage() {
   const fetchApiDocs = useCallback(async () => {
     setIsLoading(true);
     try {
-      const response = await fetch('/api/api-docs');
+      const response = await fetch('/api-docs');
       if (!response.ok) {
         throw new Error('Failed to fetch API documentation');
       }

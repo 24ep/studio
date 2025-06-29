@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -29,10 +29,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
 
+// Import ReactQuill CSS
+import 'react-quill/dist/quill.snow.css';
+
 // Dynamically import ReactQuill to prevent build-time loading
 const ReactQuill = dynamic(() => import('react-quill'), {
   ssr: false,
-  loading: () => <div className="h-32 bg-muted animate-pulse rounded border border-input" />
+  loading: () => <div className="h-[200px] bg-muted animate-pulse rounded-md" />
 });
 
 const editPositionFormSchema = z.object({

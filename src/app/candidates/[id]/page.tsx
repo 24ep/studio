@@ -28,6 +28,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from 'react-hot-toast';
+import { ImageUpload } from '@/components/ui/image-upload';
 
 const MINIO_PUBLIC_BASE_URL = process.env.NEXT_PUBLIC_MINIO_URL || `http://localhost:9847`;
 const MINIO_BUCKET = process.env.NEXT_PUBLIC_MINIO_BUCKET_NAME || "canditrack-resumes";
@@ -237,6 +238,9 @@ export default function CandidateDetailPage() {
   const [availableStages, setAvailableStages] = useState<RecruitmentStage[]>([]);
 
   const [isEditing, setIsEditing] = useState(false);
+
+  const [avatarUploading, setAvatarUploading] = useState(false);
+  const [avatarError, setAvatarError] = useState<string | null>(null);
 
   const form = useForm<EditCandidateFormValues>({
     resolver: zodResolver(editCandidateDetailSchema),
@@ -644,10 +648,55 @@ export default function CandidateDetailPage() {
           <Card className="shadow-lg">
             <CardHeader className="flex flex-row items-start justify-between gap-4">
               <div className="flex items-center gap-4">
-                <Avatar className="h-20 w-20 border-2 border-primary">
-                  <AvatarImage src={personalInfo?.avatar_url || `https://placehold.co/80x80.png?text=${candidate.name.charAt(0)}`} alt={candidate.name} data-ai-hint="person avatar" />
-                  <AvatarFallback className="text-3xl">{candidate.name.charAt(0).toUpperCase()}</AvatarFallback>
-                </Avatar>
+                {/* Avatar Upload */}
+                {isEditing ? (
+                  <div className="flex flex-col items-center gap-2">
+                    <ImageUpload
+                      value={personalInfo?.avatar_url || ''}
+                      onChange={async (value) => {
+                        setAvatarError(null);
+                        if (value && value.startsWith('data:image/')) {
+                          setAvatarUploading(true);
+                          try {
+                            const res = await fetch(value);
+                            const blob = await res.blob();
+                            const formData = new FormData();
+                            formData.append('avatar', new File([blob], 'avatar.png', { type: blob.type }));
+                            const uploadRes = await fetch(`/api/candidates/${candidate.id}/avatar`, {
+                              method: 'POST',
+                              body: formData,
+                            });
+                            const result = await uploadRes.json();
+                            if (!uploadRes.ok) throw new Error(result.message || 'Upload failed');
+                            setValue('parsedData.personal_info.avatar_url', result.avatar_url);
+                            setAvatarUploading(false);
+                          } catch (err: any) {
+                            setAvatarError(err.message || 'Failed to upload avatar');
+                            setAvatarUploading(false);
+                          }
+                        } else {
+                          setValue('parsedData.personal_info.avatar_url', value);
+                        }
+                      }}
+                      label="Avatar"
+                      placeholder="Enter avatar URL or upload image file"
+                      previewSize="md"
+                      allowUrl={true}
+                      allowFile={true}
+                    />
+                    {avatarUploading && (
+                      <div className="text-xs text-muted-foreground mt-1">Uploading avatar...</div>
+                    )}
+                    {avatarError && (
+                      <div className="text-xs text-destructive mt-1">{avatarError}</div>
+                    )}
+                  </div>
+                ) : (
+                  <Avatar className="h-20 w-20 border-2 border-primary">
+                    <AvatarImage src={personalInfo?.avatar_url || `https://placehold.co/80x80.png?text=${candidate.name.charAt(0)}`} alt={candidate.name} data-ai-hint="person avatar" />
+                    <AvatarFallback className="text-3xl">{candidate.name.charAt(0).toUpperCase()}</AvatarFallback>
+                  </Avatar>
+                )}
                 <div>
                   {isEditing ? (
                     <>

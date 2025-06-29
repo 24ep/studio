@@ -30,13 +30,21 @@ body {
     --primary: hsl(var(--primary-gradient-start-l)); 
     --primary-foreground: 0 0% 100%;
 
-
+    /* Secondary Gradient */
+    --secondary-gradient-start-l: 220 20% 94%;
+    --secondary-gradient-end-l: 220 15% 90%;
     --secondary: 220 20% 94%; 
     --secondary-foreground: 220 25% 30%; 
 
+    /* Muted Gradient */
+    --muted-gradient-start-l: 220 20% 96%;
+    --muted-gradient-end-l: 220 15% 92%;
     --muted: 220 20% 96%; 
     --muted-foreground: 220 15% 50%; 
 
+    /* Accent Gradient */
+    --accent-gradient-start-l: 187 100% 42%;
+    --accent-gradient-end-l: 200 100% 50%;
     --accent: 187 100% 42%; /* #00BCD4 Cyan */
     --accent-foreground: 0 0% 100%; 
 
@@ -79,6 +87,23 @@ body {
     --preferences-left-panel-gradient-start: 220 60% 25%; 
     --preferences-left-panel-gradient-end: 230 50% 45%;
 
+    /* Card Gradient Variables */
+    --card-gradient-start: 0 0% 100%;
+    --card-gradient-end: 220 20% 98%;
+    --card-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+    --card-shadow-hover: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+
+    /* Button Gradient Variables */
+    --button-gradient-start: 179 67% 66%;
+    --button-gradient-end: 238 74% 61%;
+    --button-hover-start: 179 67% 60%;
+    --button-hover-end: 238 74% 55%;
+
+    /* Input Gradient Variables */
+    --input-gradient-start: 0 0% 100%;
+    --input-gradient-end: 220 15% 96%;
+    --input-focus-gradient-start: 0 0% 100%;
+    --input-focus-gradient-end: 220 15% 98%;
 
   }
 
@@ -105,12 +130,21 @@ body {
     --primary: hsl(var(--primary-gradient-start-d)); 
     --primary-foreground: hsl(0 0% 100%); 
 
+    /* Secondary Gradient - Dark */
+    --secondary-gradient-start-d: 220 15% 25%;
+    --secondary-gradient-end-d: 220 10% 20%;
     --secondary: 220 15% 25%; 
     --secondary-foreground: 210 30% 85%;
 
+    /* Muted Gradient - Dark */
+    --muted-gradient-start-d: 220 15% 20%;
+    --muted-gradient-end-d: 220 10% 15%;
     --muted: 220 15% 20%;
     --muted-foreground: 210 25% 70%;
 
+    /* Accent Gradient - Dark */
+    --accent-gradient-start-d: 200 100% 55%;
+    --accent-gradient-end-d: 210 100% 60%;
     --accent: 200 100% 55%; 
     --accent-foreground: 220 15% 10%; 
 
@@ -149,7 +183,25 @@ body {
 
     /* Preferences Page Specific Gradient - Dark Mode */
     --preferences-left-panel-gradient-start: 220 70% 30%; 
-    --preferences-left-panel-gradient-end: 230 60% 50%;   
+    --preferences-left-panel-gradient-end: 230 60% 50%;
+
+    /* Card Gradient Variables - Dark */
+    --card-gradient-start: 220 15% 13%;
+    --card-gradient-end: 220 10% 10%;
+    --card-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.3), 0 1px 2px -1px rgb(0 0 0 / 0.3);
+    --card-shadow-hover: 0 4px 6px -1px rgb(0 0 0 / 0.3), 0 2px 4px -2px rgb(0 0 0 / 0.3);
+
+    /* Button Gradient Variables - Dark */
+    --button-gradient-start: 179 67% 66%;
+    --button-gradient-end: 238 74% 61%;
+    --button-hover-start: 179 67% 60%;
+    --button-hover-end: 238 74% 55%;
+
+    /* Input Gradient Variables - Dark */
+    --input-gradient-start: 220 15% 18%;
+    --input-gradient-end: 220 10% 15%;
+    --input-focus-gradient-start: 220 15% 20%;
+    --input-focus-gradient-end: 220 10% 18%;
   }
 }
 
@@ -159,11 +211,13 @@ body {
   }
   body {
     @apply bg-background text-foreground; 
-    background-image: linear-gradient(90deg, hsl(var(--body-background-start-l)) 0%, hsl(var(--body-background-mid-l)) 55%, hsl(var(--body-background-end-l)) 100%);
+    background-image: linear-gradient(135deg, hsl(var(--body-background-start-l)) 0%, hsl(var(--body-background-mid-l)) 50%, hsl(var(--body-background-end-l)) 100%);
+    background-attachment: fixed;
   }
   .dark body {
     @apply bg-background text-foreground; 
-    background-image: linear-gradient(90deg, hsl(var(--body-background-start-d)) 0%, hsl(var(--body-background-mid-d)) 55%, hsl(var(--body-background-end-d)) 100%);
+    background-image: linear-gradient(135deg, hsl(var(--body-background-start-d)) 0%, hsl(var(--body-background-mid-d)) 50%, hsl(var(--body-background-end-d)) 100%);
+    background-attachment: fixed;
   }
 }
 
@@ -176,102 +230,144 @@ body {
 
   /* Active menu item style */
   [data-sidebar="menu-button"][data-active="true"] { 
-    background-color: hsl(var(--sidebar-primary));
+    background: linear-gradient(135deg, hsl(var(--sidebar-primary)) 0%, hsl(var(--accent)) 100%);
     color: hsl(var(--sidebar-primary-foreground)) !important;
-    box-shadow: 0 2px 8px -2px hsla(var(--sidebar-primary), 0.3);
+    box-shadow: 0 4px 12px -2px hsla(var(--sidebar-primary), 0.4);
   }
 
   /* Hover on active menu item */
   [data-sidebar="menu-button"][data-active="true"]:hover {
-    filter: brightness(1.05);
+    filter: brightness(1.1);
+    transform: translateY(-1px);
   }
 
   /* General menu button transitions */
   [data-sidebar="menu-button"] {
-    transition: background-color 0.15s ease-in-out, color 0.15s ease-in-out, box-shadow 0.15s ease-in-out, filter 0.15s ease-in-out;
+    transition: all 0.2s ease-in-out;
   }
 
   /* Primary buttons to use the new gradient */
   .btn-primary-gradient {
-    background-color: hsl(var(--primary-gradient-start-l)); /* Fallback */
-    background-image: -moz-linear-gradient(90deg, hsl(var(--primary-gradient-start-l)) 0%, hsl(var(--primary-gradient-end-l)) 100%); /* Firefox */
-    background-image: -webkit-linear-gradient(90deg, hsl(var(--primary-gradient-start-l)) 0%, hsl(var(--primary-gradient-end-l)) 100%); /* Old Chrome, Safari */
-    background-image: -ms-linear-gradient(90deg, hsl(var(--primary-gradient-start-l)) 0%, hsl(var(--primary-gradient-end-l)) 100%); /* Old IE */
-    background-image: linear-gradient(90deg, hsl(var(--primary-gradient-start-l)) 0%, hsl(var(--primary-gradient-end-l)) 100%); /* Standard */
-    color: hsl(var(--primary-foreground));
+    background: linear-gradient(135deg, hsl(var(--button-gradient-start)) 0%, hsl(var(--button-gradient-end)) 100%);
     border: none;
-    filter: progid: DXImageTransform.Microsoft.gradient( startColorstr="#6FE3E1", endColorstr="#5257E5", GradientType=1 ); /* IE6-9 */
+    box-shadow: 0 2px 8px -2px hsla(var(--button-gradient-start), 0.3);
+    transition: all 0.2s ease-in-out;
   }
 
   .dark .btn-primary-gradient {
-    background-color: hsl(var(--primary-gradient-start-d)); /* Fallback */
-    background-image: -moz-linear-gradient(90deg, hsl(var(--primary-gradient-start-d)) 0%, hsl(var(--primary-gradient-end-d)) 100%);
-    background-image: -webkit-linear-gradient(90deg, hsl(var(--primary-gradient-start-d)) 0%, hsl(var(--primary-gradient-end-d)) 100%);
-    background-image: -ms-linear-gradient(90deg, hsl(var(--primary-gradient-start-d)) 0%, hsl(var(--primary-gradient-end-d)) 100%);
-    background-image: linear-gradient(90deg, hsl(var(--primary-gradient-start-d)) 0%, hsl(var(--primary-gradient-end-d)) 100%); /* Standard */
-    color: hsl(var(--primary-foreground));
-    border: none;
-    filter: progid: DXImageTransform.Microsoft.gradient( startColorstr="#6FE3E1", endColorstr="#5257E5", GradientType=1 ); /* IE6-9 */
+    background: linear-gradient(135deg, hsl(var(--button-gradient-start)) 0%, hsl(var(--button-gradient-end)) 100%);
+    box-shadow: 0 2px 8px -2px hsla(var(--button-gradient-start), 0.4);
   }
 
   .btn-primary-gradient:hover {
-    filter: brightness(1.1) progid:DXImageTransform.Microsoft.gradient( startColorstr="#6FE3E1", endColorstr="#5257E5", GradientType=1 ); 
-    box-shadow: 0 2px 10px -3px hsla(var(--primary-gradient-start-l), 0.4); 
-  }
-   .dark .btn-primary-gradient:hover {
-    filter: brightness(1.1) progid:DXImageTransform.Microsoft.gradient( startColorstr="#6FE3E1", endColorstr="#5257E5", GradientType=1 );
-    box-shadow: 0 2px 10px -3px hsla(var(--primary-gradient-start-d), 0.4);
+    background: linear-gradient(135deg, hsl(var(--button-hover-start)) 0%, hsl(var(--button-hover-end)) 100%);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px -2px hsla(var(--button-gradient-start), 0.4);
   }
 
+  .dark .btn-primary-gradient:hover {
+    background: linear-gradient(135deg, hsl(var(--button-hover-start)) 0%, hsl(var(--button-hover-end)) 100%);
+    box-shadow: 0 4px 12px -2px hsla(var(--button-gradient-start), 0.5);
+  }
 
-  /* Blue gradient hover for secondary and outline button types */
   .btn-hover-primary-gradient:hover {
-    background-image: linear-gradient(to right, hsl(var(--primary-gradient-start-l)), hsl(var(--primary-gradient-end-l)));
-    color: hsl(var(--primary-foreground)) !important;
-    border-color: transparent !important; 
-    background-color: transparent !important; 
-    filter: none !important; 
-    box-shadow: 0 2px 10px -3px hsla(var(--primary-gradient-start-l), 0.4);
+    background: linear-gradient(135deg, hsl(var(--button-gradient-start)) 0%, hsl(var(--button-gradient-end)) 100%);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px -2px hsla(var(--button-gradient-start), 0.3);
   }
+
   .dark .btn-hover-primary-gradient:hover {
-    background-image: linear-gradient(to right, hsl(var(--primary-gradient-start-d)), hsl(var(--primary-gradient-end-d)));
-    color: hsl(var(--primary-foreground)) !important; 
-    border-color: transparent !important;
-    background-color: transparent !important;
-    filter: none !important;
-    box-shadow: 0 2px 10px -3px hsla(var(--primary-gradient-start-d), 0.4);
+    background: linear-gradient(135deg, hsl(var(--button-gradient-start)) 0%, hsl(var(--button-gradient-end)) 100%);
+    box-shadow: 0 4px 12px -2px hsla(var(--button-gradient-start), 0.4);
   }
 
-  /* Custom green styles for checked states */
-  /* Default checkbox: primary border, primary check icon, transparent background */
+  /* Card gradients */
+  .card-gradient {
+    background: linear-gradient(135deg, hsl(var(--card-gradient-start)) 0%, hsl(var(--card-gradient-end)) 100%);
+    box-shadow: var(--card-shadow);
+    transition: all 0.2s ease-in-out;
+  }
+
+  .card-gradient:hover {
+    box-shadow: var(--card-shadow-hover);
+    transform: translateY(-2px);
+  }
+
+  /* Input gradients */
+  .input-gradient {
+    background: linear-gradient(135deg, hsl(var(--input-gradient-start)) 0%, hsl(var(--input-gradient-end)) 100%);
+    border: 1px solid hsl(var(--border));
+    transition: all 0.2s ease-in-out;
+  }
+
+  .input-gradient:focus {
+    background: linear-gradient(135deg, hsl(var(--input-focus-gradient-start)) 0%, hsl(var(--input-focus-gradient-end)) 100%);
+    border-color: hsl(var(--ring));
+    box-shadow: 0 0 0 2px hsla(var(--ring), 0.2);
+  }
+
+  /* Secondary button gradients */
+  .btn-secondary-gradient {
+    background: linear-gradient(135deg, hsl(var(--secondary-gradient-start-l)) 0%, hsl(var(--secondary-gradient-end-l)) 100%);
+    border: 1px solid hsl(var(--border));
+    transition: all 0.2s ease-in-out;
+  }
+
+  .dark .btn-secondary-gradient {
+    background: linear-gradient(135deg, hsl(var(--secondary-gradient-start-d)) 0%, hsl(var(--secondary-gradient-end-d)) 100%);
+  }
+
+  .btn-secondary-gradient:hover {
+    background: linear-gradient(135deg, hsl(var(--secondary-gradient-end-l)) 0%, hsl(var(--secondary-gradient-start-l)) 100%);
+    transform: translateY(-1px);
+  }
+
+  .dark .btn-secondary-gradient:hover {
+    background: linear-gradient(135deg, hsl(var(--secondary-gradient-end-d)) 0%, hsl(var(--secondary-gradient-start-d)) 100%);
+  }
+
+  /* Muted background gradients */
+  .muted-gradient {
+    background: linear-gradient(135deg, hsl(var(--muted-gradient-start-l)) 0%, hsl(var(--muted-gradient-end-l)) 100%);
+  }
+
+  .dark .muted-gradient {
+    background: linear-gradient(135deg, hsl(var(--muted-gradient-start-d)) 0%, hsl(var(--muted-gradient-end-d)) 100%);
+  }
+
+  /* Accent gradients */
+  .accent-gradient {
+    background: linear-gradient(135deg, hsl(var(--accent-gradient-start-l)) 0%, hsl(var(--accent-gradient-end-l)) 100%);
+  }
+
+  .dark .accent-gradient {
+    background: linear-gradient(135deg, hsl(var(--accent-gradient-start-d)) 0%, hsl(var(--accent-gradient-end-d)) 100%);
+  }
+
+  /* Checkbox and switch gradients */
   .checkbox-primary[data-state="checked"] {
-    @apply bg-transparent border-primary text-primary;
+    background: linear-gradient(135deg, hsl(var(--primary-gradient-start-l)) 0%, hsl(var(--primary-gradient-end-l)) 100%);
   }
 
-  /* Green variant checkbox: green border, green check icon, transparent background */
   .checkbox-green[data-state="checked"] {
-    background-color: transparent !important; 
-    border-color: hsl(var(--custom-green-checked-icon)) !important; 
-    color: hsl(var(--custom-green-checked-icon)) !important; 
+    background: linear-gradient(135deg, hsl(var(--custom-green-checked)) 0%, hsl(var(--success)) 100%);
   }
+
   .dark .checkbox-green[data-state="checked"] {
-    background-color: transparent !important;
-    border-color: hsl(var(--custom-green-checked-icon)) !important;
-    color: hsl(var(--custom-green-checked-icon)) !important;
+    background: linear-gradient(135deg, hsl(var(--custom-green-checked)) 0%, hsl(var(--success)) 100%);
   }
 
-
-  /* Switch component green variant (background color) */
   .switch-green[data-state="checked"] {
-    background-color: hsl(var(--custom-green-checked)) !important;
-  }
-  .dark .switch-green[data-state="checked"] {
-     background-color: hsl(var(--custom-green-checked)) !important;
+    background: linear-gradient(135deg, hsl(var(--custom-green-checked)) 0%, hsl(var(--success)) 100%);
   }
 
-  /* Preferences Page Specific Gradient Utility */
+  .dark .switch-green[data-state="checked"] {
+    background: linear-gradient(135deg, hsl(var(--custom-green-checked)) 0%, hsl(var(--success)) 100%);
+  }
+
+  /* Preferences page gradient */
   .bg-preferences-gradient {
-    background-image: linear-gradient(135deg, hsl(var(--preferences-left-panel-gradient-start)), hsl(var(--preferences-left-panel-gradient-end)));
+    background: linear-gradient(135deg, hsl(var(--preferences-left-panel-gradient-start)) 0%, hsl(var(--preferences-left-panel-gradient-end)) 100%);
   }
 }
 

@@ -241,6 +241,18 @@ export default function SignInClient({ initialSettings }: SignInClientProps) {
   // Extract loginPageContent from settings
   const loginPageContent = initialSettings?.find(s => s.key === 'loginPageContent')?.value || '';
 
+  // Listen for appConfigChanged and force re-render
+  useEffect(() => {
+    const handleAppConfigChange = () => {
+      // Just force a re-render by updating a dummy state
+      setAppLogoUrl(prev => prev ? prev + '' : prev);
+      setLoginLayoutType(prev => prev ? prev : DEFAULT_LOGIN_LAYOUT_TYPE);
+      // Optionally, you can refetch settings or reload the page if needed
+    };
+    window.addEventListener('appConfigChanged', handleAppConfigChange);
+    return () => window.removeEventListener('appConfigChanged', handleAppConfigChange);
+  }, []);
+
   if (status === "loading" || !isClient) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center bg-gradient-to-br from-slate-100 to-sky-100 dark:from-slate-900 dark:to-sky-900 p-4">

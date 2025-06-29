@@ -27,6 +27,7 @@ import {
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Textarea } from '@/components/ui/textarea';
 import type { SystemSetting, LoginPageBackgroundType, LoginPageLayoutType } from '@/lib/types';
+import { ImageUpload } from '@/components/ui/image-upload';
 
 interface SystemSettings {
   appName?: string;
@@ -153,38 +154,42 @@ export default function PreferencesPage() {
     }
   };
 
-  const ColorSwatch = ({ color, onChange, label }: { color: string; onChange: (color: string) => void; label: string }) => (
-    <div className="flex items-center gap-2">
-      <Popover>
-        <PopoverTrigger asChild>
-          <Button
-            variant="outline"
-            className="w-12 h-8 p-0 border-2"
-            style={{ backgroundColor: color }}
-          >
-            <span className="sr-only">{label}</span>
-          </Button>
-        </PopoverTrigger>
-        <PopoverContent className="w-64">
-          <div className="space-y-2">
-            <Label>{label}</Label>
-            <Input
-              type="color"
-              value={color}
-              onChange={(e) => onChange(e.target.value)}
-              className="w-full h-10"
-            />
-            <Input
-              value={color}
-              onChange={(e) => onChange(e.target.value)}
-              placeholder="Hex color code"
-            />
-          </div>
-        </PopoverContent>
-      </Popover>
-      <span className="text-sm text-muted-foreground">{label}</span>
-    </div>
-  );
+  const ColorSwatch = ({ color, onChange, label }: { color: string; onChange: (color: string) => void; label: string }) => {
+    // Ensure color is a valid hex or fallback
+    const safeColor = /^#([0-9A-F]{3}){1,2}$/i.test(color) ? color : (color?.startsWith('#') ? color : `#${color.replace(/[^0-9A-F]/gi, '').slice(0, 6)}`) || '#ffffff';
+    return (
+      <div className="flex items-center gap-2">
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button
+              variant="outline"
+              className="w-12 h-8 p-0 border-2"
+              style={{ backgroundColor: safeColor }}
+            >
+              <span className="sr-only">{label}</span>
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-64">
+            <div className="space-y-2">
+              <Label>{label}</Label>
+              <Input
+                type="color"
+                value={safeColor}
+                onChange={(e) => onChange(e.target.value)}
+                className="w-full h-10"
+              />
+              <Input
+                value={safeColor}
+                onChange={(e) => onChange(e.target.value)}
+                placeholder="Hex color code"
+              />
+            </div>
+          </PopoverContent>
+        </Popover>
+        <span className="text-sm text-muted-foreground">{label}</span>
+      </div>
+    );
+  };
 
   const SidebarSettings = () => (
     <div className="space-y-6">
@@ -352,7 +357,7 @@ export default function PreferencesPage() {
     <div className="space-y-6">
       <div>
         <h3 className="text-lg font-semibold mb-4">Layout</h3>
-        <div className="space-y-2">
+        <div className="flex gap-4 items-center">
           <Label>Layout Type</Label>
           <Select
             value={settings.loginPageLayoutType || 'center'}
@@ -363,7 +368,7 @@ export default function PreferencesPage() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="center">Centered Login Box</SelectItem>
-              <SelectItem value="2column">3-Column Layout (Login on Right)</SelectItem>
+              <SelectItem value="2column">Two Column (Login on Right)</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -393,19 +398,15 @@ export default function PreferencesPage() {
           </div>
 
           {settings.loginPageBackgroundType === 'image' && (
-            <div className="space-y-2">
-              <Label>Background Image URL</Label>
-              <div className="flex gap-2">
-                <Input
-                  value={settings.loginPageBackgroundImageUrl || ''}
-                  onChange={(e) => handleSaveSettings({ loginPageBackgroundImageUrl: e.target.value })}
-                  placeholder="Enter image URL"
-                />
-                <Button variant="outline" size="icon">
-                  <Upload className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
+            <ImageUpload
+              value={settings.loginPageBackgroundImageUrl || ''}
+              onChange={(value) => handleSaveSettings({ loginPageBackgroundImageUrl: value })}
+              label="Background Image"
+              placeholder="Enter image URL or upload image file"
+              previewSize="lg"
+              allowUrl={true}
+              allowFile={true}
+            />
           )}
 
           {settings.loginPageBackgroundType === 'color' && (
@@ -524,28 +525,15 @@ export default function PreferencesPage() {
 
       <div>
         <h3 className="text-lg font-semibold mb-4">Logo</h3>
-        <div className="space-y-2">
-          <Label>Logo URL (Data URL or Image URL)</Label>
-          <div className="flex gap-2">
-            <Input
-              value={settings.appLogoDataUrl || ''}
-              onChange={(e) => handleSaveSettings({ appLogoDataUrl: e.target.value })}
-              placeholder="Enter logo URL or data URL"
-            />
-            <Button variant="outline" size="icon">
-              <Upload className="h-4 w-4" />
-            </Button>
-          </div>
-          {settings.appLogoDataUrl && (
-            <div className="mt-2">
-              <img 
-                src={settings.appLogoDataUrl} 
-                alt="Logo Preview" 
-                className="h-16 w-16 object-contain border rounded"
-              />
-            </div>
-          )}
-        </div>
+        <ImageUpload
+          value={settings.appLogoDataUrl || ''}
+          onChange={(value) => handleSaveSettings({ appLogoDataUrl: value })}
+          label="Application Logo"
+          placeholder="Enter logo URL or upload image file"
+          previewSize="md"
+          allowUrl={true}
+          allowFile={true}
+        />
       </div>
     </div>
   );

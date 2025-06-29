@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
 import { Loader2, XCircle, FileText, Plus, Trash2, UploadCloud } from "lucide-react";
 import { CandidateQueueProvider, CandidateImportUploadQueue } from "@/components/candidates/CandidateImportUploadQueue";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogClose, DialogFooter } from "@/components/ui/dialog";
@@ -148,8 +149,8 @@ function UploadPageContent() {
       set.id === setId 
         ? { 
             ...set, 
-            selectedPositionId: positionId,
-            selectedPositionTitle: selectedPosition?.title
+            selectedPositionId: positionId === 'none' ? '' : positionId,
+            selectedPositionTitle: positionId === 'none' ? undefined : selectedPosition?.title
           }
         : set
     ));
@@ -244,162 +245,227 @@ function UploadPageContent() {
           setCurrentSetId(null);
         }
       }}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Bulk Upload Candidate CVs</DialogTitle>
-            <DialogDescription>
-              Upload multiple PDF files with position assignments. You can create multiple sets with different position targets.
-            </DialogDescription>
-          </DialogHeader>
+        <DialogContent className="max-w-5xl max-h-[95vh] overflow-hidden p-0">
+          <div className="flex flex-col h-full">
+            {/* Header with gradient background */}
+            <div className="bg-gradient-to-r from-primary/10 via-accent/10 to-primary/10 p-6 border-b">
+              <DialogHeader className="mb-0">
+                <DialogTitle className="text-2xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+                  Bulk Upload Candidate CVs
+                </DialogTitle>
+                <DialogDescription className="text-base">
+                  Upload multiple PDF files with position assignments. Create multiple sets for different position targets.
+                </DialogDescription>
+              </DialogHeader>
+            </div>
 
-          <div className="space-y-6">
-            {/* Upload Sets */}
-            {uploadSets.length === 0 ? (
-              <div className="text-center py-8">
-                <p className="text-muted-foreground mb-4">No upload sets created yet.</p>
-                <Button onClick={addUploadSet}>
-                  <Plus className="mr-2 h-4 w-4" />
-                  Create First Upload Set
-                </Button>
-              </div>
-            ) : (
-              uploadSets.map((set, setIndex) => (
-                <Card key={set.id} className={`${currentSetId === set.id ? 'ring-2 ring-primary' : ''}`}>
-                  <CardHeader className="pb-3">
-                    <div className="flex items-center justify-between">
-                      <CardTitle className="text-lg">Upload Set {setIndex + 1}</CardTitle>
-                      <div className="flex items-center gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => setCurrentSetId(set.id)}
-                          disabled={currentSetId === set.id}
-                        >
-                          Select Files
-                        </Button>
-                        {uploadSets.length > 1 && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => removeUploadSet(set.id)}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        )}
-                      </div>
+            {/* Main content area */}
+            <div className="flex-1 overflow-y-auto p-6">
+              <div className="space-y-6">
+                {/* Upload Sets */}
+                {uploadSets.length === 0 ? (
+                  <div className="text-center py-12">
+                    <div className="bg-gradient-to-br from-muted/50 to-muted/30 rounded-2xl p-8 border-2 border-dashed border-primary/20">
+                      <UploadCloud className="mx-auto h-16 w-16 text-primary/60 mb-4" />
+                      <h3 className="text-xl font-semibold mb-2">No upload sets created yet</h3>
+                      <p className="text-muted-foreground mb-6">Create your first upload set to get started</p>
+                      <Button onClick={addUploadSet} size="lg" className="btn-primary-gradient">
+                        <Plus className="mr-2 h-5 w-5" />
+                        Create First Upload Set
+                      </Button>
                     </div>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    {/* Position Selection */}
-                    <div>
-                      <Label htmlFor={`position-${set.id}`}>Target Position (Optional)</Label>
-                      <Select 
-                        value={set.selectedPositionId} 
-                        onValueChange={(value) => updateSetPosition(set.id, value)}
-                      >
-                        <SelectTrigger id={`position-${set.id}`} className="mt-1">
-                          <SelectValue placeholder="Select a position to apply to..." />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="">None (General Application)</SelectItem>
-                          {availablePositions.map(pos => (
-                            <SelectItem key={pos.id} value={pos.id}>{pos.title}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    {/* File Upload Area */}
-                    {currentSetId === set.id && (
-                      <div
-                        className={`border-2 border-dashed rounded-lg p-6 text-center transition-colors ${
-                          dragActive ? "border-primary bg-primary/10" : "border-input"
-                        }`}
-                        onDrop={handleDrop}
-                        onDragOver={handleDragOver}
-                        onDragLeave={handleDragLeave}
-                        onClick={() => document.getElementById(`file-input-${set.id}`)?.click()}
-                        style={{ cursor: "pointer" }}
-                      >
-                        <Input
-                          id={`file-input-${set.id}`}
-                          type="file"
-                          accept="application/pdf"
-                          multiple
-                          className="hidden"
-                          onChange={(e) => handleInputChange(e, set.id)}
-                        />
-                        <UploadCloud className="mx-auto h-8 w-8 text-muted-foreground mb-2" />
-                        <p className="text-muted-foreground">Drop PDF files here or click to select</p>
-                        <p className="text-xs text-muted-foreground mt-1">Max {MAX_FILE_SIZE / (1024*1024)}MB per file</p>
-                      </div>
-                    )}
-
-                    {/* Files List */}
-                    {set.files.length > 0 && (
-                      <div>
-                        <h4 className="font-semibold mb-2">Files in this set ({set.files.length}):</h4>
-                        <div className="space-y-2 max-h-40 overflow-y-auto">
-                          {set.files.map((file, idx) => (
-                            <div key={`${file.name}-${idx}`} className="flex items-center justify-between bg-muted/50 rounded px-3 py-2">
-                              <div className="flex items-center gap-2 truncate">
-                                <FileText className="h-4 w-4 text-primary shrink-0" />
-                                <span className="truncate" title={file.name}>{file.name}</span>
-                                <span className="text-xs text-muted-foreground whitespace-nowrap">
-                                  ({formatBytes(file.size)})
-                                </span>
+                  </div>
+                ) : (
+                  <div className="grid gap-6">
+                    {uploadSets.map((set, setIndex) => (
+                      <Card key={set.id} className={`card-gradient transition-all duration-300 ${
+                        currentSetId === set.id 
+                          ? 'ring-2 ring-primary/50 shadow-lg scale-[1.02]' 
+                          : 'hover:shadow-md hover:scale-[1.01]'
+                      }`}>
+                        <CardHeader className="pb-4">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                              <div className="w-8 h-8 rounded-full bg-gradient-to-r from-primary to-accent flex items-center justify-center text-white font-bold text-sm">
+                                {setIndex + 1}
                               </div>
-                              <Button 
-                                type="button" 
-                                size="icon" 
-                                variant="ghost" 
-                                onClick={() => removeFileFromSet(set.id, file)}
-                              >
-                                <XCircle className="h-4 w-4" />
-                              </Button>
+                              <CardTitle className="text-xl">Upload Set {setIndex + 1}</CardTitle>
+                              {set.selectedPositionTitle && (
+                                <Badge variant="secondary" className="ml-2">
+                                  {set.selectedPositionTitle}
+                                </Badge>
+                              )}
                             </div>
-                          ))}
-                        </div>
-                      </div>
+                            <div className="flex items-center gap-2">
+                              <Button
+                                variant={currentSetId === set.id ? "default" : "outline"}
+                                size="sm"
+                                onClick={() => setCurrentSetId(set.id)}
+                                className={currentSetId === set.id ? "btn-primary-gradient" : ""}
+                              >
+                                {currentSetId === set.id ? "Active" : "Select Files"}
+                              </Button>
+                              {uploadSets.length > 1 && (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => removeUploadSet(set.id)}
+                                  className="text-destructive hover:text-destructive"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              )}
+                            </div>
+                          </div>
+                        </CardHeader>
+                        <CardContent className="space-y-6">
+                          {/* Position Selection */}
+                          <div className="bg-muted/30 rounded-lg p-4">
+                            <Label htmlFor={`position-${set.id}`} className="text-sm font-medium">
+                              Target Position (Optional)
+                            </Label>
+                            <Select 
+                              value={set.selectedPositionId} 
+                              onValueChange={(value) => updateSetPosition(set.id, value)}
+                            >
+                              <SelectTrigger id={`position-${set.id}`} className="mt-2 input-gradient">
+                                <SelectValue placeholder="Select a position to apply to..." />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="none">None (General Application)</SelectItem>
+                                {availablePositions.map(pos => (
+                                  <SelectItem key={pos.id} value={pos.id}>{pos.title}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+
+                          {/* File Upload Area */}
+                          {currentSetId === set.id && (
+                            <div
+                              className={`border-2 border-dashed rounded-xl p-8 text-center transition-all duration-300 ${
+                                dragActive 
+                                  ? "border-primary bg-gradient-to-br from-primary/10 to-accent/10 scale-105" 
+                                  : "border-input hover:border-primary/50 hover:bg-muted/20"
+                              }`}
+                              onDrop={handleDrop}
+                              onDragOver={handleDragOver}
+                              onDragLeave={handleDragLeave}
+                              onClick={() => document.getElementById(`file-input-${set.id}`)?.click()}
+                              style={{ cursor: "pointer" }}
+                            >
+                              <Input
+                                id={`file-input-${set.id}`}
+                                type="file"
+                                accept="application/pdf"
+                                multiple
+                                className="hidden"
+                                onChange={(e) => handleInputChange(e, set.id)}
+                              />
+                              <div className="bg-gradient-to-br from-primary/20 to-accent/20 rounded-full w-20 h-20 mx-auto mb-4 flex items-center justify-center">
+                                <UploadCloud className="h-10 w-10 text-primary" />
+                              </div>
+                              <h3 className="text-lg font-semibold mb-2">Drop PDF files here or click to select</h3>
+                              <p className="text-muted-foreground mb-2">Support for multiple PDF files</p>
+                              <p className="text-xs text-muted-foreground">Max {MAX_FILE_SIZE / (1024*1024)}MB per file</p>
+                            </div>
+                          )}
+
+                          {/* Files List */}
+                          {set.files.length > 0 && (
+                            <div className="bg-muted/20 rounded-lg p-4">
+                              <div className="flex items-center gap-2 mb-3">
+                                <FileText className="h-5 w-5 text-primary" />
+                                <h4 className="font-semibold">Files in this set ({set.files.length})</h4>
+                              </div>
+                              <div className="space-y-2 max-h-48 overflow-y-auto">
+                                {set.files.map((file, idx) => (
+                                  <div key={`${file.name}-${idx}`} className="flex items-center justify-between bg-background/80 rounded-lg px-4 py-3 border hover:shadow-sm transition-all">
+                                    <div className="flex items-center gap-3 truncate">
+                                      <div className="w-8 h-8 rounded-full bg-gradient-to-r from-primary/20 to-accent/20 flex items-center justify-center">
+                                        <FileText className="h-4 w-4 text-primary" />
+                                      </div>
+                                      <div className="truncate">
+                                        <p className="font-medium truncate" title={file.name}>{file.name}</p>
+                                        <p className="text-xs text-muted-foreground">
+                                          {formatBytes(file.size)}
+                                        </p>
+                                      </div>
+                                    </div>
+                                    <Button 
+                                      type="button" 
+                                      size="icon" 
+                                      variant="ghost" 
+                                      onClick={() => removeFileFromSet(set.id, file)}
+                                      className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                                    >
+                                      <XCircle className="h-4 w-4" />
+                                    </Button>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                )}
+
+                {/* Add New Set Button */}
+                {uploadSets.length > 0 && (
+                  <div className="text-center">
+                    <Button 
+                      variant="outline" 
+                      onClick={addUploadSet}
+                      size="lg"
+                      className="btn-secondary-gradient"
+                    >
+                      <Plus className="mr-2 h-5 w-5" />
+                      Add Another Upload Set
+                    </Button>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Footer with gradient background */}
+            <div className="bg-gradient-to-r from-muted/50 to-muted/30 p-6 border-t">
+              <DialogFooter className="flex items-center justify-between">
+                <div className="text-sm text-muted-foreground">
+                  {totalFiles > 0 && (
+                    <span>Total files: <span className="font-semibold text-primary">{totalFiles}</span></span>
+                  )}
+                </div>
+                <div className="flex gap-3">
+                  <DialogClose asChild>
+                    <Button type="button" variant="outline" className="btn-secondary-gradient">
+                      Cancel
+                    </Button>
+                  </DialogClose>
+                  <Button 
+                    type="button" 
+                    onClick={handleConfirmUpload} 
+                    disabled={totalFiles === 0 || uploading}
+                    className="btn-primary-gradient"
+                    size="lg"
+                  >
+                    {uploading ? (
+                      <>
+                        <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                        Uploading...
+                      </>
+                    ) : (
+                      <>
+                        <UploadCloud className="mr-2 h-5 w-5" />
+                        Upload {totalFiles} File{totalFiles !== 1 ? 's' : ''}
+                      </>
                     )}
-                  </CardContent>
-                </Card>
-              ))
-            )}
-
-            {/* Add New Set Button */}
-            <Button 
-              variant="outline" 
-              onClick={addUploadSet}
-              className="w-full"
-            >
-              <Plus className="mr-2 h-4 w-4" />
-              Add Another Upload Set
-            </Button>
+                  </Button>
+                </div>
+              </DialogFooter>
+            </div>
           </div>
-
-          <DialogFooter className="mt-6">
-            <DialogClose asChild>
-              <Button type="button" variant="outline">Cancel</Button>
-            </DialogClose>
-            <Button 
-              type="button" 
-              onClick={handleConfirmUpload} 
-              disabled={totalFiles === 0 || uploading}
-            >
-              {uploading ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Uploading...
-                </>
-              ) : (
-                <>
-                  <UploadCloud className="mr-2 h-4 w-4" />
-                  Upload {totalFiles} File{totalFiles !== 1 ? 's' : ''}
-                </>
-              )}
-            </Button>
-          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
