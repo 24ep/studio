@@ -13,6 +13,11 @@ export interface StartupResult {
     message: string;
     error?: string;
   };
+  seeding: {
+    status: 'success' | 'warning' | 'error';
+    message: string;
+    error?: string;
+  };
   overall: 'ready' | 'partial' | 'failed';
 }
 
@@ -20,6 +25,7 @@ export async function initializeApplication(): Promise<StartupResult> {
   const result: StartupResult = {
     minio: { status: 'error', message: 'Not initialized' },
     database: { status: 'error', message: 'Not initialized' },
+    seeding: { status: 'error', message: 'Not initialized' },
     overall: 'failed'
   };
   
@@ -57,11 +63,45 @@ export async function initializeApplication(): Promise<StartupResult> {
       error: error instanceof Error ? error.message : 'Unknown error'
     };
   }
+
+  // Check if database needs seeding
+  try {
+    const pool = getPool();
+    const client = await pool.connect();
+    
+    // Check if admin user exists
+    const adminCheck = await client.query('SELECT COUNT(*) as count FROM "User" WHERE email = $1', ['admin@ncc.com']);
+    const adminExists = parseInt(adminCheck.rows[0].count) > 0;
+    
+    // Check if recruitment stages exist
+    const stagesCheck = await client.query('SELECT COUNT(*) as count FROM "RecruitmentStage"');
+    const stagesExist = parseInt(stagesCheck.rows[0].count) > 0;
+    
+    client.release();
+    
+    if (adminExists && stagesExist) {
+      result.seeding = {
+        status: 'success',
+        message: 'Database already seeded'
+      };
+    } else {
+      result.seeding = {
+        status: 'warning',
+        message: 'Database needs seeding - run prisma db seed'
+      };
+    }
+  } catch (error) {
+    result.seeding = {
+      status: 'error',
+      message: 'Failed to check seeding status',
+      error: error instanceof Error ? error.message : 'Unknown error'
+    };
+  }
   
   // Determine overall status
-  if (result.database.status === 'success' && result.minio.status === 'success') {
+  if (result.database.status === 'success' && result.minio.status === 'success' && result.seeding.status === 'success') {
     result.overall = 'ready';
-  } else if (result.database.status === 'success' && (result.minio.status === 'warning' || result.minio.status === 'error')) {
+  } else if (result.database.status === 'success' && (result.minio.status === 'warning' || result.minio.status === 'error') && result.seeding.status === 'success') {
     result.overall = 'partial';
   } else {
     result.overall = 'failed';
@@ -76,6 +116,18 @@ export async function isApplicationReady(): Promise<boolean> {
     const result = await initializeApplication();
     return result.overall === 'ready';
   } catch (error) {
+    return false;
+  }
+}
+
+// Function to seed the database
+export async function seedDatabase(): Promise<boolean> {
+  try {
+    const { execSync } = require('child_process');
+    execSync('npx prisma db seed', { stdio: 'inherit' });
+    return true;
+  } catch (error) {
+    console.error('Failed to seed database:', error);
     return false;
   }
 }

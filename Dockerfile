@@ -60,5 +60,5 @@ EXPOSE 9846
 HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
   CMD curl -f http://localhost:9846/api/health || exit 1
 
-# Start the app with database initialization
-CMD ./wait-for-db.sh "$DB_HOST:$DB_PORT" -- sh -c "echo 'Database ready. Initializing schema...' && npx prisma generate && (npx prisma db push --accept-data-loss || (echo 'Push failed, trying reset...' && npx prisma db push --force-reset --accept-data-loss)) && echo 'Schema initialized. Starting app...' && npm run start"
+# Start the app with database initialization and seeding
+CMD ./wait-for-db.sh "$DB_HOST:$DB_PORT" -- sh -c "echo 'Database ready. Initializing schema...' && npx prisma generate && (npx prisma db push --accept-data-loss || (echo 'Push failed, trying reset...' && npx prisma db push --force-reset --accept-data-loss)) && echo 'Schema initialized. Seeding database...' && (npx prisma db seed || echo 'Seeding failed or already seeded') && echo 'Database ready. Starting app...' && npm run start"
