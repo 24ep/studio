@@ -55,7 +55,6 @@ yarn-error.log
 
 # Build optimization - exclude unnecessary files
 .github
-scripts
 docs
 *.md
 .git
