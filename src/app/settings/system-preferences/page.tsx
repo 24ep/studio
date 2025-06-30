@@ -731,7 +731,7 @@ export default function SystemPreferencesPage() {
 
   return (
     <div className="space-y-8">
-      <Card className="w-full max-w-xl mx-auto shadow-lg">
+      <Card className="w-full max-w-4xl mx-auto shadow-lg">
         <CardHeader>
           <CardTitle className="flex items-center">
             <Palette className="mr-2 h-6 w-6 text-primary" /> System Preferences
@@ -965,46 +965,48 @@ export default function SystemPreferencesPage() {
                   </div>
                 </div>
               </div>
-            </div>
-          </section>
 
-          <section>
-            <h3 className="text-lg font-semibold text-foreground mb-2 flex items-center">
-              <SidebarIcon className="mr-2 h-5 w-5" /> Sidebar Colors
-            </h3>
-            <p className="text-xs text-muted-foreground mb-4">
-              Customize the sidebar appearance for light and dark themes
-            </p>
-            <Tabs defaultValue="light-sidebar" className="w-full">
-              <TabsList className="grid w-full grid-cols-2 mb-6">
-                <TabsTrigger value="light-sidebar" className="flex items-center gap-2">
-                  <Sun className="h-4 w-4" />
-                  Light Theme
-                </TabsTrigger>
-                <TabsTrigger value="dark-sidebar" className="flex items-center gap-2">
-                  <Moon className="h-4 w-4" />
-                  Dark Theme
-                </TabsTrigger>
-              </TabsList>
-              <TabsContent value="light-sidebar" className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {renderSidebarColorInputs('Light')}
-                </div>
-                <Button variant="outline" size="sm" onClick={() => resetSidebarColors('Light')}>
-                  <RotateCcw className="mr-2 h-4 w-4" />
-                  Reset Light Theme Colors
-                </Button>
-              </TabsContent>
-              <TabsContent value="dark-sidebar" className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {renderSidebarColorInputs('Dark')}
-                </div>
-                <Button variant="outline" size="sm" onClick={() => resetSidebarColors('Dark')}>
-                  <RotateCcw className="mr-2 h-4 w-4" />
-                  Reset Dark Theme Colors
-                </Button>
-              </TabsContent>
-            </Tabs>
+              <Separator className="my-6" />
+              
+              <div>
+                <h4 className="text-lg font-semibold text-foreground mb-2 flex items-center">
+                  <SidebarIcon className="mr-2 h-5 w-5" /> Sidebar Colors
+                </h4>
+                <p className="text-xs text-muted-foreground mb-4">
+                  Customize the sidebar appearance for light and dark themes
+                </p>
+                <Tabs defaultValue="light-sidebar" className="w-full">
+                  <TabsList className="grid w-full grid-cols-2 mb-6">
+                    <TabsTrigger value="light-sidebar" className="flex items-center gap-2">
+                      <Sun className="h-4 w-4" />
+                      Light Theme
+                    </TabsTrigger>
+                    <TabsTrigger value="dark-sidebar" className="flex items-center gap-2">
+                      <Moon className="h-4 w-4" />
+                      Dark Theme
+                    </TabsTrigger>
+                  </TabsList>
+                  <TabsContent value="light-sidebar" className="space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {renderSidebarColorInputs('Light')}
+                    </div>
+                    <Button variant="outline" size="sm" onClick={() => resetSidebarColors('Light')}>
+                      <RotateCcw className="mr-2 h-4 w-4" />
+                      Reset Light Theme Colors
+                    </Button>
+                  </TabsContent>
+                  <TabsContent value="dark-sidebar" className="space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {renderSidebarColorInputs('Dark')}
+                    </div>
+                    <Button variant="outline" size="sm" onClick={() => resetSidebarColors('Dark')}>
+                      <RotateCcw className="mr-2 h-4 w-4" />
+                      Reset Dark Theme Colors
+                    </Button>
+                  </TabsContent>
+                </Tabs>
+              </div>
+            </div>
           </section>
         </CardContent>
         <CardFooter>

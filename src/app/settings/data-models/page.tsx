@@ -150,7 +150,10 @@ export default function DataModelsPage() {
             <Database className="mr-3 h-6 w-6 text-primary" /> Data Models
           </CardTitle>
           <CardDescription>
-            Define and manage data models for candidates, positions, and other entities in your system.
+            Define and manage data models for candidates, positions, and other entities in your system. 
+            Candidates and positions are now fully configurable as data models, allowing you to customize 
+            their structure, validation rules, and field definitions. The system includes default models 
+            for Candidate, Position, and User entities that can be modified or extended as needed.
           </CardDescription>
         </CardHeader>
         <CardContent>

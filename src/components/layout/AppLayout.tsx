@@ -143,8 +143,8 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
 
   return (
     <SidebarProvider defaultOpen>
-      <Sidebar collapsible="icon" variant="sidebar" className="border-r" data-sidebar="sidebar">
-        <SidebarHeader className="p-4 flex items-center justify-center h-16">
+      <Sidebar collapsible="icon" variant="sidebar" className="border-r bg-sidebar" data-sidebar="sidebar">
+        <SidebarHeader className="p-4 flex items-center justify-center h-16 border-b border-sidebar-border">
           <Link href="/" className="flex items-center gap-2 font-semibold text-primary group-data-[collapsible=icon]:hidden">
             {renderLogo(false)}
             <span className="ml-1">{currentAppName}</span>
@@ -156,13 +156,11 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
           </div>
           <SidebarTrigger className="hidden md:group-data-[collapsible=icon]:hidden" />
         </SidebarHeader>
-        <Separator className="my-0" />
-        <SidebarContent className="p-2 pr-1">
+        <SidebarContent className="p-4">
           <SidebarNav />
         </SidebarContent>
-        <SidebarFooter className="p-4 border-t group-data-[collapsible=icon]:hidden">
+        <SidebarFooter className="p-4 border-t border-sidebar-border group-data-[collapsible=icon]:hidden">
           <p className="text-xs text-muted-foreground">© {new Date().getFullYear()} {currentAppName} | Version {packageJson.version} </p>
-      
         </SidebarFooter>
       </Sidebar>
       <SidebarInset>

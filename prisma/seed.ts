@@ -234,6 +234,83 @@ async function main() {
     }
     console.log('✅ System settings created/updated');
 
+    // Seed default data models for candidates and positions
+    console.log('Creating default data models...');
+    const dataModels = [
+      {
+        id: '30000000-0000-0000-0000-000000000001',
+        name: 'Candidate Profile',
+        modelType: 'Candidate',
+        description: 'Standard candidate data model with personal and professional information',
+        schema: {
+          type: 'object',
+          properties: {
+            name: { type: 'string', required: true, label: 'Full Name', description: 'Candidate\'s full name' },
+            email: { type: 'string', format: 'email', required: true, label: 'Email Address', description: 'Primary email contact' },
+            phone: { type: 'string', label: 'Phone Number', description: 'Contact phone number' },
+            positionId: { type: 'string', label: 'Applied Position', description: 'Position the candidate applied for' },
+            recruiterId: { type: 'string', label: 'Assigned Recruiter', description: 'Recruiter responsible for this candidate' },
+            fitScore: { type: 'number', label: 'Fit Score', description: 'AI-generated fit score for the position' },
+            status: { type: 'string', label: 'Application Status', description: 'Current status in recruitment process' },
+            applicationDate: { type: 'date', label: 'Application Date', description: 'When the candidate applied' },
+            avatarUrl: { type: 'string', label: 'Avatar URL', description: 'Profile picture URL' },
+            dataAiHint: { type: 'string', label: 'AI Data Hint', description: 'Additional data for AI processing' },
+            customAttributes: { type: 'object', label: 'Custom Attributes', description: 'Additional custom fields' }
+          },
+          required: ['name', 'email']
+        },
+        isActive: true
+      },
+      {
+        id: '30000000-0000-0000-0000-000000000002',
+        name: 'Job Position',
+        modelType: 'Position',
+        description: 'Job position data model with requirements and details',
+        schema: {
+          type: 'object',
+          properties: {
+            title: { type: 'string', required: true, label: 'Job Title', description: 'Position title' },
+            department: { type: 'string', required: true, label: 'Department', description: 'Department this position belongs to' },
+            description: { type: 'string', label: 'Job Description', description: 'Detailed job description' },
+            isOpen: { type: 'boolean', label: 'Position Open', description: 'Whether the position is currently open' },
+            positionLevel: { type: 'string', label: 'Position Level', description: 'Seniority level of the position' },
+            customAttributes: { type: 'object', label: 'Custom Attributes', description: 'Additional custom fields' }
+          },
+          required: ['title', 'department']
+        },
+        isActive: true
+      },
+      {
+        id: '30000000-0000-0000-0000-000000000003',
+        name: 'User Profile',
+        modelType: 'User',
+        description: 'User profile data model for system users',
+        schema: {
+          type: 'object',
+          properties: {
+            name: { type: 'string', required: true, label: 'Full Name', description: 'User\'s full name' },
+            email: { type: 'string', format: 'email', required: true, label: 'Email Address', description: 'User\'s email address' },
+            role: { type: 'string', label: 'User Role', description: 'System role (Admin, Recruiter, etc.)' },
+            avatarUrl: { type: 'string', label: 'Avatar URL', description: 'Profile picture URL' },
+            modulePermissions: { type: 'array', items: { type: 'string' }, label: 'Module Permissions', description: 'List of module permissions' },
+            authenticationMethod: { type: 'string', label: 'Authentication Method', description: 'How the user authenticates' },
+            forcePasswordChange: { type: 'boolean', label: 'Force Password Change', description: 'Whether user must change password' }
+          },
+          required: ['name', 'email']
+        },
+        isActive: true
+      }
+    ];
+    
+    for (const dataModel of dataModels) {
+      await prisma.dataModel.upsert({
+        where: { id: dataModel.id },
+        update: {},
+        create: dataModel
+      });
+    }
+    console.log('✅ Default data models created/updated');
+
     console.log('🎉 Database seeding completed successfully!');
   } catch (error) {
     console.error('❌ Error during seeding:', error);
