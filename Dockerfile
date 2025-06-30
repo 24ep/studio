@@ -1,8 +1,15 @@
-# Use the 24ep/studio:dev image from Docker Hub as base
-FROM 24ep/studio:dev
+# Use official Node.js base image
+FROM node:20-alpine as base
 
 # Set working directory
 WORKDIR /app
+
+# Copy package files and install dependencies
+COPY package.json package-lock.json ./
+RUN npm ci --omit=dev
+
+# Copy the rest of the application code
+COPY . .
 
 # Copy your specific configuration files
 COPY --chown=node:node prisma ./prisma
@@ -11,8 +18,7 @@ COPY --chown=node:node wait-for-db.sh ./wait-for-db.sh
 COPY --chown=node:node process-upload-queue.mjs ./process-upload-queue.mjs
 COPY --chown=node:node ws-queue-bridge.js ./ws-queue-bridge.js
 
-# Make scripts executable (using the node user)
-USER node
+# Make scripts executable
 RUN chmod +x ./start.sh ./wait-for-db.sh
 
 # Generate Prisma client
