@@ -2,23 +2,7 @@ version: '3.8'
 
 services:
   app:
-    build:
-      context: .
-      dockerfile: Dockerfile
-      args:
-        DATABASE_URL: "${DATABASE_URL}"
-        NEXTAUTH_URL: "${NEXTAUTH_URL}"
-        NEXTAUTH_SECRET: "${NEXTAUTH_SECRET}"
-        AZURE_AD_CLIENT_ID: "${AZURE_AD_CLIENT_ID}"
-        AZURE_AD_CLIENT_SECRET: "${AZURE_AD_CLIENT_SECRET}"
-        AZURE_AD_TENANT_ID: "${AZURE_AD_TENANT_ID}"
-        GOOGLE_API_KEY: "${GOOGLE_API_KEY}"
-        NEXT_PUBLIC_GOOGLE_FONTS_API_KEY: "${NEXT_PUBLIC_GOOGLE_FONTS_API_KEY}"
-      # Build optimizations
-      cache_from:
-        - node:20-alpine
-      # Build with no cache for fresh builds (comment out for faster builds)
-      # no_cache: true
+    image: 24ep/studio:latest
     ports:
       - "${APP_PORT:-9846}:9846"
     # For production deployments, you typically want the application code to be self-contained
@@ -131,9 +115,7 @@ services:
     cpus: 0.1
 
   upload-queue-processor:
-    build:
-      context: .
-      dockerfile: Dockerfile
+    image: 24ep/studio:latest
     command: sh -c "until curl -sf http://app:9846/api/health; do echo Waiting for App HTTP health...; sleep 2; done; node process-upload-queue.mjs"
     environment:
       DATABASE_URL: ${DATABASE_URL}
@@ -172,9 +154,7 @@ services:
     cpus: 0.5
 
   ws-queue-bridge:
-    build:
-      context: .
-      dockerfile: Dockerfile
+    image: 24ep/studio:latest
     command: sh -c "until nc -z redis ${REDIS_PORT}; do echo Waiting for Redis...; sleep 2; done; node ws-queue-bridge.js"
     environment:
       REDIS_URL: ${REDIS_URL}
