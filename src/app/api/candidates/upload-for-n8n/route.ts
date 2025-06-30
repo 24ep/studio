@@ -1,8 +1,7 @@
-
 // src/app/api/candidates/upload-for-n8n/route.ts
 import { NextResponse, type NextRequest } from 'next/server';
 import { getServerSession } from 'next-auth/next';
-import { authOptions } from '@/app/api/auth/[...nextauth]/route';
+import { authOptions } from '@/lib/authOptions';
 import type { UserProfile, Position } from '@/lib/types';
 import { logAudit } from '@/lib/auditLog';
 import pool from '../../../../lib/db'; // For fetching position title

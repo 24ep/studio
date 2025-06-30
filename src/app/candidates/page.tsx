@@ -1,7 +1,6 @@
-
 // src/app/candidates/page.tsx - Server Component
 import { getServerSession } from 'next-auth/next';
-import { authOptions } from '@/app/api/auth/[...nextauth]/route';
+import { authOptions } from '@/lib/authOptions';
 import pool from '@/lib/db';
 import { CandidatesPageClient } from '@/components/candidates/CandidatesPageClient';
 import type { Candidate, Position, RecruitmentStage } from '@/lib/types';

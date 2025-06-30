@@ -1,10 +1,9 @@
-
 // src/app/api/settings/webhook-mappings/route.ts
 import { NextResponse, type NextRequest } from 'next/server';
 import pool from '../../../../lib/db';
 import { z } from 'zod';
 import { getServerSession } from 'next-auth/next';
-import { authOptions } from '@/app/api/auth/[...nextauth]/route';
+import { authOptions } from '@/lib/authOptions';
 import type { WebhookFieldMapping } from '@/lib/types';
 import { logAudit } from '@/lib/auditLog';
 

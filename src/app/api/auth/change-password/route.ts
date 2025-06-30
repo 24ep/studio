@@ -1,8 +1,7 @@
-
 // src/app/api/auth/change-password/route.ts
 import { NextResponse, type NextRequest } from 'next/server';
 import { getServerSession } from 'next-auth/next';
-import { authOptions } from '@/app/api/auth/[...nextauth]/route';
+import { authOptions } from '@/lib/authOptions';
 import { z } from 'zod';
 import pool from '../../../../lib/db';
 import bcrypt from 'bcrypt';

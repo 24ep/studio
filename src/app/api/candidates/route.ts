@@ -6,7 +6,7 @@ import { z } from 'zod';
 import { logAudit } from '@/lib/auditLog';
 import { v4 as uuidv4 } from 'uuid';
 import { getServerSession } from 'next-auth/next';
-import { authOptions } from '@/app/api/auth/[...nextauth]/route';
+import { authOptions } from '@/lib/authOptions';
 
 // Core statuses for fallback or specific logic, full list comes from DB
 const coreCandidateStatusValues: [CandidateStatus, ...CandidateStatus[]] = ['Applied', 'Screening', 'Shortlisted', 'Interview Scheduled', 'Interviewing', 'Offer Extended', 'Offer Accepted', 'Hired', 'Rejected', 'On Hold'];
