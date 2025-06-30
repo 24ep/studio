@@ -70,6 +70,13 @@ services:
       - minio
       - redis
     restart: unless-stopped
+    # Health check for the application
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9846/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
     # Strict resource limits for runtime
     mem_limit: 1g
     cpus: 0.5
@@ -132,7 +139,7 @@ services:
 
   upload-queue-processor:
     image: 24ep/studio:dev
-    command: sh -c "until curl -sf http://app:9846/api/health; do echo Waiting for App HTTP health...; sleep 2; done; node process-upload-queue.mjs"
+    command: sh -c "echo 'Waiting for app service to be ready...' && sleep 10 && until curl -sf http://app:9846/api/health > /dev/null 2>&1; do echo 'App health check failed, retrying in 10 seconds...'; sleep 10; done && echo 'App service is ready, starting upload queue processor...' && node process-upload-queue.mjs"
     environment:
       DATABASE_URL: ${DATABASE_URL}
       MINIO_ENDPOINT: ${MINIO_ENDPOINT}
@@ -161,10 +168,14 @@ services:
       PROCESSOR_URL: ${PROCESSOR_URL}
       PROCESSOR_API_KEY: ${PROCESSOR_API_KEY}
     depends_on:
-      - app
-      - postgres
-      - minio
-      - redis
+      app:
+        condition: service_healthy
+      postgres:
+        condition: service_started
+      minio:
+        condition: service_started
+      redis:
+        condition: service_started
     restart: unless-stopped
     mem_limit: 1g
     cpus: 0.5

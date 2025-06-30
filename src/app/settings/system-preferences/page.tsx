@@ -1,8 +1,8 @@
 "use client";
 
 import React, { useEffect, useState, type ChangeEvent } from "react";
-import { Loader2, Save, X, Palette, ImageUp, Trash2, XCircle, PenSquare, Sun, Moon, RotateCcw, Sidebar as SidebarIcon } from "lucide-react";
-import { useSession } from "next-auth/react";
+import { Loader2, Save, X, Palette, ImageUp, Trash2, XCircle, PenSquare, Sun, Moon, RotateCcw, Sidebar as SidebarIcon, LogIn } from "lucide-react";
+import { useSession, signIn } from "next-auth/react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -11,7 +11,6 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter }
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useToast } from "@/hooks/use-toast";
 import Image from "next/image";
-import { signIn } from "next-auth/react";
 import { useRouter, usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { setThemeAndColors } from "@/lib/themeUtils";
@@ -30,7 +29,15 @@ const APP_LOGO_DATA_URL_KEY = 'appLogoDataUrl';
 const APP_NAME_KEY = 'appName';
 const APP_CONFIG_APP_NAME_KEY = 'appConfigAppName';
 
+// Login page design keys/types/utilities
+const LOGIN_BACKGROUND_TYPE_KEY = 'loginBackgroundType';
+const LOGIN_BACKGROUND_IMAGE_KEY = 'loginBackgroundImage';
+const LOGIN_BACKGROUND_GRADIENT_START_KEY = 'loginBackgroundGradientStart';
+const LOGIN_BACKGROUND_GRADIENT_END_KEY = 'loginBackgroundGradientEnd';
+const LOGIN_BACKGROUND_COLOR_KEY = 'loginBackgroundColor';
+
 type ThemePreference = "light" | "dark" | "system";
+type LoginBackgroundType = 'image' | 'gradient' | 'solid';
 
 // --- Sidebar color keys/types/utilities ---
 const DEFAULT_PRIMARY_GRADIENT_START = "179 67% 66%";
@@ -413,6 +420,12 @@ function createInitialSidebarColors() {
 }
 // --- End sidebar color utilities ---
 
+// Login page design state
+const DEFAULT_LOGIN_BACKGROUND_TYPE: LoginBackgroundType = 'gradient';
+const DEFAULT_LOGIN_BACKGROUND_GRADIENT_START = '179 67% 66%';
+const DEFAULT_LOGIN_BACKGROUND_GRADIENT_END = '238 74% 61%';
+const DEFAULT_LOGIN_BACKGROUND_COLOR = '220 25% 97%';
+
 export default function SystemPreferencesPage() {
   const { success, error } = useToast();
   const [isClient, setIsClient] = useState(false);
@@ -427,6 +440,16 @@ export default function SystemPreferencesPage() {
   const [selectedLogoFile, setSelectedLogoFile] = useState<File | null>(null);
   const [logoPreviewUrl, setLogoPreviewUrl] = useState<string | null>(null);
   const [savedLogoDataUrl, setSavedLogoDataUrl] = useState<string | null>(null);
+  
+  // Login page design state
+  const [loginBackgroundType, setLoginBackgroundType] = useState<LoginBackgroundType>(DEFAULT_LOGIN_BACKGROUND_TYPE);
+  const [selectedLoginImageFile, setSelectedLoginImageFile] = useState<File | null>(null);
+  const [loginImagePreviewUrl, setLoginImagePreviewUrl] = useState<string | null>(null);
+  const [savedLoginImageDataUrl, setSavedLoginImageDataUrl] = useState<string | null>(null);
+  const [loginBackgroundGradientStart, setLoginBackgroundGradientStart] = useState<string>(DEFAULT_LOGIN_BACKGROUND_GRADIENT_START);
+  const [loginBackgroundGradientEnd, setLoginBackgroundGradientEnd] = useState<string>(DEFAULT_LOGIN_BACKGROUND_GRADIENT_END);
+  const [loginBackgroundColor, setLoginBackgroundColor] = useState<string>(DEFAULT_LOGIN_BACKGROUND_COLOR);
+  
   // Loading/saving/error
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -457,6 +480,15 @@ export default function SystemPreferencesPage() {
           setAppName(data[APP_NAME_KEY] || DEFAULT_APP_NAME);
           setSavedLogoDataUrl(data[APP_LOGO_DATA_URL_KEY] || null);
           setLogoPreviewUrl(data[APP_LOGO_DATA_URL_KEY] || null);
+          
+          // Load login page design settings
+          setLoginBackgroundType((data[LOGIN_BACKGROUND_TYPE_KEY] as LoginBackgroundType) || DEFAULT_LOGIN_BACKGROUND_TYPE);
+          setSavedLoginImageDataUrl(data[LOGIN_BACKGROUND_IMAGE_KEY] || null);
+          setLoginImagePreviewUrl(data[LOGIN_BACKGROUND_IMAGE_KEY] || null);
+          setLoginBackgroundGradientStart(data[LOGIN_BACKGROUND_GRADIENT_START_KEY] || DEFAULT_LOGIN_BACKGROUND_GRADIENT_START);
+          setLoginBackgroundGradientEnd(data[LOGIN_BACKGROUND_GRADIENT_END_KEY] || DEFAULT_LOGIN_BACKGROUND_GRADIENT_END);
+          setLoginBackgroundColor(data[LOGIN_BACKGROUND_COLOR_KEY] || DEFAULT_LOGIN_BACKGROUND_COLOR);
+          
           // Load sidebar colors
           const newSidebarColors = createInitialSidebarColors();
           SIDEBAR_COLOR_KEYS.forEach(key => {
@@ -524,61 +556,95 @@ export default function SystemPreferencesPage() {
     }
   };
 
+  const handleLoginImageFileChange = (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      if (file.size > 100 * 1024) { // 100KB limit
+        error('Login background image must be less than 100KB');
+        return;
+      }
+      
+      setSelectedLoginImageFile(file);
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const dataUrl = e.target?.result as string;
+        setLoginImagePreviewUrl(dataUrl);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const removeSelectedLoginImage = (clearSaved: boolean = false) => {
+    if (clearSaved) {
+      setSavedLoginImageDataUrl(null);
+      setLoginImagePreviewUrl(null);
+    } else {
+      setSelectedLoginImageFile(null);
+      setLoginImagePreviewUrl(savedLoginImageDataUrl);
+    }
+  };
+
   const handleSavePreferences = async () => {
+    if (!canEdit) return;
+    
     setSaving(true);
     setErrorMsg(null);
     setSuccessMsg(false);
     
     try {
-      // Prepare settings to save
-      const settingsToSave = [
+      const formData = new FormData();
+      
+      // System preferences
+      formData.append('preferences', JSON.stringify([
         { key: APP_THEME_KEY, value: themePreference },
         { key: APP_NAME_KEY, value: appName },
-        { key: APP_LOGO_DATA_URL_KEY, value: logoPreviewUrl },
-        ...SIDEBAR_COLOR_KEYS.map(key => ({ key, value: (sidebarColors as any)[key] }))
-      ];
-
+        { key: LOGIN_BACKGROUND_TYPE_KEY, value: loginBackgroundType },
+        { key: LOGIN_BACKGROUND_GRADIENT_START_KEY, value: loginBackgroundGradientStart },
+        { key: LOGIN_BACKGROUND_GRADIENT_END_KEY, value: loginBackgroundGradientEnd },
+        { key: LOGIN_BACKGROUND_COLOR_KEY, value: loginBackgroundColor },
+      ]));
+      
+      // Logo file
+      if (selectedLogoFile) {
+        formData.append('logo', selectedLogoFile);
+      }
+      
+      // Login background image file
+      if (selectedLoginImageFile) {
+        formData.append('loginBackgroundImage', selectedLoginImageFile);
+      }
+      
+      // Sidebar colors
+      SIDEBAR_COLOR_KEYS.forEach(key => {
+        formData.append('preferences', JSON.stringify([{ key, value: sidebarColors[key] }]));
+      });
+      
       const res = await fetch('/api/settings/system-settings', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(settingsToSave),
+        body: formData,
       });
-
+      
       if (!res.ok) {
         const errorData = await res.json();
-        throw new Error(errorData.message || 'Failed to save preferences');
+        throw new Error(errorData.error || 'Failed to save preferences');
       }
-
-      // Update localStorage for immediate effect
-      if (typeof window !== 'undefined') {
-        localStorage.setItem(APP_CONFIG_APP_NAME_KEY, appName);
-        if (logoPreviewUrl) {
-          localStorage.setItem(APP_LOGO_DATA_URL_KEY, logoPreviewUrl);
-        } else {
-          localStorage.removeItem(APP_LOGO_DATA_URL_KEY);
-        }
-        localStorage.setItem('appThemePreference', themePreference);
-        
-        // Save sidebar colors to localStorage
-        SIDEBAR_COLOR_KEYS.forEach(key => {
-          localStorage.setItem(key, (sidebarColors as any)[key]);
-        });
+      
+      // Update saved states
+      if (selectedLogoFile) {
+        setSavedLogoDataUrl(logoPreviewUrl);
+        setSelectedLogoFile(null);
       }
-
-      // Dispatch custom event to update other components
-      if (typeof window !== 'undefined') {
-        window.dispatchEvent(new CustomEvent('appConfigChanged', {
-          detail: {
-            appName,
-            logoUrl: logoPreviewUrl,
-            themePreference,
-            sidebarColors
-          }
-        }));
+      
+      if (selectedLoginImageFile) {
+        setSavedLoginImageDataUrl(loginImagePreviewUrl);
+        setSelectedLoginImageFile(null);
       }
-
+      
+      success('Preferences saved successfully!');
       setSuccessMsg(true);
-      setTimeout(() => setSuccessMsg(false), 3000);
+      
+      // Dispatch event for real-time updates
+      window.dispatchEvent(new CustomEvent('appConfigChanged'));
       
     } catch (e: any) {
       setErrorMsg(e.message);
@@ -757,6 +823,189 @@ export default function SystemPreferencesPage() {
               </p>
             </div>
           </section>
+
+          <section>
+            <h3 className="text-lg font-semibold text-foreground mb-2 flex items-center">
+              <LogIn className="mr-2 h-5 w-5" /> Login Page Design
+            </h3>
+            <div className="space-y-4">
+              <div>
+                <Label htmlFor="login-background-type">Background Type</Label>
+                <Select value={loginBackgroundType} onValueChange={(value) => setLoginBackgroundType(value as LoginBackgroundType)} disabled={!canEdit}>
+                  <SelectTrigger className="mt-1">
+                    <SelectValue placeholder="Select background type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="image">Background Image</SelectItem>
+                    <SelectItem value="gradient">Gradient</SelectItem>
+                    <SelectItem value="solid">Solid Color</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {loginBackgroundType === 'image' && (
+                <div>
+                  <Label htmlFor="login-background-image">Background Image (Recommended: landscape, max 500KB)</Label>
+                  <Input
+                    id="login-background-image"
+                    type="file"
+                    accept="image/*"
+                    onChange={handleLoginImageFileChange}
+                    className="mt-1"
+                    disabled={!canEdit}
+                  />
+                  {loginImagePreviewUrl && (
+                    <div className="mt-3 p-2 border rounded-md inline-flex items-center gap-3 bg-muted/50">
+                      <Image src={loginImagePreviewUrl} alt="Login background preview" width={120} height={80} className="h-20 w-30 object-cover rounded" />
+                      {selectedLoginImageFile && <span className="text-sm text-foreground truncate max-w-xs">{selectedLoginImageFile.name}</span>}
+                      <Button variant="ghost" size="icon" onClick={() => removeSelectedLoginImage(false)} className="h-7 w-7">
+                        <XCircle className="h-4 w-4 text-muted-foreground hover:text-destructive"/>
+                        <span className="sr-only">Cancel selection</span>
+                      </Button>
+                    </div>
+                  )}
+                  {savedLoginImageDataUrl && (
+                    <div className="mt-2">
+                      <Button variant="outline" size="sm" onClick={() => removeSelectedLoginImage(true)} disabled={!canEdit}>
+                        <Trash2 className="mr-2 h-4 w-4"/> Remove Background Image
+                      </Button>
+                    </div>
+                  )}
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Select an image for the login page background. Landscape orientation works best.
+                  </p>
+                </div>
+              )}
+
+              {loginBackgroundType === 'gradient' && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="login-gradient-start">Gradient Start Color</Label>
+                    <div className="flex items-center gap-2 mt-1">
+                      <Input
+                        id="login-gradient-start"
+                        type="text"
+                        value={loginBackgroundGradientStart}
+                        onChange={(e) => setLoginBackgroundGradientStart(e.target.value)}
+                        placeholder="179 67% 66%"
+                        className="text-sm"
+                        disabled={!canEdit}
+                      />
+                      <Input
+                        type="color"
+                        value={convertHslStringToHex(loginBackgroundGradientStart)}
+                        onChange={(e) => setLoginBackgroundGradientStart(hexToHslString(e.target.value))}
+                        className="w-10 h-9 p-1 rounded-md border"
+                        disabled={!canEdit}
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <Label htmlFor="login-gradient-end">Gradient End Color</Label>
+                    <div className="flex items-center gap-2 mt-1">
+                      <Input
+                        id="login-gradient-end"
+                        type="text"
+                        value={loginBackgroundGradientEnd}
+                        onChange={(e) => setLoginBackgroundGradientEnd(e.target.value)}
+                        placeholder="238 74% 61%"
+                        className="text-sm"
+                        disabled={!canEdit}
+                      />
+                      <Input
+                        type="color"
+                        value={convertHslStringToHex(loginBackgroundGradientEnd)}
+                        onChange={(e) => setLoginBackgroundGradientEnd(hexToHslString(e.target.value))}
+                        className="w-10 h-9 p-1 rounded-md border"
+                        disabled={!canEdit}
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {loginBackgroundType === 'solid' && (
+                <div>
+                  <Label htmlFor="login-solid-color">Background Color</Label>
+                  <div className="flex items-center gap-2 mt-1">
+                    <Input
+                      id="login-solid-color"
+                      type="text"
+                      value={loginBackgroundColor}
+                      onChange={(e) => setLoginBackgroundColor(e.target.value)}
+                      placeholder="220 25% 97%"
+                      className="text-sm"
+                      disabled={!canEdit}
+                    />
+                    <Input
+                      type="color"
+                      value={convertHslStringToHex(loginBackgroundColor)}
+                      onChange={(e) => setLoginBackgroundColor(hexToHslString(e.target.value))}
+                      className="w-10 h-9 p-1 rounded-md border"
+                      disabled={!canEdit}
+                    />
+                  </div>
+                </div>
+              )}
+
+              <div className="p-4 border rounded-lg bg-muted/30">
+                <h4 className="text-sm font-medium mb-2">Preview</h4>
+                <div 
+                  className="h-24 rounded-md relative overflow-hidden"
+                  style={{
+                    background: loginBackgroundType === 'image' && loginImagePreviewUrl 
+                      ? `url(${loginImagePreviewUrl}) center/cover`
+                      : loginBackgroundType === 'gradient'
+                      ? `linear-gradient(135deg, hsl(${loginBackgroundGradientStart}), hsl(${loginBackgroundGradientEnd}))`
+                      : `hsl(${loginBackgroundColor})`
+                  }}
+                >
+                  <div className="absolute inset-0 bg-black/20 flex items-center justify-center">
+                    <span className="text-white text-sm font-medium">Login Page Background</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section>
+            <h3 className="text-lg font-semibold text-foreground mb-2 flex items-center">
+              <SidebarIcon className="mr-2 h-5 w-5" /> Sidebar Colors
+            </h3>
+            <p className="text-xs text-muted-foreground mb-4">
+              Customize the sidebar appearance for light and dark themes
+            </p>
+            <Tabs defaultValue="light-sidebar" className="w-full">
+              <TabsList className="grid w-full grid-cols-2 mb-6">
+                <TabsTrigger value="light-sidebar" className="flex items-center gap-2">
+                  <Sun className="h-4 w-4" />
+                  Light Theme
+                </TabsTrigger>
+                <TabsTrigger value="dark-sidebar" className="flex items-center gap-2">
+                  <Moon className="h-4 w-4" />
+                  Dark Theme
+                </TabsTrigger>
+              </TabsList>
+              <TabsContent value="light-sidebar" className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {renderSidebarColorInputs('Light')}
+                </div>
+                <Button variant="outline" size="sm" onClick={() => resetSidebarColors('Light')}>
+                  <RotateCcw className="mr-2 h-4 w-4" />
+                  Reset Light Theme Colors
+                </Button>
+              </TabsContent>
+              <TabsContent value="dark-sidebar" className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {renderSidebarColorInputs('Dark')}
+                </div>
+                <Button variant="outline" size="sm" onClick={() => resetSidebarColors('Dark')}>
+                  <RotateCcw className="mr-2 h-4 w-4" />
+                  Reset Dark Theme Colors
+                </Button>
+              </TabsContent>
+            </Tabs>
+          </section>
         </CardContent>
         <CardFooter>
           <Button onClick={handleSavePreferences} className="btn-primary-gradient" disabled={saving || !canEdit}>
@@ -765,49 +1014,6 @@ export default function SystemPreferencesPage() {
           </Button>
           {successMsg && <span className="ml-4 text-green-600">Preferences saved!</span>}
         </CardFooter>
-      </Card>
-      <Card className="lg:col-span-3">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <SidebarIcon className="h-5 w-5 text-primary" />
-            Sidebar Colors
-          </CardTitle>
-          <CardDescription>
-            Customize the sidebar appearance for light and dark themes
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Tabs defaultValue="light-sidebar" className="w-full">
-            <TabsList className="grid w-full grid-cols-2 mb-6">
-              <TabsTrigger value="light-sidebar" className="flex items-center gap-2">
-                <Sun className="h-4 w-4" />
-                Light Theme
-              </TabsTrigger>
-              <TabsTrigger value="dark-sidebar" className="flex items-center gap-2">
-                <Moon className="h-4 w-4" />
-                Dark Theme
-              </TabsTrigger>
-            </TabsList>
-            <TabsContent value="light-sidebar" className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {renderSidebarColorInputs('Light')}
-              </div>
-              <Button variant="outline" size="sm" onClick={() => resetSidebarColors('Light')}>
-                <RotateCcw className="mr-2 h-4 w-4" />
-                Reset Light Theme Colors
-              </Button>
-            </TabsContent>
-            <TabsContent value="dark-sidebar" className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {renderSidebarColorInputs('Dark')}
-              </div>
-              <Button variant="outline" size="sm" onClick={() => resetSidebarColors('Dark')}>
-                <RotateCcw className="mr-2 h-4 w-4" />
-                Reset Dark Theme Colors
-              </Button>
-            </TabsContent>
-          </Tabs>
-        </CardContent>
       </Card>
     </div>
   );
