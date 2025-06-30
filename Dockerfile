@@ -5,13 +5,14 @@ FROM 24ep/studio:dev
 WORKDIR /app
 
 # Copy your specific configuration files
-COPY prisma ./prisma
-COPY start.sh ./start.sh
-COPY wait-for-db.sh ./wait-for-db.sh
-COPY process-upload-queue.mjs ./process-upload-queue.mjs
-COPY ws-queue-bridge.js ./ws-queue-bridge.js
+COPY --chown=node:node prisma ./prisma
+COPY --chown=node:node start.sh ./start.sh
+COPY --chown=node:node wait-for-db.sh ./wait-for-db.sh
+COPY --chown=node:node process-upload-queue.mjs ./process-upload-queue.mjs
+COPY --chown=node:node ws-queue-bridge.js ./ws-queue-bridge.js
 
-# Make scripts executable
+# Make scripts executable (using the node user)
+USER node
 RUN chmod +x ./start.sh ./wait-for-db.sh
 
 # Generate Prisma client
