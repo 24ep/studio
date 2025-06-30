@@ -1,5 +1,5 @@
-# Use the 24ep/studio image from Docker Hub as base
-FROM 24ep/studio
+# Use the 24ep/studio:dev image from Docker Hub as base
+FROM 24ep/studio:dev
 
 # Set working directory
 WORKDIR /app
