@@ -28,6 +28,7 @@ const DEFAULT_THEME: ThemePreference = "system";
 const APP_THEME_KEY = 'themePreference';
 const APP_LOGO_DATA_URL_KEY = 'appLogoDataUrl';
 const APP_NAME_KEY = 'appName';
+const APP_CONFIG_APP_NAME_KEY = 'appConfigAppName';
 
 type ThemePreference = "light" | "dark" | "system";
 
@@ -35,21 +36,101 @@ type ThemePreference = "light" | "dark" | "system";
 const DEFAULT_PRIMARY_GRADIENT_START = "179 67% 66%";
 const DEFAULT_PRIMARY_GRADIENT_END = "238 74% 61%";
 const DEFAULT_SIDEBAR_COLORS_BASE = {
+  // Background colors
   sidebarBgStartL: "220 25% 97%", sidebarBgEndL: "220 20% 94%", sidebarTextL: "220 25% 30%",
   sidebarActiveBgStartL: DEFAULT_PRIMARY_GRADIENT_START, sidebarActiveBgEndL: DEFAULT_PRIMARY_GRADIENT_END, sidebarActiveTextL: "0 0% 100%",      
   sidebarHoverBgL: "220 10% 92%", sidebarHoverTextL: "220 25% 25%", sidebarBorderL: "220 15% 85%",
   sidebarBgStartD: "220 15% 12%", sidebarBgEndD: "220 15% 9%", sidebarTextD: "210 30% 85%",
   sidebarActiveBgStartD: DEFAULT_PRIMARY_GRADIENT_START, sidebarActiveBgEndD: DEFAULT_PRIMARY_GRADIENT_END, sidebarActiveTextD: "0 0% 100%",      
-  sidebarHoverBgD: "220 15% 20%", sidebarHoverTextD: "210 30% 90%", sidebarBorderD: "220 15% 18%"
+  sidebarHoverBgD: "220 15% 20%", sidebarHoverTextD: "210 30% 90%", sidebarBorderD: "220 15% 18%",
+  
+  // Font settings
+  sidebarFontFamilyL: "inherit", sidebarFontSizeL: "0.875rem", sidebarFontWeightL: "400",
+  sidebarLineHeightL: "1.25rem", sidebarLetterSpacingL: "0", sidebarTextTransformL: "none",
+  sidebarFontFamilyD: "inherit", sidebarFontSizeD: "0.875rem", sidebarFontWeightD: "400",
+  sidebarLineHeightD: "1.25rem", sidebarLetterSpacingD: "0", sidebarTextTransformD: "none",
+  
+  // Border and shadow settings
+  sidebarBorderWidthL: "1px", sidebarBorderStyleL: "solid", sidebarBorderRadiusL: "0.5rem",
+  sidebarShadowL: "0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1)",
+  sidebarShadowHoverL: "0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)",
+  sidebarShadowActiveL: "0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1)",
+  sidebarBorderWidthD: "1px", sidebarBorderStyleD: "solid", sidebarBorderRadiusD: "0.5rem",
+  sidebarShadowD: "0 1px 3px 0 rgb(0 0 0 / 0.3), 0 1px 2px -1px rgb(0 0 0 / 0.3)",
+  sidebarShadowHoverD: "0 4px 6px -1px rgb(0 0 0 / 0.3), 0 2px 4px -2px rgb(0 0 0 / 0.3)",
+  sidebarShadowActiveD: "0 10px 15px -3px rgb(0 0 0 / 0.3), 0 4px 6px -4px rgb(0 0 0 / 0.3)",
+  
+  // Spacing and layout
+  sidebarPaddingXL: "0.75rem", sidebarPaddingYL: "0.5rem", sidebarMarginL: "0.25rem", sidebarGapL: "0.5rem",
+  sidebarWidthL: "16rem", sidebarWidthCollapsedL: "3rem", sidebarTransitionDurationL: "0.2s", sidebarTransitionTimingL: "ease-in-out",
+  sidebarPaddingXD: "0.75rem", sidebarPaddingYD: "0.5rem", sidebarMarginD: "0.25rem", sidebarGapD: "0.5rem",
+  sidebarWidthD: "16rem", sidebarWidthCollapsedD: "3rem", sidebarTransitionDurationD: "0.2s", sidebarTransitionTimingD: "ease-in-out",
+  
+  // Menu item specific settings
+  sidebarMenuItemBgL: "transparent", sidebarMenuItemBgHoverL: "220 10% 92%", sidebarMenuItemBgActiveL: "179 67% 66%",
+  sidebarMenuItemColorL: "220 25% 30%", sidebarMenuItemColorHoverL: "220 25% 25%", sidebarMenuItemColorActiveL: "0 0% 100%",
+  sidebarMenuItemBorderL: "transparent", sidebarMenuItemBorderHoverL: "transparent", sidebarMenuItemBorderActiveL: "transparent",
+  sidebarMenuItemBorderRadiusL: "0.375rem", sidebarMenuItemPaddingXL: "0.75rem", sidebarMenuItemPaddingYL: "0.5rem",
+  sidebarMenuItemMarginL: "0.125rem", sidebarMenuItemFontWeightL: "400", sidebarMenuItemFontWeightActiveL: "600",
+  sidebarMenuItemFontSizeL: "0.875rem", sidebarMenuItemLineHeightL: "1.25rem", sidebarMenuItemTransitionL: "all 0.2s ease-in-out",
+  sidebarMenuItemBgD: "transparent", sidebarMenuItemBgHoverD: "220 15% 20%", sidebarMenuItemBgActiveD: "179 67% 66%",
+  sidebarMenuItemColorD: "210 30% 85%", sidebarMenuItemColorHoverD: "210 30% 90%", sidebarMenuItemColorActiveD: "0 0% 100%",
+  sidebarMenuItemBorderD: "transparent", sidebarMenuItemBorderHoverD: "transparent", sidebarMenuItemBorderActiveD: "transparent",
+  sidebarMenuItemBorderRadiusD: "0.375rem", sidebarMenuItemPaddingXD: "0.75rem", sidebarMenuItemPaddingYD: "0.5rem",
+  sidebarMenuItemMarginD: "0.125rem", sidebarMenuItemFontWeightD: "400", sidebarMenuItemFontWeightActiveD: "600",
+  sidebarMenuItemFontSizeD: "0.875rem", sidebarMenuItemLineHeightD: "1.25rem", sidebarMenuItemTransitionD: "all 0.2s ease-in-out",
+  
+  // Icon settings
+  sidebarIconSizeL: "1.25rem", sidebarIconColorL: "220 25% 30%", sidebarIconColorHoverL: "220 25% 25%", sidebarIconColorActiveL: "0 0% 100%",
+  sidebarIconMarginRightL: "0.75rem", sidebarIconTransitionL: "color 0.2s ease-in-out",
+  sidebarIconSizeD: "1.25rem", sidebarIconColorD: "210 30% 85%", sidebarIconColorHoverD: "210 30% 90%", sidebarIconColorActiveD: "0 0% 100%",
+  sidebarIconMarginRightD: "0.75rem", sidebarIconTransitionD: "color 0.2s ease-in-out",
+  
+  // Group label settings
+  sidebarGroupLabelColorL: "220 15% 50%", sidebarGroupLabelFontSizeL: "0.75rem", sidebarGroupLabelFontWeightL: "500",
+  sidebarGroupLabelTextTransformL: "uppercase", sidebarGroupLabelLetterSpacingL: "0.05em", sidebarGroupLabelPaddingL: "0.5rem 0.75rem", sidebarGroupLabelMarginL: "0.5rem 0",
+  sidebarGroupLabelColorD: "210 25% 70%", sidebarGroupLabelFontSizeD: "0.75rem", sidebarGroupLabelFontWeightD: "500",
+  sidebarGroupLabelTextTransformD: "uppercase", sidebarGroupLabelLetterSpacingD: "0.05em", sidebarGroupLabelPaddingD: "0.5rem 0.75rem", sidebarGroupLabelMarginD: "0.5rem 0",
 };
+
 const SIDEBAR_COLOR_KEYS = [
+  // Background colors
   'sidebarBgStartL', 'sidebarBgEndL', 'sidebarTextL',
   'sidebarActiveBgStartL', 'sidebarActiveBgEndL', 'sidebarActiveTextL',
   'sidebarHoverBgL', 'sidebarHoverTextL', 'sidebarBorderL',
   'sidebarBgStartD', 'sidebarBgEndD', 'sidebarTextD',
   'sidebarActiveBgStartD', 'sidebarActiveBgEndD', 'sidebarActiveTextD',
   'sidebarHoverBgD', 'sidebarHoverTextD', 'sidebarBorderD',
+  
+  // Font settings
+  'sidebarFontFamilyL', 'sidebarFontSizeL', 'sidebarFontWeightL', 'sidebarLineHeightL', 'sidebarLetterSpacingL', 'sidebarTextTransformL',
+  'sidebarFontFamilyD', 'sidebarFontSizeD', 'sidebarFontWeightD', 'sidebarLineHeightD', 'sidebarLetterSpacingD', 'sidebarTextTransformD',
+  
+  // Border and shadow settings
+  'sidebarBorderWidthL', 'sidebarBorderStyleL', 'sidebarBorderRadiusL', 'sidebarShadowL', 'sidebarShadowHoverL', 'sidebarShadowActiveL',
+  'sidebarBorderWidthD', 'sidebarBorderStyleD', 'sidebarBorderRadiusD', 'sidebarShadowD', 'sidebarShadowHoverD', 'sidebarShadowActiveD',
+  
+  // Spacing and layout
+  'sidebarPaddingXL', 'sidebarPaddingYL', 'sidebarMarginL', 'sidebarGapL', 'sidebarWidthL', 'sidebarWidthCollapsedL', 'sidebarTransitionDurationL', 'sidebarTransitionTimingL',
+  'sidebarPaddingXD', 'sidebarPaddingYD', 'sidebarMarginD', 'sidebarGapD', 'sidebarWidthD', 'sidebarWidthCollapsedD', 'sidebarTransitionDurationD', 'sidebarTransitionTimingD',
+  
+  // Menu item specific settings
+  'sidebarMenuItemBgL', 'sidebarMenuItemBgHoverL', 'sidebarMenuItemBgActiveL', 'sidebarMenuItemColorL', 'sidebarMenuItemColorHoverL', 'sidebarMenuItemColorActiveL',
+  'sidebarMenuItemBorderL', 'sidebarMenuItemBorderHoverL', 'sidebarMenuItemBorderActiveL', 'sidebarMenuItemBorderRadiusL', 'sidebarMenuItemPaddingXL', 'sidebarMenuItemPaddingYL',
+  'sidebarMenuItemMarginL', 'sidebarMenuItemFontWeightL', 'sidebarMenuItemFontWeightActiveL', 'sidebarMenuItemFontSizeL', 'sidebarMenuItemLineHeightL', 'sidebarMenuItemTransitionL',
+  'sidebarMenuItemBgD', 'sidebarMenuItemBgHoverD', 'sidebarMenuItemBgActiveD', 'sidebarMenuItemColorD', 'sidebarMenuItemColorHoverD', 'sidebarMenuItemColorActiveD',
+  'sidebarMenuItemBorderD', 'sidebarMenuItemBorderHoverD', 'sidebarMenuItemBorderActiveD', 'sidebarMenuItemBorderRadiusD', 'sidebarMenuItemPaddingXD', 'sidebarMenuItemPaddingYD',
+  'sidebarMenuItemMarginD', 'sidebarMenuItemFontWeightD', 'sidebarMenuItemFontWeightActiveD', 'sidebarMenuItemFontSizeD', 'sidebarMenuItemLineHeightD', 'sidebarMenuItemTransitionD',
+  
+  // Icon settings
+  'sidebarIconSizeL', 'sidebarIconColorL', 'sidebarIconColorHoverL', 'sidebarIconColorActiveL', 'sidebarIconMarginRightL', 'sidebarIconTransitionL',
+  'sidebarIconSizeD', 'sidebarIconColorD', 'sidebarIconColorHoverD', 'sidebarIconColorActiveD', 'sidebarIconMarginRightD', 'sidebarIconTransitionD',
+  
+  // Group label settings
+  'sidebarGroupLabelColorL', 'sidebarGroupLabelFontSizeL', 'sidebarGroupLabelFontWeightL', 'sidebarGroupLabelTextTransformL', 'sidebarGroupLabelLetterSpacingL', 'sidebarGroupLabelPaddingL', 'sidebarGroupLabelMarginL',
+  'sidebarGroupLabelColorD', 'sidebarGroupLabelFontSizeD', 'sidebarGroupLabelFontWeightD', 'sidebarGroupLabelTextTransformD', 'sidebarGroupLabelLetterSpacingD', 'sidebarGroupLabelPaddingD', 'sidebarGroupLabelMarginD',
 ];
+
 function parseHslString(hslString: string): { h: number; s: number; l: number } | null {
   const match = hslString?.match(/^([\d.]+)\s+([\d.]+)%\s+([\d.]+)%$/);
   if (!match) return null;
@@ -105,6 +186,7 @@ function convertHslStringToHex(hslString: string | null | undefined): string {
 }
 
 interface SidebarColors {
+  // Background colors
   sidebarBgStartL: string; sidebarBgEndL: string; sidebarTextL: string;
   sidebarActiveBgStartL: string; sidebarActiveBgEndL: string; sidebarActiveTextL: string;
   sidebarHoverBgL: string; sidebarHoverTextL: string; sidebarBorderL: string;
@@ -112,16 +194,217 @@ interface SidebarColors {
   sidebarActiveBgStartD: string; sidebarActiveBgEndD: string; 
   sidebarActiveTextD: string;
   sidebarHoverBgD: string; sidebarHoverTextD: string; sidebarBorderD: string;
+  
+  // Font settings
+  sidebarFontFamilyL: string; sidebarFontSizeL: string; sidebarFontWeightL: string;
+  sidebarLineHeightL: string; sidebarLetterSpacingL: string; sidebarTextTransformL: string;
+  sidebarFontFamilyD: string; sidebarFontSizeD: string; sidebarFontWeightD: string;
+  sidebarLineHeightD: string; sidebarLetterSpacingD: string; sidebarTextTransformD: string;
+  
+  // Border and shadow settings
+  sidebarBorderWidthL: string; sidebarBorderStyleL: string; sidebarBorderRadiusL: string;
+  sidebarShadowL: string; sidebarShadowHoverL: string; sidebarShadowActiveL: string;
+  sidebarBorderWidthD: string; sidebarBorderStyleD: string; sidebarBorderRadiusD: string;
+  sidebarShadowD: string; sidebarShadowHoverD: string; sidebarShadowActiveD: string;
+  
+  // Spacing and layout
+  sidebarPaddingXL: string; sidebarPaddingYL: string; sidebarMarginL: string; sidebarGapL: string;
+  sidebarWidthL: string; sidebarWidthCollapsedL: string; sidebarTransitionDurationL: string; sidebarTransitionTimingL: string;
+  sidebarPaddingXD: string; sidebarPaddingYD: string; sidebarMarginD: string; sidebarGapD: string;
+  sidebarWidthD: string; sidebarWidthCollapsedD: string; sidebarTransitionDurationD: string; sidebarTransitionTimingD: string;
+  
+  // Menu item specific settings
+  sidebarMenuItemBgL: string; sidebarMenuItemBgHoverL: string; sidebarMenuItemBgActiveL: string;
+  sidebarMenuItemColorL: string; sidebarMenuItemColorHoverL: string; sidebarMenuItemColorActiveL: string;
+  sidebarMenuItemBorderL: string; sidebarMenuItemBorderHoverL: string; sidebarMenuItemBorderActiveL: string;
+  sidebarMenuItemBorderRadiusL: string; sidebarMenuItemPaddingXL: string; sidebarMenuItemPaddingYL: string;
+  sidebarMenuItemMarginL: string; sidebarMenuItemFontWeightL: string; sidebarMenuItemFontWeightActiveL: string;
+  sidebarMenuItemFontSizeL: string; sidebarMenuItemLineHeightL: string; sidebarMenuItemTransitionL: string;
+  sidebarMenuItemBgD: string; sidebarMenuItemBgHoverD: string; sidebarMenuItemBgActiveD: string;
+  sidebarMenuItemColorD: string; sidebarMenuItemColorHoverD: string; sidebarMenuItemColorActiveD: string;
+  sidebarMenuItemBorderD: string; sidebarMenuItemBorderHoverD: string; sidebarMenuItemBorderActiveD: string;
+  sidebarMenuItemBorderRadiusD: string; sidebarMenuItemPaddingXD: string; sidebarMenuItemPaddingYD: string;
+  sidebarMenuItemMarginD: string; sidebarMenuItemFontWeightD: string; sidebarMenuItemFontWeightActiveD: string;
+  sidebarMenuItemFontSizeD: string; sidebarMenuItemLineHeightD: string; sidebarMenuItemTransitionD: string;
+  
+  // Icon settings
+  sidebarIconSizeL: string; sidebarIconColorL: string; sidebarIconColorHoverL: string; sidebarIconColorActiveL: string;
+  sidebarIconMarginRightL: string; sidebarIconTransitionL: string;
+  sidebarIconSizeD: string; sidebarIconColorD: string; sidebarIconColorHoverD: string; sidebarIconColorActiveD: string;
+  sidebarIconMarginRightD: string; sidebarIconTransitionD: string;
+  
+  // Group label settings
+  sidebarGroupLabelColorL: string; sidebarGroupLabelFontSizeL: string; sidebarGroupLabelFontWeightL: string;
+  sidebarGroupLabelTextTransformL: string; sidebarGroupLabelLetterSpacingL: string; sidebarGroupLabelPaddingL: string; sidebarGroupLabelMarginL: string;
+  sidebarGroupLabelColorD: string; sidebarGroupLabelFontSizeD: string; sidebarGroupLabelFontWeightD: string;
+  sidebarGroupLabelTextTransformD: string; sidebarGroupLabelLetterSpacingD: string; sidebarGroupLabelPaddingD: string; sidebarGroupLabelMarginD: string;
+  
   [key: string]: string;
 }
 
 function setSidebarCSSVars(settings: SidebarColors) {
   if (typeof window === 'undefined') return;
   const root = document.documentElement;
-  SIDEBAR_COLOR_KEYS.forEach((key: keyof SidebarColors) => {
-    const cssVar = (key as string).replace(/([A-Z])/g, "-$1").toLowerCase();
-    if (settings[key]) {
-      root.style.setProperty(`--${cssVar}`, settings[key]);
+  
+  // Map settings keys to Tailwind CSS variable names
+  const cssVarMapping: Record<string, string> = {
+    // Light theme - Background colors
+    'sidebarBgStartL': '--sidebar-background-start',
+    'sidebarBgEndL': '--sidebar-background-end',
+    'sidebarTextL': '--sidebar-foreground',
+    'sidebarBorderL': '--sidebar-border',
+    'sidebarActiveBgStartL': '--sidebar-primary',
+    'sidebarActiveTextL': '--sidebar-primary-foreground',
+    'sidebarHoverBgL': '--sidebar-accent',
+    'sidebarHoverTextL': '--sidebar-accent-foreground',
+    
+    // Light theme - Font settings
+    'sidebarFontFamilyL': '--sidebar-font-family',
+    'sidebarFontSizeL': '--sidebar-font-size',
+    'sidebarFontWeightL': '--sidebar-font-weight',
+    'sidebarLineHeightL': '--sidebar-line-height',
+    'sidebarLetterSpacingL': '--sidebar-letter-spacing',
+    'sidebarTextTransformL': '--sidebar-text-transform',
+    
+    // Light theme - Border and shadow settings
+    'sidebarBorderWidthL': '--sidebar-border-width',
+    'sidebarBorderStyleL': '--sidebar-border-style',
+    'sidebarBorderRadiusL': '--sidebar-border-radius',
+    'sidebarShadowL': '--sidebar-shadow',
+    'sidebarShadowHoverL': '--sidebar-shadow-hover',
+    'sidebarShadowActiveL': '--sidebar-shadow-active',
+    
+    // Light theme - Spacing and layout
+    'sidebarPaddingXL': '--sidebar-padding-x',
+    'sidebarPaddingYL': '--sidebar-padding-y',
+    'sidebarMarginL': '--sidebar-margin',
+    'sidebarGapL': '--sidebar-gap',
+    'sidebarWidthL': '--sidebar-width',
+    'sidebarWidthCollapsedL': '--sidebar-width-collapsed',
+    'sidebarTransitionDurationL': '--sidebar-transition-duration',
+    'sidebarTransitionTimingL': '--sidebar-transition-timing',
+    
+    // Light theme - Menu item specific settings
+    'sidebarMenuItemBgL': '--sidebar-menu-item-background',
+    'sidebarMenuItemBgHoverL': '--sidebar-menu-item-background-hover',
+    'sidebarMenuItemBgActiveL': '--sidebar-menu-item-background-active',
+    'sidebarMenuItemColorL': '--sidebar-menu-item-color',
+    'sidebarMenuItemColorHoverL': '--sidebar-menu-item-color-hover',
+    'sidebarMenuItemColorActiveL': '--sidebar-menu-item-color-active',
+    'sidebarMenuItemBorderL': '--sidebar-menu-item-border',
+    'sidebarMenuItemBorderHoverL': '--sidebar-menu-item-border-hover',
+    'sidebarMenuItemBorderActiveL': '--sidebar-menu-item-border-active',
+    'sidebarMenuItemBorderRadiusL': '--sidebar-menu-item-border-radius',
+    'sidebarMenuItemPaddingXL': '--sidebar-menu-item-padding-x',
+    'sidebarMenuItemPaddingYL': '--sidebar-menu-item-padding-y',
+    'sidebarMenuItemMarginL': '--sidebar-menu-item-margin',
+    'sidebarMenuItemFontWeightL': '--sidebar-menu-item-font-weight',
+    'sidebarMenuItemFontWeightActiveL': '--sidebar-menu-item-font-weight-active',
+    'sidebarMenuItemFontSizeL': '--sidebar-menu-item-font-size',
+    'sidebarMenuItemLineHeightL': '--sidebar-menu-item-line-height',
+    'sidebarMenuItemTransitionL': '--sidebar-menu-item-transition',
+    
+    // Light theme - Icon settings
+    'sidebarIconSizeL': '--sidebar-icon-size',
+    'sidebarIconColorL': '--sidebar-icon-color',
+    'sidebarIconColorHoverL': '--sidebar-icon-color-hover',
+    'sidebarIconColorActiveL': '--sidebar-icon-color-active',
+    'sidebarIconMarginRightL': '--sidebar-icon-margin-right',
+    'sidebarIconTransitionL': '--sidebar-icon-transition',
+    
+    // Light theme - Group label settings
+    'sidebarGroupLabelColorL': '--sidebar-group-label-color',
+    'sidebarGroupLabelFontSizeL': '--sidebar-group-label-font-size',
+    'sidebarGroupLabelFontWeightL': '--sidebar-group-label-font-weight',
+    'sidebarGroupLabelTextTransformL': '--sidebar-group-label-text-transform',
+    'sidebarGroupLabelLetterSpacingL': '--sidebar-group-label-letter-spacing',
+    'sidebarGroupLabelPaddingL': '--sidebar-group-label-padding',
+    'sidebarGroupLabelMarginL': '--sidebar-group-label-margin',
+    
+    // Dark theme - Background colors
+    'sidebarBgStartD': '--sidebar-background-start',
+    'sidebarBgEndD': '--sidebar-background-end',
+    'sidebarTextD': '--sidebar-foreground',
+    'sidebarBorderD': '--sidebar-border',
+    'sidebarActiveBgStartD': '--sidebar-primary',
+    'sidebarActiveTextD': '--sidebar-primary-foreground',
+    'sidebarHoverBgD': '--sidebar-accent',
+    'sidebarHoverTextD': '--sidebar-accent-foreground',
+    
+    // Dark theme - Font settings
+    'sidebarFontFamilyD': '--sidebar-font-family',
+    'sidebarFontSizeD': '--sidebar-font-size',
+    'sidebarFontWeightD': '--sidebar-font-weight',
+    'sidebarLineHeightD': '--sidebar-line-height',
+    'sidebarLetterSpacingD': '--sidebar-letter-spacing',
+    'sidebarTextTransformD': '--sidebar-text-transform',
+    
+    // Dark theme - Border and shadow settings
+    'sidebarBorderWidthD': '--sidebar-border-width',
+    'sidebarBorderStyleD': '--sidebar-border-style',
+    'sidebarBorderRadiusD': '--sidebar-border-radius',
+    'sidebarShadowD': '--sidebar-shadow',
+    'sidebarShadowHoverD': '--sidebar-shadow-hover',
+    'sidebarShadowActiveD': '--sidebar-shadow-active',
+    
+    // Dark theme - Spacing and layout
+    'sidebarPaddingXD': '--sidebar-padding-x',
+    'sidebarPaddingYD': '--sidebar-padding-y',
+    'sidebarMarginD': '--sidebar-margin',
+    'sidebarGapD': '--sidebar-gap',
+    'sidebarWidthD': '--sidebar-width',
+    'sidebarWidthCollapsedD': '--sidebar-width-collapsed',
+    'sidebarTransitionDurationD': '--sidebar-transition-duration',
+    'sidebarTransitionTimingD': '--sidebar-transition-timing',
+    
+    // Dark theme - Menu item specific settings
+    'sidebarMenuItemBgD': '--sidebar-menu-item-background',
+    'sidebarMenuItemBgHoverD': '--sidebar-menu-item-background-hover',
+    'sidebarMenuItemBgActiveD': '--sidebar-menu-item-background-active',
+    'sidebarMenuItemColorD': '--sidebar-menu-item-color',
+    'sidebarMenuItemColorHoverD': '--sidebar-menu-item-color-hover',
+    'sidebarMenuItemColorActiveD': '--sidebar-menu-item-color-active',
+    'sidebarMenuItemBorderD': '--sidebar-menu-item-border',
+    'sidebarMenuItemBorderHoverD': '--sidebar-menu-item-border-hover',
+    'sidebarMenuItemBorderActiveD': '--sidebar-menu-item-border-active',
+    'sidebarMenuItemBorderRadiusD': '--sidebar-menu-item-border-radius',
+    'sidebarMenuItemPaddingXD': '--sidebar-menu-item-padding-x',
+    'sidebarMenuItemPaddingYD': '--sidebar-menu-item-padding-y',
+    'sidebarMenuItemMarginD': '--sidebar-menu-item-margin',
+    'sidebarMenuItemFontWeightD': '--sidebar-menu-item-font-weight',
+    'sidebarMenuItemFontWeightActiveD': '--sidebar-menu-item-font-weight-active',
+    'sidebarMenuItemFontSizeD': '--sidebar-menu-item-font-size',
+    'sidebarMenuItemLineHeightD': '--sidebar-menu-item-line-height',
+    'sidebarMenuItemTransitionD': '--sidebar-menu-item-transition',
+    
+    // Dark theme - Icon settings
+    'sidebarIconSizeD': '--sidebar-icon-size',
+    'sidebarIconColorD': '--sidebar-icon-color',
+    'sidebarIconColorHoverD': '--sidebar-icon-color-hover',
+    'sidebarIconColorActiveD': '--sidebar-icon-color-active',
+    'sidebarIconMarginRightD': '--sidebar-icon-margin-right',
+    'sidebarIconTransitionD': '--sidebar-icon-transition',
+    
+    // Dark theme - Group label settings
+    'sidebarGroupLabelColorD': '--sidebar-group-label-color',
+    'sidebarGroupLabelFontSizeD': '--sidebar-group-label-font-size',
+    'sidebarGroupLabelFontWeightD': '--sidebar-group-label-font-weight',
+    'sidebarGroupLabelTextTransformD': '--sidebar-group-label-text-transform',
+    'sidebarGroupLabelLetterSpacingD': '--sidebar-group-label-letter-spacing',
+    'sidebarGroupLabelPaddingD': '--sidebar-group-label-padding',
+    'sidebarGroupLabelMarginD': '--sidebar-group-label-margin',
+  };
+
+  // Set CSS variables based on current theme
+  const isDark = document.documentElement.classList.contains('dark');
+  const themeSuffix = isDark ? 'D' : 'L';
+  
+  SIDEBAR_COLOR_KEYS.forEach(key => {
+    if (key.endsWith(themeSuffix) && settings[key as keyof SidebarColors]) {
+      const cssVarName = cssVarMapping[key];
+      if (cssVarName) {
+        root.style.setProperty(cssVarName, settings[key as keyof SidebarColors]);
+      }
     }
   });
 }
@@ -167,7 +450,7 @@ export default function SystemPreferencesPage() {
         setLoading(true);
         setErrorMsg(null);
         try {
-          const res = await fetch('/api/settings/system-preferences');
+          const res = await fetch('/api/settings/system-settings');
           if (!res.ok) throw new Error('Failed to load system preferences');
           const data = await res.json();
           setThemePreference((data[APP_THEME_KEY] as ThemePreference) || DEFAULT_THEME);
@@ -176,8 +459,10 @@ export default function SystemPreferencesPage() {
           setLogoPreviewUrl(data[APP_LOGO_DATA_URL_KEY] || null);
           // Load sidebar colors
           const newSidebarColors = createInitialSidebarColors();
-          Object.keys(newSidebarColors).forEach(key => {
-            if (data[key]) newSidebarColors[key] = data[key];
+          SIDEBAR_COLOR_KEYS.forEach(key => {
+            if (data[key]) {
+              (newSidebarColors as any)[key] = data[key];
+            }
           });
           setSidebarColors(newSidebarColors);
           setSidebarCSSVars(newSidebarColors);
@@ -240,37 +525,66 @@ export default function SystemPreferencesPage() {
   };
 
   const handleSavePreferences = async () => {
-    if (!isClient || !canEdit) return;
     setSaving(true);
     setErrorMsg(null);
     setSuccessMsg(false);
+    
     try {
-      const payload = {
-        [APP_THEME_KEY]: themePreference,
-        [APP_NAME_KEY]: appName || DEFAULT_APP_NAME,
-        [APP_LOGO_DATA_URL_KEY]: logoPreviewUrl || '',
-        ...sidebarColors,
-      };
-      const res = await fetch('/api/settings/system-preferences', {
+      // Prepare settings to save
+      const settingsToSave = [
+        { key: APP_THEME_KEY, value: themePreference },
+        { key: APP_NAME_KEY, value: appName },
+        { key: APP_LOGO_DATA_URL_KEY, value: logoPreviewUrl },
+        ...SIDEBAR_COLOR_KEYS.map(key => ({ key, value: (sidebarColors as any)[key] }))
+      ];
+
+      const res = await fetch('/api/settings/system-settings', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
+        body: JSON.stringify(settingsToSave),
       });
+
       if (!res.ok) {
-        const errData = await res.json();
-        throw new Error(errData.message || 'Failed to save preferences');
+        const errorData = await res.json();
+        throw new Error(errorData.message || 'Failed to save preferences');
       }
-      setSavedLogoDataUrl(logoPreviewUrl || null);
-      setSelectedLogoFile(null);
+
+      // Update localStorage for immediate effect
+      if (typeof window !== 'undefined') {
+        localStorage.setItem(APP_CONFIG_APP_NAME_KEY, appName);
+        if (logoPreviewUrl) {
+          localStorage.setItem(APP_LOGO_DATA_URL_KEY, logoPreviewUrl);
+        } else {
+          localStorage.removeItem(APP_LOGO_DATA_URL_KEY);
+        }
+        localStorage.setItem('appThemePreference', themePreference);
+        
+        // Save sidebar colors to localStorage
+        SIDEBAR_COLOR_KEYS.forEach(key => {
+          localStorage.setItem(key, (sidebarColors as any)[key]);
+        });
+      }
+
+      // Dispatch custom event to update other components
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('appConfigChanged', {
+          detail: {
+            appName,
+            logoUrl: logoPreviewUrl,
+            themePreference,
+            sidebarColors
+          }
+        }));
+      }
+
       setSuccessMsg(true);
-      setThemeAndColors({ themePreference, sidebarColors });
-      toast.success('Preferences Saved: System preferences have been updated.');
+      setTimeout(() => setSuccessMsg(false), 3000);
+      
     } catch (e: any) {
       setErrorMsg(e.message);
-      toast.error('Error: ' + e.message);
+      console.error('Failed to save preferences:', e);
     } finally {
       setSaving(false);
-      setTimeout(() => setSuccessMsg(false), 2000);
     }
   };
 
@@ -441,55 +755,6 @@ export default function SystemPreferencesPage() {
                 Select an image to replace the application logo. Changes apply after saving preferences.
                 Stored in the database as a data URL (max 100KB recommended).
               </p>
-            </div>
-          </section>
-
-          <section>
-            <h3 className="text-lg font-semibold text-foreground mb-2 flex items-center">
-              <Palette className="mr-2 h-5 w-5" /> Sidebar Color
-            </h3>
-            <div className="flex flex-wrap gap-3 items-center mb-2">
-              {SIDEBAR_COLOR_KEYS.map((swatch) => (
-                <button
-                  key={swatch}
-                  type="button"
-                  className={cn(
-                    "w-8 h-8 rounded-full border-2 flex items-center justify-center focus:outline-none transition-all",
-                    sidebarColors[swatch as keyof SidebarColors] === swatch
-                      ? "border-primary ring-2 ring-primary"
-                      : "border-muted"
-                  )}
-                  style={{ backgroundColor: `hsl(${swatch})` }}
-                  onClick={() => { setSidebarColors(prev => ({ ...prev, [swatch as keyof SidebarColors]: swatch })); }}
-                  aria-label={swatch}
-                  disabled={!canEdit}
-                >
-                  {sidebarColors[swatch as keyof SidebarColors] === swatch && (
-                    <span className="block w-3 h-3 rounded-full bg-white border border-primary" />
-                  )}
-                </button>
-              ))}
-              {/* Custom color input */}
-              <input
-                type="text"
-                className="w-32 h-8 rounded border ml-2 px-2 text-sm"
-                placeholder="#hex or hsl( )"
-                value={sidebarColors['sidebarBgStartL' as keyof SidebarColors]}
-                onChange={e => {
-                  setSidebarColors((prev: SidebarColors) => ({ ...prev, ['sidebarBgStartL' as keyof SidebarColors]: e.target.value }));
-                }}
-                disabled={!canEdit}
-                aria-label="Custom sidebar color"
-              />
-              <span className="text-xs ml-2">Custom</span>
-            </div>
-            <p className="text-xs text-muted-foreground mt-1">
-              Select a color for the left menu (sidebar) background. Default is HSL blue. You can enter a custom HSL or hex code (e.g. <code>221 83% 53%</code> or <code>#2563eb</code> or <code>hsl(221 83% 53%)</code>).
-            </p>
-            <div className="mt-2 flex items-center gap-2">
-              <span className="text-xs">Current:</span>
-              <span className="w-6 h-6 rounded-full border" style={{ background: (sidebarColors['sidebarBgStartL' as keyof SidebarColors] || '').startsWith('#') ? sidebarColors['sidebarBgStartL' as keyof SidebarColors] : (sidebarColors['sidebarBgStartL' as keyof SidebarColors] || '').startsWith('hsl') ? sidebarColors['sidebarBgStartL' as keyof SidebarColors] : `hsl(${sidebarColors['sidebarBgStartL' as keyof SidebarColors]})` }} />
-              <span className="text-xs font-mono">{sidebarColors['sidebarBgStartL' as keyof SidebarColors]}</span>
             </div>
           </section>
         </CardContent>

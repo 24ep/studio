@@ -17,6 +17,7 @@ const STATIC_API_ROUTES = [
   'src/app/api/settings/recruitment-stages/[id]/route.ts',
   'src/app/api/settings/recruitment-stages/[id]/move/route.ts',
   'src/app/api/settings/recruitment-stages/reorder/route.ts',
+  'src/app/api/settings/notifications/route.ts',
   'src/app/api/positions/route.ts',
   'src/app/api/positions/[id]/route.ts',
   'src/app/api/positions/all.ts',

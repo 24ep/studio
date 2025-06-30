@@ -55,8 +55,6 @@ import { authOptions } from '@/lib/auth';
  *         description: Server error
  */
 
-export const dynamic = "force-dynamic";
-
 export async function GET(request: NextRequest) {
   const session = await getServerSession(authOptions);
   if (session?.user?.role !== 'Admin' && !session?.user?.modulePermissions?.includes('NOTIFICATION_SETTINGS_MANAGE')) {

@@ -58,13 +58,36 @@ export default {
   				accent: 'hsl(var(--sidebar-accent))',
   				'accent-foreground': 'hsl(var(--sidebar-accent-foreground))',
   				border: 'hsl(var(--sidebar-border))',
-  				ring: 'hsl(var(--sidebar-ring))'
+  				ring: 'hsl(var(--sidebar-ring))',
+  				'background-start': 'hsl(var(--sidebar-background-start))',
+  				'background-end': 'hsl(var(--sidebar-background-end))',
+  				'menu-item': {
+  					background: 'var(--sidebar-menu-item-background)',
+  					'background-hover': 'hsl(var(--sidebar-menu-item-background-hover))',
+  					'background-active': 'hsl(var(--sidebar-menu-item-background-active))',
+  					color: 'hsl(var(--sidebar-menu-item-color))',
+  					'color-hover': 'hsl(var(--sidebar-menu-item-color-hover))',
+  					'color-active': 'hsl(var(--sidebar-menu-item-color-active))',
+  					border: 'var(--sidebar-menu-item-border)',
+  					'border-hover': 'var(--sidebar-menu-item-border-hover)',
+  					'border-active': 'var(--sidebar-menu-item-border-active)',
+  				},
+  				icon: {
+  					color: 'hsl(var(--sidebar-icon-color))',
+  					'color-hover': 'hsl(var(--sidebar-icon-color-hover))',
+  					'color-active': 'hsl(var(--sidebar-icon-color-active))',
+  				},
+  				'group-label': {
+  					color: 'hsl(var(--sidebar-group-label-color))',
+  				}
   			}
   		},
   		borderRadius: {
   			lg: 'var(--radius)',
   			md: 'calc(var(--radius) - 2px)',
-  			sm: 'calc(var(--radius) - 4px)'
+  			sm: 'calc(var(--radius) - 4px)',
+  			'sidebar': 'var(--sidebar-border-radius)',
+  			'sidebar-menu': 'var(--sidebar-menu-item-border-radius)',
   		},
   		keyframes: {
   			'accordion-down': {
@@ -87,7 +110,78 @@ export default {
   		animation: {
   			'accordion-down': 'accordion-down 0.2s ease-out',
   			'accordion-up': 'accordion-up 0.2s ease-out'
-  		}
+  		},
+  		spacing: {
+  			'sidebar-padding-x': 'var(--sidebar-padding-x)',
+  			'sidebar-padding-y': 'var(--sidebar-padding-y)',
+  			'sidebar-margin': 'var(--sidebar-margin)',
+  			'sidebar-gap': 'var(--sidebar-gap)',
+  		},
+  		width: {
+  			'sidebar': 'var(--sidebar-width)',
+  			'sidebar-collapsed': 'var(--sidebar-width-collapsed)',
+  		},
+  		height: {
+  			'sidebar-icon': 'var(--sidebar-icon-size)',
+  		},
+  		fontSize: {
+  			'sidebar': 'var(--sidebar-font-size)',
+  			'sidebar-menu': 'var(--sidebar-menu-item-font-size)',
+  			'sidebar-group': 'var(--sidebar-group-label-font-size)',
+  		},
+  		fontWeight: {
+  			'sidebar': 'var(--sidebar-font-weight)',
+  			'sidebar-menu': 'var(--sidebar-menu-item-font-weight)',
+  			'sidebar-menu-active': 'var(--sidebar-menu-item-font-weight-active)',
+  			'sidebar-group': 'var(--sidebar-group-label-font-weight)',
+  		},
+  		lineHeight: {
+  			'sidebar': 'var(--sidebar-line-height)',
+  			'sidebar-menu': 'var(--sidebar-menu-item-line-height)',
+  		},
+  		letterSpacing: {
+  			'sidebar': 'var(--sidebar-letter-spacing)',
+  			'sidebar-group': 'var(--sidebar-group-label-letter-spacing)',
+  		},
+  		borderWidth: {
+  			'sidebar': 'var(--sidebar-border-width)',
+  		},
+  		boxShadow: {
+  			'sidebar': 'var(--sidebar-shadow)',
+  			'sidebar-hover': 'var(--sidebar-shadow-hover)',
+  			'sidebar-active': 'var(--sidebar-shadow-active)',
+  		},
+  		transitionDuration: {
+  			'sidebar': 'var(--sidebar-transition-duration)',
+  		},
+  		transitionTimingFunction: {
+  			'sidebar': 'var(--sidebar-transition-timing)',
+  		},
+  		textTransform: {
+  			'sidebar': 'var(--sidebar-text-transform)',
+  			'sidebar-group': 'var(--sidebar-group-label-text-transform)',
+  		},
+  		textDecoration: {
+  			'sidebar': 'var(--sidebar-text-decoration)',
+  		},
+  		fontFamily: {
+  			'sidebar': 'var(--sidebar-font-family)',
+  		},
+  		padding: {
+  			'sidebar-x': 'var(--sidebar-padding-x)',
+  			'sidebar-y': 'var(--sidebar-padding-y)',
+  			'sidebar-menu-x': 'var(--sidebar-menu-item-padding-x)',
+  			'sidebar-menu-y': 'var(--sidebar-menu-item-padding-y)',
+  			'sidebar-group': 'var(--sidebar-group-label-padding)',
+  		},
+  		margin: {
+  			'sidebar': 'var(--sidebar-margin)',
+  			'sidebar-menu': 'var(--sidebar-menu-item-margin)',
+  			'sidebar-group': 'var(--sidebar-group-label-margin)',
+  		},
+  		gap: {
+  			'sidebar': 'var(--sidebar-gap)',
+  		},
   	}
   },
   plugins: [require("tailwindcss-animate")],

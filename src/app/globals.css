@@ -68,8 +68,10 @@ body {
     --chart-4: 195 100% 65%; 
     --chart-5: 220 14% 60%;
 
-    /* Sidebar CSS Variables (will be set by JavaScript from settings) */
+    /* Comprehensive Sidebar CSS Variables - Light Theme */
     --sidebar-background: 220 25% 97%;
+    --sidebar-background-start: 220 25% 97%;
+    --sidebar-background-end: 220 20% 94%;
     --sidebar-foreground: 220 25% 30%;
     --sidebar-primary: hsl(var(--primary-gradient-start-l));
     --sidebar-primary-foreground: hsl(var(--primary-foreground));
@@ -77,6 +79,70 @@ body {
     --sidebar-accent-foreground: 220 25% 25%;
     --sidebar-border: 220 15% 85%;
     --sidebar-ring: hsl(var(--ring));
+    
+    /* Enhanced Sidebar Styling Variables - Light Theme */
+    --sidebar-font-family: inherit;
+    --sidebar-font-size: 0.875rem;
+    --sidebar-font-weight: 400;
+    --sidebar-line-height: 1.25rem;
+    --sidebar-letter-spacing: 0;
+    --sidebar-text-decoration: none;
+    --sidebar-text-transform: none;
+    
+    /* Sidebar Border & Shadow Variables - Light Theme */
+    --sidebar-border-width: 1px;
+    --sidebar-border-style: solid;
+    --sidebar-border-radius: 0.5rem;
+    --sidebar-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+    --sidebar-shadow-hover: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+    --sidebar-shadow-active: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+    
+    /* Sidebar Spacing & Layout Variables - Light Theme */
+    --sidebar-padding-x: 0.75rem;
+    --sidebar-padding-y: 0.5rem;
+    --sidebar-margin: 0.25rem;
+    --sidebar-gap: 0.5rem;
+    --sidebar-width: 16rem;
+    --sidebar-width-collapsed: 3rem;
+    --sidebar-transition-duration: 0.2s;
+    --sidebar-transition-timing: ease-in-out;
+    
+    /* Sidebar Menu Item Specific Variables - Light Theme */
+    --sidebar-menu-item-background: transparent;
+    --sidebar-menu-item-background-hover: 220 10% 92%;
+    --sidebar-menu-item-background-active: hsl(var(--primary-gradient-start-l));
+    --sidebar-menu-item-color: 220 25% 30%;
+    --sidebar-menu-item-color-hover: 220 25% 25%;
+    --sidebar-menu-item-color-active: 0 0% 100%;
+    --sidebar-menu-item-border: transparent;
+    --sidebar-menu-item-border-hover: transparent;
+    --sidebar-menu-item-border-active: transparent;
+    --sidebar-menu-item-border-radius: 0.375rem;
+    --sidebar-menu-item-padding-x: 0.75rem;
+    --sidebar-menu-item-padding-y: 0.5rem;
+    --sidebar-menu-item-margin: 0.125rem;
+    --sidebar-menu-item-font-weight: 400;
+    --sidebar-menu-item-font-weight-active: 600;
+    --sidebar-menu-item-font-size: 0.875rem;
+    --sidebar-menu-item-line-height: 1.25rem;
+    --sidebar-menu-item-transition: all 0.2s ease-in-out;
+    
+    /* Sidebar Icon Variables - Light Theme */
+    --sidebar-icon-size: 1.25rem;
+    --sidebar-icon-color: 220 25% 30%;
+    --sidebar-icon-color-hover: 220 25% 25%;
+    --sidebar-icon-color-active: 0 0% 100%;
+    --sidebar-icon-margin-right: 0.75rem;
+    --sidebar-icon-transition: color 0.2s ease-in-out;
+    
+    /* Sidebar Group Label Variables - Light Theme */
+    --sidebar-group-label-color: 220 15% 50%;
+    --sidebar-group-label-font-size: 0.75rem;
+    --sidebar-group-label-font-weight: 500;
+    --sidebar-group-label-text-transform: uppercase;
+    --sidebar-group-label-letter-spacing: 0.05em;
+    --sidebar-group-label-padding: 0.5rem 0.75rem;
+    --sidebar-group-label-margin: 0.5rem 0;
 
     /* Green color for specific checked states */
     --custom-green-checked: 142 76% 36%;
@@ -166,8 +232,10 @@ body {
     --chart-4: 195 100% 65%;
     --chart-5: 220 15% 50%;
 
-    /* Sidebar CSS Variables (will be set by JavaScript from settings) */
+    /* Comprehensive Sidebar CSS Variables - Dark Theme */
     --sidebar-background: 220 15% 12%;
+    --sidebar-background-start: 220 15% 12%;
+    --sidebar-background-end: 220 15% 9%;
     --sidebar-foreground: 210 30% 85%;
     --sidebar-primary: hsl(var(--primary-gradient-start-d));
     --sidebar-primary-foreground: hsl(var(--primary-foreground));
@@ -175,6 +243,70 @@ body {
     --sidebar-accent-foreground: 210 30% 90%;
     --sidebar-border: 220 15% 18%;
     --sidebar-ring: hsl(var(--primary-gradient-start-d));
+    
+    /* Enhanced Sidebar Styling Variables - Dark Theme */
+    --sidebar-font-family: inherit;
+    --sidebar-font-size: 0.875rem;
+    --sidebar-font-weight: 400;
+    --sidebar-line-height: 1.25rem;
+    --sidebar-letter-spacing: 0;
+    --sidebar-text-decoration: none;
+    --sidebar-text-transform: none;
+    
+    /* Sidebar Border & Shadow Variables - Dark Theme */
+    --sidebar-border-width: 1px;
+    --sidebar-border-style: solid;
+    --sidebar-border-radius: 0.5rem;
+    --sidebar-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.3), 0 1px 2px -1px rgb(0 0 0 / 0.3);
+    --sidebar-shadow-hover: 0 4px 6px -1px rgb(0 0 0 / 0.3), 0 2px 4px -2px rgb(0 0 0 / 0.3);
+    --sidebar-shadow-active: 0 10px 15px -3px rgb(0 0 0 / 0.3), 0 4px 6px -4px rgb(0 0 0 / 0.3);
+    
+    /* Sidebar Spacing & Layout Variables - Dark Theme */
+    --sidebar-padding-x: 0.75rem;
+    --sidebar-padding-y: 0.5rem;
+    --sidebar-margin: 0.25rem;
+    --sidebar-gap: 0.5rem;
+    --sidebar-width: 16rem;
+    --sidebar-width-collapsed: 3rem;
+    --sidebar-transition-duration: 0.2s;
+    --sidebar-transition-timing: ease-in-out;
+    
+    /* Sidebar Menu Item Specific Variables - Dark Theme */
+    --sidebar-menu-item-background: transparent;
+    --sidebar-menu-item-background-hover: 220 15% 20%;
+    --sidebar-menu-item-background-active: hsl(var(--primary-gradient-start-d));
+    --sidebar-menu-item-color: 210 30% 85%;
+    --sidebar-menu-item-color-hover: 210 30% 90%;
+    --sidebar-menu-item-color-active: 0 0% 100%;
+    --sidebar-menu-item-border: transparent;
+    --sidebar-menu-item-border-hover: transparent;
+    --sidebar-menu-item-border-active: transparent;
+    --sidebar-menu-item-border-radius: 0.375rem;
+    --sidebar-menu-item-padding-x: 0.75rem;
+    --sidebar-menu-item-padding-y: 0.5rem;
+    --sidebar-menu-item-margin: 0.125rem;
+    --sidebar-menu-item-font-weight: 400;
+    --sidebar-menu-item-font-weight-active: 600;
+    --sidebar-menu-item-font-size: 0.875rem;
+    --sidebar-menu-item-line-height: 1.25rem;
+    --sidebar-menu-item-transition: all 0.2s ease-in-out;
+    
+    /* Sidebar Icon Variables - Dark Theme */
+    --sidebar-icon-size: 1.25rem;
+    --sidebar-icon-color: 210 30% 85%;
+    --sidebar-icon-color-hover: 210 30% 90%;
+    --sidebar-icon-color-active: 0 0% 100%;
+    --sidebar-icon-margin-right: 0.75rem;
+    --sidebar-icon-transition: color 0.2s ease-in-out;
+    
+    /* Sidebar Group Label Variables - Dark Theme */
+    --sidebar-group-label-color: 210 25% 70%;
+    --sidebar-group-label-font-size: 0.75rem;
+    --sidebar-group-label-font-weight: 500;
+    --sidebar-group-label-text-transform: uppercase;
+    --sidebar-group-label-letter-spacing: 0.05em;
+    --sidebar-group-label-padding: 0.5rem 0.75rem;
+    --sidebar-group-label-margin: 0.5rem 0;
 
      /* Green color for specific checked states */
     --custom-green-checked: 147 80% 40%;
@@ -226,19 +358,203 @@ body {
   /* Sidebar base style - Tailwind handles most styling via bg-sidebar, text-sidebar-foreground, etc. */
   [data-sidebar="sidebar"] {
     /* Additional custom styling can be added here if needed */
+    background: linear-gradient(135deg, hsl(var(--sidebar-background-start)) 0%, hsl(var(--sidebar-background-end)) 100%);
+    font-family: var(--sidebar-font-family);
+    font-size: var(--sidebar-font-size);
+    font-weight: var(--sidebar-font-weight);
+    line-height: var(--sidebar-line-height);
+    letter-spacing: var(--sidebar-letter-spacing);
+    text-decoration: var(--sidebar-text-decoration);
+    text-transform: var(--sidebar-text-transform);
+    border: var(--sidebar-border-width) var(--sidebar-border-style) hsl(var(--sidebar-border));
+    border-radius: var(--sidebar-border-radius);
+    box-shadow: var(--sidebar-shadow);
+    transition: all var(--sidebar-transition-duration) var(--sidebar-transition-timing);
+    padding: var(--sidebar-padding-y) var(--sidebar-padding-x);
+    gap: var(--sidebar-gap);
+  }
+
+  /* Sidebar hover effect */
+  [data-sidebar="sidebar"]:hover {
+    box-shadow: var(--sidebar-shadow-hover);
+  }
+
+  /* Sidebar menu items */
+  [data-sidebar="menu-item"] {
+    margin: var(--sidebar-menu-item-margin);
+  }
+
+  /* Sidebar menu buttons */
+  [data-sidebar="menu-button"] {
+    background: var(--sidebar-menu-item-background);
+    color: hsl(var(--sidebar-menu-item-color));
+    border: var(--sidebar-menu-item-border-width, 1px) var(--sidebar-menu-item-border-style, solid) var(--sidebar-menu-item-border);
+    border-radius: var(--sidebar-menu-item-border-radius);
+    padding: var(--sidebar-menu-item-padding-y) var(--sidebar-menu-item-padding-x);
+    font-weight: var(--sidebar-menu-item-font-weight);
+    font-size: var(--sidebar-menu-item-font-size);
+    line-height: var(--sidebar-menu-item-line-height);
+    transition: var(--sidebar-menu-item-transition);
+    box-shadow: none;
+  }
+
+  /* Sidebar menu button hover */
+  [data-sidebar="menu-button"]:hover {
+    background: hsl(var(--sidebar-menu-item-background-hover));
+    color: hsl(var(--sidebar-menu-item-color-hover));
+    border-color: var(--sidebar-menu-item-border-hover);
+    box-shadow: var(--sidebar-shadow-hover);
   }
 
   /* Active menu item style */
   [data-sidebar="menu-button"][data-active="true"] { 
     background: linear-gradient(135deg, hsl(var(--sidebar-primary)) 0%, hsl(var(--accent)) 100%);
     color: hsl(var(--sidebar-primary-foreground)) !important;
-    box-shadow: 0 4px 12px -2px hsla(var(--sidebar-primary), 0.4);
+    box-shadow: var(--sidebar-shadow-active);
+    font-weight: var(--sidebar-menu-item-font-weight-active);
+    border-color: var(--sidebar-menu-item-border-active);
   }
 
   /* Hover on active menu item */
   [data-sidebar="menu-button"][data-active="true"]:hover {
     filter: brightness(1.1);
     transform: translateY(-1px);
+    box-shadow: var(--sidebar-shadow-active);
+  }
+
+  /* Sidebar icons */
+  [data-sidebar="menu-button"] svg {
+    width: var(--sidebar-icon-size);
+    height: var(--sidebar-icon-size);
+    color: hsl(var(--sidebar-icon-color));
+    margin-right: var(--sidebar-icon-margin-right);
+    transition: var(--sidebar-icon-transition);
+  }
+
+  /* Sidebar icon hover */
+  [data-sidebar="menu-button"]:hover svg {
+    color: hsl(var(--sidebar-icon-color-hover));
+  }
+
+  /* Sidebar icon active */
+  [data-sidebar="menu-button"][data-active="true"] svg {
+    color: hsl(var(--sidebar-icon-color-active));
+  }
+
+  /* Sidebar group labels */
+  [data-sidebar="group-label"] {
+    color: hsl(var(--sidebar-group-label-color));
+    font-size: var(--sidebar-group-label-font-size);
+    font-weight: var(--sidebar-group-label-font-weight);
+    text-transform: var(--sidebar-group-label-text-transform);
+    letter-spacing: var(--sidebar-group-label-letter-spacing);
+    padding: var(--sidebar-group-label-padding);
+    margin: var(--sidebar-group-label-margin);
+  }
+
+  /* Sidebar content area */
+  [data-sidebar="content"] {
+    gap: var(--sidebar-gap);
+  }
+
+  /* Sidebar header */
+  [data-sidebar="header"] {
+    padding: var(--sidebar-padding-y) var(--sidebar-padding-x);
+  }
+
+  /* Sidebar footer */
+  [data-sidebar="footer"] {
+    padding: var(--sidebar-padding-y) var(--sidebar-padding-x);
+  }
+
+  /* Sidebar separator */
+  [data-sidebar="separator"] {
+    background-color: hsl(var(--sidebar-border));
+    margin: var(--sidebar-margin) 0;
+  }
+
+  /* Sidebar menu sub items */
+  [data-sidebar="menu-sub"] {
+    border-left: 1px solid hsl(var(--sidebar-border));
+    margin-left: var(--sidebar-padding-x);
+    padding-left: var(--sidebar-padding-x);
+  }
+
+  /* Sidebar menu sub buttons */
+  [data-sidebar="menu-sub-button"] {
+    background: var(--sidebar-menu-item-background);
+    color: hsl(var(--sidebar-menu-item-color));
+    border: var(--sidebar-menu-item-border-width, 1px) var(--sidebar-menu-item-border-style, solid) var(--sidebar-menu-item-border);
+    border-radius: var(--sidebar-menu-item-border-radius);
+    padding: var(--sidebar-menu-item-padding-y) var(--sidebar-menu-item-padding-x);
+    font-weight: var(--sidebar-menu-item-font-weight);
+    font-size: var(--sidebar-menu-item-font-size);
+    line-height: var(--sidebar-menu-item-line-height);
+    transition: var(--sidebar-menu-item-transition);
+  }
+
+  /* Sidebar menu sub button hover */
+  [data-sidebar="menu-sub-button"]:hover {
+    background: hsl(var(--sidebar-menu-item-background-hover));
+    color: hsl(var(--sidebar-menu-item-color-hover));
+    border-color: var(--sidebar-menu-item-border-hover);
+  }
+
+  /* Sidebar menu sub button active */
+  [data-sidebar="menu-sub-button"][data-active="true"] {
+    background: linear-gradient(135deg, hsl(var(--sidebar-primary)) 0%, hsl(var(--accent)) 100%);
+    color: hsl(var(--sidebar-primary-foreground)) !important;
+    font-weight: var(--sidebar-menu-item-font-weight-active);
+    border-color: var(--sidebar-menu-item-border-active);
+  }
+
+  /* Sidebar menu actions */
+  [data-sidebar="menu-action"] {
+    color: hsl(var(--sidebar-icon-color));
+    transition: var(--sidebar-icon-transition);
+  }
+
+  /* Sidebar menu action hover */
+  [data-sidebar="menu-action"]:hover {
+    color: hsl(var(--sidebar-icon-color-hover));
+    background: hsl(var(--sidebar-menu-item-background-hover));
+  }
+
+  /* Sidebar menu badges */
+  [data-sidebar="menu-badge"] {
+    color: hsl(var(--sidebar-menu-item-color));
+    font-size: var(--sidebar-menu-item-font-size);
+    font-weight: var(--sidebar-menu-item-font-weight);
+  }
+
+  /* Sidebar menu badge hover */
+  [data-sidebar="menu-button"]:hover [data-sidebar="menu-badge"] {
+    color: hsl(var(--sidebar-menu-item-color-hover));
+  }
+
+  /* Sidebar menu badge active */
+  [data-sidebar="menu-button"][data-active="true"] [data-sidebar="menu-badge"] {
+    color: hsl(var(--sidebar-primary-foreground));
+  }
+
+  /* Sidebar rail (collapsible handle) */
+  [data-sidebar="rail"] {
+    background: transparent;
+    border: none;
+    transition: var(--sidebar-transition-duration) var(--sidebar-transition-timing);
+  }
+
+  [data-sidebar="rail"]:hover {
+    background: hsl(var(--sidebar-menu-item-background-hover));
+  }
+
+  [data-sidebar="rail"]:after {
+    background: hsl(var(--sidebar-border));
+    transition: var(--sidebar-transition-duration) var(--sidebar-transition-timing);
+  }
+
+  [data-sidebar="rail"]:hover:after {
+    background: hsl(var(--sidebar-accent));
   }
 
   /* General menu button transitions */
