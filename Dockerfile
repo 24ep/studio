@@ -1,4 +1,4 @@
-FROM node:18
+FROM 24ep/studio:dev
 
 WORKDIR /app
 
