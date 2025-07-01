@@ -99,6 +99,24 @@ export async function POST(request: NextRequest) {
       `;
       await client.query(historyQuery, [randomUUID(), candidateId, objectName, originalName, actingUserId]);
 
+      // Add to upload queue for webhook processing
+      const queueId = randomUUID();
+      await client.query(
+        `INSERT INTO upload_queue (id, file_name, file_size, status, source, upload_id, created_by, file_path, webhook_payload)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+        [
+          queueId,
+          originalName,
+          buffer.length,
+          'queued',
+          'single',
+          null,
+          actingUserId,
+          objectName,
+          JSON.stringify({ candidateId })
+        ]
+      );
+
       await client.query('COMMIT');
 
       await logAudit('AUDIT', `Resume '${originalName}' uploaded for candidate '${candidate.name}' by ${actingUserName}`, 'API:Resumes:Upload', actingUserId, { 

@@ -12,6 +12,7 @@ import { AlertDialog, AlertDialogTrigger, AlertDialogContent, AlertDialogHeader,
 import { useToast } from '@/hooks/use-toast';
 import { addDays, format, isAfter, isBefore, parseISO, subDays } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose } from "@/components/ui/dialog";
 
 export type CandidateJobType = "upload" | "import";
 
@@ -96,6 +97,7 @@ export const CandidateImportUploadQueue: React.FC = () => {
     const start = subDays(end, 30);
     return { start, end };
   });
+  const [showJobDetailId, setShowJobDetailId] = useState<string | null>(null);
 
   // Fetch paginated jobs
   const fetchJobs = useCallback(async () => {
@@ -121,6 +123,16 @@ export const CandidateImportUploadQueue: React.FC = () => {
 
   useEffect(() => {
     fetchJobs();
+  }, [fetchJobs]);
+
+  useEffect(() => {
+    function handleRefreshEvent() {
+      fetchJobs();
+    }
+    window.addEventListener('refreshCandidateQueue', handleRefreshEvent);
+    return () => {
+      window.removeEventListener('refreshCandidateQueue', handleRefreshEvent);
+    };
   }, [fetchJobs]);
 
   useEffect(() => {
@@ -247,7 +259,6 @@ export const CandidateImportUploadQueue: React.FC = () => {
     <div className="mb-6">
       {/* Summary Status Cards */}
       <div className="mb-6">
-        <div className="font-semibold text-lg mb-4">Bulk Upload Summary</div>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
           <Card className="shadow-sm hover:shadow-md transition-shadow duration-200">
             <CardContent className="p-4">
@@ -529,6 +540,14 @@ export const CandidateImportUploadQueue: React.FC = () => {
                         {cancelLoading && cancelId === item.id ? <Loader2 className="animate-spin h-4 w-4" /> : <X className="h-4 w-4 text-orange-500" />}
                       </Button>
                     )}
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      title="Show Job Details"
+                      onClick={() => setShowJobDetailId(item.id)}
+                    >
+                      <Eye className="h-4 w-4 text-primary" />
+                    </Button>
                   </TableCell>
                 </TableRow>
                 {showErrorLogId === item.id && item.error_details && (
@@ -713,6 +732,21 @@ export const CandidateImportUploadQueue: React.FC = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      <Dialog open={!!showJobDetailId} onOpenChange={open => !open && setShowJobDetailId(null)}>
+        <DialogContent className="max-w-xl w-full">
+          <DialogHeader>
+            <DialogTitle>Job Details</DialogTitle>
+          </DialogHeader>
+          <div className="max-h-96 overflow-auto text-xs bg-muted rounded p-2">
+            <pre className="whitespace-pre-wrap break-all">{JSON.stringify(filteredJobs.find(j => j.id === showJobDetailId), null, 2)}</pre>
+          </div>
+          <DialogFooter>
+            <DialogClose asChild>
+              <Button variant="outline">Close</Button>
+            </DialogClose>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }; 

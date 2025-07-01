@@ -144,6 +144,7 @@ function UploadPageContent() {
       setSelectedPositionId("");
       setDialogOpen(false);
       toast.success('Bulk upload completed successfully');
+      window.dispatchEvent(new CustomEvent('refreshCandidateQueue'));
     } catch (error) {
       console.error('Bulk upload error:', error);
       toast.error('Bulk upload failed');

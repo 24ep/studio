@@ -29,18 +29,9 @@ export const sidebarConfig: SidebarNavGroup[] = [
     ],
   },
   {
-    label: "Administration",
+    label: "Settings",
     items: [
-      { label: "System Settings", icon: Settings, href: "/settings/system-settings", adminOnly: true },
-      { label: "Preferences", icon: Palette, href: "/settings/system-preferences", adminOnly: true },
-      { label: "Recruitment Stages", icon: KanbanSquare, href: "/settings/stages", adminOnly: true },
-      { label: "Data Model UI", icon: DatabaseZap, href: "/settings/data-models", adminOnly: true },
-      { label: "Custom Fields", icon: SlidersHorizontal, href: "/settings/custom-fields", adminOnly: true },
-      { label: "Notifications", icon: BellRing, href: "/settings/notifications", adminOnly: true },
-      { label: "Users", icon: UsersRound, href: "/settings/users", adminOnly: true },
-      { label: "User Groups", icon: ShieldCheck, href: "/settings/user-groups", adminOnly: true },
-      { label: "API Docs", icon: Code2, href: "/settings/api-docs", adminOnly: true },
-      { label: "Logs", icon: ListOrdered, href: "/settings/logs", adminOnly: true },
+      { label: "Settings", icon: Settings, href: "/settings" },
     ],
   },
 ]; 

@@ -559,11 +559,10 @@ export default function SystemPreferencesPage() {
   const handleLoginImageFileChange = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
-      if (file.size > 100 * 1024) { // 100KB limit
-        error('Login background image must be less than 100KB');
+      if (file.size > 500 * 1024) { // 500KB limit
+        error('Login background image must be less than 500KB');
         return;
       }
-      
       setSelectedLoginImageFile(file);
       const reader = new FileReader();
       reader.onload = (e) => {

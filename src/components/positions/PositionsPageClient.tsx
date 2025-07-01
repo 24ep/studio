@@ -29,6 +29,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
 export default function PositionsPageClient() {
   const [positions, setPositions] = useState<Position[]>([]);
@@ -288,59 +289,62 @@ export default function PositionsPageClient() {
               )}
             </div>
           ) : (
-            <div className="space-y-4">
-              {filteredPositions.map((position) => (
-                <div
-                  key={position.id}
-                  className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors"
-                >
-                  <div className="flex-1">
-                    <div className="flex items-center gap-3 mb-2">
-                      <Link 
-                        href={`/positions/${position.id}`}
-                        className="text-lg font-semibold hover:text-primary transition-colors"
-                      >
-                        {position.title}
-                      </Link>
-                      <Badge variant={position.isOpen ? "default" : "secondary"}>
-                        {position.isOpen ? "Open" : "Closed"}
-                      </Badge>
-                    </div>
-                    <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                      <span>{position.department}</span>
-                      {position.position_level && (
-                        <span>• {position.position_level}</span>
-                      )}
-                      {position.description && (
-                        <span className="truncate max-w-xs">• {position.description}</span>
-                      )}
-                    </div>
-                  </div>
-                  
-                  {canManagePositions && (
-                    <div className="flex items-center gap-2">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => {
-                          setSelectedPosition(position);
-                          setIsEditModalOpen(true);
-                        }}
-                      >
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setPositionToDelete(position)}
-                        className="text-destructive hover:text-destructive"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  )}
-                </div>
-              ))}
+            <div className="overflow-x-auto rounded-lg border border-border bg-background">
+              <Table className="min-w-full divide-y divide-border">
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Title</TableHead>
+                    <TableHead>Department</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Level</TableHead>
+                    <TableHead>Created</TableHead>
+                    <TableHead>Updated</TableHead>
+                    <TableHead>Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredPositions.map((position) => (
+                    <TableRow key={position.id} className="hover:bg-muted/50">
+                      <TableCell className="font-medium">{position.title}</TableCell>
+                      <TableCell>{position.department}</TableCell>
+                      <TableCell>
+                        {position.isOpen ? (
+                          <Badge variant="default">Open</Badge>
+                        ) : (
+                          <Badge variant="destructive">Closed</Badge>
+                        )}
+                      </TableCell>
+                      <TableCell>{position.position_level || '-'}</TableCell>
+                      <TableCell>{position.createdAt ? new Date(position.createdAt).toLocaleDateString() : '-'}</TableCell>
+                      <TableCell>{position.updatedAt ? new Date(position.updatedAt).toLocaleDateString() : '-'}</TableCell>
+                      <TableCell>
+                        {canManagePositions && (
+                          <div className="flex items-center gap-2">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => {
+                                setSelectedPosition(position);
+                                setIsEditModalOpen(true);
+                              }}
+                            >
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => setPositionToDelete(position)}
+                              className="text-destructive hover:text-destructive"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
             </div>
           )}
         </CardContent>

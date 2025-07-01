@@ -162,6 +162,7 @@ services:
       dockerfile: Dockerfile
     command: sh -c "until nc -z redis ${REDIS_PORT}; do echo Waiting for Redis...; sleep 2; done; node ws-queue-bridge.js"
     environment:
+      DATABASE_URL: ${DATABASE_URL}
       REDIS_URL: ${REDIS_URL}
       WS_QUEUE_BRIDGE_PORT: ${WS_QUEUE_BRIDGE_PORT:-3002}
       WS_ALLOWED_ORIGINS: ${WS_ALLOWED_ORIGINS}
