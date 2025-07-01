@@ -6,6 +6,7 @@ COPY package*.json ./
 RUN npm install
 
 COPY . .
+RUN rm -f next.config.js
 RUN npx prisma generate
 
 RUN npm run build
