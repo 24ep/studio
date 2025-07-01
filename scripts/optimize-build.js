@@ -100,8 +100,6 @@ function main() {
   console.log(`💡 Expected build time reduction: 20-30% additional improvement`);
 }
 
-if (require.main === module) {
-  main();
-}
+main();
 
 export { removeForceDynamic, STATIC_API_ROUTES, DYNAMIC_API_ROUTES }; 
