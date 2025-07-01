@@ -19,11 +19,6 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
 import { useSession } from "next-auth/react";
 import type { PlatformModuleId, SettingsNavigationItem } from '@/lib/types';
 import { Separator } from '@/components/ui/separator';
@@ -296,7 +291,6 @@ const SidebarNavComponent = function SidebarNav() {
                         ? "bg-sidebar-primary text-sidebar-primary-foreground shadow-md scale-[1.02] font-semibold"
                         : "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground text-sidebar-foreground"
                     )}
-                    tooltip={item.label}
                     onClick={() => {
                       if (accordionValue === "settings-group" && !currentClientIsSettingsSectionActive) {
                         setAccordionValue(undefined);
@@ -346,7 +340,6 @@ const SidebarNavComponent = function SidebarNav() {
                         ? "bg-sidebar-primary text-sidebar-primary-foreground shadow-md scale-[1.02] font-semibold"
                         : "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground text-sidebar-foreground"
                     )}
-                    tooltip={item.label}
                     onClick={() => {
                       if (accordionValue === "settings-group" && !currentClientIsSettingsSectionActive) {
                         setAccordionValue(undefined);
@@ -392,7 +385,6 @@ const SidebarNavComponent = function SidebarNav() {
                       ? "bg-sidebar-primary text-sidebar-primary-foreground shadow-md scale-[1.02] font-semibold"
                       : "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground text-sidebar-foreground"
                   )}
-                  tooltip={myTaskBoardNavItem.label}
                   onClick={() => {
                     if (accordionValue === "settings-group" && !currentClientIsSettingsSectionActive) {
                       setAccordionValue(undefined);
@@ -462,7 +454,6 @@ const SidebarNavComponent = function SidebarNav() {
                                 ? "bg-sidebar-primary/20 text-sidebar-primary-foreground font-medium"
                                 : "hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground text-sidebar-foreground/80"
                             )}
-                            tooltip={item.label}
                             onClick={() => handleNavigation(item.href)}
                             size="sm"
                             data-active={isActive}
