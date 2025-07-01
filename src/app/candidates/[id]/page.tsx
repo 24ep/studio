@@ -728,17 +728,9 @@ export default function CandidateDetailPage() {
                                 name="status"
                                 control={control}
                                 render={({ field }) => (
-                                    <Select onValueChange={field.onChange} value={field.value}>
-                                        <SelectTrigger className="text-base px-3 py-1 capitalize"><SelectValue /></SelectTrigger>
-                                        <SelectContent>
-                                            {availableStages.map(s => (
-                                                <SelectItem key={s.id} value={s.name}>{s.name}</SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
+                                    <Input {...field} placeholder="Status" />
                                 )}
                             />
-                            {errors.status && <p className="text-sm text-destructive">{errors.status.message}</p>}
                             <Label htmlFor="fitScore" className="mt-1">Fit Score (Applied Position)</Label>
                             <Input id="fitScore" type="number" {...register('fitScore', { valueAsNumber: true })} className="w-32 text-right" />
 
@@ -764,13 +756,7 @@ export default function CandidateDetailPage() {
                                 name="positionId"
                                 control={control}
                                 render={({ field }) => (
-                                    <Select onValueChange={(value) => field.onChange(value === "___NONE___" ? null : value)} value={field.value ?? "___NONE___"}>
-                                        <SelectTrigger><SelectValue placeholder="Select Position" /></SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value="___NONE___">N/A - General Application</SelectItem>
-                                            {allDbPositions.map(pos => <SelectItem key={pos.id} value={pos.id}>{pos.title}</SelectItem>)}
-                                        </SelectContent>
-                                    </Select>
+                                    <Input {...field} value={field.value || ''} placeholder="Position ID" />
                                 )}
                             />
                         </>
@@ -915,16 +901,7 @@ export default function CandidateDetailPage() {
                                             name={`parsedData.experience.${index}.postition_level`}
                                             control={control}
                                             render={({ field: controllerField }) => (
-                                                <Select
-                                                    onValueChange={(value) => controllerField.onChange(value === PLACEHOLDER_VALUE_NONE ? null : value)}
-                                                    value={controllerField.value ?? PLACEHOLDER_VALUE_NONE}
-                                                >
-                                                <SelectTrigger><SelectValue placeholder="Position Level" /></SelectTrigger>
-                                                <SelectContent>
-                                                    <SelectItem value={PLACEHOLDER_VALUE_NONE}>N/A / Not Specified</SelectItem>
-                                                    {positionLevelOptions.map(level => <SelectItem key={level} value={level}>{level.charAt(0).toUpperCase() + level.slice(1)}</SelectItem>)}
-                                                </SelectContent>
-                                                </Select>
+                                                <Input {...controllerField} value={controllerField.value || ''} placeholder="Position Level" />
                                             )}
                                         />
                                         <div className="flex items-center space-x-2">
