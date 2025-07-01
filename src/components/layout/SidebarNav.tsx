@@ -32,16 +32,16 @@ const SidebarNav = React.memo(function SidebarNav() {
   }, []);
 
   return (
-    <Sidebar className="bg-gradient-to-b from-sidebar-background to-sidebar-background-end border-r border-sidebar-border shadow-lg min-h-screen flex flex-col" data-sidebar="sidebar">
+    <Sidebar className="bg-gradient-to-b from-sidebar-background to-sidebar-background-end min-h-screen flex flex-col" data-sidebar="sidebar">
       {/* Branding section */}
       <div className="sidebar-branding">
-        <Link href="/" className="flex flex-col items-center gap-2">
+        <Link href="/" className="flex flex-row items-center gap-3 px-4 py-4">
           {isClient && appLogoUrl ? (
-            <Image src={appLogoUrl} alt="App Logo" width={48} height={48} className="h-12 w-12 object-contain rounded" />
+            <Image src={appLogoUrl} alt="App Logo" width={40} height={40} className="h-10 w-10 object-contain rounded" />
           ) : (
-            DEFAULT_LOGO_ICON
+            <span className="h-10 w-10 flex items-center justify-center">{DEFAULT_LOGO_ICON}</span>
           )}
-          <span className="app-name mt-1 text-lg font-bold text-primary tracking-tight text-center whitespace-nowrap">
+          <span className="app-name text-lg font-bold text-primary tracking-tight whitespace-nowrap">
             {currentAppName}
           </span>
         </Link>
@@ -76,25 +76,6 @@ const SidebarNav = React.memo(function SidebarNav() {
             </SidebarGroupContent>
           </SidebarGroup>
         ))}
-      </div>
-      {/* User section at bottom */}
-      <div className="sidebar-user-section">
-        {user?.image ? (
-          <Image src={user.image} alt={user.name || "User"} width={40} height={40} className="avatar" />
-        ) : (
-          <div className="avatar bg-muted flex items-center justify-center">
-            <UserCircle className="h-8 w-8 text-muted-foreground" />
-          </div>
-        )}
-        <span className="user-name mt-1">{user?.name || user?.email || "User"}</span>
-        <div className="user-actions">
-          <Link href="/settings" title="Settings" className="hover:text-primary">
-            <Settings className="h-5 w-5" />
-          </Link>
-          <button onClick={() => signOut()} title="Sign out" className="hover:text-destructive">
-            <LogOut className="h-5 w-5" />
-          </button>
-        </div>
       </div>
     </Sidebar>
   );
