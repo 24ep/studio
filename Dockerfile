@@ -1,15 +1,14 @@
-# Use pre-built image from Docker Hub
-FROM 24ep/studio:dev
+FROM node:18
 
-# Set environment variables
-ENV NODE_ENV=production
-ENV NEXT_TELEMETRY_DISABLED=1
+WORKDIR /app
 
-# Expose the application port
+COPY package*.json ./
+RUN npm install
+
+COPY . .
+
+RUN npm run build
+
 EXPOSE 9846
 
-# Copy the entrypoint script
-COPY entrypoint.sh /entrypoint.sh
-RUN chmod +x /entrypoint.sh
-
-ENTRYPOINT ["/entrypoint.sh"]
+CMD ["npm", "run", "start"]

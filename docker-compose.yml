@@ -2,7 +2,10 @@ version: '3.8'
 
 services:
   app:
-    image: 24ep/studio:dev
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: studio-internal:dev
     ports:
       - "${APP_PORT:-9846}:9846"
     # For production deployments, you typically want the application code to be self-contained
@@ -116,7 +119,7 @@ services:
     cpus: 0.1
 
   upload-queue-processor:
-    image: 24ep/studio:dev
+    image: studio-internal:dev
     command: sh -c "echo 'Waiting for app service to be ready...' && sleep 10 && until curl -sf http://app:9846/api/health > /dev/null 2>&1; do echo 'App health check failed, retrying in 10 seconds...'; sleep 10; done && echo 'App service is ready, starting upload queue processor...' && node process-upload-queue.mjs"
     environment:
       DATABASE_URL: ${DATABASE_URL}
@@ -155,7 +158,7 @@ services:
     cpus: 0.5
 
   ws-queue-bridge:
-    image: 24ep/studio:dev
+    image: studio-internal:dev
     command: sh -c "until nc -z redis ${REDIS_PORT}; do echo Waiting for Redis...; sleep 2; done; node ws-queue-bridge.js"
     environment:
       REDIS_URL: ${REDIS_URL}
