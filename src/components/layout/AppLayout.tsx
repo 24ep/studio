@@ -143,7 +143,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
 
   return (
     <SidebarProvider defaultOpen>
-      <Sidebar collapsible="icon" variant="sidebar" className="border-r bg-sidebar" data-sidebar="sidebar">
+      <Sidebar collapsible="icon" variant="sidebar" className="bg-sidebar" data-sidebar="sidebar">
         <SidebarHeader className="p-4 flex items-center justify-center h-16 border-b border-sidebar-border">
           <Link href="/" className="flex items-center gap-2 font-semibold text-primary group-data-[collapsible=icon]:hidden">
             {renderLogo(false)}

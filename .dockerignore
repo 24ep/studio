@@ -72,4 +72,18 @@ deploy-to-portainer.sh
 run-migration.ps1
 test-minio-config.js
 troubleshoot-postgres.js
-process-upload-queue.ts
+
+# vercel
+.vercel
+
+# typescript
+*.tsbuildinfo
+next-env.d.ts
+
+.genkit/*
+.env*
+
+# firebase
+firebase-debug.log
+firestore-debug.log
+/src/generated/prisma
