@@ -54,13 +54,7 @@ services:
       - minio
       - redis
     restart: unless-stopped
-    # Health check for the application
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:9846/api/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
+
     # Strict resource limits for runtime
     mem_limit: 1g
     cpus: 0.5
