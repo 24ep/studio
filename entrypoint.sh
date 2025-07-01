@@ -9,7 +9,7 @@ if [ -z "$DATABASE_URL" ]; then
     exit 1
 fi
 
-echo "📊 Current DATABASE_URL: ${DATABASE_URL:0:30}..."
+echo "📊 Current DATABASE_URL: $(echo \"$DATABASE_URL\" | cut -c1-30)..."
 
 # Generate Prisma client
 echo "🔧 Generating Prisma client..."
