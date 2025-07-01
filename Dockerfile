@@ -8,6 +8,8 @@ ENV NEXT_TELEMETRY_DISABLED=1
 # Expose the application port
 EXPOSE 9846
 
-# The image already contains the built application
-# Just start the application
-CMD ["npm", "run", "start"]
+# Copy the entrypoint script
+COPY entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+
+ENTRYPOINT ["/entrypoint.sh"]
