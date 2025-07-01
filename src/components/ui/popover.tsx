@@ -4,11 +4,13 @@ import * as React from "react"
 import * as PopoverPrimitive from "@radix-ui/react-popover"
 
 import { cn } from "@/lib/utils"
+import { logIfInvalidSingleChild } from "./utils"
 
 const Popover = PopoverPrimitive.Root
 
 const PopoverTrigger = React.forwardRef<HTMLButtonElement, React.ComponentPropsWithoutRef<typeof PopoverPrimitive.Trigger>>(
   function PopoverTriggerWithDebug(props, ref) {
+    logIfInvalidSingleChild(props.children, "PopoverTrigger");
     return (
       <PopoverPrimitive.Trigger {...props} ref={ref}>
         {props.children}

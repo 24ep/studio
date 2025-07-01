@@ -4,6 +4,7 @@ import * as React from "react"
 import * as DropdownMenuPrimitive from "@radix-ui/react-dropdown-menu"
 import { Check, ChevronRight, Circle } from "lucide-react"
 import { Slot } from "@radix-ui/react-slot"
+import { logIfInvalidSingleChild } from "./utils"
 
 import { cn } from "@/lib/utils"
 
@@ -13,6 +14,7 @@ const DropdownMenuTrigger = React.forwardRef<
   React.ElementRef<typeof DropdownMenuPrimitive.Trigger>,
   React.ComponentPropsWithoutRef<typeof DropdownMenuPrimitive.Trigger>
 >(function DropdownMenuTriggerWithDebug(props, ref) {
+  logIfInvalidSingleChild(props.children, "DropdownMenuTrigger");
   return (
     <DropdownMenuPrimitive.Trigger asChild={props.asChild} ref={ref} {...props}>
       {props.children}
