@@ -556,7 +556,7 @@ const SidebarMenuButton = React.forwardRef<
     const Comp = asChild ? Slot : "button"
     const { isMobile, state } = useSidebar()
 
-    const button = (
+    let button = (
       <Comp
         ref={ref}
         data-sidebar="menu-button"
@@ -566,6 +566,15 @@ const SidebarMenuButton = React.forwardRef<
         {...props}
       />
     )
+
+    // If asChild is true and children is an array or fragment, wrap in a div
+    if (asChild && React.isValidElement(props.children)) {
+      const child = props.children
+      if (Array.isArray(child) || (child && child.type === React.Fragment)) {
+        console.warn('SidebarMenuButton: Multiple children or fragment detected, wrapping in a div to satisfy React.Children.only.');
+        button = <div>{button}</div>
+      }
+    }
 
     if (!tooltip) {
       return button
@@ -580,7 +589,7 @@ const SidebarMenuButton = React.forwardRef<
     return (
       <Tooltip>
         {/* Ensure TooltipTrigger always receives a single React element, never a fragment or array */}
-        <TooltipTrigger asChild><div>{button}</div></TooltipTrigger>
+        <TooltipTrigger asChild>{button}</TooltipTrigger>
         <TooltipContent
           side="right"
           align="center"
