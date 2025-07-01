@@ -2,23 +2,7 @@ version: '3.8'
 
 services:
   app:
-    build:
-      context: .
-      dockerfile: Dockerfile
-      args:
-        DATABASE_URL: "${DATABASE_URL}"
-        NEXTAUTH_URL: "${NEXTAUTH_URL}"
-        NEXTAUTH_SECRET: "${NEXTAUTH_SECRET}"
-        AZURE_AD_CLIENT_ID: "${AZURE_AD_CLIENT_ID}"
-        AZURE_AD_CLIENT_SECRET: "${AZURE_AD_CLIENT_SECRET}"
-        AZURE_AD_TENANT_ID: "${AZURE_AD_TENANT_ID}"
-        GOOGLE_API_KEY: "${GOOGLE_API_KEY}"
-        NEXT_PUBLIC_GOOGLE_FONTS_API_KEY: "${NEXT_PUBLIC_GOOGLE_FONTS_API_KEY}"
-      # Build optimizations
-      cache_from:
-        - 24ep/studio:dev
-      # Build with no cache for fresh builds (comment out for faster builds)
-      # no_cache: true
+    image: 24ep/studio:dev
     ports:
       - "${APP_PORT:-9846}:9846"
     # For production deployments, you typically want the application code to be self-contained

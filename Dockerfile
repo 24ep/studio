@@ -1,18 +1,13 @@
-# ---- Build Stage ----
-FROM node:20-alpine AS builder
-WORKDIR /app
-COPY package.json package-lock.json ./
-RUN npm ci --omit=dev
-COPY . .
-# Generate Prisma client before building Next.js
-RUN npx prisma generate
-RUN npm run build
+# Use pre-built image from Docker Hub
+FROM 24ep/studio:dev
 
-# ---- Production Stage ----
-FROM node:20-alpine AS runner
-WORKDIR /app
-COPY --from=builder /app ./
+# Set environment variables
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
+
+# Expose the application port
 EXPOSE 9846
+
+# The image already contains the built application
+# Just start the application
 CMD ["npm", "run", "start"]
