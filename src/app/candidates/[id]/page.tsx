@@ -911,8 +911,8 @@ export default function CandidateDetailPage() {
                                                 render={({ field: controllerField }) => (
                                                     <Checkbox
                                                         id={`experience.${index}.is_current_position`}
-                                                        checked={!!controllerField.value}
-                                                        onCheckedChange={controllerField.onChange}
+                                                        checked={Boolean(controllerField.value)}
+                                                        onCheckedChange={(checked) => controllerField.onChange(checked)}
                                                     />
                                                 )}
                                             />

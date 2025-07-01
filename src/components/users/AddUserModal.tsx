@@ -178,7 +178,7 @@ export function AddUserModal({ isOpen, onOpenChange, onAddUser }: AddUserModalPr
                                 <FormField key={group.id} control={form.control} name="groupIds"
                                   render={({ field }) => (
                                     <FormItem className="flex flex-row items-center space-x-3 space-y-0 px-2 py-1.5 hover:bg-accent rounded-sm">
-                                      <FormControl><Checkbox checked={field.value?.includes(group.id)}
+                                      <FormControl><Checkbox checked={Boolean(field.value?.includes(group.id))}
                                         onCheckedChange={(checked) => checked ? field.onChange([...(field.value || []), group.id]) : field.onChange((field.value || []).filter(v => v !== group.id))}
                                       /></FormControl>
                                       <FormLabel className="text-sm font-normal cursor-pointer flex-grow">{group.name}</FormLabel>

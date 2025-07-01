@@ -146,14 +146,10 @@ services:
       PROCESSOR_URL: ${PROCESSOR_URL}
       PROCESSOR_API_KEY: ${PROCESSOR_API_KEY}
     depends_on:
-      app:
-        condition: service_healthy
-      postgres:
-        condition: service_started
-      minio:
-        condition: service_started
-      redis:
-        condition: service_started
+      - app
+      - postgres
+      - minio
+      - redis
     restart: unless-stopped
     mem_limit: 1g
     cpus: 0.5

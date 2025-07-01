@@ -354,8 +354,8 @@ export function AddCandidateModal({ isOpen, onOpenChange, onAddCandidate, availa
                                 render={({ field: controllerField }) => (
                                     <Checkbox
                                         id={`experience.${index}.is_current_position`}
-                                        checked={!!controllerField.value}
-                                        onCheckedChange={controllerField.onChange}
+                                        checked={Boolean(controllerField.value)}
+                                        onCheckedChange={(checked) => controllerField.onChange(checked)}
                                         className="h-4 w-4"
                                     />
                                 )}

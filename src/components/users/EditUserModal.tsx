@@ -316,8 +316,8 @@ export function EditUserModal({ isOpen, onOpenChange, onEditUser, user, isSelfEd
                                 <FormItem className="flex flex-row items-center space-x-3 space-y-0">
                                   <FormControl>
                                     <Checkbox 
-                                      checked={field.value} 
-                                      onCheckedChange={field.onChange}
+                                      checked={Boolean(field.value)} 
+                                      onCheckedChange={(checked) => field.onChange(checked)}
                                     />
                                   </FormControl>
                                   <FormLabel className="text-base font-medium">
@@ -409,7 +409,7 @@ export function EditUserModal({ isOpen, onOpenChange, onEditUser, user, isSelfEd
                                       <FormItem className="flex flex-row items-center space-x-3 space-y-0 px-3 py-2 hover:bg-accent rounded-sm">
                                         <FormControl>
                                           <Checkbox 
-                                            checked={field.value?.includes(group.id)}
+                                            checked={Boolean(field.value?.includes(group.id))}
                                             onCheckedChange={(checked) => 
                                               checked 
                                                 ? field.onChange([...(field.value || []), group.id]) 

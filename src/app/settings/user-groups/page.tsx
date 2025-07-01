@@ -369,7 +369,7 @@ export default function RolesPermissionsPage() {
               )} />
               <FormField control={form.control} name="is_default" render={({ field }) => (
                 <FormItem className="flex flex-row items-center space-x-3 space-y-0 pt-2">
-                  <FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange} /></FormControl>
+                  <FormControl><Checkbox checked={Boolean(field.value)} onCheckedChange={(checked) => field.onChange(checked)} /></FormControl>
                   <FormLabel className="font-normal">Set as Default Role</FormLabel>
                 </FormItem>
               )} />

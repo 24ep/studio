@@ -117,8 +117,8 @@ export function DynamicForm({
               ) : field.type === 'boolean' ? (
                 <div className="flex items-center space-x-2">
                   <Checkbox
-                    checked={formField.value as boolean}
-                    onCheckedChange={formField.onChange}
+                    checked={Boolean(formField.value)}
+                    onCheckedChange={(checked) => formField.onChange(checked)}
                   />
                   <span className="text-sm text-muted-foreground">
                     {field.description}
