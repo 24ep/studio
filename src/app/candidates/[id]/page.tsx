@@ -622,547 +622,547 @@ export default function CandidateDetailPage() {
 
   return (
     <FormProvider {...form}>
-    <div className="space-y-6 p-6">
-      <div className="flex justify-between items-center mb-4">
-        <Button variant="outline" onClick={() => router.push('/candidates')}>
-          <ArrowLeft className="mr-2 h-4 w-4" /> Back to All Candidates
-        </Button>
-        {!isEditing && (
-            <Button onClick={() => setIsEditing(true)}><Edit3 className="mr-2 h-4 w-4"/> Edit Details</Button>
-        )}
-        {isEditing && (
-            <div className="flex gap-2">
-                <Button onClick={handleSubmit(handleSaveDetails)} variant="default" disabled={isSubmitting} className="btn-primary-gradient">
-                    {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Save className="mr-2 h-4 w-4"/>}
-                    {isSubmitting ? 'Saving...' : 'Save Changes'}
-                </Button>
-                <Button variant="outline" onClick={handleCancelEdit} disabled={isSubmitting}>
-                    <X className="mr-2 h-4 w-4"/> Cancel
-                </Button>
-            </div>
-        )}
-      </div>
-    <form onSubmit={handleSubmit(handleSaveDetails)}>
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 space-y-6">
-          <Card className="shadow-lg">
-            <CardHeader className="flex flex-row items-start justify-between gap-4">
-              <div className="flex items-center gap-4">
-                {/* Avatar Upload */}
-                {isEditing ? (
-                  <div className="flex flex-col items-center gap-2">
-                    <ImageUpload
-                      value={personalInfo?.avatar_url || ''}
-                      onChange={async (value) => {
-                        setAvatarError(null);
-                        if (value && value.startsWith('data:image/')) {
-                          setAvatarUploading(true);
-                          try {
-                            const res = await fetch(value);
-                            const blob = await res.blob();
-                            const formData = new FormData();
-                            formData.append('avatar', new File([blob], 'avatar.png', { type: blob.type }));
-                            const uploadRes = await fetch(`/api/candidates/${candidate.id}/avatar`, {
-                              method: 'POST',
-                              body: formData,
-                            });
-                            const result = await uploadRes.json();
-                            if (!uploadRes.ok) throw new Error(result.message || 'Upload failed');
-                            setValue('parsedData.personal_info.avatar_url', result.avatar_url);
-                            setAvatarUploading(false);
-                          } catch (err: any) {
-                            setAvatarError(err.message || 'Failed to upload avatar');
-                            setAvatarUploading(false);
-                          }
-                        } else {
-                          setValue('parsedData.personal_info.avatar_url', value);
-                        }
-                      }}
-                      label="Avatar"
-                      placeholder="Enter avatar URL or upload image file"
-                      previewSize="md"
-                      allowUrl={true}
-                      allowFile={true}
-                    />
-                    {avatarUploading && (
-                      <div className="text-xs text-muted-foreground mt-1">Uploading avatar...</div>
-                    )}
-                    {avatarError && (
-                      <div className="text-xs text-destructive mt-1">{avatarError}</div>
-                    )}
-                  </div>
-                ) : (
-                  <Avatar className="h-20 w-20 border-2 border-primary">
-                    <AvatarImage src={personalInfo?.avatar_url || `https://placehold.co/80x80.png?text=${candidate.name.charAt(0)}`} alt={candidate.name} data-ai-hint="person avatar" />
-                    <AvatarFallback className="text-3xl">{candidate.name.charAt(0).toUpperCase()}</AvatarFallback>
-                  </Avatar>
-                )}
-                <div>
-                  {isEditing ? (
-                    <>
-                      <Label htmlFor="name">Name</Label>
-                      <Input id="name" {...register('name')} className="text-3xl font-bold" />
-                      {errors.name && <p className="text-sm text-destructive">{errors.name.message}</p>}
-
-                      <Label htmlFor="email" className="mt-1 block">Email</Label>
-                      <Input id="email" {...register('email')} />
-                      {errors.email && <p className="text-sm text-destructive">{errors.email.message}</p>}
-
-                      <Label htmlFor="phone" className="mt-1 block">Phone</Label>
-                      <Input id="phone" {...register('phone')} />
-                    </>
-                  ) : (
-                    <>
-                      <CardTitle className="text-3xl">{candidate.name}</CardTitle>
-                      {renderField("Email", candidate.email, Mail)}
-                      {renderField("Phone", candidate.phone, Phone)}
-                    </>
-                  )}
-                </div>
-              </div>
-              <div className="flex flex-col items-end gap-2">
-                 {isEditing ? (
-                    <>
-                        <Label htmlFor="status">Status</Label>
-                        <Controller
-                            name="status"
-                            control={control}
-                            render={({ field }) => (
-                                <Select onValueChange={field.onChange} value={field.value}>
-                                    <SelectTrigger className="text-base px-3 py-1 capitalize"><SelectValue /></SelectTrigger>
-                                    <SelectContent>
-                                        {availableStages.map(s => (
-                                            <SelectItem key={s.id} value={s.name}>{s.name}</SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                            )}
-                        />
-                        {errors.status && <p className="text-sm text-destructive">{errors.status.message}</p>}
-                        <Label htmlFor="fitScore" className="mt-1">Fit Score (Applied Position)</Label>
-                        <Input id="fitScore" type="number" {...register('fitScore', { valueAsNumber: true })} className="w-32 text-right" />
-
-                    </>
-                  ) : (
-                    <>
-                        <Badge variant={getStatusBadgeVariant(candidate.status)} className="text-base px-3 py-1 capitalize">{candidate.status}</Badge>
-                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                        <Percent className="h-4 w-4" /> Fit Score (Applied Position): <span className="font-semibold text-foreground">{(candidate.fitScore || 0)}%</span>
-                        </div>
-                        <Progress value={candidate.fitScore || 0} className="w-32 h-2" />
-                    </>
-                  )}
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-2">
-                 {isEditing ? (
-                    <>
-                        <Label htmlFor="parsedData.cv_language">CV Language</Label>
-                        <Input id="parsedData.cv_language" {...register('parsedData.cv_language')} />
-                        <Label htmlFor="positionId">Applied for Position</Label>
-                         <Controller
-                            name="positionId"
-                            control={control}
-                            render={({ field }) => (
-                                <Select onValueChange={(value) => field.onChange(value === "___NONE___" ? null : value)} value={field.value ?? "___NONE___"}>
-                                    <SelectTrigger><SelectValue placeholder="Select Position" /></SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="___NONE___">N/A - General Application</SelectItem>
-                                        {allDbPositions.map(pos => <SelectItem key={pos.id} value={pos.id}>{pos.title}</SelectItem>)}
-                                    </SelectContent>
-                                </Select>
-                            )}
-                        />
-                    </>
-                ) : (
-                    <>
-                        {renderField("Applied for", candidate.position?.title || 'N/A - General Application', Briefcase)}
-                        {renderField("Application Date", candidate.applicationDate ? format(parseISO(candidate.applicationDate), "PPP") : 'N/A', CalendarDays)}
-                        {renderField("CV Language", parsed?.cv_language, Tag)}
-                    </>
-                )}
-                {candidate.resumePath && !isEditing && renderField(
-                  "Resume",
-                  getDisplayFilename(candidate.resumePath),
-                  HardDrive,
-                  true,
-                  `${MINIO_PUBLIC_BASE_URL}/${MINIO_BUCKET}/${candidate.resumePath}`, 
-                  "_blank"
-                )}
-                 {(parsed?.associatedMatchDetails && !isEditing) && (
-                  <Card className="mt-4 bg-muted/50 p-3">
-                    <CardHeader className="p-0 pb-1">
-                      <CardTitle className="text-sm font-semibold flex items-center"><Zap className="mr-2 h-4 w-4 text-orange-500" /> Initial Processed Match</CardTitle>
-                    </CardHeader>
-                    <CardContent className="p-0 text-xs space-y-0.5">
-                      {renderField("Matched Job", parsed.associatedMatchDetails.jobTitle)}
-                      {renderField("Processed Fit Score", `${parsed.associatedMatchDetails.fitScore}%`)}
-                    </CardContent>
-                  </Card>
-                )}
-            </CardContent>
-            {!isEditing && (
-              <CardFooter className="gap-2">
-                  <Button variant="outline" onClick={() => setIsUploadModalOpen(true)}><UploadCloud className="mr-2 h-4 w-4" /> Upload New Resume</Button>
-                  <Button variant="outline" onClick={() => setIsTransitionsModalOpen(true)}><Edit className="mr-2 h-4 w-4" /> Manage Transitions</Button>
-              </CardFooter>
-            )}
-          </Card>
-
+      <div className="space-y-6 p-6">
+        <div className="flex justify-between items-center mb-4">
+          <Button variant="outline" onClick={() => router.push('/candidates')}>
+            <ArrowLeft className="mr-2 h-4 w-4" /> Back to All Candidates
+          </Button>
           {!isEditing && (
-             <RoleSuggestionSummary candidate={candidate} allDbPositions={allDbPositions} />
+              <Button onClick={() => setIsEditing(true)}><Edit3 className="mr-2 h-4 w-4"/> Edit Details</Button>
           )}
-
-
-          <Card>
-                <CardHeader><CardTitle className="flex items-center"><UserCircle className="mr-2 h-5 w-5 text-primary"/>Personal Information</CardTitle></CardHeader>
-                <CardContent className="space-y-3">
+          {isEditing && (
+              <div className="flex gap-2">
+                  <Button onClick={handleSubmit(handleSaveDetails)} variant="default" disabled={isSubmitting} className="btn-primary-gradient">
+                      {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Save className="mr-2 h-4 w-4"/>}
+                      {isSubmitting ? 'Saving...' : 'Save Changes'}
+                  </Button>
+                  <Button variant="outline" onClick={handleCancelEdit} disabled={isSubmitting}>
+                      <X className="mr-2 h-4 w-4"/> Cancel
+                  </Button>
+              </div>
+          )}
+        </div>
+        <form onSubmit={handleSubmit(handleSaveDetails)}>
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="lg:col-span-2 space-y-6">
+              <Card className="shadow-lg">
+                <CardHeader className="flex flex-row items-start justify-between gap-4">
+                  <div className="flex items-center gap-4">
+                    {/* Avatar Upload */}
                     {isEditing ? (
+                      <div className="flex flex-col items-center gap-2">
+                        <ImageUpload
+                          value={personalInfo?.avatar_url || ''}
+                          onChange={async (value) => {
+                            setAvatarError(null);
+                            if (value && value.startsWith('data:image/')) {
+                              setAvatarUploading(true);
+                              try {
+                                const res = await fetch(value);
+                                const blob = await res.blob();
+                                const formData = new FormData();
+                                formData.append('avatar', new File([blob], 'avatar.png', { type: blob.type }));
+                                const uploadRes = await fetch(`/api/candidates/${candidate.id}/avatar`, {
+                                  method: 'POST',
+                                  body: formData,
+                                });
+                                const result = await uploadRes.json();
+                                if (!uploadRes.ok) throw new Error(result.message || 'Upload failed');
+                                setValue('parsedData.personal_info.avatar_url', result.avatar_url);
+                                setAvatarUploading(false);
+                              } catch (err: any) {
+                                setAvatarError(err.message || 'Failed to upload avatar');
+                                setAvatarUploading(false);
+                              }
+                            } else {
+                              setValue('parsedData.personal_info.avatar_url', value);
+                            }
+                          }}
+                          label="Avatar"
+                          placeholder="Enter avatar URL or upload image file"
+                          previewSize="md"
+                          allowUrl={true}
+                          allowFile={true}
+                        />
+                        {avatarUploading && (
+                          <div className="text-xs text-muted-foreground mt-1">Uploading avatar...</div>
+                        )}
+                        {avatarError && (
+                          <div className="text-xs text-destructive mt-1">{avatarError}</div>
+                        )}
+                      </div>
+                    ) : (
+                      <Avatar className="h-20 w-20 border-2 border-primary">
+                        <AvatarImage src={personalInfo?.avatar_url || `https://placehold.co/80x80.png?text=${candidate.name.charAt(0)}`} alt={candidate.name} data-ai-hint="person avatar" />
+                        <AvatarFallback className="text-3xl">{candidate.name.charAt(0).toUpperCase()}</AvatarFallback>
+                      </Avatar>
+                    )}
+                    <div>
+                      {isEditing ? (
                         <>
-                            <Label htmlFor="parsedData.personal_info.title_honorific">Title</Label>
-                            <Input id="parsedData.personal_info.title_honorific" {...register('parsedData.personal_info.title_honorific')} />
-                            <Label htmlFor="parsedData.personal_info.firstname">First Name *</Label>
-                            <Input id="parsedData.personal_info.firstname" {...register('parsedData.personal_info.firstname')} />
-                            {errors.parsedData?.personal_info?.firstname && <p className="text-sm text-destructive">{errors.parsedData.personal_info.firstname.message}</p>}
-                            <Label htmlFor="parsedData.personal_info.lastname">Last Name *</Label>
-                            <Input id="parsedData.personal_info.lastname" {...register('parsedData.personal_info.lastname')} />
-                            {errors.parsedData?.personal_info?.lastname && <p className="text-sm text-destructive">{errors.parsedData.personal_info.lastname.message}</p>}
-                            <Label htmlFor="parsedData.personal_info.nickname">Nickname</Label>
-                            <Input id="parsedData.personal_info.nickname" {...register('parsedData.personal_info.nickname')} />
-                            <Label htmlFor="parsedData.personal_info.location">Location</Label>
-                            <Input id="parsedData.personal_info.location" {...register('parsedData.personal_info.location')} />
-                            <Label htmlFor="parsedData.personal_info.introduction_aboutme">About Me</Label>
-                            <Textarea id="parsedData.personal_info.introduction_aboutme" {...register('parsedData.personal_info.introduction_aboutme')} />
+                          <Label htmlFor="name">Name</Label>
+                          <Input id="name" {...register('name')} className="text-3xl font-bold" />
+                          {errors.name && <p className="text-sm text-destructive">{errors.name.message}</p>}
+
+                          <Label htmlFor="email" className="mt-1 block">Email</Label>
+                          <Input id="email" {...register('email')} />
+                          {errors.email && <p className="text-sm text-destructive">{errors.email.message}</p>}
+
+                          <Label htmlFor="phone" className="mt-1 block">Phone</Label>
+                          <Input id="phone" {...register('phone')} />
+                        </>
+                      ) : (
+                        <>
+                          <CardTitle className="text-3xl">{candidate.name}</CardTitle>
+                          {renderField("Email", candidate.email, Mail)}
+                          {renderField("Phone", candidate.phone, Phone)}
+                        </>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex flex-col items-end gap-2">
+                     {isEditing ? (
+                        <>
+                            <Label htmlFor="status">Status</Label>
+                            <Controller
+                                name="status"
+                                control={control}
+                                render={({ field }) => (
+                                    <Select onValueChange={field.onChange} value={field.value}>
+                                        <SelectTrigger className="text-base px-3 py-1 capitalize"><SelectValue /></SelectTrigger>
+                                        <SelectContent>
+                                            {availableStages.map(s => (
+                                                <SelectItem key={s.id} value={s.name}>{s.name}</SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                )}
+                            />
+                            {errors.status && <p className="text-sm text-destructive">{errors.status.message}</p>}
+                            <Label htmlFor="fitScore" className="mt-1">Fit Score (Applied Position)</Label>
+                            <Input id="fitScore" type="number" {...register('fitScore', { valueAsNumber: true })} className="w-32 text-right" />
+
+                        </>
+                      ) : (
+                        <>
+                            <Badge variant={getStatusBadgeVariant(candidate.status)} className="text-base px-3 py-1 capitalize">{candidate.status}</Badge>
+                            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                            <Percent className="h-4 w-4" /> Fit Score (Applied Position): <span className="font-semibold text-foreground">{(candidate.fitScore || 0)}%</span>
+                            </div>
+                            <Progress value={candidate.fitScore || 0} className="w-32 h-2" />
+                        </>
+                      )}
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-2">
+                     {isEditing ? (
+                        <>
+                            <Label htmlFor="parsedData.cv_language">CV Language</Label>
+                            <Input id="parsedData.cv_language" {...register('parsedData.cv_language')} />
+                            <Label htmlFor="positionId">Applied for Position</Label>
+                             <Controller
+                                name="positionId"
+                                control={control}
+                                render={({ field }) => (
+                                    <Select onValueChange={(value) => field.onChange(value === "___NONE___" ? null : value)} value={field.value ?? "___NONE___"}>
+                                        <SelectTrigger><SelectValue placeholder="Select Position" /></SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="___NONE___">N/A - General Application</SelectItem>
+                                            {allDbPositions.map(pos => <SelectItem key={pos.id} value={pos.id}>{pos.title}</SelectItem>)}
+                                        </SelectContent>
+                                    </Select>
+                                )}
+                            />
                         </>
                     ) : (
                         <>
-                            {renderField("Title", personalInfo?.title_honorific)}
-                            {renderField("First Name", personalInfo?.firstname)}
-                            {renderField("Last Name", personalInfo?.lastname)}
-                            {renderField("Nickname", personalInfo?.nickname)}
-                            {renderField("Location", personalInfo?.location, MapPin)}
-                            {(personalInfo)?.introduction_aboutme && (
-                                <div>
-                                <h4 className="text-sm font-medium text-muted-foreground mb-1 flex items-center"><Info className="h-4 w-4 mr-2"/>About Me:</h4>
-                                <p className="text-sm text-foreground whitespace-pre-wrap bg-muted/50 p-3 rounded-md">{personalInfo.introduction_aboutme}</p>
-                                </div>
-                            )}
+                            {renderField("Applied for", candidate.position?.title || 'N/A - General Application', Briefcase)}
+                            {renderField("Application Date", candidate.applicationDate ? format(parseISO(candidate.applicationDate), "PPP") : 'N/A', CalendarDays)}
+                            {renderField("CV Language", parsed?.cv_language, Tag)}
                         </>
                     )}
+                    {candidate.resumePath && !isEditing && renderField(
+                      "Resume",
+                      getDisplayFilename(candidate.resumePath),
+                      HardDrive,
+                      true,
+                      `${MINIO_PUBLIC_BASE_URL}/${MINIO_BUCKET}/${candidate.resumePath}`, 
+                      "_blank"
+                    )}
+                     {(parsed?.associatedMatchDetails && !isEditing) && (
+                      <Card className="mt-4 bg-muted/50 p-3">
+                        <CardHeader className="p-0 pb-1">
+                          <CardTitle className="text-sm font-semibold flex items-center"><Zap className="mr-2 h-4 w-4 text-orange-500" /> Initial Processed Match</CardTitle>
+                        </CardHeader>
+                        <CardContent className="p-0 text-xs space-y-0.5">
+                          {renderField("Matched Job", parsed.associatedMatchDetails.jobTitle)}
+                          {renderField("Processed Fit Score", `${parsed.associatedMatchDetails.fitScore}%`)}
+                        </CardContent>
+                      </Card>
+                    )}
                 </CardContent>
-            </Card>
+                {!isEditing && (
+                  <CardFooter className="gap-2">
+                      <Button variant="outline" onClick={() => setIsUploadModalOpen(true)}><UploadCloud className="mr-2 h-4 w-4" /> Upload New Resume</Button>
+                      <Button variant="outline" onClick={() => setIsTransitionsModalOpen(true)}><Edit className="mr-2 h-4 w-4" /> Manage Transitions</Button>
+                  </CardFooter>
+                )}
+              </Card>
 
-            <Card>
-                <CardHeader><CardTitle className="flex items-center"><GraduationCap className="mr-2 h-5 w-5 text-primary"/>Education</CardTitle></CardHeader>
-                <CardContent>
+              {!isEditing && (
+                 <RoleSuggestionSummary candidate={candidate} allDbPositions={allDbPositions} />
+              )}
+
+
+              <Card>
+                    <CardHeader><CardTitle className="flex items-center"><UserCircle className="mr-2 h-5 w-5 text-primary"/>Personal Information</CardTitle></CardHeader>
+                    <CardContent className="space-y-3">
+                        {isEditing ? (
+                            <>
+                                <Label htmlFor="parsedData.personal_info.title_honorific">Title</Label>
+                                <Input id="parsedData.personal_info.title_honorific" {...register('parsedData.personal_info.title_honorific')} />
+                                <Label htmlFor="parsedData.personal_info.firstname">First Name *</Label>
+                                <Input id="parsedData.personal_info.firstname" {...register('parsedData.personal_info.firstname')} />
+                                {errors.parsedData?.personal_info?.firstname && <p className="text-sm text-destructive">{errors.parsedData.personal_info.firstname.message}</p>}
+                                <Label htmlFor="parsedData.personal_info.lastname">Last Name *</Label>
+                                <Input id="parsedData.personal_info.lastname" {...register('parsedData.personal_info.lastname')} />
+                                {errors.parsedData?.personal_info?.lastname && <p className="text-sm text-destructive">{errors.parsedData.personal_info.lastname.message}</p>}
+                                <Label htmlFor="parsedData.personal_info.nickname">Nickname</Label>
+                                <Input id="parsedData.personal_info.nickname" {...register('parsedData.personal_info.nickname')} />
+                                <Label htmlFor="parsedData.personal_info.location">Location</Label>
+                                <Input id="parsedData.personal_info.location" {...register('parsedData.personal_info.location')} />
+                                <Label htmlFor="parsedData.personal_info.introduction_aboutme">About Me</Label>
+                                <Textarea id="parsedData.personal_info.introduction_aboutme" {...register('parsedData.personal_info.introduction_aboutme')} />
+                            </>
+                        ) : (
+                            <>
+                                {renderField("Title", personalInfo?.title_honorific)}
+                                {renderField("First Name", personalInfo?.firstname)}
+                                {renderField("Last Name", personalInfo?.lastname)}
+                                {renderField("Nickname", personalInfo?.nickname)}
+                                {renderField("Location", personalInfo?.location, MapPin)}
+                                {(personalInfo)?.introduction_aboutme && (
+                                    <div>
+                                    <h4 className="text-sm font-medium text-muted-foreground mb-1 flex items-center"><Info className="h-4 w-4 mr-2"/>About Me:</h4>
+                                    <p className="text-sm text-foreground whitespace-pre-wrap bg-muted/50 p-3 rounded-md">{personalInfo.introduction_aboutme}</p>
+                                    </div>
+                                )}
+                            </>
+                        )}
+                    </CardContent>
+                </Card>
+
+                <Card>
+                    <CardHeader><CardTitle className="flex items-center"><GraduationCap className="mr-2 h-5 w-5 text-primary"/>Education</CardTitle></CardHeader>
+                    <CardContent>
+                        <ScrollArea className="h-[300px]">
+                        {isEditing ? (
+                            <div className="space-y-4">
+                                {educationFields.map((field, index) => (
+                                    <div key={field.id} className="p-3 border rounded-md space-y-2 bg-muted/30 relative">
+                                        <Input placeholder="University" {...register(`parsedData.education.${index}.university`)} />
+                                        <Input placeholder="Major" {...register(`parsedData.education.${index}.major`)} />
+                                        <Input placeholder="Field" {...register(`parsedData.education.${index}.field`)} />
+                                        <Input placeholder="Campus" {...register(`parsedData.education.${index}.campus`)} />
+                                        <Input placeholder="Period" {...register(`parsedData.education.${index}.period`)} />
+                                        <Input placeholder="Duration" {...register(`parsedData.education.${index}.duration`)} />
+                                        <Input placeholder="GPA" {...register(`parsedData.education.${index}.GPA`)} />
+                                        <Button type="button" variant="ghost" size="icon" className="absolute top-1 right-1 h-7 w-7" onClick={() => removeEducation(index)}>
+                                            <Trash2 className="h-4 w-4 text-destructive" />
+                                        </Button>
+                                    </div>
+                                ))}
+                                 <Button type="button" variant="outline" className="mt-2" onClick={() => appendEducation({ university: '', major: '', field: '', campus: '', period: '', duration: '', GPA: '' })}>
+                                    <PlusCircle className="mr-2 h-4 w-4" /> Add Education
+                                </Button>
+                            </div>
+                        ) : (
+                            (parsed?.education && parsed.education.length > 0) ? (
+                                <ul className="space-y-4">
+                                    {parsed.education.map((edu, index) => (
+                                    <li key={`edu-${index}-${edu.university || index}`} className="p-3 border rounded-md bg-muted/30">
+                                        {renderField("University", edu.university)}
+                                        {renderField("Major", edu.major)}
+                                        {renderField("Field", edu.field)}
+                                        {renderField("Campus", edu.campus)}
+                                        {renderField("Period", edu.period, CalendarDays)}
+                                        {renderField("Duration", edu.duration)}
+                                        {renderField("GPA", edu.GPA)}
+                                        {index < parsed.education!.length - 1 && <Separator className="my-3" />}
+                                    </li>
+                                    ))}
+                                </ul>
+                            ) : <div className="text-sm text-muted-foreground text-center py-4">No education details provided.</div>
+                        )}
+                        </ScrollArea>
+                    </CardContent>
+                </Card>
+
+              <Card>
+                  <CardHeader><CardTitle className="flex items-center"><Briefcase className="mr-2 h-5 w-5 text-primary"/>Experience</CardTitle></CardHeader>
+                  <CardContent>
+                      <ScrollArea className="h-[300px]">
+                      {isEditing ? (
+                            <div className="space-y-4">
+                                {experienceFields.map((field, index) => (
+                                    <div key={field.id} className="p-3 border rounded-md space-y-2 bg-muted/30 relative">
+                                        <Input placeholder="Company" {...register(`parsedData.experience.${index}.company`)} />
+                                        <Input placeholder="Position" {...register(`parsedData.experience.${index}.position`)} />
+                                        <Textarea placeholder="Description" {...register(`parsedData.experience.${index}.description`)} />
+                                        <Input placeholder="Period" {...register(`parsedData.experience.${index}.period`)} />
+                                        <Input placeholder="Duration" {...register(`parsedData.experience.${index}.duration`)} />
+                                         <Controller
+                                            name={`parsedData.experience.${index}.postition_level`}
+                                            control={control}
+                                            render={({ field: controllerField }) => (
+                                                <Select
+                                                    onValueChange={(value) => controllerField.onChange(value === PLACEHOLDER_VALUE_NONE ? null : value)}
+                                                    value={controllerField.value ?? PLACEHOLDER_VALUE_NONE}
+                                                >
+                                                <SelectTrigger><SelectValue placeholder="Position Level" /></SelectTrigger>
+                                                <SelectContent>
+                                                    <SelectItem value={PLACEHOLDER_VALUE_NONE}>N/A / Not Specified</SelectItem>
+                                                    {positionLevelOptions.map(level => <SelectItem key={level} value={level}>{level.charAt(0).toUpperCase() + level.slice(1)}</SelectItem>)}
+                                                </SelectContent>
+                                                </Select>
+                                            )}
+                                        />
+                                        <div className="flex items-center space-x-2">
+                                            <Controller
+                                                name={`parsedData.experience.${index}.is_current_position`}
+                                                control={control}
+                                                render={({ field: controllerField }) => (
+                                                    <Checkbox
+                                                        id={`experience.${index}.is_current_position`}
+                                                        checked={!!controllerField.value}
+                                                        onCheckedChange={controllerField.onChange}
+                                                    />
+                                                )}
+                                            />
+                                            <Label htmlFor={`experience.${index}.is_current_position`}>Current Position</Label>
+                                        </div>
+                                        <Button type="button" variant="ghost" size="icon" className="absolute top-1 right-1 h-7 w-7" onClick={() => removeExperience(index)}>
+                                            <Trash2 className="h-4 w-4 text-destructive" />
+                                        </Button>
+                                    </div>
+                                ))}
+                                <Button type="button" variant="outline" className="mt-2" onClick={() => appendExperience({ company: '', position: '', period: '', duration: '', is_current_position: false, description: '', postition_level: null })}>
+                                    <PlusCircle className="mr-2 h-4 w-4" /> Add Experience
+                                </Button>
+                            </div>
+                        ) : (
+                            (parsed?.experience && parsed.experience.length > 0) ? (
+                                <ul className="space-y-4">
+                                    {parsed.experience.map((exp, index) => (
+                                    <li key={`exp-${index}-${exp.company || index}`} className="p-3 border rounded-md bg-muted/30">
+                                        {renderField("Company", exp.company)}
+                                        {renderField("Position", exp.position)}
+                                        {renderField("Level", String(exp.postition_level))}
+                                        {renderField("Period", exp.period, CalendarDays)}
+                                        {renderField("Duration", exp.duration)}
+                                        {exp.is_current_position !== undefined && renderField("Current Position", String(exp.is_current_position))}
+                                        {exp.description && (
+                                            <div>
+                                                <h4 className="text-sm font-medium text-muted-foreground mt-2 mb-1">Description:</h4>
+                                                <p className="text-sm text-foreground whitespace-pre-wrap bg-background p-2 rounded">{exp.description}</p>
+                                            </div>
+                                        )}
+                                        {index < parsed.experience!.length - 1 && <Separator className="my-3" />}
+                                    </li>
+                                    ))}
+                                </ul>
+                            ) : <div className="text-sm text-muted-foreground text-center py-4">No experience details provided.</div>
+                        )}
+                      </ScrollArea>
+                  </CardContent>
+              </Card>
+
+                <Card>
+                  <CardHeader><CardTitle className="flex items-center"><Star className="mr-2 h-5 w-5 text-primary"/>Skills</CardTitle></CardHeader>
+                  <CardContent>
                     <ScrollArea className="h-[300px]">
                     {isEditing ? (
                         <div className="space-y-4">
-                            {educationFields.map((field, index) => (
+                            {skillsFields.map((field, index) => (
                                 <div key={field.id} className="p-3 border rounded-md space-y-2 bg-muted/30 relative">
-                                    <Input placeholder="University" {...register(`parsedData.education.${index}.university`)} />
-                                    <Input placeholder="Major" {...register(`parsedData.education.${index}.major`)} />
-                                    <Input placeholder="Field" {...register(`parsedData.education.${index}.field`)} />
-                                    <Input placeholder="Campus" {...register(`parsedData.education.${index}.campus`)} />
-                                    <Input placeholder="Period" {...register(`parsedData.education.${index}.period`)} />
-                                    <Input placeholder="Duration" {...register(`parsedData.education.${index}.duration`)} />
-                                    <Input placeholder="GPA" {...register(`parsedData.education.${index}.GPA`)} />
-                                    <Button type="button" variant="ghost" size="icon" className="absolute top-1 right-1 h-7 w-7" onClick={() => removeEducation(index)}>
+                                    <Input placeholder="Skill Segment" {...register(`parsedData.skills.${index}.segment_skill`)} />
+                                    <Textarea placeholder="Skills (comma-separated)" {...register(`parsedData.skills.${index}.skill_string`)} />
+                                    <Button type="button" variant="ghost" size="icon" className="absolute top-1 right-1 h-7 w-7" onClick={() => removeSkill(index)}>
                                         <Trash2 className="h-4 w-4 text-destructive" />
                                     </Button>
                                 </div>
                             ))}
-                             <Button type="button" variant="outline" className="mt-2" onClick={() => appendEducation({ university: '', major: '', field: '', campus: '', period: '', duration: '', GPA: '' })}>
-                                <PlusCircle className="mr-2 h-4 w-4" /> Add Education
+                            <Button type="button" variant="outline" className="mt-2" onClick={() => appendSkill({ segment_skill: '', skill_string: '' })}>
+                                <PlusCircle className="mr-2 h-4 w-4" /> Add Skill Segment
                             </Button>
                         </div>
                     ) : (
-                        (parsed?.education && parsed.education.length > 0) ? (
+                        (parsed?.skills && parsed.skills.length > 0) ? (
                             <ul className="space-y-4">
-                                {parsed.education.map((edu, index) => (
-                                <li key={`edu-${index}-${edu.university || index}`} className="p-3 border rounded-md bg-muted/30">
-                                    {renderField("University", edu.university)}
-                                    {renderField("Major", edu.major)}
-                                    {renderField("Field", edu.field)}
-                                    {renderField("Campus", edu.campus)}
-                                    {renderField("Period", edu.period, CalendarDays)}
-                                    {renderField("Duration", edu.duration)}
-                                    {renderField("GPA", edu.GPA)}
-                                    {index < parsed.education!.length - 1 && <Separator className="my-3" />}
+                                {parsed.skills.map((skillEntry, index) => (
+                                <li key={`skill-${index}-${skillEntry.segment_skill || index}`} className="p-3 border rounded-md bg-muted/30">
+                                    {renderField("Segment", skillEntry.segment_skill)}
+                                    {skillEntry.skill && skillEntry.skill.length > 0 && (
+                                    <div>
+                                        <h4 className="text-sm font-medium text-muted-foreground mt-1.5">Skills:</h4>
+                                        <div className="flex flex-wrap gap-1.5 mt-1">
+                                        {skillEntry.skill.map((s, i) => <Badge key={`${index}-${i}-${s}`} variant="secondary">{s}</Badge>)}
+                                        </div>
+                                    </div>
+                                    )}
+                                    {index < parsed.skills!.length - 1 && <Separator className="my-3" />}
                                 </li>
                                 ))}
                             </ul>
-                        ) : <div className="text-sm text-muted-foreground text-center py-4">No education details provided.</div>
+                        ) : <div className="text-sm text-muted-foreground text-center py-4">No skill details provided.</div>
                     )}
                     </ScrollArea>
-                </CardContent>
-            </Card>
+                  </CardContent>
+                </Card>
 
-          <Card>
-              <CardHeader><CardTitle className="flex items-center"><Briefcase className="mr-2 h-5 w-5 text-primary"/>Experience</CardTitle></CardHeader>
-              <CardContent>
-                  <ScrollArea className="h-[300px]">
-                  {isEditing ? (
+                <Card>
+                  <CardHeader><CardTitle className="flex items-center"><UserCog className="mr-2 h-5 w-5 text-primary"/>Job Suitability</CardTitle></CardHeader>
+                  <CardContent>
+                    <ScrollArea className="h-[300px]">
+                     {isEditing ? (
                         <div className="space-y-4">
-                            {experienceFields.map((field, index) => (
+                            {jobSuitableFields.map((field, index) => (
                                 <div key={field.id} className="p-3 border rounded-md space-y-2 bg-muted/30 relative">
-                                    <Input placeholder="Company" {...register(`parsedData.experience.${index}.company`)} />
-                                    <Input placeholder="Position" {...register(`parsedData.experience.${index}.position`)} />
-                                    <Textarea placeholder="Description" {...register(`parsedData.experience.${index}.description`)} />
-                                    <Input placeholder="Period" {...register(`parsedData.experience.${index}.period`)} />
-                                    <Input placeholder="Duration" {...register(`parsedData.experience.${index}.duration`)} />
-                                     <Controller
-                                        name={`parsedData.experience.${index}.postition_level`}
-                                        control={control}
-                                        render={({ field: controllerField }) => (
-                                            <Select
-                                                onValueChange={(value) => controllerField.onChange(value === PLACEHOLDER_VALUE_NONE ? null : value)}
-                                                value={controllerField.value ?? PLACEHOLDER_VALUE_NONE}
-                                            >
-                                            <SelectTrigger><SelectValue placeholder="Position Level" /></SelectTrigger>
-                                            <SelectContent>
-                                                <SelectItem value={PLACEHOLDER_VALUE_NONE}>N/A / Not Specified</SelectItem>
-                                                {positionLevelOptions.map(level => <SelectItem key={level} value={level}>{level.charAt(0).toUpperCase() + level.slice(1)}</SelectItem>)}
-                                            </SelectContent>
-                                            </Select>
-                                        )}
-                                    />
-                                    <div className="flex items-center space-x-2">
-                                        <Controller
-                                            name={`parsedData.experience.${index}.is_current_position`}
-                                            control={control}
-                                            render={({ field: controllerField }) => (
-                                                <Checkbox
-                                                    id={`experience.${index}.is_current_position`}
-                                                    checked={!!controllerField.value}
-                                                    onCheckedChange={controllerField.onChange}
-                                                />
-                                            )}
-                                        />
-                                        <Label htmlFor={`experience.${index}.is_current_position`}>Current Position</Label>
-                                    </div>
-                                    <Button type="button" variant="ghost" size="icon" className="absolute top-1 right-1 h-7 w-7" onClick={() => removeExperience(index)}>
+                                    <Input placeholder="Suitable Career Path" {...register(`parsedData.job_suitable.${index}.suitable_career`)} />
+                                    <Input placeholder="Suitable Job Position" {...register(`parsedData.job_suitable.${index}.suitable_job_position`)} />
+                                    <Input placeholder="Suitable Job Level" {...register(`parsedData.job_suitable.${index}.suitable_job_level`)} />
+                                    <Input placeholder="Desired Salary (THB/Month)" {...register(`parsedData.job_suitable.${index}.suitable_salary_bath_month`)} />
+                                    <Button type="button" variant="ghost" size="icon" className="absolute top-1 right-1 h-7 w-7" onClick={() => removeJobSuitable(index)}>
                                         <Trash2 className="h-4 w-4 text-destructive" />
                                     </Button>
                                 </div>
                             ))}
-                            <Button type="button" variant="outline" className="mt-2" onClick={() => appendExperience({ company: '', position: '', period: '', duration: '', is_current_position: false, description: '', postition_level: null })}>
-                                <PlusCircle className="mr-2 h-4 w-4" /> Add Experience
+                            <Button type="button" variant="outline" className="mt-2" onClick={() => appendJobSuitable({ suitable_career: '', suitable_job_position: '', suitable_job_level: '', suitable_salary_bath_month: '' })}>
+                                <PlusCircle className="mr-2 h-4 w-4" /> Add Job Suitability
                             </Button>
                         </div>
                     ) : (
-                        (parsed?.experience && parsed.experience.length > 0) ? (
+                        (parsed?.job_suitable && parsed.job_suitable.length > 0) ? (
                             <ul className="space-y-4">
-                                {parsed.experience.map((exp, index) => (
-                                <li key={`exp-${index}-${exp.company || index}`} className="p-3 border rounded-md bg-muted/30">
-                                    {renderField("Company", exp.company)}
-                                    {renderField("Position", exp.position)}
-                                    {renderField("Level", String(exp.postition_level))}
-                                    {renderField("Period", exp.period, CalendarDays)}
-                                    {renderField("Duration", exp.duration)}
-                                    {exp.is_current_position !== undefined && renderField("Current Position", String(exp.is_current_position))}
-                                    {exp.description && (
-                                        <div>
-                                            <h4 className="text-sm font-medium text-muted-foreground mt-2 mb-1">Description:</h4>
-                                            <p className="text-sm text-foreground whitespace-pre-wrap bg-background p-2 rounded">{exp.description}</p>
-                                        </div>
-                                    )}
-                                    {index < parsed.experience!.length - 1 && <Separator className="my-3" />}
+                                {parsed.job_suitable.map((job, index) => (
+                                <li key={`jobsuit-${index}-${job.suitable_career || index}`} className="p-3 border rounded-md bg-muted/30">
+                                    {renderField("Career Path", job.suitable_career)}
+                                    {renderField("Job Position", job.suitable_job_position)}
+                                    {renderField("Job Level", job.suitable_job_level)}
+                                    {renderField("Desired Salary (THB/Month)", job.suitable_salary_bath_month, DollarSign)}
+                                    {index < parsed.job_suitable!.length - 1 && <Separator className="my-3" />}
                                 </li>
                                 ))}
                             </ul>
-                        ) : <div className="text-sm text-muted-foreground text-center py-4">No experience details provided.</div>
+                        ) : <div className="text-sm text-muted-foreground text-center py-4">No job suitability details provided.</div>
                     )}
-                  </ScrollArea>
-              </CardContent>
-          </Card>
+                    </ScrollArea>
+                  </CardContent>
+                </Card>
 
-            <Card>
-              <CardHeader><CardTitle className="flex items-center"><Star className="mr-2 h-5 w-5 text-primary"/>Skills</CardTitle></CardHeader>
-              <CardContent>
-                <ScrollArea className="h-[300px]">
-                {isEditing ? (
-                    <div className="space-y-4">
-                        {skillsFields.map((field, index) => (
-                            <div key={field.id} className="p-3 border rounded-md space-y-2 bg-muted/30 relative">
-                                <Input placeholder="Skill Segment" {...register(`parsedData.skills.${index}.segment_skill`)} />
-                                <Textarea placeholder="Skills (comma-separated)" {...register(`parsedData.skills.${index}.skill_string`)} />
-                                <Button type="button" variant="ghost" size="icon" className="absolute top-1 right-1 h-7 w-7" onClick={() => removeSkill(index)}>
-                                    <Trash2 className="h-4 w-4 text-destructive" />
-                                </Button>
+              <Card>
+                <CardHeader><CardTitle className="flex items-center"><MessageSquare className="mr-2 h-5 w-5 text-primary"/>Transition History</CardTitle></CardHeader>
+                <CardContent>
+                  {candidate.transitionHistory && candidate.transitionHistory.length > 0 ? (
+                    <ScrollArea className="h-[300px]">
+                    <ul className="space-y-0">
+                      {candidate.transitionHistory.sort((a,b) => parseISO(b.date).getTime() - parseISO(a.date).getTime()).map((record, index) => (
+                        <li key={record.id} className="p-3 hover:bg-muted/50 transition-colors">
+                          <div className="flex items-start space-x-3">
+                            <CalendarDays className="h-4 w-4 text-muted-foreground mt-1" />
+                            <div className="flex-1">
+                              <p className="text-sm font-semibold text-foreground">{record.stage}</p>
+                              <p className="text-xs text-muted-foreground">
+                                {format(parseISO(record.date), "MMM d, yyyy 'at' h:mm a")}
+                                {record.actingUserName && <span className="italic"> by {record.actingUserName}</span>}
+                              </p>
+                              {record.notes && <p className="text-sm text-foreground mt-1.5 whitespace-pre-wrap">{record.notes}</p>}
                             </div>
-                        ))}
-                        <Button type="button" variant="outline" className="mt-2" onClick={() => appendSkill({ segment_skill: '', skill_string: '' })}>
-                            <PlusCircle className="mr-2 h-4 w-4" /> Add Skill Segment
-                        </Button>
-                    </div>
-                ) : (
-                    (parsed?.skills && parsed.skills.length > 0) ? (
-                        <ul className="space-y-4">
-                            {parsed.skills.map((skillEntry, index) => (
-                            <li key={`skill-${index}-${skillEntry.segment_skill || index}`} className="p-3 border rounded-md bg-muted/30">
-                                {renderField("Segment", skillEntry.segment_skill)}
-                                {skillEntry.skill && skillEntry.skill.length > 0 && (
-                                <div>
-                                    <h4 className="text-sm font-medium text-muted-foreground mt-1.5">Skills:</h4>
-                                    <div className="flex flex-wrap gap-1.5 mt-1">
-                                    {skillEntry.skill.map((s, i) => <Badge key={`${index}-${i}-${s}`} variant="secondary">{s}</Badge>)}
-                                    </div>
-                                </div>
-                                )}
-                                {index < parsed.skills!.length - 1 && <Separator className="my-3" />}
-                            </li>
-                            ))}
-                        </ul>
-                    ) : <div className="text-sm text-muted-foreground text-center py-4">No skill details provided.</div>
-                )}
-                </ScrollArea>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader><CardTitle className="flex items-center"><UserCog className="mr-2 h-5 w-5 text-primary"/>Job Suitability</CardTitle></CardHeader>
-              <CardContent>
-                <ScrollArea className="h-[300px]">
-                 {isEditing ? (
-                    <div className="space-y-4">
-                        {jobSuitableFields.map((field, index) => (
-                            <div key={field.id} className="p-3 border rounded-md space-y-2 bg-muted/30 relative">
-                                <Input placeholder="Suitable Career Path" {...register(`parsedData.job_suitable.${index}.suitable_career`)} />
-                                <Input placeholder="Suitable Job Position" {...register(`parsedData.job_suitable.${index}.suitable_job_position`)} />
-                                <Input placeholder="Suitable Job Level" {...register(`parsedData.job_suitable.${index}.suitable_job_level`)} />
-                                <Input placeholder="Desired Salary (THB/Month)" {...register(`parsedData.job_suitable.${index}.suitable_salary_bath_month`)} />
-                                <Button type="button" variant="ghost" size="icon" className="absolute top-1 right-1 h-7 w-7" onClick={() => removeJobSuitable(index)}>
-                                    <Trash2 className="h-4 w-4 text-destructive" />
-                                </Button>
-                            </div>
-                        ))}
-                        <Button type="button" variant="outline" className="mt-2" onClick={() => appendJobSuitable({ suitable_career: '', suitable_job_position: '', suitable_job_level: '', suitable_salary_bath_month: '' })}>
-                            <PlusCircle className="mr-2 h-4 w-4" /> Add Job Suitability
-                        </Button>
-                    </div>
-                ) : (
-                    (parsed?.job_suitable && parsed.job_suitable.length > 0) ? (
-                        <ul className="space-y-4">
-                            {parsed.job_suitable.map((job, index) => (
-                            <li key={`jobsuit-${index}-${job.suitable_career || index}`} className="p-3 border rounded-md bg-muted/30">
-                                {renderField("Career Path", job.suitable_career)}
-                                {renderField("Job Position", job.suitable_job_position)}
-                                {renderField("Job Level", job.suitable_job_level)}
-                                {renderField("Desired Salary (THB/Month)", job.suitable_salary_bath_month, DollarSign)}
-                                {index < parsed.job_suitable!.length - 1 && <Separator className="my-3" />}
-                            </li>
-                            ))}
-                        </ul>
-                    ) : <div className="text-sm text-muted-foreground text-center py-4">No job suitability details provided.</div>
-                )}
-                </ScrollArea>
-              </CardContent>
-            </Card>
-
-          <Card>
-            <CardHeader><CardTitle className="flex items-center"><MessageSquare className="mr-2 h-5 w-5 text-primary"/>Transition History</CardTitle></CardHeader>
-            <CardContent>
-              {candidate.transitionHistory && candidate.transitionHistory.length > 0 ? (
-                <ScrollArea className="h-[300px]">
-                <ul className="space-y-0">
-                  {candidate.transitionHistory.sort((a,b) => parseISO(b.date).getTime() - parseISO(a.date).getTime()).map((record, index) => (
-                    <li key={record.id} className="p-3 hover:bg-muted/50 transition-colors">
-                      <div className="flex items-start space-x-3">
-                        <CalendarDays className="h-4 w-4 text-muted-foreground mt-1" />
-                        <div className="flex-1">
-                          <p className="text-sm font-semibold text-foreground">{record.stage}</p>
-                          <p className="text-xs text-muted-foreground">
-                            {format(parseISO(record.date), "MMM d, yyyy 'at' h:mm a")}
-                            {record.actingUserName && <span className="italic"> by {record.actingUserName}</span>}
-                          </p>
-                          {record.notes && <p className="text-sm text-foreground mt-1.5 whitespace-pre-wrap">{record.notes}</p>}
-                        </div>
-                      </div>
-                       {index < candidate.transitionHistory.length - 1 && <Separator className="my-3" />}
-                    </li>
-                  ))}
-                </ul>
-                </ScrollArea>
-              ) : <div className="text-sm text-muted-foreground text-center py-4">No transition history available.</div>}
-            </CardContent>
-          </Card>
-        </div>
-
-        <div className="lg:col-span-1 space-y-6">
-          {(parsed?.job_matches && parsed.job_matches.length > 0 && !isEditing) && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center"><ListChecks className="mr-2 h-5 w-5 text-blue-600" />Suggested Jobs</CardTitle>
-                <CardDescription>Full list of job matches from automated processing for this candidate.</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <ScrollArea className="h-[calc(100vh-240px)]">
-                  <ul className="space-y-3">
-                    {parsed.job_matches.map((match, index) => (
-                      <li key={`match-${index}-${match.job_id || index}`} className="p-3 border rounded-md bg-muted/30">
-                        <h4
-                          className="font-semibold text-foreground hover:text-primary hover:underline cursor-pointer"
-                          onClick={() => handleJobMatchClick(match.job_title)}
-                        >
-                          {match.job_title || 'Job Title Missing'} <ExternalLink className="inline h-3 w-3 ml-1 opacity-70" />
-                        </h4>
-                        <div className="text-sm text-muted-foreground">
-                          Fit Score: <span className="font-medium text-foreground">{match.fit_score}%</span>
-                          {match.job_id && ` (Match ID: ${match.job_id})`}
-                        </div>
-                        {match.match_reasons && match.match_reasons.length > 0 && (
-                          <div className="mt-1.5">
-                            <p className="text-xs font-medium text-muted-foreground">Reasons:</p>
-                            <ul className="list-disc list-inside pl-3 text-xs text-foreground">
-                              {match.match_reasons.map((reason, i) => <li key={`reason-${index}-${i}`}>{reason}</li>)}
-                            </ul>
                           </div>
-                        )}
-                      </li>
-                    ))}
-                  </ul>
-                </ScrollArea>
-              </CardContent>
-            </Card>
-          )}
-           {(!isEditing && (!parsed?.job_matches || parsed.job_matches.length === 0)) && (
-             <Card>
-                <CardHeader><CardTitle className="flex items-center"><ListChecks className="mr-2 h-5 w-5 text-blue-600" />Suggested Jobs</CardTitle></CardHeader>
-                <CardContent><p className="text-sm text-muted-foreground text-center py-4">No automated job match data available.</p></CardContent>
-             </Card>
-           )}
-        </div>
-      </div>
-    </form>
+                           {index < candidate.transitionHistory.length - 1 && <Separator className="my-3" />}
+                        </li>
+                      ))}
+                    </ul>
+                    </ScrollArea>
+                  ) : <div className="text-sm text-muted-foreground text-center py-4">No transition history available.</div>}
+                </CardContent>
+              </Card>
+            </div>
 
-      {candidate && (
-        <>
-          <UploadResumeModal
-              isOpen={isUploadModalOpen}
-              onOpenChange={setIsUploadModalOpen}
-              candidate={candidate}
-              onUploadSuccess={handleUploadSuccess}
-          />
-          <ManageTransitionsModal
-              candidate={candidate}
-              isOpen={isTransitionsModalOpen}
-              onOpenChange={setIsTransitionsModalOpen}
-              onUpdateCandidate={handleUpdateCandidateStatus}
-              onRefreshCandidateData={fetchCandidateDetails}
-              availableStages={availableStages}
-          />
-        </>
-      )}
-      {selectedPositionForEdit && (
-          <EditPositionModal
-            isOpen={isEditPositionModalOpen}
-            onOpenChange={setIsEditPositionModalOpen}
-            position={selectedPositionForEdit}
-            onEditPosition={handlePositionEdited}
-          />
-      )}
-    </div>
+            <div className="lg:col-span-1 space-y-6">
+              {(parsed?.job_matches && parsed.job_matches.length > 0 && !isEditing) && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center"><ListChecks className="mr-2 h-5 w-5 text-blue-600" />Suggested Jobs</CardTitle>
+                    <CardDescription>Full list of job matches from automated processing for this candidate.</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <ScrollArea className="h-[calc(100vh-240px)]">
+                      <ul className="space-y-3">
+                        {parsed.job_matches.map((match, index) => (
+                          <li key={`match-${index}-${match.job_id || index}`} className="p-3 border rounded-md bg-muted/30">
+                            <h4
+                              className="font-semibold text-foreground hover:text-primary hover:underline cursor-pointer"
+                              onClick={() => handleJobMatchClick(match.job_title)}
+                            >
+                              {match.job_title || 'Job Title Missing'} <ExternalLink className="inline h-3 w-3 ml-1 opacity-70" />
+                            </h4>
+                            <div className="text-sm text-muted-foreground">
+                              Fit Score: <span className="font-medium text-foreground">{match.fit_score}%</span>
+                              {match.job_id && ` (Match ID: ${match.job_id})`}
+                            </div>
+                            {match.match_reasons && match.match_reasons.length > 0 && (
+                              <div className="mt-1.5">
+                                <p className="text-xs font-medium text-muted-foreground">Reasons:</p>
+                                <ul className="list-disc list-inside pl-3 text-xs text-foreground">
+                                  {match.match_reasons.map((reason, i) => <li key={`reason-${index}-${i}`}>{reason}</li>)}
+                                </ul>
+                              </div>
+                            )}
+                          </li>
+                        ))}
+                      </ul>
+                    </ScrollArea>
+                  </CardContent>
+                </Card>
+              )}
+               {(!isEditing && (!parsed?.job_matches || parsed.job_matches.length === 0)) && (
+                 <Card>
+                    <CardHeader><CardTitle className="flex items-center"><ListChecks className="mr-2 h-5 w-5 text-blue-600" />Suggested Jobs</CardTitle></CardHeader>
+                    <CardContent><p className="text-sm text-muted-foreground text-center py-4">No automated job match data available.</p></CardContent>
+                 </Card>
+               )}
+            </div>
+          </div>
+        </form>
+
+        {candidate && (
+          <>
+            <UploadResumeModal
+                isOpen={isUploadModalOpen}
+                onOpenChange={setIsUploadModalOpen}
+                candidate={candidate}
+                onUploadSuccess={handleUploadSuccess}
+            />
+            <ManageTransitionsModal
+                candidate={candidate}
+                isOpen={isTransitionsModalOpen}
+                onOpenChange={setIsTransitionsModalOpen}
+                onUpdateCandidate={handleUpdateCandidateStatus}
+                onRefreshCandidateData={fetchCandidateDetails}
+                availableStages={availableStages}
+            />
+          </>
+        )}
+        {selectedPositionForEdit && (
+            <EditPositionModal
+              isOpen={isEditPositionModalOpen}
+              onOpenChange={setIsEditPositionModalOpen}
+              position={selectedPositionForEdit}
+              onEditPosition={handlePositionEdited}
+            />
+        )}
+      </div>
     </FormProvider>
   );
 }
