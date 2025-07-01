@@ -355,7 +355,7 @@ export default function RecruitmentStagesPage() {
           </AlertDialogHeader>
           <div className="py-4">
             <Label htmlFor="replacement-stage">Select Replacement Stage</Label>
-            <Select value={replacementStageName} onValueChange={setReplacementStageName}>
+            <Select value={replacementStageName || ''} onValueChange={setReplacementStageName}>
               <SelectTrigger id="replacement-stage" className="w-full mt-1">
                 <SelectValue placeholder="Choose a new stage..." />
               </SelectTrigger>

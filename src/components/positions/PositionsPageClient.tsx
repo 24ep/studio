@@ -239,7 +239,7 @@ export default function PositionsPageClient() {
               />
             </div>
             
-            <Select value={statusFilter} onValueChange={(value: 'all' | 'open' | 'closed') => setStatusFilter(value)}>
+            <Select value={statusFilter || ''} onValueChange={(value: 'all' | 'open' | 'closed') => setStatusFilter(value)}>
               <SelectTrigger>
                 <SelectValue placeholder="Filter by status" />
               </SelectTrigger>
@@ -250,7 +250,7 @@ export default function PositionsPageClient() {
               </SelectContent>
             </Select>
             
-            <Select value={departmentFilter} onValueChange={setDepartmentFilter}>
+            <Select value={departmentFilter || ''} onValueChange={setDepartmentFilter}>
               <SelectTrigger>
                 <SelectValue placeholder="Filter by department" />
               </SelectTrigger>

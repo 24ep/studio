@@ -831,7 +831,7 @@ export default function SystemPreferencesPage() {
             <div className="space-y-4">
               <div>
                 <Label htmlFor="login-background-type">Background Type</Label>
-                <Select value={loginBackgroundType} onValueChange={(value) => setLoginBackgroundType(value as LoginBackgroundType)} disabled={!canEdit}>
+                <Select value={loginBackgroundType || ''} onValueChange={(value) => setLoginBackgroundType(value as LoginBackgroundType)} disabled={!canEdit}>
                   <SelectTrigger className="mt-1">
                     <SelectValue placeholder="Select background type" />
                   </SelectTrigger>

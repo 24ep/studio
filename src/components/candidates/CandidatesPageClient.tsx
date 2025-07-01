@@ -768,8 +768,8 @@ export function CandidatesPageClient({
           {bulkActionType === 'change_status' && (
             <div className="my-4 space-y-2">
               <Label htmlFor="bulk-new-status">New Status</Label>
-              <Select value={bulkNewStatus} onValueChange={setBulkNewStatus}>
-                <SelectTrigger id="bulk-new-status"><SelectValue /></SelectTrigger>
+              <Select value={bulkNewStatus || ''} onValueChange={setBulkNewStatus}>
+                <SelectTrigger id="bulk-new-status"><SelectValue placeholder="Select status..." /></SelectTrigger>
                 <SelectContent>{availableStages.map(s => <SelectItem key={s.id} value={s.name}>{s.name}</SelectItem>)}</SelectContent>
               </Select>
               <Label htmlFor="bulk-transition-notes">Notes (Optional)</Label>

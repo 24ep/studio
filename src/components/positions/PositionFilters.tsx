@@ -129,7 +129,7 @@ export function PositionFilters({ initialFilters = { isOpen: "all" }, onFilterCh
         </div>
         <div>
           <Label htmlFor="status-select">Status</Label>
-          <Select value={isOpen} onValueChange={(value) => setIsOpen(value as PositionFilterValues['isOpen'])} disabled={isLoading}>
+          <Select value={isOpen || ''} onValueChange={(value) => setIsOpen(value as PositionFilterValues['isOpen'])} disabled={isLoading}>
             <SelectTrigger id="status-select" className="w-full mt-1">
               <SelectValue placeholder="All Statuses" />
             </SelectTrigger>

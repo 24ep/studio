@@ -256,8 +256,8 @@ export default function ManageUsersPage() {
               </div>
               <div className="space-y-1">
                 <Label htmlFor="role-filter">Role</Label>
-                <Select value={roleFilter} onValueChange={(value) => setRoleFilter(value as UserProfile['role'] | "ALL_ROLES")} disabled={isLoading}>
-                  <SelectTrigger id="role-filter"><SelectValue /></SelectTrigger>
+                <Select value={roleFilter || ''} onValueChange={(value) => setRoleFilter(value as UserProfile['role'] | "ALL_ROLES")} disabled={isLoading}>
+                  <SelectTrigger id="role-filter"><SelectValue placeholder="Select role..." /></SelectTrigger>
                   <SelectContent>
                     {userRoleOptionsFilter.map(opt => <SelectItem key={opt} value={opt}>{opt === "ALL_ROLES" ? "All Roles" : opt}</SelectItem>)}
                   </SelectContent>

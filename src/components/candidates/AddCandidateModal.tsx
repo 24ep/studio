@@ -339,7 +339,7 @@ export function AddCandidateModal({ isOpen, onOpenChange, onAddCandidate, availa
                                   onValueChange={(value) => controllerField.onChange(value === PLACEHOLDER_VALUE_NONE ? null : value)}
                                   value={controllerField.value ?? PLACEHOLDER_VALUE_NONE}
                                 >
-                                <SelectTrigger><SelectValue placeholder="Position Level" /></SelectTrigger>
+                                <SelectTrigger id={`experience.${index}.postition_level`}><SelectValue placeholder="Position Level" /></SelectTrigger>
                                 <SelectContent>
                                     <SelectItem value={PLACEHOLDER_VALUE_NONE}>N/A / Not Specified</SelectItem>
                                     {positionLevelOptions.map(level => <SelectItem key={level} value={level}>{level.charAt(0).toUpperCase() + level.slice(1)}</SelectItem>)}
