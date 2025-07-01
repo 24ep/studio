@@ -203,7 +203,7 @@ export function CandidateFilters({
   };
   
   const renderMultiSelectTrigger = (placeholder: string, selectedItems: Set<string>, allItems: {id: string; title?: string; name?: string}[], itemType: 'position' | 'status' | 'recruiter') => {
-    if (selectedItems.size === 0) return placeholder;
+    if (selectedItems.size === 0) return <span>{placeholder}</span>;
     if (selectedItems.size === 1) {
       const firstId = Array.from(selectedItems)[0];
       let itemName = '';
@@ -214,9 +214,9 @@ export function CandidateFilters({
       } else if (itemType === 'recruiter') {
         itemName = (allItems as UserProfile[]).find(r => r.id === firstId)?.name || placeholder;
       }
-      return itemName;
+      return <span>{itemName}</span>;
     }
-    return `${selectedItems.size} selected`;
+    return <span>{`${selectedItems.size} selected`}</span>;
   };
 
   // Defensive defaults for arrays

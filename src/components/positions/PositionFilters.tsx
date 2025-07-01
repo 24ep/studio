@@ -66,9 +66,9 @@ export function PositionFilters({ initialFilters = { isOpen: "all" }, onFilterCh
   };
   
   const renderMultiSelectDepartmentTrigger = () => {
-    if (selectedDepartments.size === 0) return "All Departments";
-    if (selectedDepartments.size === 1) return Array.from(selectedDepartments)[0];
-    return `${selectedDepartments.size} departments selected`;
+    if (selectedDepartments.size === 0) return <span>All Departments</span>;
+    if (selectedDepartments.size === 1) return <span>{Array.from(selectedDepartments)[0]}</span>;
+    return <span>{`${selectedDepartments.size} departments selected`}</span>;
   };
 
   const filteredDepartments = availableDepartments.filter(dept => dept.toLowerCase().includes(departmentSearch.toLowerCase()));
