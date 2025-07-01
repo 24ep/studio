@@ -13,4 +13,4 @@ RUN npm run build
 EXPOSE 9846
 
 RUN chmod +x ./entrypoint.sh
-ENTRYPOINT ["./entrypoint.sh"]
+CMD ["./entrypoint.sh"]
