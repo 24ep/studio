@@ -80,8 +80,11 @@ export default function SettingsLayout({ children }: { children: ReactNode }) {
   }
 
   if (status === "unauthenticated" && isClient) {
-     signIn(undefined, { callbackUrl: pathname }); // Redirect to sign-in
-     return ( <div className="flex h-full items-center justify-center"> <Loader2 className="h-12 w-12 animate-spin text-primary" /> <p className="ml-2">Redirecting to sign-in...</p> </div> );
+    return (
+      <div className="flex h-full items-center justify-center">
+        <p className="text-lg text-destructive">You are not authenticated. Please sign in.</p>
+      </div>
+    );
   }
   
   // Check if user has access to ANY settings page. If not, redirect.
