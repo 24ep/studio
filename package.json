@@ -15,8 +15,7 @@
     "lint": "next lint",
     "processor": "tsx process-upload-queue.ts",
     "clean": "rimraf dist src/**/*.js src/**/*.jsx prisma/seed.js tailwind.config.js",
-    "optimize": "node scripts/optimize-build.js",
-    "postinstall": "prisma generate"
+    "optimize": "node scripts/optimize-build.js"
   },
   "dependencies": {
     "@genkit-ai/firebase": "^1.14.0",
