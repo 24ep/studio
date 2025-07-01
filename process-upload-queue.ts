@@ -1,8 +1,24 @@
 import fetch from 'node-fetch';
 
-const BASE_INTERVAL_MS = parseInt(process.env.PROCESSOR_INTERVAL_MS || '5000');
+// Validate and parse interval
+const BASE_INTERVAL_MS_RAW = process.env.PROCESSOR_INTERVAL_MS;
+let BASE_INTERVAL_MS = 5000;
+if (BASE_INTERVAL_MS_RAW) {
+  const parsed = parseInt(BASE_INTERVAL_MS_RAW, 10);
+  if (!isNaN(parsed) && parsed > 0) {
+    BASE_INTERVAL_MS = parsed;
+  } else {
+    console.warn('Invalid PROCESSOR_INTERVAL_MS, using default 5000ms');
+  }
+}
 const MAX_BACKOFF_MS = 60000; // 1 minute max
 const PROCESS_URL = process.env.PROCESSOR_URL || 'http://app:9846/api/upload-queue/process';
+
+// Exit if API key is not set
+if (!process.env.PROCESSOR_API_KEY) {
+  console.error('PROCESSOR_API_KEY is not set! Exiting.');
+  process.exit(1);
+}
 
 interface ProcessResponse {
   message?: string;
@@ -14,6 +30,7 @@ async function getMaxConcurrentProcessors(): Promise<number> {
   if (process.env.MAX_CONCURRENT_PROCESSORS) {
     const envValue = parseInt(process.env.MAX_CONCURRENT_PROCESSORS, 10);
     if (!isNaN(envValue) && envValue > 0) return envValue;
+    else console.warn('Invalid MAX_CONCURRENT_PROCESSORS, using default 5');
   }
   try {
     const res = await fetch('http://app:9846/api/settings/system-settings');
@@ -23,18 +40,33 @@ async function getMaxConcurrentProcessors(): Promise<number> {
       ? settings.find((s: any) => s.key === 'maxConcurrentProcessors')
       : null;
     const value = found ? parseInt(found.value, 10) : 5;
-    return isNaN(value) ? 5 : value;
+    return isNaN(value) || value <= 0 ? 5 : value;
   } catch {
     return 5;
   }
 }
 
 async function processJob(apiKey: string) {
-  const res = await fetch(PROCESS_URL, {
-    method: 'POST',
-    headers: { 'x-api-key': apiKey }
-  });
+  let res;
+  try {
+    res = await fetch(PROCESS_URL, {
+      method: 'POST',
+      headers: { 'x-api-key': apiKey }
+    });
+  } catch (err) {
+    console.error('Network error calling process endpoint:', err);
+    return false;
+  }
   const contentType = res.headers.get('content-type');
+  if (!res.ok) {
+    let errorText = '';
+    try {
+      errorText = await res.text();
+    } catch {}
+    console.error(`Process job failed: HTTP ${res.status} - ${res.statusText}`);
+    console.error('Response body:', errorText);
+    return false;
+  }
   if (contentType && contentType.includes('application/json')) {
     const data = await res.json();
     if (typeof data === 'object' && data !== null && 'message' in data && (data as any).message === 'No queued jobs') {
