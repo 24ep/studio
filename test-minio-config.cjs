@@ -1,0 +1,3 @@
+const { Client } = require('minio');
+
+// ... rest of the original code ... 
