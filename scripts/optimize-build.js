@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
-const fs = require('fs');
-const path = require('path');
+import fs from 'fs';
+import path from 'path';
 
 // API routes that likely don't need force-dynamic
 const STATIC_API_ROUTES = [
@@ -104,4 +104,4 @@ if (require.main === module) {
   main();
 }
 
-module.exports = { removeForceDynamic, STATIC_API_ROUTES, DYNAMIC_API_ROUTES }; 
+export { removeForceDynamic, STATIC_API_ROUTES, DYNAMIC_API_ROUTES }; 
