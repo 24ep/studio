@@ -5,21 +5,13 @@ import * as PopoverPrimitive from "@radix-ui/react-popover"
 
 import { cn } from "@/lib/utils"
 
-function DebugSingleChild({ children, triggerName }: { children: React.ReactNode, triggerName: string }) {
-  if (!React.isValidElement(children)) {
-    // eslint-disable-next-line no-console
-    console.error(`Invalid child for ${triggerName}:`, children);
-  }
-  return children;
-}
-
 const Popover = PopoverPrimitive.Root
 
 const PopoverTrigger = React.forwardRef<HTMLButtonElement, React.ComponentPropsWithoutRef<typeof PopoverPrimitive.Trigger>>(
   function PopoverTriggerWithDebug(props, ref) {
     return (
       <PopoverPrimitive.Trigger {...props} ref={ref}>
-        <DebugSingleChild triggerName="PopoverTrigger">{props.children}</DebugSingleChild>
+        {props.children}
       </PopoverPrimitive.Trigger>
     );
   }

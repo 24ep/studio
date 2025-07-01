@@ -5,14 +5,6 @@ import * as TooltipPrimitive from "@radix-ui/react-tooltip"
 
 import { cn } from "@/lib/utils"
 
-function DebugSingleChild({ children, triggerName }: { children: React.ReactNode, triggerName: string }) {
-  if (!React.isValidElement(children)) {
-    // eslint-disable-next-line no-console
-    console.error(`Invalid child for ${triggerName}:`, children);
-  }
-  return children;
-}
-
 const TooltipProvider = TooltipPrimitive.Provider
 
 const Tooltip = TooltipPrimitive.Root
@@ -22,7 +14,7 @@ const TooltipTrigger = React.forwardRef<HTMLButtonElement, React.ComponentPropsW
   function TooltipTriggerWithDebug(props, ref) {
     return (
       <TooltipPrimitive.Trigger {...props} ref={ref}>
-        <DebugSingleChild triggerName="TooltipTrigger">{props.children}</DebugSingleChild>
+        {props.children}
       </TooltipPrimitive.Trigger>
     );
   }

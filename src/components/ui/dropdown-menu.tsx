@@ -7,14 +7,6 @@ import { Slot } from "@radix-ui/react-slot"
 
 import { cn } from "@/lib/utils"
 
-function DebugSingleChild({ children, triggerName }: { children: React.ReactNode, triggerName: string }) {
-  if (!React.isValidElement(children)) {
-    // eslint-disable-next-line no-console
-    console.error(`Invalid child for ${triggerName}:`, children);
-  }
-  return children;
-}
-
 const DropdownMenu = DropdownMenuPrimitive.Root
 
 const DropdownMenuTrigger = React.forwardRef<
@@ -23,7 +15,7 @@ const DropdownMenuTrigger = React.forwardRef<
 >(function DropdownMenuTriggerWithDebug(props, ref) {
   return (
     <DropdownMenuPrimitive.Trigger asChild={props.asChild} ref={ref} {...props}>
-      <DebugSingleChild triggerName="DropdownMenuTrigger">{props.children}</DebugSingleChild>
+      {props.children}
     </DropdownMenuPrimitive.Trigger>
   );
 });

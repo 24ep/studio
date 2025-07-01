@@ -2,7 +2,7 @@
 
 import React, { Component, ErrorInfo, ReactNode } from 'react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { AlertTriangle, RefreshCw, Home, Bug } from 'lucide-react';
 import { useRouter } from 'next/navigation';
@@ -82,63 +82,22 @@ function ErrorFallback({ error }: ErrorFallbackProps) {
       userAgent: navigator.userAgent,
       timestamp: new Date().toISOString(),
     };
-
     // In a real app, you'd send this to your error reporting service
     console.error('Error report:', errorDetails);
-    
-    // For now, just copy to clipboard
     navigator.clipboard.writeText(JSON.stringify(errorDetails, null, 2));
     alert('Error details copied to clipboard. Please report this to support.');
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background p-4">
-      <Card className="w-full max-w-md">
-        <CardHeader className="text-center">
-          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-md bg-destructive/10">
-            <AlertTriangle className="h-8 w-8 text-destructive" />
-          </div>
-          <CardTitle className="text-xl">Something went wrong</CardTitle>
+    <div className="flex flex-col items-center justify-center min-h-[300px] p-8">
+      <Card className="max-w-md w-full">
+        <CardHeader>
+          <CardTitle>Something went wrong</CardTitle>
+          <CardDescription>
+            An unexpected error occurred. Please try again or contact support if the problem persists.
+          </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <Alert>
-            <Bug className="h-4 w-4" />
-            <AlertTitle>Unexpected Error</AlertTitle>
-            <AlertDescription>
-              {error?.message || 'An unexpected error occurred. Please try again.'}
-            </AlertDescription>
-          </Alert>
-
-          <div className="space-y-2">
-            <Button 
-              onClick={handleReload} 
-              className="w-full"
-              variant="default"
-            >
-              <RefreshCw className="mr-2 h-4 w-4" />
-              Reload Page
-            </Button>
-            
-            <Button 
-              onClick={handleGoHome} 
-              className="w-full"
-              variant="outline"
-            >
-              <Home className="mr-2 h-4 w-4" />
-              Go to Home
-            </Button>
-            
-            <Button 
-              onClick={handleReportError} 
-              className="w-full"
-              variant="ghost"
-              size="sm"
-            >
-              <Bug className="mr-2 h-4 w-4" />
-              Report Error
-            </Button>
-          </div>
-
+        <CardContent>
           {process.env.NODE_ENV === 'development' && error?.stack && (
             <details className="mt-4">
               <summary className="cursor-pointer text-sm text-muted-foreground">
@@ -149,6 +108,11 @@ function ErrorFallback({ error }: ErrorFallbackProps) {
               </pre>
             </details>
           )}
+          <div className="flex gap-2 mt-6">
+            <button className="btn btn-primary" onClick={handleReload}>Reload</button>
+            <button className="btn btn-secondary" onClick={handleGoHome}>Go Home</button>
+            <button className="btn btn-outline" onClick={handleReportError}>Report Error</button>
+          </div>
         </CardContent>
       </Card>
     </div>
