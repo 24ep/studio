@@ -9,12 +9,19 @@ COPY package*.json ./
 RUN npm ci --only=production
 
 # Copy only necessary files for the processor
-COPY process-upload-queue.mjs ./
+COPY process-upload-queue.ts ./
 COPY lib/ ./lib/
 COPY prisma/ ./prisma/
 
+# Install TypeScript compiler
+RUN npm install -g typescript
+
 # Generate Prisma client
 RUN npx prisma generate
+
+# Compile process-upload-queue.ts to process-upload-queue.mjs
+RUN tsc process-upload-queue.ts --module NodeNext --target es2020 --esModuleInterop --moduleResolution nodenext --outDir . && \
+    mv process-upload-queue.js process-upload-queue.mjs
 
 # Create a simple entrypoint for the processor
 RUN printf '#!/bin/sh\nnode process-upload-queue.mjs\n' > /app/start-processor.sh && \
