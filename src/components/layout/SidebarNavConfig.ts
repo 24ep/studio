@@ -68,32 +68,6 @@ export const sidebarConfig: SidebarNavGroup[] = [
         href: "/my-tasks",
         description: "Personal task management"
       },
-      { 
-        label: "Resumes", 
-        icon: FileText, 
-        href: "/resumes",
-        description: "Resume management",
-        adminOnly: true
-      },
-      { 
-        label: "Analytics", 
-        icon: BarChart3, 
-        href: "/analytics",
-        description: "Recruitment metrics",
-        adminOnly: true
-      },
-      { 
-        label: "Calendar", 
-        icon: Calendar, 
-        href: "/calendar",
-        description: "Interview scheduling"
-      },
-      { 
-        label: "Communications", 
-        icon: MessageSquare, 
-        href: "/communications",
-        description: "Candidate communications"
-      },
     ],
   },
   {
