@@ -172,9 +172,9 @@ export function EditUserModal({ isOpen, onOpenChange, onEditUser, user, isSelfEd
       <DialogContent className="sm:max-w-6xl lg:max-w-7xl xl:max-w-8xl max-h-[95vh] flex flex-col p-0">
         <DialogHeader className="p-8 pb-6 border-b bg-gradient-to-r from-primary/5 to-primary/10">
           <DialogTitle className="flex items-center text-2xl font-bold">
-            <Edit3 className="mr-3 h-6 w-6 text-primary" /> {dialogTitle}
+            <Edit3 className="mr-3 h-6 w-6 text-primary" /> {typeof dialogTitle === 'object' ? JSON.stringify(dialogTitle) : dialogTitle}
           </DialogTitle>
-          <DialogDescription className="text-base mt-2">{dialogDescription}</DialogDescription>
+          <DialogDescription className="text-base mt-2">{typeof dialogDescription === 'object' ? JSON.stringify(dialogDescription) : dialogDescription}</DialogDescription>
         </DialogHeader>
 
         <div className="flex flex-col lg:flex-row flex-grow overflow-hidden p-8 gap-8">
@@ -193,7 +193,7 @@ export function EditUserModal({ isOpen, onOpenChange, onEditUser, user, isSelfEd
                     activeTab === item.id && "btn-primary-gradient text-primary-foreground shadow-lg",
                   )}
                 >
-                  <item.icon className="mr-3 h-5 w-5" /> {item.label}
+                  <item.icon className="mr-3 h-5 w-5" /> {typeof item.label === 'object' ? JSON.stringify(item.label) : item.label}
                 </Button>
               ))}
             </aside>

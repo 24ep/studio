@@ -153,7 +153,9 @@ export function AddUserModal({ isOpen, onOpenChange, onAddUser }: AddUserModalPr
                   <FormField control={form.control} name="name" render={({ field }) => (<FormItem><FormLabel htmlFor="name-add">Full Name *</FormLabel><FormControl><Input id="name-add" {...field} className="mt-1" /></FormControl><FormMessage /></FormItem>)} />
                   <FormField control={form.control} name="email" render={({ field }) => (<FormItem><FormLabel htmlFor="email-add">Email Address *</FormLabel><FormControl><Input id="email-add" type="email" {...field} className="mt-1" /></FormControl><FormMessage /></FormItem>)} />
                   <FormField control={form.control} name="password" render={({ field }) => (<FormItem><FormLabel htmlFor="password-add">Password *</FormLabel><FormControl><Input id="password-add" type="password" {...field} className="mt-1" /></FormControl><FormMessage /></FormItem>)} />
-                  <FormField control={form.control} name="role" render={({ field }) => (<FormItem><FormLabel htmlFor="role-add">System Role *</FormLabel><Select onValueChange={field.onChange} value={field.value} defaultValue={field.value}><FormControl><SelectTrigger id="role-add" className="mt-1"><SelectValue placeholder="Select a role" /></SelectTrigger></FormControl><SelectContent>{userRoleOptions.map(role => (<SelectItem key={role} value={role}>{role}</SelectItem>))}</SelectContent></Select><FormMessage /></FormItem>)} />
+                  <FormField control={form.control} name="role" render={({ field }) => (<FormItem><FormLabel htmlFor="role-add">System Role *</FormLabel><Select onValueChange={field.onChange} value={field.value} defaultValue={field.value}><FormControl><SelectTrigger id="role-add" className="mt-1"><SelectValue placeholder="Select a role" /></SelectTrigger></FormControl><SelectContent>{userRoleOptions.map(role => (
+                    <SelectItem key={role} value={role}>{typeof role === 'object' ? JSON.stringify(role) : role}</SelectItem>
+                  ))}</SelectContent></Select><FormMessage /></FormItem>)} />
                   <FormField control={form.control} name="authenticationMethod" render={({ field }) => (<FormItem><FormLabel htmlFor="auth-method-add">Authentication Method *</FormLabel><Select onValueChange={field.onChange} value={field.value} defaultValue={field.value}><FormControl><SelectTrigger id="auth-method-add" className="mt-1"><SelectValue placeholder="Select authentication method" /></SelectTrigger></FormControl><SelectContent><SelectItem value="basic">Basic (Email/Password)</SelectItem><SelectItem value="azure">Azure AD</SelectItem></SelectContent></Select><FormMessage /></FormItem>)} />
                   <FormField control={form.control} name="forcePasswordChange" render={({ field }) => (<FormItem className="flex flex-row items-center space-x-3 space-y-0 pt-2"><FormControl><Toggle checked={field.value} onCheckedChange={field.onChange} /></FormControl><FormLabel className="font-normal">Force Password Change on First Login</FormLabel></FormItem>)} />
                 </div>
@@ -181,7 +183,7 @@ export function AddUserModal({ isOpen, onOpenChange, onAddUser }: AddUserModalPr
                                       <FormControl><Checkbox checked={Boolean(field.value?.includes(group.id))}
                                         onCheckedChange={(checked) => checked ? field.onChange([...(field.value || []), group.id]) : field.onChange((field.value || []).filter(v => v !== group.id))}
                                       /></FormControl>
-                                      <FormLabel className="text-sm font-normal cursor-pointer flex-grow">{group.name}</FormLabel>
+                                      <FormLabel className="text-sm font-normal cursor-pointer flex-grow">{typeof group.name === 'object' ? JSON.stringify(group.name) : group.name}</FormLabel>
                                     </FormItem>
                                   )} />
                               ))}
@@ -198,7 +200,7 @@ export function AddUserModal({ isOpen, onOpenChange, onAddUser }: AddUserModalPr
                         <div className="space-y-4 rounded-md border p-4 max-h-60 overflow-y-auto">
                           {groupedPermissions.map(group => (
                             <div key={group.category}>
-                              <h4 className="font-medium text-sm text-muted-foreground mb-1.5">{group.category}</h4>
+                              <h4 className="font-medium text-sm text-muted-foreground mb-1.5">{typeof group.category === 'object' ? JSON.stringify(group.category) : group.category}</h4>
                               {group.permissions.map((module) => (
                                 <FormField key={module.id} control={form.control} name="modulePermissions"
                                   render={({ field }) => {
@@ -212,8 +214,8 @@ export function AddUserModal({ isOpen, onOpenChange, onAddUser }: AddUserModalPr
                                           />
                                         </FormControl>
                                         <div className="flex flex-col">
-                                          <FormLabel className="text-sm font-medium">{module.label}</FormLabel>
-                                          <span className="text-xs text-muted-foreground">{module.description}</span>
+                                          <FormLabel className="text-sm font-medium">{typeof module.label === 'object' ? JSON.stringify(module.label) : module.label}</FormLabel>
+                                          <span className="text-xs text-muted-foreground">{typeof module.description === 'object' ? JSON.stringify(module.description) : module.description}</span>
                                         </div>
                                       </FormItem>
                                     );

@@ -237,7 +237,7 @@ export function MyTasksPageClient({
      return ( <div className="flex flex-col items-center justify-center h-[calc(100vh-10rem)] text-center p-4"> <ShieldAlert className="w-16 h-16 text-destructive mb-4" /> <h2 className="text-2xl font-semibold text-foreground mb-2">Access Denied</h2> <p className="text-muted-foreground mb-4 max-w-md">You need to be signed in to view this page.</p> <Button onClick={() => signIn(undefined, { callbackUrl: pathname })} className="btn-primary-gradient">Sign In</Button> </div> );
   }
   if (permissionError) {
-     return ( <div className="flex flex-col items-center justify-center h-[calc(100vh-10rem)] text-center p-4"> <ShieldAlert className="w-16 h-16 text-destructive mb-4" /> <h2 className="text-2xl font-semibold text-foreground mb-2">Permission Denied</h2> <p className="text-muted-foreground mb-4 max-w-md">{fetchError || "You do not have sufficient permissions to view this page."}</p> <Button onClick={() => router.push('/')} className="btn-primary-gradient">Go to Dashboard</Button> </div> );
+     return ( <div className="flex flex-col items-center justify-center h-[calc(100vh-10rem)] text-center p-4"> <ShieldAlert className="w-16 h-16 text-destructive mb-4" /> <h2 className="text-2xl font-semibold text-foreground mb-2">Permission Denied</h2> <p className="text-muted-foreground mb-4 max-w-md">{typeof fetchError === 'object' ? JSON.stringify(fetchError) : fetchError}</p> <Button onClick={() => router.push('/')} className="btn-primary-gradient">Go to Dashboard</Button> </div> );
   }
 
   if (fetchError && !isLoading) {
@@ -245,7 +245,7 @@ export function MyTasksPageClient({
       <div className="flex flex-col items-center justify-center h-[calc(100vh-10rem)] text-center p-4">
         <ServerCrash className="w-16 h-16 text-destructive mb-4" />
         <h2 className="text-2xl font-semibold text-foreground mb-2">Error Loading Tasks</h2>
-        <p className="text-muted-foreground mb-4 max-w-md">{fetchError}</p>
+        <p className="text-muted-foreground mb-4 max-w-md">{typeof fetchError === 'object' ? JSON.stringify(fetchError) : fetchError}</p>
         <Button onClick={() => fetchTaskBoardCandidates(standardFilters, selectedRecruiterFilter)} className="btn-hover-primary-gradient">Try Again</Button>
       </div>
     );
@@ -311,9 +311,9 @@ export function MyTasksPageClient({
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                     <div>
                     <CardTitle className="flex items-center">
-                        <ListTodo className="mr-2 h-6 w-6 text-primary" /> {pageTitle}
+                        <ListTodo className="mr-2 h-6 w-6 text-primary" /> {typeof pageTitle === 'object' ? JSON.stringify(pageTitle) : pageTitle}
                     </CardTitle>
-                    <CardDescription>{pageDescription}</CardDescription>
+                    <CardDescription>{typeof pageDescription === 'object' ? JSON.stringify(pageDescription) : pageDescription}</CardDescription>
                     </div>
                     <div className="flex gap-1 self-end sm:self-center">
                         <Button variant={viewMode === 'kanban' ? 'default' : 'outline'} size="icon" onClick={() => setViewMode('kanban')}><LayoutGrid className="h-4 w-4" /></Button>
@@ -352,7 +352,7 @@ export function MyTasksPageClient({
                     <Brain className="h-5 w-5 text-blue-600 dark:text-blue-400" />
                     <AlertTitle className="font-semibold text-blue-700 dark:text-blue-300">AI Search Results</AlertTitle>
                     <AlertDescription className="text-blue-700 dark:text-blue-300">
-                      {aiSearchReasoning}
+                      {typeof aiSearchReasoning === 'object' ? JSON.stringify(aiSearchReasoning) : aiSearchReasoning}
                       {aiMatchedCandidateIds && aiMatchedCandidateIds.length === 0 && " No strong matches found."}
                     </AlertDescription>
                   </Alert>

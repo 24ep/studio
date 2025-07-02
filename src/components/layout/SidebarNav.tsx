@@ -67,7 +67,7 @@ const Branding: React.FC<{ appLogoUrl: string | null, appName: string }> = ({ ap
       )}
       <div className="flex flex-col">
         <span className="app-name text-xl font-bold text-foreground tracking-tight">
-          {appName}
+          {typeof appName === 'object' ? JSON.stringify(appName) : appName}
         </span>
       </div>
     </Link>
@@ -88,10 +88,10 @@ const NavGroups: React.FC<{ userRole: string | undefined, pathname: string, side
                 className={`flex items-center gap-3 px-4 py-2 rounded-lg transition-all duration-200 font-medium text-base
                   ${isActive ? 'bg-primary text-white shadow' : 'text-muted-foreground hover:bg-muted hover:text-foreground'}
                 `}
-                title={item.label}
+                title={typeof item.label === 'object' ? JSON.stringify(item.label) : item.label}
               >
                 <Icon className="h-5 w-5" />
-                <span>{item.label}</span>
+                <span>{typeof item.label === 'object' ? JSON.stringify(item.label) : item.label}</span>
               </a>
             </Link>
           );
