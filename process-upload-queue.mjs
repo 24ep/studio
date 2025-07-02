@@ -1,5 +1,5 @@
 // To run as ESM: rename this file to .mjs or set "type": "module" in package.json
-import fetch from 'node-fetch';
+// Using built-in fetch API (available in Node.js 18+)
 
 const BASE_INTERVAL_MS = parseInt(process.env.PROCESSOR_INTERVAL_MS || '5000');
 const MAX_BACKOFF_MS = 60000; // 1 minute max
