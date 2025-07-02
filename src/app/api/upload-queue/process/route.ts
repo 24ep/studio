@@ -53,6 +53,7 @@ export async function POST(request: NextRequest) {
   
   const client = await getPool().connect();
   let job;
+  let payload = null;
   try {
     // 1. Atomically pick and mark the oldest queued job as 'processing'
     const res = await client.query(
@@ -113,7 +114,6 @@ export async function POST(request: NextRequest) {
     let status = 'success';
     let error = null;
     let error_details = null;
-    let payload = null;
     let appliedJob = undefined;
     if (resumeWebhookUrl && resumeWebhookUrl.startsWith('http')) {
       // Only build payload and convert file if webhook is valid

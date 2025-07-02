@@ -1,4 +1,4 @@
-'use server';
+
 /**
  * @fileOverview Genkit flow for AI-powered candidate search.
  *

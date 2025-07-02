@@ -46,7 +46,7 @@ const SystemSettingsForm: React.FC<SystemSettingsFormProps> = ({
   isSaving = false 
 }) => {
   const [formData, setFormData] = useState<SystemSetting>({
-    key: '',
+    key: 'appName',
     value: null
   });
 
@@ -54,7 +54,7 @@ const SystemSettingsForm: React.FC<SystemSettingsFormProps> = ({
     if (setting) {
       setFormData(setting);
     } else {
-      setFormData({ key: '', value: null });
+      setFormData({ key: 'appName', value: null });
     }
   }, [setting]);
 

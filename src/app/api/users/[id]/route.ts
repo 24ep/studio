@@ -46,6 +46,9 @@ function extractIdFromUrl(request: NextRequest): string | null {
  */
 export async function GET(request: NextRequest) {
     const id = extractIdFromUrl(request);
+    if (!id) {
+        return NextResponse.json({ message: "Invalid user ID" }, { status: 400 });
+    }
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) {
         return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
@@ -107,6 +110,9 @@ export async function GET(request: NextRequest) {
  */
 export async function PUT(request: NextRequest) {
     const id = extractIdFromUrl(request);
+    if (!id) {
+        return NextResponse.json({ message: "Invalid user ID" }, { status: 400 });
+    }
     const session = await getServerSession(authOptions);
     const actingUserId = session?.user?.id;
     if (!actingUserId) {
@@ -195,6 +201,9 @@ export async function PUT(request: NextRequest) {
  */
 export async function DELETE(request: NextRequest) {
     const id = extractIdFromUrl(request);
+    if (!id) {
+        return NextResponse.json({ message: "Invalid user ID" }, { status: 400 });
+    }
     const session = await getServerSession(authOptions);
     const actingUserId = session?.user?.id;
      if (!actingUserId) {

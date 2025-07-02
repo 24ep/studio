@@ -1,5 +1,6 @@
 import { startupMinIOInitialization } from './minio';
 import { getPool } from './db';
+import { execSync } from 'child_process';
 
 export interface StartupResult {
   minio: {
@@ -123,7 +124,6 @@ export async function isApplicationReady(): Promise<boolean> {
 // Function to seed the database
 export async function seedDatabase(): Promise<boolean> {
   try {
-    const { execSync } = require('child_process');
     execSync('npx prisma db seed', { stdio: 'inherit' });
     return true;
   } catch (error) {
