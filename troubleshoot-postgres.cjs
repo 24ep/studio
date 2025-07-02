@@ -1,3 +1,0 @@
-const { Pool } = require('pg');
-
-// ... rest of the original code ... 

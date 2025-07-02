@@ -137,23 +137,13 @@ export const CandidateImportUploadQueue: React.FC = () => {
 
   useEffect(() => {
     // Determine WebSocket URL based on environment
-    let wsUrl;
-    if (process.env.NEXT_PUBLIC_WS_QUEUE_BRIDGE_URL) {
-      // Use environment variable if set
-      wsUrl = process.env.NEXT_PUBLIC_WS_QUEUE_BRIDGE_URL;
-    } else if (typeof window !== 'undefined') {
-      // In browser, use current hostname with WebSocket bridge port
-      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-      wsUrl = `${protocol}//${window.location.hostname}:3002`;
-    } else {
-      // Fallback for server-side rendering
-      wsUrl = 'ws://localhost:3002';
-    }
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const wsUrl = `${protocol}//${window.location.host}/api/upload-queue/ws`;
     
     const ws = new window.WebSocket(wsUrl);
     
     ws.onopen = () => {
-      console.log('WebSocket connected to upload queue bridge');
+      console.log('WebSocket connected to upload queue endpoint');
     };
     
     ws.onerror = (error) => {

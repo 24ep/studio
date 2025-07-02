@@ -154,26 +154,6 @@ services:
     mem_limit: 1g
     cpus: 0.5
 
-  ws-queue-bridge:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    command: sh -c "until nc -z redis ${REDIS_PORT}; do echo Waiting for Redis...; sleep 2; done; node ws-queue-bridge.js"
-    environment:
-      DATABASE_URL: ${DATABASE_URL}
-      REDIS_URL: ${REDIS_URL}
-      WS_QUEUE_BRIDGE_PORT: ${WS_QUEUE_BRIDGE_PORT:-3002}
-      WS_ALLOWED_ORIGINS: ${WS_ALLOWED_ORIGINS}
-      NODE_ENV: ${NODE_ENV}
-    ports:
-      - "${WS_QUEUE_BRIDGE_PORT:-3002}:3002"
-    depends_on:
-      - redis
-    restart: unless-stopped
-    # Resource limits
-    mem_limit: 256m
-    cpus: 0.1
-
 volumes:
   postgres_data:
   minio_data:
