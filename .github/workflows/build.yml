@@ -2,19 +2,19 @@ name: Build and Push Docker Image
 
 on:
   push:
-    branches: [ main, master, dev ]
+    branches: [ main, master, uat , dev ]
   pull_request:
-    branches: [ main, master, dev ]
+    branches: [ main, master, uat ,dev ]
 
 env:
   REGISTRY: docker.io
   IMAGE_NAME: ${{ github.repository }}
-  ENVIRONMENT: dev
+  ENVIRONMENT: uat
 
 jobs:
   build:
     runs-on: ubuntu-latest
-    environment: dev
+    environment: uat
     
     steps:
     - name: Checkout repository
@@ -41,7 +41,7 @@ jobs:
           type=semver,pattern={{version}}
           type=semver,pattern={{major}}.{{minor}}
           type=sha
-          type=raw,value=dev,enable={{is_default_branch}}
+          type=raw,value=uat,enable={{is_default_branch}}
 
     - name: Build and push Docker image
       uses: docker/build-push-action@v5
@@ -53,5 +53,5 @@ jobs:
         cache-from: type=gha
         cache-to: type=gha,mode=max
         build-args: |
-          NODE_ENV=development
-          ENVIRONMENT=dev 
+          NODE_ENV=production
+          ENVIRONMENT=uat 
