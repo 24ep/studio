@@ -18,6 +18,8 @@ export const runtime = 'nodejs';
 import { NextRequest } from 'next/server';
 import { getPool } from '@/lib/db';
 import { clients } from './clients';
+import { subscribeToChannel } from '@/lib/redis';
+import { broadcastQueueUpdate } from './broadcastQueueUpdate';
 
 export async function GET(request: NextRequest) {
   const { webSocket } = request as any;
@@ -40,4 +42,22 @@ async function sendQueue(socket: WebSocket) {
   } finally {
     client.release();
   }
+}
+
+// Subscribe to Redis channel for queue updates and broadcast to all clients
+let subscribed = false;
+if (!subscribed) {
+  subscribed = true;
+  subscribeToChannel('candidate_upload_queue', async (message) => {
+    // Only broadcast if the message is a queue_updated event
+    try {
+      const msg = JSON.parse(message);
+      if (msg.type === 'queue_updated') {
+        await broadcastQueueUpdate();
+      }
+    } catch (e) {
+      // fallback: always broadcast
+      await broadcastQueueUpdate();
+    }
+  });
 } 

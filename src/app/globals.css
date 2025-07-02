@@ -600,13 +600,15 @@ body {
   /* Card gradients */
   .card-gradient {
     background: linear-gradient(135deg, hsl(var(--card-gradient-start)) 0%, hsl(var(--card-gradient-end)) 100%);
-    box-shadow: var(--card-shadow);
-    transition: all 0.2s ease-in-out;
+    box-shadow: 0 4px 16px 0 rgb(0 0 0 / 0.08), 0 1.5px 6px -1.5px rgb(0 0 0 / 0.06);
+    border-radius: 1rem;
+    border: 1px solid hsl(220, 15%, 92%); /* subtle light gray border */
+    transition: box-shadow 0.2s cubic-bezier(0.4,0,0.2,1), border 0.2s cubic-bezier(0.4,0,0.2,1), transform 0.2s cubic-bezier(0.4,0,0.2,1);
   }
 
   .card-gradient:hover {
-    box-shadow: var(--card-shadow-hover);
-    transform: translateY(-2px);
+    box-shadow: 0 8px 32px 0 rgb(0 0 0 / 0.12), 0 3px 12px -3px rgb(0 0 0 / 0.10);
+    transform: translateY(-2px) scale(1.01);
   }
 
   /* Input gradients */

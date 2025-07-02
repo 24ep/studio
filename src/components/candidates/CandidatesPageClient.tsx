@@ -663,7 +663,7 @@ export function CandidatesPageClient({
         </ScrollArea>
       </aside>
 
-      <div className="flex-1 md:w-[80%] space-y-6 min-w-0"> 
+      <div className="flex-1 w-full space-y-6 min-w-0"> 
         <div className="flex flex-col sm:flex-row justify-between items-center gap-2">
           <h1 className="text-2xl font-semibold text-foreground hidden md:block"> Candidate Management </h1>
           <div className="w-full md:w-auto flex flex-col sm:flex-row gap-2 items-center sm:justify-end">

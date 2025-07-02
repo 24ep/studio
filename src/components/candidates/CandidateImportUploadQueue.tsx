@@ -245,6 +245,9 @@ export const CandidateImportUploadQueue: React.FC = () => {
   const numSuccess = jobs.filter(j => j.source === 'bulk' && j.status === 'success' && isInRange(j.completed_date)).length;
   const numError = jobs.filter(j => j.source === 'bulk' && j.status === 'error' && isInRange(j.completed_date)).length;
 
+  // 1. Add a helper to get the selected job for the webhook log:
+  const selectedWebhookLogJob = jobs.find(j => j.id === showWebhookLogId);
+
   return (
     <div className="mb-6">
       {/* Summary Status Cards */}
@@ -307,87 +310,104 @@ export const CandidateImportUploadQueue: React.FC = () => {
           </Card>
         </div>
       </div>
-      
-      <div className="mb-2 font-semibold">All Upload Jobs: {totalBulkJobs}</div>
-      <div className="flex flex-row flex-wrap items-center gap-2 mb-4">
-        <Input
-          placeholder="Filter by file name..."
-          value={filter}
-          onChange={e => setFilter(e.target.value)}
-          className="min-w-[200px] max-w-xs"
-        />
-        <select
-          value={statusFilter}
-          onChange={e => setStatusFilter(e.target.value)}
-          className="border rounded-md px-2 py-2 text-sm bg-background text-foreground min-w-[150px] max-w-xs"
-        >
-          <option value="">All Statuses</option>
-          <option value="queued">Queued</option>
-          <option value="uploading">Uploading</option>
-          <option value="processing">Processing</option>
-          <option value="importing">Importing</option>
-          <option value="success">Success</option>
-          <option value="error">Error</option>
-          <option value="cancelled">Cancelled</option>
-        </select>
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-muted-foreground whitespace-nowrap">Date:</span>
-          <input
-            type="date"
-            value={format(dateRange.start, 'yyyy-MM-dd')}
-            onChange={e => setDateRange(r => ({ ...r, start: new Date(e.target.value) }))}
-            className="border rounded px-2 py-1 text-sm"
+      {/* Filters and Bulk Actions in Card */}
+      <Card className="mb-4 p-4 flex flex-col md:flex-row md:items-center gap-2 md:gap-4 shadow-none border border-gray-200">
+        {/* Filters */}
+        <div className="flex flex-wrap items-center gap-2 flex-1">
+          <Input
+            placeholder="Filter by file name..."
+            value={filter}
+            onChange={e => setFilter(e.target.value)}
+            className="min-w-[180px] max-w-xs"
           />
-          <span className="text-sm text-muted-foreground">-</span>
-          <input
-            type="date"
-            value={format(dateRange.end, 'yyyy-MM-dd')}
-            onChange={e => setDateRange(r => ({ ...r, end: new Date(e.target.value) }))}
-            className="border rounded px-2 py-1 text-sm"
-          />
+          <select
+            value={statusFilter}
+            onChange={e => setStatusFilter(e.target.value)}
+            className="border rounded-md px-2 py-2 text-sm bg-background text-foreground min-w-[130px] max-w-xs"
+          >
+            <option value="">All Statuses</option>
+            <option value="queued">Queued</option>
+            <option value="uploading">Uploading</option>
+            <option value="processing">Processing</option>
+            <option value="importing">Importing</option>
+            <option value="success">Success</option>
+            <option value="error">Error</option>
+            <option value="cancelled">Cancelled</option>
+          </select>
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-muted-foreground whitespace-nowrap">Date:</span>
+            <input
+              type="date"
+              value={format(dateRange.start, 'yyyy-MM-dd')}
+              onChange={e => setDateRange(r => ({ ...r, start: new Date(e.target.value) }))}
+              className="border rounded px-2 py-1 text-sm"
+            />
+            <span className="text-sm text-muted-foreground">-</span>
+            <input
+              type="date"
+              value={format(dateRange.end, 'yyyy-MM-dd')}
+              onChange={e => setDateRange(r => ({ ...r, end: new Date(e.target.value) }))}
+              className="border rounded px-2 py-1 text-sm"
+            />
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleManualRefresh}
+            className=""
+          >
+            <RotateCcw className="h-4 w-4 mr-2" />
+            Refresh
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => {
+              setFilter("");
+              setStatusFilter("");
+              setDateRange({ start: subDays(new Date(), 30), end: new Date() });
+            }}
+            className=""
+          >
+            Clear Filters
+          </Button>
         </div>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={handleManualRefresh}
-          className="ml-auto"
-        >
-          <RotateCcw className="h-4 w-4 mr-2" />
-          Refresh
-        </Button>
-      </div>
-      <div className="flex items-center gap-2 mb-2">
-        <input
-          type="checkbox"
-          checked={allSelected}
-          ref={el => {
-            if (el) el.indeterminate = someSelected;
-          }}
-          onChange={e => handleSelectAll(e.target.checked)}
-          aria-label="Select all filtered jobs"
-        />
-        <span>Select All</span>
-        <Button
-          variant="outline"
-          size="sm"
-          disabled={bulkDeleteIds.length === 0 || bulkRetryLoading}
-          onClick={() => setShowBulkRetryConfirm(true)}
-          aria-label="Retry selected jobs"
-        >
-          {bulkRetryLoading ? <Loader2 className="animate-spin h-4 w-4 mr-2" /> : null}
-          Retry Selected
-        </Button>
-        <Button
-          variant="destructive"
-          size="sm"
-          disabled={bulkDeleteIds.length === 0 || bulkDeleteLoading}
-          onClick={() => setShowBulkDeleteConfirm(true)}
-          aria-label="Delete selected jobs"
-        >
-          {bulkDeleteLoading ? <Loader2 className="animate-spin h-4 w-4 mr-2" /> : null}
-          Delete Selected
-        </Button>
-      </div>
+        {/* Bulk Actions */}
+        <div className="flex items-center gap-2 mt-2 md:mt-0">
+          <input
+            type="checkbox"
+            checked={allSelected}
+            ref={el => {
+              if (el) el.indeterminate = someSelected;
+            }}
+            onChange={e => handleSelectAll(e.target.checked)}
+            aria-label="Select all filtered jobs"
+            className="scale-110"
+          />
+          <span className="text-sm">Select All</span>
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={bulkDeleteIds.length === 0 || bulkRetryLoading}
+            onClick={() => setShowBulkRetryConfirm(true)}
+            aria-label="Retry selected jobs"
+          >
+            {bulkRetryLoading ? <Loader2 className="animate-spin h-4 w-4 mr-2" /> : null}
+            Retry Selected
+          </Button>
+          <Button
+            variant="destructive"
+            size="sm"
+            disabled={bulkDeleteIds.length === 0 || bulkDeleteLoading}
+            onClick={() => setShowBulkDeleteConfirm(true)}
+            aria-label="Delete selected jobs"
+          >
+            {bulkDeleteLoading ? <Loader2 className="animate-spin h-4 w-4 mr-2" /> : null}
+            Delete Selected
+          </Button>
+        </div>
+      </Card>
+      <div className="mb-2 font-semibold">All Upload Jobs: {totalBulkJobs}</div>
       <div className="border rounded-lg overflow-x-auto">
         <Table>
           <TableHeader>
@@ -491,7 +511,7 @@ export const CandidateImportUploadQueue: React.FC = () => {
                       <Button 
                         variant="ghost" 
                         size="icon" 
-                        onClick={() => setShowWebhookLogId(showWebhookLogId === item.id ? null : item.id)} 
+                        onClick={() => setShowWebhookLogId(item.id)} 
                         title="View webhook log"
                       >
                         <ExternalLink className="h-4 w-4 text-blue-500" />
@@ -550,36 +570,6 @@ export const CandidateImportUploadQueue: React.FC = () => {
                         </Button>
                       </div>
                       <pre className="whitespace-pre-wrap break-all max-h-40 overflow-auto">{item.error_details}</pre>
-                    </TableCell>
-                  </TableRow>
-                )}
-                {showWebhookLogId === item.id && (item.webhook_payload || item.webhook_response) && (
-                  <TableRow>
-                    <TableCell colSpan={9} className="bg-blue-50 rounded p-2 text-xs">
-                      <div className="flex justify-between items-center mb-2">
-                        <span className="font-semibold text-blue-800">Webhook Log</span>
-                        <Button variant="ghost" size="icon" onClick={() => setShowWebhookLogId(null)}>
-                          <XCircle className="h-4 w-4" />
-                        </Button>
-                      </div>
-                      <div className="space-y-4">
-                        {item.webhook_payload && (
-                          <div>
-                            <h4 className="font-medium text-blue-700 mb-1">Payload Sent to Webhook:</h4>
-                            <pre className="whitespace-pre-wrap break-all max-h-40 overflow-auto bg-white p-2 rounded border text-xs">
-                              {JSON.stringify(item.webhook_payload, null, 2)}
-                            </pre>
-                          </div>
-                        )}
-                        {item.webhook_response && (
-                          <div>
-                            <h4 className="font-medium text-blue-700 mb-1">Webhook Response:</h4>
-                            <pre className="whitespace-pre-wrap break-all max-h-40 overflow-auto bg-white p-2 rounded border text-xs">
-                              {JSON.stringify(item.webhook_response, null, 2)}
-                            </pre>
-                          </div>
-                        )}
-                      </div>
                     </TableCell>
                   </TableRow>
                 )}
@@ -733,6 +723,39 @@ export const CandidateImportUploadQueue: React.FC = () => {
           <DialogFooter>
             <DialogClose asChild>
               <Button variant="outline">Close</Button>
+            </DialogClose>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      {/* Webhook Log Dialog (rendered once, outside the table) */}
+      <Dialog open={!!selectedWebhookLogJob} onOpenChange={(open) => { if (!open) setShowWebhookLogId(null); }}>
+        <DialogContent className="sm:max-w-2xl max-h-[90vh] flex flex-col">
+          <DialogHeader className="pt-6 px-6 pb-4 border-b">
+            <DialogTitle className="text-2xl flex items-center text-blue-800">
+              <ExternalLink className="h-6 w-6 mr-3 text-blue-700" />Webhook Log
+            </DialogTitle>
+          </DialogHeader>
+          <div className="flex-grow overflow-y-auto px-6 py-4 space-y-4">
+            {selectedWebhookLogJob?.webhook_payload && (
+              <div>
+                <h4 className="font-medium text-blue-700 mb-1">Payload Sent to Webhook:</h4>
+                <pre className="whitespace-pre-wrap break-all max-h-40 overflow-auto bg-white p-2 rounded border text-xs">
+                  {JSON.stringify(selectedWebhookLogJob.webhook_payload, null, 2)}
+                </pre>
+              </div>
+            )}
+            {selectedWebhookLogJob?.webhook_response && (
+              <div>
+                <h4 className="font-medium text-blue-700 mb-1">Webhook Response:</h4>
+                <pre className="whitespace-pre-wrap break-all max-h-40 overflow-auto bg-white p-2 rounded border text-xs">
+                  {JSON.stringify(selectedWebhookLogJob.webhook_response, null, 2)}
+                </pre>
+              </div>
+            )}
+          </div>
+          <DialogFooter className="p-6 pt-4 border-t">
+            <DialogClose asChild>
+              <Button type="button" variant="outline">Close</Button>
             </DialogClose>
           </DialogFooter>
         </DialogContent>

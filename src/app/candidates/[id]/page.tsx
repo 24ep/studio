@@ -795,6 +795,14 @@ export default function CandidateDetailPage() {
                 )}
               </Card>
 
+              {/* Upload Resume Modal */}
+              <UploadResumeModal
+                isOpen={isUploadModalOpen}
+                onOpenChange={setIsUploadModalOpen}
+                candidate={candidate}
+                onUploadSuccess={handleUploadSuccess}
+              />
+
               {!isEditing && (
                  <RoleSuggestionSummary candidate={candidate} allDbPositions={allDbPositions} />
               )}
@@ -1115,12 +1123,6 @@ export default function CandidateDetailPage() {
 
         {candidate && (
           <>
-            <UploadResumeModal
-                isOpen={isUploadModalOpen}
-                onOpenChange={setIsUploadModalOpen}
-                candidate={candidate}
-                onUploadSuccess={handleUploadSuccess}
-            />
             <ManageTransitionsModal
                 candidate={candidate}
                 isOpen={isTransitionsModalOpen}

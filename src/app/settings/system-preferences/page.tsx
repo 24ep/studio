@@ -585,11 +585,9 @@ export default function SystemPreferencesPage() {
 
   const handleSavePreferences = async () => {
     if (!canEdit) return;
-    
     setSaving(true);
     setErrorMsg(null);
     setSuccessMsg(false);
-    
     try {
       const formData = new FormData();
       
@@ -641,6 +639,14 @@ export default function SystemPreferencesPage() {
       
       success('Preferences saved successfully!');
       setSuccessMsg(true);
+      
+      // Immediately update theme/colors in DOM
+      setThemeAndColors({
+        themePreference,
+        primaryGradientStart: sidebarColors.sidebarActiveBgStartL,
+        primaryGradientEnd: sidebarColors.sidebarActiveBgEndL,
+        sidebarColors,
+      });
       
       // Dispatch event for real-time updates
       window.dispatchEvent(new CustomEvent('appConfigChanged'));

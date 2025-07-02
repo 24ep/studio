@@ -3,11 +3,9 @@ import * as React from "react";
 import { usePathname } from "next/navigation";
 import { Sidebar, SidebarGroup, SidebarGroupLabel, SidebarGroupContent, SidebarMenu, SidebarMenuItem, SidebarMenuButton } from "@/components/ui/sidebar";
 import { useSession } from "next-auth/react";
-import { sidebarConfig } from "./SidebarNavConfig";
+import { sidebarConfig as staticSidebarConfig } from "./SidebarNavConfig";
 import Link from "next/link";
 import Image from "next/image";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { 
   ChevronRight, 
@@ -77,39 +75,9 @@ const Branding: React.FC<{ appLogoUrl: string | null, appName: string }> = ({ ap
   </div>
 );
 
-const UserProfile: React.FC<{ user: any }> = ({ user }) => {
-  const userRole = user?.role;
-  return (
-    <div className="px-4 py-4 border-b border-gray-100">
-      <div className="flex items-center gap-3 p-3 rounded-lg bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-100">
-        <Avatar className="h-10 w-10 border-2 border-white shadow-sm">
-          <AvatarImage src={user.image || undefined} alt={user.name || 'User'} />
-          <AvatarFallback className="bg-gradient-to-br from-blue-500 to-indigo-600 text-white font-semibold">
-            {user.name?.charAt(0) || user.email?.charAt(0) || 'U'}
-          </AvatarFallback>
-        </Avatar>
-        <div className="flex-1 min-w-0">
-          <p className="text-sm font-semibold text-gray-900 truncate">
-            {user.name || 'User'}
-          </p>
-          <p className="text-xs text-gray-600 truncate">
-            {user.email}
-          </p>
-          <div className="flex items-center gap-1 mt-1">
-            {getRoleIcon(userRole || '')}
-            <Badge variant="outline" className={`text-xs px-2 py-0.5 ${getRoleBadgeColor(userRole || '')}`}>
-              {userRole}
-            </Badge>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-const NavGroups: React.FC<{ userRole: string | undefined, pathname: string }> = ({ userRole, pathname }) => (
+const NavGroups: React.FC<{ userRole: string | undefined, pathname: string, sidebarConfig: any[] }> = ({ userRole, pathname, sidebarConfig }) => (
   <div className="flex-1 px-3 py-4 space-y-2">
-    {sidebarConfig.map((group) => (
+    {sidebarConfig.map((group: any) => (
       <SidebarGroup key={group.label}>
         <SidebarGroupLabel className="px-3 py-2 text-xs font-semibold text-gray-500 tracking-wider uppercase">
           {group.label}
@@ -117,9 +85,11 @@ const NavGroups: React.FC<{ userRole: string | undefined, pathname: string }> = 
         <SidebarGroupContent>
           <SidebarMenu className="space-y-1">
             {group.items
-              .filter(item => !item.adminOnly || userRole === "Admin")
-              .map(item => {
+              .filter((item: any) => !item.adminOnly || userRole === "Admin")
+              .map((item: any) => {
                 const isActive = pathname === item.href;
+                // If icon is a string (from API), fallback to Users icon
+                const Icon = typeof item.icon === 'string' ? Users : item.icon;
                 return (
                   <SidebarMenuItem key={item.href}>
                     <SidebarMenuButton
@@ -140,7 +110,7 @@ const NavGroups: React.FC<{ userRole: string | undefined, pathname: string }> = 
                             ? 'bg-white/20 text-white' 
                             : 'bg-gray-100 text-gray-600 group-hover:bg-gray-200 group-hover:text-gray-700'
                         }`}>
-                          <item.icon className="h-4 w-4" />
+                          <Icon className="h-4 w-4" />
                         </div>
                         <span className="font-medium">{item.label}</span>
                         {isActive && (
@@ -200,6 +170,8 @@ const SidebarNav: React.FC = React.memo(function SidebarNav() {
 
   const [appLogoUrl, setAppLogoUrl] = React.useState<string | null>(null);
   const [currentAppName, setCurrentAppName] = React.useState<string>(DEFAULT_APP_NAME);
+  const [sidebarConfig, setSidebarConfig] = React.useState<any[]>(staticSidebarConfig);
+  const [sidebarLoading, setSidebarLoading] = React.useState<boolean>(true);
 
   React.useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -220,6 +192,14 @@ const SidebarNav: React.FC = React.memo(function SidebarNav() {
         }
       };
       window.addEventListener('appConfigChanged', handleAppConfigChange);
+      // Fetch sidebar config from API
+      fetch('/api/settings/sidebar-config')
+        .then(res => res.ok ? res.json() : Promise.reject())
+        .then(data => {
+          if (Array.isArray(data)) setSidebarConfig(data);
+        })
+        .catch(() => setSidebarConfig(staticSidebarConfig))
+        .finally(() => setSidebarLoading(false));
       return () => {
         window.removeEventListener('appConfigChanged', handleAppConfigChange);
       };
@@ -229,8 +209,11 @@ const SidebarNav: React.FC = React.memo(function SidebarNav() {
   return (
     <Sidebar className="bg-white border-r border-gray-200 min-h-screen flex flex-col shadow-sm" data-sidebar="sidebar">
       <Branding appLogoUrl={appLogoUrl} appName={currentAppName} />
-      {session?.user && <UserProfile user={session.user} />}
-      <NavGroups userRole={userRole} pathname={pathname} />
+      {sidebarLoading ? (
+        <div className="flex-1 flex items-center justify-center text-muted-foreground">Loading menu...</div>
+      ) : (
+        <NavGroups userRole={userRole} pathname={pathname} sidebarConfig={sidebarConfig} />
+      )}
       <QuickActions />
     </Sidebar>
   );
