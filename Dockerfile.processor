@@ -1,0 +1,23 @@
+FROM node:20-alpine
+
+WORKDIR /app
+
+# Copy package files first for better caching
+COPY package*.json ./
+
+# Install only production dependencies
+RUN npm ci --only=production
+
+# Copy only necessary files for the processor
+COPY process-upload-queue.mjs ./
+COPY lib/ ./lib/
+COPY prisma/ ./prisma/
+
+# Generate Prisma client
+RUN npx prisma generate
+
+# Create a simple entrypoint for the processor
+RUN echo '#!/bin/sh\nnode process-upload-queue.mjs' > /app/start-processor.sh && \
+    chmod +x /app/start-processor.sh
+
+CMD ["/app/start-processor.sh"] 
