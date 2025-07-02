@@ -1,21 +1,16 @@
 "use client";
+
 import React, { type ReactNode, useState, useEffect } from "react";
-import {
-  SidebarProvider,
-  Sidebar,
-  SidebarHeader,
-  SidebarContent,
-  SidebarFooter,
-  SidebarInset,
-  SidebarTrigger,
-} from "@/components/ui/sidebar";
-import dynamic from 'next/dynamic';
+import { SidebarProvider } from "@/components/ui/sidebar";
 import { Header } from "./Header";
-import Link from "next/link";
-import { Separator } from "@/components/ui/separator";
-import { Package2, Loader2 } from "lucide-react";
+import { useSession } from "next-auth/react";
+import { GlobalLoadingOverlay } from "./GlobalLoadingOverlay";
+import { usePageLoading } from "@/hooks/use-page-loading";
+import SidebarNav from "./SidebarNav";
 import { usePathname } from "next/navigation";
+import Link from "next/link";
 import Image from 'next/image';
+import { Package2 } from "lucide-react";
 import packageJson from '../../../package.json';
 import { setThemeAndColors } from '@/lib/themeUtils';
 
@@ -23,8 +18,6 @@ const APP_LOGO_DATA_URL_KEY = 'appLogoDataUrl';
 const APP_CONFIG_APP_NAME_KEY = 'appConfigAppName';
 const DEFAULT_APP_NAME = "CandiTrack";
 const DEFAULT_LOGO_ICON = <Package2 className="h-6 w-6" />;
-
-const SidebarNav = dynamic(() => import('./SidebarNav'), { ssr: false });
 
 function getPageTitle(pathname: string): string {
   if (pathname === "/") return "Dashboard";
@@ -55,7 +48,11 @@ function getPageTitle(pathname: string): string {
   return DEFAULT_APP_NAME; // Use dynamic app name as fallback for unknown paths
 }
 
-export function AppLayout({ children }: { children: React.ReactNode }) {
+interface AppLayoutProps {
+  children: React.ReactNode
+}
+
+export function AppLayout({ children }: AppLayoutProps) {
   const pathname = usePathname();
   const [currentAppName, setCurrentAppName] = useState<string>(DEFAULT_APP_NAME);
   const pageTitle = pathname === "/auth/signin" ? "Sign In" : getPageTitle(pathname) || currentAppName; // Use currentAppName in title if needed
@@ -63,6 +60,9 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   const [appLogoUrl, setAppLogoUrl] = useState<string | null>(null);
   const [isClient, setIsClient] = useState(false);
   const [isPageLoading, setIsPageLoading] = useState(false);
+
+  const { data: session, status } = useSession();
+  const isLoading = usePageLoading();
 
   useEffect(() => {
     setIsClient(true);
@@ -127,8 +127,13 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
     return () => clearTimeout(timer);
   }, [pathname]);
 
+  // Show loading while session is being fetched
+  if (status === "loading") {
+    return <GlobalLoadingOverlay />;
+  }
 
-  if (pathname === "/auth/signin") {
+  // If not authenticated, show children (auth pages will handle redirect)
+  if (!session?.user) {
     return <>{children}</>;
   }
 
@@ -142,41 +147,17 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <SidebarProvider defaultOpen>
-      <Sidebar collapsible="icon" variant="sidebar" className="bg-sidebar" data-sidebar="sidebar">
-        <SidebarHeader className="p-4 flex items-center justify-center h-16 border-b border-sidebar-border">
-          <Link href="/" className="flex items-center gap-2 font-semibold text-primary group-data-[collapsible=icon]:hidden">
-            {renderLogo(false)}
-            <span className="ml-1">{currentAppName}</span>
-          </Link>
-          <div className="hidden items-center justify-center group-data-[collapsible=icon]:flex group-data-[collapsible=icon]:w-full">
-            <Link href="/" className="flex items-center gap-2 font-semibold text-primary">
-               {renderLogo(true)}
-            </Link>
-          </div>
-          <SidebarTrigger className="hidden md:group-data-[collapsible=icon]:hidden" />
-        </SidebarHeader>
-        <SidebarContent className="p-4">
-          <SidebarNav />
-        </SidebarContent>
-        <SidebarFooter className="p-4 border-t border-sidebar-border group-data-[collapsible=icon]:hidden">
-          <p className="text-xs text-muted-foreground">© {new Date().getFullYear()} {currentAppName} | Version {packageJson.version} </p>
-        </SidebarFooter>
-      </Sidebar>
-      <SidebarInset>
-        <Header pageTitle={pageTitle} />
-        <main className={isSettingsPage ? "flex-1 overflow-y-auto relative" : "flex-1 overflow-y-auto relative p-8"}>
-          {isPageLoading && (
-            <div className="absolute inset-0 flex items-center justify-center bg-background/50 backdrop-blur-sm z-10">
-              <div className="flex flex-col items-center gap-4 p-6 rounded-lg bg-card border shadow-lg">
-                <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                <p className="text-sm font-medium text-foreground">Loading page...</p>
-              </div>
-            </div>
-          )}
-          {children}
-        </main>
-      </SidebarInset>
+    <SidebarProvider defaultOpen={true}>
+      <div className="flex min-h-screen bg-gray-50">
+        <SidebarNav />
+        <div className="flex-1 flex flex-col min-w-0">
+          <Header pageTitle={pageTitle} />
+          <main className="flex-1 overflow-auto p-6">
+            {isLoading && <GlobalLoadingOverlay />}
+            {children}
+          </main>
+        </div>
+      </div>
     </SidebarProvider>
   );
 }
