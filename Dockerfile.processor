@@ -17,7 +17,7 @@ COPY prisma/ ./prisma/
 RUN npx prisma generate
 
 # Create a simple entrypoint for the processor
-RUN echo '#!/bin/sh\nnode process-upload-queue.mjs' > /app/start-processor.sh && \
+RUN printf '#!/bin/sh\nnode process-upload-queue.mjs\n' > /app/start-processor.sh && \
     chmod +x /app/start-processor.sh
 
 CMD ["/app/start-processor.sh"] 
