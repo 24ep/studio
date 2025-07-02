@@ -15,7 +15,14 @@ export const PLATFORM_MODULE_CATEGORIES = {
 
 export type PlatformModuleCategory = typeof PLATFORM_MODULE_CATEGORIES[keyof typeof PLATFORM_MODULE_CATEGORIES];
 
-export const PLATFORM_MODULES = [
+export interface PlatformModule {
+  id: string;
+  label: string;
+  category: PlatformModuleCategory;
+  description: string;
+}
+
+export const PLATFORM_MODULES: PlatformModule[] = [
   { id: 'CANDIDATES_VIEW', label: 'View Candidates', category: PLATFORM_MODULE_CATEGORIES.CANDIDATE_MANAGEMENT, description: "Allows viewing candidate profiles and lists." },
   { id: 'CANDIDATES_MANAGE', label: 'Manage Candidates', category: PLATFORM_MODULE_CATEGORIES.CANDIDATE_MANAGEMENT, description: "Allows adding, editing, and deleting candidate profiles." },
   { id: 'CANDIDATES_IMPORT', label: 'Import Candidates', category: PLATFORM_MODULE_CATEGORIES.CANDIDATE_MANAGEMENT, description: "Allows bulk importing of candidate data." },
@@ -37,9 +44,8 @@ export const PLATFORM_MODULES = [
   { id: 'IT_DEPARTMENT_MANAGE', label: 'Manage IT Department', category: PLATFORM_MODULE_CATEGORIES.DEPARTMENT_MANAGEMENT, description: "Allows full management of IT department including users, records, and settings." },
   { id: 'FINANCE_DEPARTMENT_MANAGE', label: 'Manage Finance Department', category: PLATFORM_MODULE_CATEGORIES.DEPARTMENT_MANAGEMENT, description: "Allows full management of Finance department including users, records, and settings." },
   { id: 'MARKETING_DEPARTMENT_MANAGE', label: 'Manage Marketing Department', category: PLATFORM_MODULE_CATEGORIES.DEPARTMENT_MANAGEMENT, description: "Allows full management of Marketing department including users, records, and settings." },
-] as const;
+];
 
-export type PlatformModule = typeof PLATFORM_MODULES[number];
 export type PlatformModuleId = PlatformModule['id'];
 
 

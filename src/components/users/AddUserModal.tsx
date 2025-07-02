@@ -27,7 +27,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Toggle } from '@/components/ui/toggle';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { UserPlus, ShieldCheck, Users, Loader2 } from 'lucide-react';
-import type { UserProfile, PlatformModuleId, UserGroup, PlatformModuleCategory } from '@/lib/types';
+import type { UserProfile, PlatformModuleId, UserGroup, PlatformModuleCategory, PlatformModule } from '@/lib/types';
 import { PLATFORM_MODULES, PLATFORM_MODULE_CATEGORIES } from '@/lib/types';
 import { ScrollArea } from '../ui/scroll-area';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -59,10 +59,11 @@ interface AddUserModalProps {
   onAddUser: (data: AddUserFormValues) => Promise<void>;
 }
 
-const groupedPermissions = Object.values(PLATFORM_MODULE_CATEGORIES).map(category => ({
-  category,
-  permissions: PLATFORM_MODULES.filter(p => p.category === category)
-}));
+const groupedPermissions: { category: PlatformModuleCategory, permissions: PlatformModule[] }[] =
+  Object.values(PLATFORM_MODULE_CATEGORIES).map(category => ({
+    category,
+    permissions: PLATFORM_MODULES.filter(p => p.category === category) as PlatformModule[]
+  }));
 
 export function AddUserModal({ isOpen, onOpenChange, onAddUser }: AddUserModalProps) {
   const [availableGroups, setAvailableGroups] = useState<UserGroup[]>([]);
@@ -198,10 +199,10 @@ export function AddUserModal({ isOpen, onOpenChange, onAddUser }: AddUserModalPr
                     <div className="space-y-2">
                         <Label className="flex items-center text-md font-medium"><ShieldCheck className="mr-2 h-5 w-5 text-primary" /> Direct Module Permissions</Label>
                         <div className="space-y-4 rounded-md border p-4 max-h-60 overflow-y-auto">
-                          {groupedPermissions.map(group => (
+                          {groupedPermissions.map((group: { category: PlatformModuleCategory, permissions: PlatformModule[] }) => (
                             <div key={group.category}>
                               <h4 className="font-medium text-sm text-muted-foreground mb-1.5">{typeof group.category === 'object' ? JSON.stringify(group.category) : group.category}</h4>
-                              {group.permissions.map((module) => (
+                              {group.permissions.map((module: PlatformModule) => (
                                 <FormField key={module.id} control={form.control} name="modulePermissions"
                                   render={({ field }) => {
                                     const checked = field.value?.includes(module.id);
