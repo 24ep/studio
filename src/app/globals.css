@@ -370,13 +370,14 @@ body {
     border-radius: var(--sidebar-border-radius);
     box-shadow: var(--sidebar-shadow); */
     transition: all var(--sidebar-transition-duration) var(--sidebar-transition-timing);
-    /* padding: var(--sidebar-padding-y) var(--sidebar-padding-x); */
+    padding: var(--sidebar-padding-y) var(--sidebar-padding-x);
     gap: var(--sidebar-gap);
   }
 
   /* Sidebar hover effect */
   [data-sidebar="sidebar"]:hover {
-    box-shadow: var(--sidebar-shadow-hover);
+    box-shadow: none;
+    /* box-shadow: var(--sidebar-shadow-hover); */
   }
 
   /* Sidebar menu items */
