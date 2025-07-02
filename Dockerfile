@@ -1,4 +1,4 @@
-FROM 24ep/studio:uat
+FROM node:18-alpine
 
 WORKDIR /app
 
