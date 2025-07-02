@@ -24,7 +24,8 @@ echo "🌱 Seeding database..."
 npx prisma db seed
 
 echo "✅ Database schema fixed and seeded successfully!"
-echo "🚀 You can now restart your application." 
+echo "🚀 Starting application..." 
 
-# Start the application
+# Start the main application
+echo "🌐 Starting main application..."
 npm run start 
