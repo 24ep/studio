@@ -11,6 +11,7 @@ import Image from 'next/image';
 import { CredentialsSignInForm } from "@/components/auth/CredentialsSignInForm";
 import type { SystemSetting, LoginPageBackgroundType, LoginPageLayoutType } from '@/lib/types';
 import { setThemeAndColors } from '@/lib/themeUtils';
+import { sanitizeHtml } from '@/lib/utils';
 
 interface SignInClientProps {
   initialSettings?: SystemSetting[];
@@ -319,7 +320,7 @@ export default function SignInClient({ initialSettings }: SignInClientProps) {
         <div className="w-full lg:basis-[40%] lg:max-w-[40%] border rounded-lg flex flex-col justify-center items-center bg-white shadow-2xl p-8 lg:p-12">
           <div className="w-full max-w-md">
             {loginPageContent && (
-              <div className="mb-8 text-center" dangerouslySetInnerHTML={{ __html: loginPageContent }} />
+              <div className="mb-8 text-center" dangerouslySetInnerHTML={{ __html: sanitizeHtml(loginPageContent) }} />
             )}
             
             {/* Application Logo and Name */}
@@ -391,7 +392,7 @@ export default function SignInClient({ initialSettings }: SignInClientProps) {
     <div style={loginPageStyle} className="min-h-screen flex flex-col items-center justify-center p-4">
       <div className="w-full max-w-md">
         {loginPageContent && (
-          <div className="mb-8 text-center" dangerouslySetInnerHTML={{ __html: loginPageContent }} />
+          <div className="mb-8 text-center" dangerouslySetInnerHTML={{ __html: sanitizeHtml(loginPageContent) }} />
         )}
         
         {/* Logo and Brand */}
