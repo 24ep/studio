@@ -1,4 +1,5 @@
-import fetch from 'node-fetch';
+// Use built-in fetch API (available in Node.js 18+)
+// No import needed - fetch is globally available
 
 // Validate and parse interval
 const BASE_INTERVAL_MS_RAW = process.env.PROCESSOR_INTERVAL_MS;
@@ -123,4 +124,7 @@ console.log('Starting background processor...');
 runProcessorLoop().catch(err => {
   console.error('Fatal error in background processor:', err);
   process.exit(1);
-}); 
+});
+
+// Export to make this a module
+export {}; 

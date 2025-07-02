@@ -26,19 +26,31 @@ async function getSystemSetting(key: string): Promise<string | null> {
 export const dynamic = "force-dynamic";
 
 export async function POST(request: NextRequest) {
+  console.log('Automation upload endpoint called');
   const session = await getServerSession(authOptions);
   const actingUserId = session?.user?.id || null;
   const actingUserName = session?.user?.name || session?.user?.email || 'System (automation Upload)';
+  console.log('User:', actingUserName, 'ID:', actingUserId);
 
-  let generalPdfWebhookUrl = await getSystemSetting('generalPdfWebhookUrl'); // Fetch from DB first
+  let generalPdfWebhookUrl: string | null = null;
+  
+  // Try to get from database first
+  try {
+    generalPdfWebhookUrl = await getSystemSetting('generalPdfWebhookUrl');
+  } catch (dbError) {
+    console.warn('Could not fetch generalPdfWebhookUrl from database:', dbError);
+  }
+  
+  // Fallback to environment variable if not found in DB
   if (!generalPdfWebhookUrl) {
-    // Fallback to environment variable if not found in DB
     generalPdfWebhookUrl = process.env.GENERAL_PDF_WEBHOOK_URL || null;
+    console.log('Using GENERAL_PDF_WEBHOOK_URL from environment:', generalPdfWebhookUrl ? 'Set' : 'Not set');
   }
 
   if (!generalPdfWebhookUrl) {
     const errorMessage = "Automated candidate creation is not configured on the server. Please ensure the PDF Webhook URL is set either in Settings > Integrations or as a GENERAL_PDF_WEBHOOK_URL environment variable.";
     console.error(errorMessage);
+    console.error('Environment variable GENERAL_PDF_WEBHOOK_URL:', process.env.GENERAL_PDF_WEBHOOK_URL);
     await logAudit('ERROR', `Attempt to use candidate creation upload by ${actingUserName} (ID: ${actingUserId}) failed: PDF Webhook URL not configured.`, 'API:Candidates:Create', actingUserId);
     return NextResponse.json({ message: errorMessage }, { status: 500 });
   }
