@@ -71,25 +71,6 @@ export const sidebarConfig: SidebarNavGroup[] = [
     ],
   },
   {
-    label: "Automation",
-    items: [
-      { 
-        label: "AI Matching", 
-        icon: Zap, 
-        href: "/ai-matching",
-        description: "AI-powered candidate matching",
-        adminOnly: true
-      },
-      { 
-        label: "Workflows", 
-        icon: Target, 
-        href: "/workflows",
-        description: "Automated recruitment workflows",
-        adminOnly: true
-      },
-    ],
-  },
-  {
     label: "System",
     items: [
       { 
@@ -97,20 +78,6 @@ export const sidebarConfig: SidebarNavGroup[] = [
         icon: Settings, 
         href: "/settings",
         description: "System configuration"
-      },
-      { 
-        label: "Users", 
-        icon: Shield, 
-        href: "/users",
-        description: "User management",
-        adminOnly: true
-      },
-      { 
-        label: "Data Models", 
-        icon: Database, 
-        href: "/data-models",
-        description: "Custom data models",
-        adminOnly: true
       },
       { 
         label: "Logs", 

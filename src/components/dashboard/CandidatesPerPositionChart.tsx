@@ -13,13 +13,18 @@ import type { ChartConfig } from "@/components/ui/chart"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import type { Candidate, Position } from "@/lib/types"
 // Static imports for chart elements
-import { Bar, CartesianGrid, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer, LabelList } from 'recharts';
+import { Bar } from 'react-chartjs-2';
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  Title,
+  Tooltip,
+  Legend,
+} from 'chart.js';
 
-// Dynamic import for the main chart container
-const BarChart = dynamic(
-  () => import('recharts').then(mod => mod.BarChart),
-  { ssr: false }
-);
+ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
 
 interface CandidatesPerPositionChartProps {
   candidates: Candidate[];
@@ -54,13 +59,6 @@ export function CandidatesPerPositionChart({ candidates, positions }: Candidates
     )
   }
 
-  const chartConfig = {
-    candidates: {
-      label: "Candidates",
-      color: "hsl(var(--primary))",
-    },
-  } satisfies ChartConfig
-
   return (
     <Card>
       <CardHeader>
@@ -68,55 +66,48 @@ export function CandidatesPerPositionChart({ candidates, positions }: Candidates
         <CardDescription>Overview of candidate distribution across open positions.</CardDescription>
       </CardHeader>
       <CardContent>
-        <ChartContainer config={chartConfig} className="min-h-[300px] w-full">
-          <ResponsiveContainer width="100%" height={300}>
-            <BarChart 
-              data={data} 
-              margin={{ top: 20, right: 20, left: -20, bottom: 5 }}
-              accessibilityLayer
-            >
-              <CartesianGrid vertical={false} strokeDasharray="3 3" />
-              <XAxis
-                dataKey="position"
-                tickLine={false}
-                tickMargin={10}
-                axisLine={false}
-                angle={-45}
-                textAnchor="end"
-                height={80}
-                interval={0}
-                tick={{ fontSize: 12 }}
-              />
-              <YAxis 
-                tickLine={false}
-                axisLine={false}
-                tickMargin={10}
-                allowDecimals={false}
-              />
-              <ChartTooltip
-                cursor={false}
-                content={<ChartTooltipContent 
-                  labelKey="fullPositionTitle"
-                  formatter={(value: any, name: any, props: any) => (
-                    <>
-                     <div className="font-medium">{props.payload.fullPositionTitle}</div>
-                     <div className="text-muted-foreground">{`${value} candidates`}</div>
-                    </>
-                  )}
-                />}
-              />
-              <ChartLegend content={<ChartLegendContent />} />
-              <Bar dataKey="candidates" fill="var(--color-candidates)" radius={4}>
-                <LabelList
-                  position="top"
-                  offset={8}
-                  className="fill-foreground"
-                  fontSize={12}
-                />
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
-        </ChartContainer>
+        <Bar
+          data={{
+            labels: data.map(d => d.position),
+            datasets: [
+              {
+                label: 'Candidates',
+                data: data.map(d => d.candidates),
+                backgroundColor: 'rgba(59, 130, 246, 0.8)', // blue-500
+                borderRadius: 8,
+                borderSkipped: false,
+                barPercentage: 0.7,
+              },
+            ],
+          }}
+          options={{
+            indexAxis: 'y',
+            responsive: true,
+            plugins: {
+              legend: { display: false },
+              title: { display: false },
+              tooltip: {
+                callbacks: {
+                  label: function(context) {
+                    return ` ${context.parsed.x} candidates`;
+                  }
+                }
+              }
+            },
+            scales: {
+              x: {
+                beginAtZero: true,
+                grid: { color: 'rgba(100,116,139,0.1)' },
+                ticks: { color: '#64748b', font: { size: 13 } },
+              },
+              y: {
+                grid: { display: false },
+                ticks: { color: '#64748b', font: { size: 13 } },
+              },
+            },
+          }}
+          height={300}
+        />
       </CardContent>
     </Card>
   )

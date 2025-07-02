@@ -16,6 +16,18 @@ import { useRouter } from 'next/navigation';
 import { toast } from "react-hot-toast";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { Bar } from 'react-chartjs-2';
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  Title,
+  Tooltip,
+  Legend,
+} from 'chart.js';
+
+ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
 
 interface DashboardPageClientProps {
   initialCandidates: Candidate[];
@@ -320,7 +332,7 @@ export default function DashboardPageClient({
         </div>
       )}
 
-      {/* Section 3: Candidate Scoring Analysis - Vertical Bar Chart */}
+      {/* Section 3: Candidate Scoring Analysis - Chart.js Horizontal Bar Chart */}
       <div className="space-y-4">
         <div className="flex items-center space-x-2">
           <div className="h-6 w-1 bg-blue-500 rounded-full"></div>
@@ -328,31 +340,54 @@ export default function DashboardPageClient({
         </div>
         <Card className="shadow-sm hover:shadow-md transition-all duration-200">
           <CardContent className="pt-6">
-            <div className="flex items-end justify-between h-64 space-x-2">
-              {candidateScoreRanges.map((range, index) => {
-                const colors = [
-                  { bg: "bg-red-500", text: "text-red-500" },
-                  { bg: "bg-orange-500", text: "text-orange-500" },
-                  { bg: "bg-yellow-500", text: "text-yellow-500" },
-                  { bg: "bg-blue-500", text: "text-blue-500" },
-                  { bg: "bg-green-500", text: "text-green-500" }
-                ];
-                const color = colors[index];
-                const maxCount = Math.max(...candidateScoreRanges.map(r => r.count));
-                const height = maxCount > 0 ? (range.count / maxCount) * 100 : 0;
-                
-                return (
-                  <div key={range.label} className="flex flex-col items-center flex-1">
-                    <div className="text-sm font-medium text-muted-foreground mb-2">{range.count}</div>
-                    <div 
-                      className={`w-full ${color.bg} rounded-t transition-all duration-300 hover:opacity-80`}
-                      style={{ height: `${Math.max(height, 4)}%` }}
-                    ></div>
-                    <div className="text-xs text-muted-foreground mt-2 text-center">{range.label}</div>
-                  </div>
-                );
-              })}
-            </div>
+            <Bar
+              data={{
+                labels: candidateScoreRanges.map(r => r.label),
+                datasets: [
+                  {
+                    label: 'Candidates',
+                    data: candidateScoreRanges.map(r => r.count),
+                    backgroundColor: [
+                      'rgba(239, 68, 68, 0.8)',    // red-500
+                      'rgba(249, 115, 22, 0.8)',   // orange-500
+                      'rgba(234, 179, 8, 0.8)',    // yellow-500
+                      'rgba(59, 130, 246, 0.8)',   // blue-500
+                      'rgba(34, 197, 94, 0.8)',    // green-500
+                    ],
+                    borderRadius: 8,
+                    borderSkipped: false,
+                    barPercentage: 0.7,
+                  },
+                ],
+              }}
+              options={{
+                indexAxis: 'y',
+                responsive: true,
+                plugins: {
+                  legend: { display: false },
+                  title: { display: false },
+                  tooltip: {
+                    callbacks: {
+                      label: function(context) {
+                        return ` ${context.parsed.x} candidates`;
+                      }
+                    }
+                  }
+                },
+                scales: {
+                  x: {
+                    beginAtZero: true,
+                    grid: { color: 'rgba(100,116,139,0.1)' },
+                    ticks: { color: '#64748b', font: { size: 13 } },
+                  },
+                  y: {
+                    grid: { display: false },
+                    ticks: { color: '#64748b', font: { size: 13 } },
+                  },
+                },
+              }}
+              height={260}
+            />
           </CardContent>
         </Card>
       </div>

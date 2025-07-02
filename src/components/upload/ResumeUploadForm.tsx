@@ -196,7 +196,7 @@ export function ResumeUploadForm({ candidateId, onUploadSuccess, currentResumePa
 
   if (cardMode) {
     return (
-      <Card className="w-full max-w-2xl mx-auto shadow-lg">
+      <Card className="w-full mx-auto shadow-lg">
         <CardHeader>
           <CardTitle className="text-2xl flex items-center">
             <UploadCloud className="mr-2 h-6 w-6 text-primary" /> Upload Resume {candidateId && <span className="text-base text-muted-foreground ml-2">for Candidate ID: {candidateId.substring(0,8)}...</span>}

@@ -312,8 +312,8 @@ export const CandidateImportUploadQueue: React.FC = () => {
       </div>
       {/* Filters and Bulk Actions in Card */}
       <Card className="mb-4 p-4 flex flex-col md:flex-row md:items-center gap-2 md:gap-4 shadow-none border border-gray-200">
-        {/* Filters */}
         <div className="flex flex-wrap items-center gap-2 flex-1">
+          {/* Filters */}
           <Input
             placeholder="Filter by file name..."
             value={filter}
@@ -371,9 +371,7 @@ export const CandidateImportUploadQueue: React.FC = () => {
           >
             Clear Filters
           </Button>
-        </div>
-        {/* Bulk Actions */}
-        <div className="flex items-center gap-2 mt-2 md:mt-0">
+          {/* Bulk Actions */}
           <input
             type="checkbox"
             checked={allSelected}
@@ -553,28 +551,13 @@ export const CandidateImportUploadQueue: React.FC = () => {
                     <Button
                       variant="ghost"
                       size="icon"
-                      title="Show Job Details"
+                      title="Show Details"
                       onClick={() => setShowJobDetailId(item.id)}
                     >
                       <Eye className="h-4 w-4 text-primary" />
                     </Button>
                   </TableCell>
                 </TableRow>
-                {showErrorLogId === item.id && item.error_details && (
-                  <TableRow>
-                    <TableCell colSpan={9} className="bg-destructive/10 rounded p-2 text-xs text-destructive">
-                      <div className="flex justify-between items-center mb-1">
-                        <span>Error Log</span>
-                        <Button variant="ghost" size="icon" onClick={() => setShowErrorLogId(null)}>
-                          <XCircle className="h-4 w-4" />
-                        </Button>
-                      </div>
-                      <pre className="whitespace-pre-wrap break-all max-h-40 overflow-auto bg-background p-2 rounded border text-xs">
-                        {item.error_details}
-                      </pre>
-                    </TableCell>
-                  </TableRow>
-                )}
               </React.Fragment>
             ))}
           </TableBody>
@@ -715,16 +698,65 @@ export const CandidateImportUploadQueue: React.FC = () => {
         </AlertDialogContent>
       </AlertDialog>
       <Dialog open={!!showJobDetailId} onOpenChange={open => !open && setShowJobDetailId(null)}>
-        <DialogContent className="max-w-xl w-full">
+        <DialogContent className="max-w-2xl w-full">
           <DialogHeader>
             <DialogTitle>Job Details</DialogTitle>
           </DialogHeader>
-          <div className="max-h-96 overflow-auto text-xs bg-muted rounded p-2">
-            <pre className="whitespace-pre-wrap break-all">{JSON.stringify(filteredJobs.find(j => j.id === showJobDetailId), null, 2)}</pre>
-          </div>
+          {(() => {
+            const job = jobs.find(j => j.id === showJobDetailId);
+            if (!job) return <div>Job not found.</div>;
+            return (
+              <div className="space-y-6">
+                {/* Job Details Section */}
+                <div>
+                  <h3 className="font-semibold mb-2">Job Info</h3>
+                  <div className="grid grid-cols-2 gap-2 text-sm">
+                    <div><span className="font-medium">File:</span> {job.file_name}</div>
+                    <div><span className="font-medium">Size:</span> {formatBytes(job.file_size)}</div>
+                    <div><span className="font-medium">Status:</span> {job.status}</div>
+                    <div><span className="font-medium">Source:</span> {job.source}</div>
+                    <div><span className="font-medium">Uploaded:</span> {job.upload_date ? format(new Date(job.upload_date), 'yyyy-MM-dd HH:mm') : '-'}</div>
+                    <div><span className="font-medium">Completed:</span> {job.completed_date ? format(new Date(job.completed_date), 'yyyy-MM-dd HH:mm') : '-'}</div>
+                    <div><span className="font-medium">Duration:</span> {job.upload_date ? formatDuration(job.upload_date, job.completed_date) : '-'}</div>
+                    <div><span className="font-medium">ID:</span> {job.id}</div>
+                  </div>
+                  {job.file_path && (
+                    <div className="mt-2">
+                      <a href={`${MINIO_PUBLIC_BASE_URL}/${MINIO_BUCKET}/${job.file_path}`} target="_blank" rel="noopener noreferrer" className="text-primary underline">Download File</a>
+                    </div>
+                  )}
+                </div>
+                {/* Webhook Log Section */}
+                {(job.webhook_payload || job.webhook_response) && (
+                  <div>
+                    <h3 className="font-semibold mb-2">Webhook Log</h3>
+                    {job.webhook_payload && (
+                      <div className="mb-2">
+                        <div className="font-medium text-xs mb-1">Payload:</div>
+                        <pre className="bg-muted p-2 rounded text-xs overflow-auto max-h-40 whitespace-pre-wrap">{JSON.stringify(job.webhook_payload, null, 2)}</pre>
+                      </div>
+                    )}
+                    {job.webhook_response && (
+                      <div>
+                        <div className="font-medium text-xs mb-1">Response:</div>
+                        <pre className="bg-muted p-2 rounded text-xs overflow-auto max-h-40 whitespace-pre-wrap">{JSON.stringify(job.webhook_response, null, 2)}</pre>
+                      </div>
+                    )}
+                  </div>
+                )}
+                {/* Error Log Section */}
+                {job.error_details && (
+                  <div>
+                    <h3 className="font-semibold mb-2 text-destructive">Error Log</h3>
+                    <pre className="bg-destructive/10 border border-destructive rounded p-2 text-xs text-destructive max-h-40 overflow-auto whitespace-pre-wrap">{job.error_details}</pre>
+                  </div>
+                )}
+              </div>
+            );
+          })()}
           <DialogFooter>
             <DialogClose asChild>
-              <Button variant="outline">Close</Button>
+              <Button type="button" variant="outline">Close</Button>
             </DialogClose>
           </DialogFooter>
         </DialogContent>

@@ -1,4 +1,4 @@
-# FROM 24ep/studio:uat
+# FROM 24ep/studio:uatmake sure login page can be setting
 FROM node:18-alpine
 
 WORKDIR /app

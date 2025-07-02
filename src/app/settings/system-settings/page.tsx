@@ -11,6 +11,7 @@ import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { toast } from 'react-hot-toast';
+import { Select, SelectTrigger, SelectContent, SelectItem } from '@/components/ui/select';
 
 const ReactQuill = dynamic(() => import('react-quill'), { ssr: false });
 
@@ -166,7 +167,7 @@ export default function SystemSettingsPage() {
             <Label htmlFor="resume-processing-webhook">Resume Processing Webhook URL (Any Service)</Label>
             <Input id="resume-processing-webhook" type="url" placeholder="https://your-webhook-endpoint/receive-resume" value={resumeProcessingWebhookUrl} onChange={(e) => setResumeProcessingWebhookUrl(e.target.value)} className="mt-1" disabled={isSaving}/>
             <p className="text-xs text-muted-foreground mt-1">This URL will receive a POST request with the uploaded resume file (as FormData). You can use any compatible webhook service (Zapier, Make, custom API, etc.).</p>
-      </div>
+          </div>
           <Separator />
           <div>
             <Label htmlFor="general-pdf-webhook">New Candidate PDF Webhook URL</Label>

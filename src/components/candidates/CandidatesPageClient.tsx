@@ -644,9 +644,9 @@ export function CandidatesPageClient({
   }
 
   return (
-    <div className="flex flex-col md:flex-row gap-6 h-full">
-      <aside className="w-full md:w-[20%] flex-shrink-0 md:sticky md:top-[calc(var(--header-height,4rem)_+_1rem)] md:max-h-[calc(100vh-var(--header-height,4rem)-2rem)]">
-        <ScrollArea className="h-full md:pr-2">
+    <div className="flex flex-col md:flex-row gap-2 h-full">
+      <aside className="w-full md:w-auto flex-shrink-0">
+        <ScrollArea className="h-full">
           <div className="flex justify-between items-center mb-3 md:hidden"> 
             <h2 className="text-lg font-semibold">Filters</h2>
           </div>

@@ -606,6 +606,10 @@ body {
     transition: box-shadow 0.2s cubic-bezier(0.4,0,0.2,1), border 0.2s cubic-bezier(0.4,0,0.2,1), transform 0.2s cubic-bezier(0.4,0,0.2,1);
   }
 
+  .dark .card-gradient {
+    border: 1px solid hsl(var(--border)); /* use dark border token in dark mode */
+  }
+
   .card-gradient:hover {
     box-shadow: 0 8px 32px 0 rgb(0 0 0 / 0.12), 0 3px 12px -3px rgb(0 0 0 / 0.10);
     transform: translateY(-2px) scale(1.01);
@@ -821,5 +825,27 @@ body {
   box-shadow: 
     0 20px 25px -5px rgba(0, 0, 0, 0.3),
     0 10px 10px -5px rgba(0, 0, 0, 0.2);
+}
+
+/* Toast (react-hot-toast) custom styles: always opaque background */
+/* Light mode */
+body .react-hot-toast, .react-hot-toast {
+  --toast-bg: #fff;
+}
+body .react-hot-toast .react-hot-toast__toast, .react-hot-toast .react-hot-toast__toast {
+  background: var(--toast-bg) !important;
+  color: #222 !important;
+  box-shadow: 0 4px 24px 0 rgba(0,0,0,0.10), 0 1.5px 4px 0 rgba(0,0,0,0.08);
+  border-radius: 0.5rem;
+}
+/* Dark mode */
+.dark .react-hot-toast, .dark.react-hot-toast {
+  --toast-bg: #18181b;
+}
+.dark .react-hot-toast .react-hot-toast__toast, .dark.react-hot-toast .react-hot-toast__toast {
+  background: var(--toast-bg) !important;
+  color: #f3f4f6 !important;
+  box-shadow: 0 4px 24px 0 rgba(0,0,0,0.30), 0 1.5px 4px 0 rgba(0,0,0,0.18);
+  border-radius: 0.5rem;
 }
     

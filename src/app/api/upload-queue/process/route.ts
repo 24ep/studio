@@ -55,10 +55,10 @@ export async function POST(request: NextRequest) {
   let job;
   let payload = null;
   try {
-    // 1. Atomically pick and mark the oldest queued job as 'processing'
+    // 1. Atomically pick and mark the oldest queued job as 'inprogress'
     const res = await client.query(
       `UPDATE upload_queue
-       SET status = 'processing', updated_at = now()
+       SET status = 'inprogress', updated_at = now()
        WHERE id = (
          SELECT id FROM upload_queue WHERE status = 'queued' ORDER BY upload_date ASC LIMIT 1
          FOR UPDATE SKIP LOCKED
@@ -116,31 +116,33 @@ export async function POST(request: NextRequest) {
     let error_details = null;
     let appliedJob = undefined;
     if (resumeWebhookUrl && resumeWebhookUrl.startsWith('http')) {
-      // Only build payload and convert file if webhook is valid
-      const fileBase64 = fileBuffer?.toString('base64');
-      if (job.position_id || job.position_title || job.position_description || job.position_level) {
-        appliedJob = {
-          id: job.position_id,
-          title: job.position_title,
-          description: job.position_description,
-          level: job.position_level,
-        };
-      }
-      payload = {
-        file: fileBase64,
-        filename: job.filename,
-        mimetype: job.mimetype,
+      // Build JSON payload as required
+      const publicUrl = `${process.env.MINIO_PUBLIC_BASE_URL || ''}/${MINIO_BUCKET}/${job.file_path}`;
+      const inputs = {
+        cv_url: publicUrl,
+        applied_job_id: job.position_id,
+        applied_job_level: job.position_level,
+        applied_job_title: job.position_title,
+        applied_job_description: job.position_description,
         candidate_id: job.candidate_id,
-        applied_job: appliedJob,
         job_id: job.id,
         meta: job.meta,
+        filename: job.filename,
+        mimetype: job.mimetype,
       };
+      const jsonPayload = {
+        inputs,
+        response_mode: 'streaming',
+        user: 'abc-123',
+      };
+      let webhookResStatus = null;
       try {
         webhookRes = await fetch(resumeWebhookUrl, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload),
+          body: JSON.stringify(jsonPayload),
         });
+        webhookResStatus = webhookRes.status;
         if (!webhookRes.ok) {
           webhookError = `Webhook responded with status ${webhookRes.status}`;
         }
@@ -156,6 +158,8 @@ export async function POST(request: NextRequest) {
         error = `Webhook responded with status ${webhookRes.status}`;
         error_details = webhookError;
       }
+      // For logging/debugging, store a summary of the payload
+      payload = jsonPayload;
     } else {
       // Webhook not set, skip file processing for webhook
       webhookError = 'Webhook URL not set or invalid, skipping webhook file send.';
