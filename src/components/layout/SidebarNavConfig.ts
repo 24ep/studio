@@ -1,4 +1,4 @@
-import { LayoutDashboard, Users, Briefcase, Settings, Palette, KanbanSquare, DatabaseZap, SlidersHorizontal, BellRing, UsersRound, Code2, ListOrdered, ShieldCheck, Zap, ListTodo, UploadCloud } from "lucide-react";
+import { LayoutDashboard, Users, Briefcase, Settings, ListTodo, UploadCloud } from "lucide-react";
 
 export interface SidebarNavItem {
   label: string;

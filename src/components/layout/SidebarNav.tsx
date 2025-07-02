@@ -2,11 +2,11 @@
 import * as React from "react";
 import { usePathname } from "next/navigation";
 import { Sidebar, SidebarGroup, SidebarGroupLabel, SidebarGroupContent, SidebarMenu, SidebarMenuItem, SidebarMenuButton } from "@/components/ui/sidebar";
-import { useSession, signOut } from "next-auth/react";
+import { useSession } from "next-auth/react";
 import { sidebarConfig } from "./SidebarNavConfig";
 import Link from "next/link";
 import Image from "next/image";
-import { Settings, LogOut, UserCircle } from "lucide-react";
+
 
 const APP_LOGO_DATA_URL_KEY = 'appLogoDataUrl';
 const APP_CONFIG_APP_NAME_KEY = 'appConfigAppName';
@@ -17,7 +17,6 @@ const SidebarNav = React.memo(function SidebarNav() {
   const pathname = usePathname();
   const { data: session } = useSession();
   const userRole = session?.user?.role;
-  const user = session?.user;
 
   const [appLogoUrl, setAppLogoUrl] = React.useState<string | null>(null);
   const [currentAppName, setCurrentAppName] = React.useState<string>(DEFAULT_APP_NAME);
@@ -26,8 +25,30 @@ const SidebarNav = React.memo(function SidebarNav() {
   React.useEffect(() => {
     setIsClient(true);
     if (typeof window !== 'undefined') {
-      setAppLogoUrl(localStorage.getItem(APP_LOGO_DATA_URL_KEY));
-      setCurrentAppName(localStorage.getItem(APP_CONFIG_APP_NAME_KEY) || DEFAULT_APP_NAME);
+      // Read localStorage values once
+      const storedLogo = localStorage.getItem(APP_LOGO_DATA_URL_KEY);
+      const storedAppName = localStorage.getItem(APP_CONFIG_APP_NAME_KEY);
+      
+      setAppLogoUrl(storedLogo);
+      setCurrentAppName(storedAppName || DEFAULT_APP_NAME);
+      
+      // Listen for app config changes
+      const handleAppConfigChange = (event: Event) => {
+        const customEvent = event as CustomEvent<{ appName?: string; logoUrl?: string | null }>;
+        if (customEvent.detail) {
+          if (customEvent.detail.appName) {
+            setCurrentAppName(customEvent.detail.appName);
+          }
+          if (customEvent.detail.logoUrl !== undefined) {
+            setAppLogoUrl(customEvent.detail.logoUrl);
+          }
+        }
+      };
+      
+      window.addEventListener('appConfigChanged', handleAppConfigChange);
+      return () => {
+        window.removeEventListener('appConfigChanged', handleAppConfigChange);
+      };
     }
   }, []);
 
@@ -69,7 +90,7 @@ const SidebarNav = React.memo(function SidebarNav() {
                           <item.icon className="h-5 w-5" />
                           <span className="truncate">{item.label}</span>
                         </Link>
-                      </SidebarMenuButton>
+                                              </SidebarMenuButton>
                     </SidebarMenuItem>
                   ))}
               </SidebarMenu>
