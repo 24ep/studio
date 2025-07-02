@@ -59,7 +59,7 @@ function getRoleBadgeColor(role: string) {
 // Subcomponents
 const Branding: React.FC<{ appLogoUrl: string | null, appName: string }> = ({ appLogoUrl, appName }) => (
   <div className="sidebar-branding border-b border-border bg-background">
-    <Link href="/" className="flex flex-row items-center gap-3 px-6 py-6 hover:bg-muted transition-colors duration-200">
+    <Link href="/" className="flex flex-row items-center gap-3 px-3 py-3 hover:bg-muted transition-colors duration-200">
       {appLogoUrl ? (
         <Image src={appLogoUrl} alt="App Logo" width={40} height={40} className="h-10 w-10 object-contain rounded-xl shadow-sm" />
       ) : (

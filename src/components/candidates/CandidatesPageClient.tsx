@@ -25,6 +25,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
+import { BulkUploadCVsModal } from './BulkUploadCVsModal';
 
 
 interface CandidatesPageClientProps {
@@ -108,6 +109,7 @@ export function CandidatesPageClient({
   const canExportCandidates = session?.user?.role === 'Admin' || session?.user?.modulePermissions?.includes('CANDIDATES_EXPORT');
   const canManageCandidates = session?.user?.role === 'Admin' || session?.user?.modulePermissions?.includes('CANDIDATES_MANAGE');
 
+  const [isBulkUploadModalOpen, setIsBulkUploadModalOpen] = useState(false);
 
   const fetchRecruiters = useCallback(async () => {
     if (sessionStatus !== 'authenticated') return;
@@ -606,6 +608,16 @@ export function CandidatesPageClient({
     }
   };
 
+  useEffect(() => {
+    const handleRefresh = () => {
+      fetchPaginatedCandidates(filters, page, pageSize);
+    };
+    window.addEventListener('refreshCandidateQueue', handleRefresh);
+    return () => {
+      window.removeEventListener('refreshCandidateQueue', handleRefresh);
+    };
+  }, [filters, page, pageSize, fetchPaginatedCandidates]);
+
   if (sessionStatus === 'loading') {
     // Show a loading spinner while session is being established
     return (
@@ -644,7 +656,7 @@ export function CandidatesPageClient({
   }
 
   return (
-    <div className="flex flex-col md:flex-row gap-2 h-full">
+    <div className="flex flex-col md:flex-row gap-6 h-full">
       <aside className="w-full md:w-auto flex-shrink-0">
         <ScrollArea className="h-full">
           <div className="flex justify-between items-center mb-3 md:hidden"> 
@@ -694,7 +706,7 @@ export function CandidatesPageClient({
                <DropdownMenuTrigger asChild><Button variant="outline" className="w-full sm:w-auto"> More Actions <ChevronDown className="ml-2 h-4 w-4" /> </Button></DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 {canManageCandidates && (<DropdownMenuItem onSelect={() => setIsAddModalOpen(true)}> <PlusCircle className="mr-2 h-4 w-4" /> Add Manually </DropdownMenuItem>)}
-                {canImportCandidates && (<DropdownMenuItem onSelect={() => setIsImportModalOpen(true)}> <FileUp className="mr-2 h-4 w-4" /> Import (CSV) </DropdownMenuItem>)}
+                {canManageCandidates && (<DropdownMenuItem onSelect={() => setIsBulkUploadModalOpen(true)}> <FileUp className="mr-2 h-4 w-4" /> Bulk Upload CVs </DropdownMenuItem>)}
                 {canImportCandidates && (<DropdownMenuItem onSelect={handleDownloadCsvTemplateGuide}> <FileDown className="mr-2 h-4 w-4" /> Download CSV Template </DropdownMenuItem>)}
                 {canExportCandidates && (<DropdownMenuItem onSelect={handleExportToCsv} disabled={isLoading}> <FileSpreadsheet className="mr-2 h-4 w-4" /> Export (CSV) </DropdownMenuItem>)}
               </DropdownMenuContent>
@@ -753,7 +765,11 @@ export function CandidatesPageClient({
       {canManageCandidates && <AddCandidateModal isOpen={isAddModalOpen} onOpenChange={setIsAddModalOpen} onAddCandidate={handleAddCandidateSubmit} availablePositions={availablePositions} availableStages={availableStages} />}
       {canManageCandidates && <UploadResumeModal isOpen={isUploadModalOpen} onOpenChange={setIsUploadModalOpen} candidate={selectedCandidateForUpload} onUploadSuccess={handleUploadSuccess} />}
       {canManageCandidates && <CreateCandidateViaAutomationModal isOpen={isCreateViaAutomationModalOpen} onOpenChange={setIsCreateViaAutomationModalOpen} onProcessingStart={handleAutomatedProcessingStart} />}
-      {canImportCandidates && <ImportCandidatesModal isOpen={isImportModalOpen} onOpenChange={setIsImportModalOpen} onImportSuccess={() => fetchPaginatedCandidates(filters, page, pageSize)} />}
+      {canManageCandidates && <BulkUploadCVsModal
+        isOpen={isBulkUploadModalOpen}
+        onOpenChange={setIsBulkUploadModalOpen}
+        onUploadSuccess={() => fetchPaginatedCandidates(filters, page, pageSize)}
+      />}
       {selectedPositionForEdit && ( <EditPositionModal isOpen={isEditPositionModalOpen} onOpenChange={(isOpen) => { setIsEditPositionModalOpen(isOpen); if (!isOpen) setSelectedPositionForEdit(null); }} position={selectedPositionForEdit} onEditPosition={handlePositionEdited} /> )}
 
       <AlertDialog open={isBulkActionConfirmOpen} onOpenChange={setIsBulkActionConfirmOpen}>

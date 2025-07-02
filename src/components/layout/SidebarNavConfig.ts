@@ -79,13 +79,6 @@ export const sidebarConfig: SidebarNavGroup[] = [
         href: "/settings",
         description: "System configuration"
       },
-      { 
-        label: "Logs", 
-        icon: FileText, 
-        href: "/logs",
-        description: "System logs and audit trail",
-        adminOnly: true
-      },
     ],
   },
 ]; 

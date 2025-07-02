@@ -366,11 +366,11 @@ body {
     letter-spacing: var(--sidebar-letter-spacing);
     text-decoration: var(--sidebar-text-decoration);
     text-transform: var(--sidebar-text-transform);
-    border: var(--sidebar-border-width) var(--sidebar-border-style) hsl(var(--sidebar-border));
+    /* border: var(--sidebar-border-width) var(--sidebar-border-style) hsl(var(--sidebar-border));
     border-radius: var(--sidebar-border-radius);
-    box-shadow: var(--sidebar-shadow);
+    box-shadow: var(--sidebar-shadow); */
     transition: all var(--sidebar-transition-duration) var(--sidebar-transition-timing);
-    padding: var(--sidebar-padding-y) var(--sidebar-padding-x);
+    /* padding: var(--sidebar-padding-y) var(--sidebar-padding-x); */
     gap: var(--sidebar-gap);
   }
 

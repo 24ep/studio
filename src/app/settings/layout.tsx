@@ -100,7 +100,7 @@ export default function SettingsLayout({ children }: { children: ReactNode }) {
 
   return (
     <div className="flex h-full bg-muted/30">
-      <aside className="hidden md:flex md:flex-col md:w-80 border-r bg-card shadow-sm">
+      <aside className="hidden md:flex md:flex-col md:w-80 border-r">
         <div className="p-4 border-b">
           <h2 className="text-xl font-semibold flex items-center text-foreground">
             <Settings className="mr-2 h-5 w-5 text-primary" /> Application Settings
