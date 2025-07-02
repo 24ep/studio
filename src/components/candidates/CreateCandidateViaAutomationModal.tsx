@@ -119,15 +119,12 @@ export function CreateCandidateViaAutomationModal({ isOpen, onOpenChange, onProc
         const formData = new FormData();
         formData.append('pdfFile', file);
         if (selectedPositionId && selectedPositionId !== NONE_POSITION_VALUE) {
-          formData.append('positionId', selectedPositionId);
+          formData.append('applied_position_id', selectedPositionId);
           const selectedPosition = availablePositions.find(p => p.id === selectedPositionId);
           if (selectedPosition) {
-            if (selectedPosition.description) {
-              formData.append('targetPositionDescription', selectedPosition.description);
-            }
-            if (selectedPosition.position_level) {
-              formData.append('targetPositionLevel', selectedPosition.position_level);
-            }
+            formData.append('applied_position_title', selectedPosition.title || "");
+            formData.append('applied_position_description', selectedPosition.description || "");
+            formData.append('applied_position_level', selectedPosition.position_level || "");
           }
         }
         try {

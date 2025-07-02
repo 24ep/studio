@@ -593,12 +593,12 @@ export default function SystemPreferencesPage() {
       
       // System preferences
       formData.append('preferences', JSON.stringify([
-        { key: APP_THEME_KEY, value: themePreference },
-        { key: APP_NAME_KEY, value: appName },
-        { key: LOGIN_BACKGROUND_TYPE_KEY, value: loginBackgroundType },
-        { key: LOGIN_BACKGROUND_GRADIENT_START_KEY, value: loginBackgroundGradientStart },
-        { key: LOGIN_BACKGROUND_GRADIENT_END_KEY, value: loginBackgroundGradientEnd },
-        { key: LOGIN_BACKGROUND_COLOR_KEY, value: loginBackgroundColor },
+        { key: APP_THEME_KEY, value: themePreference == null ? null : String(themePreference) },
+        { key: APP_NAME_KEY, value: appName == null ? null : String(appName) },
+        { key: LOGIN_BACKGROUND_TYPE_KEY, value: loginBackgroundType == null ? null : String(loginBackgroundType) },
+        { key: LOGIN_BACKGROUND_GRADIENT_START_KEY, value: loginBackgroundGradientStart == null ? null : String(loginBackgroundGradientStart) },
+        { key: LOGIN_BACKGROUND_GRADIENT_END_KEY, value: loginBackgroundGradientEnd == null ? null : String(loginBackgroundGradientEnd) },
+        { key: LOGIN_BACKGROUND_COLOR_KEY, value: loginBackgroundColor == null ? null : String(loginBackgroundColor) },
       ]));
       
       // Logo file
@@ -613,7 +613,7 @@ export default function SystemPreferencesPage() {
       
       // Sidebar colors
       SIDEBAR_COLOR_KEYS.forEach(key => {
-        formData.append('preferences', JSON.stringify([{ key, value: sidebarColors[key] }]));
+        formData.append('preferences', JSON.stringify([{ key, value: sidebarColors[key] == null ? null : String(sidebarColors[key]) }]));
       });
       
       const res = await fetch('/api/settings/system-settings', {

@@ -28,7 +28,7 @@ type ResumeUploadFormValues = z.infer<typeof resumeUploadSchema>;
 
 interface ResumeUploadFormProps {
   candidateId: string;
-  onUploadSuccess?: (updatedCandidate: Candidate, automationResponse?: any) => void;
+  onUploadSuccess?: () => void;
   currentResumePath?: string | null;
   cardMode?: boolean; 
 }
@@ -54,43 +54,67 @@ export function ResumeUploadForm({ candidateId, onUploadSuccess, currentResumePa
       toast.error("Candidate ID and resume file are required.");
       return;
     }
-    // console.log("ResumeUploadForm: Submitting form data:", data); // Added for debugging auto-save
-
-
     setIsSubmitting(true);
-    const formData = new FormData();
-    formData.append('resume', data.resume[0]);
-
+    const file = data.resume[0];
     try {
-      const response = await fetch(`/api/resumes/upload?candidateId=${candidateId}`, {
+      // Step 1: Upload file to /api/upload-queue/upload-file
+      const formData = new FormData();
+      formData.append('files', file);
+      const uploadRes = await fetch('/api/upload-queue/upload-file', {
         method: 'POST',
-        body: formData,
+        body: formData
       });
-
-      const result = await response.json();
-
-      if (!response.ok) {
-        throw new Error(result.message || `Failed to upload resume. Status: ${response.status}`);
-      }
-
-      let toastDescription = `Resume uploaded successfully.`;
-      if (result.automationResponse) {
-        if (result.automationResponse.success) {
-          toastDescription += ` automation processing status: ${result.automationResponse.message || 'Initiated'}.`;
-          if(result.automationResponse.data) console.log("automation data:", result.automationResponse.data);
+      if (!uploadRes.ok) {
+        let errorMsg = 'File upload failed';
+        try {
+          const errorData = await uploadRes.json();
+          errorMsg = errorData.error || errorMsg;
+          console.error('File upload error:', errorData);
+        } catch (parseErr) {
+          console.error('File upload error (non-JSON):', uploadRes);
         }
-        toastDescription += ` automation notification failed: ${result.automationResponse.error || 'Unknown automation error'}`;
+        toast.error(errorMsg);
+        return;
       }
-
-      toast.success(toastDescription);
-
-      if (onUploadSuccess && result.candidate) {
-        onUploadSuccess(result.candidate, result.automationResponse);
+      const { results } = await uploadRes.json();
+      const result = results[0];
+      if (result.status !== 'success') {
+        toast.error(`${result.file_name}: ${result.error || 'Upload failed'}`);
+        return;
       }
+      // Step 2: Add to upload queue
+      const queueData = {
+        file_name: result.file_name,
+        file_size: file.size,
+        status: 'queued',
+        source: 'candidate',
+        upload_id: candidateId,
+        file_path: result.file_path,
+        created_by: undefined, // Set to session user if available
+      };
+      const queueRes = await fetch('/api/upload-queue', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(queueData)
+      });
+      if (!queueRes.ok) {
+        let errorMsg = 'Failed to add file to upload queue';
+        try {
+          const errorData = await queueRes.json();
+          errorMsg = errorData.error || errorMsg;
+          console.error('Upload queue POST error:', errorData);
+        } catch (parseErr) {
+          console.error('Upload queue POST error (non-JSON):', queueRes);
+        }
+        toast.error(`${result.file_name}: ${errorMsg}`);
+        return;
+      }
+      toast.success('Resume uploaded and queued successfully. It will be processed when a slot is available.');
       form.reset();
       setSelectedFile(null);
-       const fileInput = document.getElementById(`resume-upload-${candidateId}`) as HTMLInputElement;
+      const fileInput = document.getElementById(`resume-upload-${candidateId}`) as HTMLInputElement;
       if (fileInput) fileInput.value = '';
+      if (onUploadSuccess) onUploadSuccess();
     } catch (error) {
       console.error("Error uploading resume:", error);
       toast.error((error as Error).message);

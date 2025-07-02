@@ -61,7 +61,9 @@ const SystemSettingsForm: React.FC<SystemSettingsFormProps> = ({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (formData.key.trim()) {
-      onSubmit([formData]);
+      // Always send value as string or null
+      const safeValue = formData.value === null || formData.value === undefined ? null : String(formData.value);
+      onSubmit([{ ...formData, value: safeValue }]);
     }
   };
 

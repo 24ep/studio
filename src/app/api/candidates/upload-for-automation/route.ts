@@ -61,7 +61,10 @@ export async function POST(request: NextRequest) {
     const targetPositionId = formData.get('positionId') as string | null;
     const targetPositionDescription = formData.get('targetPositionDescription') as string | null;
     const targetPositionLevel = formData.get('targetPositionLevel') as string | null;
-
+    const appliedPositionId = formData.get('applied_position_id') as string | null;
+    const appliedPositionTitle = formData.get('applied_position_title') as string | null;
+    const appliedPositionDescription = formData.get('applied_position_description') as string | null;
+    const appliedPositionLevel = formData.get('applied_position_level') as string | null;
 
     if (!file) {
       return NextResponse.json({ message: 'No PDF file provided in "pdfFile" field' }, { status: 400 });
@@ -92,6 +95,12 @@ export async function POST(request: NextRequest) {
     const fileBase64 = Buffer.from(arrayBuffer).toString('base64');
     const payload = {
       inputs: {
+        cv_url: null, // to be set below if needed
+        job_id: targetPositionId,
+        applied_position_id: appliedPositionId,
+        applied_position_level: appliedPositionLevel,
+        applied_position_title: appliedPositionTitle,
+        applied_position_description: appliedPositionDescription,
         file: fileBase64,
         fileName: file.name,
         mimeType: file.type,
@@ -107,8 +116,13 @@ export async function POST(request: NextRequest) {
         }
       },
       response_mode: 'streaming',
-      user: 'cv_screening'
+      user: actingUserName,
     };
+
+    // If you have a public URL for the uploaded PDF, set it here
+    // For now, set cv_url to null or the correct value if available
+    // payload.inputs.cv_url = ...
+
     const webhookResponse = await fetch(generalPdfWebhookUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },

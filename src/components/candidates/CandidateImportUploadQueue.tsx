@@ -456,25 +456,23 @@ export const CandidateImportUploadQueue: React.FC = () => {
                   </TableCell>
                   <TableCell>{formatBytes(item.file_size)}</TableCell>
                   <TableCell>
-                    <span className="text-muted-foreground capitalize">
-                      {(() => {
-                        const status = item.status;
-                        let color = '';
-                        switch (status) {
-                          case 'queued': color = 'bg-muted text-foreground'; break;
-                          case 'uploading': color = 'bg-primary text-white'; break;
-                          case 'processing': color = 'bg-orange-500 text-white dark:bg-orange-700'; break;
-                          case 'importing': color = 'bg-primary/80 text-white'; break;
-                          case 'success': color = 'bg-success text-white'; break;
-                          case 'error': color = 'bg-destructive text-white'; break;
-                          case 'cancelled': color = 'bg-yellow-400 text-black dark:bg-yellow-700 dark:text-white'; break;
-                          default: color = 'bg-muted text-foreground';
-                        }
-                        return (
-                          <span className={`inline-block px-2 py-0.5 rounded text-xs font-semibold ${color}`}>{status}</span>
-                        );
-                      })()}
-                    </span>
+                    {(() => {
+                      const status = item.status;
+                      let variant: any = 'default';
+                      switch (status) {
+                        case 'queued': variant = 'secondary'; break;
+                        case 'uploading': variant = 'default'; break;
+                        case 'processing': variant = 'outline'; break;
+                        case 'importing': variant = 'outline'; break;
+                        case 'success': variant = 'default'; break;
+                        case 'error': variant = 'destructive'; break;
+                        case 'cancelled': variant = 'secondary'; break;
+                        default: variant = 'secondary';
+                      }
+                      return (
+                        <Badge variant={variant} className="capitalize">{status}</Badge>
+                      );
+                    })()}
                   </TableCell>
                   <TableCell>
                     {item.upload_date ? (
