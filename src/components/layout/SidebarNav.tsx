@@ -135,9 +135,19 @@ const SidebarNav: React.FC = React.memo(function SidebarNav() {
       fetch('/api/settings/sidebar-config')
         .then(res => res.ok ? res.json() : Promise.reject())
         .then(data => {
-          if (Array.isArray(data)) setSidebarConfig(data);
+          if (Array.isArray(data)) {
+            setSidebarConfig(data);
+          } else if (data && Array.isArray(data.default)) {
+            setSidebarConfig(data.default);
+          } else {
+            console.warn('Sidebar config API returned unexpected structure:', data);
+            setSidebarConfig(staticSidebarConfig);
+          }
         })
-        .catch(() => setSidebarConfig(staticSidebarConfig))
+        .catch((err) => {
+          console.warn('Sidebar config API fetch failed, using static config.', err);
+          setSidebarConfig(staticSidebarConfig);
+        })
         .finally(() => setSidebarLoading(false));
       return () => {
         window.removeEventListener('appConfigChanged', handleAppConfigChange);
