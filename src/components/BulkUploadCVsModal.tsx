@@ -88,6 +88,35 @@ export function BulkUploadCVsModal({ isOpen, onOpenChange, onUploadSuccess }: Bu
   const removeFile = (file: File) => {
     setSelectedFiles(prev => prev.filter(f => f !== file));
   };
+
+  // Helper to add a file to the upload queue and handle errors
+  async function addToUploadQueue(queueData: any, fileName: string) {
+    try {
+      const queueRes = await fetch('/api/upload-queue', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(queueData)
+      });
+      if (!queueRes.ok) {
+        let errorMsg = 'Failed to add file to upload queue';
+        try {
+          const errorData = await queueRes.json();
+          errorMsg = errorData.error || errorMsg;
+          console.error('Upload queue POST error:', errorData);
+        } catch (parseErr) {
+          console.error('Upload queue POST error (non-JSON):', queueRes);
+        }
+        toast.error(`${fileName}: ${errorMsg}`);
+        return false;
+      }
+      return true;
+    } catch (err) {
+      console.error('Network or unexpected error during upload queue POST:', err);
+      toast.error(`${fileName}: Unexpected error adding to upload queue`);
+      return false;
+    }
+  }
+
   const handleConfirmUpload = async () => {
     setUploading(true);
     const batchId = uuidv4();
@@ -103,9 +132,20 @@ export function BulkUploadCVsModal({ isOpen, onOpenChange, onUploadSuccess }: Bu
         body: formData
       });
       if (!uploadRes.ok) {
-        throw new Error(`File upload failed`);
+        let errorMsg = 'File upload failed';
+        try {
+          const errorData = await uploadRes.json();
+          errorMsg = errorData.error || errorMsg;
+          console.error('File upload error:', errorData);
+        } catch (parseErr) {
+          console.error('File upload error (non-JSON):', uploadRes);
+        }
+        toast.error(errorMsg);
+        return;
       }
       const { results } = await uploadRes.json();
+      // Track if any file failed to queue
+      let anyQueueError = false;
       await Promise.all(results.map(async (result: any, idx: number) => {
         if (result.status === 'success') {
           const queueData = {
@@ -122,24 +162,26 @@ export function BulkUploadCVsModal({ isOpen, onOpenChange, onUploadSuccess }: Bu
             },
             created_by: session?.user?.id,
           };
-          await fetch('/api/upload-queue', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(queueData)
-          });
+          const ok = await addToUploadQueue(queueData, result.file_name);
+          if (!ok) anyQueueError = true;
         } else {
           toast.error(`${result.file_name}: ${result.error || 'Upload failed'}`);
+          anyQueueError = true;
         }
       }));
       setSelectedFiles([]);
       setSelectedPositionId("");
       onOpenChange(false);
-      toast.success('Bulk upload completed successfully');
+      if (!anyQueueError) {
+        toast.success('Bulk upload completed successfully');
+      } else {
+        toast.error('Some files failed to queue. Check errors above.');
+      }
       if (onUploadSuccess) onUploadSuccess();
       window.dispatchEvent(new CustomEvent('refreshCandidateQueue'));
     } catch (error) {
       console.error('Bulk upload error:', error);
-      toast.error('Bulk upload failed');
+      toast.error('Bulk upload failed (unexpected error)');
     } finally {
       setUploading(false);
     }

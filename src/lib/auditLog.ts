@@ -1,5 +1,6 @@
 // src/lib/auditLog.ts
 import { getPool } from './db';
+import { v4 as uuidv4 } from 'uuid';
 
 /**
  * Writes an audit log entry to the database.
@@ -14,10 +15,10 @@ export async function logAudit(
   const client = await getPool().connect();
   try {
     const query = `
-      INSERT INTO "AuditLog" (level, message, source, "actingUserId", details, timestamp)
-      VALUES ($1, $2, $3, $4, $5, NOW());
+      INSERT INTO "AuditLog" (id, level, message, source, "actingUserId", details, timestamp)
+      VALUES ($1, $2, $3, $4, $5, $6, NOW());
     `;
-    await client.query(query, [level, message, source, actingUserId, details]);
+    await client.query(query, [uuidv4(), level, message, source, actingUserId, details]);
   } catch (error) {
     // If the audit log itself fails, we log to the console as a fallback.
     // This is critical to ensure logging failures don't crash the application.

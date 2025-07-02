@@ -23,6 +23,7 @@ import {
 import { toast } from 'react-hot-toast';
 import { UploadCloud, FileText, XCircle, Loader2, Zap } from 'lucide-react';
 import type { Position } from '@/lib/types';
+import { v4 as uuidv4 } from 'uuid';
 
 const MAX_FILE_SIZE = 500 * 1024 * 1024; // 500MB
 const NONE_POSITION_VALUE = "___NONE_POSITION___"; // Placeholder for SelectItem value
@@ -34,7 +35,8 @@ interface CreateCandidateViaAutomationModalProps {
 }
 
 export function CreateCandidateViaAutomationModal({ isOpen, onOpenChange, onProcessingStart }: CreateCandidateViaAutomationModalProps) {
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [dragActive, setDragActive] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [availablePositions, setAvailablePositions] = useState<Position[]>([]);
   const [selectedPositionId, setSelectedPositionId] = useState<string>("");
@@ -48,10 +50,8 @@ export function CreateCandidateViaAutomationModal({ isOpen, onOpenChange, onProc
             throw new Error('Failed to fetch positions');
           }
           const result = await response.json();
-          // Handle both array and object with data property
           const data = Array.isArray(result) ? result : (result.data || []);
           setAvailablePositions(Array.isArray(data) ? data : []);
-          console.log('Fetched positions for automation modal:', data);
         } catch (error) {
           console.error("Error fetching positions for modal:", error);
           toast.error("Could not load positions for selection.");
@@ -59,110 +59,122 @@ export function CreateCandidateViaAutomationModal({ isOpen, onOpenChange, onProc
       };
       fetchPositions();
     } else {
-      // Reset state when modal closes
-      setSelectedFile(null);
+      setSelectedFiles([]);
       setSelectedPositionId("");
       const fileInput = document.getElementById('automated-candidate-pdf-upload') as HTMLInputElement;
       if (fileInput) fileInput.value = '';
     }
   }, [isOpen]);
 
-  const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      if (file.type === 'application/pdf') {
-        if (file.size > MAX_FILE_SIZE) {
-            toast.error(`PDF file size should not exceed ${MAX_FILE_SIZE / (1024*1024)}MB.`);
-            setSelectedFile(null);
-            event.target.value = '';
-            return;
-        }
-        setSelectedFile(file);
+  const handleFiles = (files: FileList | null) => {
+    if (!files) return;
+    const newFiles: File[] = [];
+    const invalidFiles: { name: string; reason: string }[] = [];
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      if (file.type !== "application/pdf") {
+        invalidFiles.push({ name: file.name, reason: "Invalid file type" });
+        toast.error(`${file.name}: Invalid file type`);
+      } else if (file.size > MAX_FILE_SIZE) {
+        invalidFiles.push({ name: file.name, reason: `File too large (max ${MAX_FILE_SIZE / (1024*1024)}MB)` });
+        toast.error(`${file.name}: File too large (max ${MAX_FILE_SIZE / (1024*1024)}MB)`);
       } else {
-        toast.error("Please select a PDF file.");
-        setSelectedFile(null);
-        event.target.value = '';
+        newFiles.push(file);
       }
-    } else {
-      setSelectedFile(null);
+    }
+    setSelectedFiles(prev => [...prev, ...newFiles]);
+    if (invalidFiles.length > 0) {
+      toast.error(`${invalidFiles.length} file(s) were invalid and not added.`);
     }
   };
 
-  const removeFile = () => {
-    setSelectedFile(null);
-    const fileInput = document.getElementById('automated-candidate-pdf-upload') as HTMLInputElement;
-    if (fileInput) fileInput.value = '';
+  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setDragActive(false);
+    handleFiles(e.dataTransfer.files);
+  };
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setDragActive(true);
+  };
+  const handleDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setDragActive(false);
+  };
+  const handleInputChange = (e: ChangeEvent<HTMLInputElement>) => {
+    handleFiles(e.target.files);
+  };
+  const removeFile = (file: File) => {
+    setSelectedFiles(prev => prev.filter(f => f !== file));
   };
 
   const handleUploadForProcessing = async () => {
-    if (!selectedFile) {
-      toast.error("Please select a PDF file to upload.");
+    if (selectedFiles.length === 0) {
+      toast.error("Please select at least one PDF file to upload.");
       return;
     }
-    
     setIsUploading(true);
-    const formData = new FormData();
-    formData.append('pdfFile', selectedFile);
-
-    if (selectedPositionId && selectedPositionId !== NONE_POSITION_VALUE) {
-      formData.append('positionId', selectedPositionId);
-      const selectedPosition = availablePositions.find(p => p.id === selectedPositionId);
-      if (selectedPosition) {
-        if (selectedPosition.description) {
-          formData.append('targetPositionDescription', selectedPosition.description);
-        }
-        if (selectedPosition.position_level) {
-          formData.append('targetPositionLevel', selectedPosition.position_level);
-        }
-      }
-    }
-
     try {
-      const response = await fetch('/api/candidates/upload-for-automation', {
-        method: 'POST',
-        body: formData,
-      });
-
-      const result = await response.json();
-
-      if (!response.ok) {
-        let description = result.message || `Failed to send PDF for automated candidate creation. Status: ${response.status}`;
-        
-        if (response.status === 500 && typeof result.errorDetails === 'string') {
-            try {
+      await Promise.all(selectedFiles.map(async (file) => {
+        const formData = new FormData();
+        formData.append('pdfFile', file);
+        if (selectedPositionId && selectedPositionId !== NONE_POSITION_VALUE) {
+          formData.append('positionId', selectedPositionId);
+          const selectedPosition = availablePositions.find(p => p.id === selectedPositionId);
+          if (selectedPosition) {
+            if (selectedPosition.description) {
+              formData.append('targetPositionDescription', selectedPosition.description);
+            }
+            if (selectedPosition.position_level) {
+              formData.append('targetPositionLevel', selectedPosition.position_level);
+            }
+          }
+        }
+        try {
+          const response = await fetch('/api/candidates/upload-for-automation', {
+            method: 'POST',
+            body: formData,
+          });
+          const result = await response.json();
+          if (!response.ok) {
+            let description = result.message || `Failed to send PDF for automated candidate creation. Status: ${response.status}`;
+            if (response.status === 500 && typeof result.errorDetails === 'string') {
+              try {
                 const parsedAutomationError = JSON.parse(result.errorDetails);
                 if (parsedAutomationError.message === "No item to return got found") {
-                    description = "The automation workflow reported: 'No item to return got found'. This means the workflow ran but didn't produce the expected candidate data. Please check the automation workflow configuration and execution logs.";
+                  description = "The automation workflow reported: 'No item to return got found'. This means the workflow ran but didn't produce the expected candidate data. Please check the automation workflow configuration and execution logs.";
                 } else if (parsedAutomationError.message === "Error in workflow") {
-                    description = "The automation workflow reported a general error: 'Error in workflow'. This indicates an issue within the automation workflow itself. Please check the automation execution logs for more specific details about what went wrong during its processing.";
-                } else { // Other JSON error from automation
-                    const detailsSnippet = String(result.errorDetails).substring(0, 150) + (String(result.errorDetails).length > 150 ? '...' : '');
-                    description = `The automation workflow encountered an internal server error (500). Please check your automation workflow logs for details. Automation Output: ${detailsSnippet}`;
+                  description = "The automation workflow reported a general error: 'Error in workflow'. This indicates an issue within the automation workflow itself. Please check the automation execution logs for more specific details about what went wrong during its processing.";
+                } else {
+                  const detailsSnippet = String(result.errorDetails).substring(0, 150) + (String(result.errorDetails).length > 150 ? '...' : '');
+                  description = `The automation workflow encountered an internal server error (500). Please check your automation workflow logs for details. Automation Output: ${detailsSnippet}`;
                 }
-            } catch (e) { // JSON.parse failed or errorDetails was not a JSON string
+              } catch (e) {
                 const detailsSnippet = String(result.errorDetails).substring(0, 150) + (String(result.errorDetails).length > 150 ? '...' : '');
                 description = `The automation workflow encountered an internal server error (500) with non-JSON output. Please check your automation workflow logs. Output Snippet: ${detailsSnippet}`;
+              }
+            } else if (result.message === "automation integration for candidate creation is not configured on the server.") {
+              description = "Automated candidate creation is not configured on the server. Please ensure the Generic PDF Webhook URL environment variable is set.";
+            } else if (result.errorDetails) {
+              const detailsSnippet = String(result.errorDetails).substring(0, 150) + (String(result.errorDetails).length > 150 ? '...' : '');
+              description = `${result.message || 'Failed to send PDF.'} Details: ${detailsSnippet}`;
             }
-        } else if (result.message === "automation integration for candidate creation is not configured on the server.") { 
-          description = "Automated candidate creation is not configured on the server. Please ensure the Generic PDF Webhook URL environment variable is set.";
-        } else if (result.errorDetails) { // Non-500 error, but with errorDetails
-            const detailsSnippet = String(result.errorDetails).substring(0, 150) + (String(result.errorDetails).length > 150 ? '...' : '');
-            description = `${result.message || 'Failed to send PDF.'} Details: ${detailsSnippet}`;
+            throw new Error(description);
+          }
+          toast.success(result.message || `Resume "${file.name}" sent for automated processing. A new candidate will be created if parsing is successful.`);
+        } catch (error) {
+          console.error("Error sending PDF for automated candidate creation:", error);
+          toast.error((error as Error).message);
         }
-        throw new Error(description);
-      }
-
-      toast.success(result.message || `Resume "${selectedFile.name}" sent for automated processing. A new candidate will be created if parsing is successful.`);
+      }));
+      setSelectedFiles([]);
+      setSelectedPositionId("");
       onProcessingStart();
-      onOpenChange(false); // Close modal on success
-    } catch (error) {
-      console.error("Error sending PDF for automated candidate creation:", error);
-      toast.error((error as Error).message);
+      onOpenChange(false);
     } finally {
       setIsUploading(false);
     }
   };
-  
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
@@ -172,70 +184,69 @@ export function CreateCandidateViaAutomationModal({ isOpen, onOpenChange, onProc
             <Zap className="mr-2 h-5 w-5 text-orange-500" /> Create Candidate via Resume (Automated)
           </DialogTitle>
           <DialogDescription>
-            Upload a PDF resume. It will be sent for automated parsing and candidate creation.
-            You can optionally select a position to associate the candidate with.
+            Upload one or more PDF resumes. Each will be sent for automated parsing and candidate creation. You can optionally select a position to associate the candidates with.
           </DialogDescription>
         </DialogHeader>
-        
-        <div className="py-4 space-y-4">
-            <div>
-                <Label htmlFor="automated-candidate-pdf-upload">Select PDF Resume (Max 10MB)</Label>
-                <Input
-                id="automated-candidate-pdf-upload"
-                type="file"
-                accept="application/pdf"
-                onChange={handleFileChange}
-                className="mt-1"
-                />
-            </div>
-            {selectedFile && (
-                <div className="flex items-center justify-between p-2 bg-muted/50 rounded-md text-sm">
-                <div className="flex items-center gap-2 truncate">
-                    <FileText className="h-4 w-4 text-primary shrink-0" />
-                    <span className="truncate">{selectedFile.name}</span> 
-                    <span className="text-xs text-muted-foreground whitespace-nowrap">({(selectedFile.size / 1024 / 1024).toFixed(2)} MB)</span>
-                </div>
-                <Button type="button" variant="ghost" size="icon" className="h-6 w-6" onClick={removeFile}>
-                    <XCircle className="h-4 w-4 text-destructive" />
-                    <span className="sr-only">Remove file</span>
-                </Button>
-                </div>
+        <div className="space-y-4 py-2">
+          <div>
+            <Label htmlFor="position-select">Assign to Position (optional)</Label>
+            <Select value={(selectedPositionId === "" ? NONE_POSITION_VALUE : selectedPositionId) || ''} onValueChange={value => setSelectedPositionId(value === NONE_POSITION_VALUE ? "" : value)}>
+              <SelectTrigger id="position-select" className="mt-2">
+                <SelectValue placeholder="Select a position..." />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={NONE_POSITION_VALUE}>None (General Application)</SelectItem>
+                {availablePositions.map(pos => (
+                  <SelectItem key={pos.id} value={pos.id}>{pos.title}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div
+            className={`border-2 border-dashed rounded-xl p-8 text-center transition-all duration-300 ${
+              dragActive 
+                ? 'border-primary bg-primary/10' 
+                : 'border-border bg-muted/30'
+            }`}
+            onDrop={handleDrop}
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+            onClick={() => document.getElementById('automated-candidate-pdf-upload')?.click()}
+            style={{ cursor: 'pointer' }}
+          >
+            <input
+              id="automated-candidate-pdf-upload"
+              type="file"
+              accept="application/pdf"
+              multiple
+              className="hidden"
+              onChange={handleInputChange}
+            />
+            <UploadCloud className="mx-auto mb-2 h-8 w-8 text-primary" />
+            <p className="text-base font-medium mb-2">Drag and drop PDF files here, or click to select files</p>
+            <p className="text-xs text-muted-foreground">Only PDF files are accepted. Max size: 500MB each.</p>
+            {selectedFiles.length > 0 && (
+              <div className="mt-4 flex flex-col gap-2">
+                {selectedFiles.map((file, idx) => (
+                  <div key={idx} className="flex items-center justify-between bg-background rounded px-2 py-1 border border-border">
+                    <span className="truncate max-w-xs">{file.name}</span>
+                    <Button type="button" size="icon" variant="ghost" onClick={e => { e.stopPropagation(); removeFile(file); }}>
+                      <XCircle className="h-4 w-4 text-destructive" />
+                    </Button>
+                  </div>
+                ))}
+              </div>
             )}
-             <div>
-              <Label htmlFor="target-position-automated">Target Position (Optional)</Label>
-              <Select 
-                value={selectedPositionId || NONE_POSITION_VALUE} 
-                onValueChange={(value) => setSelectedPositionId(value === NONE_POSITION_VALUE ? "" : value)}
-              >
-                <SelectTrigger id="target-position-automated" className="mt-1">
-                  <SelectValue placeholder="Select a position to apply to..." />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value={NONE_POSITION_VALUE}>None (General Application / Let system match)</SelectItem>
-                  {availablePositions.map(pos => (
-                    <SelectItem key={pos.id} value={pos.id}>{pos.title}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <p className="text-xs text-muted-foreground mt-1">
-                If selected, this position will be prioritized. Its description will also be sent for processing.
-              </p>
-            </div>
+          </div>
         </div>
-        
-        <DialogFooter className="mt-2">
+        <DialogFooter>
           <DialogClose asChild>
-            <Button type="button" variant="outline">
-              Cancel
-            </Button>
+            <Button type="button" variant="outline" disabled={isUploading}>Cancel</Button>
           </DialogClose>
-          <Button 
-              onClick={handleUploadForProcessing} 
-              disabled={!selectedFile || isUploading}
-            >
-              {isUploading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <UploadCloud className="mr-2 h-4 w-4" />}
-              {isUploading ? 'Sending...' : 'Send for Automated Creation'}
-            </Button>
+          <Button onClick={handleUploadForProcessing} disabled={selectedFiles.length === 0 || isUploading}>
+            {isUploading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <UploadCloud className="mr-2 h-4 w-4" />}
+            {isUploading ? 'Uploading...' : 'Upload'}
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
