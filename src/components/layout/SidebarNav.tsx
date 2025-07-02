@@ -58,18 +58,18 @@ function getRoleBadgeColor(role: string) {
 
 // Subcomponents
 const Branding: React.FC<{ appLogoUrl: string | null, appName: string }> = ({ appLogoUrl, appName }) => (
-  <div className="sidebar-branding border-b border-gray-100 bg-gradient-to-r from-gray-50 to-white">
-    <Link href="/" className="flex flex-row items-center gap-3 px-6 py-6 hover:bg-gray-50 transition-colors duration-200">
+  <div className="sidebar-branding border-b border-border bg-background">
+    <Link href="/" className="flex flex-row items-center gap-3 px-6 py-6 hover:bg-muted transition-colors duration-200">
       {appLogoUrl ? (
         <Image src={appLogoUrl} alt="App Logo" width={40} height={40} className="h-10 w-10 object-contain rounded-xl shadow-sm" />
       ) : (
         DEFAULT_LOGO_ICON
       )}
       <div className="flex flex-col">
-        <span className="app-name text-xl font-bold text-gray-900 tracking-tight">
+        <span className="app-name text-xl font-bold text-foreground tracking-tight">
           {appName}
         </span>
-        <span className="text-xs text-gray-500 font-medium">Recruitment Platform</span>
+        <span className="text-xs text-muted-foreground font-medium">Recruitment Platform</span>
       </div>
     </Link>
   </div>
@@ -79,7 +79,7 @@ const NavGroups: React.FC<{ userRole: string | undefined, pathname: string, side
   <div className="flex-1 px-3 py-4 space-y-2">
     {sidebarConfig.map((group: any) => (
       <SidebarGroup key={group.label}>
-        <SidebarGroupLabel className="px-3 py-2 text-xs font-semibold text-gray-500 tracking-wider uppercase">
+        <SidebarGroupLabel className="px-3 py-2 text-xs font-semibold text-muted-foreground tracking-wider uppercase">
           {group.label}
         </SidebarGroupLabel>
         <SidebarGroupContent>
@@ -99,7 +99,7 @@ const NavGroups: React.FC<{ userRole: string | undefined, pathname: string, side
                       className={`w-full flex items-center gap-3 px-3 py-3 rounded-lg transition-all duration-200 text-sm font-medium group relative overflow-hidden
                         ${isActive 
                           ? 'bg-gradient-to-r from-blue-500 to-indigo-600 text-white shadow-lg shadow-blue-500/25' 
-                          : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900 hover:shadow-sm'
+                          : 'text-muted-foreground hover:bg-muted hover:text-foreground hover:shadow-sm'
                         }
                         ${isActive ? 'scale-[1.02]' : 'hover:scale-[1.01]'}
                       `}
@@ -108,7 +108,7 @@ const NavGroups: React.FC<{ userRole: string | undefined, pathname: string, side
                         <div className={`p-1.5 rounded-md transition-all duration-200 ${
                           isActive 
                             ? 'bg-white/20 text-white' 
-                            : 'bg-gray-100 text-gray-600 group-hover:bg-gray-200 group-hover:text-gray-700'
+                            : 'bg-muted text-muted-foreground group-hover:bg-accent group-hover:text-accent-foreground'
                         }`}>
                           <Icon className="h-4 w-4" />
                         </div>
@@ -207,7 +207,7 @@ const SidebarNav: React.FC = React.memo(function SidebarNav() {
   }, []);
 
   return (
-    <Sidebar className="bg-white border-r border-gray-200 min-h-screen flex flex-col shadow-sm" data-sidebar="sidebar">
+    <Sidebar className="bg-background border-r border-border min-h-screen flex flex-col shadow-sm" data-sidebar="sidebar">
       <Branding appLogoUrl={appLogoUrl} appName={currentAppName} />
       {sidebarLoading ? (
         <div className="flex-1 flex items-center justify-center text-muted-foreground">Loading menu...</div>

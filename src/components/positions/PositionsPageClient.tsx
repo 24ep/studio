@@ -210,10 +210,10 @@ export default function PositionsPageClient() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-muted-foreground">Closed Positions</p>
-                <p className="text-2xl font-bold text-gray-600">{closedPositions}</p>
+                <p className="text-2xl font-bold text-muted-foreground">{closedPositions}</p>
               </div>
-              <div className="h-8 w-8 rounded-full bg-gray-100 flex items-center justify-center">
-                <span className="text-gray-600 text-sm font-bold">C</span>
+              <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center">
+                <span className="text-muted-foreground text-sm font-bold">C</span>
               </div>
             </div>
           </CardContent>

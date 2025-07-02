@@ -317,7 +317,7 @@ export default function SignInClient({ initialSettings }: SignInClientProps) {
         </div>
 
         {/* Right column: Login panel (40%) */}
-        <div className="w-full lg:basis-[40%] lg:max-w-[40%] border rounded-lg flex flex-col justify-center items-center bg-white shadow-2xl p-8 lg:p-12">
+        <div className="w-full lg:basis-[40%] lg:max-w-[40%] border border-border rounded-lg flex flex-col justify-center items-center bg-background shadow-2xl p-8 lg:p-12">
           <div className="w-full max-w-md">
             {loginPageContent && (
               <div className="mb-8 text-center" dangerouslySetInnerHTML={{ __html: sanitizeHtml(loginPageContent) }} />

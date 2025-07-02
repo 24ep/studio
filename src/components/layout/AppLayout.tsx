@@ -148,7 +148,7 @@ export function AppLayout({ children }: AppLayoutProps) {
 
   return (
     <SidebarProvider defaultOpen={true}>
-      <div className="flex min-h-screen bg-gray-50">
+      <div className="flex min-h-screen bg-background">
         <SidebarNav />
         <div className="flex-1 flex flex-col min-w-0">
           <Header pageTitle={pageTitle} />

@@ -214,7 +214,7 @@ export default function SystemStatusPage() {
       case 'info':
       case 'checking':
         return 'text-blue-500';
-      default: return 'text-gray-500';
+      default: return 'text-muted-foreground';
     }
   };
   
@@ -236,7 +236,7 @@ export default function SystemStatusPage() {
 
   const getToggleIcon = (status: StatusItem['status']) => {
     if (status === 'enabled') return <ToggleRight className="mr-2 h-4 w-4 text-green-500" />;
-    if (status === 'disabled') return <ToggleLeft className="mr-2 h-4 w-4 text-gray-500" />;
+    if (status === 'disabled') return <ToggleLeft className="mr-2 h-4 w-4 text-muted-foreground" />;
     return <Settings className="mr-2 h-4 w-4" />;
   }
 
@@ -295,7 +295,7 @@ export default function SystemStatusPage() {
                     size="sm" 
                     className={cn("btn-hover-primary-gradient",
                       item.id === 'azure_ad_sso_conceptual' && item.status === 'enabled' && 'bg-green-500 hover:bg-green-600 text-white border-green-600',
-                      item.id === 'azure_ad_sso_conceptual' && item.status === 'disabled' && 'bg-gray-400 hover:bg-gray-500 text-white border-gray-500',
+                      item.id === 'azure_ad_sso_conceptual' && item.status === 'disabled' && 'bg-muted hover:bg-muted/70 text-white border-border',
                     )}
                   >
                     {item.isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : 

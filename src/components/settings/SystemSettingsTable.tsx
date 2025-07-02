@@ -46,7 +46,7 @@ const SystemSettingsTable: React.FC<SystemSettingsTableProps> = ({ settings, isL
         </CardHeader>
         <CardContent>
           <div className="flex items-center justify-center py-8">
-            <div className="text-gray-500">Loading settings...</div>
+            <div className="text-muted-foreground">Loading settings...</div>
           </div>
         </CardContent>
       </Card>
@@ -67,7 +67,7 @@ const SystemSettingsTable: React.FC<SystemSettingsTableProps> = ({ settings, isL
         </CardHeader>
         <CardContent>
           <div className="flex items-center justify-center py-8">
-            <div className="text-gray-500">No settings found</div>
+            <div className="text-muted-foreground">No settings found</div>
           </div>
         </CardContent>
       </Card>

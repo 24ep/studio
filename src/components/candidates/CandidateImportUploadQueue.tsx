@@ -260,7 +260,7 @@ export const CandidateImportUploadQueue: React.FC = () => {
                   <p className="text-sm font-medium text-muted-foreground">Queued</p>
                   <p className="text-2xl font-bold text-foreground">{numQueued}</p>
                 </div>
-                <div className="h-8 w-8 rounded-full bg-gray-400 flex items-center justify-center">
+                <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center">
                   <span className="text-white text-xs font-bold">Q</span>
                 </div>
               </div>
@@ -274,7 +274,7 @@ export const CandidateImportUploadQueue: React.FC = () => {
                   <p className="text-sm font-medium text-muted-foreground">In Progress</p>
                   <p className="text-2xl font-bold text-foreground">{numInProgress}</p>
                 </div>
-                <div className="h-8 w-8 rounded-full bg-blue-500 flex items-center justify-center">
+                <div className="h-8 w-8 rounded-full bg-primary flex items-center justify-center">
                   <span className="text-white text-xs font-bold">P</span>
                 </div>
               </div>
@@ -288,7 +288,7 @@ export const CandidateImportUploadQueue: React.FC = () => {
                   <p className="text-sm font-medium text-muted-foreground">Success</p>
                   <p className="text-2xl font-bold text-foreground">{numSuccess}</p>
                 </div>
-                <div className="h-8 w-8 rounded-full bg-green-500 flex items-center justify-center">
+                <div className="h-8 w-8 rounded-full bg-success flex items-center justify-center">
                   <CheckCircle className="h-4 w-4 text-white" />
                 </div>
               </div>
@@ -302,7 +302,7 @@ export const CandidateImportUploadQueue: React.FC = () => {
                   <p className="text-sm font-medium text-muted-foreground">Error</p>
                   <p className="text-2xl font-bold text-foreground">{numError}</p>
                 </div>
-                <div className="h-8 w-8 rounded-full bg-red-500 flex items-center justify-center">
+                <div className="h-8 w-8 rounded-full bg-destructive flex items-center justify-center">
                   <XCircle className="h-4 w-4 text-white" />
                 </div>
               </div>
@@ -461,14 +461,14 @@ export const CandidateImportUploadQueue: React.FC = () => {
                         const status = item.status;
                         let color = '';
                         switch (status) {
-                          case 'queued': color = 'bg-gray-400 text-white'; break;
-                          case 'uploading': color = 'bg-blue-500 text-white'; break;
-                          case 'processing': color = 'bg-orange-500 text-white'; break;
-                          case 'importing': color = 'bg-blue-400 text-white'; break;
-                          case 'success': color = 'bg-green-500 text-white'; break;
-                          case 'error': color = 'bg-red-500 text-white'; break;
-                          case 'cancelled': color = 'bg-yellow-400 text-black'; break;
-                          default: color = 'bg-gray-300 text-black';
+                          case 'queued': color = 'bg-muted text-foreground'; break;
+                          case 'uploading': color = 'bg-primary text-white'; break;
+                          case 'processing': color = 'bg-orange-500 text-white dark:bg-orange-700'; break;
+                          case 'importing': color = 'bg-primary/80 text-white'; break;
+                          case 'success': color = 'bg-success text-white'; break;
+                          case 'error': color = 'bg-destructive text-white'; break;
+                          case 'cancelled': color = 'bg-yellow-400 text-black dark:bg-yellow-700 dark:text-white'; break;
+                          default: color = 'bg-muted text-foreground';
                         }
                         return (
                           <span className={`inline-block px-2 py-0.5 rounded text-xs font-semibold ${color}`}>{status}</span>
@@ -569,7 +569,9 @@ export const CandidateImportUploadQueue: React.FC = () => {
                           <XCircle className="h-4 w-4" />
                         </Button>
                       </div>
-                      <pre className="whitespace-pre-wrap break-all max-h-40 overflow-auto">{item.error_details}</pre>
+                      <pre className="whitespace-pre-wrap break-all max-h-40 overflow-auto bg-background p-2 rounded border text-xs">
+                        {item.error_details}
+                      </pre>
                     </TableCell>
                   </TableRow>
                 )}
@@ -739,7 +741,7 @@ export const CandidateImportUploadQueue: React.FC = () => {
             {selectedWebhookLogJob?.webhook_payload && (
               <div>
                 <h4 className="font-medium text-blue-700 mb-1">Payload Sent to Webhook:</h4>
-                <pre className="whitespace-pre-wrap break-all max-h-40 overflow-auto bg-white p-2 rounded border text-xs">
+                <pre className="whitespace-pre-wrap break-all max-h-40 overflow-auto bg-background p-2 rounded border text-xs">
                   {JSON.stringify(selectedWebhookLogJob.webhook_payload, null, 2)}
                 </pre>
               </div>
@@ -747,7 +749,7 @@ export const CandidateImportUploadQueue: React.FC = () => {
             {selectedWebhookLogJob?.webhook_response && (
               <div>
                 <h4 className="font-medium text-blue-700 mb-1">Webhook Response:</h4>
-                <pre className="whitespace-pre-wrap break-all max-h-40 overflow-auto bg-white p-2 rounded border text-xs">
+                <pre className="whitespace-pre-wrap break-all max-h-40 overflow-auto bg-background p-2 rounded border text-xs">
                   {JSON.stringify(selectedWebhookLogJob.webhook_response, null, 2)}
                 </pre>
               </div>
