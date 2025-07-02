@@ -109,8 +109,7 @@ const SidebarNav: React.FC = React.memo(function SidebarNav() {
 
   const [appLogoUrl, setAppLogoUrl] = React.useState<string | null>(null);
   const [currentAppName, setCurrentAppName] = React.useState<string>(DEFAULT_APP_NAME);
-  const [sidebarConfig, setSidebarConfig] = React.useState<any[]>(staticSidebarConfig);
-  const [sidebarLoading, setSidebarLoading] = React.useState<boolean>(true);
+  const sidebarConfig = staticSidebarConfig;
 
   React.useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -118,51 +117,13 @@ const SidebarNav: React.FC = React.memo(function SidebarNav() {
       const storedAppName = localStorage.getItem(APP_CONFIG_APP_NAME_KEY);
       setAppLogoUrl(storedLogo);
       setCurrentAppName(storedAppName || DEFAULT_APP_NAME);
-
-      const handleAppConfigChange = (event: Event) => {
-        const customEvent = event as CustomEvent<{ appName?: string; logoUrl?: string | null }>;
-        if (customEvent.detail) {
-          if (customEvent.detail.appName) {
-            setCurrentAppName(customEvent.detail.appName);
-          }
-          if (customEvent.detail.logoUrl !== undefined) {
-            setAppLogoUrl(customEvent.detail.logoUrl);
-          }
-        }
-      };
-      window.addEventListener('appConfigChanged', handleAppConfigChange);
-      // Fetch sidebar config from API
-      fetch('/api/settings/sidebar-config')
-        .then(res => res.ok ? res.json() : Promise.reject())
-        .then(data => {
-          if (Array.isArray(data)) {
-            setSidebarConfig(data);
-          } else if (data && Array.isArray(data.default)) {
-            setSidebarConfig(data.default);
-          } else {
-            console.warn('Sidebar config API returned unexpected structure:', data);
-            setSidebarConfig(staticSidebarConfig);
-          }
-        })
-        .catch((err) => {
-          console.warn('Sidebar config API fetch failed, using static config.', err);
-          setSidebarConfig(staticSidebarConfig);
-        })
-        .finally(() => setSidebarLoading(false));
-      return () => {
-        window.removeEventListener('appConfigChanged', handleAppConfigChange);
-      };
     }
   }, []);
 
   return (
     <Sidebar className="bg-background border-r border-border min-h-screen flex flex-col shadow-sm w-64 rounded-none border-t-0 border-b-0 border-l-0" data-sidebar="sidebar">
       <Branding appLogoUrl={appLogoUrl} appName={currentAppName} />
-      {sidebarLoading ? (
-        <div className="flex-1 flex items-center justify-center text-muted-foreground">Loading menu...</div>
-      ) : (
-        <NavGroups userRole={userRole} pathname={pathname} sidebarConfig={sidebarConfig} />
-      )}
+      <NavGroups userRole={userRole} pathname={pathname} sidebarConfig={sidebarConfig} />
     </Sidebar>
   );
 });
