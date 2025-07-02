@@ -1,4 +1,4 @@
-FROM 24ep/studio:dev
+FROM 24ep/studio:uat
 
 WORKDIR /app
 

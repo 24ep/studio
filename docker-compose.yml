@@ -2,7 +2,7 @@ version: '3.8'
 
 services:
   app:
-    image: 24ep/studio:dev
+    image: 24ep/studio:uat
     ports:
       - "${APP_PORT:-9846}:9846"
     # For production deployments, you typically want the application code to be self-contained
