@@ -309,20 +309,39 @@ export default function SignInClient({ initialSettings }: SignInClientProps) {
   );
 
   if (loginLayoutType === '2column') {
+    // Get the background image URL from settings
+    const loginBgImageUrl = initialSettings?.find(s => s.key === 'loginPageBackgroundImageUrl')?.value || null;
     return (
-      <div style={loginPageStyle} className="min-h-screen flex flex-row">
-        {/* Left column: Background only (60%) */}
-        <div className="hidden lg:flex flex-col items-center justify-center relative basis-[60%] max-w-[60%]">
-          {/* Background is handled by loginPageStyle */}
+      <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'row' }} className="min-h-screen flex flex-row">
+        {/* Left column: Image from settings, centered and contained, with overlay */}
+        <div className="hidden lg:flex flex-col items-center justify-center relative basis-[60%] max-w-[60%] bg-muted">
+          {loginBgImageUrl ? (
+            <>
+              <img
+                src={loginBgImageUrl}
+                alt="Login Visual"
+                className="object-contain max-h-[80vh] w-auto h-auto mx-auto z-10"
+                style={{ maxWidth: '80%', maxHeight: '80%' }}
+              />
+              {/* Overlay for contrast */}
+              <div className="absolute inset-0 bg-gradient-to-r from-black/30 to-transparent z-20 pointer-events-none" />
+            </>
+          ) : (
+            <div className="flex flex-col items-center justify-center w-full h-full">
+              <div className="w-64 h-64 bg-gradient-to-br from-primary to-primary/80 rounded-2xl shadow-lg flex items-center justify-center">
+                <span className="text-5xl font-bold text-primary-foreground">CT</span>
+              </div>
+              <p className="mt-8 text-2xl font-semibold text-muted-foreground text-center">Welcome to {currentAppName}</p>
+            </div>
+          )}
         </div>
 
         {/* Right column: Login panel (40%) */}
-        <div className="w-full lg:basis-[40%] lg:max-w-[40%] border border-border rounded-lg flex flex-col justify-center items-center bg-background shadow-2xl p-8 lg:p-12">
+        <div className="w-full lg:basis-[40%] lg:max-w-[40%] flex flex-col justify-center items-center bg-background shadow-2xl p-8 lg:p-12 min-h-screen">
           <div className="w-full max-w-md">
             {loginPageContent && (
               <div className="mb-8 text-center" dangerouslySetInnerHTML={{ __html: sanitizeHtml(loginPageContent) }} />
             )}
-            
             {/* Application Logo and Name */}
             <div className="text-center mb-8">
               {isClient && appLogoUrl ? (
@@ -340,8 +359,7 @@ export default function SignInClient({ initialSettings }: SignInClientProps) {
               )}
               <h2 className="text-2xl font-bold text-foreground">{currentAppName}</h2>
             </div>
-
-            <Card className="w-full bg-white border border-border/50 pro-card-shadow login-transition">
+            <Card className="w-full bg-white dark:bg-card border border-border/50 pro-card-shadow login-transition">
               <CardHeader className="text-center pb-6">
                 <CardTitle className="text-2xl font-bold text-foreground">Welcome back</CardTitle>
                 <CardDescription className="text-muted-foreground">
@@ -356,7 +374,6 @@ export default function SignInClient({ initialSettings }: SignInClientProps) {
                     <AlertDescription>{errorMessage}</AlertDescription>
                   </Alert>
                 )}
-                
                 {isAzureAdConfigured && (
                   <div className="space-y-4">
                     <AzureAdSignInButton />
@@ -365,16 +382,14 @@ export default function SignInClient({ initialSettings }: SignInClientProps) {
                         <span className="w-full border-t border-border/50" />
                       </div>
                       <div className="relative flex justify-center text-xs uppercase">
-                        <span className="bg-white px-2 text-muted-foreground">Or continue with</span>
+                        <span className="bg-white dark:bg-card px-2 text-muted-foreground">Or continue with</span>
                       </div>
                     </div>
                   </div>
                 )}
-                
                 <CredentialsSignInForm />
               </CardContent>
             </Card>
-
             {/* Footer */}
             <div className="mt-8 text-center">
               <p className="text-xs text-muted-foreground">

@@ -75,7 +75,7 @@ const Branding: React.FC<{ appLogoUrl: string | null, appName: string }> = ({ ap
 );
 
 const NavGroups: React.FC<{ userRole: string | undefined, pathname: string, sidebarConfig: any[] }> = ({ userRole, pathname, sidebarConfig }) => (
-  <div className="flex-1 flex flex-col items-center justify-start py-4 gap-4">
+  <nav className="flex-1 flex flex-col gap-2 px-2 py-4">
     {sidebarConfig.flatMap((group: any) =>
       group.items
         .filter((item: any) => !item.adminOnly || userRole === "Admin")
@@ -85,52 +85,19 @@ const NavGroups: React.FC<{ userRole: string | undefined, pathname: string, side
           return (
             <Link href={item.href} key={item.href} legacyBehavior>
               <a
-                className={`flex items-center justify-center h-12 w-12 rounded-lg transition-all duration-200
-                  ${isActive ? 'bg-primary text-white shadow-lg' : 'text-muted-foreground hover:bg-muted hover:text-foreground'}
+                className={`flex items-center gap-3 px-4 py-2 rounded-lg transition-all duration-200 font-medium text-base
+                  ${isActive ? 'bg-primary text-white shadow' : 'text-muted-foreground hover:bg-muted hover:text-foreground'}
                 `}
                 title={item.label}
               >
-                <Icon className="h-6 w-6" />
+                <Icon className="h-5 w-5" />
+                <span>{item.label}</span>
               </a>
             </Link>
           );
         })
     )}
-  </div>
-);
-
-const QuickActions: React.FC = () => (
-  <div className="px-3 py-4 border-t border-gray-100">
-    <div className="space-y-2">
-      <Button
-        variant="ghost"
-        size="sm"
-        className="w-full flex items-center gap-2 justify-start"
-        onClick={() => signOut()}
-      >
-        <LogOut className="h-4 w-4" />
-        Sign out
-      </Button>
-      <Link href="/settings/system-preferences" passHref legacyBehavior>
-        <Button variant="ghost" size="sm" className="w-full flex items-center gap-2 justify-start">
-          <Settings className="h-4 w-4" />
-          System Preferences
-        </Button>
-      </Link>
-      <Link href="/settings/notifications" passHref legacyBehavior>
-        <Button variant="ghost" size="sm" className="w-full flex items-center gap-2 justify-start">
-          <Bell className="h-4 w-4" />
-          Notifications
-        </Button>
-      </Link>
-      <Link href="/docs" passHref legacyBehavior>
-        <Button variant="ghost" size="sm" className="w-full flex items-center gap-2 justify-start">
-          <HelpCircle className="h-4 w-4" />
-          Help & Docs
-        </Button>
-      </Link>
-    </div>
-  </div>
+  </nav>
 );
 
 // Main SidebarNav component
@@ -138,6 +105,7 @@ const SidebarNav: React.FC = React.memo(function SidebarNav() {
   const pathname = usePathname();
   const { data: session } = useSession();
   const userRole = session?.user?.role;
+  const user = session?.user;
 
   const [appLogoUrl, setAppLogoUrl] = React.useState<string | null>(null);
   const [currentAppName, setCurrentAppName] = React.useState<string>(DEFAULT_APP_NAME);
@@ -178,7 +146,8 @@ const SidebarNav: React.FC = React.memo(function SidebarNav() {
   }, []);
 
   return (
-    <Sidebar className="bg-background border-r border-border min-h-screen flex flex-col shadow-sm" data-sidebar="sidebar">
+    <Sidebar className="bg-background border-r border-border min-h-screen flex flex-col shadow-sm w-64 rounded-none border-t-0 border-b-0 border-l-0" data-sidebar="sidebar">
+      <Branding appLogoUrl={appLogoUrl} appName={currentAppName} />
       {sidebarLoading ? (
         <div className="flex-1 flex items-center justify-center text-muted-foreground">Loading menu...</div>
       ) : (

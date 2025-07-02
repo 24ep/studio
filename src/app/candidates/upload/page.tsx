@@ -132,7 +132,7 @@ function UploadPageContent() {
               targetPositionId: selectedPositionId || null,
               uploadBatch: batchId
             },
-            created_by: session?.user?.name || session?.user?.email || 'Unknown',
+            created_by: session?.user?.id,
           };
           await fetch('/api/upload-queue', {
             method: 'POST',

@@ -151,6 +151,8 @@ export async function POST(request: NextRequest) {
   
   const data = await request.json();
   const { file_name, file_size, status, source, upload_id, created_by, file_path } = data;
+  console.log('Upload queue POST received:', data);
+  console.log('Parsed values:', { file_name, file_size, status, source, upload_id, created_by, file_path });
   if (!file_path) {
     await logAudit('WARN', `Upload queue entry attempted without file_path by ${actingUserName}`, 'API:UploadQueue:Post', actingUserId, { data });
     return NextResponse.json({ error: 'file_path is required' }, { status: 400 });
@@ -182,6 +184,7 @@ export async function POST(request: NextRequest) {
       fileName: file_name,
       error: (error as Error).message 
     });
+    console.error('Upload queue POST error:', error);
     throw error;
   } finally {
     client.release();
