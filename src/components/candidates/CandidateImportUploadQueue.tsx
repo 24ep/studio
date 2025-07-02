@@ -13,6 +13,7 @@ import { useToast } from '@/hooks/use-toast';
 import { addDays, format, isAfter, isBefore, parseISO, subDays } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose } from "@/components/ui/dialog";
+import { useSession } from 'next-auth/react';
 
 export type CandidateJobType = "upload" | "import";
 
@@ -98,6 +99,7 @@ export const CandidateImportUploadQueue: React.FC = () => {
     return { start, end };
   });
   const [showJobDetailId, setShowJobDetailId] = useState<string | null>(null);
+  const { data: session } = useSession();
 
   // Fetch paginated jobs
   const fetchJobs = useCallback(async () => {

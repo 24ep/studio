@@ -2,14 +2,6 @@
 
 import React from 'react';
 import dynamic from 'next/dynamic';
-import {
-  ChartContainer,
-  ChartTooltip,
-  ChartTooltipContent,
-  ChartLegend,
-  ChartLegendContent,
-} from "@/components/ui/chart"
-import type { ChartConfig } from "@/components/ui/chart"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import type { Candidate, Position } from "@/lib/types"
 // Static imports for chart elements

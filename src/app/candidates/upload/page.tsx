@@ -13,6 +13,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { v4 as uuidv4 } from 'uuid';
 import { toast } from 'react-hot-toast';
 import type { Position } from '@/lib/types';
+import { useSession } from 'next-auth/react';
 
 const MAX_FILE_SIZE = 500 * 1024 * 1024; // 500MB
 
@@ -31,6 +32,7 @@ function UploadPageContent() {
   const [selectedPositionId, setSelectedPositionId] = useState<string>("");
   const [availablePositions, setAvailablePositions] = useState<Position[]>([]);
   const [uploading, setUploading] = useState(false);
+  const { data: session } = useSession();
 
   // Fetch available positions
   useEffect(() => {
@@ -129,7 +131,8 @@ function UploadPageContent() {
             webhook_payload: {
               targetPositionId: selectedPositionId || null,
               uploadBatch: batchId
-            }
+            },
+            created_by: session?.user?.name || session?.user?.email || 'Unknown',
           };
           await fetch('/api/upload-queue', {
             method: 'POST',
