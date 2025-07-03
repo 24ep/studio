@@ -119,6 +119,20 @@ export default function PreferencesSettingsPage() {
     }
   }, [sessionStatus, router, pathname, signIn]);
 
+  // Apply settings on initial load and when sidebar colors change
+  useEffect(() => {
+    if (isClient && sessionStatus === 'authenticated') {
+      // Apply theme and colors
+      setThemeAndColors({
+        themePreference,
+        sidebarColors
+      });
+      
+      // Apply sidebar active style
+      applySidebarActiveStyle(sidebarActiveStyle);
+    }
+  }, [isClient, sessionStatus, themePreference, sidebarColors, sidebarActiveStyle]);
+
   const handleLogoFileChange = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
@@ -213,9 +227,11 @@ export default function PreferencesSettingsPage() {
 
   const handleSavePreferences = () => {
     if (!isClient) return;
+    
+    // Save all preferences to localStorage
     localStorage.setItem(APP_THEME_KEY, themePreference);
-    localStorage.setItem(APP_CONFIG_APP_NAME_KEY, appName || DEFAULT_APP_NAME); // Save app name
-    localStorage.setItem(SIDEBAR_ACTIVE_STYLE_KEY, sidebarActiveStyle); // Save sidebar style
+    localStorage.setItem(APP_CONFIG_APP_NAME_KEY, appName || DEFAULT_APP_NAME);
+    localStorage.setItem(SIDEBAR_ACTIVE_STYLE_KEY, sidebarActiveStyle);
 
     // Save sidebar colors
     Object.entries(sidebarColors).forEach(([key, value]) => {
@@ -236,7 +252,15 @@ export default function PreferencesSettingsPage() {
       loginBgUpdated = true;
     }
 
-    success('Your preferences have been updated locally.');
+    // Apply all changes immediately
+    setThemeAndColors({
+      themePreference,
+      sidebarColors
+    });
+    
+    applySidebarActiveStyle(sidebarActiveStyle);
+
+    success('Your preferences have been updated and applied.');
 
     // Dispatch a single event for any config change
     window.dispatchEvent(new CustomEvent('appConfigChanged', { 
@@ -258,11 +282,21 @@ export default function PreferencesSettingsPage() {
   };
 
   const handleSidebarColorChange = (key: string, value: string) => {
-    setSidebarColors(prev => ({ ...prev, [key]: value }));
+    const updatedColors = { ...sidebarColors, [key]: value };
+    setSidebarColors(updatedColors);
     // Apply immediately for preview
     setThemeAndColors({
       themePreference,
-      sidebarColors: { ...sidebarColors, [key]: value }
+      sidebarColors: updatedColors
+    });
+  };
+
+  const handleThemeChange = (value: ThemePreference) => {
+    setThemePreference(value);
+    // Apply theme immediately
+    setThemeAndColors({
+      themePreference: value,
+      sidebarColors
     });
   };
 
@@ -308,7 +342,7 @@ export default function PreferencesSettingsPage() {
             <h3 className="text-lg font-semibold text-foreground mb-2">Theme</h3>
             <RadioGroup
               value={themePreference}
-              onValueChange={(value) => setThemePreference(value as ThemePreference)}
+              onValueChange={handleThemeChange}
               className="flex flex-col sm:flex-row sm:space-x-4"
             >
               <div className="flex items-center space-x-2">
@@ -670,7 +704,60 @@ export default function PreferencesSettingsPage() {
             </div>
           </section>
         </CardContent>
-        <CardFooter>
+        <CardFooter className="flex justify-between">
+          <Button 
+            variant="outline" 
+            onClick={() => {
+              // Reset all preferences to defaults
+              setThemePreference('system');
+              setAppName(DEFAULT_APP_NAME);
+              setSidebarActiveStyle('gradient');
+              setSelectedLogoFile(null);
+              setLogoPreviewUrl(null);
+              setSavedLogoDataUrl(null);
+              setSelectedLoginBgFile(null);
+              setLoginBgPreviewUrl(null);
+              setSavedLoginBgDataUrl(null);
+              
+              const defaultColors = {
+                sidebarBgStartL: '0 0% 100%',
+                sidebarBgEndL: '0 0% 100%',
+                sidebarTextL: '222.2 84% 4.9%',
+                sidebarActiveBgStartL: '179 67% 66%',
+                sidebarActiveBgEndL: '238 74% 61%',
+                sidebarActiveTextL: '0 0% 100%',
+                sidebarHoverBgL: '210 40% 98%',
+                sidebarHoverTextL: '222.2 84% 4.9%',
+                sidebarBorderL: '214.3 31.8% 91.4%',
+                sidebarBgStartD: '222.2 84% 4.9%',
+                sidebarBgEndD: '222.2 84% 4.9%',
+                sidebarTextD: '210 40% 98%',
+                sidebarActiveBgStartD: '179 67% 66%',
+                sidebarActiveBgEndD: '238 74% 61%',
+                sidebarActiveTextD: '0 0% 100%',
+                sidebarHoverBgD: '217.2 32.6% 17.5%',
+                sidebarHoverTextD: '210 40% 98%',
+                sidebarBorderD: '217.2 32.6% 17.5%',
+              };
+              setSidebarColors(defaultColors);
+              
+              // Clear localStorage
+              localStorage.removeItem(APP_THEME_KEY);
+              localStorage.removeItem(APP_CONFIG_APP_NAME_KEY);
+              localStorage.removeItem(SIDEBAR_ACTIVE_STYLE_KEY);
+              localStorage.removeItem(APP_LOGO_DATA_URL_KEY);
+              localStorage.removeItem(LOGIN_BG_DATA_URL_KEY);
+              Object.keys(defaultColors).forEach(key => localStorage.removeItem(key));
+              
+              // Apply defaults
+              setThemeAndColors({ themePreference: 'system', sidebarColors: defaultColors });
+              applySidebarActiveStyle('gradient');
+              
+              success('All preferences have been reset to defaults.');
+            }}
+          >
+            Reset All
+          </Button>
           <Button onClick={handleSavePreferences} className="btn-primary-gradient">
             <Save className="mr-2 h-4 w-4" /> Save Preferences
           </Button>
