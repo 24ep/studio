@@ -118,12 +118,7 @@ export default function RolesPermissionsPage() {
   }, [sessionStatus, pathname]); // Removed selectedRole from dependencies
 
   useEffect(() => {
-    // Debug: Log session and permissions
-    if (session) {
-      console.log('[DEBUG] Session:', session);
-      console.log('[DEBUG] User role:', session.user.role);
-      console.log('[DEBUG] User modulePermissions:', session.user.modulePermissions);
-    }
+
     if (sessionStatus === 'unauthenticated') {
       signIn(undefined, { callbackUrl: pathname });
     } else if (sessionStatus === 'authenticated') {

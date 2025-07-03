@@ -21,7 +21,7 @@ import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Toggle } from '@/components/ui/toggle';
+import { Switch } from '@/components/ui/switch';
 import {
   Dialog,
   DialogContent,
@@ -467,7 +467,7 @@ export function EditUserModal({ isOpen, onOpenChange, onEditUser, user, isSelfEd
                                             <p className="text-sm text-muted-foreground mt-1">{module.description}</p>
                                           </div>
                                           <FormControl>
-                                            <Toggle
+                                            <Switch
                                               id={`${user?.id}-${module.id}`}
                                               checked={checked}
                                               onCheckedChange={(checked) => 

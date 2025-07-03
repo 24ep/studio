@@ -1,0 +1,189 @@
+version: "3.8"
+
+services:
+  8021_hr_ai_screening:
+    build:
+      context: .
+      dockerfile: Dockerfile.8021
+    image: 8021_hr_ai_screening:latest
+    restart: always
+    environment:
+      # Application Configuration
+      NODE_ENV: production
+      APP_PORT: 8021
+      NEXT_TELEMETRY_DISABLED: 1
+      
+      # Database Configuration
+      DATABASE_URL: ${DATABASE_URL}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      
+      # MinIO Configuration
+      MINIO_ENDPOINT: ${MINIO_ENDPOINT}
+      MINIO_PORT: ${MINIO_PORT}
+      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY}
+      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY}
+      MINIO_BUCKET_NAME: ${MINIO_BUCKET_NAME}
+      MINIO_USE_SSL: ${MINIO_USE_SSL}
+      MINIO_PUBLIC_BASE_URL: ${MINIO_PUBLIC_BASE_URL}
+      
+      # Redis Configuration
+      REDIS_URL: ${REDIS_URL}
+      
+      # Authentication Configuration
+      NEXTAUTH_URL: ${NEXTAUTH_URL}
+      NEXTAUTH_SECRET: ${NEXTAUTH_SECRET}
+      
+      # Azure AD Configuration (Optional)
+      AZURE_AD_CLIENT_ID: ${AZURE_AD_CLIENT_ID}
+      AZURE_AD_CLIENT_SECRET: ${AZURE_AD_CLIENT_SECRET}
+      AZURE_AD_TENANT_ID: ${AZURE_AD_TENANT_ID}
+      NEXT_PUBLIC_AZURE_AD_CLIENT_ID: ${NEXT_PUBLIC_AZURE_AD_CLIENT_ID}
+      NEXT_PUBLIC_AZURE_AD_TENANT_ID: ${NEXT_PUBLIC_AZURE_AD_TENANT_ID}
+      
+      # Webhook Configuration
+      RESUME_PROCESSING_WEBHOOK_URL: ${RESUME_PROCESSING_WEBHOOK_URL}
+      GENERAL_PDF_WEBHOOK_URL: ${GENERAL_PDF_WEBHOOK_URL}
+      PROCESSOR_API_KEY: ${PROCESSOR_API_KEY}
+      
+      # External API Keys
+      GOOGLE_API_KEY: ${GOOGLE_API_KEY}
+      NEXT_PUBLIC_GOOGLE_FONTS_API_KEY: ${NEXT_PUBLIC_GOOGLE_FONTS_API_KEY}
+      
+      # WebSocket Configuration
+      WS_QUEUE_BRIDGE_PORT: ${WS_QUEUE_BRIDGE_PORT}
+      WS_ALLOWED_ORIGINS: ${WS_ALLOWED_ORIGINS}
+      NEXT_PUBLIC_WS_QUEUE_BRIDGE_URL: ${NEXT_PUBLIC_WS_QUEUE_BRIDGE_URL}
+      
+      # Public MinIO Configuration
+      NEXT_PUBLIC_MINIO_BUCKET: ${NEXT_PUBLIC_MINIO_BUCKET}
+      NEXT_PUBLIC_MINIO_PUBLIC_BASE_URL: ${NEXT_PUBLIC_MINIO_PUBLIC_BASE_URL}
+      NEXT_PUBLIC_MINIO_URL: ${NEXT_PUBLIC_MINIO_URL}
+      NEXT_PUBLIC_MINIO_BUCKET_NAME: ${NEXT_PUBLIC_MINIO_BUCKET_NAME}
+      
+      # Internal Network Configuration
+      INTERNAL_SERVER_IP: ${INTERNAL_SERVER_IP}
+      INTERNAL_DOMAIN: ${INTERNAL_DOMAIN}
+    volumes:
+      - /var/dockers/8021/uploads:/app/uploads
+      - /var/dockers/8021/logs:/app/logs
+      - /var/dockers/8021/data:/app/data
+    ports:
+      - "8021:8021"
+    networks:
+      - docker_internal
+    depends_on:
+      - postgres
+      - minio
+      - redis
+    mem_limit: 1g
+    cpus: 0.5
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: '0.5'
+        reservations:
+          memory: 512M
+          cpus: '0.25'
+
+  postgres:
+    image: postgres:14-alpine
+    restart: always
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_INITDB_ARGS: "--encoding=UTF-8 --lc-collate=C --lc-ctype=C"
+    volumes:
+      - /var/dockers/8021/postgres_data:/var/lib/postgresql/data
+    ports:
+      - "80211:5432"
+    networks:
+      - docker_internal
+    mem_limit: 512m
+    cpus: 0.25
+
+  minio:
+    image: minio/minio:latest
+    restart: always
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+      MINIO_SERVER_URL: http://localhost:9000
+      MINIO_BROWSER_REDIRECT_URL: http://localhost:9001
+    command: server /data --console-address ":9001" --address ":9000"
+    volumes:
+      - /var/dockers/8021/minio_data:/data
+    networks:
+      - docker_internal
+    mem_limit: 512m
+    cpus: 0.25
+
+  redis:
+    image: redis:alpine
+    restart: always
+    volumes:
+      - /var/dockers/8021/redis_data:/data
+    networks:
+      - docker_internal
+    mem_limit: 256m
+    cpus: 0.1
+
+  upload-queue-processor:
+    build:
+      context: .
+      dockerfile: Dockerfile.processor
+    restart: always
+    environment:
+      DATABASE_URL: ${DATABASE_URL}
+      MINIO_ENDPOINT: ${MINIO_ENDPOINT}
+      MINIO_PORT: ${MINIO_PORT}
+      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY}
+      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY}
+      MINIO_BUCKET_NAME: ${MINIO_BUCKET_NAME}
+      MINIO_USE_SSL: ${MINIO_USE_SSL}
+      MINIO_PUBLIC_BASE_URL: ${MINIO_PUBLIC_BASE_URL}
+      REDIS_URL: ${REDIS_URL}
+      NEXTAUTH_URL: ${NEXTAUTH_URL}
+      NEXTAUTH_SECRET: ${NEXTAUTH_SECRET}
+      AZURE_AD_CLIENT_ID: ${AZURE_AD_CLIENT_ID}
+      AZURE_AD_CLIENT_SECRET: ${AZURE_AD_CLIENT_SECRET}
+      AZURE_AD_TENANT_ID: ${AZURE_AD_TENANT_ID}
+      NEXT_PUBLIC_AZURE_AD_CLIENT_ID: ${NEXT_PUBLIC_AZURE_AD_CLIENT_ID}
+      NEXT_PUBLIC_AZURE_AD_TENANT_ID: ${NEXT_PUBLIC_AZURE_AD_TENANT_ID}
+      RESUME_PROCESSING_WEBHOOK_URL: ${RESUME_PROCESSING_WEBHOOK_URL}
+      GENERAL_PDF_WEBHOOK_URL: ${GENERAL_PDF_WEBHOOK_URL}
+      GOOGLE_API_KEY: ${GOOGLE_API_KEY}
+      NEXT_PUBLIC_GOOGLE_FONTS_API_KEY: ${NEXT_PUBLIC_GOOGLE_FONTS_API_KEY}
+      NODE_ENV: ${NODE_ENV}
+      PROCESSOR_INTERVAL_MS: ${PROCESSOR_INTERVAL_MS}
+      LOG_INTERVAL_MS: ${LOG_INTERVAL_MS}
+      PROCESSOR_URL: http://8021_hr_ai_screening:8021/api/upload-queue/process
+      PROCESSOR_API_KEY: ${PROCESSOR_API_KEY}
+    volumes:
+      - /var/dockers/8021/processor_logs:/app/logs
+    networks:
+      - docker_internal
+    depends_on:
+      - 8021_hr_ai_screening
+      - postgres
+      - minio
+      - redis
+    mem_limit: 1g
+    cpus: 0.5
+
+networks:
+  default:
+    external: true
+    name: docker_external
+
+  docker_internal:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.21.0/24
+          gateway: 172.20.21.1

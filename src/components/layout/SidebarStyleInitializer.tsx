@@ -14,7 +14,7 @@ export function SidebarStyleInitializer() {
     // Debug: Log the current style
     if (typeof window !== 'undefined') {
       const currentStyle = localStorage.getItem('sidebarActiveStylePreference') || 'gradient';
-      console.log('SidebarStyleInitializer: Current style is', currentStyle);
+  
     }
   }, []);
 

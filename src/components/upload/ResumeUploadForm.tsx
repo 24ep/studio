@@ -28,7 +28,7 @@ type ResumeUploadFormValues = z.infer<typeof resumeUploadSchema>;
 
 interface ResumeUploadFormProps {
   candidateId: string;
-  onUploadSuccess?: () => void;
+  onUploadSuccess?: (updatedCandidate?: Candidate) => void;
   currentResumePath?: string | null;
   cardMode?: boolean; 
 }

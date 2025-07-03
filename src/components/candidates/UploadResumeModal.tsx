@@ -28,23 +28,21 @@ export function UploadResumeModal({ isOpen, onOpenChange, candidate, onUploadSuc
   // Added for debugging auto-save
   useEffect(() => {
     if (isOpen) {
-      // console.log("UploadResumeModal: Modal opened for candidate:", candidate?.name);
+  
     }
   }, [isOpen, candidate]);
 
 
   if (!candidate) return null;
 
-  const handleInternalUploadSuccess = (updatedCandidate: Candidate) => {
-    onUploadSuccess(updatedCandidate);
+  const handleInternalUploadSuccess = () => {
+    // Since the upload form doesn't return the updated candidate,
+    // we'll close the modal and let the parent component refresh the data
     onOpenChange(false);
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => {
-        // console.log("UploadResumeModal: Dialog onOpenChange called with:", open); // Added for debugging auto-save
-        onOpenChange(open);
-    }}>
+          <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle className="flex items-center">

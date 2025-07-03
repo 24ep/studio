@@ -787,7 +787,7 @@ export default function SystemPreferencesPage() {
               </div>
             </RadioGroup>
             <p className="text-xs text-muted-foreground mt-1">
-              Note: This theme preference is visual only for this prototype. Actual theme switching is handled by the header toggle.
+              Note: This theme preference is saved locally. Actual theme switching is handled by the header toggle.
             </p>
           </section>
 

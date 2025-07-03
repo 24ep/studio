@@ -145,7 +145,7 @@ export const CandidateImportUploadQueue: React.FC = () => {
     const ws = new window.WebSocket(wsUrl);
     
     ws.onopen = () => {
-      console.log('WebSocket connected to upload queue endpoint');
+      
     };
     
     ws.onerror = (error) => {

@@ -122,7 +122,6 @@ const SidebarNavComponent = function SidebarNav() {
                 asChild
                 isActive={pathname === item.href || (item.href !== "/" && pathname.startsWith(item.href))}
                 className="w-full justify-start"
-                tooltip={item.label}
                 onClick={() => {
                   if (accordionValue === "settings-group" && !currentClientIsSettingsSectionActive) {
                      setAccordionValue(undefined);
@@ -147,7 +146,6 @@ const SidebarNavComponent = function SidebarNav() {
                 asChild
                 isActive={isMyTaskBoardActive}
                 className="w-full justify-start"
-                tooltip={myTaskBoardNavItem.label}
                  onClick={() => {
                    if (accordionValue === "settings-group" && !currentClientIsSettingsSectionActive) {
                     setAccordionValue(undefined);
@@ -206,7 +204,6 @@ const SidebarNavComponent = function SidebarNav() {
                           isActive={pathname.startsWith(item.href)}
                           className="w-full justify-start"
                           size="sm"
-                          tooltip={item.label}
                           data-active={pathname.startsWith(item.href)}
                         >
                           {item.icon && <item.icon className="h-4 w-4 ml-[1px]" />}

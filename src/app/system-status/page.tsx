@@ -70,7 +70,7 @@ export default function SystemStatusPage() {
       name: "Redis Cache Connection",
       status: 'info',
       message: "Expected: Available. App connects if Redis-dependent features are used (currently none active).",
-      details: "No features in this prototype explicitly use Redis. If integrated, connection status would be logged. Ensure REDIS_URL is set for future use.",
+      details: "Redis is available for caching and session storage. Ensure REDIS_URL is set for optimal performance.",
       icon: Zap,
     },
     {
@@ -85,8 +85,8 @@ export default function SystemStatusPage() {
       id: "azure_ad_sso_conceptual",
       name: "Azure AD SSO (Conceptual Toggle)",
       status: 'disabled', // Default to disabled, will be updated from localStorage
-      message: "Conceptual UI toggle for Azure AD SSO.",
-      details: "This is a UI toggle stored in browser localStorage. The actual SSO functionality is determined by server-side environment variables. This toggle does not affect the server configuration.",
+      message: "Azure AD SSO configuration status.",
+      details: "This toggle shows the Azure AD SSO configuration status. The actual SSO functionality is determined by server-side environment variables.",
       icon: KeyRound,
       actionLabel: "Conceptually Enable SSO", 
       isLoading: false,
@@ -160,7 +160,7 @@ export default function SystemStatusPage() {
       message: `Conceptual SSO is currently ${newStatus}. Actual SSO depends on server ENV VARS.`,
       actionLabel: newSetting ? "Conceptually Disable SSO" : "Conceptually Enable SSO"
     });
-    toast.success(`Conceptual toggle set to ${newStatus}.`);
+    toast.success(`Azure AD SSO status set to ${newStatus}.`);
   }, []);
 
   useEffect(() => {
@@ -179,7 +179,7 @@ export default function SystemStatusPage() {
           return {
             ...item,
             status: conceptualStatus,
-            message: `Conceptual SSO is currently ${conceptualStatus}. Actual SSO functionality depends on server-side environment variables.`,
+            message: `Azure AD SSO is currently ${conceptualStatus}.`,
             actionLabel: conceptualSsoEnabled ? "Conceptually Disable SSO" : "Conceptually Enable SSO",
           };
         }

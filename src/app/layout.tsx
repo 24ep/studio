@@ -12,11 +12,7 @@ import { authOptions } from "@/lib/auth"
 // import { getServerSession } from "next-auth/next"
 // import { authOptions } from "@/app/api/auth/[...nextauth]/route"
 
-// Remove build-time console logs
-// console.log(">>> [BUILD] src/app/layout.tsx loaded");
 
-// Remove force-dynamic to allow static optimization
-// export const dynamic = "force-dynamic";
 
 const poppins = Poppins({
   subsets: ['latin'],
@@ -81,13 +77,7 @@ export default async function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
-  // Remove build-time console logs
-  // console.log(">>> [BUILD] RootLayout function called");
-  
-  // Remove build-time session fetching
-  // console.log("[BUILD LOG] Before getServerSession in RootLayout");
-  // const session = await getServerSession(authOptions);
-  // console.log("[BUILD LOG] After getServerSession in RootLayout");
+
 
   return (
     <html lang="en" className={poppins.variable}>

@@ -439,14 +439,14 @@ export function CandidatesPageClient({
       "parsedData.job_suitable", "parsedData.job_matches"
     ];
     const exampleRows = [
-      ["John Doe", "john.doe@example.com", "555-1212", "your-position-uuid-here", "85", "Applied", new Date().toISOString(),
-       "EN", "John", "Doe", "Mr.", "Johnny", "New York, USA", "Experienced software engineer.",
-       "john.doe@example.com", "555-1212",
-       JSON.stringify([{university:"Tech U",major:"CS"}]),
-       JSON.stringify([{company:"Big Tech Inc.",position:"Dev"}]),
-       JSON.stringify([{segment_skill:"Languages",skill:["Python","JS"]}]),
-       JSON.stringify([{suitable_career:"Software Development"}]),
-       JSON.stringify([{job_title:"Senior Dev",fit_score:90}])
+      ["Sample Candidate", "candidate@example.com", "555-0000", "position-uuid", "85", "Applied", new Date().toISOString(),
+       "EN", "Sample", "Candidate", "Mr.", "Sam", "City, Country", "Professional summary.",
+       "candidate@example.com", "555-0000",
+       JSON.stringify([{university:"University",major:"Field of Study"}]),
+       JSON.stringify([{company:"Company",position:"Position"}]),
+       JSON.stringify([{segment_skill:"Skills",skill:["Skill 1","Skill 2"]}]),
+       JSON.stringify([{suitable_career:"Career Path"}]),
+       JSON.stringify([{job_title:"Job Title",fit_score:85}])
       ],
     ];
      let csvContent = headers.join(',') + '\n';

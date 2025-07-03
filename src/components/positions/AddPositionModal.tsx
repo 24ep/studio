@@ -51,7 +51,7 @@ interface AddPositionModalProps {
 }
 
 export function AddPositionModal({ isOpen, onOpenChange, onAddPosition }: AddPositionModalProps) {
-  const [testInput, setTestInput] = useState('');
+
   
   const form = useForm<AddPositionFormValues>({
     resolver: zodResolver(addPositionFormSchema),
@@ -77,7 +77,6 @@ export function AddPositionModal({ isOpen, onOpenChange, onAddPosition }: AddPos
   }, [isOpen, form]);
 
   const onSubmit = async (data: AddPositionFormValues) => {
-    console.log('Form submitted with data:', data);
     await onAddPosition(data);
   };
 
