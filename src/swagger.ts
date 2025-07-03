@@ -221,10 +221,141 @@ const swaggerSpec = {
         }
       }
     },
+    '/api/external/candidates': {
+      get: {
+        summary: 'Get all candidates (external API)',
+        description: 'Returns a paginated list of candidates. Requires Bearer token authentication.',
+        tags: ['External Candidates'],
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { name: 'page', in: 'query', description: 'Page number for pagination', schema: { type: 'integer', default: 1 } },
+          { name: 'limit', in: 'query', description: 'Number of items per page', schema: { type: 'integer', default: 10 } },
+          { name: 'status', in: 'query', description: 'Filter by candidate status', schema: { type: 'string' } },
+          { name: 'positionId', in: 'query', description: 'Filter by position ID', schema: { type: 'string' } },
+          { name: 'recruiterId', in: 'query', description: 'Filter by recruiter ID', schema: { type: 'string' } },
+          { name: 'searchTerm', in: 'query', description: 'Search term for name or email', schema: { type: 'string' } }
+        ],
+        responses: {
+          '200': {
+            description: 'List of candidates',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    candidates: { type: 'array', items: { $ref: '#/components/schemas/Candidate' } },
+                    total: { type: 'integer' },
+                    page: { type: 'integer' },
+                    limit: { type: 'integer' }
+                  }
+                }
+              }
+            }
+          },
+          '401': { description: 'Unauthorized' }
+        }
+      },
+      post: {
+        summary: 'Create a new candidate (external API)',
+        description: 'Creates a new candidate. Requires Bearer token authentication.',
+        tags: ['External Candidates'],
+        security: [{ bearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: { $ref: '#/components/schemas/Candidate' }
+            }
+          }
+        },
+        responses: {
+          '201': {
+            description: 'Candidate created successfully',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    message: { type: 'string' },
+                    candidate: { $ref: '#/components/schemas/Candidate' }
+                  }
+                }
+              }
+            }
+          },
+          '400': { description: 'Invalid input data' },
+          '401': { description: 'Unauthorized' },
+          '403': { description: 'Insufficient permissions' },
+          '409': { description: 'Candidate with this email already exists' }
+        }
+      }
+    },
+    '/api/external/candidates/{id}': {
+      get: {
+        summary: 'Get candidate by ID (external API)',
+        description: 'Returns details for a specific candidate. Requires Bearer token authentication.',
+        tags: ['External Candidates'],
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { name: 'id', in: 'path', required: true, description: 'Candidate ID', schema: { type: 'string' } }
+        ],
+        responses: {
+          '200': {
+            description: 'Candidate details',
+            content: { 'application/json': { schema: { $ref: '#/components/schemas/Candidate' } } }
+          },
+          '401': { description: 'Unauthorized' },
+          '404': { description: 'Candidate not found' }
+        }
+      },
+      put: {
+        summary: 'Update candidate by ID (external API)',
+        description: 'Updates a candidate. Requires Bearer token authentication and Admin or CANDIDATES_MANAGE permission.',
+        tags: ['External Candidates'],
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { name: 'id', in: 'path', required: true, description: 'Candidate ID', schema: { type: 'string' } }
+        ],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: { $ref: '#/components/schemas/Candidate' }
+            }
+          }
+        },
+        responses: {
+          '200': {
+            description: 'Candidate updated successfully',
+            content: { 'application/json': { schema: { $ref: '#/components/schemas/Candidate' } } }
+          },
+          '400': { description: 'Invalid input data' },
+          '401': { description: 'Unauthorized' },
+          '403': { description: 'Insufficient permissions' },
+          '404': { description: 'Candidate not found' }
+        }
+      },
+      delete: {
+        summary: 'Delete candidate by ID (external API)',
+        description: 'Deletes a candidate. Requires Bearer token authentication and Admin or CANDIDATES_MANAGE permission.',
+        tags: ['External Candidates'],
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { name: 'id', in: 'path', required: true, description: 'Candidate ID', schema: { type: 'string' } }
+        ],
+        responses: {
+          '200': { description: 'Candidate deleted successfully' },
+          '401': { description: 'Unauthorized' },
+          '403': { description: 'Insufficient permissions' },
+          '404': { description: 'Candidate not found' }
+        }
+      }
+    },
   },
   tags: [
     { name: 'External Authentication', description: 'External API authentication endpoints' },
-    { name: 'External Positions', description: 'External API for positions' }
+    { name: 'External Positions', description: 'External API for positions' },
+    { name: 'External Candidates', description: 'External API for candidates' }
   ],
   components: {
     securitySchemes: {
@@ -600,7 +731,8 @@ const swaggerSpec = {
   },
   tags: [
     { name: 'External Authentication', description: 'External API authentication endpoints' },
-    { name: 'External Positions', description: 'External API for positions' }
+    { name: 'External Positions', description: 'External API for positions' },
+    { name: 'External Candidates', description: 'External API for candidates' }
   ]
 };
 
