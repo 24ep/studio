@@ -20,7 +20,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
 export interface CandidateFilterValues {
   name?: string;
@@ -235,7 +235,6 @@ export function CandidateFilters({
         <div className="flex items-center gap-2 mb-2">
           <Brain className="w-5 h-5 text-primary" />
           <h3 className="text-xl font-bold">AI Candidate Search</h3>
-          <TooltipProvider>
             <Tooltip>
               <TooltipTrigger>
                 <Lightbulb className="w-4 h-4 text-muted-foreground ml-1" />
@@ -246,7 +245,6 @@ export function CandidateFilters({
                 </p>
               </TooltipContent>
             </Tooltip>
-          </TooltipProvider>
         </div>
         <Textarea
           id="ai-search"

@@ -6,6 +6,7 @@ import { AppLayout } from '@/components/layout/AppLayout';
 import { Toaster } from 'react-hot-toast';
 import { AuthProvider } from '@/components/auth/AuthProvider';
 import { ErrorBoundary } from '@/components/ui/error-boundary';
+import { TooltipProvider } from '@/components/ui/tooltip';
 import { getServerSession } from "next-auth/next"
 import { authOptions } from "@/lib/auth"
 // If you need to pass server-side session for initial render optimization:
@@ -82,24 +83,26 @@ export default async function RootLayout({
   return (
     <html lang="en" className={poppins.variable}>
       <body className="min-h-screen bg-background font-sans antialiased">
-        <AuthProvider>
-          <ErrorBoundary>
-            <AppLayout>
-              {children}
-            </AppLayout>
-          </ErrorBoundary>
-          <Toaster 
-            position="top-right"
-            toastOptions={{
-              duration: 4000,
-              style: {
-                background: 'hsl(var(--background))',
-                color: 'hsl(var(--foreground))',
-                border: '1px solid hsl(var(--border))',
-              },
-            }}
-          />
-        </AuthProvider>
+        <TooltipProvider>
+          <AuthProvider>
+            <ErrorBoundary>
+              <AppLayout>
+                {children}
+              </AppLayout>
+            </ErrorBoundary>
+            <Toaster 
+              position="top-right"
+              toastOptions={{
+                duration: 4000,
+                style: {
+                  background: 'hsl(var(--background))',
+                  color: 'hsl(var(--foreground))',
+                  border: '1px solid hsl(var(--border))',
+                },
+              }}
+            />
+          </AuthProvider>
+        </TooltipProvider>
       </body>
     </html>
   );

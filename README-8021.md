@@ -149,28 +149,33 @@ networks:
 - **Health Check:** Available at `/api/health`
 
 ### PostgreSQL Database
-- **Port:** 5432 (internal), 80211 (external)
+- **Port:** 5432 (internal),8521 (external)
 - **Image:** `postgres:14-alpine`
 - **Description:** Primary database for the application
 - **Data Persistence:** `/var/dockers/8021/postgres_data`
-- **External Access:** Available at `10.0.10.71:80211`
+- **External Access:** Available at `10.0.10.71:8521`
 
 ### MinIO Object Storage
-- **Ports:** 9000 (API), 9001 (Console)
+- **Ports:** 9000 (API internal), 8621 (API external), 9001 (Console internal)
 - **Image:** `minio/minio:latest`
 - **Description:** Object storage for file uploads
 - **Data Persistence:** `/var/dockers/8021/minio_data`
+- **External API Access:** Available at `10.0.10.71:8621`
 
 ### Redis Cache
-- **Port:** 6379 (internal)
+- **Port:** 6379 (internal), 8721 (external)
 - **Image:** `redis:alpine`
 - **Description:** Caching and session storage
 - **Data Persistence:** `/var/dockers/8021/redis_data`
+- **External Access:** Available at `10.0.10.71:8721`
 
 ### Upload Queue Processor
+- **Port:** 8821 (external)
 - **Image:** `8021_upload_processor:latest`
-- **Description:** Background processor for file uploads
+- **Description:** Background processor for file uploads with health monitoring
 - **Logs:** `/var/dockers/8021/processor_logs`
+- **Health Check:** Available at `http://10.0.10.71:8821/health`
+- **Status Page:** Available at `http://10.0.10.71:8821/`
 
 ## Network Configuration
 
@@ -229,8 +234,11 @@ docker-compose -f docker-compose.8021.yml up -d
 
 ### Health Checks
 - Application: `http://10.0.10.71:8021/api/health`
+- MinIO API: `http://10.0.10.71:8621`
 - MinIO Console: `http://10.0.10.71:9848`
-- Database: `10.0.10.71:80211` (PostgreSQL)
+- Database: `10.0.10.71:8521` (PostgreSQL)
+- Redis: `10.0.10.71:8721`
+- Upload Processor: `http://10.0.10.71:8821/health`
 
 ### Log Locations
 - Application logs: `/var/dockers/8021/logs/`
