@@ -7,11 +7,11 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter }
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from '@/hooks/use-toast';
-import { Save, Palette, ImageUp, Trash2, Loader2, XCircle, PenSquare, Sidebar } from 'lucide-react';
+import { Save, Palette, ImageUp, Trash2, Loader2, XCircle, PenSquare, Sidebar, Paintbrush } from 'lucide-react';
 import Image from 'next/image';
 import { signIn, useSession } from 'next-auth/react';
 import { useRouter, usePathname } from 'next/navigation';
-import { applySidebarActiveStyle } from '@/lib/themeUtils';
+import { applySidebarActiveStyle, setThemeAndColors } from '@/lib/themeUtils';
 
 const APP_THEME_KEY = 'appThemePreference';
 const APP_LOGO_DATA_URL_KEY = 'appLogoDataUrl';
@@ -33,6 +33,31 @@ export default function PreferencesSettingsPage() {
   const [themePreference, setThemePreference] = useState<ThemePreference>('system');
   const [appName, setAppName] = useState<string>(DEFAULT_APP_NAME);
   const [sidebarActiveStyle, setSidebarActiveStyle] = useState<SidebarActiveStyle>('gradient');
+
+  // Sidebar Colors state
+  const [sidebarColors, setSidebarColors] = useState({
+    // Light theme
+    sidebarBgStartL: '0 0% 100%', // White
+    sidebarBgEndL: '0 0% 100%', // White
+    sidebarTextL: '222.2 84% 4.9%', // Dark text
+    sidebarActiveBgStartL: '179 67% 66%', // Primary start
+    sidebarActiveBgEndL: '238 74% 61%', // Primary end
+    sidebarActiveTextL: '0 0% 100%', // White text
+    sidebarHoverBgL: '210 40% 98%', // Light hover
+    sidebarHoverTextL: '222.2 84% 4.9%', // Dark text
+    sidebarBorderL: '214.3 31.8% 91.4%', // Light border
+    
+    // Dark theme
+    sidebarBgStartD: '222.2 84% 4.9%', // Dark background
+    sidebarBgEndD: '222.2 84% 4.9%', // Dark background
+    sidebarTextD: '210 40% 98%', // Light text
+    sidebarActiveBgStartD: '179 67% 66%', // Primary start
+    sidebarActiveBgEndD: '238 74% 61%', // Primary end
+    sidebarActiveTextD: '0 0% 100%', // White text
+    sidebarHoverBgD: '217.2 32.6% 17.5%', // Dark hover
+    sidebarHoverTextD: '210 40% 98%', // Light text
+    sidebarBorderD: '217.2 32.6% 17.5%', // Dark border
+  });
 
   // App Logo state
   const [selectedLogoFile, setSelectedLogoFile] = useState<File | null>(null);
@@ -60,6 +85,24 @@ export default function PreferencesSettingsPage() {
 
             const storedSidebarStyle = localStorage.getItem(SIDEBAR_ACTIVE_STYLE_KEY) as SidebarActiveStyle | null;
             if (storedSidebarStyle) setSidebarActiveStyle(storedSidebarStyle);
+
+            // Load saved sidebar colors
+            const savedSidebarColors: Record<string, string> = {};
+            const colorKeys = [
+              'sidebarBgStartL', 'sidebarBgEndL', 'sidebarTextL', 'sidebarActiveBgStartL', 'sidebarActiveBgEndL', 'sidebarActiveTextL', 'sidebarHoverBgL', 'sidebarHoverTextL', 'sidebarBorderL',
+              'sidebarBgStartD', 'sidebarBgEndD', 'sidebarTextD', 'sidebarActiveBgStartD', 'sidebarActiveBgEndD', 'sidebarActiveTextD', 'sidebarHoverBgD', 'sidebarHoverTextD', 'sidebarBorderD'
+            ];
+            
+            colorKeys.forEach(key => {
+              const saved = localStorage.getItem(key);
+              if (saved) {
+                savedSidebarColors[key] = saved;
+              }
+            });
+            
+            if (Object.keys(savedSidebarColors).length > 0) {
+              setSidebarColors(prev => ({ ...prev, ...savedSidebarColors }));
+            }
         }
     }
   }, [sessionStatus, router, pathname, signIn]);
@@ -116,6 +159,11 @@ export default function PreferencesSettingsPage() {
     localStorage.setItem(APP_CONFIG_APP_NAME_KEY, appName || DEFAULT_APP_NAME); // Save app name
     localStorage.setItem(SIDEBAR_ACTIVE_STYLE_KEY, sidebarActiveStyle); // Save sidebar style
 
+    // Save sidebar colors
+    Object.entries(sidebarColors).forEach(([key, value]) => {
+      localStorage.setItem(key, value);
+    });
+
     let logoUpdated = false;
     if (selectedLogoFile && logoPreviewUrl) {
       localStorage.setItem(APP_LOGO_DATA_URL_KEY, logoPreviewUrl);
@@ -130,7 +178,8 @@ export default function PreferencesSettingsPage() {
       detail: { 
         appName: appName || DEFAULT_APP_NAME,
         logoUrl: logoUpdated ? logoPreviewUrl : savedLogoDataUrl,
-        sidebarActiveStyle: sidebarActiveStyle
+        sidebarActiveStyle: sidebarActiveStyle,
+        sidebarColors: sidebarColors
       } 
     }));
   };
@@ -140,6 +189,15 @@ export default function PreferencesSettingsPage() {
     setSidebarActiveStyle(newStyle);
     // Apply immediately for preview
     applySidebarActiveStyle(newStyle);
+  };
+
+  const handleSidebarColorChange = (key: string, value: string) => {
+    setSidebarColors(prev => ({ ...prev, [key]: value }));
+    // Apply immediately for preview
+    setThemeAndColors({
+      themePreference,
+      sidebarColors: { ...sidebarColors, [key]: value }
+    });
   };
 
   if (sessionStatus === 'loading' || (sessionStatus === 'unauthenticated' && pathname !== '/auth/signin' && !pathname.startsWith('/_next/')) || !isClient) {
@@ -261,6 +319,243 @@ export default function PreferencesSettingsPage() {
               </Select>
               <p className="text-xs text-muted-foreground mt-1">
                 Choose how selected menu items appear in the sidebar. Changes apply immediately.
+              </p>
+            </div>
+          </section>
+
+          <section>
+            <h3 className="text-lg font-semibold text-foreground mb-2 flex items-center">
+              <Paintbrush className="mr-2 h-5 w-5" /> Sidebar Colors
+            </h3>
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Light Theme Colors */}
+                <div className="space-y-3">
+                  <h4 className="font-medium text-sm">Light Theme</h4>
+                  
+                  <div>
+                    <Label htmlFor="sidebar-bg-light">Background Color</Label>
+                    <div className="flex gap-2 mt-1">
+                      <Input
+                        id="sidebar-bg-light"
+                        type="text"
+                        value={sidebarColors.sidebarBgStartL}
+                        onChange={(e) => handleSidebarColorChange('sidebarBgStartL', e.target.value)}
+                        placeholder="0 0% 100%"
+                        className="flex-1"
+                      />
+                      <div 
+                        className="w-10 h-10 rounded border"
+                        style={{ backgroundColor: `hsl(${sidebarColors.sidebarBgStartL})` }}
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <Label htmlFor="sidebar-text-light">Text Color</Label>
+                    <div className="flex gap-2 mt-1">
+                      <Input
+                        id="sidebar-text-light"
+                        type="text"
+                        value={sidebarColors.sidebarTextL}
+                        onChange={(e) => handleSidebarColorChange('sidebarTextL', e.target.value)}
+                        placeholder="222.2 84% 4.9%"
+                        className="flex-1"
+                      />
+                      <div 
+                        className="w-10 h-10 rounded border"
+                        style={{ backgroundColor: `hsl(${sidebarColors.sidebarTextL})` }}
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <Label htmlFor="sidebar-active-bg-light">Active Background Start</Label>
+                    <div className="flex gap-2 mt-1">
+                      <Input
+                        id="sidebar-active-bg-light"
+                        type="text"
+                        value={sidebarColors.sidebarActiveBgStartL}
+                        onChange={(e) => handleSidebarColorChange('sidebarActiveBgStartL', e.target.value)}
+                        placeholder="179 67% 66%"
+                        className="flex-1"
+                      />
+                      <div 
+                        className="w-10 h-10 rounded border"
+                        style={{ backgroundColor: `hsl(${sidebarColors.sidebarActiveBgStartL})` }}
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <Label htmlFor="sidebar-active-bg-end-light">Active Background End</Label>
+                    <div className="flex gap-2 mt-1">
+                      <Input
+                        id="sidebar-active-bg-end-light"
+                        type="text"
+                        value={sidebarColors.sidebarActiveBgEndL}
+                        onChange={(e) => handleSidebarColorChange('sidebarActiveBgEndL', e.target.value)}
+                        placeholder="238 74% 61%"
+                        className="flex-1"
+                      />
+                      <div 
+                        className="w-10 h-10 rounded border"
+                        style={{ backgroundColor: `hsl(${sidebarColors.sidebarActiveBgEndL})` }}
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <Label htmlFor="sidebar-hover-bg-light">Hover Background</Label>
+                    <div className="flex gap-2 mt-1">
+                      <Input
+                        id="sidebar-hover-bg-light"
+                        type="text"
+                        value={sidebarColors.sidebarHoverBgL}
+                        onChange={(e) => handleSidebarColorChange('sidebarHoverBgL', e.target.value)}
+                        placeholder="210 40% 98%"
+                        className="flex-1"
+                      />
+                      <div 
+                        className="w-10 h-10 rounded border"
+                        style={{ backgroundColor: `hsl(${sidebarColors.sidebarHoverBgL})` }}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Dark Theme Colors */}
+                <div className="space-y-3">
+                  <h4 className="font-medium text-sm">Dark Theme</h4>
+                  
+                  <div>
+                    <Label htmlFor="sidebar-bg-dark">Background Color</Label>
+                    <div className="flex gap-2 mt-1">
+                      <Input
+                        id="sidebar-bg-dark"
+                        type="text"
+                        value={sidebarColors.sidebarBgStartD}
+                        onChange={(e) => handleSidebarColorChange('sidebarBgStartD', e.target.value)}
+                        placeholder="222.2 84% 4.9%"
+                        className="flex-1"
+                      />
+                      <div 
+                        className="w-10 h-10 rounded border"
+                        style={{ backgroundColor: `hsl(${sidebarColors.sidebarBgStartD})` }}
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <Label htmlFor="sidebar-text-dark">Text Color</Label>
+                    <div className="flex gap-2 mt-1">
+                      <Input
+                        id="sidebar-text-dark"
+                        type="text"
+                        value={sidebarColors.sidebarTextD}
+                        onChange={(e) => handleSidebarColorChange('sidebarTextD', e.target.value)}
+                        placeholder="210 40% 98%"
+                        className="flex-1"
+                      />
+                      <div 
+                        className="w-10 h-10 rounded border"
+                        style={{ backgroundColor: `hsl(${sidebarColors.sidebarTextD})` }}
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <Label htmlFor="sidebar-active-bg-dark">Active Background Start</Label>
+                    <div className="flex gap-2 mt-1">
+                      <Input
+                        id="sidebar-active-bg-dark"
+                        type="text"
+                        value={sidebarColors.sidebarActiveBgStartD}
+                        onChange={(e) => handleSidebarColorChange('sidebarActiveBgStartD', e.target.value)}
+                        placeholder="179 67% 66%"
+                        className="flex-1"
+                      />
+                      <div 
+                        className="w-10 h-10 rounded border"
+                        style={{ backgroundColor: `hsl(${sidebarColors.sidebarActiveBgEndD})` }}
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <Label htmlFor="sidebar-active-bg-end-dark">Active Background End</Label>
+                    <div className="flex gap-2 mt-1">
+                      <Input
+                        id="sidebar-active-bg-end-dark"
+                        type="text"
+                        value={sidebarColors.sidebarActiveBgEndD}
+                        onChange={(e) => handleSidebarColorChange('sidebarActiveBgEndD', e.target.value)}
+                        placeholder="238 74% 61%"
+                        className="flex-1"
+                      />
+                      <div 
+                        className="w-10 h-10 rounded border"
+                        style={{ backgroundColor: `hsl(${sidebarColors.sidebarActiveBgEndD})` }}
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <Label htmlFor="sidebar-hover-bg-dark">Hover Background</Label>
+                    <div className="flex gap-2 mt-1">
+                      <Input
+                        id="sidebar-hover-bg-dark"
+                        type="text"
+                        value={sidebarColors.sidebarHoverBgD}
+                        onChange={(e) => handleSidebarColorChange('sidebarHoverBgD', e.target.value)}
+                        placeholder="217.2 32.6% 17.5%"
+                        className="flex-1"
+                      />
+                      <div 
+                        className="w-10 h-10 rounded border"
+                        style={{ backgroundColor: `hsl(${sidebarColors.sidebarHoverBgD})` }}
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="flex gap-2">
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => {
+                    const defaultColors = {
+                      sidebarBgStartL: '0 0% 100%',
+                      sidebarBgEndL: '0 0% 100%',
+                      sidebarTextL: '222.2 84% 4.9%',
+                      sidebarActiveBgStartL: '179 67% 66%',
+                      sidebarActiveBgEndL: '238 74% 61%',
+                      sidebarActiveTextL: '0 0% 100%',
+                      sidebarHoverBgL: '210 40% 98%',
+                      sidebarHoverTextL: '222.2 84% 4.9%',
+                      sidebarBorderL: '214.3 31.8% 91.4%',
+                      sidebarBgStartD: '222.2 84% 4.9%',
+                      sidebarBgEndD: '222.2 84% 4.9%',
+                      sidebarTextD: '210 40% 98%',
+                      sidebarActiveBgStartD: '179 67% 66%',
+                      sidebarActiveBgEndD: '238 74% 61%',
+                      sidebarActiveTextD: '0 0% 100%',
+                      sidebarHoverBgD: '217.2 32.6% 17.5%',
+                      sidebarHoverTextD: '210 40% 98%',
+                      sidebarBorderD: '217.2 32.6% 17.5%',
+                    };
+                    setSidebarColors(defaultColors);
+                    setThemeAndColors({ themePreference, sidebarColors: defaultColors });
+                  }}
+                >
+                  Reset to Default
+                </Button>
+              </div>
+              
+              <p className="text-xs text-muted-foreground">
+                Customize sidebar colors for both light and dark themes. Use HSL color format (e.g., "179 67% 66%"). 
+                Changes apply immediately for preview. Save to make permanent.
               </p>
             </div>
           </section>
