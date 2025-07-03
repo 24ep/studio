@@ -23,7 +23,7 @@ type ThemePreference = "light" | "dark" | "system";
 type SidebarActiveStyle = "gradient" | "solid" | "outline" | "subtle";
 
 export default function PreferencesSettingsPage() {
-  const { toast } = useToast();
+  const { show, success, error } = useToast();
   const [isClient, setIsClient] = useState(false);
   const { data: session, status: sessionStatus } = useSession();
   const router = useRouter();
@@ -69,7 +69,7 @@ export default function PreferencesSettingsPage() {
     if (file) {
       if (file.type.startsWith('image/')) {
         if (file.size > 100 * 1024) { // Max 100KB
-            toast({ title: "Logo Too Large", description: "Please select an image smaller than 100KB.", variant: "destructive" });
+            error("Please select an image smaller than 100KB.");
             setSelectedLogoFile(null);
             setLogoPreviewUrl(savedLogoDataUrl);
             event.target.value = '';
@@ -82,7 +82,7 @@ export default function PreferencesSettingsPage() {
         };
         reader.readAsDataURL(file);
       } else {
-        toast({ title: "Invalid File Type", description: "Please select an image file (e.g., PNG, JPG, SVG).", variant: "destructive" });
+        error("Please select an image file (e.g., PNG, JPG, SVG).");
         setSelectedLogoFile(null);
         setLogoPreviewUrl(savedLogoDataUrl);
         event.target.value = '';
@@ -103,7 +103,7 @@ export default function PreferencesSettingsPage() {
         localStorage.removeItem(APP_LOGO_DATA_URL_KEY);
         setSavedLogoDataUrl(null);
         setLogoPreviewUrl(null);
-        toast({ title: "Logo Cleared", description: "The application logo has been reset to default." });
+        success("The application logo has been reset to default.");
         window.dispatchEvent(new CustomEvent('appConfigChanged', { detail: { logoUrl: null } }));
     } else {
         setLogoPreviewUrl(savedLogoDataUrl);
@@ -123,10 +123,7 @@ export default function PreferencesSettingsPage() {
       logoUpdated = true;
     }
 
-    toast({
-      title: 'Preferences Saved',
-      description: 'Your preferences have been updated locally.',
-    });
+    success('Your preferences have been updated locally.');
 
     // Dispatch a single event for any config change
     window.dispatchEvent(new CustomEvent('appConfigChanged', { 
