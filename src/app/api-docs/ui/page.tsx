@@ -7,8 +7,8 @@ import 'swagger-ui-react/swagger-ui.css';
 const SwaggerUI = dynamic(() => import('swagger-ui-react'), { ssr: false });
 
 export default function ApiDocsUIPage() {
-  const [swaggerSpec, setSwaggerSpec] = useState(null);
-  const [error, setError] = useState(null);
+  const [swaggerSpec, setSwaggerSpec] = useState<any>(null);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchSwaggerSpec = async () => {
@@ -28,7 +28,8 @@ export default function ApiDocsUIPage() {
         setSwaggerSpec(spec);
       } catch (err) {
         console.error('Failed to fetch Swagger spec:', err);
-        setError(err.message);
+        const errorMessage = err instanceof Error ? err.message : 'An unknown error occurred';
+        setError(errorMessage);
       }
     };
 
