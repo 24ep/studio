@@ -164,7 +164,6 @@ export function EditPositionModal({ isOpen, onOpenChange, onEditPosition, positi
                         theme="snow"
                         value={field.value || ''}
                         onChange={(content, delta, source, editor) => {
-                          // Only update if the change is from user input, not from programmatic changes
                           if (source === 'user') {
                             field.onChange(content);
                           }
@@ -217,39 +216,6 @@ export function EditPositionModal({ isOpen, onOpenChange, onEditPosition, positi
               </div>
             </form>
           </ScrollArea>
-
-          {/* Right Column: Associated Candidates in a Card */}
-          <div className="flex flex-col h-full"> {/* Container for the card to manage its height */}
-            <Card className="flex-grow flex flex-col overflow-hidden shadow-md">
-              <CardHeader className="p-4">
-                <CardTitle className="text-base flex items-center"> {/* Adjusted text size */}
-                  <Users className="mr-2 h-4 w-4 text-muted-foreground" /> Associated Candidates ({associatedCandidates.length})
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="p-4 pt-0 flex-grow overflow-hidden">
-                <ScrollArea className="h-full"> {/* ScrollArea takes full height of CardContent */}
-                  {isLoadingCandidates ? (
-                    <div className="flex justify-center items-center h-full">
-                      <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                    </div>
-                  ) : associatedCandidates.length > 0 ? (
-                    <ul className="space-y-2">
-                      {associatedCandidates.map(candidate => (
-                        <li key={candidate.id} className="text-sm p-1.5 rounded hover:bg-muted/30">
-                          <Link href={`/candidates/${candidate.id}`} passHref>
-                            <span className="font-medium text-foreground hover:underline cursor-pointer">{candidate.name}</span>
-                          </Link>
-                          <p className="text-xs text-muted-foreground">{candidate.email} - Fit: {(candidate.fitScore || 0)}%</p>
-                        </li>
-                      ))}
-                    </ul>
-                  ) : (
-                    <p className="text-sm text-muted-foreground text-center py-4">No candidates currently associated with this position.</p>
-                  )}
-                </ScrollArea>
-              </CardContent>
-            </Card>
-          </div>
         </div>
         
         <DialogFooter className="p-6 pt-4 border-t mt-auto"> {/* Added padding */}

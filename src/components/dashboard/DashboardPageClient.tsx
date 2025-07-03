@@ -263,7 +263,7 @@ export default function DashboardPageClient({
 
   // Unified Dashboard - Show all metrics to everyone
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 p-6">
       {/* Section 1: Key Performance Indicators */}
       <div className="space-y-4">
         <div className="flex items-center space-x-2">
@@ -341,7 +341,7 @@ export default function DashboardPageClient({
         <p className="text-sm text-muted-foreground mb-2">This chart shows the distribution of candidates by their fit score, helping you quickly identify the quality mix in your pipeline.</p>
         {/* Sort score ranges by count descending */}
         {(() => {
-          const sortedScoreRanges = [...candidateScoreRanges].sort((a, b) => b.count - a.count);
+          const sortedScoreRanges = [...candidateScoreRanges].sort((b, a) => b.count - a.count);
           return (
             <Card className="shadow-sm hover:shadow-md transition-all duration-200">
               <CardContent className="pt-6">
@@ -391,7 +391,7 @@ export default function DashboardPageClient({
                       },
                     },
                   }}
-                  height={160}
+                  height={100}
                 />
               </CardContent>
             </Card>
@@ -399,26 +399,6 @@ export default function DashboardPageClient({
         })()}
       </div>
 
-      {/* Section 4: Recruitment Pipeline */}
-      <div className="space-y-4">
-        <div className="flex items-center space-x-2">
-          <div className="h-6 w-1 bg-green-500 rounded-full"></div>
-          <h2 className="text-xl font-semibold text-foreground">Recruitment Pipeline</h2>
-        </div>
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          {stageSummary.slice(0, 8).map(stage => (
-            <Card key={stage.stage} className="shadow-sm hover:shadow-md transition-all duration-200">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground capitalize">{stage.stage.replace(/([A-Z])/g, ' $1').trim()}</CardTitle>
-                <div className="p-2 rounded-lg bg-green-500/10">
-                  <div className="h-5 w-5 rounded-full text-green-500 bg-current"></div>
-                </div>
-              </CardHeader>
-              <CardContent><div className="text-2xl font-bold text-foreground">{stage.count}</div></CardContent>
-        </Card>
-          ))}
-        </div>
-      </div>
 
       {/* Section 5: Unassigned Candidates */}
       <div className="space-y-4">

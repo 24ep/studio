@@ -169,53 +169,48 @@ export default function PositionsPageClient() {
           <CardTitle>Position Filters</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search positions..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
-              />
+          <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 flex-1">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search positions..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+              <Select value={statusFilter || ''} onValueChange={(value: 'all' | 'open' | 'closed') => setStatusFilter(value)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Filter by status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Status</SelectItem>
+                  <SelectItem value="open">Open Only</SelectItem>
+                  <SelectItem value="closed">Closed Only</SelectItem>
+                </SelectContent>
+              </Select>
+              <Select value={departmentFilter || ''} onValueChange={setDepartmentFilter}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Filter by department" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Departments</SelectItem>
+                  {departments.map(dept => (
+                    <SelectItem key={dept} value={dept}>{dept}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
-            <Select value={statusFilter || ''} onValueChange={(value: 'all' | 'open' | 'closed') => setStatusFilter(value)}>
-              <SelectTrigger>
-                <SelectValue placeholder="Filter by status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Status</SelectItem>
-                <SelectItem value="open">Open Only</SelectItem>
-                <SelectItem value="closed">Closed Only</SelectItem>
-              </SelectContent>
-            </Select>
-            <Select value={departmentFilter || ''} onValueChange={setDepartmentFilter}>
-              <SelectTrigger>
-                <SelectValue placeholder="Filter by department" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Departments</SelectItem>
-                {departments.map(dept => (
-                  <SelectItem key={dept} value={dept}>{dept}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            {canManagePositions && (
+              <Button onClick={() => setIsAddModalOpen(true)} className="btn-primary-gradient whitespace-nowrap">
+                <PlusCircle className="mr-2 h-4 w-4" />
+                Add Position
+              </Button>
+            )}
           </div>
         </CardContent>
       </Card>
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <h1 className="text-3xl font-bold">Job Positions</h1>
-          <p className="text-muted-foreground">Manage your open job positions</p>
-        </div>
-        {canManagePositions && (
-          <Button onClick={() => setIsAddModalOpen(true)} className="btn-primary-gradient">
-            <PlusCircle className="mr-2 h-4 w-4" />
-            Add Position
-          </Button>
-        )}
-      </div>
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card>

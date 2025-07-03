@@ -265,44 +265,6 @@ export default function PositionDetailPage() {
           </div>
         </CardContent>
       </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center">
-            <Users className="mr-2 h-5 w-5 text-primary" />
-            Candidates for this Position ({associatedCandidates.length})
-          </CardTitle>
-          <CardDescription>
-            List of candidates associated with &quot;{position.title}&quot;, sorted by Fit Score (descending).
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {associatedCandidates.length > 0 ? (
-            <CandidateTable
-              candidates={associatedCandidates}
-              availablePositions={availablePositions}
-              availableStages={availableStages}
-              availableRecruiters={availableRecruiters}
-              onAssignRecruiter={handleAssignRecruiter}
-              onUpdateCandidate={handleUpdateCandidateStatus}
-              onDeleteCandidate={handleDeleteCandidate}
-              onOpenUploadModal={handleOpenUploadModal}
-              onEditPosition={handleEditPosition}
-              isLoading={isLoading && associatedCandidates.length === 0}
-              onRefreshCandidateData={refreshCandidateInList}
-              selectedCandidateIds={selectedCandidateIds}
-              onToggleSelectCandidate={onToggleSelectCandidate}
-              onToggleSelectAllCandidates={onToggleSelectAllCandidates}
-              isAllCandidatesSelected={isAllCandidatesSelected}
-            />
-          ) : (
-            <div className="text-center py-8 text-muted-foreground">
-              <Users className="mx-auto h-12 w-12 mb-2" />
-              No candidates currently associated with this position.
-            </div>
-          )}
-        </CardContent>
-      </Card>
     </div>
   );
 }

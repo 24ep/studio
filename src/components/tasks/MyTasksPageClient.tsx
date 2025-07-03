@@ -263,7 +263,7 @@ export function MyTasksPageClient({
     : "Candidates assigned to you for processing.";
 
   return (
-    <div className="flex flex-col md:flex-row gap-6 h-full">
+    <div className="flex flex-col md:flex-row gap-6 h-full p-6">
         <aside className="w-full md:w-[280px] lg:w-[320px] flex-shrink-0 md:sticky md:top-[calc(var(--header-height,4rem)_+_1rem)] md:max-h-[calc(100vh-var(--header-height,4rem)-2rem)]">
            <ScrollArea className="h-full md:pr-2">
                 <div className="md:hidden mb-3"> 

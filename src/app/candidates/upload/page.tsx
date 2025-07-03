@@ -156,7 +156,7 @@ function UploadPageContent() {
   };
   const totalFiles = selectedFiles.length;
   return (
-    <div className="mx-auto py-3">
+    <div className="mx-auto py-3 p-6">
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold">Bulk Upload Candidate CVs</h1>
         <Button onClick={() => setDialogOpen(true)}>

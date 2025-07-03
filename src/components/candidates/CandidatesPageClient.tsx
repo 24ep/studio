@@ -675,11 +675,8 @@ export function CandidatesPageClient({
             </button>
           </div>
           <div className="flex-1 overflow-y-auto">
-            <Card className="m-4">
-              <CardHeader>
-                <CardTitle>Candidate Filters</CardTitle>
-              </CardHeader>
-              <CardContent>
+         
+       
                 <CandidateFilters
                   initialFilters={filters}
                   onFilterChange={handleFilterChange}
@@ -690,8 +687,8 @@ export function CandidatesPageClient({
                   isLoading={isLoading || isAiSearching}
                   isAiSearching={isAiSearching}
                 />
-              </CardContent>
-            </Card>
+           
+    
           </div>
         </aside>
       )}
@@ -708,7 +705,6 @@ export function CandidatesPageClient({
       {/* Main Content */}
       <main className="flex-1 w-full space-y-6 min-w-0 p-6">
         <div className="flex flex-col sm:flex-row justify-between items-center gap-2">
-          <h1 className="text-2xl font-semibold text-foreground hidden md:block"> Candidate Management </h1>
           <div className="w-full md:w-auto flex flex-col sm:flex-row gap-2 items-center sm:justify-end">
             {selectedCandidateIds.size > 0 && canManageCandidates && (
               <DropdownMenu>

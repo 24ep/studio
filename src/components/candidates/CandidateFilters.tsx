@@ -234,7 +234,7 @@ export function CandidateFilters({
       <div className="rounded-lg shadow flex flex-col gap-4  border-primary/20">
         <div className="flex items-center gap-2 mb-2">
           <Brain className="w-5 h-5 text-primary" />
-          <h3 className="text-xl font-bold">AI Candidate Search</h3>
+          <h3 className="text font-bold">AI Search</h3>
             <Tooltip>
               <TooltipTrigger>
                 <Lightbulb className="w-4 h-4 text-muted-foreground ml-1" />
