@@ -156,18 +156,19 @@ networks:
 - **External Access:** Available at `10.0.10.71:8521`
 
 ### MinIO Object Storage
-- **Ports:** 9000 (API internal), 8621 (API external), 9001 (Console internal)
+- **Ports:** 9000 (API internal), 8621 (API external), 9001 (Console internal), 8721 (Console external)
 - **Image:** `minio/minio:latest`
 - **Description:** Object storage for file uploads
 - **Data Persistence:** `/var/dockers/8021/minio_data`
 - **External API Access:** Available at `10.0.10.71:8621`
+- **External Console Access:** Available at `http://10.0.10.71:8721`
 
 ### Redis Cache
-- **Port:** 6379 (internal), 8721 (external)
+- **Port:** 6379 (internal), 8921 (external)
 - **Image:** `redis:alpine`
 - **Description:** Caching and session storage
 - **Data Persistence:** `/var/dockers/8021/redis_data`
-- **External Access:** Available at `10.0.10.71:8721`
+- **External Access:** Available at `10.0.10.71:8921`
 
 ### Upload Queue Processor
 - **Port:** 8821 (external)
@@ -235,9 +236,9 @@ docker-compose -f docker-compose.8021.yml up -d
 ### Health Checks
 - Application: `http://10.0.10.71:8021/api/health`
 - MinIO API: `http://10.0.10.71:8621`
-- MinIO Console: `http://10.0.10.71:9848`
+- MinIO Console: `http://10.0.10.71:8721`
 - Database: `10.0.10.71:8521` (PostgreSQL)
-- Redis: `10.0.10.71:8721`
+- Redis: `10.0.10.71:8921`
 - Upload Processor: `http://10.0.10.71:8821/health`
 
 ### Log Locations

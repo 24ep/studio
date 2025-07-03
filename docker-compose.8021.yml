@@ -120,6 +120,7 @@ services:
       - /var/dockers/8021/minio_data:/data
     ports:
       - "8621:9000"
+      - "8721:9001"
     networks:
       - docker_internal
     mem_limit: 512m
@@ -131,7 +132,7 @@ services:
     volumes:
       - /var/dockers/8021/redis_data:/data
     ports:
-      - "8721:6379"
+      - "8921:6379"
     networks:
       - docker_internal
     mem_limit: 256m
