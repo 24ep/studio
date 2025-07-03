@@ -46,14 +46,45 @@ const systemSettingKeyEnum = z.enum([
     'loginPageBackgroundType', 'loginPageBackgroundImageUrl', 
     'loginPageBackgroundColor1', 'loginPageBackgroundColor2',
     'loginPageLayoutType',
-    // Sidebar Light Theme
+    // Alternative keys used by system preferences page
+    'themePreference', 'loginBackgroundType', 'loginBackgroundGradientStart', 
+    'loginBackgroundGradientEnd', 'loginBackgroundColor',
+    // Sidebar Light Theme - Background colors
     'sidebarBgStartL', 'sidebarBgEndL', 'sidebarTextL',
     'sidebarActiveBgStartL', 'sidebarActiveBgEndL', 'sidebarActiveTextL',
     'sidebarHoverBgL', 'sidebarHoverTextL', 'sidebarBorderL',
-    // Sidebar Dark Theme
+    // Sidebar Dark Theme - Background colors
     'sidebarBgStartD', 'sidebarBgEndD', 'sidebarTextD',
     'sidebarActiveBgStartD', 'sidebarActiveBgEndD', 'sidebarActiveTextD',
     'sidebarHoverBgD', 'sidebarHoverTextD', 'sidebarBorderD',
+    // Sidebar Light Theme - Font settings
+    'sidebarFontFamilyL', 'sidebarFontSizeL', 'sidebarFontWeightL', 'sidebarLineHeightL', 'sidebarLetterSpacingL', 'sidebarTextTransformL',
+    // Sidebar Dark Theme - Font settings
+    'sidebarFontFamilyD', 'sidebarFontSizeD', 'sidebarFontWeightD', 'sidebarLineHeightD', 'sidebarLetterSpacingD', 'sidebarTextTransformD',
+    // Sidebar Light Theme - Border and shadow settings
+    'sidebarBorderWidthL', 'sidebarBorderStyleL', 'sidebarBorderRadiusL', 'sidebarShadowL', 'sidebarShadowHoverL', 'sidebarShadowActiveL',
+    // Sidebar Dark Theme - Border and shadow settings
+    'sidebarBorderWidthD', 'sidebarBorderStyleD', 'sidebarBorderRadiusD', 'sidebarShadowD', 'sidebarShadowHoverD', 'sidebarShadowActiveD',
+    // Sidebar Light Theme - Spacing and layout
+    'sidebarPaddingXL', 'sidebarPaddingYL', 'sidebarMarginL', 'sidebarGapL', 'sidebarWidthL', 'sidebarWidthCollapsedL', 'sidebarTransitionDurationL', 'sidebarTransitionTimingL',
+    // Sidebar Dark Theme - Spacing and layout
+    'sidebarPaddingXD', 'sidebarPaddingYD', 'sidebarMarginD', 'sidebarGapD', 'sidebarWidthD', 'sidebarWidthCollapsedD', 'sidebarTransitionDurationD', 'sidebarTransitionTimingD',
+    // Sidebar Light Theme - Menu item specific settings
+    'sidebarMenuItemBgL', 'sidebarMenuItemBgHoverL', 'sidebarMenuItemBgActiveL', 'sidebarMenuItemColorL', 'sidebarMenuItemColorHoverL', 'sidebarMenuItemColorActiveL',
+    'sidebarMenuItemBorderL', 'sidebarMenuItemBorderHoverL', 'sidebarMenuItemBorderActiveL', 'sidebarMenuItemBorderRadiusL', 'sidebarMenuItemPaddingXL', 'sidebarMenuItemPaddingYL',
+    'sidebarMenuItemMarginL', 'sidebarMenuItemFontWeightL', 'sidebarMenuItemFontWeightActiveL', 'sidebarMenuItemFontSizeL', 'sidebarMenuItemLineHeightL', 'sidebarMenuItemTransitionL',
+    // Sidebar Dark Theme - Menu item specific settings
+    'sidebarMenuItemBgD', 'sidebarMenuItemBgHoverD', 'sidebarMenuItemBgActiveD', 'sidebarMenuItemColorD', 'sidebarMenuItemColorHoverD', 'sidebarMenuItemColorActiveD',
+    'sidebarMenuItemBorderD', 'sidebarMenuItemBorderHoverD', 'sidebarMenuItemBorderActiveD', 'sidebarMenuItemBorderRadiusD', 'sidebarMenuItemPaddingXD', 'sidebarMenuItemPaddingYD',
+    'sidebarMenuItemMarginD', 'sidebarMenuItemFontWeightD', 'sidebarMenuItemFontWeightActiveD', 'sidebarMenuItemFontSizeD', 'sidebarMenuItemLineHeightD', 'sidebarMenuItemTransitionD',
+    // Sidebar Light Theme - Icon settings
+    'sidebarIconSizeL', 'sidebarIconColorL', 'sidebarIconColorHoverL', 'sidebarIconColorActiveL', 'sidebarIconMarginRightL', 'sidebarIconTransitionL',
+    // Sidebar Dark Theme - Icon settings
+    'sidebarIconSizeD', 'sidebarIconColorD', 'sidebarIconColorHoverD', 'sidebarIconColorActiveD', 'sidebarIconMarginRightD', 'sidebarIconTransitionD',
+    // Sidebar Light Theme - Group label settings
+    'sidebarGroupLabelColorL', 'sidebarGroupLabelFontSizeL', 'sidebarGroupLabelFontWeightL', 'sidebarGroupLabelTextTransformL', 'sidebarGroupLabelLetterSpacingL', 'sidebarGroupLabelPaddingL', 'sidebarGroupLabelMarginL',
+    // Sidebar Dark Theme - Group label settings
+    'sidebarGroupLabelColorD', 'sidebarGroupLabelFontSizeD', 'sidebarGroupLabelFontWeightD', 'sidebarGroupLabelTextTransformD', 'sidebarGroupLabelLetterSpacingD', 'sidebarGroupLabelPaddingD', 'sidebarGroupLabelMarginD',
     'appFontFamily',
     'loginPageContent',
     'maxConcurrentProcessors',
@@ -94,14 +125,59 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ message: "Forbidden: Insufficient permissions" }, { status: 403 });
   }
 
-  let body;
+  let settingsToSave: any[] = [];
+  const contentType = request.headers.get('content-type') || '';
+
   try {
-    body = await request.json();
+    if (contentType.includes('multipart/form-data')) {
+      // Handle FormData (from system preferences page)
+      const formData = await request.formData();
+      const preferencesEntries = formData.getAll('preferences');
+      
+      // Parse each preferences entry and combine them
+      for (const entry of preferencesEntries) {
+        if (typeof entry === 'string') {
+          try {
+            const parsed = JSON.parse(entry);
+            if (Array.isArray(parsed)) {
+              settingsToSave.push(...parsed);
+            } else {
+              settingsToSave.push(parsed);
+            }
+          } catch (parseError) {
+            console.error('Failed to parse preferences entry:', entry, parseError);
+            return NextResponse.json({ message: "Error parsing preferences data", error: (parseError as Error).message }, { status: 400 });
+          }
+        }
+      }
+
+      // Handle file uploads if present
+      const logoFile = formData.get('logo');
+      const loginBackgroundImageFile = formData.get('loginBackgroundImage');
+
+      if (logoFile && typeof logoFile !== 'string') {
+        // Convert logo file to data URL and add to settings
+        const buffer = Buffer.from(await logoFile.arrayBuffer());
+        const dataUrl = `data:${logoFile.type};base64,${buffer.toString('base64')}`;
+        settingsToSave.push({ key: 'appLogoDataUrl', value: dataUrl });
+      }
+
+      if (loginBackgroundImageFile && typeof loginBackgroundImageFile !== 'string') {
+        // Convert login background image file to data URL and add to settings
+        const buffer = Buffer.from(await loginBackgroundImageFile.arrayBuffer());
+        const dataUrl = `data:${loginBackgroundImageFile.type};base64,${buffer.toString('base64')}`;
+        settingsToSave.push({ key: 'loginPageBackgroundImageUrl', value: dataUrl });
+      }
+    } else {
+      // Handle JSON (from system settings page)
+      const body = await request.json();
+      settingsToSave = body;
+    }
   } catch (error) {
     return NextResponse.json({ message: "Error parsing request body", error: (error as Error).message }, { status: 400 });
   }
 
-  const validationResult = saveSystemSettingsSchema.safeParse(body);
+  const validationResult = saveSystemSettingsSchema.safeParse(settingsToSave);
   if (!validationResult.success) {
     return NextResponse.json(
       { message: "Invalid input for system settings", errors: validationResult.error.flatten().fieldErrors },
@@ -109,14 +185,14 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const settingsToSave = validationResult.data;
+  const validatedSettings = validationResult.data;
   const client = await getPool().connect();
 
   try {
     await client.query('BEGIN');
     const savedSettings: SystemSetting[] = [];
 
-    for (const setting of settingsToSave) {
+    for (const setting of validatedSettings) {
       const upsertQuery = `
         INSERT INTO "SystemSetting" (key, value, "updatedAt")
         VALUES ($1, $2, NOW())
@@ -130,7 +206,7 @@ export async function POST(request: NextRequest) {
     }
 
     await client.query('COMMIT');
-    await logAudit('AUDIT', `System settings updated by ${session.user.name}. Keys: ${settingsToSave.map(s=>s.key).join(', ')}`, 'API:SystemSettings:Update', session.user.id, { updatedKeys: settingsToSave.map(s=>s.key) });
+    await logAudit('AUDIT', `System settings updated by ${session.user.name}. Keys: ${validatedSettings.map(s=>s.key).join(', ')}`, 'API:SystemSettings:Update', session.user.id, { updatedKeys: validatedSettings.map(s=>s.key) });
     
     // Return all current settings after update as an object (key-value pairs)
     const allSettingsResult = await client.query('SELECT key, value, "updatedAt" FROM "SystemSetting"');

@@ -6,6 +6,7 @@ import { Header } from "./Header";
 import { useSession } from "next-auth/react";
 import { GlobalLoadingOverlay } from "./GlobalLoadingOverlay";
 import { usePageLoading } from "@/hooks/use-page-loading";
+import { useSessionValidation } from "@/hooks/use-session-validation";
 import SidebarNav from "./SidebarNav";
 import { SidebarStyleInitializer } from "./SidebarStyleInitializer";
 import { usePathname } from "next/navigation";
@@ -67,6 +68,14 @@ export function AppLayout({ children }: AppLayoutProps) {
 
   const { data: session, status } = useSession();
   const isLoading = usePageLoading();
+  
+  // Add session validation - only validate on authenticated pages
+  const shouldValidateSession = pathname !== "/auth/signin" && status === "authenticated";
+  const { isValidating: isSessionValidating } = useSessionValidation({
+    validateInterval: 5 * 60 * 1000, // 5 minutes
+    autoSignOut: true,
+    redirectTo: '/auth/signin'
+  });
 
   useEffect(() => {
     setIsClient(true);
@@ -131,8 +140,8 @@ export function AppLayout({ children }: AppLayoutProps) {
     return () => clearTimeout(timer);
   }, [pathname]);
 
-  // Show loading while session is being fetched
-  if (status === "loading") {
+  // Show loading while session is being fetched or validated
+  if (status === "loading" || (shouldValidateSession && isSessionValidating)) {
     return <GlobalLoadingOverlay />;
   }
 

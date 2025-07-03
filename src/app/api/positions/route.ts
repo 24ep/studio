@@ -36,7 +36,6 @@ import { logAudit } from '@/lib/auditLog';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
 import { v4 as uuidv4 } from 'uuid';
-import { getRedisClient, CACHE_KEY_POSITIONS } from '@/lib/redis';
 import { getPool } from '@/lib/db';
 
 export async function GET(request: NextRequest) {
@@ -170,6 +169,7 @@ export async function POST(request: NextRequest) {
     };
 
     // Invalidate cache
+    const { getRedisClient, CACHE_KEY_POSITIONS } = await import('@/lib/redis');
     const redisClient = await getRedisClient();
     if (redisClient) {
         await redisClient.del(CACHE_KEY_POSITIONS);

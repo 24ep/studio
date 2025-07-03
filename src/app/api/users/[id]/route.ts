@@ -6,6 +6,7 @@ import { logAudit } from '@/lib/auditLog';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
 import prisma from '@/lib/prisma';
+import { removeUserPresence } from '@/lib/redis';
 
 const updateUserSchema = z.object({
   name: z.string().min(1, "Name is required").optional(),
@@ -182,6 +183,27 @@ export async function PUT(request: NextRequest) {
 }
 
 /**
+ * Invalidates sessions for a deleted user by clearing their presence data
+ * @param userId - The ID of the user whose sessions should be invalidated
+ */
+async function invalidateUserSessions(userId: string): Promise<void> {
+  try {
+    // Remove user presence from Redis
+    await removeUserPresence(userId);
+    
+    // Note: NextAuth sessions are JWT-based and stored client-side
+    // We can't directly invalidate them server-side, but we can:
+    // 1. Clear presence data (done above)
+    // 2. Add validation checks in API routes (already implemented)
+    // 3. Consider implementing a session blacklist if needed
+    
+    console.log(`Session cleanup completed for user ${userId}`);
+  } catch (error) {
+    console.error(`Failed to cleanup sessions for user ${userId}:`, error);
+  }
+}
+
+/**
  * @openapi
  * /api/users/{id}:
  *   delete:
@@ -218,6 +240,9 @@ export async function DELETE(request: NextRequest) {
                 name: true
             }
         });
+
+        // Cleanup sessions for the deleted user
+        await invalidateUserSessions(id);
 
         await logAudit('AUDIT', `User '${deletedUser.name}' (ID: ${id}) was deleted.`, 'API:Users:Delete', actingUserId, { targetUserId: id });
         return NextResponse.json({ message: "User deleted successfully" }, { status: 200 });

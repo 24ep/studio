@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getPool } from '@/lib/db';
 import { v4 as uuidv4 } from 'uuid';
 import { getServerSession } from 'next-auth/next';
-import { authOptions } from '@/lib/auth';
+import { authOptions, validateUserSession } from '@/lib/auth';
 import { logAudit } from '@/lib/auditLog';
 
 /**
@@ -112,8 +112,19 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const actingUserId = session.user.id;
-  const actingUserName = session.user.name || session.user.email || 'System';
+  const validation = await validateUserSession(session);
+  if (!validation.isValid) {
+    await logAudit('ERROR', `Upload queue access attempted with invalid session by ${validation.userName || 'Unknown'}`, 'API:UploadQueue:Get', null, { 
+      invalidUserId: validation.userId,
+      sessionUser: validation.userName,
+      error: validation.error
+    });
+    return NextResponse.json({ error: validation.error }, { status: 401 });
+  }
+
+  const actingUserId = validation.userId!;
+  const actingUserName = validation.userName!;
+  
   const url = new URL(request.url);
   const limit = parseInt(url.searchParams.get('limit') || '20', 10);
   const offset = parseInt(url.searchParams.get('offset') || '0', 10);
@@ -145,8 +156,18 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const actingUserId = session.user.id;
-  const actingUserName = session.user.name || session.user.email || 'System';
+  const validation = await validateUserSession(session);
+  if (!validation.isValid) {
+    await logAudit('ERROR', `Upload queue entry attempted with invalid session by ${validation.userName || 'Unknown'}`, 'API:UploadQueue:Post', null, { 
+      invalidUserId: validation.userId,
+      sessionUser: validation.userName,
+      error: validation.error
+    });
+    return NextResponse.json({ error: validation.error }, { status: 401 });
+  }
+
+  const actingUserId = validation.userId!;
+  const actingUserName = validation.userName!;
   
   const data = await request.json();
   const { file_name, file_size, status, source, upload_id, file_path } = data;

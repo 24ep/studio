@@ -152,16 +152,14 @@ body {
 
   /* Light theme: Active menu item styles based on preference */
   /* Default gradient style (original) */
-  :root:not(.dark) [data-sidebar="menu-button"][data-active="true"],
-  :root:not(.dark) [data-sidebar="menu-button"][data-active="true"] span {
+  :root:not(.dark) [data-sidebar="menu-button"][data-active="true"] {
     background-image: var(--sidebar-active-background-l);
     color: var(--sidebar-active-foreground-l) !important;
     box-shadow: 0 2px 8px -2px hsla(var(--primary-gradient-start-l), 0.3);
   }
 
   /* Solid background style */
-  :root:not(.dark).sidebar-active-solid [data-sidebar="menu-button"][data-active="true"],
-  :root:not(.dark).sidebar-active-solid [data-sidebar="menu-button"][data-active="true"] span {
+  :root:not(.dark).sidebar-active-solid [data-sidebar="menu-button"][data-active="true"] {
     background-color: hsl(var(--primary-gradient-start-l));
     background-image: none;
     color: white !important;
@@ -169,8 +167,7 @@ body {
   }
 
   /* Outline border style */
-  :root:not(.dark).sidebar-active-outline [data-sidebar="menu-button"][data-active="true"],
-  :root:not(.dark).sidebar-active-outline [data-sidebar="menu-button"][data-active="true"] span {
+  :root:not(.dark).sidebar-active-outline [data-sidebar="menu-button"][data-active="true"] {
     background-color: transparent;
     background-image: none;
     color: hsl(var(--primary-gradient-start-l)) !important;
@@ -179,8 +176,7 @@ body {
   }
 
   /* Subtle highlight style */
-  :root:not(.dark).sidebar-active-subtle [data-sidebar="menu-button"][data-active="true"],
-  :root:not(.dark).sidebar-active-subtle [data-sidebar="menu-button"][data-active="true"] span {
+  :root:not(.dark).sidebar-active-subtle [data-sidebar="menu-button"][data-active="true"] {
     background-color: hsla(var(--primary-gradient-start-l), 0.1);
     background-image: none;
     color: hsl(var(--primary-gradient-start-l)) !important;
@@ -206,16 +202,14 @@ body {
 
   /* Dark theme: Active menu item styles based on preference */
   /* Default gradient style (original) */
-  .dark [data-sidebar="menu-button"][data-active="true"],
-  .dark [data-sidebar="menu-button"][data-active="true"] span {
+  .dark [data-sidebar="menu-button"][data-active="true"] {
     background-image: var(--sidebar-active-background-d);
     color: white !important;
     box-shadow: 0 2px 10px -3px hsla(var(--primary-gradient-start-d), 0.4);
   }
 
   /* Solid background style */
-  .dark.sidebar-active-solid [data-sidebar="menu-button"][data-active="true"],
-  .dark.sidebar-active-solid [data-sidebar="menu-button"][data-active="true"] span {
+  .dark.sidebar-active-solid [data-sidebar="menu-button"][data-active="true"] {
     background-color: hsl(var(--primary-gradient-start-d));
     background-image: none;
     color: white !important;
@@ -223,8 +217,7 @@ body {
   }
 
   /* Outline border style */
-  .dark.sidebar-active-outline [data-sidebar="menu-button"][data-active="true"],
-  .dark.sidebar-active-outline [data-sidebar="menu-button"][data-active="true"] span {
+  .dark.sidebar-active-outline [data-sidebar="menu-button"][data-active="true"] {
     background-color: transparent;
     background-image: none;
     color: hsl(var(--primary-gradient-start-d)) !important;
@@ -233,8 +226,7 @@ body {
   }
 
   /* Subtle highlight style */
-  .dark.sidebar-active-subtle [data-sidebar="menu-button"][data-active="true"],
-  .dark.sidebar-active-subtle [data-sidebar="menu-button"][data-active="true"] span {
+  .dark.sidebar-active-subtle [data-sidebar="menu-button"][data-active="true"] {
     background-color: hsla(var(--primary-gradient-start-d), 0.15);
     background-image: none;
     color: hsl(var(--primary-gradient-start-d)) !important;

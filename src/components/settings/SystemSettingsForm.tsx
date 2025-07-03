@@ -25,14 +25,45 @@ const ALLOWED_SYSTEM_SETTING_KEYS = [
   'loginPageBackgroundType', 'loginPageBackgroundImageUrl', 
   'loginPageBackgroundColor1', 'loginPageBackgroundColor2',
   'loginPageLayoutType',
-  // Sidebar Light Theme
+  // Alternative keys used by system preferences page
+  'themePreference', 'loginBackgroundType', 'loginBackgroundGradientStart', 
+  'loginBackgroundGradientEnd', 'loginBackgroundColor',
+  // Sidebar Light Theme - Background colors
   'sidebarBgStartL', 'sidebarBgEndL', 'sidebarTextL',
   'sidebarActiveBgStartL', 'sidebarActiveBgEndL', 'sidebarActiveTextL',
   'sidebarHoverBgL', 'sidebarHoverTextL', 'sidebarBorderL',
-  // Sidebar Dark Theme
+  // Sidebar Dark Theme - Background colors
   'sidebarBgStartD', 'sidebarBgEndD', 'sidebarTextD',
   'sidebarActiveBgStartD', 'sidebarActiveBgEndD', 'sidebarActiveTextD',
   'sidebarHoverBgD', 'sidebarHoverTextD', 'sidebarBorderD',
+  // Sidebar Light Theme - Font settings
+  'sidebarFontFamilyL', 'sidebarFontSizeL', 'sidebarFontWeightL', 'sidebarLineHeightL', 'sidebarLetterSpacingL', 'sidebarTextTransformL',
+  // Sidebar Dark Theme - Font settings
+  'sidebarFontFamilyD', 'sidebarFontSizeD', 'sidebarFontWeightD', 'sidebarLineHeightD', 'sidebarLetterSpacingD', 'sidebarTextTransformD',
+  // Sidebar Light Theme - Border and shadow settings
+  'sidebarBorderWidthL', 'sidebarBorderStyleL', 'sidebarBorderRadiusL', 'sidebarShadowL', 'sidebarShadowHoverL', 'sidebarShadowActiveL',
+  // Sidebar Dark Theme - Border and shadow settings
+  'sidebarBorderWidthD', 'sidebarBorderStyleD', 'sidebarBorderRadiusD', 'sidebarShadowD', 'sidebarShadowHoverD', 'sidebarShadowActiveD',
+  // Sidebar Light Theme - Spacing and layout
+  'sidebarPaddingXL', 'sidebarPaddingYL', 'sidebarMarginL', 'sidebarGapL', 'sidebarWidthL', 'sidebarWidthCollapsedL', 'sidebarTransitionDurationL', 'sidebarTransitionTimingL',
+  // Sidebar Dark Theme - Spacing and layout
+  'sidebarPaddingXD', 'sidebarPaddingYD', 'sidebarMarginD', 'sidebarGapD', 'sidebarWidthD', 'sidebarWidthCollapsedD', 'sidebarTransitionDurationD', 'sidebarTransitionTimingD',
+  // Sidebar Light Theme - Menu item specific settings
+  'sidebarMenuItemBgL', 'sidebarMenuItemBgHoverL', 'sidebarMenuItemBgActiveL', 'sidebarMenuItemColorL', 'sidebarMenuItemColorHoverL', 'sidebarMenuItemColorActiveL',
+  'sidebarMenuItemBorderL', 'sidebarMenuItemBorderHoverL', 'sidebarMenuItemBorderActiveL', 'sidebarMenuItemBorderRadiusL', 'sidebarMenuItemPaddingXL', 'sidebarMenuItemPaddingYL',
+  'sidebarMenuItemMarginL', 'sidebarMenuItemFontWeightL', 'sidebarMenuItemFontWeightActiveL', 'sidebarMenuItemFontSizeL', 'sidebarMenuItemLineHeightL', 'sidebarMenuItemTransitionL',
+  // Sidebar Dark Theme - Menu item specific settings
+  'sidebarMenuItemBgD', 'sidebarMenuItemBgHoverD', 'sidebarMenuItemBgActiveD', 'sidebarMenuItemColorD', 'sidebarMenuItemColorHoverD', 'sidebarMenuItemColorActiveD',
+  'sidebarMenuItemBorderD', 'sidebarMenuItemBorderHoverD', 'sidebarMenuItemBorderActiveD', 'sidebarMenuItemBorderRadiusD', 'sidebarMenuItemPaddingXD', 'sidebarMenuItemPaddingYD',
+  'sidebarMenuItemMarginD', 'sidebarMenuItemFontWeightD', 'sidebarMenuItemFontWeightActiveD', 'sidebarMenuItemFontSizeD', 'sidebarMenuItemLineHeightD', 'sidebarMenuItemTransitionD',
+  // Sidebar Light Theme - Icon settings
+  'sidebarIconSizeL', 'sidebarIconColorL', 'sidebarIconColorHoverL', 'sidebarIconColorActiveL', 'sidebarIconMarginRightL', 'sidebarIconTransitionL',
+  // Sidebar Dark Theme - Icon settings
+  'sidebarIconSizeD', 'sidebarIconColorD', 'sidebarIconColorHoverD', 'sidebarIconColorActiveD', 'sidebarIconMarginRightD', 'sidebarIconTransitionD',
+  // Sidebar Light Theme - Group label settings
+  'sidebarGroupLabelColorL', 'sidebarGroupLabelFontSizeL', 'sidebarGroupLabelFontWeightL', 'sidebarGroupLabelTextTransformL', 'sidebarGroupLabelLetterSpacingL', 'sidebarGroupLabelPaddingL', 'sidebarGroupLabelMarginL',
+  // Sidebar Dark Theme - Group label settings
+  'sidebarGroupLabelColorD', 'sidebarGroupLabelFontSizeD', 'sidebarGroupLabelFontWeightD', 'sidebarGroupLabelTextTransformD', 'sidebarGroupLabelLetterSpacingD', 'sidebarGroupLabelPaddingD', 'sidebarGroupLabelMarginD',
   'appFontFamily',
   'loginPageContent',
   'maxConcurrentProcessors',

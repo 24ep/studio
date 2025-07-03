@@ -4,7 +4,6 @@ import { z } from 'zod';
 import { logAudit } from '@/lib/auditLog';
 import { getServerSession } from 'next-auth/next';
 import type { PositionBulkActionPayload } from '@/lib/types';
-import { getRedisClient, CACHE_KEY_POSITIONS } from '@/lib/redis';
 import { getPool } from '@/lib/db';
 import { authOptions } from '@/lib/auth';
 
@@ -162,6 +161,7 @@ export async function POST(request: NextRequest) {
     await client.query('COMMIT');
 
     if (cacheInvalidated) {
+        const { getRedisClient, CACHE_KEY_POSITIONS } = await import('@/lib/redis');
         const redisClient = await getRedisClient();
         if (redisClient) {
             await redisClient.del(CACHE_KEY_POSITIONS);

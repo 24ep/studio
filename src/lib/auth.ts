@@ -16,6 +16,57 @@ const isAzureADConfigured = () => {
          process.env.AZURE_AD_TENANT_ID !== 'your_azure_ad_directory_tenant_id';
 };
 
+/**
+ * Validates that a user exists in the database
+ * @param userId - The user ID to validate
+ * @returns Promise<boolean> - True if user exists, false otherwise
+ */
+export async function validateUserExists(userId: string): Promise<boolean> {
+  if (!userId) return false;
+  
+  const client = await getPool().connect();
+  try {
+    const result = await client.query('SELECT id FROM "User" WHERE id = $1', [userId]);
+    return result.rows.length > 0;
+  } catch (error) {
+    console.error('Error validating user existence:', error);
+    return false;
+  } finally {
+    client.release();
+  }
+}
+
+/**
+ * Validates user session and returns user info if valid
+ * @param session - The session object from getServerSession
+ * @returns Promise<{isValid: boolean, userId?: string, userName?: string, error?: string}>
+ */
+export async function validateUserSession(session: any): Promise<{
+  isValid: boolean;
+  userId?: string;
+  userName?: string;
+  error?: string;
+}> {
+  if (!session?.user?.id) {
+    return { isValid: false, error: 'No user session found' };
+  }
+
+  const userId = session.user.id;
+  const userName = session.user.name || session.user.email || 'System';
+  
+  const userExists = await validateUserExists(userId);
+  if (!userExists) {
+    return { 
+      isValid: false, 
+      error: 'Invalid user session. Please sign in again.',
+      userId,
+      userName
+    };
+  }
+
+  return { isValid: true, userId, userName };
+}
+
 export const authOptions: NextAuthOptions = {
     providers: [
       // Only add Azure AD provider if properly configured
