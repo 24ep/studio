@@ -328,7 +328,6 @@ model UploadQueue {
   updatedAt      DateTime @default(now()) @map("updated_at")
   filePath       String   @map("file_path")
   webhookPayload Json?    @map("webhook_payload")
-  webhookResponse Json?   @map("webhook_response")
   
   // Relations
   createdByUser  User?     @relation("UserUploadQueue", fields: [createdBy], references: [id])

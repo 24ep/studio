@@ -110,7 +110,7 @@ export async function POST(request: NextRequest) {
       resumeWebhookUrl = process.env.RESUME_PROCESSING_WEBHOOK_URL || '';
     }
     let webhookRes = null;
-    let webhookError = null;
+    let webhookError: string | null = null;
     let status = 'success';
     let error = null;
     let error_details = null;
@@ -143,34 +143,35 @@ export async function POST(request: NextRequest) {
           body: JSON.stringify(jsonPayload),
         });
         webhookResStatus = webhookRes.status;
-        if (!webhookRes.ok) {
+        if (webhookRes.ok) {
+          status = 'success';
+        } else {
+          status = 'error';
           webhookError = `Webhook responded with status ${webhookRes.status}`;
+          error = webhookError;
+          error_details = await webhookRes.text().catch(() => webhookError);
         }
       } catch (err) {
-        if (err && typeof err === 'object' && 'message' in err && typeof (err as any).message === 'string') {
-          webhookError = (err as any).message;
-        } else {
-          webhookError = 'Unknown error calling webhook';
-        }
-      }
-      if (webhookRes && !webhookRes.ok) {
         status = 'error';
-        error = `Webhook responded with status ${webhookRes.status}`;
+        webhookError = (err && typeof err === 'object' && 'message' in err && typeof (err as any).message === 'string') ? (err as any).message : 'Unknown error calling webhook';
+        error = webhookError;
         error_details = webhookError;
       }
-      // For logging/debugging, store a summary of the payload
-      payload = jsonPayload;
+      // For logging/debugging, store a summary of the payload and error
+      payload = { ...jsonPayload, webhookError, webhookResStatus };
     } else {
-      // Webhook not set, skip file processing for webhook
+      // Webhook not set, set status to error
+      status = 'error';
       webhookError = 'Webhook URL not set or invalid, skipping webhook file send.';
+      error = webhookError;
+      error_details = webhookError;
+      payload = { error: webhookError };
       console.warn('[Webhook Skipped]', webhookError);
-      // Optionally, set status to 'skipped' if you want to track this
-      // status = 'skipped';
     }
     // 4. Update job status
     await client.query(
-      `UPDATE upload_queue SET status = $1, error = $2, error_details = $3, completed_date = now(), updated_at = now(), webhook_payload = $4, webhook_response = $5 WHERE id = $6`,
-      [status, error, error_details, payload, { status: webhookRes && 'status' in webhookRes ? webhookRes.status : null, response: webhookError || 'Success' }, job.id]
+      `UPDATE upload_queue SET status = $1, error = $2, error_details = $3, completed_date = now(), updated_at = now(), webhook_payload = $4 WHERE id = $5`,
+      [status, error, error_details, payload, job.id]
     );
     // Publish queue update event
     const redisClient = await import('@/lib/redis').then(m => m.getRedisClient());
@@ -208,8 +209,8 @@ export async function POST(request: NextRequest) {
   } catch (err) {
     if (job) {
       await client.query(
-        `UPDATE upload_queue SET status = 'error', error = $1, error_details = $2, completed_date = now(), updated_at = now(), webhook_payload = $3, webhook_response = $4 WHERE id = $5`,
-        [(err as Error).message, (err as Error).stack, payload, { error: (err as Error).message, stack: (err as Error).stack }, job.id]
+        `UPDATE upload_queue SET status = 'error', error = $1, error_details = $2, completed_date = now(), updated_at = now(), webhook_payload = $3 WHERE id = $4`,
+        [(err as Error).message, (err as Error).stack, payload, job.id]
       );
       await logAudit('ERROR', `Upload queue job '${job.file_name}' failed with exception`, 'API:UploadQueue:Process', null, { 
         jobId: job.id,
@@ -228,7 +229,7 @@ export async function POST(request: NextRequest) {
 export async function processSingleUploadQueueJob(job: any, client: any) {
   let payload = null;
   let webhookRes = null;
-  let webhookError = null;
+  let webhookError: string | null = null;
   let status = 'success';
   let error = null;
   let error_details = null;
@@ -288,34 +289,35 @@ export async function processSingleUploadQueueJob(job: any, client: any) {
           body: JSON.stringify(jsonPayload),
         });
         webhookResStatus = webhookRes.status;
-        if (!webhookRes.ok) {
+        if (webhookRes.ok) {
+          status = 'success';
+        } else {
+          status = 'error';
           webhookError = `Webhook responded with status ${webhookRes.status}`;
+          error = webhookError;
+          error_details = await webhookRes.text().catch(() => webhookError);
         }
       } catch (err) {
-        if (err && typeof err === 'object' && 'message' in err && typeof (err as any).message === 'string') {
-          webhookError = (err as any).message;
-        } else {
-          webhookError = 'Unknown error calling webhook';
-        }
-      }
-      if (webhookRes && !webhookRes.ok) {
         status = 'error';
-        error = `Webhook responded with status ${webhookRes.status}`;
+        webhookError = (err && typeof err === 'object' && 'message' in err && typeof (err as any).message === 'string') ? (err as any).message : 'Unknown error calling webhook';
+        error = webhookError;
         error_details = webhookError;
       }
-      // For logging/debugging, store a summary of the payload
-      payload = jsonPayload;
+      // For logging/debugging, store a summary of the payload and error
+      payload = { ...jsonPayload, webhookError, webhookResStatus };
     } else {
-      // Webhook not set, skip file processing for webhook
+      // Webhook not set, set status to error
+      status = 'error';
       webhookError = 'Webhook URL not set or invalid, skipping webhook file send.';
+      error = webhookError;
+      error_details = webhookError;
+      payload = { error: webhookError };
       console.warn('[Webhook Skipped]', webhookError);
-      // Optionally, set status to 'skipped' if you want to track this
-      // status = 'skipped';
     }
     // 4. Update job status
     await client.query(
-      `UPDATE upload_queue SET status = $1, error = $2, error_details = $3, completed_date = now(), updated_at = now(), webhook_payload = $4, webhook_response = $5 WHERE id = $6`,
-      [status, error, error_details, payload, { status: webhookRes && 'status' in webhookRes ? webhookRes.status : null, response: webhookError || 'Success' }, job.id]
+      `UPDATE upload_queue SET status = $1, error = $2, error_details = $3, completed_date = now(), updated_at = now(), webhook_payload = $4 WHERE id = $5`,
+      [status, error, error_details, payload, job.id]
     );
     // Publish queue update event
     const redisClient = await import('@/lib/redis').then(m => m.getRedisClient());
@@ -347,8 +349,8 @@ export async function processSingleUploadQueueJob(job: any, client: any) {
   } catch (err) {
     if (job) {
       await client.query(
-        `UPDATE upload_queue SET status = 'error', error = $1, error_details = $2, completed_date = now(), updated_at = now(), webhook_payload = $3, webhook_response = $4 WHERE id = $5`,
-        [(err as Error).message, (err as Error).stack, payload, { error: (err as Error).message, stack: (err as Error).stack }, job.id]
+        `UPDATE upload_queue SET status = 'error', error = $1, error_details = $2, completed_date = now(), updated_at = now(), webhook_payload = $3 WHERE id = $4`,
+        [(err as Error).message, (err as Error).stack, payload, job.id]
       );
       await logAudit('ERROR', `Upload queue job '${job.file_name}' failed with exception`, 'API:UploadQueue:Process', null, {
         jobId: job.id,

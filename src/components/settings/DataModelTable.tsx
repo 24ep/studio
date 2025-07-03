@@ -21,33 +21,18 @@ const DataModelTable: React.FC<DataModelTableProps> = ({
 }) => {
   if (isLoading) {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Database className="h-5 w-5" />
-            Data Models
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
+ 
           <div className="flex items-center justify-center py-8">
             <Loader2 className="h-6 w-6 animate-spin text-primary" />
             <span className="ml-2">Loading data models...</span>
           </div>
-        </CardContent>
-      </Card>
+       
     );
   }
 
   if (!dataModels || dataModels.length === 0) {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Database className="h-5 w-5" />
-            Data Models
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
+    
           <div className="text-center py-8">
             <Database className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
             <h3 className="text-lg font-semibold text-foreground mb-2">No Data Models</h3>
@@ -55,8 +40,7 @@ const DataModelTable: React.FC<DataModelTableProps> = ({
               No data models have been defined yet. Create your first data model to get started.
             </p>
           </div>
-        </CardContent>
-      </Card>
+      
     );
   }
 
@@ -91,14 +75,8 @@ const DataModelTable: React.FC<DataModelTableProps> = ({
   };
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Database className="h-5 w-5" />
-          Data Models ({dataModels.length})
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
+   
+      
         <Table>
           <TableHeader>
             <TableRow>
@@ -170,8 +148,7 @@ const DataModelTable: React.FC<DataModelTableProps> = ({
             ))}
           </TableBody>
         </Table>
-      </CardContent>
-    </Card>
+ 
   );
 };
 

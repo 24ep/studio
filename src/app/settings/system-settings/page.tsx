@@ -120,7 +120,7 @@ export default function SystemSettingsPage() {
   return (
     <div className="space-y-12 pb-32 p-6">
       {/* AI Configuration (Gemini) */}
-      <div className="shadow-lg ">
+  
         <div className="flex items-center text-2xl gap-2">
           <BrainCircuit className="h-7 w-7 text-primary" />
           AI Configuration (Gemini)
@@ -132,9 +132,9 @@ export default function SystemSettingsPage() {
             <p className="text-xs text-muted-foreground mt-1">This key is stored securely on the server. For Genkit to use this, ensure it&apos;s also available as the GOOGLE_API_KEY environment variable where your Next.js server runs, or ensure your Genkit flows dynamically fetch it.</p>
         </div>
         </div>
-      </div>
+   
       {/* Webhook Automation + Max Concurrent Processors */}
-      <div className="shadow-lg ">
+  
         <div className="flex items-center text-2xl gap-2">
           <Zap className="h-7 w-7 text-primary" />
           Workflow Automation
@@ -164,9 +164,9 @@ export default function SystemSettingsPage() {
           />
         </div>
         </div>
-      </div>
+
       {/* SMTP Configuration */}
-      <div className="shadow-lg ">
+     
         <div className="flex items-center text-2xl gap-2">
           <Mail className="h-7 w-7 text-primary" />
           SMTP Configuration
@@ -199,7 +199,7 @@ export default function SystemSettingsPage() {
             <Input id="smtp-from-email" type="email" placeholder="noreply@example.com" value={smtpFromEmail} onChange={(e) => setSmtpFromEmail(e.target.value)} className="mt-1" disabled={isSaving}/>
           </div>
         </div>
-      </div>
+      
 
       {/* Floating Save/Reset Bar */}
       <div className="fixed bottom-6 right-6 z-30 bg-background/95 border shadow-lg rounded-xl flex flex-row gap-4 py-3 px-6" style={{boxShadow: '0 2px 16px 0 rgba(0,0,0,0.10)'}}>

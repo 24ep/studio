@@ -266,7 +266,6 @@ export default function RecruitmentStagesPage() {
 
   return (
     <div className="space-y-6">
-      <div className="shadow-lg">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 p-6">
           <div>
             <div className="flex items-center text-2xl">
@@ -282,7 +281,7 @@ export default function RecruitmentStagesPage() {
             <PlusCircle className="mr-2 h-4 w-4" /> Add New Stage
           </Button>
         </div>
-        <div className="pt-6">
+        <div className="p-6">
           {isLoading && stages.length === 0 ? (
             <div className="flex justify-center items-center py-10">
               <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -327,9 +326,9 @@ export default function RecruitmentStagesPage() {
             </div>
           )}
         </div>
-      </div>
+    
 
-      <StagesForm
+      {/* <StagesForm
         open={isModalOpen}
         stage={editingStage}
         onClose={() => {
@@ -337,7 +336,7 @@ export default function RecruitmentStagesPage() {
           setEditingStage(null);
         }}
         onSubmit={handleFormSubmit}
-      />
+      /> */}
 
       <AlertDialog open={isReplacementModalOpen} onOpenChange={(open) => {
         setIsReplacementModalOpen(open);

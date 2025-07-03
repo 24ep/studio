@@ -229,7 +229,7 @@ export function CandidateFilters({
   const filteredRecruiters = safeAvailableRecruiters.filter(rec => rec.name.toLowerCase().includes(recruiterSearch.toLowerCase()));
 
   return (
-    <div className="space-y-6 p-6">
+    <div>
       {/* AI Search Section */}
       <div className="rounded-lg flex flex-col gap-4  border-primary/20">
         <div className="flex items-center gap-2 mb-2">

@@ -117,8 +117,8 @@ function UploadPageContent() {
         throw new Error(`File upload failed`);
       }
       const { results } = await uploadRes.json();
-      // Bulk blocking upload: process each file via blocking endpoint
-      const webhookResults: any[] = [];
+      // Non-blocking upload: process each file via non-blocking endpoint
+      const queueResults: any[] = [];
       await Promise.all(results.map(async (result: any, idx: number) => {
         if (result.status === 'success') {
           const queueData = {
@@ -134,35 +134,36 @@ function UploadPageContent() {
               uploadBatch: batchId
             },
           };
-          // Use blocking endpoint
-          const resp = await fetch('/api/upload-queue/blocking-process', {
+          const queueRes = await fetch('/api/upload-queue', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(queueData)
           });
-          let webhookResult;
-          try {
-            webhookResult = await resp.json();
-          } catch (e) {
-            webhookResult = { error: 'Invalid response from server' };
+          let error = undefined;
+          if (!queueRes.ok) {
+            try {
+              const errorData = await queueRes.json();
+              error = errorData.error || 'Failed to add file to upload queue';
+            } catch {
+              error = 'Failed to add file to upload queue';
+            }
           }
-          webhookResults.push({ file: result.file_name, ...webhookResult });
+          queueResults.push({ file: result.file_name, success: queueRes.ok, error });
         } else {
-          webhookResults.push({ file: result.file_name, error: result.error || 'Upload failed' });
+          queueResults.push({ file: result.file_name, success: false, error: result.error || 'Upload failed' });
         }
       }));
       setSelectedFiles([]);
       setSelectedPositionId("");
       setDialogOpen(false);
       // Show summary to user
-      const numSuccess = webhookResults.filter(r => !r.error && (!r.webhook_response || r.webhook_response.status === 200)).length;
-      const numError = webhookResults.length - numSuccess;
+      const numSuccess = queueResults.filter(r => r.success).length;
+      const numError = queueResults.length - numSuccess;
       if (numError === 0) {
-        toast.success(`Bulk upload completed successfully (${numSuccess} files)`);
+        toast.success(`Bulk upload: ${numSuccess} file(s) queued for processing.`);
       } else {
-        toast.error(`Bulk upload completed with errors: ${numError} failed, ${numSuccess} succeeded.`);
-        // Optionally, show details in console
-        console.table(webhookResults);
+        toast.error(`Bulk upload: ${numError} failed, ${numSuccess} queued.`);
+        console.table(queueResults);
       }
       window.dispatchEvent(new CustomEvent('refreshCandidateQueue'));
     } catch (error) {

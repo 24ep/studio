@@ -34,7 +34,6 @@ export interface CandidateJob {
   file?: File;
   type: CandidateJobType;
   webhook_payload?: any;
-  webhook_response?: any;
 }
 
 interface QueueContextType {
@@ -80,7 +79,7 @@ export const CandidateImportUploadQueue: React.FC = () => {
   const [page, setPage] = useState(1);
   const [pageSize] = useState(20);
   const [showErrorLogId, setShowErrorLogId] = useState<string | null>(null);
-  const [showWebhookLogId, setShowWebhookLogId] = useState<string | null>(null);
+  const [showCombinedDialogId, setShowCombinedDialogId] = useState<string | null>(null);
   const [filter, setFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [deleteId, setDeleteId] = useState<string | null>(null);
@@ -98,7 +97,6 @@ export const CandidateImportUploadQueue: React.FC = () => {
     const start = subDays(end, 30);
     return { start, end };
   });
-  const [showJobDetailId, setShowJobDetailId] = useState<string | null>(null);
   const { data: session } = useSession();
 
   // Fetch paginated jobs
@@ -247,8 +245,8 @@ export const CandidateImportUploadQueue: React.FC = () => {
   const numSuccess = jobs.filter(j => j.source === 'bulk' && j.status === 'success' && isInRange(j.completed_date)).length;
   const numError = jobs.filter(j => j.source === 'bulk' && j.status === 'error' && isInRange(j.completed_date)).length;
 
-  // 1. Add a helper to get the selected job for the webhook log:
-  const selectedWebhookLogJob = jobs.find(j => j.id === showWebhookLogId);
+  // Helper to get the selected job for the combined dialog:
+  const selectedCombinedJob = jobs.find(j => j.id === showCombinedDialogId);
 
   return (
     <div className="mb-6">
@@ -416,8 +414,6 @@ export const CandidateImportUploadQueue: React.FC = () => {
               <TableHead>File Name</TableHead>
               <TableHead>Size</TableHead>
               <TableHead>Status</TableHead>
-              <TableHead>Webhook Status</TableHead>
-              <TableHead>Duration</TableHead>
               <TableHead>Completed Date</TableHead>
               <TableHead>Upload Date</TableHead>
               <TableHead>Upload ID</TableHead>
@@ -475,31 +471,6 @@ export const CandidateImportUploadQueue: React.FC = () => {
                       );
                     })()}
                   </TableCell>
-                  <TableCell>
-                    {(() => {
-                      // Show webhook status or error if available
-                      if (item.webhook_response) {
-                        if (typeof item.webhook_response === 'object' && item.webhook_response.status) {
-                          return <Badge variant={item.webhook_response.status === 200 ? 'success' : 'destructive'}>{`HTTP ${item.webhook_response.status}`}</Badge>;
-                        } else if (typeof item.webhook_response === 'string') {
-                          return <Badge variant="destructive">{item.webhook_response}</Badge>;
-                        }
-                      }
-                      if (item.status === 'success') return <Badge variant="success">Success</Badge>;
-                      if (item.status === 'error') return <Badge variant="destructive">Error</Badge>;
-                      return <Badge variant="secondary">-</Badge>;
-                    })()}
-                  </TableCell>
-                  <TableCell>
-                    {item.upload_date ? (
-                      <span className="text-sm font-mono">
-                        {formatDuration(item.upload_date, item.completed_date)}
-                        {!item.completed_date && (item.status === 'uploading' || item.status === 'importing' || item.status === 'processing') && (
-                          <span className="text-blue-500 ml-1">●</span>
-                        )}
-                      </span>
-                    ) : '-'}
-                  </TableCell>
                   <TableCell>{item.completed_date ? new Date(item.completed_date).toLocaleString() : '-'}</TableCell>
                   <TableCell>{item.upload_date ? new Date(item.upload_date).toLocaleString() : '-'}</TableCell>
                   <TableCell>{item.upload_id || '-'}</TableCell>
@@ -521,16 +492,14 @@ export const CandidateImportUploadQueue: React.FC = () => {
                         </a>
                       </Button>
                     )}
-                    {(item.webhook_payload || item.webhook_response) && (
-                      <Button 
-                        variant="ghost" 
-                        size="icon" 
-                        onClick={() => setShowWebhookLogId(item.id)} 
-                        title="View webhook log"
-                      >
-                        <ExternalLink className="h-4 w-4 text-blue-500" />
-                      </Button>
-                    )}
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      title="Details & Webhook Log"
+                      onClick={() => setShowCombinedDialogId(item.id)}
+                    >
+                      <Eye className="h-4 w-4 text-primary" />
+                    </Button>
                     {item.status === "error" && (
                       <Button variant="ghost" size="icon" onClick={() => setShowErrorLogId(item.id)} title="View error log">
                         <Eye className="h-4 w-4 text-destructive" />
@@ -564,14 +533,6 @@ export const CandidateImportUploadQueue: React.FC = () => {
                         {cancelLoading && cancelId === item.id ? <Loader2 className="animate-spin h-4 w-4" /> : <X className="h-4 w-4 text-orange-500" />}
                       </Button>
                     )}
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      title="Show Details"
-                      onClick={() => setShowJobDetailId(item.id)}
-                    >
-                      <Eye className="h-4 w-4 text-primary" />
-                    </Button>
                   </TableCell>
                 </TableRow>
               </React.Fragment>
@@ -713,86 +674,56 @@ export const CandidateImportUploadQueue: React.FC = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-      <Dialog open={!!showJobDetailId} onOpenChange={open => !open && setShowJobDetailId(null)}>
+      <Dialog open={!!selectedCombinedJob} onOpenChange={open => !open && setShowCombinedDialogId(null)}>
         <DialogContent className="max-w-2xl w-full">
           <DialogHeader>
-            <DialogTitle>Job Details</DialogTitle>
+            <DialogTitle>Job Details & Webhook Log</DialogTitle>
           </DialogHeader>
-          {(() => {
-            const job = jobs.find(j => j.id === showJobDetailId);
-            if (!job) return <div>Job not found.</div>;
-            return (
-              <div className="space-y-6">
-                {/* Job Details Section */}
-                <div>
-                  <h3 className="font-semibold mb-2">Job Info</h3>
-                  <div className="grid grid-cols-2 gap-2 text-sm">
-                    <div><span className="font-medium">File:</span> {job.file_name}</div>
-                    <div><span className="font-medium">Size:</span> {formatBytes(job.file_size)}</div>
-                    <div><span className="font-medium">Status:</span> {job.status}</div>
-                    <div><span className="font-medium">Source:</span> {job.source}</div>
-                    <div><span className="font-medium">Uploaded:</span> {job.upload_date ? format(new Date(job.upload_date), 'yyyy-MM-dd HH:mm') : '-'}</div>
-                    <div><span className="font-medium">Completed:</span> {job.completed_date ? format(new Date(job.completed_date), 'yyyy-MM-dd HH:mm') : '-'}</div>
-                    <div><span className="font-medium">Duration:</span> {job.upload_date ? formatDuration(job.upload_date, job.completed_date) : '-'}</div>
-                    <div><span className="font-medium">ID:</span> {job.id}</div>
+          {selectedCombinedJob ? (
+            <div className="space-y-6">
+              {/* Job Details Section */}
+              <div>
+                <h3 className="font-semibold mb-2">Job Info</h3>
+                <div className="grid grid-cols-2 gap-2 text-sm">
+                  <div><span className="font-medium">File:</span> {selectedCombinedJob.file_name}</div>
+                  <div><span className="font-medium">Size:</span> {formatBytes(selectedCombinedJob.file_size)}</div>
+                  <div><span className="font-medium">Status:</span> {selectedCombinedJob.status}</div>
+                  <div><span className="font-medium">Source:</span> {selectedCombinedJob.source}</div>
+                  <div><span className="font-medium">Uploaded:</span> {selectedCombinedJob.upload_date ? format(new Date(selectedCombinedJob.upload_date), 'yyyy-MM-dd HH:mm') : '-'}</div>
+                  <div><span className="font-medium">Completed:</span> {selectedCombinedJob.completed_date ? format(new Date(selectedCombinedJob.completed_date), 'yyyy-MM-dd HH:mm') : '-'}</div>
+                  <div><span className="font-medium">Duration:</span> {selectedCombinedJob.upload_date ? formatDuration(selectedCombinedJob.upload_date, selectedCombinedJob.completed_date) : '-'}</div>
+                  <div><span className="font-medium">ID:</span> {selectedCombinedJob.id}</div>
+                </div>
+                {selectedCombinedJob.file_path && (
+                  <div className="mt-2">
+                    <a href={`${MINIO_PUBLIC_BASE_URL}/${MINIO_BUCKET}/${selectedCombinedJob.file_path}`} target="_blank" rel="noopener noreferrer" className="text-primary underline">Download File</a>
                   </div>
-                  {job.file_path && (
-                    <div className="mt-2">
-                      <a href={`${MINIO_PUBLIC_BASE_URL}/${MINIO_BUCKET}/${job.file_path}`} target="_blank" rel="noopener noreferrer" className="text-primary underline">Download File</a>
+                )}
+              </div>
+              {/* Error Log Section */}
+              {selectedCombinedJob.error_details && (
+                <div>
+                  <h3 className="font-semibold mb-2 text-destructive">Error Log</h3>
+                  <pre className="bg-destructive/10 border border-destructive rounded p-2 text-xs text-destructive max-h-40 overflow-auto whitespace-pre-wrap">{selectedCombinedJob.error_details}</pre>
+                </div>
+              )}
+              {/* Webhook Log Section */}
+              {(selectedCombinedJob.webhook_payload) && (
+                <div>
+                  <h3 className="font-semibold mb-2 text-blue-800 flex items-center"><ExternalLink className="h-5 w-5 mr-2 text-blue-700" />Webhook Log</h3>
+                  {selectedCombinedJob.webhook_payload && (
+                    <div className="mb-2">
+                      <div className="font-medium text-xs mb-1">Payload Sent to Webhook:</div>
+                      <pre className="whitespace-pre-wrap break-all max-h-40 overflow-auto bg-background p-2 rounded border text-xs">
+                        {JSON.stringify(selectedCombinedJob.webhook_payload, null, 2)}
+                      </pre>
                     </div>
                   )}
                 </div>
-                {/* Error Log Section */}
-                {job.error_details && (
-                  <div>
-                    <h3 className="font-semibold mb-2 text-destructive">Error Log</h3>
-                    <pre className="bg-destructive/10 border border-destructive rounded p-2 text-xs text-destructive max-h-40 overflow-auto whitespace-pre-wrap">{job.error_details}</pre>
-                  </div>
-                )}
-              </div>
-            );
-          })()}
+              )}
+            </div>
+          ) : <div>Job not found.</div>}
           <DialogFooter>
-            <DialogClose asChild>
-              <Button type="button" variant="outline">Close</Button>
-            </DialogClose>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-      {/* Webhook Log Dialog (rendered once, outside the table) */}
-      <Dialog open={!!selectedWebhookLogJob} onOpenChange={(open) => { if (!open) setShowWebhookLogId(null); }}>
-        <DialogContent className="sm:max-w-2xl max-h-[90vh] flex flex-col">
-          <DialogHeader className="pt-6 px-6 pb-4 border-b">
-            <DialogTitle className="text-2xl flex items-center text-blue-800">
-              <ExternalLink className="h-6 w-6 mr-3 text-blue-700" />Webhook Log
-            </DialogTitle>
-          </DialogHeader>
-          <div className="flex-grow overflow-y-auto px-6 py-4 space-y-4">
-            {selectedWebhookLogJob?.webhook_payload && (
-              <div>
-                <h4 className="font-medium text-blue-700 mb-1">Payload Sent to Webhook:</h4>
-                <pre className="whitespace-pre-wrap break-all max-h-40 overflow-auto bg-background p-2 rounded border text-xs">
-                  {JSON.stringify(selectedWebhookLogJob.webhook_payload, null, 2)}
-                </pre>
-              </div>
-            )}
-            {selectedWebhookLogJob?.webhook_response && (
-              <div>
-                <h4 className="font-medium text-blue-700 mb-1">Webhook Response:</h4>
-                <pre className="whitespace-pre-wrap break-all max-h-40 overflow-auto bg-background p-2 rounded border text-xs">
-                  {JSON.stringify(selectedWebhookLogJob.webhook_response, null, 2)}
-                </pre>
-                {/* Show HTTP status or error if present */}
-                {typeof selectedWebhookLogJob.webhook_response === 'object' && selectedWebhookLogJob.webhook_response.status && (
-                  <div className="mt-1 text-xs">HTTP Status: <span className={selectedWebhookLogJob.webhook_response.status === 200 ? 'text-green-600' : 'text-red-600'}>{selectedWebhookLogJob.webhook_response.status}</span></div>
-                )}
-                {typeof selectedWebhookLogJob.webhook_response === 'object' && selectedWebhookLogJob.webhook_response.response && (
-                  <div className="mt-1 text-xs">Response: <span className="text-muted-foreground">{selectedWebhookLogJob.webhook_response.response}</span></div>
-                )}
-              </div>
-            )}
-          </div>
-          <DialogFooter className="p-6 pt-4 border-t">
             <DialogClose asChild>
               <Button type="button" variant="outline">Close</Button>
             </DialogClose>

@@ -225,24 +225,14 @@ export default function ManageUsersPage() {
   }
 
   return (
-    <div className="space-y-6 p-6">
-      <Card className="shadow-lg">
-        <CardHeader className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
-          <div>
-            <CardTitle className="flex items-center text-2xl">
-              <UsersRound className="mr-3 h-6 w-6 text-primary" /> Manage Users
-            </CardTitle>
-            <CardDescription className="mt-1">
-               View, add, edit, and delete application users. Assign roles, permissions, and groups.
-            </CardDescription>
-          </div>
+        <div>
+          
           {session?.user?.role === 'Admin' && (
               <Button className="w-full sm:w-auto btn-primary-gradient" onClick={() => setIsAddUserModalOpen(true)}> 
               <PlusCircle className="mr-2 h-4 w-4" /> Add New User
               </Button>
           )}
-        </CardHeader>
-        <CardContent>
+   
           {/* Filters Section */}
           <div className="mb-6">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
@@ -358,8 +348,7 @@ export default function ManageUsersPage() {
               <span className="font-semibold">Security Note:</span> User creation, deletion, and modification of roles/permissions are restricted to &apos;Admin&apos; users. User passwords are securely hashed using bcrypt.
             </div>
           </div>
-        </CardContent>
-      </Card>
+    
       <React.Fragment>
         <AddUserModal 
           isOpen={isAddUserModalOpen} 

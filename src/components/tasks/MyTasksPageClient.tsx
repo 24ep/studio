@@ -10,7 +10,7 @@ import { CandidateTable } from '@/components/candidates/CandidateTable';
 import { CandidateKanbanView } from '@/components/candidates/CandidateKanbanView';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Loader2, ServerCrash, ShieldAlert, ListTodo, Users, Filter, LayoutGrid, List, Search, FilterX, Brain } from 'lucide-react';
+import { Loader2, ServerCrash, ShieldAlert, ListTodo, Users, Filter, LayoutGrid, List, Search, FilterX, Brain, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
@@ -69,6 +69,7 @@ export function MyTasksPageClient({
   const [authError, setAuthError] = useState(serverAuthError);
   const [permissionError, setPermissionError] = useState(serverPermissionError);
 
+  const [showFilters, setShowFilters] = useState(true);
 
   const fetchRecruitersForAdminFilter = useCallback(async () => {
     if (session?.user?.role === 'Admin' && allRecruitersForFilter.length <= 1) { // Only fetch if not already populated or just has self
@@ -263,129 +264,126 @@ export function MyTasksPageClient({
     : "Candidates assigned to you for processing.";
 
   return (
-    <div className="flex flex-col md:flex-row gap-6 h-full p-6">
-        <aside className="w-full md:w-[280px] lg:w-[320px] flex-shrink-0 md:sticky md:top-[calc(var(--header-height,4rem)_+_1rem)] md:max-h-[calc(100vh-var(--header-height,4rem)-2rem)]">
-           <ScrollArea className="h-full md:pr-2">
-                <div className="md:hidden mb-3"> 
-                    {session?.user?.role === 'Admin' && (
-                        <div className="w-full">
-                            <Label htmlFor="recruiter-filter-select-mobile" className="text-xs font-medium">View tasks for:</Label>
-                             <Popover>
-                                <PopoverTrigger asChild>
-                                    <Button variant="outline" role="combobox" className="w-full justify-between mt-1 text-xs">
-                                        <span className="truncate">
-                                            {selectedRecruiterFilter === MY_ASSIGNED_VALUE ? "My Assigned (Admin)" :
-                                            selectedRecruiterFilter === ALL_CANDIDATES_ADMIN_VALUE ? "All Candidates (Admin)" :
-                                            allRecruitersForFilter.find(r => r.id === selectedRecruiterFilter)?.name || "My Assigned (Admin)"}
-                                        </span>
-                                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                                    </Button>
-                                </PopoverTrigger>
-                                <PopoverContent className="w-[--trigger-width] p-0 dropdown-content-height">
-                                    <ScrollArea className="max-h-60">
-                                        <Button variant="ghost" className={cn("w-full justify-start px-2 py-1 text-xs font-normal h-auto", selectedRecruiterFilter === MY_ASSIGNED_VALUE && "bg-accent text-accent-foreground")} onClick={() => handleRecruiterFilterChange(MY_ASSIGNED_VALUE)}><Check className={cn("mr-2 h-4 w-4", selectedRecruiterFilter === MY_ASSIGNED_VALUE ? "opacity-100" : "opacity-0")}/>My Assigned (Admin)</Button>
-                                        <Button variant="ghost" className={cn("w-full justify-start px-2 py-1 text-xs font-normal h-auto", selectedRecruiterFilter === ALL_CANDIDATES_ADMIN_VALUE && "bg-accent text-accent-foreground")} onClick={() => handleRecruiterFilterChange(ALL_CANDIDATES_ADMIN_VALUE)}><Check className={cn("mr-2 h-4 w-4", selectedRecruiterFilter === ALL_CANDIDATES_ADMIN_VALUE ? "opacity-100" : "opacity-0")}/>All Candidates (Admin)</Button>
-                                        {allRecruitersForFilter.map(rec => (<Button key={rec.id} variant="ghost" className={cn("w-full justify-start px-2 py-1 text-xs font-normal h-auto", selectedRecruiterFilter === rec.id && "bg-accent text-accent-foreground")} onClick={() => handleRecruiterFilterChange(rec.id)}><Check className={cn("mr-2 h-4 w-4", selectedRecruiterFilter === rec.id ? "opacity-100" : "opacity-0")}/>{rec.name}</Button>))}
-                                    </ScrollArea>
-                                </PopoverContent>
-                            </Popover>
-                        </div>
-                    )}
-                </div>
-                 <CandidateFilters
-                    initialFilters={standardFilters}
-                    onFilterChange={handleStandardFilterChange}
-                    onAiSearch={handleAiSearch}
-                    availablePositions={availablePositions}
-                    availableStages={availableStages}
-                    availableRecruiters={allRecruitersForFilter}
-                    isLoading={isLoading || isAiSearching}
-                    isAiSearching={isAiSearching}
-                />
-            </ScrollArea>
+    <div className="flex h-full relative">
+      {/* Filter Sidebar */}
+      {showFilters && (
+        <aside className="w-80 min-w-[250px] border-r bg-white dark:bg-background transition-all flex flex-col">
+          <div className="flex justify-between items-center p-4 border-b">
+            <span className="font-bold text-lg">Filters</span>
+            <button
+              className="ml-2 p-1 rounded hover:bg-muted"
+              onClick={() => setShowFilters(false)}
+              aria-label="Hide filters"
+            >
+              <ChevronLeft className="h-5 w-5" />
+            </button>
+          </div>
+          <div className="flex-1 overflow-y-auto">
+            <CandidateFilters
+              initialFilters={standardFilters}
+              onFilterChange={handleStandardFilterChange}
+              onAiSearch={handleAiSearch}
+              availablePositions={availablePositions}
+              availableStages={availableStages}
+              availableRecruiters={allRecruitersForFilter}
+              isLoading={isLoading || isAiSearching}
+              isAiSearching={isAiSearching}
+            />
+          </div>
         </aside>
+      )}
+      {/* Show button when sidebar is hidden */}
+      {!showFilters && (
+        <button
+          className="absolute left-0 top-4 z-10 bg-white dark:bg-background border rounded-r p-1 shadow"
+          onClick={() => setShowFilters(true)}
+          aria-label="Show filters"
+        >
+          <ChevronRight className="h-5 w-5" />
+        </button>
+      )}
+      {/* Main Content */}
+      <div className="flex-1 space-y-6 min-w-0">
+        <Card>
+          <CardHeader>
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+              <div>
+                <CardTitle className="flex items-center">
+                  <ListTodo className="mr-2 h-6 w-6 text-primary" /> {typeof pageTitle === 'object' ? JSON.stringify(pageTitle) : pageTitle}
+                </CardTitle>
+                <CardDescription>{typeof pageDescription === 'object' ? JSON.stringify(pageDescription) : pageDescription}</CardDescription>
+              </div>
+              <div className="flex gap-1 self-end sm:self-center">
+                <Button variant={viewMode === 'kanban' ? 'default' : 'outline'} size="icon" onClick={() => setViewMode('kanban')}><LayoutGrid className="h-4 w-4" /></Button>
+                <Button variant={viewMode === 'list' ? 'default' : 'outline'} size="icon" onClick={() => setViewMode('list')}><List className="h-4 w-4" /></Button>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {session?.user?.role === 'Admin' && (
+              <div className="mb-4 w-full md:max-w-xs hidden md:block">
+                <Label htmlFor="recruiter-filter-select-desktop" className="text-xs font-medium">View tasks for:</Label>
+                 <Popover>
+                    <PopoverTrigger asChild>
+                        <Button variant="outline" role="combobox" className="w-full justify-between mt-1 text-xs">
+                            <span className="truncate">
+                                {selectedRecruiterFilter === MY_ASSIGNED_VALUE ? "My Assigned (Admin)" :
+                                selectedRecruiterFilter === ALL_CANDIDATES_ADMIN_VALUE ? "All Candidates (Admin)" :
+                                allRecruitersForFilter.find(r => r.id === selectedRecruiterFilter)?.name || "My Assigned (Admin)"}
+                            </span>
+                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                        </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-[--trigger-width] p-0 dropdown-content-height">
+                        <ScrollArea className="max-h-60">
+                            <Button variant="ghost" className={cn("w-full justify-start px-2 py-1 text-xs font-normal h-auto", selectedRecruiterFilter === MY_ASSIGNED_VALUE && "bg-accent text-accent-foreground")} onClick={() => handleRecruiterFilterChange(MY_ASSIGNED_VALUE)}><Check className={cn("mr-2 h-4 w-4", selectedRecruiterFilter === MY_ASSIGNED_VALUE ? "opacity-100" : "opacity-0")}/>My Assigned (Admin)</Button>
+                            <Button variant="ghost" className={cn("w-full justify-start px-2 py-1 text-xs font-normal h-auto", selectedRecruiterFilter === ALL_CANDIDATES_ADMIN_VALUE && "bg-accent text-accent-foreground")} onClick={() => handleRecruiterFilterChange(ALL_CANDIDATES_ADMIN_VALUE)}><Check className={cn("mr-2 h-4 w-4", selectedRecruiterFilter === ALL_CANDIDATES_ADMIN_VALUE ? "opacity-100" : "opacity-0")}/>All Candidates (Admin)</Button>
+                            {allRecruitersForFilter.map(rec => (<Button key={rec.id} variant="ghost" className={cn("w-full justify-start px-2 py-1 text-xs font-normal h-auto", selectedRecruiterFilter === rec.id && "bg-accent text-accent-foreground")} onClick={() => handleRecruiterFilterChange(rec.id)}><Check className={cn("mr-2 h-4 w-4", selectedRecruiterFilter === rec.id ? "opacity-100" : "opacity-0")}/>{rec.name}</Button>))}
+                        </ScrollArea>
+                    </PopoverContent>
+                </Popover>
+              </div>
+            )}
 
-        <div className="flex-1 space-y-6 min-w-0">
-            <Card>
-                <CardHeader>
-                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                    <div>
-                    <CardTitle className="flex items-center">
-                        <ListTodo className="mr-2 h-6 w-6 text-primary" /> {typeof pageTitle === 'object' ? JSON.stringify(pageTitle) : pageTitle}
-                    </CardTitle>
-                    <CardDescription>{typeof pageDescription === 'object' ? JSON.stringify(pageDescription) : pageDescription}</CardDescription>
-                    </div>
-                    <div className="flex gap-1 self-end sm:self-center">
-                        <Button variant={viewMode === 'kanban' ? 'default' : 'outline'} size="icon" onClick={() => setViewMode('kanban')}><LayoutGrid className="h-4 w-4" /></Button>
-                        <Button variant={viewMode === 'list' ? 'default' : 'outline'} size="icon" onClick={() => setViewMode('list')}><List className="h-4 w-4" /></Button>
-                    </div>
-                </div>
-                </CardHeader>
-                <CardContent>
-                {session?.user?.role === 'Admin' && (
-                    <div className="mb-4 w-full md:max-w-xs hidden md:block">
-                        <Label htmlFor="recruiter-filter-select-desktop" className="text-xs font-medium">View tasks for:</Label>
-                         <Popover>
-                            <PopoverTrigger asChild>
-                                <Button variant="outline" role="combobox" className="w-full justify-between mt-1 text-xs">
-                                    <span className="truncate">
-                                        {selectedRecruiterFilter === MY_ASSIGNED_VALUE ? "My Assigned (Admin)" :
-                                        selectedRecruiterFilter === ALL_CANDIDATES_ADMIN_VALUE ? "All Candidates (Admin)" :
-                                        allRecruitersForFilter.find(r => r.id === selectedRecruiterFilter)?.name || "My Assigned (Admin)"}
-                                    </span>
-                                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                                </Button>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-[--trigger-width] p-0 dropdown-content-height">
-                                <ScrollArea className="max-h-60">
-                                    <Button variant="ghost" className={cn("w-full justify-start px-2 py-1 text-xs font-normal h-auto", selectedRecruiterFilter === MY_ASSIGNED_VALUE && "bg-accent text-accent-foreground")} onClick={() => handleRecruiterFilterChange(MY_ASSIGNED_VALUE)}><Check className={cn("mr-2 h-4 w-4", selectedRecruiterFilter === MY_ASSIGNED_VALUE ? "opacity-100" : "opacity-0")}/>My Assigned (Admin)</Button>
-                                    <Button variant="ghost" className={cn("w-full justify-start px-2 py-1 text-xs font-normal h-auto", selectedRecruiterFilter === ALL_CANDIDATES_ADMIN_VALUE && "bg-accent text-accent-foreground")} onClick={() => handleRecruiterFilterChange(ALL_CANDIDATES_ADMIN_VALUE)}><Check className={cn("mr-2 h-4 w-4", selectedRecruiterFilter === ALL_CANDIDATES_ADMIN_VALUE ? "opacity-100" : "opacity-0")}/>All Candidates (Admin)</Button>
-                                    {allRecruitersForFilter.map(rec => (<Button key={rec.id} variant="ghost" className={cn("w-full justify-start px-2 py-1 text-xs font-normal h-auto", selectedRecruiterFilter === rec.id && "bg-accent text-accent-foreground")} onClick={() => handleRecruiterFilterChange(rec.id)}><Check className={cn("mr-2 h-4 w-4", selectedRecruiterFilter === rec.id ? "opacity-100" : "opacity-0")}/>{rec.name}</Button>))}
-                                </ScrollArea>
-                            </PopoverContent>
-                        </Popover>
-                    </div>
-                )}
+            {aiSearchReasoning && (
+              <Alert variant="default" className="mb-4 bg-blue-50 border-blue-300 dark:bg-blue-900/30 dark:border-blue-700">
+                <Brain className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                <AlertTitle className="font-semibold text-blue-700 dark:text-blue-300">AI Search Results</AlertTitle>
+                <AlertDescription className="text-blue-700 dark:text-blue-300">
+                  {typeof aiSearchReasoning === 'object' ? JSON.stringify(aiSearchReasoning) : aiSearchReasoning}
+                  {aiMatchedCandidateIds && aiMatchedCandidateIds.length === 0 && " No strong matches found."}
+                </AlertDescription>
+              </Alert>
+            )}
 
-                {aiSearchReasoning && (
-                  <Alert variant="default" className="mb-4 bg-blue-50 border-blue-300 dark:bg-blue-900/30 dark:border-blue-700">
-                    <Brain className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-                    <AlertTitle className="font-semibold text-blue-700 dark:text-blue-300">AI Search Results</AlertTitle>
-                    <AlertDescription className="text-blue-700 dark:text-blue-300">
-                      {typeof aiSearchReasoning === 'object' ? JSON.stringify(aiSearchReasoning) : aiSearchReasoning}
-                      {aiMatchedCandidateIds && aiMatchedCandidateIds.length === 0 && " No strong matches found."}
-                    </AlertDescription>
-                  </Alert>
-                )}
-
-                {(isLoading || isAiSearching) && displayedCandidates.length === 0 ? (
-                    <div className="flex items-center justify-center h-64"><Loader2 className="h-12 w-12 animate-spin text-primary" /></div>
-                ) : displayedCandidates.length === 0 ? (
-                    <div className="text-center py-10"><Users className="mx-auto h-12 w-12 text-muted-foreground" /><p className="mt-4 text-muted-foreground">No candidates match the current filters.</p></div>
-                ) : viewMode === 'list' ? (
-                    <CandidateTable
-                    candidates={displayedCandidates}
-                    availablePositions={availablePositions}
-                    availableStages={availableStages}
-                    availableRecruiters={allRecruitersForFilter}
-                    onAssignRecruiter={() => { /* Not allowed in My Tasks */ }}
-                    onUpdateCandidate={async (id, newStatus) => { /* Limited action */ }}
-                    onDeleteCandidate={async (id) => { /* Limited action */ }}
-                    onOpenUploadModal={() => { /* Limited action */ }}
-                    onEditPosition={() => { /* Limited action */ }}
-                    isLoading={(isLoading || isAiSearching) && displayedCandidates.length > 0}
-                    onRefreshCandidateData={async (id) => fetchTaskBoardCandidates(standardFilters, selectedRecruiterFilter)}
-                    selectedCandidateIds={new Set()} 
-                    onToggleSelectCandidate={() => {}}
-                    onToggleSelectAllCandidates={() => {}}
-                    isAllCandidatesSelected={false}
-                    />
-                ) : (
-                    <CandidateKanbanView candidates={displayedCandidates} statuses={availableStages.map(s => s.name)} />
-                )}
-                </CardContent>
-            </Card>
-        </div>
+            {(isLoading || isAiSearching) && displayedCandidates.length === 0 ? (
+                <div className="flex items-center justify-center h-64"><Loader2 className="h-12 w-12 animate-spin text-primary" /></div>
+            ) : displayedCandidates.length === 0 ? (
+                <div className="text-center py-10"><Users className="mx-auto h-12 w-12 text-muted-foreground" /><p className="mt-4 text-muted-foreground">No candidates match the current filters.</p></div>
+            ) : viewMode === 'list' ? (
+                <CandidateTable
+                candidates={displayedCandidates}
+                availablePositions={availablePositions}
+                availableStages={availableStages}
+                availableRecruiters={allRecruitersForFilter}
+                onAssignRecruiter={() => { /* Not allowed in My Tasks */ }}
+                onUpdateCandidate={async (id, newStatus) => { /* Limited action */ }}
+                onDeleteCandidate={async (id) => { /* Limited action */ }}
+                onOpenUploadModal={() => { /* Limited action */ }}
+                onEditPosition={() => { /* Limited action */ }}
+                isLoading={(isLoading || isAiSearching) && displayedCandidates.length > 0}
+                onRefreshCandidateData={async (id) => fetchTaskBoardCandidates(standardFilters, selectedRecruiterFilter)}
+                selectedCandidateIds={new Set()} 
+                onToggleSelectCandidate={() => {}}
+                onToggleSelectAllCandidates={() => {}}
+                isAllCandidatesSelected={false}
+                />
+            ) : (
+                <CandidateKanbanView candidates={displayedCandidates} statuses={availableStages.map(s => s.name)} />
+            )}
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }

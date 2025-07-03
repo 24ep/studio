@@ -27,6 +27,7 @@ export function BulkUploadCVsModal({ isOpen, onOpenChange, onUploadSuccess }: Bu
   const [availablePositions, setAvailablePositions] = useState<Position[]>([]);
   const [uploading, setUploading] = useState(false);
   const { data: session } = useSession();
+  const [fileBatchMap, setFileBatchMap] = useState<{ [fileName: string]: string }>({});
 
   useEffect(() => {
     if (!isOpen) return;
@@ -51,6 +52,7 @@ export function BulkUploadCVsModal({ isOpen, onOpenChange, onUploadSuccess }: Bu
     if (!files) return;
     const newFiles: File[] = [];
     const invalidFiles: { name: string; reason: string }[] = [];
+    const newBatchMap: { [fileName: string]: string } = {};
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
       if (file.type !== "application/pdf") {
@@ -61,9 +63,11 @@ export function BulkUploadCVsModal({ isOpen, onOpenChange, onUploadSuccess }: Bu
         toast.error(`${file.name}: File too large (max ${MAX_FILE_SIZE / (1024*1024)}MB)`);
       } else {
         newFiles.push(file);
+        newBatchMap[file.name] = uuidv4();
       }
     }
     setSelectedFiles(prev => [...prev, ...newFiles]);
+    setFileBatchMap(prev => ({ ...prev, ...newBatchMap }));
     if (invalidFiles.length > 0) {
       toast.error(`${invalidFiles.length} file(s) were invalid and not added.`);
     }
@@ -87,38 +91,43 @@ export function BulkUploadCVsModal({ isOpen, onOpenChange, onUploadSuccess }: Bu
   };
   const removeFile = (file: File) => {
     setSelectedFiles(prev => prev.filter(f => f !== file));
+    setFileBatchMap(prev => {
+      const newMap = { ...prev };
+      delete newMap[file.name];
+      return newMap;
+    });
   };
 
   // Helper to add a file to the upload queue and handle errors
-  async function addToUploadQueueBlocking(queueData: any, fileName: string) {
+  async function addToUploadQueueNonBlocking(queueData: any, fileName: string) {
     try {
-      const queueRes = await fetch('/api/upload-queue/blocking-process', {
+      const queueRes = await fetch('/api/upload-queue', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(queueData)
       });
-      let webhookResult;
-      try {
-        webhookResult = await queueRes.json();
-      } catch (e) {
-        webhookResult = { error: 'Invalid response from server' };
-      }
-      if (!queueRes.ok || webhookResult.error) {
-        let errorMsg = webhookResult.error || 'Failed to process file via webhook';
+      if (!queueRes.ok) {
+        let errorMsg = 'Failed to add file to upload queue';
+        try {
+          const errorData = await queueRes.json();
+          errorMsg = errorData.error || errorMsg;
+          console.error('Upload queue POST error:', errorData);
+        } catch (parseErr) {
+          console.error('Upload queue POST error (non-JSON):', queueRes);
+        }
         toast.error(`${fileName}: ${errorMsg}`);
-        return { success: false, result: webhookResult };
+        return { success: false, error: errorMsg };
       }
-      return { success: true, result: webhookResult };
+      return { success: true };
     } catch (err) {
-      console.error('Network or unexpected error during blocking upload queue POST:', err);
+      console.error('Network or unexpected error during upload queue POST:', err);
       toast.error(`${fileName}: Unexpected error adding to upload queue`);
-      return { success: false, result: { error: 'Unexpected error' } };
+      return { success: false, error: 'Unexpected error' };
     }
   }
 
   const handleConfirmUpload = async () => {
     setUploading(true);
-    const batchId = uuidv4();
     const now = new Date().toISOString();
     try {
       if (selectedFiles.length === 0) return;
@@ -143,13 +152,14 @@ export function BulkUploadCVsModal({ isOpen, onOpenChange, onUploadSuccess }: Bu
         return;
       }
       const { results } = await uploadRes.json();
-      // Track webhook results for all files
-      let webhookResults: any[] = [];
+      let queueResults: any[] = [];
       await Promise.all(results.map(async (result: any, idx: number) => {
         if (result.status === 'success') {
+          const file = selectedFiles[idx];
+          const batchId = fileBatchMap[file.name] || uuidv4();
           const queueData = {
             file_name: result.file_name,
-            file_size: selectedFiles[idx]?.size || 0,
+            file_size: file?.size || 0,
             status: 'queued',
             source: 'bulk',
             upload_id: batchId,
@@ -160,24 +170,24 @@ export function BulkUploadCVsModal({ isOpen, onOpenChange, onUploadSuccess }: Bu
               uploadBatch: batchId
             },
           };
-          const { success, result: webhookResult } = await addToUploadQueueBlocking(queueData, result.file_name);
-          webhookResults.push({ file: result.file_name, ...webhookResult });
+          const { success, error } = await addToUploadQueueNonBlocking(queueData, result.file_name);
+          queueResults.push({ file: result.file_name, success, error });
         } else {
-          webhookResults.push({ file: result.file_name, error: result.error || 'Upload failed' });
+          queueResults.push({ file: result.file_name, success: false, error: result.error || 'Upload failed' });
         }
       }));
       setSelectedFiles([]);
       setSelectedPositionId("");
+      setFileBatchMap({});
       onOpenChange(false);
       // Show summary to user
-      const numSuccess = webhookResults.filter(r => !r.error && (!r.webhook_response || r.webhook_response.status === 200)).length;
-      const numError = webhookResults.length - numSuccess;
+      const numSuccess = queueResults.filter(r => r.success).length;
+      const numError = queueResults.length - numSuccess;
       if (numError === 0) {
-        toast.success(`Bulk upload completed successfully (${numSuccess} files)`);
+        toast.success(`Bulk upload: ${numSuccess} file(s) queued for processing.`);
       } else {
-        toast.error(`Bulk upload completed with errors: ${numError} failed, ${numSuccess} succeeded.`);
-        // Optionally, show details in console
-        console.table(webhookResults);
+        toast.error(`Bulk upload: ${numError} failed, ${numSuccess} queued.`);
+        console.table(queueResults);
       }
       if (onUploadSuccess) onUploadSuccess();
       window.dispatchEvent(new CustomEvent('refreshCandidateQueue'));
@@ -247,6 +257,7 @@ export function BulkUploadCVsModal({ isOpen, onOpenChange, onUploadSuccess }: Bu
                 {selectedFiles.map((file, idx) => (
                   <div key={idx} className="flex items-center justify-between bg-background rounded px-2 py-1 border border-border">
                     <span className="truncate max-w-xs">{file.name}</span>
+                    <span className="ml-2 text-xs text-muted-foreground">ID: {fileBatchMap[file.name]}</span>
                     <Button type="button" size="icon" variant="ghost" onClick={e => { e.stopPropagation(); removeFile(file); }}>
                       <Trash2 className="h-4 w-4 text-destructive" />
                     </Button>

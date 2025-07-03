@@ -143,10 +143,6 @@ export default function DataModelsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="shadow-lg">
-        <div className="flex items-center text-2xl">
-          <Database className="mr-3 h-6 w-6 text-primary" /> Data Models
-        </div>
         <div className="p-4">
           <DataModelModal onDataModelUpdate={handleAddNewDataModel} />
           
@@ -165,7 +161,7 @@ export default function DataModelsPage() {
             isSaving={isSaving}
           />
         </div>
-      </div>
+    
     </div>
   );
 }
