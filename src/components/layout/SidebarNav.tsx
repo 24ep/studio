@@ -2,7 +2,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Users, Briefcase, Settings, UsersRound, Code2, ListOrdered, Palette, Zap, ListTodo, DatabaseZap, SlidersHorizontal, KanbanSquare, Settings2, UserCog } from "lucide-react"; 
+import { LayoutDashboard, Users, Briefcase, Settings, UsersRound, Code2, ListOrdered, Palette, Zap, ListTodo, DatabaseZap, SlidersHorizontal, KanbanSquare, Settings2, UserCog, UploadCloud } from "lucide-react"; 
 import { cn } from "@/lib/utils";
 import {
   SidebarMenu,
@@ -19,6 +19,7 @@ const mainNavItems = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
   { href: "/candidates", label: "Candidates", icon: Users },
   { href: "/positions", label: "Positions", icon: Briefcase },
+  { href: "/candidates/upload", label: "Bulk Upload", icon: UploadCloud },
 ];
 
 const myTaskBoardNavItem = { href: "/my-tasks", label: "My Task Board", icon: ListTodo };

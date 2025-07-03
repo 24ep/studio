@@ -23,6 +23,9 @@ const DEFAULT_LOGO_ICON = <Package2 className="h-6 w-6" />;
 function getPageTitle(pathname: string): string {
   if (pathname === "/") return "Dashboard";
   if (pathname.startsWith("/candidates")) { 
+    if (pathname === "/candidates/upload") {
+      return "Bulk Upload";
+    }
     if (pathname.split('/').length === 3 && pathname.split('/')[2] !== '' && !pathname.includes('create-via-automation')) {
         return "Candidate Details";
     }
