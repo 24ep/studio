@@ -719,6 +719,30 @@ export const CandidateImportUploadQueue: React.FC = () => {
                       </pre>
                     </div>
                   )}
+                  {selectedCombinedJob.error_details && (
+                    <div className="mt-2">
+                      <div className="font-medium text-xs mb-1">Webhook Response/Error:</div>
+                      <pre className="whitespace-pre-wrap break-all max-h-40 overflow-auto bg-background p-2 rounded border text-xs">
+                        {selectedCombinedJob.error_details}
+                      </pre>
+                    </div>
+                  )}
+                  {selectedCombinedJob.webhook_payload.webhookError && (
+                    <div className="mt-2">
+                      <div className="font-medium text-xs mb-1">Webhook Error:</div>
+                      <pre className="whitespace-pre-wrap break-all max-h-40 overflow-auto bg-background p-2 rounded border text-xs">
+                        {selectedCombinedJob.webhook_payload.webhookError}
+                      </pre>
+                    </div>
+                  )}
+                  {selectedCombinedJob.webhook_payload.webhookResStatus && (
+                    <div className="mt-2">
+                      <div className="font-medium text-xs mb-1">Webhook Response Status:</div>
+                      <pre className="whitespace-pre-wrap break-all max-h-40 overflow-auto bg-background p-2 rounded border text-xs">
+                        {selectedCombinedJob.webhook_payload.webhookResStatus}
+                      </pre>
+                    </div>
+                  )}
                 </div>
               )}
             </div>

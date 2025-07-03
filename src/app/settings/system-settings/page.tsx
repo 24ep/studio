@@ -139,7 +139,7 @@ export default function SystemSettingsPage() {
           <Zap className="h-7 w-7 text-primary" />
           Workflow Automation
         </div>
-        <div className="space-y-4 pt-6">
+    
           <div>
             <Label htmlFor="resume-processing-webhook">Resume Processing Webhook URL (Any Service)</Label>
             <Input id="resume-processing-webhook" type="url" placeholder="https://your-webhook-endpoint/receive-resume" value={resumeProcessingWebhookUrl} onChange={(e) => setResumeProcessingWebhookUrl(e.target.value)} className="mt-1" disabled={isSaving}/>
@@ -153,7 +153,7 @@ export default function SystemSettingsPage() {
           </div>
           <Separator />
           <div>
-            <Label style={{ marginTop: 16, display: 'block' }}>Max Concurrent Processors</Label>
+            <Label style={{ marginTop: 16, display: 'block' }} mb-2>Max Concurrent Processors</Label>
             <Input
               type="number"
               min={1}
@@ -163,7 +163,7 @@ export default function SystemSettingsPage() {
               style={{ marginBottom: 16, width: 80 }}
           />
         </div>
-        </div>
+        
 
       {/* SMTP Configuration */}
      
@@ -171,7 +171,6 @@ export default function SystemSettingsPage() {
           <Mail className="h-7 w-7 text-primary" />
           SMTP Configuration
         </div>
-        <div className="space-y-4 pt-6">
           <div>
             <Label htmlFor="smtp-host">SMTP Host</Label>
             <Input id="smtp-host" type="text" placeholder="smtp.example.com" value={smtpHost} onChange={(e) => setSmtpHost(e.target.value)} className="mt-1" disabled={isSaving}/>
@@ -198,7 +197,7 @@ export default function SystemSettingsPage() {
             <Label htmlFor="smtp-from-email">From Email</Label>
             <Input id="smtp-from-email" type="email" placeholder="noreply@example.com" value={smtpFromEmail} onChange={(e) => setSmtpFromEmail(e.target.value)} className="mt-1" disabled={isSaving}/>
           </div>
-        </div>
+     
       
 
       {/* Floating Save/Reset Bar */}

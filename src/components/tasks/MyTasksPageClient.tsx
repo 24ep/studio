@@ -278,7 +278,7 @@ export function MyTasksPageClient({
               <ChevronLeft className="h-5 w-5" />
             </button>
           </div>
-          <div className="flex-1 overflow-y-auto">
+          <div className="flex-1 overflow-y-auto p-6">
             <CandidateFilters
               initialFilters={standardFilters}
               onFilterChange={handleStandardFilterChange}
@@ -304,8 +304,7 @@ export function MyTasksPageClient({
       )}
       {/* Main Content */}
       <div className="flex-1 space-y-6 min-w-0">
-        <Card>
-          <CardHeader>
+
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
               <div>
                 <CardTitle className="flex items-center">
@@ -318,8 +317,7 @@ export function MyTasksPageClient({
                 <Button variant={viewMode === 'list' ? 'default' : 'outline'} size="icon" onClick={() => setViewMode('list')}><List className="h-4 w-4" /></Button>
               </div>
             </div>
-          </CardHeader>
-          <CardContent>
+      
             {session?.user?.role === 'Admin' && (
               <div className="mb-4 w-full md:max-w-xs hidden md:block">
                 <Label htmlFor="recruiter-filter-select-desktop" className="text-xs font-medium">View tasks for:</Label>
@@ -381,8 +379,7 @@ export function MyTasksPageClient({
             ) : (
                 <CandidateKanbanView candidates={displayedCandidates} statuses={availableStages.map(s => s.name)} />
             )}
-          </CardContent>
-        </Card>
+        
       </div>
     </div>
   );
