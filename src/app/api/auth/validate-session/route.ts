@@ -45,31 +45,50 @@ import { authOptions, validateUserSession } from '@/lib/auth';
  *                   example: "Invalid user session. Please sign in again."
  */
 export async function GET(request: NextRequest) {
-  const session = await getServerSession(authOptions);
-  
-  if (!session) {
-    return NextResponse.json({ 
-      valid: false, 
-      error: 'No session found' 
-    }, { status: 401 });
-  }
-
-  const validation = await validateUserSession(session);
-  
-  if (!validation.isValid) {
-    return NextResponse.json({ 
-      valid: false, 
-      error: validation.error 
-    }, { status: 401 });
-  }
-
-  return NextResponse.json({
-    valid: true,
-    user: {
-      id: session.user.id,
-      name: session.user.name,
-      email: session.user.email,
-      role: session.user.role
+  try {
+    const session = await getServerSession(authOptions);
+    
+    if (!session) {
+      console.log('[SESSION VALIDATION] No session found');
+      return NextResponse.json({ 
+        valid: false, 
+        error: 'No session found' 
+      }, { status: 401 });
     }
-  });
+
+    if (!session.user?.id) {
+      console.log('[SESSION VALIDATION] Session exists but no user ID found');
+      return NextResponse.json({ 
+        valid: false, 
+        error: 'Invalid session - no user ID' 
+      }, { status: 401 });
+    }
+
+    const validation = await validateUserSession(session);
+    
+    if (!validation.isValid) {
+      console.log(`[SESSION VALIDATION] Session validation failed for user ${validation.userId}: ${validation.error}`);
+      return NextResponse.json({ 
+        valid: false, 
+        error: validation.error 
+      }, { status: 401 });
+    }
+
+    console.log(`[SESSION VALIDATION] Session validated successfully for user ${session.user.id}`);
+    return NextResponse.json({
+      valid: true,
+      user: {
+        id: session.user.id,
+        name: session.user.name,
+        email: session.user.email,
+        role: session.user.role
+      }
+    });
+  } catch (error) {
+    console.error('[SESSION VALIDATION] Unexpected error during session validation:', error);
+    return NextResponse.json({ 
+      valid: false, 
+      error: 'Internal server error during session validation' 
+    }, { status: 500 });
+  }
 } 

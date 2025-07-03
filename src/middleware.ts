@@ -29,28 +29,12 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(signInUrl);
   }
 
-  // If token exists but is invalid (user doesn't exist), redirect to sign in
-  if (token?.id && !pathname.startsWith('/auth/signin')) {
-    try {
-      // Quick validation - we'll do a more thorough check in the API routes
-      // This is just to catch obvious cases and redirect to sign in
-      const response = await fetch(`${request.nextUrl.origin}/api/auth/validate-session`, {
-        headers: {
-          'Authorization': `Bearer ${token.id}`,
-        },
-      });
-      
-      if (!response.ok) {
-        const signInUrl = new URL('/auth/signin', request.url);
-        signInUrl.searchParams.set('callbackUrl', pathname);
-        signInUrl.searchParams.set('error', 'SessionExpired');
-        return NextResponse.redirect(signInUrl);
-      }
-    } catch (error) {
-      // If validation fails, continue with the request
-      // The API routes will handle the detailed validation
-      console.warn('Session validation failed in middleware:', error);
-    }
+  // If token exists but user ID is missing, redirect to sign in
+  if (token && !token.id && !pathname.startsWith('/auth/signin')) {
+    const signInUrl = new URL('/auth/signin', request.url);
+    signInUrl.searchParams.set('callbackUrl', pathname);
+    signInUrl.searchParams.set('error', 'SessionExpired');
+    return NextResponse.redirect(signInUrl);
   }
 
   return NextResponse.next();

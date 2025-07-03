@@ -29,10 +29,16 @@ export function useSessionValidation(options: {
     }
 
     try {
-      const response = await fetch('/api/auth/validate-session');
+      const response = await fetch('/api/auth/validate-session', {
+        method: 'GET',
+        credentials: 'include', // Include cookies
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
       
       if (!response.ok) {
-        const errorData = await response.json();
+        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
         console.warn('Session validation failed:', errorData.error);
         
         if (autoSignOut) {
@@ -45,6 +51,7 @@ export function useSessionValidation(options: {
     } catch (error) {
       console.error('Session validation error:', error);
       // Don't auto sign out on network errors, only on validation failures
+      // This prevents users from being logged out due to temporary network issues
     }
   }, [session, status, autoSignOut, redirectTo]);
 

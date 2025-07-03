@@ -239,6 +239,8 @@ export default function SignInClient({ initialSettings }: SignInClientProps) {
   if (errorParam) {
     if (errorParam === "CredentialsSignin") {
       errorMessage = "Invalid email or password. Please try again.";
+    } else if (errorParam === "SessionExpired") {
+      errorMessage = "Your session has expired. Please sign in again.";
     } else if (errorParam === "OAuthSignin" || errorParam === "OAuthCallback" || errorParam === "OAuthCreateAccount" || errorParam === "EmailCreateAccount" || errorParam === "Callback" || errorParam === "OAuthAccountNotLinked" || errorParam === "EmailSignin" || errorParam === "SessionRequired") {
       errorMessage = "There was an error signing in with Azure AD. Please try again or contact support.";
     } else {

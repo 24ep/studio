@@ -22,14 +22,19 @@ const isAzureADConfigured = () => {
  * @returns Promise<boolean> - True if user exists, false otherwise
  */
 export async function validateUserExists(userId: string): Promise<boolean> {
-  if (!userId) return false;
+  if (!userId) {
+    console.log('[USER VALIDATION] No userId provided');
+    return false;
+  }
   
   const client = await getPool().connect();
   try {
     const result = await client.query('SELECT id FROM "User" WHERE id = $1', [userId]);
-    return result.rows.length > 0;
+    const exists = result.rows.length > 0;
+    console.log(`[USER VALIDATION] User ${userId} exists: ${exists}`);
+    return exists;
   } catch (error) {
-    console.error('Error validating user existence:', error);
+    console.error('[USER VALIDATION] Error validating user existence:', error);
     return false;
   } finally {
     client.release();

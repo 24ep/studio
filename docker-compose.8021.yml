@@ -5,7 +5,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.8021
-    image: 8021_hr_ai_screening:latest
+    image: 8021_hr_ai_screening:uat
     restart: always
     environment:
       # Application Configuration
