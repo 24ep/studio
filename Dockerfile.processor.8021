@@ -1,0 +1,33 @@
+FROM node:20-alpine
+
+WORKDIR /app
+
+# Copy package files first for better caching
+COPY package*.json ./
+
+# Install only production dependencies
+RUN npm ci --only=production
+
+# Copy only necessary files for the processor
+COPY process-upload-queue-with-server.ts ./
+COPY lib/ ./lib/
+COPY prisma/ ./prisma/
+
+# Install TypeScript compiler
+RUN npm install -g typescript
+
+# Generate Prisma client
+RUN npx prisma generate
+
+# Compile process-upload-queue-with-server.ts to process-upload-queue-with-server.mjs
+RUN tsc process-upload-queue-with-server.ts --module NodeNext --target es2020 --esModuleInterop --moduleResolution nodenext --outDir . && \
+    mv process-upload-queue-with-server.js process-upload-queue-with-server.mjs
+
+# Create a simple entrypoint for the processor
+RUN printf '#!/bin/sh\nnode process-upload-queue-with-server.mjs\n' > /app/start-processor.sh && \
+    chmod +x /app/start-processor.sh
+
+# Expose the health server port
+EXPOSE 8821
+
+CMD ["/app/start-processor.sh"] 
