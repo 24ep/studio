@@ -23,6 +23,8 @@ import {
 } from "@/components/ui/tooltip";
 import { useSession } from "next-auth/react";
 import type { PlatformModuleId } from '@/lib/types';
+import { useSidebarPreferences } from '@/hooks/use-sidebar-preferences';
+import { getSidebarStyleClasses } from '@/lib/sidebar-styles';
 
 
 const mainNavItems = [
@@ -53,6 +55,7 @@ const SidebarNavComponent = function SidebarNav() {
   const { data: session, status: sessionStatus } = useSession();
   const userRole = session?.user?.role;
   const modulePermissions = session?.user?.modulePermissions || [];
+  const { sidebarStyle } = useSidebarPreferences();
 
   const [isClient, setIsClient] = React.useState(false);
 
@@ -115,30 +118,35 @@ const SidebarNavComponent = function SidebarNav() {
 
   return (
       <SidebarMenu>
-        {mainNavItems.map((item) => (
-          <SidebarMenuItem key={item.href}>
-            <Link href={item.href} passHref legacyBehavior>
-              <SidebarMenuButton
-                asChild
-                isActive={pathname === item.href || (item.href !== "/" && pathname.startsWith(item.href))}
-                className="w-full justify-start"
-                tooltip={item.label}
-                onClick={() => {
-                  if (accordionValue === "settings-group" && !currentClientIsSettingsSectionActive) {
-                     setAccordionValue(undefined);
-                  }
-                }}
-                size="default"
-                data-active={pathname === item.href || (item.href !== "/" && pathname.startsWith(item.href))}
-              >
-                <a>
-                  <item.icon className="h-5 w-5" />
-                  <span className="truncate">{item.label}</span>
-                </a>
-              </SidebarMenuButton>
-            </Link>
-          </SidebarMenuItem>
-        ))}
+        {mainNavItems.map((item) => {
+          const isActive = pathname === item.href || (item.href !== "/" && pathname.startsWith(item.href));
+          const styleClasses = isActive && sidebarStyle.style !== 'default' ? getSidebarStyleClasses(sidebarStyle) : [];
+          
+          return (
+            <SidebarMenuItem key={item.href}>
+              <Link href={item.href} passHref legacyBehavior>
+                <SidebarMenuButton
+                  asChild
+                  isActive={isActive}
+                  className={cn("w-full justify-start", ...styleClasses)}
+                  tooltip={item.label}
+                  onClick={() => {
+                    if (accordionValue === "settings-group" && !currentClientIsSettingsSectionActive) {
+                       setAccordionValue(undefined);
+                    }
+                  }}
+                  size="default"
+                  data-active={isActive}
+                >
+                  <a>
+                    <item.icon className="h-5 w-5" />
+                    <span className="truncate">{item.label}</span>
+                  </a>
+                </SidebarMenuButton>
+              </Link>
+            </SidebarMenuItem>
+          );
+        })}
 
         {isClient && (userRole === 'Recruiter' || userRole === 'Admin') && (
           <SidebarMenuItem key={myTaskBoardNavItem.href}>
@@ -146,7 +154,7 @@ const SidebarNavComponent = function SidebarNav() {
               <SidebarMenuButton
                 asChild
                 isActive={isMyTaskBoardActive}
-                className="w-full justify-start"
+                className={cn("w-full justify-start", ...(isMyTaskBoardActive && sidebarStyle.style !== 'default' ? getSidebarStyleClasses(sidebarStyle) : []))}
                 tooltip={myTaskBoardNavItem.label}
                  onClick={() => {
                    if (accordionValue === "settings-group" && !currentClientIsSettingsSectionActive) {
@@ -180,7 +188,8 @@ const SidebarNavComponent = function SidebarNav() {
                     className={cn(
                       "flex w-full items-center gap-2 overflow-hidden rounded-md px-3 py-2 text-left text-sm outline-none ring-sidebar-ring transition-all focus-visible:ring-2 active:bg-sidebar-accent active:text-sidebar-accent-foreground disabled:pointer-events-none disabled:opacity-50",
                       "my-1 justify-between group-data-[collapsible=icon]:!size-8 group-data-[collapsible=icon]:!p-2",
-                      "hover:no-underline"
+                      "hover:no-underline",
+                      ...(initialIsSettingsSectionActive && sidebarStyle.style !== 'default' ? getSidebarStyleClasses(sidebarStyle) : [])
                     )}
                     data-active={initialIsSettingsSectionActive}
                   >
@@ -199,22 +208,27 @@ const SidebarNavComponent = function SidebarNav() {
               </Tooltip>
               <AccordionContent className="pt-1 pb-0 pl-3 pr-0 group-data-[collapsible=icon]:hidden">
                 <SidebarMenu className="flex flex-col gap-0.5 py-0">
-                  {isClient && clientSettingsSubItems.map((item) => (
-                    <SidebarMenuItem key={item.href}>
-                      <Link href={item.href} passHref legacyBehavior>
-                        <SidebarMenuButton
-                          isActive={pathname.startsWith(item.href)}
-                          className="w-full justify-start"
-                          size="sm"
-                          tooltip={item.label}
-                          data-active={pathname.startsWith(item.href)}
-                        >
-                          {item.icon && <item.icon className="h-4 w-4 ml-[1px]" />}
-                          <span className="truncate">{item.label}</span>
-                        </SidebarMenuButton>
-                      </Link>
-                    </SidebarMenuItem>
-                  ))}
+                  {isClient && clientSettingsSubItems.map((item) => {
+                    const isActive = pathname.startsWith(item.href);
+                    const styleClasses = isActive && sidebarStyle.style !== 'default' ? getSidebarStyleClasses(sidebarStyle) : [];
+                    
+                    return (
+                      <SidebarMenuItem key={item.href}>
+                        <Link href={item.href} passHref legacyBehavior>
+                          <SidebarMenuButton
+                            isActive={isActive}
+                            className={cn("w-full justify-start", ...styleClasses)}
+                            size="sm"
+                            tooltip={item.label}
+                            data-active={isActive}
+                          >
+                            {item.icon && <item.icon className="h-4 w-4 ml-[1px]" />}
+                            <span className="truncate">{item.label}</span>
+                          </SidebarMenuButton>
+                        </Link>
+                      </SidebarMenuItem>
+                    );
+                  })}
                 </SidebarMenu>
               </AccordionContent>
             </AccordionItem>

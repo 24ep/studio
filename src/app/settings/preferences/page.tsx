@@ -1,4 +1,3 @@
-
 "use client";
 import { useState, useEffect, type ChangeEvent } from 'react';
 import { Button } from '@/components/ui/button';
@@ -6,11 +5,14 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from '@/hooks/use-toast';
-import { Save, Palette, ImageUp, Trash2, Loader2, XCircle, PenSquare } from 'lucide-react';
+import { Save, Palette, ImageUp, Trash2, Loader2, XCircle, PenSquare, Sidebar } from 'lucide-react';
 import Image from 'next/image';
 import { signIn, useSession } from 'next-auth/react';
 import { useRouter, usePathname } from 'next/navigation';
+import { useSidebarPreferences, type SidebarStyleConfig } from '@/hooks/use-sidebar-preferences';
+import { updateSidebarCSSVariables } from '@/lib/sidebar-styles';
 
 const APP_THEME_KEY = 'appThemePreference';
 const APP_LOGO_DATA_URL_KEY = 'appLogoDataUrl';
@@ -29,12 +31,12 @@ export default function PreferencesSettingsPage() {
   // Preferences state
   const [themePreference, setThemePreference] = useState<ThemePreference>('system');
   const [appName, setAppName] = useState<string>(DEFAULT_APP_NAME);
+  const { sidebarStyle, updateSidebarStyle } = useSidebarPreferences();
 
   // App Logo state
   const [selectedLogoFile, setSelectedLogoFile] = useState<File | null>(null);
   const [logoPreviewUrl, setLogoPreviewUrl] = useState<string | null>(null);
   const [savedLogoDataUrl, setSavedLogoDataUrl] = useState<string | null>(null);
-
 
   useEffect(() => {
     setIsClient(true);
@@ -53,6 +55,8 @@ export default function PreferencesSettingsPage() {
 
             const storedAppName = localStorage.getItem(APP_CONFIG_APP_NAME_KEY);
             setAppName(storedAppName || DEFAULT_APP_NAME);
+
+            // Sidebar preferences are now handled by the hook
         }
     }
   }, [sessionStatus, router, pathname, signIn]);
@@ -108,6 +112,9 @@ export default function PreferencesSettingsPage() {
     localStorage.setItem(APP_THEME_KEY, themePreference);
     localStorage.setItem(APP_CONFIG_APP_NAME_KEY, appName || DEFAULT_APP_NAME); // Save app name
 
+    // Update CSS variables for sidebar styling
+    updateSidebarCSSVariables(sidebarStyle);
+
     let logoUpdated = false;
     if (selectedLogoFile && logoPreviewUrl) {
       localStorage.setItem(APP_LOGO_DATA_URL_KEY, logoPreviewUrl);
@@ -124,7 +131,8 @@ export default function PreferencesSettingsPage() {
     window.dispatchEvent(new CustomEvent('appConfigChanged', { 
       detail: { 
         appName: appName || DEFAULT_APP_NAME,
-        logoUrl: logoUpdated ? logoPreviewUrl : savedLogoDataUrl 
+        logoUrl: logoUpdated ? logoPreviewUrl : savedLogoDataUrl,
+        sidebarStyle: sidebarStyle
       } 
     }));
   };
@@ -190,6 +198,97 @@ export default function PreferencesSettingsPage() {
             <p className="text-xs text-muted-foreground mt-1">
               Note: This theme preference is visual only for this prototype. Actual theme switching is handled by the header toggle.
             </p>
+          </section>
+
+          <section>
+            <h3 className="text-lg font-semibold text-foreground mb-2 flex items-center">
+              <Sidebar className="mr-2 h-5 w-5" /> Sidebar Styling
+            </h3>
+            <div className="space-y-4">
+              <div>
+                <Label htmlFor="sidebar-style">Selected Menu Style</Label>
+                <Select
+                  value={sidebarStyle.style}
+                  onValueChange={(value) => setSidebarStyle(prev => ({ ...prev, style: value as SidebarStylePreference }))}
+                >
+                  <SelectTrigger id="sidebar-style" className="mt-1">
+                    <SelectValue placeholder="Select style" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="default">Default (Gradient)</SelectItem>
+                    <SelectItem value="gradient">Custom Gradient</SelectItem>
+                    <SelectItem value="solid">Solid Color</SelectItem>
+                    <SelectItem value="outline">Outline Style</SelectItem>
+                    <SelectItem value="minimal">Minimal</SelectItem>
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Choose how selected menu items appear in the sidebar.
+                </p>
+              </div>
+
+              <div>
+                <Label htmlFor="shadow-intensity">Shadow Intensity</Label>
+                <Select
+                  value={sidebarStyle.shadowIntensity}
+                  onValueChange={(value) => setSidebarStyle(prev => ({ ...prev, shadowIntensity: value as any }))}
+                >
+                  <SelectTrigger id="shadow-intensity" className="mt-1">
+                    <SelectValue placeholder="Select shadow intensity" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">None</SelectItem>
+                    <SelectItem value="subtle">Subtle</SelectItem>
+                    <SelectItem value="medium">Medium</SelectItem>
+                    <SelectItem value="strong">Strong</SelectItem>
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Adjust the shadow effect on selected menu items.
+                </p>
+              </div>
+
+              {(sidebarStyle.style === 'gradient' || sidebarStyle.style === 'solid') && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="primary-color">Primary Color</Label>
+                    <Input
+                      id="primary-color"
+                      type="color"
+                      value={sidebarStyle.primaryColor || '#3F51B5'}
+                      onChange={(e) => setSidebarStyle(prev => ({ ...prev, primaryColor: e.target.value }))}
+                      className="mt-1 h-10"
+                    />
+                  </div>
+                  {sidebarStyle.style === 'gradient' && (
+                    <div>
+                      <Label htmlFor="secondary-color">Secondary Color</Label>
+                      <Input
+                        id="secondary-color"
+                        type="color"
+                        value={sidebarStyle.secondaryColor || '#5C6BC0'}
+                        onChange={(e) => setSidebarStyle(prev => ({ ...prev, secondaryColor: e.target.value }))}
+                        className="mt-1 h-10"
+                      />
+                    </div>
+                  )}
+                </div>
+              )}
+
+              <div>
+                <Label htmlFor="text-color">Text Color</Label>
+                <Input
+                  id="text-color"
+                  type="color"
+                  value={sidebarStyle.textColor || '#FFFFFF'}
+                  onChange={(e) => setSidebarStyle(prev => ({ ...prev, textColor: e.target.value }))}
+                  className="mt-1 h-10"
+                />
+                <p className="text-xs text-muted-foreground mt-1">
+                  Color of text on selected menu items.
+                </p>
+              </div>
+            </div>
           </section>
 
           <section>
