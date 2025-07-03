@@ -90,7 +90,7 @@ export function ResumeUploadForm({ candidateId, onUploadSuccess, currentResumePa
         source: 'candidate',
         upload_id: candidateId,
         file_path: result.file_path,
-        created_by: undefined, // Set to session user if available
+
       };
       const queueRes = await fetch('/api/upload-queue', {
         method: 'POST',

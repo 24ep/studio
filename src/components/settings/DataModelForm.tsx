@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Toggle } from '@/components/ui/toggle';
+import { Switch } from '@/components/ui/switch';
 import { Loader2, Save, X, Database, Code } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -221,7 +221,7 @@ const DataModelForm: React.FC<DataModelFormProps> = ({
                     </FormDescription>
                   </div>
                   <FormControl>
-                    <Toggle
+                    <Switch
                       checked={field.value}
                       onCheckedChange={field.onChange}
                     />

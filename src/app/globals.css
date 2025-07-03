@@ -3,19 +3,12 @@
 @tailwind utilities;
 
 body {
-  font-family: var(--font-dynamic), var(--font-poppins), Arial, Helvetica, sans-serif;
+  font-family: var(--font-open-sans), Arial, Helvetica, sans-serif;
 }
 
 @layer base {
   :root {
-    /* Background Gradient Variables - Light Theme (for body) */
-    --body-background-start-l: 0 0% 100%;       /* #FFFFFF */
-    --body-background-mid-l: 240 100% 99.4%;   /* #FCFCFF (approx rgba(252, 252, 255, 1)) */
-    --body-background-end-l: 240 100% 98%;     /* #F5F5FF (approx rgba(245, 245, 255, 1)) */
-    
-    /* Solid background color for components - Use a solid color, not a gradient for --background */
-    --background: hsl(var(--body-background-start-l)); /* Solid white for light theme component backgrounds */
-    
+    --background: 0 0% 98%; /* Soft Off-White for modern light theme */
     --foreground: 220 25% 25%; /* Darker Grey for text, increased contrast */
 
     --card: 0 0% 100%; /* White for cards to stand out slightly */
@@ -24,316 +17,113 @@ body {
     --popover: 0 0% 100%;
     --popover-foreground: 220 25% 20%;
 
-    /* Primary Color Definition for Light Theme - NEW DEFAULT GRADIENT (cyan-to-blue) */
-    --primary-gradient-start-l: 179 67% 66%; /* hsla(179, 67%, 66%, 1) */
-    --primary-gradient-end-l: 238 74% 61%;   /* hsla(238, 74%, 61%, 1) */
-    --primary: hsl(var(--primary-gradient-start-l)); 
-    --primary-foreground: 0 0% 100%;
+    /* Primary Gradient Definition for Light Theme */
+    --primary-gradient-start-l: 231 48% 48%; /* #3F51B5 Deep Blue */
+    --primary-gradient-end-l: 231 55% 60%; /* Slightly lighter/varied blue */
+    --primary: hsl(var(--primary-gradient-start-l));
+    --primary-foreground: 0 0% 100%; /* White text on primary */
 
-    /* Secondary Gradient */
-    --secondary-gradient-start-l: 220 20% 94%;
-    --secondary-gradient-end-l: 220 15% 90%;
-    --secondary: 220 20% 94%; 
-    --secondary-foreground: 220 25% 30%; 
 
-    /* Muted Gradient */
-    --muted-gradient-start-l: 220 20% 96%;
-    --muted-gradient-end-l: 220 15% 92%;
-    --muted: 220 20% 96%; 
-    --muted-foreground: 220 15% 50%; 
+    --secondary: 220 20% 94%; /* Lighter grey for secondary elements */
+    --secondary-foreground: 220 25% 30%; /* Dark text for secondary */
 
-    /* Accent Gradient */
-    --accent-gradient-start-l: 187 100% 42%;
-    --accent-gradient-end-l: 200 100% 50%;
+    --muted: 220 20% 96%; /* Muted grey, slightly lighter */
+    --muted-foreground: 220 15% 50%; /* Muted text */
+
     --accent: 187 100% 42%; /* #00BCD4 Cyan */
-    --accent-foreground: 0 0% 100%; 
+    --accent-foreground: 0 0% 100%; /* White text on Cyan */
 
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 0 0% 98%;
 
-    --success: 140 70% 45%; /* A nice green */
-    --success-foreground: 0 0% 100%; /* White text */
-    --success-border: 140 70% 35%; /* Darker green border */
-
-    --border: 220 15% 88%; 
-    --input: 220 15% 88%; 
-    --ring: hsl(var(--primary)); 
+    --border: 220 15% 88%; /* Light grey Border color, slightly softer */
+    --input: 220 15% 88%; /* Light grey Input border */
+    --ring: hsl(var(--primary-gradient-start-l)); /* Ring matches primary */
 
     --radius: 0.5rem;
 
-    /* Chart colors */
-    --chart-1: hsl(var(--primary)); 
+    /* Chart colors - can be customized further if specific chart palette is needed */
+    --chart-1: hsl(var(--primary-gradient-start-l));
     --chart-2: hsl(var(--accent));
-    --chart-3: 235 61% 65%; 
-    --chart-4: 195 100% 65%; 
+    --chart-3: 231 48% 68%;
+    --chart-4: 187 100% 62%;
     --chart-5: 220 14% 60%;
 
-    /* Comprehensive Sidebar CSS Variables - Light Theme */
-    --sidebar-background: 220 25% 97%;
-    --sidebar-background-start: 220 25% 97%;
-    --sidebar-background-end: 220 20% 94%;
-    --sidebar-foreground: 220 25% 30%;
-    --sidebar-primary: hsl(var(--primary-gradient-start-l));
-    --sidebar-primary-foreground: hsl(var(--primary-foreground));
-    --sidebar-accent: 220 10% 92%;
-    --sidebar-accent-foreground: 220 25% 25%;
-    --sidebar-border: 220 15% 85%;
-    --sidebar-ring: hsl(var(--ring));
-    
-    /* Enhanced Sidebar Styling Variables - Light Theme */
-    --sidebar-font-family: inherit;
-    --sidebar-font-size: 0.875rem;
-    --sidebar-font-weight: 400;
-    --sidebar-line-height: 1.25rem;
-    --sidebar-letter-spacing: 0;
-    --sidebar-text-decoration: none;
-    --sidebar-text-transform: none;
-    
-    /* Sidebar Border & Shadow Variables - Light Theme */
-    --sidebar-border-width: 1px;
-    --sidebar-border-style: solid;
-    --sidebar-border-radius: 0.5rem;
-    --sidebar-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
-    --sidebar-shadow-hover: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
-    --sidebar-shadow-active: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
-    
-    /* Sidebar Spacing & Layout Variables - Light Theme */
-    --sidebar-padding-x: 0.75rem;
-    --sidebar-padding-y: 0.5rem;
-    --sidebar-margin: 0.25rem;
-    --sidebar-gap: 0.5rem;
-    --sidebar-width: 16rem;
-    --sidebar-width-collapsed: 3rem;
-    --sidebar-transition-duration: 0.2s;
-    --sidebar-transition-timing: ease-in-out;
-    
-    /* Sidebar Menu Item Specific Variables - Light Theme */
-    --sidebar-menu-item-background: transparent;
-    --sidebar-menu-item-background-hover: 220 10% 92%;
-    --sidebar-menu-item-background-active: hsl(var(--primary-gradient-start-l));
-    --sidebar-menu-item-color: 220 25% 30%;
-    --sidebar-menu-item-color-hover: 220 25% 25%;
-    --sidebar-menu-item-color-active: 0 0% 100%;
-    --sidebar-menu-item-border: transparent;
-    --sidebar-menu-item-border-hover: transparent;
-    --sidebar-menu-item-border-active: transparent;
-    --sidebar-menu-item-border-radius: 0.375rem;
-    --sidebar-menu-item-padding-x: 0.75rem;
-    --sidebar-menu-item-padding-y: 0.5rem;
-    --sidebar-menu-item-margin: 0.125rem;
-    --sidebar-menu-item-font-weight: 400;
-    --sidebar-menu-item-font-weight-active: 600;
-    --sidebar-menu-item-font-size: 0.875rem;
-    --sidebar-menu-item-line-height: 1.25rem;
-    --sidebar-menu-item-transition: all 0.2s ease-in-out;
-    
-    /* Sidebar Icon Variables - Light Theme */
-    --sidebar-icon-size: 1.25rem;
-    --sidebar-icon-color: 220 25% 30%;
-    --sidebar-icon-color-hover: 220 25% 25%;
-    --sidebar-icon-color-active: 0 0% 100%;
-    --sidebar-icon-margin-right: 0.75rem;
-    --sidebar-icon-transition: color 0.2s ease-in-out;
-    
-    /* Sidebar Group Label Variables - Light Theme */
-    --sidebar-group-label-color: 220 15% 50%;
-    --sidebar-group-label-font-size: 0.75rem;
-    --sidebar-group-label-font-weight: 500;
-    --sidebar-group-label-text-transform: uppercase;
-    --sidebar-group-label-letter-spacing: 0.05em;
-    --sidebar-group-label-padding: 0.5rem 0.75rem;
-    --sidebar-group-label-margin: 0.5rem 0;
+    /* Sidebar specific theme variables - Light Theme Updated for "Modern Trend" */
+    --sidebar-background-l: linear-gradient(to bottom, hsl(220 25% 97%), hsl(220 20% 94%)); /* Light gray gradient */
+    --sidebar-foreground-l: 220 25% 30%; /* Dark grey text for readability */
+
+    /* Active item in light theme: primary gradient background, white text */
+    --sidebar-active-background-l: linear-gradient(to right, hsl(var(--primary-gradient-start-l)), hsl(var(--primary-gradient-end-l)));
+    --sidebar-active-foreground-l: hsl(var(--primary-foreground)); /* This is white */
+
+    --sidebar-accent-l: 220 10% 92%;       /* Subtle darker grey for hover background on non-active items */
+    --sidebar-accent-foreground-l: 220 25% 25%; /* Darker text for hover */
+    --sidebar-border-l: 220 15% 85%;     /* Slightly more defined, but still light border */
+    --sidebar-ring-l: hsl(var(--ring));
 
     /* Green color for specific checked states */
     --custom-green-checked: 142 76% 36%;
-    --custom-green-checked-foreground: 0 0% 100%; 
-    --custom-green-checked-icon: 142 76% 36%; 
-
-    /* Preferences Page Specific Gradient */
-    --preferences-left-panel-gradient-start: 220 60% 25%; 
-    --preferences-left-panel-gradient-end: 230 50% 45%;
-
-    /* Card Gradient Variables */
-    --card-gradient-start: 0 0% 100%;
-    --card-gradient-end: 220 20% 98%;
-    --card-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
-    --card-shadow-hover: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
-
-    /* Button Gradient Variables */
-    --button-gradient-start: 179 67% 66%;
-    --button-gradient-end: 238 74% 61%;
-    --button-hover-start: 179 67% 60%;
-    --button-hover-end: 238 74% 55%;
-
-    /* Input Gradient Variables */
-    --input-gradient-start: 0 0% 100%;
-    --input-gradient-end: 220 15% 96%;
-    --input-focus-gradient-start: 0 0% 100%;
-    --input-focus-gradient-end: 220 15% 98%;
+    --custom-green-checked-foreground: 0 0% 100%;
 
   }
 
   .dark {
-    /* Background Gradient Variables - Dark Theme (for body) */
-    --body-background-start-d: 220 15% 9%;
-    --body-background-mid-d: 220 15% 10%;
-    --body-background-end-d: 220 15% 11%;
+    /* Modern Dark Theme 2025 */
+    --background: 220 15% 10%; /* Deep dark blue/charcoal */
+    --foreground: 210 30% 95%; /* Very light gray, almost white */
 
-    /* Solid background color for components */
-    --background: hsl(var(--body-background-start-d)); 
-    
-    --foreground: 210 30% 95%; 
-
-    --card: 220 15% 13%; 
+    --card: 220 15% 13%; /* Slightly lighter than background */
     --card-foreground: 210 30% 95%;
 
-    --popover: 220 15% 16%; 
+    --popover: 220 15% 16%; /* Popover a bit lighter */
     --popover-foreground: 210 30% 95%;
 
-    /* Primary Color Definition for Dark Theme - NEW DEFAULT GRADIENT (cyan-to-blue) */
-    --primary-gradient-start-d: 179 67% 66%; /* hsla(179, 67%, 66%, 1) */
-    --primary-gradient-end-d: 238 74% 61%;   /* hsla(238, 74%, 61%, 1) */
-    --primary: hsl(var(--primary-gradient-start-d)); 
-    --primary-foreground: hsl(0 0% 100%); 
+    /* Primary Gradient Definition for Dark Theme */
+    --primary-gradient-start-d: 210 100% 60%; /* Vibrant blue */
+    --primary-gradient-end-d: 210 90% 70%;   /* Slightly lighter/varied vibrant blue */
+    --primary: hsl(var(--primary-gradient-start-d));
+    --primary-foreground: hsl(0 0% 100%); /* Explicitly white for primary actions text in dark mode */
 
-    /* Secondary Gradient - Dark */
-    --secondary-gradient-start-d: 220 15% 25%;
-    --secondary-gradient-end-d: 220 10% 20%;
-    --secondary: 220 15% 25%; 
+    --secondary: 220 15% 25%; /* Darker secondary elements */
     --secondary-foreground: 210 30% 85%;
 
-    /* Muted Gradient - Dark */
-    --muted-gradient-start-d: 220 15% 20%;
-    --muted-gradient-end-d: 220 10% 15%;
     --muted: 220 15% 20%;
     --muted-foreground: 210 25% 70%;
 
-    /* Accent Gradient - Dark */
-    --accent-gradient-start-d: 200 100% 55%;
-    --accent-gradient-end-d: 210 100% 60%;
-    --accent: 200 100% 55%; 
-    --accent-foreground: 220 15% 10%; 
+    --accent: 200 100% 55%; /* A complementary vibrant accent, e.g., a lighter blue or teal */
+    --accent-foreground: 220 15% 10%; /* Dark text on accent */
 
-    --destructive: 0 70% 55%; 
+    --destructive: 0 70% 55%; /* Slightly adjusted destructive */
     --destructive-foreground: 0 0% 98%;
-    
-    --success: 140 65% 40%; /* Slightly adjusted green for dark mode */
-    --success-foreground: 0 0% 100%;
-    --success-border: 140 65% 30%;
 
-    --border: 220 15% 22%; 
-    --input: 220 15% 18%; 
-    --ring: hsl(var(--primary)); 
+    --border: 220 15% 22%; /* Subtle borders */
+    --input: 220 15% 18%; /* Input slightly different from card */
+    --ring: hsl(var(--primary-gradient-start-d));
 
      /* Chart colors */
-    --chart-1: hsl(var(--primary)); 
+    --chart-1: hsl(var(--primary-gradient-start-d));
     --chart-2: hsl(var(--accent));
-    --chart-3: 235 61% 65%;
-    --chart-4: 195 100% 65%;
+    --chart-3: 210 100% 75%;
+    --chart-4: 200 100% 70%;
     --chart-5: 220 15% 50%;
 
-    /* Comprehensive Sidebar CSS Variables - Dark Theme */
-    --sidebar-background: 220 15% 12%;
-    --sidebar-background-start: 220 15% 12%;
-    --sidebar-background-end: 220 15% 9%;
-    --sidebar-foreground: 210 30% 85%;
-    --sidebar-primary: hsl(var(--primary-gradient-start-d));
-    --sidebar-primary-foreground: hsl(var(--primary-foreground));
-    --sidebar-accent: 220 15% 20%;
-    --sidebar-accent-foreground: 210 30% 90%;
-    --sidebar-border: 220 15% 18%;
-    --sidebar-ring: hsl(var(--primary-gradient-start-d));
-    
-    /* Enhanced Sidebar Styling Variables - Dark Theme */
-    --sidebar-font-family: inherit;
-    --sidebar-font-size: 0.875rem;
-    --sidebar-font-weight: 400;
-    --sidebar-line-height: 1.25rem;
-    --sidebar-letter-spacing: 0;
-    --sidebar-text-decoration: none;
-    --sidebar-text-transform: none;
-    
-    /* Sidebar Border & Shadow Variables - Dark Theme */
-    --sidebar-border-width: 1px;
-    --sidebar-border-style: solid;
-    --sidebar-border-radius: 0.5rem;
-    --sidebar-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.3), 0 1px 2px -1px rgb(0 0 0 / 0.3);
-    --sidebar-shadow-hover: 0 4px 6px -1px rgb(0 0 0 / 0.3), 0 2px 4px -2px rgb(0 0 0 / 0.3);
-    --sidebar-shadow-active: 0 10px 15px -3px rgb(0 0 0 / 0.3), 0 4px 6px -4px rgb(0 0 0 / 0.3);
-    
-    /* Sidebar Spacing & Layout Variables - Dark Theme */
-    --sidebar-padding-x: 0.75rem;
-    --sidebar-padding-y: 0.5rem;
-    --sidebar-margin: 0.25rem;
-    --sidebar-gap: 0.5rem;
-    --sidebar-width: 16rem;
-    --sidebar-width-collapsed: 3rem;
-    --sidebar-transition-duration: 0.2s;
-    --sidebar-transition-timing: ease-in-out;
-    
-    /* Sidebar Menu Item Specific Variables - Dark Theme */
-    --sidebar-menu-item-background: transparent;
-    --sidebar-menu-item-background-hover: 220 15% 20%;
-    --sidebar-menu-item-background-active: hsl(var(--primary-gradient-start-d));
-    --sidebar-menu-item-color: 210 30% 85%;
-    --sidebar-menu-item-color-hover: 210 30% 90%;
-    --sidebar-menu-item-color-active: 0 0% 100%;
-    --sidebar-menu-item-border: transparent;
-    --sidebar-menu-item-border-hover: transparent;
-    --sidebar-menu-item-border-active: transparent;
-    --sidebar-menu-item-border-radius: 0.375rem;
-    --sidebar-menu-item-padding-x: 0.75rem;
-    --sidebar-menu-item-padding-y: 0.5rem;
-    --sidebar-menu-item-margin: 0.125rem;
-    --sidebar-menu-item-font-weight: 400;
-    --sidebar-menu-item-font-weight-active: 600;
-    --sidebar-menu-item-font-size: 0.875rem;
-    --sidebar-menu-item-line-height: 1.25rem;
-    --sidebar-menu-item-transition: all 0.2s ease-in-out;
-    
-    /* Sidebar Icon Variables - Dark Theme */
-    --sidebar-icon-size: 1.25rem;
-    --sidebar-icon-color: 210 30% 85%;
-    --sidebar-icon-color-hover: 210 30% 90%;
-    --sidebar-icon-color-active: 0 0% 100%;
-    --sidebar-icon-margin-right: 0.75rem;
-    --sidebar-icon-transition: color 0.2s ease-in-out;
-    
-    /* Sidebar Group Label Variables - Dark Theme */
-    --sidebar-group-label-color: 210 25% 70%;
-    --sidebar-group-label-font-size: 0.75rem;
-    --sidebar-group-label-font-weight: 500;
-    --sidebar-group-label-text-transform: uppercase;
-    --sidebar-group-label-letter-spacing: 0.05em;
-    --sidebar-group-label-padding: 0.5rem 0.75rem;
-    --sidebar-group-label-margin: 0.5rem 0;
+    /* Sidebar dark theme variables - Modernized */
+    --sidebar-background-d: linear-gradient(to bottom, hsl(220 15% 12%), hsl(220 15% 9%)); /* Retain dark gradient */
+    --sidebar-foreground-d: 210 30% 85%;
+
+    /* Active item in dark theme: primary gradient background, white text */
+    --sidebar-active-background-d: linear-gradient(to right, hsl(var(--primary-gradient-start-d)), hsl(var(--primary-gradient-end-d)));
+    --sidebar-active-foreground-d: hsl(0 0% 100%); /* Explicitly white for selected menu text in dark mode */
+
+    --sidebar-accent-d: 220 15% 20%; /* Hover for non-active */
+    --sidebar-accent-foreground-d: 210 30% 90%; /* Text for hover non-active */
+    --sidebar-border-d: 220 15% 18%;
+    --sidebar-ring-d: hsl(var(--primary-gradient-start-d));
 
      /* Green color for specific checked states */
     --custom-green-checked: 147 80% 40%;
-    --custom-green-checked-foreground: 0 0% 100%; 
-    --custom-green-checked-icon: 147 80% 40%;
-
-    /* Preferences Page Specific Gradient - Dark Mode */
-    --preferences-left-panel-gradient-start: 220 70% 30%; 
-    --preferences-left-panel-gradient-end: 230 60% 50%;
-
-    /* Card Gradient Variables - Dark */
-    --card-gradient-start: 220 15% 13%;
-    --card-gradient-end: 220 10% 10%;
-    --card-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.3), 0 1px 2px -1px rgb(0 0 0 / 0.3);
-    --card-shadow-hover: 0 4px 6px -1px rgb(0 0 0 / 0.3), 0 2px 4px -2px rgb(0 0 0 / 0.3);
-
-    /* Button Gradient Variables - Dark */
-    --button-gradient-start: 179 67% 66%;
-    --button-gradient-end: 238 74% 61%;
-    --button-hover-start: 179 67% 60%;
-    --button-hover-end: 238 74% 55%;
-
-    /* Input Gradient Variables - Dark */
-    --input-gradient-start: 220 15% 18%;
-    --input-gradient-end: 220 10% 15%;
-    --input-focus-gradient-start: 220 15% 20%;
-    --input-focus-gradient-end: 220 10% 18%;
+    --custom-green-checked-foreground: 0 0% 100%;
   }
 }
 
@@ -342,511 +132,171 @@ body {
     @apply border-border;
   }
   body {
-    @apply bg-background text-foreground; 
-    background-image: linear-gradient(135deg, hsl(var(--body-background-start-l)) 0%, hsl(var(--body-background-mid-l)) 50%, hsl(var(--body-background-end-l)) 100%);
-    background-attachment: fixed;
-  }
-  .dark body {
-    @apply bg-background text-foreground; 
-    background-image: linear-gradient(135deg, hsl(var(--body-background-start-d)) 0%, hsl(var(--body-background-mid-d)) 50%, hsl(var(--body-background-end-d)) 100%);
-    background-attachment: fixed;
+    @apply bg-background text-foreground;
   }
 }
 
 /* Updated styles for sidebar and active menu item */
 @layer components {
-  /* Sidebar base style - Tailwind handles most styling via bg-sidebar, text-sidebar-foreground, etc. */
-  [data-sidebar="sidebar"] {
-    /* Additional custom styling can be added here if needed */
-    background: linear-gradient(135deg, hsl(var(--sidebar-background-start)) 0%, hsl(var(--sidebar-background-end)) 100%);
-    font-family: var(--sidebar-font-family);
-    font-size: var(--sidebar-font-size);
-    font-weight: var(--sidebar-font-weight);
-    line-height: var(--sidebar-line-height);
-    letter-spacing: var(--sidebar-letter-spacing);
-    text-decoration: var(--sidebar-text-decoration);
-    text-transform: var(--sidebar-text-transform);
-    /* border: var(--sidebar-border-width) var(--sidebar-border-style) hsl(var(--sidebar-border));
-    border-radius: var(--sidebar-border-radius);
-    box-shadow: var(--sidebar-shadow); */
-    transition: all var(--sidebar-transition-duration) var(--sidebar-transition-timing);
-    padding: var(--sidebar-padding-y) var(--sidebar-padding-x);
-    gap: var(--sidebar-gap);
+  /* Sidebar base style for light theme - Light Gray Gradient */
+  :root:not(.dark) [data-sidebar="sidebar"] {
+    background-image: var(--sidebar-background-l);
+    color: hsl(var(--sidebar-foreground-l));
+    border-right: 1px solid hsl(var(--sidebar-border-l));
+  }
+  /* Light theme: Hover on non-active items */
+  :root:not(.dark) [data-sidebar="menu-button"]:not([data-active="true"]):hover {
+    background-color: hsl(var(--sidebar-accent-l));
+    color: hsl(var(--sidebar-accent-foreground-l));
   }
 
-  /* Sidebar hover effect */
-  [data-sidebar="sidebar"]:hover {
-    box-shadow: none;
-    /* box-shadow: var(--sidebar-shadow-hover); */
+  /* Light theme: Active menu item styles based on preference */
+  /* Default gradient style (original) */
+  :root:not(.dark) [data-sidebar="menu-button"][data-active="true"],
+  :root:not(.dark) [data-sidebar="menu-button"][data-active="true"] span {
+    background-image: var(--sidebar-active-background-l);
+    color: var(--sidebar-active-foreground-l) !important;
+    box-shadow: 0 2px 8px -2px hsla(var(--primary-gradient-start-l), 0.3);
   }
 
-  /* Sidebar menu items */
-  [data-sidebar="menu-item"] {
-    margin: var(--sidebar-menu-item-margin);
+  /* Solid background style */
+  :root:not(.dark).sidebar-active-solid [data-sidebar="menu-button"][data-active="true"],
+  :root:not(.dark).sidebar-active-solid [data-sidebar="menu-button"][data-active="true"] span {
+    background-color: hsl(var(--primary-gradient-start-l));
+    background-image: none;
+    color: white !important;
+    box-shadow: 0 2px 8px -2px hsla(var(--primary-gradient-start-l), 0.3);
   }
 
-  /* Sidebar menu buttons */
-  [data-sidebar="menu-button"] {
-    background: var(--sidebar-menu-item-background);
-    color: hsl(var(--sidebar-menu-item-color));
-    border: var(--sidebar-menu-item-border-width, 1px) var(--sidebar-menu-item-border-style, solid) var(--sidebar-menu-item-border);
-    border-radius: var(--sidebar-menu-item-border-radius);
-    padding: var(--sidebar-menu-item-padding-y) var(--sidebar-menu-item-padding-x);
-    font-weight: var(--sidebar-menu-item-font-weight);
-    font-size: var(--sidebar-menu-item-font-size);
-    line-height: var(--sidebar-menu-item-line-height);
-    transition: var(--sidebar-menu-item-transition);
+  /* Outline border style */
+  :root:not(.dark).sidebar-active-outline [data-sidebar="menu-button"][data-active="true"],
+  :root:not(.dark).sidebar-active-outline [data-sidebar="menu-button"][data-active="true"] span {
+    background-color: transparent;
+    background-image: none;
+    color: hsl(var(--primary-gradient-start-l)) !important;
+    border: 2px solid hsl(var(--primary-gradient-start-l));
     box-shadow: none;
   }
 
-  /* Sidebar menu button hover */
-  [data-sidebar="menu-button"]:hover {
-    background: hsl(var(--sidebar-menu-item-background-hover));
-    color: hsl(var(--sidebar-menu-item-color-hover));
-    border-color: var(--sidebar-menu-item-border-hover);
-    box-shadow: var(--sidebar-shadow-hover);
+  /* Subtle highlight style */
+  :root:not(.dark).sidebar-active-subtle [data-sidebar="menu-button"][data-active="true"],
+  :root:not(.dark).sidebar-active-subtle [data-sidebar="menu-button"][data-active="true"] span {
+    background-color: hsla(var(--primary-gradient-start-l), 0.1);
+    background-image: none;
+    color: hsl(var(--primary-gradient-start-l)) !important;
+    box-shadow: none;
   }
 
-  /* Active menu item style */
-  [data-sidebar="menu-button"][data-active="true"] { 
-    background: linear-gradient(135deg, hsl(var(--sidebar-primary)) 0%, hsl(var(--accent)) 100%);
-    color: hsl(var(--sidebar-primary-foreground)) !important;
-    box-shadow: var(--sidebar-shadow-active);
-    font-weight: var(--sidebar-menu-item-font-weight-active);
-    border-color: var(--sidebar-menu-item-border-active);
+  /* Light theme: Hover on active menu item - slightly adjust brightness */
+  :root:not(.dark) [data-sidebar="menu-button"][data-active="true"]:hover {
+    filter: brightness(1.05);
   }
 
-  /* Hover on active menu item */
-  [data-sidebar="menu-button"][data-active="true"]:hover {
+  /* Sidebar base style for dark theme - Modern Dark Gradient */
+  .dark [data-sidebar="sidebar"] {
+    background-image: var(--sidebar-background-d);
+    color: hsl(var(--sidebar-foreground-d));
+    border-right: 1px solid hsl(var(--sidebar-border-d));
+  }
+  /* Dark theme: Hover on non-active items */
+  .dark [data-sidebar="menu-button"]:not([data-active="true"]):hover {
+    background-color: hsl(var(--sidebar-accent-d));
+    color: hsl(var(--sidebar-accent-foreground-d));
+  }
+
+  /* Dark theme: Active menu item styles based on preference */
+  /* Default gradient style (original) */
+  .dark [data-sidebar="menu-button"][data-active="true"],
+  .dark [data-sidebar="menu-button"][data-active="true"] span {
+    background-image: var(--sidebar-active-background-d);
+    color: white !important;
+    box-shadow: 0 2px 10px -3px hsla(var(--primary-gradient-start-d), 0.4);
+  }
+
+  /* Solid background style */
+  .dark.sidebar-active-solid [data-sidebar="menu-button"][data-active="true"],
+  .dark.sidebar-active-solid [data-sidebar="menu-button"][data-active="true"] span {
+    background-color: hsl(var(--primary-gradient-start-d));
+    background-image: none;
+    color: white !important;
+    box-shadow: 0 2px 10px -3px hsla(var(--primary-gradient-start-d), 0.4);
+  }
+
+  /* Outline border style */
+  .dark.sidebar-active-outline [data-sidebar="menu-button"][data-active="true"],
+  .dark.sidebar-active-outline [data-sidebar="menu-button"][data-active="true"] span {
+    background-color: transparent;
+    background-image: none;
+    color: hsl(var(--primary-gradient-start-d)) !important;
+    border: 2px solid hsl(var(--primary-gradient-start-d));
+    box-shadow: none;
+  }
+
+  /* Subtle highlight style */
+  .dark.sidebar-active-subtle [data-sidebar="menu-button"][data-active="true"],
+  .dark.sidebar-active-subtle [data-sidebar="menu-button"][data-active="true"] span {
+    background-color: hsla(var(--primary-gradient-start-d), 0.15);
+    background-image: none;
+    color: hsl(var(--primary-gradient-start-d)) !important;
+    box-shadow: none;
+  }
+
+  /* Dark theme: Hover on active menu item - slightly adjust brightness */
+  .dark [data-sidebar="menu-button"][data-active="true"]:hover {
     filter: brightness(1.1);
-    transform: translateY(-1px);
-    box-shadow: var(--sidebar-shadow-active);
-  }
-
-  /* Sidebar icons */
-  [data-sidebar="menu-button"] svg {
-    width: var(--sidebar-icon-size);
-    height: var(--sidebar-icon-size);
-    color: hsl(var(--sidebar-icon-color));
-    margin-right: var(--sidebar-icon-margin-right);
-    transition: var(--sidebar-icon-transition);
-  }
-
-  /* Sidebar icon hover */
-  [data-sidebar="menu-button"]:hover svg {
-    color: hsl(var(--sidebar-icon-color-hover));
-  }
-
-  /* Sidebar icon active */
-  [data-sidebar="menu-button"][data-active="true"] svg {
-    color: hsl(var(--sidebar-icon-color-active));
-  }
-
-  /* Sidebar group labels */
-  [data-sidebar="group-label"] {
-    color: hsl(var(--sidebar-group-label-color));
-    font-size: var(--sidebar-group-label-font-size);
-    font-weight: var(--sidebar-group-label-font-weight);
-    text-transform: var(--sidebar-group-label-text-transform);
-    letter-spacing: var(--sidebar-group-label-letter-spacing);
-    padding: var(--sidebar-group-label-padding);
-    margin: var(--sidebar-group-label-margin);
-  }
-
-  /* Sidebar content area */
-  [data-sidebar="content"] {
-    gap: var(--sidebar-gap);
-  }
-
-  /* Sidebar header */
-  [data-sidebar="header"] {
-    padding: var(--sidebar-padding-y) var(--sidebar-padding-x);
-  }
-
-  /* Sidebar footer */
-  [data-sidebar="footer"] {
-    padding: var(--sidebar-padding-y) var(--sidebar-padding-x);
-  }
-
-  /* Sidebar separator */
-  [data-sidebar="separator"] {
-    background-color: hsl(var(--sidebar-border));
-    margin: var(--sidebar-margin) 0;
-  }
-
-  /* Sidebar menu sub items */
-  [data-sidebar="menu-sub"] {
-    border-left: 1px solid hsl(var(--sidebar-border));
-    margin-left: var(--sidebar-padding-x);
-    padding-left: var(--sidebar-padding-x);
-  }
-
-  /* Sidebar menu sub buttons */
-  [data-sidebar="menu-sub-button"] {
-    background: var(--sidebar-menu-item-background);
-    color: hsl(var(--sidebar-menu-item-color));
-    border: var(--sidebar-menu-item-border-width, 1px) var(--sidebar-menu-item-border-style, solid) var(--sidebar-menu-item-border);
-    border-radius: var(--sidebar-menu-item-border-radius);
-    padding: var(--sidebar-menu-item-padding-y) var(--sidebar-menu-item-padding-x);
-    font-weight: var(--sidebar-menu-item-font-weight);
-    font-size: var(--sidebar-menu-item-font-size);
-    line-height: var(--sidebar-menu-item-line-height);
-    transition: var(--sidebar-menu-item-transition);
-  }
-
-  /* Sidebar menu sub button hover */
-  [data-sidebar="menu-sub-button"]:hover {
-    background: hsl(var(--sidebar-menu-item-background-hover));
-    color: hsl(var(--sidebar-menu-item-color-hover));
-    border-color: var(--sidebar-menu-item-border-hover);
-  }
-
-  /* Sidebar menu sub button active */
-  [data-sidebar="menu-sub-button"][data-active="true"] {
-    background: linear-gradient(135deg, hsl(var(--sidebar-primary)) 0%, hsl(var(--accent)) 100%);
-    color: hsl(var(--sidebar-primary-foreground)) !important;
-    font-weight: var(--sidebar-menu-item-font-weight-active);
-    border-color: var(--sidebar-menu-item-border-active);
-  }
-
-  /* Sidebar menu actions */
-  [data-sidebar="menu-action"] {
-    color: hsl(var(--sidebar-icon-color));
-    transition: var(--sidebar-icon-transition);
-  }
-
-  /* Sidebar menu action hover */
-  [data-sidebar="menu-action"]:hover {
-    color: hsl(var(--sidebar-icon-color-hover));
-    background: hsl(var(--sidebar-menu-item-background-hover));
-  }
-
-  /* Sidebar menu badges */
-  [data-sidebar="menu-badge"] {
-    color: hsl(var(--sidebar-menu-item-color));
-    font-size: var(--sidebar-menu-item-font-size);
-    font-weight: var(--sidebar-menu-item-font-weight);
-  }
-
-  /* Sidebar menu badge hover */
-  [data-sidebar="menu-button"]:hover [data-sidebar="menu-badge"] {
-    color: hsl(var(--sidebar-menu-item-color-hover));
-  }
-
-  /* Sidebar menu badge active */
-  [data-sidebar="menu-button"][data-active="true"] [data-sidebar="menu-badge"] {
-    color: hsl(var(--sidebar-primary-foreground));
-  }
-
-  /* Sidebar rail (collapsible handle) */
-  [data-sidebar="rail"] {
-    background: transparent;
-    border: none;
-    transition: var(--sidebar-transition-duration) var(--sidebar-transition-timing);
-  }
-
-  [data-sidebar="rail"]:hover {
-    background: hsl(var(--sidebar-menu-item-background-hover));
-  }
-
-  [data-sidebar="rail"]:after {
-    background: hsl(var(--sidebar-border));
-    transition: var(--sidebar-transition-duration) var(--sidebar-transition-timing);
-  }
-
-  [data-sidebar="rail"]:hover:after {
-    background: hsl(var(--sidebar-accent));
   }
 
   /* General menu button transitions */
   [data-sidebar="menu-button"] {
-    transition: all 0.2s ease-in-out;
+    transition: background-color 0.15s ease-in-out, color 0.15s ease-in-out, box-shadow 0.15s ease-in-out, background-image 0.15s ease-in-out, filter 0.15s ease-in-out, border 0.15s ease-in-out;
   }
 
-  /* Primary buttons to use the new gradient */
+  /* Apply gradient to primary buttons */
   .btn-primary-gradient {
-    background: linear-gradient(135deg, hsl(var(--button-gradient-start)) 0%, hsl(var(--button-gradient-end)) 100%);
+    background-image: linear-gradient(to right, hsl(var(--primary-gradient-start-l)), hsl(var(--primary-gradient-end-l)));
+    color: hsl(var(--primary-foreground));
     border: none;
-    box-shadow: 0 2px 8px -2px hsla(var(--button-gradient-start), 0.3);
-    transition: all 0.2s ease-in-out;
   }
-
   .dark .btn-primary-gradient {
-    background: linear-gradient(135deg, hsl(var(--button-gradient-start)) 0%, hsl(var(--button-gradient-end)) 100%);
-    box-shadow: 0 2px 8px -2px hsla(var(--button-gradient-start), 0.4);
+    background-image: linear-gradient(to right, hsl(var(--primary-gradient-start-d)), hsl(var(--primary-gradient-end-d)));
+    color: hsl(var(--primary-foreground)); 
   }
-
   .btn-primary-gradient:hover {
-    background: linear-gradient(135deg, hsl(var(--button-hover-start)) 0%, hsl(var(--button-hover-end)) 100%);
-    transform: translateY(-1px);
-    box-shadow: 0 4px 12px -2px hsla(var(--button-gradient-start), 0.4);
+    filter: brightness(1.1);
+    box-shadow: 0 2px 10px -3px hsla(var(--primary), 0.4);
   }
 
-  .dark .btn-primary-gradient:hover {
-    background: linear-gradient(135deg, hsl(var(--button-hover-start)) 0%, hsl(var(--button-hover-end)) 100%);
-    box-shadow: 0 4px 12px -2px hsla(var(--button-gradient-start), 0.5);
-  }
-
+  /* Blue gradient hover for secondary and outline button types */
   .btn-hover-primary-gradient:hover {
-    background: linear-gradient(135deg, hsl(var(--button-gradient-start)) 0%, hsl(var(--button-gradient-end)) 100%);
-    transform: translateY(-1px);
-    box-shadow: 0 4px 12px -2px hsla(var(--button-gradient-start), 0.3);
+    background-image: linear-gradient(to right, hsl(var(--primary-gradient-start-l)), hsl(var(--primary-gradient-end-l)));
+    color: hsl(var(--primary-foreground)) !important;
+    border-color: transparent !important; /* For outline buttons, ensure border goes away */
+    background-color: transparent !important; /* Reset base background to ensure gradient shows */
+    filter: none !important; /* Remove any inherited filters like brightness */
+    box-shadow: 0 2px 10px -3px hsla(var(--primary-gradient-start-l), 0.4);
   }
-
   .dark .btn-hover-primary-gradient:hover {
-    background: linear-gradient(135deg, hsl(var(--button-gradient-start)) 0%, hsl(var(--button-gradient-end)) 100%);
-    box-shadow: 0 4px 12px -2px hsla(var(--button-gradient-start), 0.4);
+    background-image: linear-gradient(to right, hsl(var(--primary-gradient-start-d)), hsl(var(--primary-gradient-end-d)));
+    color: hsl(var(--primary-foreground)) !important; /* Ensure light text */
+    border-color: transparent !important;
+    background-color: transparent !important;
+    filter: none !important;
+    box-shadow: 0 2px 10px -3px hsla(var(--primary-gradient-start-d), 0.4);
   }
 
-  /* Card gradients */
-  .card-gradient {
-    background: linear-gradient(135deg, hsl(var(--card-gradient-start)) 0%, hsl(var(--card-gradient-end)) 100%);
-    box-shadow: 0 4px 16px 0 rgb(0 0 0 / 0.08), 0 1.5px 6px -1.5px rgb(0 0 0 / 0.06);
-    border-radius: 1rem;
-    border: 1px solid hsl(220, 15%, 92%); /* subtle light gray border */
-    transition: box-shadow 0.2s cubic-bezier(0.4,0,0.2,1), border 0.2s cubic-bezier(0.4,0,0.2,1), transform 0.2s cubic-bezier(0.4,0,0.2,1);
-  }
-
-  .dark .card-gradient {
-    border: 1px solid hsl(var(--border)); /* use dark border token in dark mode */
-  }
-
-  .card-gradient:hover {
-    box-shadow: 0 8px 32px 0 rgb(0 0 0 / 0.12), 0 3px 12px -3px rgb(0 0 0 / 0.10);
-    transform: translateY(-2px) scale(1.01);
-  }
-
-  /* Input gradients */
-  .input-gradient {
-    background: linear-gradient(135deg, hsl(var(--input-gradient-start)) 0%, hsl(var(--input-gradient-end)) 100%);
-    border: 1px solid hsl(var(--border));
-    transition: all 0.2s ease-in-out;
-  }
-
-  .input-gradient:focus {
-    background: linear-gradient(135deg, hsl(var(--input-focus-gradient-start)) 0%, hsl(var(--input-focus-gradient-end)) 100%);
-    border-color: hsl(var(--ring));
-    box-shadow: 0 0 0 2px hsla(var(--ring), 0.2);
-  }
-
-  /* Secondary button gradients */
-  .btn-secondary-gradient {
-    background: linear-gradient(135deg, hsl(var(--secondary-gradient-start-l)) 0%, hsl(var(--secondary-gradient-end-l)) 100%);
-    border: 1px solid hsl(var(--border));
-    transition: all 0.2s ease-in-out;
-  }
-
-  .dark .btn-secondary-gradient {
-    background: linear-gradient(135deg, hsl(var(--secondary-gradient-start-d)) 0%, hsl(var(--secondary-gradient-end-d)) 100%);
-  }
-
-  .btn-secondary-gradient:hover {
-    background: linear-gradient(135deg, hsl(var(--secondary-gradient-end-l)) 0%, hsl(var(--secondary-gradient-start-l)) 100%);
-    transform: translateY(-1px);
-  }
-
-  .dark .btn-secondary-gradient:hover {
-    background: linear-gradient(135deg, hsl(var(--secondary-gradient-end-d)) 0%, hsl(var(--secondary-gradient-start-d)) 100%);
-  }
-
-  /* Muted background gradients */
-  .muted-gradient {
-    background: linear-gradient(135deg, hsl(var(--muted-gradient-start-l)) 0%, hsl(var(--muted-gradient-end-l)) 100%);
-  }
-
-  .dark .muted-gradient {
-    background: linear-gradient(135deg, hsl(var(--muted-gradient-start-d)) 0%, hsl(var(--muted-gradient-end-d)) 100%);
-  }
-
-  /* Accent gradients */
-  .accent-gradient {
-    background: linear-gradient(135deg, hsl(var(--accent-gradient-start-l)) 0%, hsl(var(--accent-gradient-end-l)) 100%);
-  }
-
-  .dark .accent-gradient {
-    background: linear-gradient(135deg, hsl(var(--accent-gradient-start-d)) 0%, hsl(var(--accent-gradient-end-d)) 100%);
-  }
-
-  /* Checkbox and switch gradients */
-  .checkbox-primary[data-state="checked"] {
-    background: linear-gradient(135deg, hsl(var(--primary-gradient-start-l)) 0%, hsl(var(--primary-gradient-end-l)) 100%);
-  }
-
+  /* Custom green styles for checked states */
   .checkbox-green[data-state="checked"] {
-    background: linear-gradient(135deg, hsl(var(--custom-green-checked)) 0%, hsl(var(--success)) 100%);
+    @apply bg-green-600 border-green-600 text-white;
   }
-
   .dark .checkbox-green[data-state="checked"] {
-    background: linear-gradient(135deg, hsl(var(--custom-green-checked)) 0%, hsl(var(--success)) 100%);
+    @apply bg-green-500 border-green-500 text-white;
   }
 
   .switch-green[data-state="checked"] {
-    background: linear-gradient(135deg, hsl(var(--custom-green-checked)) 0%, hsl(var(--success)) 100%);
+    background-color: hsl(var(--custom-green-checked)) !important;
   }
-
   .dark .switch-green[data-state="checked"] {
-    background: linear-gradient(135deg, hsl(var(--custom-green-checked)) 0%, hsl(var(--success)) 100%);
+     background-color: hsl(var(--custom-green-checked)) !important;
   }
-
-  /* Preferences page gradient */
-  .bg-preferences-gradient {
-    background: linear-gradient(135deg, hsl(var(--preferences-left-panel-gradient-start)) 0%, hsl(var(--preferences-left-panel-gradient-end)) 100%);
-  }
-}
-
-/* ReactQuill Editor Styles */
-.ql-editor {
-  background-color: hsl(var(--background));
-  color: hsl(var(--foreground));
-  border: none;
-  outline: none;
-  min-height: 150px;
-  font-family: inherit;
-}
-
-.ql-toolbar {
-  background-color: hsl(var(--muted));
-  border: 1px solid hsl(var(--border));
-  border-bottom: none;
-  border-radius: 0.375rem 0.375rem 0 0;
-}
-
-.ql-container {
-  border: 1px solid hsl(var(--border));
-  border-top: none;
-  border-radius: 0 0 0.375rem 0.375rem;
-}
-
-.ql-editor.ql-blank::before {
-  color: hsl(var(--muted-foreground));
-  font-style: italic;
-}
-
-.dark .ql-editor {
-  background-color: hsl(var(--background));
-  color: hsl(var(--foreground));
-}
-
-.dark .ql-toolbar {
-  background-color: hsl(var(--muted));
-  border-color: hsl(var(--border));
-}
-
-.dark .ql-container {
-  border-color: hsl(var(--border));
-}
-
-.dark .ql-editor.ql-blank::before {
-  color: hsl(var(--muted-foreground));
-}
-
-.ql-toolbar button,
-.ql-toolbar .ql-picker {
-  color: hsl(var(--foreground));
-}
-
-.ql-toolbar button:hover,
-.ql-toolbar .ql-picker:hover {
-  color: hsl(var(--primary));
-}
-
-.ql-toolbar button.ql-active,
-.ql-toolbar .ql-picker.ql-active {
-  color: hsl(var(--primary));
-}
-
-.ql-picker-options {
-  background-color: hsl(var(--popover));
-  border: 1px solid hsl(var(--border));
-  border-radius: 0.375rem;
-}
-
-.dark .ql-picker-options {
-  background-color: hsl(var(--popover));
-  border-color: hsl(var(--border));
-}
-
-/* Login Page Specific Styles */
-.bg-grid-white {
-  background-image: 
-    linear-gradient(rgba(255, 255, 255, 0.1) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.1) 1px, transparent 1px);
-}
-
-.dark .bg-grid-white {
-  background-image: 
-    linear-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
-}
-
-/* Login page backdrop blur and glass effect */
-.login-glass {
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  background: rgba(255, 255, 255, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-}
-
-.dark .login-glass {
-  background: rgba(0, 0, 0, 0.2);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-/* Smooth transitions for login page elements */
-.login-transition {
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-/* Professional gradient backgrounds */
-.login-gradient-light {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-}
-
-.login-gradient-dark {
-  background: linear-gradient(135deg, #1e3a8a 0%, #7c3aed 100%);
-}
-
-/* Feature icon animations */
-.feature-icon {
-  transition: transform 0.2s ease-in-out;
-}
-
-.feature-icon:hover {
-  transform: scale(1.05);
-}
-
-/* Professional card shadows */
-.pro-card-shadow {
-  box-shadow: 
-    0 20px 25px -5px rgba(0, 0, 0, 0.1),
-    0 10px 10px -5px rgba(0, 0, 0, 0.04);
-}
-
-.dark .pro-card-shadow {
-  box-shadow: 
-    0 20px 25px -5px rgba(0, 0, 0, 0.3),
-    0 10px 10px -5px rgba(0, 0, 0, 0.2);
-}
-
-/* Toast (react-hot-toast) custom styles: always opaque background */
-/* Light mode */
-body .react-hot-toast, .react-hot-toast {
-  --toast-bg: #fff;
-}
-body .react-hot-toast .react-hot-toast__toast, .react-hot-toast .react-hot-toast__toast {
-  background: var(--toast-bg) !important;
-  color: #222 !important;
-  box-shadow: 0 4px 24px 0 rgba(0,0,0,0.10), 0 1.5px 4px 0 rgba(0,0,0,0.08);
-  border-radius: 0.5rem;
-}
-/* Dark mode */
-.dark .react-hot-toast, .dark.react-hot-toast {
-  --toast-bg: #18181b;
-}
-.dark .react-hot-toast .react-hot-toast__toast, .dark.react-hot-toast .react-hot-toast__toast {
-  background: var(--toast-bg) !important;
-  color: #f3f4f6 !important;
-  box-shadow: 0 4px 24px 0 rgba(0,0,0,0.30), 0 1.5px 4px 0 rgba(0,0,0,0.18);
-  border-radius: 0.5rem;
 }
     

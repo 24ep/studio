@@ -2131,9 +2131,10 @@ const swaggerSpec = {
           status: { type: 'string', enum: ['queued', 'processing', 'completed', 'failed'] },
           source: { type: 'string' },
           upload_id: { type: 'string', format: 'uuid' },
-          created_by: { type: 'string', format: 'uuid' }
+          file_path: { type: 'string' },
+          webhook_payload: { type: 'object', additionalProperties: true }
         },
-        required: ['file_name', 'file_size', 'status', 'source', 'upload_id', 'created_by']
+        required: ['file_name', 'file_size', 'status', 'source', 'upload_id', 'file_path']
       },
       Notification: {
         type: 'object',

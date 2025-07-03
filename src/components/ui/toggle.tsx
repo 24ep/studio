@@ -1,80 +1,44 @@
 "use client"
 
 import * as React from "react"
+import { Slot } from "@radix-ui/react-slot"
+import { cva, type VariantProps } from "class-variance-authority"
+
 import { cn } from "@/lib/utils"
 
-interface ToggleProps {
-  id?: string
-  checked?: boolean
-  onCheckedChange?: (checked: boolean) => void
-  disabled?: boolean
-  className?: string
-  size?: "sm" | "md" | "lg"
-}
-
-const Toggle = React.forwardRef<HTMLButtonElement, ToggleProps>(
-  ({ 
-    id,
-    checked = false, 
-    onCheckedChange, 
-    disabled = false, 
-    className,
-    size = "md",
-    ...props 
-  }, ref) => {
-    const handleClick = () => {
-      if (!disabled && onCheckedChange) {
-        onCheckedChange(!checked)
-      }
-    }
-
-    const sizeClasses = {
-      sm: "h-4 w-7",
-      md: "h-6 w-11", 
-      lg: "h-8 w-14"
-    }
-
-    const thumbSizeClasses = {
-      sm: "h-3 w-3",
-      md: "h-5 w-5",
-      lg: "h-6 w-6"
-    }
-
-    return (
-      <button
-        ref={ref}
-        id={id}
-        type="button"
-        role="switch"
-        aria-checked={checked}
-        disabled={disabled}
-        data-state={checked ? "checked" : "unchecked"}
-        onClick={handleClick}
-        className={cn(
-          "peer inline-flex shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-all duration-200 ease-in-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:opacity-50",
-          sizeClasses[size],
-          checked 
-            ? "bg-primary border-primary" 
-            : "bg-muted border-muted-foreground/20",
-          className
-        )}
-        {...props}
-      >
-        <span
-          className={cn(
-            "pointer-events-none block rounded-full bg-background shadow-lg ring-0 transition-transform duration-200 ease-in-out",
-            thumbSizeClasses[size],
-            checked ? "translate-x-full" : "translate-x-0"
-          )}
-          style={{
-            transform: checked ? `translateX(calc(100% - ${size === 'sm' ? '12px' : size === 'md' ? '20px' : '24px'}))` : 'translateX(2px)'
-          }}
-        />
-      </button>
-    )
+const toggleVariants = cva(
+  "inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors hover:bg-muted hover:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=on]:bg-accent data-[state=on]:text-accent-foreground",
+  {
+    variants: {
+      variant: {
+        default: "bg-transparent",
+        outline: "border border-input bg-transparent hover:bg-accent hover:text-accent-foreground",
+      },
+      size: {
+        default: "h-10 px-3",
+        sm: "h-9 px-2.5",
+        lg: "h-11 px-8",
+      },
+    },
+    defaultVariants: {
+      variant: "default",
+      size: "default",
+    },
   }
 )
 
+const Toggle = React.forwardRef<
+  React.ElementRef<typeof Slot>,
+  React.ComponentPropsWithoutRef<typeof Slot> & VariantProps<typeof toggleVariants> & { asChild?: boolean; pressed?: boolean }
+>(({ className, variant, size, asChild = false, pressed, ...props }, ref) => (
+  <Slot
+    ref={ref}
+    className={cn(toggleVariants({ variant, size, className }))}
+    data-state={pressed ? "on" : "off"}
+    {...props}
+  />
+))
+
 Toggle.displayName = "Toggle"
 
-export { Toggle } 
+export { Toggle, toggleVariants } 

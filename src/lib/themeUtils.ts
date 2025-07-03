@@ -63,4 +63,63 @@ export function setThemeAndColors({
       root.style.setProperty(cssVarName, value);
     }
   });
+}
+
+// Theme utility functions for managing sidebar styling preferences
+
+export type SidebarActiveStyle = "gradient" | "solid" | "outline" | "subtle";
+
+const SIDEBAR_ACTIVE_STYLE_KEY = 'sidebarActiveStylePreference';
+
+export function getSidebarActiveStyle(): SidebarActiveStyle {
+  if (typeof window === 'undefined') return 'gradient';
+  return (localStorage.getItem(SIDEBAR_ACTIVE_STYLE_KEY) as SidebarActiveStyle) || 'gradient';
+}
+
+export function setSidebarActiveStyle(style: SidebarActiveStyle) {
+  if (typeof window === 'undefined') return;
+  localStorage.setItem(SIDEBAR_ACTIVE_STYLE_KEY, style);
+  applySidebarActiveStyle(style);
+}
+
+export function applySidebarActiveStyle(style: SidebarActiveStyle) {
+  if (typeof window === 'undefined') return;
+  
+  console.log('applySidebarActiveStyle: Applying style', style);
+  
+  // Remove existing style classes
+  document.documentElement.classList.remove(
+    'sidebar-active-gradient',
+    'sidebar-active-solid', 
+    'sidebar-active-outline',
+    'sidebar-active-subtle'
+  );
+  
+  // Add new style class
+  document.documentElement.classList.add(`sidebar-active-${style}`);
+  
+  console.log('applySidebarActiveStyle: Applied class', `sidebar-active-${style}`);
+  console.log('applySidebarActiveStyle: Current classes', document.documentElement.classList.toString());
+}
+
+// Initialize sidebar style on load
+export function initializeSidebarStyle() {
+  if (typeof window === 'undefined') return;
+  const style = getSidebarActiveStyle();
+  console.log('initializeSidebarStyle: Initializing with style', style);
+  applySidebarActiveStyle(style);
+}
+
+// Listen for preference changes
+export function setupSidebarStyleListener() {
+  if (typeof window === 'undefined') return;
+  
+  console.log('setupSidebarStyleListener: Setting up listener');
+  
+  window.addEventListener('appConfigChanged', (event: any) => {
+    console.log('setupSidebarStyleListener: Received appConfigChanged event', event.detail);
+    if (event.detail?.sidebarActiveStyle) {
+      applySidebarActiveStyle(event.detail.sidebarActiveStyle);
+    }
+  });
 } 

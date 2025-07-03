@@ -24,7 +24,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Checkbox } from "@/components/ui/checkbox";
-import { Toggle } from '@/components/ui/toggle';
+import { Switch } from '@/components/ui/switch';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { UserPlus, ShieldCheck, Users, Loader2 } from 'lucide-react';
 import type { UserProfile, PlatformModuleId, UserGroup, PlatformModuleCategory, PlatformModule } from '@/lib/types';
@@ -158,7 +158,7 @@ export function AddUserModal({ isOpen, onOpenChange, onAddUser }: AddUserModalPr
                     <SelectItem key={role} value={role}>{typeof role === 'object' ? JSON.stringify(role) : role}</SelectItem>
                   ))}</SelectContent></Select><FormMessage /></FormItem>)} />
                   <FormField control={form.control} name="authenticationMethod" render={({ field }) => (<FormItem><FormLabel htmlFor="auth-method-add">Authentication Method *</FormLabel><Select onValueChange={field.onChange} value={field.value} defaultValue={field.value}><FormControl><SelectTrigger id="auth-method-add" className="mt-1"><SelectValue placeholder="Select authentication method" /></SelectTrigger></FormControl><SelectContent><SelectItem value="basic">Basic (Email/Password)</SelectItem><SelectItem value="azure">Azure AD</SelectItem></SelectContent></Select><FormMessage /></FormItem>)} />
-                  <FormField control={form.control} name="forcePasswordChange" render={({ field }) => (<FormItem className="flex flex-row items-center space-x-3 space-y-0 pt-2"><FormControl><Toggle checked={field.value} onCheckedChange={field.onChange} /></FormControl><FormLabel className="font-normal">Force Password Change on First Login</FormLabel></FormItem>)} />
+                  <FormField control={form.control} name="forcePasswordChange" render={({ field }) => (<FormItem className="flex flex-row items-center space-x-3 space-y-0 pt-2"><FormControl><Switch checked={field.value} onCheckedChange={field.onChange} /></FormControl><FormLabel className="font-normal">Force Password Change on First Login</FormLabel></FormItem>)} />
                 </div>
 
                 {/* Right Column: Groups & Permissions */}
@@ -209,7 +209,7 @@ export function AddUserModal({ isOpen, onOpenChange, onAddUser }: AddUserModalPr
                                     return (
                                       <FormItem className="flex flex-row items-center space-x-4 mb-3">
                                         <FormControl>
-                                          <Toggle
+                                          <Switch
                                             checked={checked}
                                             onCheckedChange={(checked) => checked ? field.onChange([...(field.value || []), module.id]) : field.onChange((field.value || []).filter(v => v !== module.id))}
                                           />

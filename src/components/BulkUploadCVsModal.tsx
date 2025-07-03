@@ -160,7 +160,7 @@ export function BulkUploadCVsModal({ isOpen, onOpenChange, onUploadSuccess }: Bu
               targetPositionId: selectedPositionId || null,
               uploadBatch: batchId
             },
-            created_by: session?.user?.id,
+
           };
           const ok = await addToUploadQueue(queueData, result.file_name);
           if (!ok) anyQueueError = true;

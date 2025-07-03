@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Toggle } from '@/components/ui/toggle';
+import { Switch } from '@/components/ui/switch';
 import { Edit, BellRing, Loader2, Mail, Webhook } from 'lucide-react';
 import type { NotificationEventWithSettings } from '@/lib/types';
 
@@ -140,7 +140,7 @@ const NotificationsTable: React.FC<NotificationsTableProps> = ({
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
-                        <Toggle
+                        <Switch
                           checked={notification.isEnabled}
                           onCheckedChange={(checked) => onToggle?.(notification.id, checked)}
                           aria-label="Toggle notification"

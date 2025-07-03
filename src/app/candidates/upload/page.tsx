@@ -132,7 +132,6 @@ function UploadPageContent() {
               targetPositionId: selectedPositionId || null,
               uploadBatch: batchId
             },
-            created_by: session?.user?.id,
           };
           await fetch('/api/upload-queue', {
             method: 'POST',

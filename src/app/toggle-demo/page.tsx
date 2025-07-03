@@ -2,98 +2,122 @@
 
 import { useState } from 'react';
 import { Toggle } from '@/components/ui/toggle';
+import { Switch } from '@/components/ui/switch';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
+import { Button } from '@/components/ui/button';
 
 export default function ToggleDemoPage() {
-  const [toggles, setToggles] = useState({
+  const [switches, setSwitches] = useState({
     default: false,
     success: true,
     warning: false,
     danger: true,
-    small: false,
-    medium: true,
-    large: false,
   });
 
-  const handleToggleChange = (key: string, value: boolean) => {
-    setToggles(prev => ({ ...prev, [key]: value }));
+  const [toggleStates, setToggleStates] = useState({
+    bold: false,
+    italic: false,
+    underline: false,
+  });
+
+  const handleSwitchChange = (key: string, value: boolean) => {
+    setSwitches(prev => ({ ...prev, [key]: value }));
+  };
+
+  const handleToggleChange = (key: string) => {
+    setToggleStates(prev => ({ ...prev, [key]: !prev[key as keyof typeof prev] }));
   };
 
   return (
     <div className="container mx-auto p-8 space-y-8">
       <div className="text-center">
-        <h1 className="text-3xl font-bold mb-2">Toggle Component Demo</h1>
-        <p className="text-muted-foreground">Showcasing the new custom Toggle component with different sizes</p>
+        <h1 className="text-3xl font-bold mb-2">Toggle & Switch Components Demo</h1>
+        <p className="text-muted-foreground">Showcasing the difference between Toggle (button states) and Switch (on/off states)</p>
       </div>
 
       <div className="grid md:grid-cols-2 gap-6">
-        {/* Variants */}
+        {/* Switch Examples - for on/off states */}
         <Card>
           <CardHeader>
-            <CardTitle>Toggle Examples</CardTitle>
+            <CardTitle>Switch Examples (On/Off States)</CardTitle>
+            <p className="text-sm text-muted-foreground">Use Switch for on/off toggles like settings, notifications, etc.</p>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex items-center justify-between">
-              <Label>Default Toggle</Label>
-              <Toggle
-                checked={toggles.default}
-                onCheckedChange={(checked) => handleToggleChange('default', checked)}
+              <Label>Default Switch</Label>
+              <Switch
+                checked={switches.default}
+                onCheckedChange={(checked) => handleSwitchChange('default', checked)}
               />
             </div>
             <div className="flex items-center justify-between">
-              <Label>Success Toggle</Label>
-              <Toggle
-                checked={toggles.success}
-                onCheckedChange={(checked) => handleToggleChange('success', checked)}
+              <Label>Success Switch</Label>
+              <Switch
+                checked={switches.success}
+                onCheckedChange={(checked) => handleSwitchChange('success', checked)}
               />
             </div>
             <div className="flex items-center justify-between">
-              <Label>Warning Toggle</Label>
-              <Toggle
-                checked={toggles.warning}
-                onCheckedChange={(checked) => handleToggleChange('warning', checked)}
+              <Label>Warning Switch</Label>
+              <Switch
+                checked={switches.warning}
+                onCheckedChange={(checked) => handleSwitchChange('warning', checked)}
               />
             </div>
             <div className="flex items-center justify-between">
-              <Label>Danger Toggle</Label>
-              <Toggle
-                checked={toggles.danger}
-                onCheckedChange={(checked) => handleToggleChange('danger', checked)}
+              <Label>Danger Switch</Label>
+              <Switch
+                checked={switches.danger}
+                onCheckedChange={(checked) => handleSwitchChange('danger', checked)}
               />
             </div>
           </CardContent>
         </Card>
 
-        {/* Sizes */}
+        {/* Toggle Examples - for button states */}
         <Card>
           <CardHeader>
-            <CardTitle>Toggle Sizes</CardTitle>
+            <CardTitle>Toggle Examples (Button States)</CardTitle>
+            <p className="text-sm text-muted-foreground">Use Toggle for button states like bold, italic, etc.</p>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex items-center justify-between">
-              <Label>Small Size</Label>
-              <Toggle
-                checked={toggles.small}
-                onCheckedChange={(checked) => handleToggleChange('small', checked)}
-                size="sm"
-              />
+              <Label>Text Formatting</Label>
+              <div className="flex gap-2">
+                <Toggle
+                  pressed={toggleStates.bold}
+                  onPressedChange={() => handleToggleChange('bold')}
+                  aria-label="Toggle bold"
+                >
+                  B
+                </Toggle>
+                <Toggle
+                  pressed={toggleStates.italic}
+                  onPressedChange={() => handleToggleChange('italic')}
+                  aria-label="Toggle italic"
+                >
+                  I
+                </Toggle>
+                <Toggle
+                  pressed={toggleStates.underline}
+                  onPressedChange={() => handleToggleChange('underline')}
+                  aria-label="Toggle underline"
+                >
+                  U
+                </Toggle>
+              </div>
             </div>
             <div className="flex items-center justify-between">
-              <Label>Medium Size (Default)</Label>
-              <Toggle
-                checked={toggles.medium}
-                onCheckedChange={(checked) => handleToggleChange('medium', checked)}
-                size="md"
-              />
-            </div>
-            <div className="flex items-center justify-between">
-              <Label>Large Size</Label>
-              <Toggle
-                checked={toggles.large}
-                onCheckedChange={(checked) => handleToggleChange('large', checked)}
-                size="lg"
-              />
+              <Label>Toggle Variants</Label>
+              <div className="flex gap-2">
+                <Toggle variant="default" size="sm">
+                  Default
+                </Toggle>
+                <Toggle variant="outline" size="sm">
+                  Outline
+                </Toggle>
+              </div>
             </div>
           </CardContent>
         </Card>
@@ -106,33 +130,50 @@ export default function ToggleDemoPage() {
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            {Object.entries(toggles).map(([key, value]) => (
-              <div key={key} className="text-center p-3 border rounded-lg">
-                <div className="font-medium capitalize">{key}</div>
-                <div className={`text-sm ${value ? 'text-green-600' : 'text-gray-500'}`}>
-                  {value ? 'ON' : 'OFF'}
-                </div>
+            <div className="text-center p-3 border rounded-lg">
+              <div className="font-medium">Switch States</div>
+              <div className="text-sm text-muted-foreground">
+                {Object.values(switches).filter(Boolean).length} ON
               </div>
-            ))}
+            </div>
+            <div className="text-center p-3 border rounded-lg">
+              <div className="font-medium">Toggle States</div>
+              <div className="text-sm text-muted-foreground">
+                {Object.values(toggleStates).filter(Boolean).length} Active
+              </div>
+            </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* Features */}
+      {/* Component Comparison */}
       <Card>
         <CardHeader>
-          <CardTitle>Features</CardTitle>
+          <CardTitle>Component Comparison</CardTitle>
         </CardHeader>
         <CardContent>
-          <ul className="space-y-2 text-sm">
-            <li>✅ Custom CSS-only implementation (no external dependencies)</li>
-            <li>✅ Multiple sizes: small, medium, large</li>
-            <li>✅ Smooth animations and transitions</li>
-            <li>✅ Accessible with proper ARIA attributes</li>
-            <li>✅ Keyboard navigation support</li>
-            <li>✅ Focus states and hover effects</li>
-            <li>✅ Disabled state support</li>
-          </ul>
+          <div className="grid md:grid-cols-2 gap-6">
+            <div>
+              <h4 className="font-semibold mb-2">Switch Component</h4>
+              <ul className="space-y-1 text-sm text-muted-foreground">
+                <li>• Use for on/off states (settings, notifications)</li>
+                <li>• Based on Radix UI Switch primitive</li>
+                <li>• Props: checked, onCheckedChange</li>
+                <li>• Accessible with proper ARIA attributes</li>
+                <li>• Standard toggle switch appearance</li>
+              </ul>
+            </div>
+            <div>
+              <h4 className="font-semibold mb-2">Toggle Component</h4>
+              <ul className="space-y-1 text-sm text-muted-foreground">
+                <li>• Use for button states (bold, italic, etc.)</li>
+                <li>• Based on Radix UI Slot primitive</li>
+                <li>• Props: pressed, onPressedChange</li>
+                <li>• Can contain children (text, icons)</li>
+                <li>• Button-like appearance</li>
+              </ul>
+            </div>
+          </div>
         </CardContent>
       </Card>
     </div>

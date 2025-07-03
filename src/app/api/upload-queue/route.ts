@@ -80,12 +80,12 @@ import { logAudit } from '@/lib/auditLog';
  *               upload_id:
  *                 type: string
  *                 example: "uuid"
- *               created_by:
- *                 type: string
- *                 example: "user-uuid"
  *               file_path:
  *                 type: string
  *                 example: "/path/to/resume.pdf"
+ *               webhook_payload:
+ *                 type: object
+ *                 example: { "targetPositionId": "uuid", "uploadBatch": "uuid" }
  *     responses:
  *       201:
  *         description: Upload queue job created
@@ -103,7 +103,6 @@ import { logAudit } from '@/lib/auditLog';
  *                   status: "queued"
  *                   source: "bulk"
  *                   upload_id: "uuid"
- *                   created_by: "user-uuid"
  *       401:
  *         description: Unauthorized
  */
@@ -150,9 +149,9 @@ export async function POST(request: NextRequest) {
   const actingUserName = session.user.name || session.user.email || 'System';
   
   const data = await request.json();
-  const { file_name, file_size, status, source, upload_id, created_by, file_path } = data;
+  const { file_name, file_size, status, source, upload_id, file_path } = data;
   console.log('Upload queue POST received:', data);
-  console.log('Parsed values:', { file_name, file_size, status, source, upload_id, created_by, file_path });
+  console.log('Parsed values:', { file_name, file_size, status, source, upload_id, file_path });
   if (!file_path) {
     await logAudit('WARN', `Upload queue entry attempted without file_path by ${actingUserName}`, 'API:UploadQueue:Post', actingUserId, { data });
     return NextResponse.json({ error: 'file_path is required' }, { status: 400 });
@@ -165,7 +164,7 @@ export async function POST(request: NextRequest) {
       `INSERT INTO upload_queue (id, file_name, file_size, status, source, upload_id, created_by, file_path)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
        RETURNING *`,
-      [id, file_name, file_size, status, source, upload_id, created_by, file_path]
+      [id, file_name, file_size, status, source, upload_id, actingUserId, file_path]
     );
     
     await logAudit('AUDIT', `File '${file_name}' added to upload queue by ${actingUserName}`, 'API:UploadQueue:Post', actingUserId, { 

@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { Toggle } from '@/components/ui/toggle';
+import { Switch } from '@/components/ui/switch';
 import {
   Dialog,
   DialogContent,
@@ -174,7 +174,7 @@ export function AddPositionModal({ isOpen, onOpenChange, onAddPosition }: AddPos
               name="isOpen"
               control={form.control}
               render={({ field }) => (
-                <Toggle
+                <Switch
                   checked={field.value}
                   onCheckedChange={field.onChange}
                 />

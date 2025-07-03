@@ -7,6 +7,7 @@ import { useSession } from "next-auth/react";
 import { GlobalLoadingOverlay } from "./GlobalLoadingOverlay";
 import { usePageLoading } from "@/hooks/use-page-loading";
 import SidebarNav from "./SidebarNav";
+import { SidebarStyleInitializer } from "./SidebarStyleInitializer";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
 import Image from 'next/image';
@@ -148,6 +149,7 @@ export function AppLayout({ children }: AppLayoutProps) {
 
   return (
     <SidebarProvider defaultOpen={true}>
+      <SidebarStyleInitializer />
       <div className="flex min-h-screen bg-background">
         <SidebarNav />
         <div className="flex-1 flex flex-col min-w-0">
