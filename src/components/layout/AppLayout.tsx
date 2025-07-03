@@ -1,7 +1,7 @@
 "use client";
 
 import React, { type ReactNode, useState, useEffect } from "react";
-import { SidebarProvider } from "@/components/ui/sidebar";
+import { SidebarProvider, Sidebar, SidebarHeader, SidebarContent } from "@/components/ui/sidebar";
 import { Header } from "./Header";
 import { useSession } from "next-auth/react";
 import { GlobalLoadingOverlay } from "./GlobalLoadingOverlay";
@@ -37,7 +37,7 @@ function getPageTitle(pathname: string): string {
   if (pathname.startsWith("/users")) return "Manage Users";
   if (pathname.startsWith("/my-tasks")) return "My Task Board";
   if (pathname.startsWith("/settings/preferences")) return "Preferences";
-  if (pathname.startsWith("/settings/integrations")) return "Integrations";
+      if (pathname.startsWith("/settings/system-settings")) return "Integrations";
   if (pathname.startsWith("/settings/stages")) return "Recruitment Stages";
   if (pathname.startsWith("/settings/data-models")) return "Data Model Preferences";
   if (pathname.startsWith("/settings/custom-fields")) return "Custom Field Definitions";
@@ -151,7 +151,17 @@ export function AppLayout({ children }: AppLayoutProps) {
     <SidebarProvider defaultOpen={true}>
       <SidebarStyleInitializer />
       <div className="flex min-h-screen bg-background">
-        <SidebarNav />
+        <Sidebar>
+          <SidebarHeader>
+            <div className="flex items-center gap-2 px-2">
+              {renderLogo(false)}
+              <span className="font-semibold text-lg">{currentAppName}</span>
+            </div>
+          </SidebarHeader>
+          <SidebarContent>
+            <SidebarNav />
+          </SidebarContent>
+        </Sidebar>
         <div className="flex-1 flex flex-col min-w-0">
           <Header pageTitle={pageTitle} />
           <main className="flex-1 overflow-auto p-6">
