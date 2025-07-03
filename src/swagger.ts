@@ -352,11 +352,6 @@ const swaggerSpec = {
       }
     },
   },
-  tags: [
-    { name: 'External Authentication', description: 'External API authentication endpoints' },
-    { name: 'External Positions', description: 'External API for positions' },
-    { name: 'External Candidates', description: 'External API for candidates' }
-  ],
   components: {
     securitySchemes: {
       bearerAuth: {
