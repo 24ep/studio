@@ -282,7 +282,7 @@ export default function SignInClient({ initialSettings }: SignInClientProps) {
 
   // Render login form based on layout type
   const renderLoginForm = () => (
-    <Card className="w-full max-w-md bg-card dark:bg-card border border-border shadow-2xl">
+    <Card className="w-full max-w-md bg-card dark:bg-card">
       <CardHeader className="flex flex-col items-center justify-center text-center">
         {isClient && appLogoUrl && (
           <Image
@@ -354,8 +354,7 @@ export default function SignInClient({ initialSettings }: SignInClientProps) {
               )}
               <h2 className="text-2xl font-bold text-foreground">{currentAppName}</h2>
             </div>
-            <Card className="w-full bg-white dark:bg-card border border-border/50 pro-card-shadow login-transition">
-              <CardContent className="space-y-6">
+
                 {errorMessage && (
                   <Alert variant="destructive" className="border-red-200 bg-red-50 dark:bg-red-950/50 dark:border-red-800">
                     <AlertTriangle className="h-4 w-4" />
@@ -377,8 +376,7 @@ export default function SignInClient({ initialSettings }: SignInClientProps) {
                   </div>
                 )}
                 <CredentialsSignInForm />
-              </CardContent>
-            </Card>
+         
             {/* Footer */}
             <div className="mt-8 text-center">
               <p className="text-xs text-muted-foreground">
