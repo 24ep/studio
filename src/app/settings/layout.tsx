@@ -36,6 +36,7 @@ const settingsNavItems: SettingsNavigationItem[] = [
   { href: "/settings/user-groups", label: "Roles & Permissions", icon: ShieldCheck, description: "Manage user roles and permissions.", permissionId: 'USER_GROUPS_MANAGE' as PlatformModuleId, adminOnlyOrPermission: true },
   { href: "/settings/notifications", label: "Notification Settings", icon: BellRing, description: "Configure system notifications.", permissionId: 'NOTIFICATION_SETTINGS_MANAGE' as PlatformModuleId, adminOnlyOrPermission: true },
   { href: "/settings/users", label: "Manage Users", icon: UsersRound, description: "Add, edit, or remove users.", permissionId: 'USERS_MANAGE' as PlatformModuleId, adminOnlyOrPermission: true },
+  { href: "/settings/api-key", label: "API Key Management", icon: Code2, description: "Generate and manage your personal API key." },
   { href: "/settings/api-docs", label: "API Documentation", icon: Code2, description: "Developer API reference." },
   { href: "/settings/logs", label: "Application Logs", icon: ListOrdered, description: "View system and audit logs.", permissionId: 'LOGS_VIEW' as PlatformModuleId, adminOnlyOrPermission: true },
 ];

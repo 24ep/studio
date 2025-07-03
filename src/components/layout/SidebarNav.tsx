@@ -49,10 +49,16 @@ const SidebarNavComponent = function SidebarNav() {
             <Link href={item.href} passHref legacyBehavior>
               <SidebarMenuButton
                 asChild
-                isActive={pathname === item.href || (item.href !== "/" && pathname.startsWith(item.href))}
+                isActive={
+                  pathname === item.href ||
+                  (item.href !== "/" && pathname.startsWith(item.href + "/"))
+                }
                 className="w-full justify-start"
                 size="default"
-                data-active={pathname === item.href || (item.href !== "/" && pathname.startsWith(item.href))}
+                data-active={
+                  pathname === item.href ||
+                  (item.href !== "/" && pathname.startsWith(item.href + "/"))
+                }
               >
                 <a>
                   <item.icon className="h-5 w-5" />

@@ -317,7 +317,7 @@ export default function SignInClient({ initialSettings }: SignInClientProps) {
       <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'row' }} className="min-h-screen flex flex-row">
         {/* Left column: Image from settings, centered and contained, with overlay */}
         <div className="hidden lg:flex flex-col items-center justify-center relative basis-[60%] max-w-[60%] bg-muted">
-          {loginBgImageUrl ? (
+          {loginBgImageUrl && (
             <>
               <img
                 src={loginBgImageUrl}
@@ -328,13 +328,6 @@ export default function SignInClient({ initialSettings }: SignInClientProps) {
               {/* Overlay for contrast */}
               <div className="absolute inset-0 bg-gradient-to-r from-black/30 to-transparent z-20 pointer-events-none" />
             </>
-          ) : (
-            <div className="flex flex-col items-center justify-center w-full h-full">
-              <div className="w-64 h-64 bg-gradient-to-br from-primary to-primary/80 rounded-2xl shadow-lg flex items-center justify-center">
-                <span className="text-5xl font-bold text-primary-foreground">CT</span>
-              </div>
-              <p className="mt-8 text-2xl font-semibold text-muted-foreground text-center">Welcome to {currentAppName}</p>
-            </div>
           )}
         </div>
 

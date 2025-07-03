@@ -28,6 +28,7 @@ model User {
   emailVerified     DateTime?
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
+  apiKey            String?  @unique
   
   // Relations
   candidates        Candidate[] @relation("RecruiterCandidates")
