@@ -232,6 +232,7 @@ export interface Position {
   createdAt?: string;
   updatedAt?: string;
   candidates?: Candidate[];
+  webhook_payload?: any;
 }
 
 export interface UserGroup { // This is now "Role" in the UI
