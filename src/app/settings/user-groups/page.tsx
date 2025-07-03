@@ -14,7 +14,6 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from "@/components/ui/checkbox";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
@@ -244,17 +243,14 @@ export default function RolesPermissionsPage() {
     <div className="space-y-6 p-6">
       <div className="grid md:grid-cols-3 gap-6">
         {/* Left Panel: Roles List */}
-        <Card className="md:col-span-1 shadow-sm">
-          <CardHeader className="p-4 border-b">
-            <div className="flex justify-between items-center">
-              <CardTitle className="text-lg">Roles</CardTitle>
-               <Button size="sm" onClick={() => handleOpenModal()} className="btn-primary-gradient h-8">
-                <PlusCircle className="mr-1.5 h-4 w-4" /> Create
-              </Button>
-            </div>
-            <CardDescription className="text-xs">Select a role to view or edit its permissions.</CardDescription>
-          </CardHeader>
-          <CardContent className="p-0">
+        <div className="md:col-span-1 shadow-sm">
+          <div className="flex justify-between items-center p-4 border-b">
+            <h2 className="text-lg">Roles</h2>
+             <Button size="sm" onClick={() => handleOpenModal()} className="btn-primary-gradient h-8">
+              <PlusCircle className="mr-1.5 h-4 w-4" /> Create
+            </Button>
+          </div>
+          <div className="p-0">
             <ScrollArea className="h-[calc(100vh-16rem)]"> {/* Adjust height as needed */}
               {isLoading && roles.length === 0 ? (
                  <div className="p-4 text-sm text-muted-foreground text-center"><Loader2 className="h-5 w-5 animate-spin inline mr-2" />Loading roles...</div>
@@ -285,26 +281,24 @@ export default function RolesPermissionsPage() {
                 </div>
               )}
             </ScrollArea>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
 
         {/* Right Panel: Permissions for Selected Role */}
-        <Card className="md:col-span-2 shadow-sm">
+        <div className="md:col-span-2 shadow-sm">
           {selectedRole ? (
             <>
-              <CardHeader className="p-4 border-b">
-                <div className="flex justify-between items-center">
-                  <div>
-                    <CardTitle className="text-lg">{selectedRole.name} Permissions</CardTitle>
-                    <CardDescription className="text-xs">Configure what users with the &quot;{selectedRole.name}&quot; role can do.</CardDescription>
-                  </div>
-                  <div className="flex gap-2">
-                    {!selectedRole.is_system_role && <Button variant="outline" size="sm" onClick={() => handleOpenModal(selectedRole)}><Edit3 className="mr-1.5 h-3.5 w-3.5"/> Edit Role</Button>}
-                    {!selectedRole.is_system_role && <Button variant="destructive" size="sm" onClick={() => confirmDelete(selectedRole)}><Trash2 className="mr-1.5 h-3.5 w-3.5"/> Delete Role</Button>}
-                  </div>
+              <div className="flex justify-between items-center p-4 border-b">
+                <div>
+                  <h2 className="text-lg">{selectedRole.name} Permissions</h2>
+                  <p className="text-xs">Configure what users with the &quot;{selectedRole.name}&quot; role can do.</p>
                 </div>
-              </CardHeader>
-              <CardContent className="p-4">
+                <div className="flex gap-2">
+                  {!selectedRole.is_system_role && <Button variant="outline" size="sm" onClick={() => handleOpenModal(selectedRole)}><Edit3 className="mr-1.5 h-3.5 w-3.5"/> Edit Role</Button>}
+                  {!selectedRole.is_system_role && <Button variant="destructive" size="sm" onClick={() => confirmDelete(selectedRole)}><Trash2 className="mr-1.5 h-3.5 w-3.5"/> Delete Role</Button>}
+                </div>
+              </div>
+              <div className="p-4">
                 <ScrollArea className="h-[calc(100vh-18rem)]"> {/* Adjust height */}
                   {groupedPermissions.map(group => (
                     <div key={group.category} className="mb-6">
@@ -326,7 +320,7 @@ export default function RolesPermissionsPage() {
                     </div>
                   ))}
                 </ScrollArea>
-              </CardContent>
+              </div>
             </>
           ) : (
             <div className="flex flex-col items-center justify-center h-full p-6 text-center">
@@ -334,7 +328,7 @@ export default function RolesPermissionsPage() {
               <p className="text-muted-foreground">Select a role from the left to view and manage its permissions.</p>
             </div>
           )}
-        </Card>
+        </div>
       </div>
 
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>

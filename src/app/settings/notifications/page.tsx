@@ -4,7 +4,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useSession, signIn } from 'next-auth/react';
 import { toast } from 'react-hot-toast';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { BellRing, Loader2, ServerCrash } from 'lucide-react';
 import NotificationsTable from '@/components/settings/NotificationsTable';
@@ -154,16 +153,11 @@ export default function NotificationsPage() {
 
   return (
     <div className="space-y-6 p-6">
-      <Card className="shadow-lg">
-        <CardHeader>
-          <CardTitle className="flex items-center text-2xl">
-            <BellRing className="mr-3 h-6 w-6 text-primary" /> Notification Settings
-          </CardTitle>
-          <CardDescription>
-            Configure how and when you receive notifications about system events and updates.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
+      <div className="shadow-lg">
+        <div className="flex items-center text-2xl">
+          <BellRing className="mr-3 h-6 w-6 text-primary" /> Notification Settings
+        </div>
+        <div className="p-4">
           <NotificationsModal onNotificationUpdate={handleAddNewNotification} />
           
           <NotificationsTable
@@ -180,8 +174,8 @@ export default function NotificationsPage() {
             onSubmit={handleSubmit}
             isSaving={isSaving}
           />
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     </div>
   );
 }

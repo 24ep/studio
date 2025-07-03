@@ -4,7 +4,6 @@ import React, { useState, useEffect, useCallback } from 'react';
 import 'react-quill/dist/quill.snow.css';
 import { useSession, signIn } from 'next-auth/react';
 import { useRouter, usePathname } from 'next/navigation';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Save, Mail, Zap, BrainCircuit, Loader2, ServerCrash, Settings, RefreshCw } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -121,36 +120,26 @@ export default function SystemSettingsPage() {
   return (
     <div className="space-y-12 pb-32 p-6">
       {/* AI Configuration (Gemini) */}
-      <Card className="shadow-lg ">
-        <CardHeader>
-          <CardTitle className="flex items-center text-2xl gap-2">
-            <BrainCircuit className="h-7 w-7 text-primary" />
-            AI Configuration (Gemini)
-          </CardTitle>
-          <CardDescription className="text-base text-muted-foreground">
-            Configure your Google AI Gemini API Key for AI-powered features like advanced candidate search.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4 pt-6">
+      <div className="shadow-lg ">
+        <div className="flex items-center text-2xl gap-2">
+          <BrainCircuit className="h-7 w-7 text-primary" />
+          AI Configuration (Gemini)
+        </div>
+        <div className="space-y-4 pt-6">
         <div>
             <Label htmlFor="gemini-api-key">Gemini API Key</Label>
             <Input id="gemini-api-key" type="password" placeholder="Enter your Gemini API Key" value={geminiApiKey} onChange={(e) => setGeminiApiKey(e.target.value)} className="mt-1" disabled={isSaving}/>
             <p className="text-xs text-muted-foreground mt-1">This key is stored securely on the server. For Genkit to use this, ensure it&apos;s also available as the GOOGLE_API_KEY environment variable where your Next.js server runs, or ensure your Genkit flows dynamically fetch it.</p>
         </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
       {/* Webhook Automation + Max Concurrent Processors */}
-      <Card className="shadow-lg ">
-        <CardHeader>
-          <CardTitle className="flex items-center text-2xl gap-2">
-            <Zap className="h-7 w-7 text-primary" />
-            Workflow Automation
-          </CardTitle>
-          <CardDescription className="text-base text-muted-foreground">
-            Configure server-side webhook URLs for automated processing tasks via any compatible automation service.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4 pt-6">
+      <div className="shadow-lg ">
+        <div className="flex items-center text-2xl gap-2">
+          <Zap className="h-7 w-7 text-primary" />
+          Workflow Automation
+        </div>
+        <div className="space-y-4 pt-6">
           <div>
             <Label htmlFor="resume-processing-webhook">Resume Processing Webhook URL (Any Service)</Label>
             <Input id="resume-processing-webhook" type="url" placeholder="https://your-webhook-endpoint/receive-resume" value={resumeProcessingWebhookUrl} onChange={(e) => setResumeProcessingWebhookUrl(e.target.value)} className="mt-1" disabled={isSaving}/>
@@ -174,20 +163,15 @@ export default function SystemSettingsPage() {
               style={{ marginBottom: 16, width: 80 }}
           />
         </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
       {/* SMTP Configuration */}
-      <Card className="shadow-lg ">
-        <CardHeader>
-          <CardTitle className="flex items-center text-2xl gap-2">
-            <Mail className="h-7 w-7 text-primary" />
-            SMTP Configuration
-          </CardTitle>
-          <CardDescription className="text-base text-muted-foreground">
-            Set up your SMTP server for sending application emails. Settings are saved on the server (excluding password).
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4 pt-6">
+      <div className="shadow-lg ">
+        <div className="flex items-center text-2xl gap-2">
+          <Mail className="h-7 w-7 text-primary" />
+          SMTP Configuration
+        </div>
+        <div className="space-y-4 pt-6">
           <div>
             <Label htmlFor="smtp-host">SMTP Host</Label>
             <Input id="smtp-host" type="text" placeholder="smtp.example.com" value={smtpHost} onChange={(e) => setSmtpHost(e.target.value)} className="mt-1" disabled={isSaving}/>
@@ -214,8 +198,8 @@ export default function SystemSettingsPage() {
             <Label htmlFor="smtp-from-email">From Email</Label>
             <Input id="smtp-from-email" type="email" placeholder="noreply@example.com" value={smtpFromEmail} onChange={(e) => setSmtpFromEmail(e.target.value)} className="mt-1" disabled={isSaving}/>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
       {/* Floating Save/Reset Bar */}
       <div className="fixed bottom-6 right-6 z-30 bg-background/95 border shadow-lg rounded-xl flex flex-row gap-4 py-3 px-6" style={{boxShadow: '0 2px 16px 0 rgba(0,0,0,0.10)'}}>

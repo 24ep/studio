@@ -3,7 +3,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useSession, signIn } from 'next-auth/react';
 import { toast } from 'react-hot-toast';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Database, Loader2, ServerCrash } from 'lucide-react';
 import DataModelTable from '@/components/settings/DataModelTable';
@@ -144,19 +143,11 @@ export default function DataModelsPage() {
 
   return (
     <div className="space-y-6">
-      <Card className="shadow-lg">
-        <CardHeader>
-          <CardTitle className="flex items-center text-2xl">
-            <Database className="mr-3 h-6 w-6 text-primary" /> Data Models
-          </CardTitle>
-          <CardDescription>
-            Define and manage data models for candidates, positions, and other entities in your system. 
-            Candidates and positions are now fully configurable as data models, allowing you to customize 
-            their structure, validation rules, and field definitions. The system includes default models 
-            for Candidate, Position, and User entities that can be modified or extended as needed.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
+      <div className="shadow-lg">
+        <div className="flex items-center text-2xl">
+          <Database className="mr-3 h-6 w-6 text-primary" /> Data Models
+        </div>
+        <div className="p-4">
           <DataModelModal onDataModelUpdate={handleAddNewDataModel} />
           
           <DataModelTable
@@ -173,8 +164,8 @@ export default function DataModelsPage() {
             onSubmit={handleSubmit}
             isSaving={isSaving}
           />
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     </div>
   );
 }

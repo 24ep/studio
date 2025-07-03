@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -210,97 +209,94 @@ export default function ApplicationLogsPage() {
   }
 
   return (
-    <Card className="shadow-lg">
-      <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+    <>
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
-          <CardTitle className="flex items-center text-2xl"> <ListOrdered className="mr-3 h-6 w-6 text-primary" /> Application Logs </CardTitle>
-          <CardDescription> View system and application logs. Filter by level, date, user, or search message/source. </CardDescription>
+          <div className="flex items-center text-2xl"> <ListOrdered className="mr-3 h-6 w-6 text-primary" /> Application Logs </div>
+          <p className="text-muted-foreground"> View system and application logs. Filter by level, date, user, or search message/source. </p>
         </div>
         <Button variant="outline" size="icon" onClick={handleApplyFilters} disabled={isLoading} className="sm:ml-auto">
             <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} /> <span className="sr-only">Refresh Logs</span>
         </Button>
-      </CardHeader>
-      <CardContent>
-          {/* Filters Section */}
-          <div className="mb-6 p-4 border rounded-lg bg-card shadow-sm">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 items-end">
-                  <div className="space-y-1"><Label htmlFor="search-query">Search Message/Source</Label><Input id="search-query" type="search" placeholder="Search..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleApplyFilters()} className="w-full"/></div>
-                  <div className="space-y-1"><Label htmlFor="level-filter">Log Level</Label><Select value={levelFilter || ''} onValueChange={(value) => setLevelFilter(value as LogLevel | "ALL")}><SelectTrigger id="level-filter"><SelectValue placeholder="Select level..." /></SelectTrigger><SelectContent><SelectItem value="ALL">All Levels</SelectItem><SelectItem value="DEBUG">Debug</SelectItem><SelectItem value="INFO">Info</SelectItem><SelectItem value="WARN">Warn</SelectItem><SelectItem value="ERROR">Error</SelectItem><SelectItem value="AUDIT">Audit</SelectItem></SelectContent></Select></div>
-                  <div className="space-y-1">
-                    <Label htmlFor="user-filter">Acting User</Label>
-                    <Popover open={userPopoverOpen} onOpenChange={setUserPopoverOpen}>
-                      <PopoverTrigger asChild>
-                        <Button variant="outline" role="combobox" aria-expanded={userPopoverOpen} className="w-full justify-between font-normal">
-                          {actingUserIdFilter === 'ALL' ? 'All Users' : allUsers.find(u => u.id === actingUserIdFilter)?.name || 'All Users'}
-                          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-[--trigger-width] p-0 dropdown-content-height">
-                        <Command>
-                          <CommandInput
-                            placeholder="Search user..."
-                            value={userSearch}
-                            onChange={e => setUserSearch(e.target.value)}
-                            className="h-9"
-                          />
-                          <CommandList>
-                            <CommandEmpty>{userSearch ? 'No user found.' : 'Type to search users.'}</CommandEmpty>
-                            <CommandItem value="ALL" onSelect={() => { setActingUserIdFilter('ALL'); setUserPopoverOpen(false); setUserSearch(''); }}>
-                              <Check className={cn("mr-2 h-4 w-4", actingUserIdFilter === 'ALL' ? "opacity-100" : "opacity-0")} />
-                              All Users
+      </div>
+      <div className="mb-6 p-4 border rounded-lg bg-card shadow-sm">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 items-end">
+              <div className="space-y-1"><Label htmlFor="search-query">Search Message/Source</Label><Input id="search-query" type="search" placeholder="Search..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleApplyFilters()} className="w-full"/></div>
+              <div className="space-y-1"><Label htmlFor="level-filter">Log Level</Label><Select value={levelFilter || ''} onValueChange={(value) => setLevelFilter(value as LogLevel | "ALL")}><SelectTrigger id="level-filter"><SelectValue placeholder="Select level..." /></SelectTrigger><SelectContent><SelectItem value="ALL">All Levels</SelectItem><SelectItem value="DEBUG">Debug</SelectItem><SelectItem value="INFO">Info</SelectItem><SelectItem value="WARN">Warn</SelectItem><SelectItem value="ERROR">Error</SelectItem><SelectItem value="AUDIT">Audit</SelectItem></SelectContent></Select></div>
+              <div className="space-y-1">
+                <Label htmlFor="user-filter">Acting User</Label>
+                <Popover open={userPopoverOpen} onOpenChange={setUserPopoverOpen}>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" role="combobox" aria-expanded={userPopoverOpen} className="w-full justify-between font-normal">
+                      {actingUserIdFilter === 'ALL' ? 'All Users' : allUsers.find(u => u.id === actingUserIdFilter)?.name || 'All Users'}
+                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-[--trigger-width] p-0 dropdown-content-height">
+                    <Command>
+                      <CommandInput
+                        placeholder="Search user..."
+                        value={userSearch}
+                        onChange={e => setUserSearch(e.target.value)}
+                        className="h-9"
+                      />
+                      <CommandList>
+                        <CommandEmpty>{userSearch ? 'No user found.' : 'Type to search users.'}</CommandEmpty>
+                        <CommandItem value="ALL" onSelect={() => { setActingUserIdFilter('ALL'); setUserPopoverOpen(false); setUserSearch(''); }}>
+                          <Check className={cn("mr-2 h-4 w-4", actingUserIdFilter === 'ALL' ? "opacity-100" : "opacity-0")} />
+                          All Users
+                        </CommandItem>
+                        <ScrollArea className="max-h-48">
+                          {filteredUsersForDropdown.map((user) => (
+                            <CommandItem key={user.id} value={user.name} onSelect={() => { setActingUserIdFilter(user.id); setUserPopoverOpen(false); setUserSearch(''); }}>
+                              <Check className={cn("mr-2 h-4 w-4", actingUserIdFilter === user.id ? "opacity-100" : "opacity-0")} />
+                              {user.name}
                             </CommandItem>
-                            <ScrollArea className="max-h-48">
-                              {filteredUsersForDropdown.map((user) => (
-                                <CommandItem key={user.id} value={user.name} onSelect={() => { setActingUserIdFilter(user.id); setUserPopoverOpen(false); setUserSearch(''); }}>
-                                  <Check className={cn("mr-2 h-4 w-4", actingUserIdFilter === user.id ? "opacity-100" : "opacity-0")} />
-                                  {user.name}
-                                </CommandItem>
-                              ))}
-                            </ScrollArea>
-                          </CommandList>
-                        </Command>
-                      </PopoverContent>
-                    </Popover>
-                  </div>
-                  <div className="space-y-1"><Label htmlFor="start-date">Start Date</Label><Popover><PopoverTrigger asChild><Button id="start-date" variant={"outline"} className={cn("w-full justify-start text-left font-normal", !startDate && "text-muted-foreground")}><CalendarIcon className="mr-2 h-4 w-4" />{startDate ? format(startDate, "PPP") : <span>Pick a date</span>}</Button></PopoverTrigger><PopoverContent className="w-auto p-0"><Calendar mode="single" selected={startDate} onSelect={setStartDate} initialFocus captionLayout="dropdown-buttons" fromYear={fromYear} toYear={toYear} /></PopoverContent></Popover></div>
-                  <div className="space-y-1"><Label htmlFor="end-date">End Date</Label><Popover><PopoverTrigger asChild><Button id="end-date" variant={"outline"} className={cn("w-full justify-start text-left font-normal", !endDate && "text-muted-foreground")}><CalendarIcon className="mr-2 h-4 w-4" />{endDate ? format(endDate, "PPP") : <span>Pick a date</span>}</Button></PopoverTrigger><PopoverContent className="w-auto p-0"><Calendar mode="single" selected={endDate} onSelect={setEndDate} initialFocus captionLayout="dropdown-buttons" fromYear={fromYear} toYear={toYear} /></PopoverContent></Popover></div>
-                  <div className="flex gap-2 items-end">
-                      <Button variant="outline" onClick={handleResetFilters} disabled={isLoading} className="w-full"><FilterX className="mr-2 h-4 w-4"/>Reset</Button>
-                      <Button onClick={handleApplyFilters} disabled={isLoading} className="w-full"><Search className={`mr-2 h-4 w-4 ${isLoading ? 'animate-spin' : ''}`}/>Apply</Button>
-                  </div>
+                          ))}
+                        </ScrollArea>
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
+              </div>
+              <div className="space-y-1"><Label htmlFor="start-date">Start Date</Label><Popover><PopoverTrigger asChild><Button id="start-date" variant={"outline"} className={cn("w-full justify-start text-left font-normal", !startDate && "text-muted-foreground")}><CalendarIcon className="mr-2 h-4 w-4" />{startDate ? format(startDate, "PPP") : <span>Pick a date</span>}</Button></PopoverTrigger><PopoverContent className="w-auto p-0"><Calendar mode="single" selected={startDate} onSelect={setStartDate} initialFocus captionLayout="dropdown-buttons" fromYear={fromYear} toYear={toYear} /></PopoverContent></Popover></div>
+              <div className="space-y-1"><Label htmlFor="end-date">End Date</Label><Popover><PopoverTrigger asChild><Button id="end-date" variant={"outline"} className={cn("w-full justify-start text-left font-normal", !endDate && "text-muted-foreground")}><CalendarIcon className="mr-2 h-4 w-4" />{endDate ? format(endDate, "PPP") : <span>Pick a date</span>}</Button></PopoverTrigger><PopoverContent className="w-auto p-0"><Calendar mode="single" selected={endDate} onSelect={setEndDate} initialFocus captionLayout="dropdown-buttons" fromYear={fromYear} toYear={toYear} /></PopoverContent></Popover></div>
+              <div className="flex gap-2 items-end">
+                  <Button variant="outline" onClick={handleResetFilters} disabled={isLoading} className="w-full"><FilterX className="mr-2 h-4 w-4"/>Reset</Button>
+                  <Button onClick={handleApplyFilters} disabled={isLoading} className="w-full"><Search className={`mr-2 h-4 w-4 ${isLoading ? 'animate-spin' : ''}`}/>Apply</Button>
               </div>
           </div>
+      </div>
 
-        {isLoading && logs.length === 0 ? (  <div className="flex flex-col items-center justify-center py-10"> <Loader2 className="h-12 w-12 animate-spin text-primary" /> <p className="mt-2 text-muted-foreground">Loading logs...</p> </div>
-        ) : logs.length === 0 ? (
-          <div className="text-center py-10"> <ListOrdered className="mx-auto h-12 w-12 text-muted-foreground" /> <p className="mt-4 text-muted-foreground">No log entries found for the selected filter or search query.</p> </div>
-        ) : (
-          <>
-          <LogsTable
-            logs={logs}
-            isLoading={isLoading}
-            onEdit={handleModalOpen}
-          />
-          {totalPages > 1 && (
-              <div className="flex items-center justify-end space-x-2 py-4">
-                  <Button variant="outline" size="sm" onClick={() => setCurrentPage(1)} disabled={currentPage === 1 || isLoading}> <ChevronsLeft className="h-4 w-4" /> </Button>
-                  <Button variant="outline" size="sm" onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))} disabled={currentPage === 1 || isLoading}> <ChevronLeft className="h-4 w-4" /> </Button>
-                  <span className="text-sm text-muted-foreground"> Page {currentPage} of {totalPages} </span>
-                  <Button variant="outline" size="sm" onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))} disabled={currentPage === totalPages || isLoading}> <ChevronRight className="h-4 w-4" /> </Button>
-                  <Button variant="outline" size="sm" onClick={() => setCurrentPage(totalPages)} disabled={currentPage === totalPages || isLoading}> <ChevronsRight className="h-4 w-4" /> </Button>
-              </div>
-          )}
-          </>
-        )}
-      </CardContent>
-      <LogsForm
-        open={isModalOpen}
-        log={editingLog}
-        onClose={handleModalClose}
-        onSubmit={handleSubmit}
+    {isLoading && logs.length === 0 ? (  <div className="flex flex-col items-center justify-center py-10"> <Loader2 className="h-12 w-12 animate-spin text-primary" /> <p className="mt-2 text-muted-foreground">Loading logs...</p> </div>
+    ) : logs.length === 0 ? (
+      <div className="text-center py-10"> <ListOrdered className="mx-auto h-12 w-12 text-muted-foreground" /> <p className="mt-4 text-muted-foreground">No log entries found for the selected filter or search query.</p> </div>
+    ) : (
+      <>
+      <LogsTable
+        logs={logs}
+        isLoading={isLoading}
+        onEdit={handleModalOpen}
       />
-      <LogsModal />
-    </Card>
+      {totalPages > 1 && (
+          <div className="flex items-center justify-end space-x-2 py-4">
+              <Button variant="outline" size="sm" onClick={() => setCurrentPage(1)} disabled={currentPage === 1 || isLoading}> <ChevronsLeft className="h-4 w-4" /> </Button>
+              <Button variant="outline" size="sm" onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))} disabled={currentPage === 1 || isLoading}> <ChevronLeft className="h-4 w-4" /> </Button>
+              <span className="text-sm text-muted-foreground"> Page {currentPage} of {totalPages} </span>
+              <Button variant="outline" size="sm" onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))} disabled={currentPage === totalPages || isLoading}> <ChevronRight className="h-4 w-4" /> </Button>
+              <Button variant="outline" size="sm" onClick={() => setCurrentPage(totalPages)} disabled={currentPage === totalPages || isLoading}> <ChevronsRight className="h-4 w-4" /> </Button>
+          </div>
+      )}
+      </>
+    )}
+    <LogsForm
+      open={isModalOpen}
+      log={editingLog}
+      onClose={handleModalClose}
+      onSubmit={handleSubmit}
+    />
+    <LogsModal />
+    </>
   );
 }
 

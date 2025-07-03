@@ -3,7 +3,6 @@ import { useState, useEffect, type ChangeEvent } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from '@/hooks/use-toast';
@@ -310,14 +309,11 @@ export default function PreferencesSettingsPage() {
 
   return (
     <div className="space-y-8">
-      <Card className="w-full max-w-xl mx-auto shadow-lg rounded-xl border-gray-200 dark:border-gray-700">
-        <CardHeader>
-          <CardTitle className="flex items-center">
-            <Palette className="mr-2 h-6 w-6 text-primary" /> Preferences
-          </CardTitle>
-          <CardDescription>Manage your application name, theme, and logo. Settings are saved locally.</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-6">
+      <div className="w-full max-w-xl mx-auto shadow-lg rounded-xl border-gray-200 dark:border-gray-700">
+        <div className="flex items-center">
+          <Palette className="mr-2 h-6 w-6 text-primary" /> Preferences
+        </div>
+        <div className="space-y-6">
           <section>
             <h3 className="text-lg font-semibold text-foreground mb-2 flex items-center">
                 <PenSquare className="mr-2 h-5 w-5" /> App Name
@@ -703,8 +699,8 @@ export default function PreferencesSettingsPage() {
               </p>
             </div>
           </section>
-        </CardContent>
-        <CardFooter className="flex justify-between">
+        </div>
+        <div className="flex justify-between">
           <Button 
             variant="outline" 
             onClick={() => {
@@ -761,8 +757,8 @@ export default function PreferencesSettingsPage() {
           <Button onClick={handleSavePreferences} className="btn-primary-gradient">
             <Save className="mr-2 h-4 w-4" /> Save Preferences
           </Button>
-        </CardFooter>
-      </Card>
+        </div>
+      </div>
     </div>
   );
 }

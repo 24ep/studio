@@ -34,7 +34,6 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useSession, signIn } from 'next-auth/react';
 import { useRouter, usePathname } from 'next/navigation';
@@ -250,20 +249,20 @@ export default function CustomFieldsPage() {
 
   return (
     <div className="space-y-6 p-6">
-      <Card className="shadow-lg">
-        <CardHeader className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+      <div className="shadow-lg">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 p-6">
           <div>
-            <CardTitle className="flex items-center text-2xl"><Settings2 className="mr-3 h-6 w-6 text-primary"/>Custom Field Definitions</CardTitle>
-            <CardDescription>
+            <h2 className="flex items-center text-2xl"><Settings2 className="mr-3 h-6 w-6 text-primary"/>Custom Field Definitions</h2>
+            <p>
               Define custom fields that can be associated with Candidates or Positions.
               These fields are stored in a flexible JSONB column. The actual rendering of these fields on candidate/position forms is a future enhancement.
-            </CardDescription>
+            </p>
           </div>
           <Button onClick={() => handleOpenModal()} className="btn-primary-gradient mt-2 sm:mt-0">
             <PlusCircle className="mr-2 h-4 w-4" /> Add New Field Definition
           </Button>
-        </CardHeader>
-        <CardContent className="pt-6">
+        </div>
+        <div className="pt-6">
           {isLoading && definitions.length === 0 ? (
              <div className="flex justify-center items-center py-10">
                 <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -281,8 +280,8 @@ export default function CustomFieldsPage() {
               />
             </div>
           )}
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
       <CustomFieldForm
         open={isModalOpen}
