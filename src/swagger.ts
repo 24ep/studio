@@ -30,11 +30,11 @@ const swaggerSpec = {
     }
   ],
   paths: {
-    '/api/external/auth/login': {
+    '/api/v1/auth/login': {
       post: {
         summary: 'External API login',
         description: 'Authenticate with email and password to receive a JWT for API use.',
-        tags: ['External Authentication'],
+        tags: ['V1 Authentication'],
         requestBody: {
           required: true,
           content: {
@@ -79,11 +79,11 @@ const swaggerSpec = {
         }
       }
     },
-    '/api/external/positions': {
+    '/api/v1/positions': {
       get: {
-        summary: 'Get all positions (external API)',
+        summary: 'Get all positions (v1 API)',
         description: 'Returns a paginated list of positions. Requires Bearer token authentication.',
-        tags: ['External Positions'],
+        tags: ['V1 Positions'],
         security: [{ bearerAuth: [] }],
         parameters: [
           { name: 'title', in: 'query', description: 'Filter by position title', schema: { type: 'string' } },
@@ -112,9 +112,9 @@ const swaggerSpec = {
         }
       },
       post: {
-        summary: 'Create a new position (external API)',
+        summary: 'Create a new position (v1 API)',
         description: 'Creates a new position. Requires Bearer token authentication.',
-        tags: ['External Positions'],
+        tags: ['V1 Positions'],
         security: [{ bearerAuth: [] }],
         requestBody: {
           required: true,
@@ -150,11 +150,11 @@ const swaggerSpec = {
         }
       }
     },
-    '/api/external/positions/{id}': {
+    '/api/v1/positions/{id}': {
       get: {
-        summary: 'Get position by ID (external API)',
+        summary: 'Get position by ID (v1 API)',
         description: 'Returns details for a specific position. Requires Bearer token authentication.',
-        tags: ['External Positions'],
+        tags: ['V1 Positions'],
         security: [{ bearerAuth: [] }],
         parameters: [
           { name: 'id', in: 'path', required: true, description: 'Position ID', schema: { type: 'string' } }
@@ -169,9 +169,9 @@ const swaggerSpec = {
         }
       },
       put: {
-        summary: 'Update position by ID (external API)',
+        summary: 'Update position by ID (v1 API)',
         description: 'Updates a position. Requires Bearer token authentication and Admin or POSITIONS_MANAGE permission.',
-        tags: ['External Positions'],
+        tags: ['V1 Positions'],
         security: [{ bearerAuth: [] }],
         parameters: [
           { name: 'id', in: 'path', required: true, description: 'Position ID', schema: { type: 'string' } }
@@ -206,9 +206,9 @@ const swaggerSpec = {
         }
       },
       delete: {
-        summary: 'Delete position by ID (external API)',
+        summary: 'Delete position by ID (v1 API)',
         description: 'Deletes a position. Requires Bearer token authentication and Admin or POSITIONS_MANAGE permission.',
-        tags: ['External Positions'],
+        tags: ['V1 Positions'],
         security: [{ bearerAuth: [] }],
         parameters: [
           { name: 'id', in: 'path', required: true, description: 'Position ID', schema: { type: 'string' } }
@@ -221,11 +221,11 @@ const swaggerSpec = {
         }
       }
     },
-    '/api/external/candidates': {
+    '/api/v1/candidates': {
       get: {
-        summary: 'Get all candidates (external API)',
+        summary: 'Get all candidates (v1 API)',
         description: 'Returns a paginated list of candidates. Requires Bearer token authentication.',
-        tags: ['External Candidates'],
+        tags: ['V1 Candidates'],
         security: [{ bearerAuth: [] }],
         parameters: [
           { name: 'page', in: 'query', description: 'Page number for pagination', schema: { type: 'integer', default: 1 } },
@@ -256,9 +256,9 @@ const swaggerSpec = {
         }
       },
       post: {
-        summary: 'Create a new candidate (external API)',
+        summary: 'Create a new candidate (v1 API)',
         description: 'Creates a new candidate. Requires Bearer token authentication.',
-        tags: ['External Candidates'],
+        tags: ['V1 Candidates'],
         security: [{ bearerAuth: [] }],
         requestBody: {
           required: true,
@@ -290,11 +290,11 @@ const swaggerSpec = {
         }
       }
     },
-    '/api/external/candidates/{id}': {
+    '/api/v1/candidates/{id}': {
       get: {
-        summary: 'Get candidate by ID (external API)',
+        summary: 'Get candidate by ID (v1 API)',
         description: 'Returns details for a specific candidate. Requires Bearer token authentication.',
-        tags: ['External Candidates'],
+        tags: ['V1 Candidates'],
         security: [{ bearerAuth: [] }],
         parameters: [
           { name: 'id', in: 'path', required: true, description: 'Candidate ID', schema: { type: 'string' } }
@@ -309,9 +309,9 @@ const swaggerSpec = {
         }
       },
       put: {
-        summary: 'Update candidate by ID (external API)',
+        summary: 'Update candidate by ID (v1 API)',
         description: 'Updates a candidate. Requires Bearer token authentication and Admin or CANDIDATES_MANAGE permission.',
-        tags: ['External Candidates'],
+        tags: ['V1 Candidates'],
         security: [{ bearerAuth: [] }],
         parameters: [
           { name: 'id', in: 'path', required: true, description: 'Candidate ID', schema: { type: 'string' } }
@@ -336,9 +336,9 @@ const swaggerSpec = {
         }
       },
       delete: {
-        summary: 'Delete candidate by ID (external API)',
+        summary: 'Delete candidate by ID (v1 API)',
         description: 'Deletes a candidate. Requires Bearer token authentication and Admin or CANDIDATES_MANAGE permission.',
-        tags: ['External Candidates'],
+        tags: ['V1 Candidates'],
         security: [{ bearerAuth: [] }],
         parameters: [
           { name: 'id', in: 'path', required: true, description: 'Candidate ID', schema: { type: 'string' } }
@@ -725,9 +725,9 @@ const swaggerSpec = {
     }
   },
   tags: [
-    { name: 'External Authentication', description: 'External API authentication endpoints' },
-    { name: 'External Positions', description: 'External API for positions' },
-    { name: 'External Candidates', description: 'External API for candidates' }
+    { name: 'V1 Authentication', description: 'External API authentication endpoints' },
+    { name: 'V1 Positions', description: 'External API for positions' },
+    { name: 'V1 Candidates', description: 'External API for candidates' }
   ]
 };
 

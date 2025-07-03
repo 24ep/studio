@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { getPool } from '@/lib/db';
 import { v4 as uuidv4 } from 'uuid';
 import { verifyApiToken } from '@/lib/auth'; // You may need to implement this
+import { handleCors } from '@/lib/cors';
 
 const createPositionSchema = z.object({
   title: z.string().min(1, { message: 'Title is required' }),
@@ -72,9 +73,9 @@ export async function GET(req: NextRequest) {
       custom_attributes: row.customAttributes || {},
     }));
 
-    return new Response(JSON.stringify({ data: positions, total }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+    return new Response(JSON.stringify({ data: positions, total }), { status: 200, headers: handleCors(req) });
   } catch (error) {
-    return new Response(JSON.stringify({ error: 'Error fetching positions', details: (error as Error).message }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+    return new Response(JSON.stringify({ error: 'Error fetching positions', details: (error as Error).message }), { status: 500, headers: handleCors(req) });
   }
 }
 
@@ -122,8 +123,12 @@ export async function POST(req: NextRequest) {
       ...result.rows[0],
       custom_attributes: result.rows[0].customAttributes || {},
     };
-    return new Response(JSON.stringify(newPosition), { status: 201, headers: { 'Content-Type': 'application/json' } });
+    return new Response(JSON.stringify(newPosition), { status: 201, headers: handleCors(req) });
   } catch (error) {
-    return new Response(JSON.stringify({ error: 'Error creating position', details: (error as Error).message }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+    return new Response(JSON.stringify({ error: 'Error creating position', details: (error as Error).message }), { status: 500, headers: handleCors(req) });
   }
+}
+
+export async function OPTIONS(request: NextRequest) {
+  return handleCors(request);
 } 

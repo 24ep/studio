@@ -2,12 +2,14 @@
 import * as React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Users, Briefcase, Settings, UsersRound, Code2, ListOrdered, Palette, Zap, ListTodo, DatabaseZap, SlidersHorizontal, KanbanSquare, Settings2, UserCog, UploadCloud } from "lucide-react"; 
+import { LayoutDashboard, Users, Briefcase, Settings, UsersRound, Code2, ListOrdered, Palette, Zap, ListTodo, DatabaseZap, SlidersHorizontal, KanbanSquare, Settings2, UserCog, UploadCloud, Loader2 } from "lucide-react"; 
 import { cn } from "@/lib/utils";
 import {
   SidebarMenu,
   SidebarMenuItem,
   SidebarMenuButton,
+  SidebarSeparator,
+  SidebarMenuBadge,
   useSidebar,
 } from "@/components/ui/sidebar";
 
@@ -15,16 +17,24 @@ import { useSession } from "next-auth/react";
 import type { PlatformModuleId } from '@/lib/types';
 
 
-const mainNavItems = [
-  { href: "/", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/candidates", label: "Candidates", icon: Users },
-  { href: "/positions", label: "Positions", icon: Briefcase },
-  { href: "/candidates/upload", label: "Bulk Upload", icon: UploadCloud },
-];
-
+const dashboardNavItem = { href: "/", label: "Dashboard", icon: LayoutDashboard };
 const myTaskBoardNavItem = { href: "/my-tasks", label: "My Task Board", icon: ListTodo };
+const candidatesNavItem = { href: "/candidates", label: "Candidates", icon: Users };
+const positionsNavItem = { href: "/positions", label: "Positions", icon: Briefcase };
+const bulkUploadNavItem = { href: "/candidates/upload", label: "Bulk Upload", icon: UploadCloud };
+const settingsNavItem = { href: "/settings", label: "Settings", icon: Settings };
 
+const mainNavItems = [dashboardNavItem, myTaskBoardNavItem, candidatesNavItem, positionsNavItem, bulkUploadNavItem, settingsNavItem];
 
+// Helper to get the most specific active menu item
+function getActiveMenuItem(pathname: string, items: { href: string }[]): { href: string } | undefined {
+  // Sort by href length descending to prioritize more specific paths
+  const sorted = [...items].sort((a, b) => b.href.length - a.href.length);
+  return sorted.find(item =>
+    pathname === item.href ||
+    (item.href !== "/" && pathname.startsWith(item.href + "/"))
+  );
+}
 
 // Memoize SidebarNav to prevent unnecessary re-renders
 const SidebarNavComponent = function SidebarNav() {
@@ -34,77 +44,155 @@ const SidebarNavComponent = function SidebarNav() {
 
   const [isClient, setIsClient] = React.useState(false);
 
+  // Bulk upload pending count state
+  const [pendingCount, setPendingCount] = React.useState<number | null>(null);
+  const [pendingError, setPendingError] = React.useState(false);
+  React.useEffect(() => {
+    let ignore = false;
+    async function fetchPending() {
+      try {
+        const res = await fetch("/api/upload-queue?limit=100");
+        if (!res.ok) throw new Error("Failed to fetch");
+        const data = await res.json();
+        const count = Array.isArray(data.data)
+          ? data.data.filter((item: any) => item.status === "queued").length
+          : 0;
+        if (!ignore) {
+          setPendingCount(count);
+        }
+      } catch (e) {
+        if (!ignore) {
+          setPendingError(true);
+        }
+      }
+    }
+    fetchPending();
+    return () => { ignore = true; };
+  }, []);
+
   React.useEffect(() => {
     setIsClient(true);
   }, []);
 
-  const isAnyMainNavItemActive = mainNavItems.some(item => pathname === item.href || (item.href !== "/" && pathname.startsWith(item.href)));
+  // Only the most specific menu item should be active
+  const activeMainNavItem = getActiveMenuItem(pathname, mainNavItems);
   const isMyTaskBoardActive = myTaskBoardNavItem.href === pathname || pathname.startsWith(myTaskBoardNavItem.href + "/");
 
-
   return (
-      <SidebarMenu>
-        {mainNavItems.map((item) => (
-          <SidebarMenuItem key={item.href}>
-            <Link href={item.href} passHref legacyBehavior>
-              <SidebarMenuButton
-                asChild
-                isActive={
-                  pathname === item.href ||
-                  (item.href !== "/" && pathname.startsWith(item.href + "/"))
-                }
-                className="w-full justify-start"
-                size="default"
-                data-active={
-                  pathname === item.href ||
-                  (item.href !== "/" && pathname.startsWith(item.href + "/"))
-                }
-              >
-                <a>
-                  <item.icon className="h-5 w-5" />
-                  <span className="truncate">{item.label}</span>
-                </a>
-              </SidebarMenuButton>
-            </Link>
-          </SidebarMenuItem>
-        ))}
-
-        {isClient && (userRole === 'Recruiter' || userRole === 'Admin') && (
-          <SidebarMenuItem key={myTaskBoardNavItem.href}>
-            <Link href={myTaskBoardNavItem.href} passHref legacyBehavior>
-              <SidebarMenuButton
-                asChild
-                isActive={isMyTaskBoardActive}
-                className="w-full justify-start"
-                size="default"
-                data-active={isMyTaskBoardActive}
-              >
-                <a>
-                  <myTaskBoardNavItem.icon className="h-5 w-5" />
-                  <span className="truncate">{myTaskBoardNavItem.label}</span>
-                </a>
-              </SidebarMenuButton>
-            </Link>
-          </SidebarMenuItem>
-        )}
-
-        <SidebarMenuItem className="mt-auto">
-          <Link href="/settings" passHref legacyBehavior>
+    <SidebarMenu>
+      {/* Group 1: Dashboard, My Task Board */}
+      <SidebarMenuItem key={dashboardNavItem.href}>
+        <Link href={dashboardNavItem.href} passHref legacyBehavior>
+          <SidebarMenuButton
+            asChild
+            isActive={activeMainNavItem && activeMainNavItem.href === dashboardNavItem.href}
+            className="w-full justify-start"
+            size="default"
+            data-active={activeMainNavItem && activeMainNavItem.href === dashboardNavItem.href}
+          >
+            <a>
+              <dashboardNavItem.icon className="h-5 w-5" />
+              <span className="truncate">{dashboardNavItem.label}</span>
+            </a>
+          </SidebarMenuButton>
+        </Link>
+      </SidebarMenuItem>
+      {isClient && (userRole === 'Recruiter' || userRole === 'Admin') && (
+        <SidebarMenuItem key={myTaskBoardNavItem.href}>
+          <Link href={myTaskBoardNavItem.href} passHref legacyBehavior>
             <SidebarMenuButton
               asChild
-              isActive={pathname.startsWith("/settings")}
+              isActive={isMyTaskBoardActive}
               className="w-full justify-start"
               size="default"
-              data-active={pathname.startsWith("/settings")}
+              data-active={isMyTaskBoardActive}
             >
               <a>
-                <Settings className="h-5 w-5" />
-                <span className="truncate">Settings</span>
+                <myTaskBoardNavItem.icon className="h-5 w-5" />
+                <span className="truncate">{myTaskBoardNavItem.label}</span>
               </a>
             </SidebarMenuButton>
           </Link>
         </SidebarMenuItem>
-      </SidebarMenu>
+      )}
+      <SidebarSeparator />
+      {/* Group 2: Candidates, Positions */}
+      <SidebarMenuItem key={candidatesNavItem.href}>
+        <Link href={candidatesNavItem.href} passHref legacyBehavior>
+          <SidebarMenuButton
+            asChild
+            isActive={activeMainNavItem && activeMainNavItem.href === candidatesNavItem.href}
+            className="w-full justify-start"
+            size="default"
+            data-active={activeMainNavItem && activeMainNavItem.href === candidatesNavItem.href}
+          >
+            <a>
+              <candidatesNavItem.icon className="h-5 w-5" />
+              <span className="truncate">{candidatesNavItem.label}</span>
+            </a>
+          </SidebarMenuButton>
+        </Link>
+      </SidebarMenuItem>
+      <SidebarMenuItem key={positionsNavItem.href}>
+        <Link href={positionsNavItem.href} passHref legacyBehavior>
+          <SidebarMenuButton
+            asChild
+            isActive={activeMainNavItem && activeMainNavItem.href === positionsNavItem.href}
+            className="w-full justify-start"
+            size="default"
+            data-active={activeMainNavItem && activeMainNavItem.href === positionsNavItem.href}
+          >
+            <a>
+              <positionsNavItem.icon className="h-5 w-5" />
+              <span className="truncate">{positionsNavItem.label}</span>
+            </a>
+          </SidebarMenuButton>
+        </Link>
+      </SidebarMenuItem>
+      <SidebarSeparator />
+      {/* Group 3: Bulk Upload */}
+      <SidebarMenuItem key={bulkUploadNavItem.href}>
+        <Link href={bulkUploadNavItem.href} passHref legacyBehavior>
+          <SidebarMenuButton
+            asChild
+            isActive={activeMainNavItem && activeMainNavItem.href === bulkUploadNavItem.href}
+            className="w-full justify-start"
+            size="default"
+            data-active={activeMainNavItem && activeMainNavItem.href === bulkUploadNavItem.href}
+          >
+            <a className="flex items-center w-full">
+              <bulkUploadNavItem.icon className="h-5 w-5" />
+              <span className="truncate">{bulkUploadNavItem.label}</span>
+              {pendingError ? (
+                <SidebarMenuBadge className="ml-2 bg-gray-400 text-white">?</SidebarMenuBadge>
+              ) : pendingCount === null ? (
+                <SidebarMenuBadge className="ml-2 bg-yellow-100 text-yellow-700 flex items-center"><Loader2 className="animate-spin h-4 w-4 mr-1" />Loading</SidebarMenuBadge>
+              ) : (
+                <SidebarMenuBadge className="ml-2 bg-yellow-400 text-black">{pendingCount} Pending</SidebarMenuBadge>
+              )}
+            </a>
+          </SidebarMenuButton>
+        </Link>
+      </SidebarMenuItem>
+      <SidebarSeparator />
+      {/* Group 4: Settings */}
+      <SidebarMenuItem className="mt-auto">
+        <Link href={settingsNavItem.href} passHref legacyBehavior>
+          <SidebarMenuButton
+            asChild
+            isActive={pathname.startsWith(settingsNavItem.href)}
+            className="w-full justify-start"
+            size="default"
+            data-active={pathname.startsWith(settingsNavItem.href)}
+          >
+            <a>
+              <settingsNavItem.icon className="h-5 w-5" />
+              <span className="truncate">{settingsNavItem.label}</span>
+            </a>
+          </SidebarMenuButton>
+        </Link>
+      </SidebarMenuItem>
+    </SidebarMenu>
   );
 };
 

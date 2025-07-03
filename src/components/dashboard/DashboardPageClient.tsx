@@ -338,58 +338,65 @@ export default function DashboardPageClient({
           <div className="h-6 w-1 bg-blue-500 rounded-full"></div>
           <h2 className="text-xl font-semibold text-foreground">Candidate Scoring Analysis</h2>
         </div>
-        <Card className="shadow-sm hover:shadow-md transition-all duration-200">
-          <CardContent className="pt-6">
-            <Bar
-              data={{
-                labels: candidateScoreRanges.map(r => r.label),
-                datasets: [
-                  {
-                    label: 'Candidates',
-                    data: candidateScoreRanges.map(r => r.count),
-                    backgroundColor: [
-                      'rgba(239, 68, 68, 0.8)',    // red-500
-                      'rgba(249, 115, 22, 0.8)',   // orange-500
-                      'rgba(234, 179, 8, 0.8)',    // yellow-500
-                      'rgba(59, 130, 246, 0.8)',   // blue-500
-                      'rgba(34, 197, 94, 0.8)',    // green-500
+        <p className="text-sm text-muted-foreground mb-2">This chart shows the distribution of candidates by their fit score, helping you quickly identify the quality mix in your pipeline.</p>
+        {/* Sort score ranges by count descending */}
+        {(() => {
+          const sortedScoreRanges = [...candidateScoreRanges].sort((a, b) => b.count - a.count);
+          return (
+            <Card className="shadow-sm hover:shadow-md transition-all duration-200">
+              <CardContent className="pt-6">
+                <Bar
+                  data={{
+                    labels: sortedScoreRanges.map(r => r.label),
+                    datasets: [
+                      {
+                        label: 'Candidates',
+                        data: sortedScoreRanges.map(r => r.count),
+                        backgroundColor: [
+                          'rgba(239, 68, 68, 0.8)',    // red-500
+                          'rgba(249, 115, 22, 0.8)',   // orange-500
+                          'rgba(234, 179, 8, 0.8)',    // yellow-500
+                          'rgba(59, 130, 246, 0.8)',   // blue-500
+                          'rgba(34, 197, 94, 0.8)',    // green-500
+                        ],
+                        borderRadius: 8,
+                        borderSkipped: false,
+                        barPercentage: 0.7,
+                      },
                     ],
-                    borderRadius: 8,
-                    borderSkipped: false,
-                    barPercentage: 0.7,
-                  },
-                ],
-              }}
-              options={{
-                indexAxis: 'y',
-                responsive: true,
-                plugins: {
-                  legend: { display: false },
-                  title: { display: false },
-                  tooltip: {
-                    callbacks: {
-                      label: function(context) {
-                        return ` ${context.parsed.x} candidates`;
+                  }}
+                  options={{
+                    indexAxis: 'y',
+                    responsive: true,
+                    plugins: {
+                      legend: { display: false },
+                      title: { display: false },
+                      tooltip: {
+                        callbacks: {
+                          label: function(context) {
+                            return ` ${context.parsed.x} candidates`;
+                          }
+                        }
                       }
-                    }
-                  }
-                },
-                scales: {
-                  x: {
-                    beginAtZero: true,
-                    grid: { color: 'rgba(100,116,139,0.1)' },
-                    ticks: { color: '#64748b', font: { size: 13 } },
-                  },
-                  y: {
-                    grid: { display: false },
-                    ticks: { color: '#64748b', font: { size: 13 } },
-                  },
-                },
-              }}
-              height={260}
-            />
-          </CardContent>
-        </Card>
+                    },
+                    scales: {
+                      x: {
+                        beginAtZero: true,
+                        grid: { color: 'rgba(100,116,139,0.1)' },
+                        ticks: { color: '#64748b', font: { size: 13 } },
+                      },
+                      y: {
+                        grid: { display: false },
+                        ticks: { color: '#64748b', font: { size: 13 } },
+                      },
+                    },
+                  }}
+                  height={160}
+                />
+              </CardContent>
+            </Card>
+          );
+        })()}
       </div>
 
       {/* Section 4: Recruitment Pipeline */}

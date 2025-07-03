@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { getPool } from '@/lib/db';
 import { v4 as uuidv4 } from 'uuid';
 import { verifyApiToken } from '@/lib/auth';
+import { handleCors } from '@/lib/cors';
 
 const updatePositionSchema = z.object({
   title: z.string().min(1).optional(),
@@ -32,7 +33,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
     return new Response(JSON.stringify({
       ...position,
       custom_attributes: position.customAttributes || {},
-    }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+    }), { status: 200, headers: handleCors(req) });
   } catch (error) {
     return new Response(JSON.stringify({ error: 'Error fetching position', details: (error as Error).message }), { status: 500, headers: { 'Content-Type': 'application/json' } });
   } finally {
@@ -86,7 +87,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
         ...updatedPosition,
         custom_attributes: updatedPosition.customAttributes || {},
       }
-    }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+    }), { status: 200, headers: handleCors(req) });
   } catch (error) {
     await client.query('ROLLBACK');
     return new Response(JSON.stringify({ error: 'Error updating position', details: (error as Error).message }), { status: 500, headers: { 'Content-Type': 'application/json' } });
@@ -113,11 +114,15 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
     }
     await client.query('DELETE FROM "Position" WHERE id = $1', [id]);
     await client.query('COMMIT');
-    return new Response(JSON.stringify({ message: 'Position deleted successfully' }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+    return new Response(JSON.stringify({ message: 'Position deleted successfully' }), { status: 200, headers: handleCors(req) });
   } catch (error) {
     await client.query('ROLLBACK');
     return new Response(JSON.stringify({ error: 'Error deleting position', details: (error as Error).message }), { status: 500, headers: { 'Content-Type': 'application/json' } });
   } finally {
     client.release();
   }
+}
+
+export async function OPTIONS(request: NextRequest) {
+  return handleCors(request);
 } 

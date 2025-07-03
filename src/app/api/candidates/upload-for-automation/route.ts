@@ -115,7 +115,7 @@ export async function POST(request: NextRequest) {
           level: targetPositionLevel
         }
       },
-      response_mode: 'streaming',
+      response_mode: 'blocking',
       user: actingUserName,
     };
 

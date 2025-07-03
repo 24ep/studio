@@ -7,6 +7,7 @@ import { logAudit } from '@/lib/auditLog';
 import { getPool } from '@/lib/db';
 import { authOptions } from '@/lib/auth';
 import { MINIO_PUBLIC_BASE_URL, minioClient, MINIO_BUCKET } from '@/lib/minio';
+import { Buffer } from 'buffer';
 
 /**
  * @openapi
@@ -102,9 +103,9 @@ export async function GET(request: NextRequest) {
   // Publicly accessible or light auth check if needed for non-sensitive parts
   try {
     const result = await getPool().query('SELECT key, value, "updatedAt" FROM "SystemSetting"');
-    const settings = Object.fromEntries(result.rows.map(row => [row.key, row.value]));
+    const settings = Object.fromEntries(result.rows.map((row: any) => [row.key, row.value]));
     // Fallback for resumeProcessingWebhookUrl
-    if (!settings.resumeProcessingWebhookUrl) {
+    if (!settings.resumeProcessingWebhookUrl || settings.resumeProcessingWebhookUrl === '') {
       settings.resumeProcessingWebhookUrl = process.env.RESUME_PROCESSING_WEBHOOK_URL || 'http://localhost:5678/webhook';
     }
     // Fallback for generalPdfWebhookUrl
@@ -206,13 +207,13 @@ export async function POST(request: NextRequest) {
     }
 
     await client.query('COMMIT');
-    await logAudit('AUDIT', `System settings updated by ${session.user.name}. Keys: ${validatedSettings.map(s=>s.key).join(', ')}`, 'API:SystemSettings:Update', session.user.id, { updatedKeys: validatedSettings.map(s=>s.key) });
+    await logAudit('AUDIT', `System settings updated by ${session.user.name}. Keys: ${validatedSettings.map((s: any)=>s.key).join(', ')}`, 'API:SystemSettings:Update', session.user.id, { updatedKeys: validatedSettings.map((s: any)=>s.key) });
     
     // Return all current settings after update as an object (key-value pairs)
     const allSettingsResult = await client.query('SELECT key, value, "updatedAt" FROM "SystemSetting"');
-    const settings = Object.fromEntries(allSettingsResult.rows.map(row => [row.key, row.value]));
+    const settings = Object.fromEntries(allSettingsResult.rows.map((row: any) => [row.key, row.value]));
     // Fallback for resumeProcessingWebhookUrl
-    if (!settings.resumeProcessingWebhookUrl) {
+    if (!settings.resumeProcessingWebhookUrl || settings.resumeProcessingWebhookUrl === '') {
       settings.resumeProcessingWebhookUrl = process.env.RESUME_PROCESSING_WEBHOOK_URL || 'http://localhost:5678/webhook';
     }
     // Fallback for generalPdfWebhookUrl

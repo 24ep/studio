@@ -322,8 +322,8 @@ export default function SignInClient({ initialSettings }: SignInClientProps) {
               <img
                 src={loginBgImageUrl}
                 alt="Login Visual"
-                className="w-full h-full object-contain mx-auto z-10"
-                style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+                className="w-full h-full object-cover mx-auto z-10"
+                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
               />
               {/* Overlay for contrast */}
               <div className="absolute inset-0 bg-gradient-to-r from-black/30 to-transparent z-20 pointer-events-none" />

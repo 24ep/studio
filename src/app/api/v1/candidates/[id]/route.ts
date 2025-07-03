@@ -3,6 +3,7 @@ import { getPool } from '@/lib/db';
 import { z } from 'zod';
 import { verifyApiToken } from '@/lib/auth';
 import { v4 as uuidv4 } from 'uuid';
+import { handleCors } from '@/lib/cors';
 
 const updateCandidateSchema = z.object({
   name: z.string().min(1).optional(),
@@ -68,7 +69,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
       recruiter: candidate.recruiterId ? { name: candidate.recruiterName } : null,
       jobMatches: jobMatchesResult.rows,
       resumeHistory: resumeHistoryResult.rows,
-    }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+    }), { status: 200, headers: handleCors(req) });
   } catch (error) {
     return new Response(JSON.stringify({ error: 'Error fetching candidate', details: (error as Error).message }), { status: 500, headers: { 'Content-Type': 'application/json' } });
   } finally {
@@ -134,7 +135,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
         ...updatedCandidate,
         custom_attributes: updatedCandidate.customAttributes || {},
       }
-    }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+    }), { status: 200, headers: handleCors(req) });
   } catch (error) {
     await client.query('ROLLBACK');
     return new Response(JSON.stringify({ error: 'Error updating candidate', details: (error as Error).message }), { status: 500, headers: { 'Content-Type': 'application/json' } });
@@ -168,4 +169,8 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
   } finally {
     client.release();
   }
+}
+
+export async function OPTIONS(request: NextRequest) {
+  return handleCors(request);
 } 

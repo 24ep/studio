@@ -3,6 +3,7 @@ import { getPool } from '@/lib/db';
 import { z } from 'zod';
 import { v4 as uuidv4 } from 'uuid';
 import { verifyApiToken } from '@/lib/auth';
+import { handleCors } from '@/lib/cors';
 
 const candidateDetailsSchema = z.object({
   cv_language: z.string().optional().nullable(),
@@ -106,9 +107,9 @@ export async function GET(req: NextRequest) {
       ...row,
       custom_attributes: row.customAttributes || {},
     }));
-    return new Response(JSON.stringify({ candidates, total, page, limit }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+    return new Response(JSON.stringify({ candidates, total, page, limit }), { status: 200, headers: handleCors(req) });
   } catch (error) {
-    return new Response(JSON.stringify({ error: 'Error fetching candidates', details: (error as Error).message }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+    return new Response(JSON.stringify({ error: 'Error fetching candidates', details: (error as Error).message }), { status: 500, headers: handleCors(req) });
   } finally {
     client.release();
   }
@@ -157,14 +158,18 @@ export async function POST(req: NextRequest) {
       uuidv4(), newCandidateId, positionId, status, 'Initial creation', user.id
     ]);
     await client.query('COMMIT');
-    return new Response(JSON.stringify({ message: 'Candidate created successfully', candidate: newCandidate }), { status: 201, headers: { 'Content-Type': 'application/json' } });
+    return new Response(JSON.stringify({ message: 'Candidate created successfully', candidate: newCandidate }), { status: 201, headers: handleCors(req) });
   } catch (error) {
     await client.query('ROLLBACK');
     if ((error as any).code === '23505' && (error as any).constraint === 'Candidate_email_key') {
       return new Response(JSON.stringify({ error: `A candidate with the email "${email}" already exists.` }), { status: 409, headers: { 'Content-Type': 'application/json' } });
     }
-    return new Response(JSON.stringify({ error: 'Error creating candidate', details: (error as Error).message }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+    return new Response(JSON.stringify({ error: 'Error creating candidate', details: (error as Error).message }), { status: 500, headers: handleCors(req) });
   } finally {
     client.release();
   }
+}
+
+export async function OPTIONS(request: NextRequest) {
+  return handleCors(request);
 } 

@@ -9,7 +9,7 @@ import { CandidateTable } from '@/components/candidates/CandidateTable';
 import type { Candidate, CandidateStatus, Position, RecruitmentStage, UserProfile } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuLabel, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
-import { PlusCircle, Users, ServerCrash, Zap, Loader2, FileDown, FileUp, ChevronDown, FileSpreadsheet, ShieldAlert, Brain, Trash2 as BulkTrashIcon, Edit as BulkEditIcon } from 'lucide-react';
+import { PlusCircle, Users, ServerCrash, Zap, Loader2, FileDown, FileUp, ChevronDown, FileSpreadsheet, ShieldAlert, Brain, Trash2 as BulkTrashIcon, Edit as BulkEditIcon, ChevronLeft, ChevronRight } from 'lucide-react';
 import { toast } from "react-hot-toast";
 import { AddCandidateModal, type AddCandidateFormValues } from '@/components/candidates/AddCandidateModal';
 import { UploadResumeModal } from '@/components/candidates/UploadResumeModal';
@@ -26,6 +26,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import BulkUploadCVsModal from '@/components/BulkUploadCVsModal';
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 
 
 interface CandidatesPageClientProps {
@@ -110,6 +111,9 @@ export function CandidatesPageClient({
   const canManageCandidates = session?.user?.role === 'Admin' || session?.user?.modulePermissions?.includes('CANDIDATES_MANAGE');
 
   const [isBulkUploadModalOpen, setIsBulkUploadModalOpen] = useState(false);
+
+  // Collapsible sidebar state
+  const [showFilters, setShowFilters] = useState(true);
 
   const fetchRecruiters = useCallback(async () => {
     if (sessionStatus !== 'authenticated') return;
@@ -656,26 +660,53 @@ export function CandidatesPageClient({
   }
 
   return (
-    <div className="flex flex-col md:flex-row gap-6 h-full">
-      <aside className="w-full md:w-auto flex-shrink-0">
-        <ScrollArea className="h-full">
-          <div className="flex justify-between items-center mb-3 md:hidden"> 
-            <h2 className="text-lg font-semibold">Filters</h2>
+    <div className="flex h-full relative">
+      {/* Filter Sidebar */}
+      {showFilters && (
+        <aside className="w-80 min-w-[250px] border-r bg-white dark:bg-background transition-all flex flex-col">
+          <div className="flex justify-between items-center p-4 border-b">
+            <span className="font-bold text-lg">Filters</span>
+            <button
+              className="ml-2 p-1 rounded hover:bg-muted"
+              onClick={() => setShowFilters(false)}
+              aria-label="Hide filters"
+            >
+              <ChevronLeft className="h-5 w-5" />
+            </button>
           </div>
-          <CandidateFilters
-            initialFilters={filters}
-            onFilterChange={handleFilterChange}
-            onAiSearch={handleAiSearch}
-            availablePositions={availablePositions}
-            availableStages={availableStages}
-            availableRecruiters={availableRecruiters}
-            isLoading={isLoading || isAiSearching}
-            isAiSearching={isAiSearching}
-          />
-        </ScrollArea>
-      </aside>
-
-      <div className="flex-1 w-full space-y-6 min-w-0"> 
+          <div className="flex-1 overflow-y-auto">
+            <Card className="m-4">
+              <CardHeader>
+                <CardTitle>Candidate Filters</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <CandidateFilters
+                  initialFilters={filters}
+                  onFilterChange={handleFilterChange}
+                  onAiSearch={handleAiSearch}
+                  availablePositions={availablePositions}
+                  availableStages={availableStages}
+                  availableRecruiters={availableRecruiters}
+                  isLoading={isLoading || isAiSearching}
+                  isAiSearching={isAiSearching}
+                />
+              </CardContent>
+            </Card>
+          </div>
+        </aside>
+      )}
+      {/* Show button when sidebar is hidden */}
+      {!showFilters && (
+        <button
+          className="absolute left-0 top-4 z-10 bg-white dark:bg-background border rounded-r p-1 shadow"
+          onClick={() => setShowFilters(true)}
+          aria-label="Show filters"
+        >
+          <ChevronRight className="h-5 w-5" />
+        </button>
+      )}
+      {/* Main Content */}
+      <main className="flex-1 w-full space-y-6 min-w-0 p-6">
         <div className="flex flex-col sm:flex-row justify-between items-center gap-2">
           <h1 className="text-2xl font-semibold text-foreground hidden md:block"> Candidate Management </h1>
           <div className="w-full md:w-auto flex flex-col sm:flex-row gap-2 items-center sm:justify-end">
@@ -760,7 +791,7 @@ export function CandidatesPageClient({
           ))}
           <Button variant="outline" size="sm" onClick={() => setPage(page + 1)} disabled={page === totalPages}>Next</Button>
         </div>
-      </div>
+      </main>
 
       {canManageCandidates && <AddCandidateModal isOpen={isAddModalOpen} onOpenChange={setIsAddModalOpen} onAddCandidate={handleAddCandidateSubmit} availablePositions={availablePositions} availableStages={availableStages} />}
       {canManageCandidates && <UploadResumeModal isOpen={isUploadModalOpen} onOpenChange={setIsUploadModalOpen} candidate={selectedCandidateForUpload} onUploadSuccess={handleUploadSuccess} />}

@@ -37,6 +37,7 @@ import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
 import { v4 as uuidv4 } from 'uuid';
 import { getPool } from '@/lib/db';
+import { handleCors } from '@/lib/cors';
 
 export async function GET(request: NextRequest) {
   const session = await getServerSession(authOptions);
@@ -101,11 +102,11 @@ export async function GET(request: NextRequest) {
     }));
     
     console.log('Positions API: Returning positions:', positions.length);
-    return NextResponse.json({ data: positions, total }, { status: 200 });
+    return NextResponse.json({ data: positions, total }, { status: 200, headers: handleCors(request) });
   } catch (error) {
     console.error("Failed to fetch positions:", error);
     await logAudit('ERROR', `Failed to fetch positions. Error: ${(error as Error).message}`, 'API:Positions:GetAll', session?.user?.id);
-    return NextResponse.json({ message: "Error fetching positions", error: (error as Error).message }, { status: 500 });
+    return NextResponse.json({ message: "Error fetching positions", error: (error as Error).message }, { status: 500, headers: handleCors(request) });
   }
 }
 
@@ -125,7 +126,7 @@ export async function POST(request: NextRequest) {
 
   if (!session?.user || (session.user.role !== 'Admin' && !session.user.modulePermissions?.includes('POSITIONS_MANAGE'))) {
     await logAudit('WARN', `Forbidden attempt to create position by ${actingUserName}.`, 'API:Positions:Create', actingUserId);
-    return NextResponse.json({ message: "Forbidden: Insufficient permissions" }, { status: 403 });
+    return NextResponse.json({ message: "Forbidden: Insufficient permissions" }, { status: 403, headers: handleCors(request) });
   }
 
   let body;
@@ -133,14 +134,14 @@ export async function POST(request: NextRequest) {
     body = await request.json();
   } catch (error) {
     console.error("Error parsing request body for new position:", error);
-    return NextResponse.json({ message: "Error parsing request body", error: (error as Error).message }, { status: 400 });
+    return NextResponse.json({ message: "Error parsing request body", error: (error as Error).message }, { status: 400, headers: handleCors(request) });
   }
 
   const validationResult = createPositionSchema.safeParse(body);
   if (!validationResult.success) {
     return NextResponse.json(
       { message: "Invalid input", errors: validationResult.error.flatten().fieldErrors },
-      { status: 400 }
+      { status: 400, headers: handleCors(request) }
     );
   }
   
@@ -177,10 +178,14 @@ export async function POST(request: NextRequest) {
     }
 
     await logAudit('AUDIT', `Position '${newPosition.title}' (ID: ${newPosition.id}) created by ${actingUserName}.`, 'API:Positions:Create', actingUserId, { targetPositionId: newPosition.id, title: newPosition.title, department: newPosition.department, position_level: newPosition.position_level });
-    return NextResponse.json(newPosition, { status: 201 });
+    return NextResponse.json(newPosition, { status: 201, headers: handleCors(request) });
   } catch (error) {
     console.error("Failed to create position:", error);
     await logAudit('ERROR', `Failed to create position '${validatedData.title}' by ${actingUserName}. Error: ${(error as Error).message}`, 'API:Positions:Create', actingUserId, { title: validatedData.title });
-    return NextResponse.json({ message: "Error creating position", error: (error as Error).message }, { status: 500 });
+    return NextResponse.json({ message: "Error creating position", error: (error as Error).message }, { status: 500, headers: handleCors(request) });
   }
+}
+
+export async function OPTIONS(request: NextRequest) {
+  return handleCors(request);
 }

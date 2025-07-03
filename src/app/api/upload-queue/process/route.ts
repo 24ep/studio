@@ -132,7 +132,7 @@ export async function POST(request: NextRequest) {
       };
       const jsonPayload = {
         inputs,
-        response_mode: 'streaming',
+        response_mode: 'blocking',
         user: 'abc-123',
       };
       let webhookResStatus = null;

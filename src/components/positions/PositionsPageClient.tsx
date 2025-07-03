@@ -163,70 +163,10 @@ export default function PositionsPageClient() {
 
   return (
     <div className="space-y-6 p-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <h1 className="text-3xl font-bold">Job Positions</h1>
-          <p className="text-muted-foreground">Manage your open job positions</p>
-        </div>
-        {canManagePositions && (
-          <Button onClick={() => setIsAddModalOpen(true)} className="btn-primary-gradient">
-            <PlusCircle className="mr-2 h-4 w-4" />
-            Add Position
-          </Button>
-        )}
-      </div>
-
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Total Positions</p>
-                <p className="text-2xl font-bold">{totalPositions}</p>
-              </div>
-              <Briefcase className="h-8 w-8 text-primary" />
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Open Positions</p>
-                <p className="text-2xl font-bold text-green-600">{openPositions}</p>
-              </div>
-              <div className="h-8 w-8 rounded-full bg-green-100 flex items-center justify-center">
-                <span className="text-green-600 text-sm font-bold">O</span>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Closed Positions</p>
-                <p className="text-2xl font-bold text-muted-foreground">{closedPositions}</p>
-              </div>
-              <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center">
-                <span className="text-muted-foreground text-sm font-bold">C</span>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Filters */}
+      {/* Filters on top */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Filter className="h-5 w-5" />
-            Filters
-          </CardTitle>
+          <CardTitle>Position Filters</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -239,7 +179,6 @@ export default function PositionsPageClient() {
                 className="pl-10"
               />
             </div>
-            
             <Select value={statusFilter || ''} onValueChange={(value: 'all' | 'open' | 'closed') => setStatusFilter(value)}>
               <SelectTrigger>
                 <SelectValue placeholder="Filter by status" />
@@ -250,7 +189,6 @@ export default function PositionsPageClient() {
                 <SelectItem value="closed">Closed Only</SelectItem>
               </SelectContent>
             </Select>
-            
             <Select value={departmentFilter || ''} onValueChange={setDepartmentFilter}>
               <SelectTrigger>
                 <SelectValue placeholder="Filter by department" />
@@ -265,7 +203,59 @@ export default function PositionsPageClient() {
           </div>
         </CardContent>
       </Card>
-
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div>
+          <h1 className="text-3xl font-bold">Job Positions</h1>
+          <p className="text-muted-foreground">Manage your open job positions</p>
+        </div>
+        {canManagePositions && (
+          <Button onClick={() => setIsAddModalOpen(true)} className="btn-primary-gradient">
+            <PlusCircle className="mr-2 h-4 w-4" />
+            Add Position
+          </Button>
+        )}
+      </div>
+      {/* Stats Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Total Positions</p>
+                <p className="text-2xl font-bold">{totalPositions}</p>
+              </div>
+              <Briefcase className="h-8 w-8 text-primary" />
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Open Positions</p>
+                <p className="text-2xl font-bold text-green-600">{openPositions}</p>
+              </div>
+              <div className="h-8 w-8 rounded-full bg-green-100 flex items-center justify-center">
+                <span className="text-green-600 text-sm font-bold">O</span>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Closed Positions</p>
+                <p className="text-2xl font-bold text-muted-foreground">{closedPositions}</p>
+              </div>
+              <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center">
+                <span className="text-muted-foreground text-sm font-bold">C</span>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
       {/* Positions List */}
       <Card>
         <CardHeader>

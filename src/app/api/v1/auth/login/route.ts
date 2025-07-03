@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server';
 import { getPool, getMergedUserPermissions } from '@/lib/db';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
+import { handleCors } from '@/lib/cors';
 
 export async function POST(req: NextRequest) {
   let body;
@@ -44,4 +45,8 @@ export async function POST(req: NextRequest) {
   } finally {
     client.release();
   }
+}
+
+export async function OPTIONS(request: NextRequest) {
+  return handleCors(request);
 } 

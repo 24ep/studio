@@ -108,7 +108,7 @@ export async function POST(request: NextRequest) {
           filename: originalName,
           mimetype: file.type
         },
-        response_mode: 'streaming',
+        response_mode: 'blocking',
         user: actingUserId
       };
 
