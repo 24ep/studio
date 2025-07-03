@@ -36,7 +36,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
-import { Toggle } from "@/components/ui/toggle";
+import { Switch } from "@/components/ui/switch";
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -321,7 +321,7 @@ export default function RolesPermissionsPage() {
                               <Label htmlFor={`${selectedRole.id}-${perm.id}`} className="font-medium text-sm">{perm.label}</Label>
                               <p className="text-xs text-muted-foreground">{perm.description}</p>
                             </div>
-                            <Toggle
+                            <Switch
                               checked={(selectedRole.permissions || []).includes(perm.id)}
                               onCheckedChange={() => handlePermissionToggle(perm.id, selectedRole)}
                             />
