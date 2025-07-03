@@ -17,6 +17,7 @@ const APP_THEME_KEY = 'appThemePreference';
 const APP_LOGO_DATA_URL_KEY = 'appLogoDataUrl';
 const APP_CONFIG_APP_NAME_KEY = 'appConfigAppName'; // Key for app name
 const SIDEBAR_ACTIVE_STYLE_KEY = 'sidebarActiveStylePreference'; // Key for sidebar active style
+const LOGIN_BG_DATA_URL_KEY = 'loginBackgroundDataUrl'; // Key for login background
 const DEFAULT_APP_NAME = "CandiTrack"; // Default app name
 
 type ThemePreference = "light" | "dark" | "system";
@@ -64,6 +65,11 @@ export default function PreferencesSettingsPage() {
   const [logoPreviewUrl, setLogoPreviewUrl] = useState<string | null>(null);
   const [savedLogoDataUrl, setSavedLogoDataUrl] = useState<string | null>(null);
 
+  // Login Background state
+  const [selectedLoginBgFile, setSelectedLoginBgFile] = useState<File | null>(null);
+  const [loginBgPreviewUrl, setLoginBgPreviewUrl] = useState<string | null>(null);
+  const [savedLoginBgDataUrl, setSavedLoginBgDataUrl] = useState<string | null>(null);
+
 
   useEffect(() => {
     setIsClient(true);
@@ -78,6 +84,12 @@ export default function PreferencesSettingsPage() {
             if (storedLogoDataUrl) {
                 setSavedLogoDataUrl(storedLogoDataUrl);
                 setLogoPreviewUrl(storedLogoDataUrl);
+            }
+
+            const storedLoginBgDataUrl = localStorage.getItem(LOGIN_BG_DATA_URL_KEY);
+            if (storedLoginBgDataUrl) {
+                setSavedLoginBgDataUrl(storedLoginBgDataUrl);
+                setLoginBgPreviewUrl(storedLoginBgDataUrl);
             }
 
             const storedAppName = localStorage.getItem(APP_CONFIG_APP_NAME_KEY);
@@ -153,6 +165,52 @@ export default function PreferencesSettingsPage() {
     }
   };
 
+  const handleLoginBgFileChange = (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      if (file.type.startsWith('image/')) {
+        if (file.size > 500 * 1024) { // Max 500KB for background
+            error("Please select an image smaller than 500KB.");
+            setSelectedLoginBgFile(null);
+            setLoginBgPreviewUrl(savedLoginBgDataUrl);
+            event.target.value = '';
+            return;
+        }
+        setSelectedLoginBgFile(file);
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          setLoginBgPreviewUrl(reader.result as string);
+        };
+        reader.readAsDataURL(file);
+      } else {
+        error("Please select an image file (e.g., PNG, JPG, SVG).");
+        setSelectedLoginBgFile(null);
+        setLoginBgPreviewUrl(savedLoginBgDataUrl);
+        event.target.value = '';
+      }
+    } else {
+      setSelectedLoginBgFile(null);
+      setLoginBgPreviewUrl(savedLoginBgDataUrl);
+    }
+  };
+
+  const removeSelectedLoginBg = (clearSaved: boolean = false) => {
+    setSelectedLoginBgFile(null);
+    const fileInput = document.getElementById('login-bg-upload') as HTMLInputElement;
+    if (fileInput) {
+        fileInput.value = '';
+    }
+    if (clearSaved) {
+        localStorage.removeItem(LOGIN_BG_DATA_URL_KEY);
+        setSavedLoginBgDataUrl(null);
+        setLoginBgPreviewUrl(null);
+        success("The login background has been reset to default.");
+        window.dispatchEvent(new CustomEvent('appConfigChanged', { detail: { loginBgUrl: null } }));
+    } else {
+        setLoginBgPreviewUrl(savedLoginBgDataUrl);
+    }
+  };
+
   const handleSavePreferences = () => {
     if (!isClient) return;
     localStorage.setItem(APP_THEME_KEY, themePreference);
@@ -171,6 +229,13 @@ export default function PreferencesSettingsPage() {
       logoUpdated = true;
     }
 
+    let loginBgUpdated = false;
+    if (selectedLoginBgFile && loginBgPreviewUrl) {
+      localStorage.setItem(LOGIN_BG_DATA_URL_KEY, loginBgPreviewUrl);
+      setSavedLoginBgDataUrl(loginBgPreviewUrl);
+      loginBgUpdated = true;
+    }
+
     success('Your preferences have been updated locally.');
 
     // Dispatch a single event for any config change
@@ -178,6 +243,7 @@ export default function PreferencesSettingsPage() {
       detail: { 
         appName: appName || DEFAULT_APP_NAME,
         logoUrl: logoUpdated ? logoPreviewUrl : savedLogoDataUrl,
+        loginBgUrl: loginBgUpdated ? loginBgPreviewUrl : savedLoginBgDataUrl,
         sidebarActiveStyle: sidebarActiveStyle,
         sidebarColors: sidebarColors
       } 
@@ -210,7 +276,7 @@ export default function PreferencesSettingsPage() {
 
   return (
     <div className="space-y-8">
-      <Card className="w-full max-w-xl mx-auto shadow-lg">
+      <Card className="w-full max-w-xl mx-auto shadow-lg rounded-xl border-gray-200 dark:border-gray-700">
         <CardHeader>
           <CardTitle className="flex items-center">
             <Palette className="mr-2 h-6 w-6 text-primary" /> Preferences
@@ -296,6 +362,50 @@ export default function PreferencesSettingsPage() {
               <p className="text-xs text-muted-foreground mt-1">
                 Select an image to replace the application logo. Changes apply after saving preferences.
                 Stored in browser localStorage as a data URL (max 100KB recommended).
+              </p>
+            </div>
+          </section>
+
+          <section>
+            <h3 className="text-lg font-semibold text-foreground mb-2 flex items-center">
+              <ImageUp className="mr-2 h-5 w-5" /> Login Background
+            </h3>
+            <div>
+              <Label htmlFor="login-bg-upload">Change Login Background (Recommended: landscape, max 500KB)</Label>
+              <Input
+                id="login-bg-upload"
+                type="file"
+                accept="image/*"
+                onChange={handleLoginBgFileChange}
+                className="mt-1"
+              />
+              {loginBgPreviewUrl && (
+                <div className="mt-3 p-2 border rounded-md inline-flex items-center gap-3 bg-muted/50">
+                  <div className="relative w-24 h-16 rounded overflow-hidden">
+                    <Image 
+                      src={loginBgPreviewUrl} 
+                      alt="Login background preview" 
+                      fill 
+                      className="object-cover" 
+                    />
+                  </div>
+                  {selectedLoginBgFile && <span className="text-sm text-foreground truncate max-w-xs">{selectedLoginBgFile.name}</span>}
+                  <Button variant="ghost" size="icon" onClick={() => removeSelectedLoginBg(false)} className="h-7 w-7">
+                    <XCircle className="h-4 w-4 text-muted-foreground hover:text-destructive"/>
+                    <span className="sr-only">Cancel selection</span>
+                  </Button>
+                </div>
+              )}
+              {savedLoginBgDataUrl && (
+                 <div className="mt-2">
+                    <Button variant="outline" size="sm" onClick={() => removeSelectedLoginBg(true)}>
+                        <Trash2 className="mr-2 h-4 w-4"/> Reset to Default Background
+                    </Button>
+                 </div>
+              )}
+              <p className="text-xs text-muted-foreground mt-1">
+                Select an image to replace the login page background. Changes apply after saving preferences.
+                Stored in browser localStorage as a data URL (max 500KB recommended).
               </p>
             </div>
           </section>
