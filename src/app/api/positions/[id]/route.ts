@@ -83,7 +83,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
 
     // Fetch the latest webhook_payload for this position from upload_queue
     const uploadQueueRes = await client.query(
-      'SELECT webhook_payload FROM upload_queue WHERE (webhook_payload->'inputs'->>'job_id') = $1 ORDER BY upload_date DESC LIMIT 1',
+      "SELECT webhook_payload FROM upload_queue WHERE (webhook_payload->'inputs'->>'job_id') = $1 ORDER BY upload_date DESC LIMIT 1",
       [id]
     );
     const webhook_payload = uploadQueueRes.rows[0]?.webhook_payload || null;
