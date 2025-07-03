@@ -117,7 +117,8 @@ function UploadPageContent() {
         throw new Error(`File upload failed`);
       }
       const { results } = await uploadRes.json();
-      // Create queue entries for each file with position info
+      // Bulk blocking upload: process each file via blocking endpoint
+      const webhookResults: any[] = [];
       await Promise.all(results.map(async (result: any, idx: number) => {
         if (result.status === 'success') {
           const queueData = {
@@ -133,19 +134,36 @@ function UploadPageContent() {
               uploadBatch: batchId
             },
           };
-          await fetch('/api/upload-queue', {
+          // Use blocking endpoint
+          const resp = await fetch('/api/upload-queue/blocking-process', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(queueData)
           });
+          let webhookResult;
+          try {
+            webhookResult = await resp.json();
+          } catch (e) {
+            webhookResult = { error: 'Invalid response from server' };
+          }
+          webhookResults.push({ file: result.file_name, ...webhookResult });
         } else {
-          toast.error(`${result.file_name}: ${result.error || 'Upload failed'}`);
+          webhookResults.push({ file: result.file_name, error: result.error || 'Upload failed' });
         }
       }));
       setSelectedFiles([]);
       setSelectedPositionId("");
       setDialogOpen(false);
-      toast.success('Bulk upload completed successfully');
+      // Show summary to user
+      const numSuccess = webhookResults.filter(r => !r.error && (!r.webhook_response || r.webhook_response.status === 200)).length;
+      const numError = webhookResults.length - numSuccess;
+      if (numError === 0) {
+        toast.success(`Bulk upload completed successfully (${numSuccess} files)`);
+      } else {
+        toast.error(`Bulk upload completed with errors: ${numError} failed, ${numSuccess} succeeded.`);
+        // Optionally, show details in console
+        console.table(webhookResults);
+      }
       window.dispatchEvent(new CustomEvent('refreshCandidateQueue'));
     } catch (error) {
       console.error('Bulk upload error:', error);

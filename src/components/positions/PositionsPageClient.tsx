@@ -204,11 +204,7 @@ export default function PositionsPageClient() {
         </Card>
       </div>
       {/* Filters on top */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Position Filters</CardTitle>
-        </CardHeader>
-        <CardContent>
+ 
           <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 flex-1">
               <div className="relative">
@@ -249,8 +245,7 @@ export default function PositionsPageClient() {
               </Button>
             )}
           </div>
-        </CardContent>
-      </Card>
+      
       
       {/* Positions List */}
       

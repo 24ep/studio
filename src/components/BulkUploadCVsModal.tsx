@@ -90,30 +90,29 @@ export function BulkUploadCVsModal({ isOpen, onOpenChange, onUploadSuccess }: Bu
   };
 
   // Helper to add a file to the upload queue and handle errors
-  async function addToUploadQueue(queueData: any, fileName: string) {
+  async function addToUploadQueueBlocking(queueData: any, fileName: string) {
     try {
-      const queueRes = await fetch('/api/upload-queue', {
+      const queueRes = await fetch('/api/upload-queue/blocking-process', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(queueData)
       });
-      if (!queueRes.ok) {
-        let errorMsg = 'Failed to add file to upload queue';
-        try {
-          const errorData = await queueRes.json();
-          errorMsg = errorData.error || errorMsg;
-          console.error('Upload queue POST error:', errorData);
-        } catch (parseErr) {
-          console.error('Upload queue POST error (non-JSON):', queueRes);
-        }
-        toast.error(`${fileName}: ${errorMsg}`);
-        return false;
+      let webhookResult;
+      try {
+        webhookResult = await queueRes.json();
+      } catch (e) {
+        webhookResult = { error: 'Invalid response from server' };
       }
-      return true;
+      if (!queueRes.ok || webhookResult.error) {
+        let errorMsg = webhookResult.error || 'Failed to process file via webhook';
+        toast.error(`${fileName}: ${errorMsg}`);
+        return { success: false, result: webhookResult };
+      }
+      return { success: true, result: webhookResult };
     } catch (err) {
-      console.error('Network or unexpected error during upload queue POST:', err);
+      console.error('Network or unexpected error during blocking upload queue POST:', err);
       toast.error(`${fileName}: Unexpected error adding to upload queue`);
-      return false;
+      return { success: false, result: { error: 'Unexpected error' } };
     }
   }
 
@@ -144,8 +143,8 @@ export function BulkUploadCVsModal({ isOpen, onOpenChange, onUploadSuccess }: Bu
         return;
       }
       const { results } = await uploadRes.json();
-      // Track if any file failed to queue
-      let anyQueueError = false;
+      // Track webhook results for all files
+      let webhookResults: any[] = [];
       await Promise.all(results.map(async (result: any, idx: number) => {
         if (result.status === 'success') {
           const queueData = {
@@ -160,22 +159,25 @@ export function BulkUploadCVsModal({ isOpen, onOpenChange, onUploadSuccess }: Bu
               targetPositionId: selectedPositionId || null,
               uploadBatch: batchId
             },
-
           };
-          const ok = await addToUploadQueue(queueData, result.file_name);
-          if (!ok) anyQueueError = true;
+          const { success, result: webhookResult } = await addToUploadQueueBlocking(queueData, result.file_name);
+          webhookResults.push({ file: result.file_name, ...webhookResult });
         } else {
-          toast.error(`${result.file_name}: ${result.error || 'Upload failed'}`);
-          anyQueueError = true;
+          webhookResults.push({ file: result.file_name, error: result.error || 'Upload failed' });
         }
       }));
       setSelectedFiles([]);
       setSelectedPositionId("");
       onOpenChange(false);
-      if (!anyQueueError) {
-        toast.success('Bulk upload completed successfully');
+      // Show summary to user
+      const numSuccess = webhookResults.filter(r => !r.error && (!r.webhook_response || r.webhook_response.status === 200)).length;
+      const numError = webhookResults.length - numSuccess;
+      if (numError === 0) {
+        toast.success(`Bulk upload completed successfully (${numSuccess} files)`);
       } else {
-        toast.error('Some files failed to queue. Check errors above.');
+        toast.error(`Bulk upload completed with errors: ${numError} failed, ${numSuccess} succeeded.`);
+        // Optionally, show details in console
+        console.table(webhookResults);
       }
       if (onUploadSuccess) onUploadSuccess();
       window.dispatchEvent(new CustomEvent('refreshCandidateQueue'));

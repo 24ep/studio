@@ -416,6 +416,7 @@ export const CandidateImportUploadQueue: React.FC = () => {
               <TableHead>File Name</TableHead>
               <TableHead>Size</TableHead>
               <TableHead>Status</TableHead>
+              <TableHead>Webhook Status</TableHead>
               <TableHead>Duration</TableHead>
               <TableHead>Completed Date</TableHead>
               <TableHead>Upload Date</TableHead>
@@ -464,7 +465,7 @@ export const CandidateImportUploadQueue: React.FC = () => {
                         case 'uploading': variant = 'default'; break;
                         case 'processing': variant = 'outline'; break;
                         case 'importing': variant = 'outline'; break;
-                        case 'success': variant = 'default'; break;
+                        case 'success': variant = 'success'; break;
                         case 'error': variant = 'destructive'; break;
                         case 'cancelled': variant = 'secondary'; break;
                         default: variant = 'secondary';
@@ -472,6 +473,21 @@ export const CandidateImportUploadQueue: React.FC = () => {
                       return (
                         <Badge variant={variant} className="capitalize">{status}</Badge>
                       );
+                    })()}
+                  </TableCell>
+                  <TableCell>
+                    {(() => {
+                      // Show webhook status or error if available
+                      if (item.webhook_response) {
+                        if (typeof item.webhook_response === 'object' && item.webhook_response.status) {
+                          return <Badge variant={item.webhook_response.status === 200 ? 'success' : 'destructive'}>{`HTTP ${item.webhook_response.status}`}</Badge>;
+                        } else if (typeof item.webhook_response === 'string') {
+                          return <Badge variant="destructive">{item.webhook_response}</Badge>;
+                        }
+                      }
+                      if (item.status === 'success') return <Badge variant="success">Success</Badge>;
+                      if (item.status === 'error') return <Badge variant="destructive">Error</Badge>;
+                      return <Badge variant="secondary">-</Badge>;
                     })()}
                   </TableCell>
                   <TableCell>
@@ -740,6 +756,13 @@ export const CandidateImportUploadQueue: React.FC = () => {
                       <div>
                         <div className="font-medium text-xs mb-1">Response:</div>
                         <pre className="bg-muted p-2 rounded text-xs overflow-auto max-h-40 whitespace-pre-wrap">{JSON.stringify(job.webhook_response, null, 2)}</pre>
+                        {/* Show HTTP status or error if present */}
+                        {typeof job.webhook_response === 'object' && job.webhook_response.status && (
+                          <div className="mt-1 text-xs">HTTP Status: <span className={job.webhook_response.status === 200 ? 'text-green-600' : 'text-red-600'}>{job.webhook_response.status}</span></div>
+                        )}
+                        {typeof job.webhook_response === 'object' && job.webhook_response.response && (
+                          <div className="mt-1 text-xs">Response: <span className="text-muted-foreground">{job.webhook_response.response}</span></div>
+                        )}
                       </div>
                     )}
                   </div>
@@ -784,6 +807,13 @@ export const CandidateImportUploadQueue: React.FC = () => {
                 <pre className="whitespace-pre-wrap break-all max-h-40 overflow-auto bg-background p-2 rounded border text-xs">
                   {JSON.stringify(selectedWebhookLogJob.webhook_response, null, 2)}
                 </pre>
+                {/* Show HTTP status or error if present */}
+                {typeof selectedWebhookLogJob.webhook_response === 'object' && selectedWebhookLogJob.webhook_response.status && (
+                  <div className="mt-1 text-xs">HTTP Status: <span className={selectedWebhookLogJob.webhook_response.status === 200 ? 'text-green-600' : 'text-red-600'}>{selectedWebhookLogJob.webhook_response.status}</span></div>
+                )}
+                {typeof selectedWebhookLogJob.webhook_response === 'object' && selectedWebhookLogJob.webhook_response.response && (
+                  <div className="mt-1 text-xs">Response: <span className="text-muted-foreground">{selectedWebhookLogJob.webhook_response.response}</span></div>
+                )}
               </div>
             )}
           </div>

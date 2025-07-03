@@ -30,7 +30,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from 'react-hot-toast';
 import { ImageUpload } from '@/components/ui/image-upload';
 
-const MINIO_PUBLIC_BASE_URL = process.env.NEXT_PUBLIC_MINIO_URL || `http://localhost:9847`;
+const MINIO_PUBLIC_BASE_URL = process.env.NEXT_PUBLIC_MINIO_PUBLIC_BASE_URL || `http://localhost:9847`;
 const MINIO_BUCKET = process.env.NEXT_PUBLIC_MINIO_BUCKET_NAME || "canditrack-resumes";
 
 const PLACEHOLDER_VALUE_NONE = "___NOT_SPECIFIED___";
@@ -772,7 +772,7 @@ export default function CandidateDetailPage() {
                       getDisplayFilename(candidate.resumePath),
                       HardDrive,
                       true,
-                      `${MINIO_PUBLIC_BASE_URL}/${MINIO_BUCKET}/${candidate.resumePath}`, 
+                      `${MINIO_PUBLIC_BASE_URL}/${MINIO_BUCKET}/${candidate.resumePath}`,
                       "_blank"
                     )}
                      {(parsed?.associatedMatchDetails && !isEditing) && (

@@ -8,7 +8,7 @@ import {
   SidebarMenu,
   SidebarMenuItem,
   SidebarMenuButton,
-  SidebarSeparator,
+  SidebarGroupLabel,
   SidebarMenuBadge,
   useSidebar,
 } from "@/components/ui/sidebar";
@@ -81,6 +81,7 @@ const SidebarNavComponent = function SidebarNav() {
   return (
     <SidebarMenu>
       {/* Group 1: Dashboard, My Task Board */}
+      <SidebarGroupLabel>General</SidebarGroupLabel>
       <SidebarMenuItem key={dashboardNavItem.href}>
         <Link href={dashboardNavItem.href} passHref legacyBehavior>
           <SidebarMenuButton
@@ -115,8 +116,8 @@ const SidebarNavComponent = function SidebarNav() {
           </Link>
         </SidebarMenuItem>
       )}
-      <SidebarSeparator />
       {/* Group 2: Candidates, Positions */}
+      <SidebarGroupLabel>Recruitment</SidebarGroupLabel>
       <SidebarMenuItem key={candidatesNavItem.href}>
         <Link href={candidatesNavItem.href} passHref legacyBehavior>
           <SidebarMenuButton
@@ -149,8 +150,8 @@ const SidebarNavComponent = function SidebarNav() {
           </SidebarMenuButton>
         </Link>
       </SidebarMenuItem>
-      <SidebarSeparator />
       {/* Group 3: Bulk Upload */}
+      <SidebarGroupLabel>Bulk Actions</SidebarGroupLabel>
       <SidebarMenuItem key={bulkUploadNavItem.href}>
         <Link href={bulkUploadNavItem.href} passHref legacyBehavior>
           <SidebarMenuButton
@@ -174,8 +175,8 @@ const SidebarNavComponent = function SidebarNav() {
           </SidebarMenuButton>
         </Link>
       </SidebarMenuItem>
-      <SidebarSeparator />
       {/* Group 4: Settings */}
+      <SidebarGroupLabel>System</SidebarGroupLabel>
       <SidebarMenuItem className="mt-auto">
         <Link href={settingsNavItem.href} passHref legacyBehavior>
           <SidebarMenuButton
