@@ -170,14 +170,14 @@ export function EditUserModal({ isOpen, onOpenChange, onEditUser, user, isSelfEd
       }
     }}>
       <DialogContent className="sm:max-w-6xl lg:max-w-7xl xl:max-w-8xl max-h-[95vh] flex flex-col p-0">
-        <DialogHeader className="p-8 pb-6 border-b bg-gradient-to-r from-primary/5 to-primary/10">
+        <DialogHeader className="p-4 pb-6 border-b bg-gradient-to-r from-primary/5 to-primary/10">
           <DialogTitle className="flex items-center text-2xl font-bold">
             <Edit3 className="mr-3 h-6 w-6 text-primary" /> {typeof dialogTitle === 'object' ? JSON.stringify(dialogTitle) : dialogTitle}
           </DialogTitle>
           <DialogDescription className="text-base mt-2">{typeof dialogDescription === 'object' ? JSON.stringify(dialogDescription) : dialogDescription}</DialogDescription>
         </DialogHeader>
 
-        <div className="flex flex-col lg:flex-row flex-grow overflow-hidden p-8 gap-8">
+        <div className="flex flex-col lg:flex-row flex-grow overflow-hidden p-4 gap-8">
           {!isSelfEdit && (
             <aside className="lg:w-80 border-b lg:border-b-0 lg:border-r pb-8 lg:pb-0 lg:pr-8 space-y-2">
               <div className="mb-4">
@@ -451,7 +451,7 @@ export function EditUserModal({ isOpen, onOpenChange, onEditUser, user, isSelfEd
                         
                         <div className="space-y-6 max-h-96 overflow-y-auto pr-2">
                           {groupedPermissions.map(group => (
-                            <div key={group.category} className="bg-muted/20 rounded-lg p-4 border">
+                            <div key={group.category}>
                               <h4 className="font-semibold text-lg text-primary mb-4 border-b pb-2">{group.category}</h4>
                               <div className="space-y-4">
                                 {group.permissions.map((module) => (

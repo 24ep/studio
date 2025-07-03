@@ -233,6 +233,7 @@ export interface Position {
   updatedAt?: string;
   candidates?: Candidate[];
   webhook_payload?: any;
+  upload_id?: string;
 }
 
 export interface UserGroup { // This is now "Role" in the UI

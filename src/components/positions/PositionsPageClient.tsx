@@ -41,6 +41,8 @@ export default function PositionsPageClient() {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [selectedPosition, setSelectedPosition] = useState<Position | null>(null);
   const [positionToDelete, setPositionToDelete] = useState<Position | null>(null);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [showBulkDeleteConfirm, setShowBulkDeleteConfirm] = useState(false);
   const { data: session } = useSession();
 
   const canManagePositions = session?.user?.role === 'Admin' || session?.user?.modulePermissions?.includes('POSITIONS_MANAGE');
@@ -152,6 +154,35 @@ export default function PositionsPageClient() {
   const totalPositions = positions.length;
   const openPositions = positions.filter(p => p.isOpen).length;
   const closedPositions = positions.filter(p => !p.isOpen).length;
+
+  // Bulk selection logic
+  const allSelected = filteredPositions.length > 0 && selectedIds.length === filteredPositions.length;
+  const someSelected = selectedIds.length > 0 && selectedIds.length < filteredPositions.length;
+  const handleSelectAll = (checked: boolean) => {
+    if (checked) {
+      setSelectedIds(filteredPositions.map(p => p.id));
+    } else {
+      setSelectedIds([]);
+    }
+  };
+  const handleRowSelect = (id: string, checked: boolean) => {
+    setSelectedIds(prev => checked ? [...prev, id] : prev.filter(i => i !== id));
+  };
+  // Bulk delete handler
+  const handleBulkDelete = async () => {
+    setShowBulkDeleteConfirm(false);
+    try {
+      await Promise.all(selectedIds.map(async (id) => {
+        const response = await fetch(`/api/positions/${id}`, { method: 'DELETE' });
+        if (!response.ok) throw new Error('Failed to delete');
+      }));
+      setPositions(prev => prev.filter(p => !selectedIds.includes(p.id)));
+      setSelectedIds([]);
+      toast.success('Selected positions deleted successfully');
+    } catch (error) {
+      toast.error('Failed to delete some positions');
+    }
+  };
 
   if (isLoading) {
     return (
@@ -267,9 +298,30 @@ export default function PositionsPageClient() {
             </div>
           ) : (
             <div className="overflow-x-auto rounded-lg border border-border bg-background">
+              {/* Bulk Action Bar */}
+              {selectedIds.length > 0 && (
+                <div className="flex items-center gap-4 p-3 bg-muted border-b border-border">
+                  <span className="font-medium">{selectedIds.length} selected</span>
+                  <Button variant="destructive" size="sm" onClick={() => setShowBulkDeleteConfirm(true)}>
+                    <Trash2 className="h-4 w-4 mr-1" /> Bulk Delete
+                  </Button>
+                  <Button variant="ghost" size="sm" onClick={() => setSelectedIds([])}>
+                    Clear Selection
+                  </Button>
+                </div>
+              )}
               <Table className="min-w-full divide-y divide-border">
                 <TableHeader>
                   <TableRow>
+                    <TableHead>
+                      <input
+                        type="checkbox"
+                        checked={allSelected}
+                        ref={el => { if (el) el.indeterminate = someSelected; }}
+                        onChange={e => handleSelectAll(e.target.checked)}
+                        aria-label="Select all positions"
+                      />
+                    </TableHead>
                     <TableHead>Title</TableHead>
                     <TableHead>Department</TableHead>
                     <TableHead>Status</TableHead>
@@ -282,6 +334,14 @@ export default function PositionsPageClient() {
                 <TableBody>
                   {filteredPositions.map((position) => (
                     <TableRow key={position.id} className="hover:bg-muted/50">
+                      <TableCell>
+                        <input
+                          type="checkbox"
+                          checked={selectedIds.includes(position.id)}
+                          onChange={e => handleRowSelect(position.id, e.target.checked)}
+                          aria-label={`Select position ${position.title}`}
+                        />
+                      </TableCell>
                       <TableCell className="font-medium">{position.title}</TableCell>
                       <TableCell>{position.department}</TableCell>
                       <TableCell>
@@ -360,6 +420,24 @@ export default function PositionsPageClient() {
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction onClick={handleDeletePosition} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Bulk Delete Confirmation */}
+      <AlertDialog open={showBulkDeleteConfirm} onOpenChange={setShowBulkDeleteConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Bulk Delete Positions</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete {selectedIds.length} selected position(s)? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleBulkDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
               Delete
             </AlertDialogAction>
           </AlertDialogFooter>

@@ -19,6 +19,9 @@ const PositionDetails: React.FC<PositionDetailsProps> = ({ position }) => {
         <div>Title: {position.title}</div>
         <div>Department: {position.department}</div>
         <div>Status: {position.isOpen ? 'Open' : 'Closed'}</div>
+        {position.upload_id && (
+          <div>Upload ID: {position.upload_id}</div>
+        )}
         {/* Add more fields as needed */}
         {position.webhook_payload && (
           <div style={{ marginTop: 24 }}>

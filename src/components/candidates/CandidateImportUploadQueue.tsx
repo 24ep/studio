@@ -742,31 +742,6 @@ export const CandidateImportUploadQueue: React.FC = () => {
                     </div>
                   )}
                 </div>
-                {/* Webhook Log Section */}
-                {(job.webhook_payload || job.webhook_response) && (
-                  <div>
-                    <h3 className="font-semibold mb-2">Webhook Log</h3>
-                    {job.webhook_payload && (
-                      <div className="mb-2">
-                        <div className="font-medium text-xs mb-1">Payload:</div>
-                        <pre className="bg-muted p-2 rounded text-xs overflow-auto max-h-40 whitespace-pre-wrap">{JSON.stringify(job.webhook_payload, null, 2)}</pre>
-                      </div>
-                    )}
-                    {job.webhook_response && (
-                      <div>
-                        <div className="font-medium text-xs mb-1">Response:</div>
-                        <pre className="bg-muted p-2 rounded text-xs overflow-auto max-h-40 whitespace-pre-wrap">{JSON.stringify(job.webhook_response, null, 2)}</pre>
-                        {/* Show HTTP status or error if present */}
-                        {typeof job.webhook_response === 'object' && job.webhook_response.status && (
-                          <div className="mt-1 text-xs">HTTP Status: <span className={job.webhook_response.status === 200 ? 'text-green-600' : 'text-red-600'}>{job.webhook_response.status}</span></div>
-                        )}
-                        {typeof job.webhook_response === 'object' && job.webhook_response.response && (
-                          <div className="mt-1 text-xs">Response: <span className="text-muted-foreground">{job.webhook_response.response}</span></div>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                )}
                 {/* Error Log Section */}
                 {job.error_details && (
                   <div>
