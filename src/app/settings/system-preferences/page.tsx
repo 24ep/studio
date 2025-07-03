@@ -611,10 +611,9 @@ export default function SystemPreferencesPage() {
         formData.append('loginBackgroundImage', selectedLoginImageFile);
       }
       
-      // Sidebar colors
-      SIDEBAR_COLOR_KEYS.forEach(key => {
-        formData.append('preferences', JSON.stringify([{ key, value: sidebarColors[key] == null ? null : String(sidebarColors[key]) }]));
-      });
+      // Batch all sidebar colors into a single preferences entry
+      const sidebarColorPrefs = SIDEBAR_COLOR_KEYS.map(key => ({ key, value: sidebarColors[key] == null ? null : String(sidebarColors[key]) }));
+      formData.append('preferences', JSON.stringify(sidebarColorPrefs));
       
       const res = await fetch('/api/settings/system-settings', {
         method: 'POST',
