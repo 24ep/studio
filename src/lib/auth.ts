@@ -5,6 +5,7 @@ import { getPool, getMergedUserPermissions } from '@/lib/db';
 import bcrypt from 'bcryptjs';
 import { logAudit } from '@/lib/auditLog';
 import type { UserProfile, PlatformModuleId } from '@/lib/types';
+import jwt from 'jsonwebtoken';
 
 // Check if Azure AD is configured
 const isAzureADConfigured = () => {
@@ -208,3 +209,18 @@ export const authOptions: NextAuthOptions = {
     },
     secret: process.env.NEXTAUTH_SECRET,
   }; 
+
+/**
+ * Verifies a JWT bearer token for external API authentication.
+ * @param token - The JWT token string
+ * @returns The decoded user payload if valid, or null if invalid
+ */
+export function verifyApiToken(token: string): any | null {
+  try {
+    const secret = process.env.NEXTAUTH_SECRET;
+    if (!secret) throw new Error('NEXTAUTH_SECRET is not set');
+    return jwt.verify(token, secret);
+  } catch (err) {
+    return null;
+  }
+} 

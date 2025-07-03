@@ -30,6 +30,126 @@ const swaggerSpec = {
     }
   ],
   paths: {
+    '/api/external/auth/login': {
+      post: {
+        summary: 'External API login',
+        description: 'Authenticate with email and password to receive a JWT for API use.',
+        tags: ['External Authentication'],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  email: { type: 'string', format: 'email' },
+                  password: { type: 'string' }
+                },
+                required: ['email', 'password']
+              }
+            }
+          }
+        },
+        responses: {
+          '200': {
+            description: 'Login successful, returns JWT token and user info',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean' },
+                    token: { type: 'string', description: 'JWT for Bearer authentication' },
+                    user: {
+                      type: 'object',
+                      properties: {
+                        id: { type: 'string' },
+                        email: { type: 'string', format: 'email' },
+                        role: { type: 'string' },
+                        modulePermissions: { type: 'array', items: { type: 'string' } }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          '400': { description: 'Invalid input or missing fields' },
+          '401': { description: 'Invalid email or password' }
+        }
+      }
+    },
+    '/api/external/positions': {
+      get: {
+        summary: 'Get all positions (external API)',
+        description: 'Returns a paginated list of positions. Requires Bearer token authentication.',
+        tags: ['External Positions'],
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { name: 'title', in: 'query', description: 'Filter by position title', schema: { type: 'string' } },
+          { name: 'department', in: 'query', description: 'Filter by department (comma-separated)', schema: { type: 'string' } },
+          { name: 'isOpen', in: 'query', description: 'Filter by open status', schema: { type: 'boolean' } },
+          { name: 'position_level', in: 'query', description: 'Filter by position level', schema: { type: 'string' } },
+          { name: 'limit', in: 'query', description: 'Number of items per page', schema: { type: 'integer', default: 20 } },
+          { name: 'offset', in: 'query', description: 'Offset for pagination', schema: { type: 'integer', default: 0 } }
+        ],
+        responses: {
+          '200': {
+            description: 'List of positions',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    data: { type: 'array', items: { $ref: '#/components/schemas/Position' } },
+                    total: { type: 'integer' }
+                  }
+                }
+              }
+            }
+          },
+          '401': { description: 'Unauthorized' }
+        }
+      },
+      post: {
+        summary: 'Create a new position (external API)',
+        description: 'Creates a new position. Requires Bearer token authentication.',
+        tags: ['External Positions'],
+        security: [{ bearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  title: { type: 'string' },
+                  department: { type: 'string' },
+                  description: { type: 'string', nullable: true },
+                  isOpen: { type: 'boolean' },
+                  position_level: { type: 'string', nullable: true },
+                  custom_attributes: { type: 'object', additionalProperties: true, nullable: true }
+                },
+                required: ['title', 'department', 'isOpen']
+              }
+            }
+          }
+        },
+        responses: {
+          '201': {
+            description: 'Position created successfully',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/Position' }
+              }
+            }
+          },
+          '400': { description: 'Invalid input data' },
+          '401': { description: 'Unauthorized' },
+          '403': { description: 'Insufficient permissions' }
+        }
+      }
+    },
     '/api/auth/signin': {
       post: {
         summary: 'Sign in (Credentials or OAuth)',
