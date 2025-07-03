@@ -120,18 +120,6 @@ export default function SystemSettingsPage() {
 
   return (
     <div className="space-y-12 pb-32 p-6">
-      {/* System Settings (no concurrent input here) */}
-      <Card className="shadow-lg ">
-        <CardHeader>
-          <CardTitle className="flex items-center text-2xl gap-2">
-            <Settings className="h-7 w-7 text-primary" />
-            System Settings
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4 pt-6">
-          {/* No Max Concurrent Processors input here */}
-        </CardContent>
-      </Card>
       {/* AI Configuration (Gemini) */}
       <Card className="shadow-lg ">
         <CardHeader>
