@@ -99,6 +99,19 @@ export async function POST(request: NextRequest) {
       `;
       await client.query(historyQuery, [randomUUID(), candidateId, objectName, originalName, actingUserId]);
 
+      // Build webhook payload in requested format
+      const webhookPayload = {
+        inputs: {
+          cv_url: `${MINIO_PUBLIC_BASE_URL}/${MINIO_BUCKET}/${objectName}`,
+          candidate_id: candidateId,
+          job_id: candidate.positionid || candidate.positionId || null, // support both casings
+          filename: originalName,
+          mimetype: file.type
+        },
+        response_mode: 'streaming',
+        user: actingUserId
+      };
+
       // Add to upload queue for webhook processing
       const queueId = randomUUID();
       await client.query(
@@ -113,7 +126,7 @@ export async function POST(request: NextRequest) {
           null,
           actingUserId,
           objectName,
-          JSON.stringify({ candidateId })
+          JSON.stringify(webhookPayload)
         ]
       );
 

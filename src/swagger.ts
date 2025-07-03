@@ -30,10 +30,88 @@ const swaggerSpec = {
     }
   ],
   paths: {
-    '/api/auth/[...nextauth]': {
+    '/api/auth/signin': {
+      post: {
+        summary: 'Sign in (Credentials or OAuth)',
+        description: 'Sign in using credentials or an OAuth provider. For credentials, use application/x-www-form-urlencoded.',
+        tags: ['Authentication'],
+        requestBody: {
+          required: true,
+          content: {
+            'application/x-www-form-urlencoded': {
+              schema: {
+                type: 'object',
+                properties: {
+                  csrfToken: { type: 'string', description: 'CSRF token (required by NextAuth.js)' },
+                  email: { type: 'string', format: 'email' },
+                  password: { type: 'string' }
+                },
+                required: ['csrfToken', 'email', 'password']
+              }
+            }
+          }
+        },
+        responses: {
+          '302': { description: 'Redirect to callback or error page' },
+          '400': { description: 'Invalid credentials or missing fields' }
+        }
+      }
+    },
+    '/api/auth/signout': {
+      post: {
+        summary: 'Sign out',
+        description: 'Sign out the current user. Requires CSRF token.',
+        tags: ['Authentication'],
+        requestBody: {
+          required: true,
+          content: {
+            'application/x-www-form-urlencoded': {
+              schema: {
+                type: 'object',
+                properties: {
+                  csrfToken: { type: 'string', description: 'CSRF token (required by NextAuth.js)' }
+                },
+                required: ['csrfToken']
+              }
+            }
+          }
+        },
+        responses: {
+          '302': { description: 'Redirect to sign-in page' }
+        }
+      }
+    },
+    '/api/auth/callback/credentials': {
+      post: {
+        summary: 'Credentials sign-in callback',
+        description: 'Authenticate using credentials provider. Use application/x-www-form-urlencoded.',
+        tags: ['Authentication'],
+        requestBody: {
+          required: true,
+          content: {
+            'application/x-www-form-urlencoded': {
+              schema: {
+                type: 'object',
+                properties: {
+                  csrfToken: { type: 'string', description: 'CSRF token (required by NextAuth.js)' },
+                  email: { type: 'string', format: 'email' },
+                  password: { type: 'string' }
+                },
+                required: ['csrfToken', 'email', 'password']
+              }
+            }
+          }
+        },
+        responses: {
+          '302': { description: 'Redirect to callback or error page' },
+          '400': { description: 'Invalid credentials or missing fields' }
+        }
+      }
+    },
+    '/api/auth/session': {
       get: {
         summary: 'Get current session',
-        description: 'Returns the current authenticated session if available',
+        description: 'Returns the current authenticated session if available.',
         tags: ['Authentication'],
         responses: {
           '200': {
@@ -50,37 +128,7 @@ const swaggerSpec = {
               }
             }
           },
-          '401': {
-            description: 'Not authenticated'
-          }
-        }
-      },
-      post: {
-        summary: 'User login or signout',
-        description: 'Login (with credentials or OAuth) or signout (with provider-specific body)',
-        tags: ['Authentication'],
-        requestBody: {
-          required: false,
-          content: {
-            'application/json': {
-              schema: {
-                type: 'object',
-                properties: {
-                  email: { type: 'string', format: 'email' },
-                  password: { type: 'string' },
-                  provider: { type: 'string', enum: ['credentials', 'azure-ad'] }
-                }
-              }
-            }
-          }
-        },
-        responses: {
-          '200': {
-            description: 'Login or signout successful'
-          },
-          '401': {
-            description: 'Invalid credentials'
-          }
+          '401': { description: 'Not authenticated' }
         }
       }
     },
@@ -122,39 +170,15 @@ const swaggerSpec = {
     '/api/candidates': {
       get: {
         summary: 'Get all candidates',
-        description: 'Returns a paginated list of candidates with optional filtering',
+        description: 'Returns a paginated list of candidates with optional filtering. Requires authentication.',
         tags: ['Candidates'],
+        security: [{ bearerAuth: [] }],
         parameters: [
-          {
-            name: 'page',
-            in: 'query',
-            description: 'Page number for pagination',
-            schema: { type: 'integer', default: 1, minimum: 1 }
-          },
-          {
-            name: 'limit',
-            in: 'query',
-            description: 'Number of items per page',
-            schema: { type: 'integer', default: 10, minimum: 1, maximum: 100 }
-          },
-          {
-            name: 'status',
-            in: 'query',
-            description: 'Filter by candidate status',
-            schema: { type: 'string' }
-          },
-          {
-            name: 'positionId',
-            in: 'query',
-            description: 'Filter by position ID',
-            schema: { type: 'string', format: 'uuid' }
-          },
-          {
-            name: 'searchTerm',
-            in: 'query',
-            description: 'Search term for name or email',
-            schema: { type: 'string' }
-          }
+          { name: 'page', in: 'query', description: 'Page number for pagination', schema: { type: 'integer', default: 1, minimum: 1 } },
+          { name: 'limit', in: 'query', description: 'Number of items per page', schema: { type: 'integer', default: 10, minimum: 1, maximum: 100 } },
+          { name: 'status', in: 'query', description: 'Filter by candidate status', schema: { type: 'string' } },
+          { name: 'positionId', in: 'query', description: 'Filter by position ID', schema: { type: 'string', format: 'uuid' } },
+          { name: 'searchTerm', in: 'query', description: 'Search term for name or email', schema: { type: 'string' } }
         ],
         responses: {
           '200': {
@@ -164,10 +188,7 @@ const swaggerSpec = {
                 schema: {
                   type: 'object',
                   properties: {
-                    candidates: {
-                      type: 'array',
-                      items: { $ref: '#/components/schemas/Candidate' }
-                    },
+                    candidates: { type: 'array', items: { $ref: '#/components/schemas/Candidate' } },
                     total: { type: 'integer' },
                     page: { type: 'integer' },
                     limit: { type: 'integer' }
@@ -176,15 +197,14 @@ const swaggerSpec = {
               }
             }
           },
-          '401': {
-            description: 'Unauthorized'
-          }
+          '401': { description: 'Unauthorized' }
         }
       },
       post: {
         summary: 'Create a new candidate',
-        description: 'Creates a new candidate with the provided information',
+        description: 'Creates a new candidate with the provided information. Requires authentication.',
         tags: ['Candidates'],
+        security: [{ bearerAuth: [] }],
         requestBody: {
           required: true,
           content: {
@@ -223,96 +243,60 @@ const swaggerSpec = {
               }
             }
           },
-          '400': {
-            description: 'Invalid input data'
-          },
-          '401': {
-            description: 'Unauthorized'
-          },
-          '409': {
-            description: 'Candidate with this email already exists'
-          }
+          '400': { description: 'Invalid input data' },
+          '401': { description: 'Unauthorized' },
+          '409': { description: 'Candidate with this email already exists' }
         }
       }
     },
     '/api/candidates/{id}': {
       get: {
         summary: 'Get candidate by ID',
-        description: 'Returns a specific candidate by their ID',
+        description: 'Returns a specific candidate by their ID. Requires authentication.',
         tags: ['Candidates'],
+        security: [{ bearerAuth: [] }],
         parameters: [
-          {
-            name: 'id',
-            in: 'path',
-            required: true,
-            description: 'Candidate ID',
-            schema: { type: 'string', format: 'uuid' }
-          }
+          { name: 'id', in: 'path', required: true, description: 'Candidate ID', schema: { type: 'string', format: 'uuid' } }
         ],
         responses: {
           '200': {
             description: 'Candidate details',
-            content: {
-              'application/json': {
-                schema: { $ref: '#/components/schemas/Candidate' }
-              }
-            }
+            content: { 'application/json': { schema: { $ref: '#/components/schemas/Candidate' } } }
           },
-          '404': {
-            description: 'Candidate not found'
-          }
+          '404': { description: 'Candidate not found' },
+          '401': { description: 'Unauthorized' }
         }
       },
       put: {
         summary: 'Update candidate',
-        description: 'Updates an existing candidate',
+        description: 'Updates an existing candidate. Requires authentication.',
         tags: ['Candidates'],
+        security: [{ bearerAuth: [] }],
         parameters: [
-          {
-            name: 'id',
-            in: 'path',
-            required: true,
-            description: 'Candidate ID',
-            schema: { type: 'string', format: 'uuid' }
-          }
+          { name: 'id', in: 'path', required: true, description: 'Candidate ID', schema: { type: 'string', format: 'uuid' } }
         ],
         requestBody: {
           required: true,
-          content: {
-            'application/json': {
-              schema: { $ref: '#/components/schemas/CandidateUpdate' }
-            }
-          }
+          content: { 'application/json': { schema: { $ref: '#/components/schemas/CandidateUpdate' } } }
         },
         responses: {
-          '200': {
-            description: 'Candidate updated successfully'
-          },
-          '404': {
-            description: 'Candidate not found'
-          }
+          '200': { description: 'Candidate updated successfully' },
+          '404': { description: 'Candidate not found' },
+          '401': { description: 'Unauthorized' }
         }
       },
       delete: {
         summary: 'Delete candidate',
-        description: 'Deletes a candidate',
+        description: 'Deletes a candidate. Requires authentication.',
         tags: ['Candidates'],
+        security: [{ bearerAuth: [] }],
         parameters: [
-          {
-            name: 'id',
-            in: 'path',
-            required: true,
-            description: 'Candidate ID',
-            schema: { type: 'string', format: 'uuid' }
-          }
+          { name: 'id', in: 'path', required: true, description: 'Candidate ID', schema: { type: 'string', format: 'uuid' } }
         ],
         responses: {
-          '200': {
-            description: 'Candidate deleted successfully'
-          },
-          '404': {
-            description: 'Candidate not found'
-          }
+          '200': { description: 'Candidate deleted successfully' },
+          '404': { description: 'Candidate not found' },
+          '401': { description: 'Unauthorized' }
         }
       }
     },
@@ -424,39 +408,15 @@ const swaggerSpec = {
     '/api/positions': {
       get: {
         summary: 'Get all positions',
-        description: 'Returns a paginated list of positions with optional filtering',
+        description: 'Returns a paginated list of positions. Requires authentication.',
         tags: ['Positions'],
+        security: [{ bearerAuth: [] }],
         parameters: [
-          {
-            name: 'title',
-            in: 'query',
-            description: 'Filter by position title',
-            schema: { type: 'string' }
-          },
-          {
-            name: 'department',
-            in: 'query',
-            description: 'Filter by department (comma-separated)',
-            schema: { type: 'string' }
-          },
-          {
-            name: 'isOpen',
-            in: 'query',
-            description: 'Filter by open status',
-            schema: { type: 'boolean' }
-          },
-          {
-            name: 'limit',
-            in: 'query',
-            description: 'Number of items per page',
-            schema: { type: 'integer', default: 20 }
-          },
-          {
-            name: 'offset',
-            in: 'query',
-            description: 'Offset for pagination',
-            schema: { type: 'integer', default: 0 }
-          }
+          { name: 'page', in: 'query', description: 'Page number for pagination', schema: { type: 'integer', default: 1, minimum: 1 } },
+          { name: 'limit', in: 'query', description: 'Number of items per page', schema: { type: 'integer', default: 10, minimum: 1, maximum: 100 } },
+          { name: 'status', in: 'query', description: 'Filter by position status', schema: { type: 'string' } },
+          { name: 'searchTerm', in: 'query', description: 'Search term for title or description', schema: { type: 'string' } },
+          { name: 'offset', in: 'query', description: 'Offset for pagination', schema: { type: 'integer', default: 0 } }
         ],
         responses: {
           '200': {
@@ -466,126 +426,84 @@ const swaggerSpec = {
                 schema: {
                   type: 'object',
                   properties: {
-                    data: {
-                      type: 'array',
-                      items: { $ref: '#/components/schemas/Position' }
-                    },
+                    data: { type: 'array', items: { $ref: '#/components/schemas/Position' } },
                     total: { type: 'integer' }
                   }
                 }
               }
             }
-          }
+          },
+          '401': { description: 'Unauthorized' }
         }
       },
       post: {
         summary: 'Create a new position',
-        description: 'Creates a new position',
+        description: 'Creates a new position. Requires authentication.',
         tags: ['Positions'],
+        security: [{ bearerAuth: [] }],
         requestBody: {
           required: true,
-          content: {
-            'application/json': {
-              schema: { $ref: '#/components/schemas/PositionCreate' }
-            }
-          }
+          content: { 'application/json': { schema: { $ref: '#/components/schemas/PositionCreate' } } }
         },
         responses: {
           '201': {
             description: 'Position created successfully',
-            content: {
-              'application/json': {
-                schema: { $ref: '#/components/schemas/Position' }
-              }
-            }
+            content: { 'application/json': { schema: { $ref: '#/components/schemas/Position' } } }
           },
-          '400': {
-            description: 'Invalid input data'
-          },
-          '403': {
-            description: 'Insufficient permissions'
-          }
+          '400': { description: 'Invalid input data' },
+          '401': { description: 'Unauthorized' },
+          '403': { description: 'Insufficient permissions' }
         }
       }
     },
     '/api/positions/{id}': {
       get: {
         summary: 'Get position by ID',
-        description: 'Returns a specific position by ID',
+        description: 'Returns a specific position by ID. Requires authentication.',
         tags: ['Positions'],
+        security: [{ bearerAuth: [] }],
         parameters: [
-          {
-            name: 'id',
-            in: 'path',
-            required: true,
-            description: 'Position ID',
-            schema: { type: 'string', format: 'uuid' }
-          }
+          { name: 'id', in: 'path', required: true, description: 'Position ID', schema: { type: 'string', format: 'uuid' } }
         ],
         responses: {
           '200': {
             description: 'Position details',
-            content: {
-              'application/json': {
-                schema: { $ref: '#/components/schemas/Position' }
-              }
-            }
+            content: { 'application/json': { schema: { $ref: '#/components/schemas/Position' } } }
           },
-          '404': {
-            description: 'Position not found'
-          }
+          '404': { description: 'Position not found' },
+          '401': { description: 'Unauthorized' }
         }
       },
       put: {
         summary: 'Update position',
-        description: 'Updates an existing position',
+        description: 'Updates an existing position. Requires authentication.',
         tags: ['Positions'],
+        security: [{ bearerAuth: [] }],
         parameters: [
-          {
-            name: 'id',
-            in: 'path',
-            required: true,
-            description: 'Position ID',
-            schema: { type: 'string', format: 'uuid' }
-          }
+          { name: 'id', in: 'path', required: true, description: 'Position ID', schema: { type: 'string', format: 'uuid' } }
         ],
         requestBody: {
           required: true,
-          content: {
-            'application/json': {
-              schema: { $ref: '#/components/schemas/PositionUpdate' }
-            }
-          }
+          content: { 'application/json': { schema: { $ref: '#/components/schemas/PositionUpdate' } } }
         },
         responses: {
-          '200': {
-            description: 'Position updated successfully'
-          },
-          '404': {
-            description: 'Position not found'
-          }
+          '200': { description: 'Position updated successfully' },
+          '404': { description: 'Position not found' },
+          '401': { description: 'Unauthorized' }
         }
       },
       delete: {
         summary: 'Delete position',
-        description: 'Deletes a position',
+        description: 'Deletes a position. Requires authentication.',
         tags: ['Positions'],
+        security: [{ bearerAuth: [] }],
         parameters: [
-          {
-            name: 'id',
-            in: 'path',
-            required: true,
-            description: 'Position ID',
-            schema: { type: 'string', format: 'uuid' }
-          }
+          { name: 'id', in: 'path', required: true, description: 'Position ID', schema: { type: 'string', format: 'uuid' } }
         ],
         responses: {
-          '200': {
-            description: 'Position deleted successfully'
-          },
-          '404': {
-            description: 'Position not found'
-          }
+          '200': { description: 'Position deleted successfully' },
+          '404': { description: 'Position not found' },
+          '401': { description: 'Unauthorized' }
         }
       }
     },
