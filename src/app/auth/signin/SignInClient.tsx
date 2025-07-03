@@ -316,14 +316,14 @@ export default function SignInClient({ initialSettings }: SignInClientProps) {
     return (
       <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'row' }} className="min-h-screen flex flex-row">
         {/* Left column: Image from settings, centered and contained, with overlay */}
-        <div className="hidden lg:flex flex-col items-center justify-center relative basis-[60%] max-w-[60%] bg-muted">
+        <div className="hidden lg:flex flex-col items-center justify-center relative basis-[60%] max-w-[60%] bg-muted overflow-hidden">
           {loginBgImageUrl && (
             <>
               <img
                 src={loginBgImageUrl}
                 alt="Login Visual"
-                className="object-contain max-h-[80vh] w-auto h-auto mx-auto z-10"
-                style={{ maxWidth: '80%', maxHeight: '80%' }}
+                className="w-full h-full object-contain mx-auto z-10"
+                style={{ width: '100%', height: '100%', objectFit: 'contain' }}
               />
               {/* Overlay for contrast */}
               <div className="absolute inset-0 bg-gradient-to-r from-black/30 to-transparent z-20 pointer-events-none" />
@@ -355,12 +355,6 @@ export default function SignInClient({ initialSettings }: SignInClientProps) {
               <h2 className="text-2xl font-bold text-foreground">{currentAppName}</h2>
             </div>
             <Card className="w-full bg-white dark:bg-card border border-border/50 pro-card-shadow login-transition">
-              <CardHeader className="text-center pb-6">
-                <CardTitle className="text-2xl font-bold text-foreground">Welcome back</CardTitle>
-                <CardDescription className="text-muted-foreground">
-                  Sign in to your account to continue
-                </CardDescription>
-              </CardHeader>
               <CardContent className="space-y-6">
                 {errorMessage && (
                   <Alert variant="destructive" className="border-red-200 bg-red-50 dark:bg-red-950/50 dark:border-red-800">

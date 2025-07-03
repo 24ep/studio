@@ -12,6 +12,7 @@ export async function middleware(req: NextRequest) {
   // Skip middleware for static files and API routes that don't need session validation
   if (
     pathname.startsWith('/_next') ||
+    pathname.startsWith('/api/') ||
     pathname.startsWith('/api/auth') ||
     pathname.startsWith('/api-docs') ||
     pathname.startsWith('/favicon.ico') ||
