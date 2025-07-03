@@ -124,5 +124,6 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
 }
 
 export async function OPTIONS(request: NextRequest) {
-  return handleCors(request);
+  const headers = handleCors(request);
+  return new Response(null, { status: 200, headers });
 } 
