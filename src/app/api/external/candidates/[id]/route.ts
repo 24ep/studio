@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server';
 import { getPool } from '@/lib/db';
 import { z } from 'zod';
 import { verifyApiToken } from '@/lib/auth';
+import { v4 as uuidv4 } from 'uuid';
 
 const updateCandidateSchema = z.object({
   name: z.string().min(1).optional(),
