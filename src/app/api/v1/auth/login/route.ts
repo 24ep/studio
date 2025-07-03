@@ -48,5 +48,6 @@ export async function POST(req: NextRequest) {
 }
 
 export async function OPTIONS(request: NextRequest) {
-  return handleCors(request);
+  const headers = handleCors(request);
+  return new Response(null, { status: 200, headers });
 } 
