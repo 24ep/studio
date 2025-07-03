@@ -230,41 +230,60 @@ export default function PositionDetailPage() {
         <ArrowLeft className="mr-2 h-4 w-4" /> Back to All Positions
       </Button>
 
-      <Card className="shadow-lg">
-        <CardHeader>
-          <div className="flex justify-between items-start">
-            <div>
-              <CardTitle className="text-3xl flex items-center">
-                <Briefcase className="mr-3 h-8 w-8 text-primary" />
-                {position.title}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+        {/* Left: Position Details */}
+        <div className="lg:col-span-1">
+          <Card className="shadow-lg">
+            <CardHeader>
+              <div className="flex justify-between items-start">
+                <div>
+                  <CardTitle className="text-3xl flex items-center">
+                    <Briefcase className="mr-3 h-8 w-8 text-primary" />
+                    {position.title}
+                  </CardTitle>
+                  <CardDescription className="mt-1 ml-11">
+                    {position.department} {position.position_level && ` - ${position.position_level}`}
+                  </CardDescription>
+                </div>
+                <Badge variant={position.isOpen ? "default" : "destructive"} className={position.isOpen ? "bg-green-500 text-primary-foreground" : ""}>
+                  {position.isOpen ? "Open" : "Closed"}
+                </Badge>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="text-xs text-muted-foreground space-x-4">
+                <span>
+                  <CalendarDays className="inline-block mr-1 h-3.5 w-3.5" />
+                  Created: {position.createdAt ? format(parseISO(position.createdAt), "PPP") : 'N/A'}
+                </span>
+                <span>
+                  Last Updated: {position.updatedAt ? format(parseISO(position.updatedAt), "PPP") : 'N/A'}
+                </span>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+        {/* Right: Job Description */}
+        <div className="lg:col-span-2">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center">
+                <Info className="mr-2 h-5 w-5 text-primary" />
+                Job Description
               </CardTitle>
-              <CardDescription className="mt-1 ml-11">
-                {position.department} {position.position_level && ` - ${position.position_level}`}
-              </CardDescription>
-            </div>
-            <Badge variant={position.isOpen ? "default" : "destructive"} className={position.isOpen ? "bg-green-500 text-primary-foreground" : ""}>
-              {position.isOpen ? "Open" : "Closed"}
-            </Badge>
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {position.description && (
-            <div className="text-sm text-muted-foreground">
-              <Info className="inline-block mr-2 h-4 w-4 relative -top-px" />
-              {position.description}
-            </div>
-          )}
-          <div className="text-xs text-muted-foreground space-x-4">
-            <span>
-              <CalendarDays className="inline-block mr-1 h-3.5 w-3.5" />
-              Created: {position.createdAt ? format(parseISO(position.createdAt), "PPP") : 'N/A'}
-            </span>
-            <span>
-              Last Updated: {position.updatedAt ? format(parseISO(position.updatedAt), "PPP") : 'N/A'}
-            </span>
-          </div>
-        </CardContent>
-      </Card>
+            </CardHeader>
+            <CardContent>
+              <div className="text-base text-muted-foreground min-h-[120px]">
+                {position.description ? (
+                  <div dangerouslySetInnerHTML={{ __html: position.description }} />
+                ) : (
+                  <span>No job description provided.</span>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
     </div>
   );
 }

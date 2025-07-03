@@ -163,6 +163,46 @@ export default function PositionsPageClient() {
 
   return (
     <div className="space-y-6 p-6">
+      {/* Stats Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Total Positions</p>
+                <p className="text-2xl font-bold">{totalPositions}</p>
+              </div>
+              <Briefcase className="h-8 w-8 text-primary" />
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Open Positions</p>
+                <p className="text-2xl font-bold text-green-600">{openPositions}</p>
+              </div>
+              <div className="h-8 w-8 rounded-full bg-green-100 flex items-center justify-center">
+                <span className="text-green-600 text-sm font-bold">O</span>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Closed Positions</p>
+                <p className="text-2xl font-bold text-muted-foreground">{closedPositions}</p>
+              </div>
+              <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center">
+                <span className="text-muted-foreground text-sm font-bold">C</span>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
       {/* Filters on top */}
       <Card>
         <CardHeader>
@@ -211,52 +251,9 @@ export default function PositionsPageClient() {
           </div>
         </CardContent>
       </Card>
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Total Positions</p>
-                <p className="text-2xl font-bold">{totalPositions}</p>
-              </div>
-              <Briefcase className="h-8 w-8 text-primary" />
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Open Positions</p>
-                <p className="text-2xl font-bold text-green-600">{openPositions}</p>
-              </div>
-              <div className="h-8 w-8 rounded-full bg-green-100 flex items-center justify-center">
-                <span className="text-green-600 text-sm font-bold">O</span>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Closed Positions</p>
-                <p className="text-2xl font-bold text-muted-foreground">{closedPositions}</p>
-              </div>
-              <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center">
-                <span className="text-muted-foreground text-sm font-bold">C</span>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+      
       {/* Positions List */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Positions ({filteredPositions.length})</CardTitle>
-        </CardHeader>
-        <CardContent>
+      
           {filteredPositions.length === 0 ? (
             <div className="text-center py-12">
               <Briefcase className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
@@ -332,8 +329,8 @@ export default function PositionsPageClient() {
               </Table>
             </div>
           )}
-        </CardContent>
-      </Card>
+       
+      
 
       {/* Modals */}
       {canManagePositions && (
