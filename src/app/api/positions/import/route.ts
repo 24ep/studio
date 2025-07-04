@@ -6,8 +6,17 @@ import { z } from 'zod';
 import { v4 as uuidv4 } from 'uuid';
 import { logAudit } from '@/lib/auditLog';
 import { authOptions } from '@/lib/auth';
+import { parse as parseCsv } from 'csv-parse/sync';
+import { IncomingForm, Fields, Files, File } from 'formidable';
+import fs from 'fs';
 
 export const dynamic = "force-dynamic";
+
+export const config = {
+  api: {
+    bodyParser: false,
+  },
+};
 
 /**
  * @openapi
@@ -91,41 +100,123 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
   }
 
+  // Check if this is a file upload (multipart/form-data)
+  const contentType = request.headers.get('content-type') || '';
+  if (contentType.includes('multipart/form-data')) {
+    // Parse the form
+    const form = new IncomingForm({ keepExtensions: true });
+    const formData = await new Promise<{ fields: Fields; files: Files }>((resolve, reject) => {
+      form.parse(request as any, (err: any, fields: Fields, files: Files) => {
+        if (err) reject(err);
+        else resolve({ fields, files });
+      });
+    });
+    // Find the file
+    const fileObj = formData.files?.file || formData.files?.[Object.keys(formData.files)[0]];
+    const file = Array.isArray(fileObj) ? fileObj[0] : fileObj as File | undefined;
+    if (!file) {
+      return NextResponse.json({ message: 'No file uploaded' }, { status: 400 });
+    }
+    // Read file contents
+    const fileBuffer = fs.readFileSync(file.filepath);
+    const fileName = file.originalFilename || file.newFilename || '';
+    let positions = [];
+    if (fileName.endsWith('.csv')) {
+      // Parse CSV
+      const csvString = fileBuffer.toString('utf-8');
+      const records = parseCsv(csvString, { columns: true, skip_empty_lines: true });
+      positions = records.map((row: any) => ({
+        title: row.title,
+        department: row.department,
+        description: row.description || null,
+        isOpen: row.isOpen && String(row.isOpen).toLowerCase() === 'true',
+        position_level: row.position_level || null,
+        custom_attributes: row.custom_attributes ? JSON.parse(row.custom_attributes) : {},
+      }));
+    } else {
+      return NextResponse.json({ message: 'Only CSV import is currently supported via file upload.' }, { status: 400 });
+    }
+    // Validate and insert as before
+    const validationResult = importPositionsArraySchema.safeParse(positions);
+    if (!validationResult.success) {
+      return NextResponse.json({ message: 'Invalid input', errors: validationResult.error.flatten().fieldErrors }, { status: 400 });
+    }
+    // ... (insert logic as before, copy from below)
+    const client = await getPool().connect();
+    try {
+      await client.query('BEGIN');
+      const results = {
+        success: 0,
+        failed: 0,
+        errors: [] as string[]
+      };
+      for (const position of validationResult.data) {
+        try {
+          const existingResult = await client.query('SELECT id FROM "Position" WHERE title = $1 AND department = $2', [position.title, position.department]);
+          if (existingResult.rows.length > 0) {
+            results.failed++;
+            results.errors.push(`Position with title "${position.title}" in department "${position.department}" already exists`);
+            continue;
+          }
+          const insertQuery = `
+            INSERT INTO "Position" (id, title, department, description, "isOpen", position_level, "customAttributes", "createdAt", "updatedAt")
+            VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), NOW())
+            RETURNING *;
+          `;
+          const positionId = uuidv4();
+          await client.query(insertQuery, [
+            positionId, position.title, position.department, position.description, 
+            position.isOpen, position.position_level, position.custom_attributes || {}
+          ]);
+          results.success++;
+        } catch (error: any) {
+          results.failed++;
+          results.errors.push(`Failed to import ${position.title}: ${error.message}`);
+        }
+      }
+      await client.query('COMMIT');
+      await logAudit('AUDIT', `Bulk import (CSV) completed by ${actingUserName}. Success: ${results.success}, Failed: ${results.failed}`, 'API:Positions:Import', actingUserId, { results });
+      return NextResponse.json({
+        message: 'Import completed',
+        ...results
+      });
+    } catch (error: any) {
+      await client.query('ROLLBACK');
+      await logAudit('ERROR', `Bulk import failed. Error: ${error.message}`, 'API:Positions:Import', actingUserId, { input: positions });
+      return NextResponse.json({ message: 'Error during import', error: error.message }, { status: 500 });
+    } finally {
+      client.release();
+    }
+  }
+
+  // Fallback: JSON import (existing logic)
   let body;
   try {
     body = await request.json();
   } catch {
     return NextResponse.json({ message: 'Invalid JSON body' }, { status: 400 });
   }
-
   const validationResult = importPositionsArraySchema.safeParse(body);
   if (!validationResult.success) {
     return NextResponse.json({ message: 'Invalid input', errors: validationResult.error.flatten().fieldErrors }, { status: 400 });
   }
-
   const positions = validationResult.data;
-
   const client = await getPool().connect();
   try {
     await client.query('BEGIN');
-
     const results = {
       success: 0,
       failed: 0,
       errors: [] as string[]
     };
-
     for (const position of positions) {
       try {
-        // Check if position already exists (by title and department)
         const existingResult = await client.query('SELECT id FROM "Position" WHERE title = $1 AND department = $2', [position.title, position.department]);
         if (existingResult.rows.length > 0) {
           results.failed++;
           results.errors.push(`Position with title "${position.title}" in department "${position.department}" already exists`);
           continue;
         }
-
-        // Insert position
         const insertQuery = `
           INSERT INTO "Position" (id, title, department, description, "isOpen", position_level, "customAttributes", "createdAt", "updatedAt")
           VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), NOW())
@@ -136,22 +227,18 @@ export async function POST(request: NextRequest) {
           positionId, position.title, position.department, position.description, 
           position.isOpen, position.position_level, position.custom_attributes || {}
         ]);
-
         results.success++;
       } catch (error: any) {
         results.failed++;
         results.errors.push(`Failed to import ${position.title}: ${error.message}`);
       }
     }
-
     await client.query('COMMIT');
     await logAudit('AUDIT', `Bulk import completed by ${actingUserName}. Success: ${results.success}, Failed: ${results.failed}`, 'API:Positions:Import', actingUserId, { results });
-
     return NextResponse.json({
       message: 'Import completed',
       ...results
     });
-
   } catch (error: any) {
     await client.query('ROLLBACK');
     await logAudit('ERROR', `Bulk import failed. Error: ${error.message}`, 'API:Positions:Import', actingUserId, { input: body });

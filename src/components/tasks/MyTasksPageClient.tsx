@@ -303,7 +303,7 @@ export function MyTasksPageClient({
         </button>
       )}
       {/* Main Content */}
-      <div className="flex-1 space-y-6 min-w-0">
+      <div className="flex-1 space-y-6 min-w-0 p-6">
 
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
               <div>

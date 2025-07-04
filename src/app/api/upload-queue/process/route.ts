@@ -136,6 +136,8 @@ export async function POST(request: NextRequest) {
         user: 'abc-123',
       };
       let webhookResStatus = null;
+      let webhookResJson = null;
+      let candidateInfoPresent = false;
       try {
         webhookRes = await fetch(resumeWebhookUrl, {
           method: 'POST',
@@ -143,22 +145,30 @@ export async function POST(request: NextRequest) {
           body: JSON.stringify(jsonPayload),
         });
         webhookResStatus = webhookRes.status;
-        if (webhookRes.ok) {
+        if (webhookResStatus === 200) {
+          try {
+            webhookResJson = await webhookRes.json();
+            candidateInfoPresent = webhookResJson && (webhookResJson.candidate || webhookResJson.candidateInfo);
+          } catch (jsonErr) {
+            candidateInfoPresent = false;
+          }
+        }
+        if (webhookResStatus === 200 && candidateInfoPresent) {
           status = 'success';
         } else {
-          status = 'error';
+          status = 'fail';
           webhookError = `Webhook responded with status ${webhookRes.status}`;
           error = webhookError;
           error_details = await webhookRes.text().catch(() => webhookError);
         }
       } catch (err) {
-        status = 'error';
+        status = 'inprocess';
         webhookError = (err && typeof err === 'object' && 'message' in err && typeof (err as any).message === 'string') ? (err as any).message : 'Unknown error calling webhook';
         error = webhookError;
         error_details = webhookError;
       }
       // For logging/debugging, store a summary of the payload and error
-      payload = { ...jsonPayload, webhookError, webhookResStatus };
+      payload = { ...jsonPayload, webhookError, webhookResStatus, webhookResJson };
     } else {
       // Webhook not set, set status to error
       status = 'error';
@@ -282,6 +292,8 @@ export async function processSingleUploadQueueJob(job: any, client: any) {
         user: 'abc-123',
       };
       let webhookResStatus = null;
+      let webhookResJson = null;
+      let candidateInfoPresent = false;
       try {
         webhookRes = await fetch(resumeWebhookUrl, {
           method: 'POST',
@@ -289,22 +301,30 @@ export async function processSingleUploadQueueJob(job: any, client: any) {
           body: JSON.stringify(jsonPayload),
         });
         webhookResStatus = webhookRes.status;
-        if (webhookRes.ok) {
+        if (webhookResStatus === 200) {
+          try {
+            webhookResJson = await webhookRes.json();
+            candidateInfoPresent = webhookResJson && (webhookResJson.candidate || webhookResJson.candidateInfo);
+          } catch (jsonErr) {
+            candidateInfoPresent = false;
+          }
+        }
+        if (webhookResStatus === 200 && candidateInfoPresent) {
           status = 'success';
         } else {
-          status = 'error';
+          status = 'fail';
           webhookError = `Webhook responded with status ${webhookRes.status}`;
           error = webhookError;
           error_details = await webhookRes.text().catch(() => webhookError);
         }
       } catch (err) {
-        status = 'error';
+        status = 'inprocess';
         webhookError = (err && typeof err === 'object' && 'message' in err && typeof (err as any).message === 'string') ? (err as any).message : 'Unknown error calling webhook';
         error = webhookError;
         error_details = webhookError;
       }
       // For logging/debugging, store a summary of the payload and error
-      payload = { ...jsonPayload, webhookError, webhookResStatus };
+      payload = { ...jsonPayload, webhookError, webhookResStatus, webhookResJson };
     } else {
       // Webhook not set, set status to error
       status = 'error';

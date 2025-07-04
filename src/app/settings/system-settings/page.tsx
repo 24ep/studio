@@ -126,11 +126,11 @@ export default function SystemSettingsPage() {
           AI Configuration (Gemini)
         </div>
         <div className="space-y-4 pt-6">
-        <div>
-            <Label htmlFor="gemini-api-key">Gemini API Key</Label>
-            <Input id="gemini-api-key" type="password" placeholder="Enter your Gemini API Key" value={geminiApiKey} onChange={(e) => setGeminiApiKey(e.target.value)} className="mt-1" disabled={isSaving}/>
-            <p className="text-xs text-muted-foreground mt-1">This key is stored securely on the server. For Genkit to use this, ensure it&apos;s also available as the GOOGLE_API_KEY environment variable where your Next.js server runs, or ensure your Genkit flows dynamically fetch it.</p>
-        </div>
+     
+        <Label htmlFor="gemini-api-key">Gemini API Key</Label>
+        <Input id="gemini-api-key" type="password" placeholder="Enter your Gemini API Key" value={geminiApiKey} onChange={(e) => setGeminiApiKey(e.target.value)} className="mt-1" disabled={isSaving}/>
+        <p className="text-xs text-muted-foreground mt-1">This key is stored securely on the server. For Genkit to use this, ensure it&apos;s also available as the GOOGLE_API_KEY environment variable where your Next.js server runs, or ensure your Genkit flows dynamically fetch it.</p>
+  
         </div>
    
       {/* Webhook Automation + Max Concurrent Processors */}
@@ -140,19 +140,19 @@ export default function SystemSettingsPage() {
           Workflow Automation
         </div>
     
-          <div>
+  
             <Label htmlFor="resume-processing-webhook">Resume Processing Webhook URL (Any Service)</Label>
             <Input id="resume-processing-webhook" type="url" placeholder="https://your-webhook-endpoint/receive-resume" value={resumeProcessingWebhookUrl} onChange={(e) => setResumeProcessingWebhookUrl(e.target.value)} className="mt-1" disabled={isSaving}/>
             <p className="text-xs text-muted-foreground mt-1">This URL will receive a POST request with the uploaded resume file (as FormData). You can use any compatible webhook service (Zapier, Make, custom API, etc.).</p>
-          </div>
+      
           <Separator />
-          <div>
+   
             <Label htmlFor="general-pdf-webhook">New Candidate PDF Webhook URL</Label>
             <Input id="general-pdf-webhook" type="url" placeholder="https://your-webhook-endpoint/receive-pdf" value={generalPdfWebhookUrl} onChange={(e) => setGeneralPdfWebhookUrl(e.target.value)} className="mt-1" disabled={isSaving}/>
             <p className="text-xs text-muted-foreground mt-1">Used by the "Create via Resume (Automated)" feature. The application sends the PDF file (as FormData) and optional target position info to this endpoint. You can use any compatible webhook service (Zapier, Make, custom API, etc.).</p>
-          </div>
+         
           <Separator />
-          <div>
+     
             <Label style={{ marginTop: 16, display: 'block' }} mb-2>Max Concurrent Processors</Label>
             <Input
               type="number"
@@ -162,7 +162,7 @@ export default function SystemSettingsPage() {
               onChange={(e: React.ChangeEvent<HTMLInputElement>) => setMaxConcurrentProcessors(Number(e.target.value))}
               style={{ marginBottom: 16, width: 80 }}
           />
-        </div>
+  
         
 
       {/* SMTP Configuration */}
@@ -171,32 +171,32 @@ export default function SystemSettingsPage() {
           <Mail className="h-7 w-7 text-primary" />
           SMTP Configuration
         </div>
-          <div>
+          
             <Label htmlFor="smtp-host">SMTP Host</Label>
             <Input id="smtp-host" type="text" placeholder="smtp.example.com" value={smtpHost} onChange={(e) => setSmtpHost(e.target.value)} className="mt-1" disabled={isSaving}/>
-          </div>
-          <div>
+          
+          
             <Label htmlFor="smtp-port">SMTP Port</Label>
             <Input id="smtp-port" type="text" placeholder="587" value={smtpPort} onChange={(e) => setSmtpPort(e.target.value)} className="mt-1" disabled={isSaving}/>
-          </div>
-          <div>
+          
+          
             <Label htmlFor="smtp-user">SMTP User</Label>
             <Input id="smtp-user" type="text" placeholder="user@example.com" value={smtpUser} onChange={(e) => setSmtpUser(e.target.value)} className="mt-1" disabled={isSaving}/>
-          </div>
-          <div>
+          
+          
             <Label htmlFor="smtp-password">SMTP Password (set via env)</Label>
             <Input id="smtp-password" type="password" placeholder="Set via environment variable" value={smtpPassword} onChange={(e) => setSmtpPassword(e.target.value)} className="mt-1" disabled readOnly/>
             <p className="text-xs text-muted-foreground mt-1">Password must be set as an environment variable on the server.</p>
-          </div>
-          <div>
+          
+          
             <Label htmlFor="smtp-secure">SMTP Secure</Label>
             <input id="smtp-secure" type="checkbox" checked={smtpSecure} onChange={(e) => setSmtpSecure(e.target.checked)} disabled={isSaving}/>
             <span className="ml-2 text-sm">Use TLS/SSL</span>
-          </div>
-          <div>
+        
+          
             <Label htmlFor="smtp-from-email">From Email</Label>
             <Input id="smtp-from-email" type="email" placeholder="noreply@example.com" value={smtpFromEmail} onChange={(e) => setSmtpFromEmail(e.target.value)} className="mt-1" disabled={isSaving}/>
-          </div>
+          
      
       
 

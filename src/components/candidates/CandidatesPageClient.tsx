@@ -12,7 +12,6 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { PlusCircle, Users, ServerCrash, Zap, Loader2, FileDown, FileUp, ChevronDown, FileSpreadsheet, ShieldAlert, Brain, Trash2 as BulkTrashIcon, Edit as BulkEditIcon, ChevronLeft, ChevronRight } from 'lucide-react';
 import { toast } from "react-hot-toast";
 import { AddCandidateModal, type AddCandidateFormValues } from '@/components/candidates/AddCandidateModal';
-import { UploadResumeModal } from '@/components/candidates/UploadResumeModal';
 import { CreateCandidateViaAutomationModal } from '@/components/candidates/CreateCandidateViaAutomationModal';
 import { ImportCandidatesModal } from '@/components/candidates/ImportCandidatesModal';
 import { EditPositionModal } from '@/components/positions/EditPositionModal';
@@ -81,10 +80,8 @@ export function CandidatesPageClient({
   const [aiMatchedCandidateIds, setAiMatchedCandidateIds] = useState<string[] | null>(null);
 
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-  const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
   const [isCreateViaAutomationModalOpen, setIsCreateViaAutomationModalOpen] = useState(false);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
-  const [selectedCandidateForUpload, setSelectedCandidateForUpload] = useState<Candidate | null>(null);
   const router = useRouter();
   const pathname = usePathname();
   const [fetchError, setFetchError] = useState<string | null>(initialFetchError || null);
@@ -414,16 +411,6 @@ export function CandidatesPageClient({
         console.error("Error adding candidate:", error);
         toast.error((error as Error).message);
     } finally { setIsLoading(false); }
-  };
-
-  const handleOpenUploadModal = (candidate: Candidate) => {
-    setSelectedCandidateForUpload(candidate);
-    setIsUploadModalOpen(true);
-  };
-
-  const handleUploadSuccess = (updatedCandidate: Candidate) => {
-    refreshCandidateInList(updatedCandidate.id);
-    toast.success(`Resume for ${updatedCandidate.name} successfully updated.`);
   };
 
   const handleAutomatedProcessingStart = () => {
@@ -760,7 +747,6 @@ export function CandidatesPageClient({
             onAssignRecruiter={handleAssignRecruiter}
             onUpdateCandidate={handleUpdateCandidateAPI}
             onDeleteCandidate={handleDeleteCandidate}
-            onOpenUploadModal={handleOpenUploadModal}
             onEditPosition={handleOpenEditPositionModal}
             isLoading={(isLoading || isAiSearching) && displayedCandidates.length > 0 && !fetchError}
             onRefreshCandidateData={refreshCandidateInList}
@@ -788,7 +774,6 @@ export function CandidatesPageClient({
       </main>
 
       {canManageCandidates && <AddCandidateModal isOpen={isAddModalOpen} onOpenChange={setIsAddModalOpen} onAddCandidate={handleAddCandidateSubmit} availablePositions={availablePositions} availableStages={availableStages} />}
-      {canManageCandidates && <UploadResumeModal isOpen={isUploadModalOpen} onOpenChange={setIsUploadModalOpen} candidate={selectedCandidateForUpload} onUploadSuccess={handleUploadSuccess} />}
       {canManageCandidates && <CreateCandidateViaAutomationModal isOpen={isCreateViaAutomationModalOpen} onOpenChange={setIsCreateViaAutomationModalOpen} onProcessingStart={handleAutomatedProcessingStart} />}
       {canManageCandidates && <BulkUploadCVsModal
         isOpen={isBulkUploadModalOpen}

@@ -24,7 +24,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
   const token = authHeader?.split(' ')[1];
   const user = token ? await verifyApiToken(token) : null;
   if (!user) {
-    return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { 'Content-Type': 'application/json' } });
+    return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: handleCors(req) });
   }
   const { id } = params;
   const client = await getPool().connect();
@@ -38,7 +38,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
     `;
     const candidateResult = await client.query(candidateQuery, [id]);
     if (candidateResult.rows.length === 0) {
-      return new Response(JSON.stringify({ error: 'Candidate not found' }), { status: 404, headers: { 'Content-Type': 'application/json' } });
+      return new Response(JSON.stringify({ error: 'Candidate not found' }), { status: 404, headers: handleCors(req) });
     }
     const candidate = candidateResult.rows[0];
     // Get job matches for this candidate
@@ -71,7 +71,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
       resumeHistory: resumeHistoryResult.rows,
     }), { status: 200, headers: handleCors(req) });
   } catch (error) {
-    return new Response(JSON.stringify({ error: 'Error fetching candidate', details: (error as Error).message }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+    return new Response(JSON.stringify({ error: 'Error fetching candidate', details: (error as Error).message }), { status: 500, headers: handleCors(req) });
   } finally {
     client.release();
   }
@@ -82,18 +82,18 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
   const token = authHeader?.split(' ')[1];
   const user = token ? await verifyApiToken(token) : null;
   if (!user || (user.role !== 'Admin' && !user.modulePermissions?.includes('CANDIDATES_MANAGE'))) {
-    return new Response(JSON.stringify({ error: 'Forbidden: Insufficient permissions' }), { status: 403, headers: { 'Content-Type': 'application/json' } });
+    return new Response(JSON.stringify({ error: 'Forbidden: Insufficient permissions' }), { status: 403, headers: handleCors(req) });
   }
   const { id } = params;
   let body;
   try {
     body = await req.json();
   } catch {
-    return new Response(JSON.stringify({ error: 'Invalid JSON body' }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+    return new Response(JSON.stringify({ error: 'Invalid JSON body' }), { status: 400, headers: handleCors(req) });
   }
   const validationResult = updateCandidateSchema.safeParse(body);
   if (!validationResult.success) {
-    return new Response(JSON.stringify({ error: 'Invalid input', details: validationResult.error.flatten().fieldErrors }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+    return new Response(JSON.stringify({ error: 'Invalid input', details: validationResult.error.flatten().fieldErrors }), { status: 400, headers: handleCors(req) });
   }
   const { name, email, phone, positionId, recruiterId, fitScore, status, parsedData, custom_attributes, resumePath } = validationResult.data;
   const client = await getPool().connect();
@@ -102,7 +102,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
     const existingResult = await client.query('SELECT * FROM "Candidate" WHERE id = $1', [id]);
     if (existingResult.rows.length === 0) {
       await client.query('ROLLBACK');
-      return new Response(JSON.stringify({ error: 'Candidate not found' }), { status: 404, headers: { 'Content-Type': 'application/json' } });
+      return new Response(JSON.stringify({ error: 'Candidate not found' }), { status: 404, headers: handleCors(req) });
     }
     const existingCandidate = existingResult.rows[0];
     const oldStatus = existingCandidate.status;
@@ -138,7 +138,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
     }), { status: 200, headers: handleCors(req) });
   } catch (error) {
     await client.query('ROLLBACK');
-    return new Response(JSON.stringify({ error: 'Error updating candidate', details: (error as Error).message }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+    return new Response(JSON.stringify({ error: 'Error updating candidate', details: (error as Error).message }), { status: 500, headers: handleCors(req) });
   } finally {
     client.release();
   }
@@ -149,7 +149,7 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
   const token = authHeader?.split(' ')[1];
   const user = token ? await verifyApiToken(token) : null;
   if (!user || (user.role !== 'Admin' && !user.modulePermissions?.includes('CANDIDATES_MANAGE'))) {
-    return new Response(JSON.stringify({ error: 'Forbidden: Insufficient permissions' }), { status: 403, headers: { 'Content-Type': 'application/json' } });
+    return new Response(JSON.stringify({ error: 'Forbidden: Insufficient permissions' }), { status: 403, headers: handleCors(req) });
   }
   const { id } = params;
   const client = await getPool().connect();
@@ -158,14 +158,14 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
     const existingResult = await client.query('SELECT * FROM "Candidate" WHERE id = $1', [id]);
     if (existingResult.rows.length === 0) {
       await client.query('ROLLBACK');
-      return new Response(JSON.stringify({ error: 'Candidate not found' }), { status: 404, headers: { 'Content-Type': 'application/json' } });
+      return new Response(JSON.stringify({ error: 'Candidate not found' }), { status: 404, headers: handleCors(req) });
     }
     await client.query('DELETE FROM "Candidate" WHERE id = $1', [id]);
     await client.query('COMMIT');
-    return new Response(JSON.stringify({ message: 'Candidate deleted successfully' }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+    return new Response(JSON.stringify({ message: 'Candidate deleted successfully' }), { status: 200, headers: handleCors(req) });
   } catch (error) {
     await client.query('ROLLBACK');
-    return new Response(JSON.stringify({ error: 'Error deleting candidate', details: (error as Error).message }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+    return new Response(JSON.stringify({ error: 'Error deleting candidate', details: (error as Error).message }), { status: 500, headers: handleCors(req) });
   } finally {
     client.release();
   }

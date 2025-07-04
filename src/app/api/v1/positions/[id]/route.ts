@@ -19,7 +19,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
   const token = authHeader?.split(' ')[1];
   const user = token ? await verifyApiToken(token) : null;
   if (!user) {
-    return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { 'Content-Type': 'application/json' } });
+    return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: handleCors(req) });
   }
   const { id } = params;
   const client = await getPool().connect();
@@ -27,7 +27,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
     const query = 'SELECT id, title, department, description, "isOpen", position_level, "customAttributes", "createdAt", "updatedAt" FROM "Position" WHERE id = $1';
     const result = await client.query(query, [id]);
     if (result.rows.length === 0) {
-      return new Response(JSON.stringify({ error: 'Position not found' }), { status: 404, headers: { 'Content-Type': 'application/json' } });
+      return new Response(JSON.stringify({ error: 'Position not found' }), { status: 404, headers: handleCors(req) });
     }
     const position = result.rows[0];
     return new Response(JSON.stringify({
@@ -35,7 +35,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
       custom_attributes: position.customAttributes || {},
     }), { status: 200, headers: handleCors(req) });
   } catch (error) {
-    return new Response(JSON.stringify({ error: 'Error fetching position', details: (error as Error).message }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+    return new Response(JSON.stringify({ error: 'Error fetching position', details: (error as Error).message }), { status: 500, headers: handleCors(req) });
   } finally {
     client.release();
   }
@@ -46,18 +46,18 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
   const token = authHeader?.split(' ')[1];
   const user = token ? await verifyApiToken(token) : null;
   if (!user || (user.role !== 'Admin' && !user.modulePermissions?.includes('POSITIONS_MANAGE'))) {
-    return new Response(JSON.stringify({ error: 'Forbidden: Insufficient permissions' }), { status: 403, headers: { 'Content-Type': 'application/json' } });
+    return new Response(JSON.stringify({ error: 'Forbidden: Insufficient permissions' }), { status: 403, headers: handleCors(req) });
   }
   const { id } = params;
   let body;
   try {
     body = await req.json();
   } catch {
-    return new Response(JSON.stringify({ error: 'Invalid JSON body' }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+    return new Response(JSON.stringify({ error: 'Invalid JSON body' }), { status: 400, headers: handleCors(req) });
   }
   const validationResult = updatePositionSchema.safeParse(body);
   if (!validationResult.success) {
-    return new Response(JSON.stringify({ error: 'Invalid input', details: validationResult.error.flatten().fieldErrors }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+    return new Response(JSON.stringify({ error: 'Invalid input', details: validationResult.error.flatten().fieldErrors }), { status: 400, headers: handleCors(req) });
   }
   const { title, department, description, isOpen, position_level, custom_attributes } = validationResult.data;
   const client = await getPool().connect();
@@ -67,7 +67,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
     const existingResult = await client.query(positionExistsQuery, [id]);
     if (existingResult.rows.length === 0) {
       await client.query('ROLLBACK');
-      return new Response(JSON.stringify({ error: 'Position not found' }), { status: 404, headers: { 'Content-Type': 'application/json' } });
+      return new Response(JSON.stringify({ error: 'Position not found' }), { status: 404, headers: handleCors(req) });
     }
     const updateQuery = `
       UPDATE "Position" 
@@ -90,7 +90,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
     }), { status: 200, headers: handleCors(req) });
   } catch (error) {
     await client.query('ROLLBACK');
-    return new Response(JSON.stringify({ error: 'Error updating position', details: (error as Error).message }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+    return new Response(JSON.stringify({ error: 'Error updating position', details: (error as Error).message }), { status: 500, headers: handleCors(req) });
   } finally {
     client.release();
   }
@@ -101,7 +101,7 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
   const token = authHeader?.split(' ')[1];
   const user = token ? await verifyApiToken(token) : null;
   if (!user || (user.role !== 'Admin' && !user.modulePermissions?.includes('POSITIONS_MANAGE'))) {
-    return new Response(JSON.stringify({ error: 'Forbidden: Insufficient permissions' }), { status: 403, headers: { 'Content-Type': 'application/json' } });
+    return new Response(JSON.stringify({ error: 'Forbidden: Insufficient permissions' }), { status: 403, headers: handleCors(req) });
   }
   const { id } = params;
   const client = await getPool().connect();
@@ -110,14 +110,14 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
     const currentPosition = await client.query('SELECT * FROM "Position" WHERE id = $1', [id]);
     if (currentPosition.rows.length === 0) {
       await client.query('ROLLBACK');
-      return new Response(JSON.stringify({ error: 'Position not found' }), { status: 404, headers: { 'Content-Type': 'application/json' } });
+      return new Response(JSON.stringify({ error: 'Position not found' }), { status: 404, headers: handleCors(req) });
     }
     await client.query('DELETE FROM "Position" WHERE id = $1', [id]);
     await client.query('COMMIT');
     return new Response(JSON.stringify({ message: 'Position deleted successfully' }), { status: 200, headers: handleCors(req) });
   } catch (error) {
     await client.query('ROLLBACK');
-    return new Response(JSON.stringify({ error: 'Error deleting position', details: (error as Error).message }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+    return new Response(JSON.stringify({ error: 'Error deleting position', details: (error as Error).message }), { status: 500, headers: handleCors(req) });
   } finally {
     client.release();
   }

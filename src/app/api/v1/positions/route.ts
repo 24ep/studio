@@ -20,7 +20,7 @@ export async function GET(req: NextRequest) {
   const token = authHeader?.split(' ')[1];
   const user = token ? await verifyApiToken(token) : null;
   if (!user) {
-    return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { 'Content-Type': 'application/json' } });
+    return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: handleCors(req) });
   }
 
   try {
@@ -85,19 +85,19 @@ export async function POST(req: NextRequest) {
   const token = authHeader?.split(' ')[1];
   const user = token ? await verifyApiToken(token) : null;
   if (!user || (user.role !== 'Admin' && !user.modulePermissions?.includes('POSITIONS_MANAGE'))) {
-    return new Response(JSON.stringify({ error: 'Forbidden: Insufficient permissions' }), { status: 403, headers: { 'Content-Type': 'application/json' } });
+    return new Response(JSON.stringify({ error: 'Forbidden: Insufficient permissions' }), { status: 403, headers: handleCors(req) });
   }
 
   let body;
   try {
     body = await req.json();
   } catch (error) {
-    return new Response(JSON.stringify({ error: 'Error parsing request body', details: (error as Error).message }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+    return new Response(JSON.stringify({ error: 'Error parsing request body', details: (error as Error).message }), { status: 400, headers: handleCors(req) });
   }
 
   const validationResult = createPositionSchema.safeParse(body);
   if (!validationResult.success) {
-    return new Response(JSON.stringify({ error: 'Invalid input', details: validationResult.error.flatten().fieldErrors }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+    return new Response(JSON.stringify({ error: 'Invalid input', details: validationResult.error.flatten().fieldErrors }), { status: 400, headers: handleCors(req) });
   }
 
   const validatedData = validationResult.data;

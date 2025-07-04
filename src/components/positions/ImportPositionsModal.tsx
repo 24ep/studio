@@ -22,11 +22,13 @@ interface ImportPositionsModalProps {
   onImportSuccess: () => void; 
 }
 
-const ACCEPTED_EXCEL_TYPES = [
+const ACCEPTED_FILE_TYPES = [
   '.xlsx',
   '.xls',
+  '.csv',
   'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-  'application/vnd.ms-excel'
+  'application/vnd.ms-excel',
+  'text/csv'
 ].join(',');
 
 export function ImportPositionsModal({ isOpen, onOpenChange, onImportSuccess }: ImportPositionsModalProps) {
@@ -38,12 +40,12 @@ export function ImportPositionsModal({ isOpen, onOpenChange, onImportSuccess }: 
     if (file) {
       const fileType = file.type;
       const fileName = file.name.toLowerCase();
-      const acceptedMimeTypes = ACCEPTED_EXCEL_TYPES.split(',');
+      const acceptedMimeTypes = ACCEPTED_FILE_TYPES.split(',');
       
       if (acceptedMimeTypes.includes(fileType) || fileName.endsWith('.xlsx') || fileName.endsWith('.xls')) {
         setSelectedFile(file);
       } else {
-        toast.error("Please select an Excel file (.xlsx, .xls).");
+        toast.error("Please select an Excel or CSV file (.xlsx, .xls, .csv).");
         setSelectedFile(null);
         event.target.value = '';
       }
@@ -54,7 +56,7 @@ export function ImportPositionsModal({ isOpen, onOpenChange, onImportSuccess }: 
 
   const handleImport = async () => {
     if (!selectedFile) {
-      toast.error("Please select an Excel file to import.");
+      toast.error("Please select an Excel or CSV file to import.");
       return;
     }
     setIsImporting(true);
@@ -86,7 +88,7 @@ export function ImportPositionsModal({ isOpen, onOpenChange, onImportSuccess }: 
       onImportSuccess();
       onOpenChange(false);
       setSelectedFile(null);
-      const fileInput = document.getElementById('position-excel-import') as HTMLInputElement;
+      const fileInput = document.getElementById('position-import-file') as HTMLInputElement;
       if (fileInput) fileInput.value = '';
 
     } catch (error) {
@@ -97,32 +99,57 @@ export function ImportPositionsModal({ isOpen, onOpenChange, onImportSuccess }: 
     }
   };
 
+  const handleDownloadCsvTemplate = () => {
+    const headers = ["title", "department", "isOpen", "position_level"];
+    const exampleRows = [
+      ["Sample Position", "Engineering", "TRUE", "Senior"]
+    ];
+    let csvContent = headers.join(',') + '\n';
+    exampleRows.forEach(row => {
+      csvContent += row.map(val => `"${String(val || '').replace(/"/g, '""')}"`).join(',') + '\n';
+    });
+    csvContent += "\nNOTE: isOpen should be TRUE or FALSE. position_level is optional.";
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', 'positions_template.csv');
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={(open) => {
       onOpenChange(open);
       if (!open) {
         setSelectedFile(null);
         setIsImporting(false);
-        const fileInput = document.getElementById('position-excel-import') as HTMLInputElement;
+        const fileInput = document.getElementById('position-import-file') as HTMLInputElement;
         if (fileInput) fileInput.value = '';
       }
     }}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center">
-            <Briefcase className="mr-2 h-5 w-5 text-primary" /> Import Positions (Excel)
+            <Briefcase className="mr-2 h-5 w-5 text-primary" /> Import Positions (Excel/CSV)
           </DialogTitle>
           <DialogDescription>
-            Upload an Excel file (.xlsx, .xls) containing position data.
-            Refer to the downloaded Excel template guide for the expected structure.
+            Upload an Excel or CSV file (.xlsx, .xls, .csv) containing position data.<br />
+            <Button variant="link" className="p-0 h-auto text-primary underline" onClick={handleDownloadCsvTemplate}>
+              Download CSV Template
+            </Button>
+            <br />Refer to the template for the expected structure.
           </DialogDescription>
         </DialogHeader>
         <div className="py-4 space-y-2">
-          <Label htmlFor="position-excel-import">Select Excel File</Label>
+          <Label htmlFor="position-import-file">Select Excel or CSV File</Label>
           <Input
-            id="position-excel-import"
+            id="position-import-file"
             type="file"
-            accept={ACCEPTED_EXCEL_TYPES}
+            accept={ACCEPTED_FILE_TYPES}
             onChange={handleFileChange}
             className="mt-1"
           />

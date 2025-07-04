@@ -45,10 +45,10 @@ export async function GET(req: NextRequest) {
   const token = authHeader?.split(' ')[1];
   const user = token ? await verifyApiToken(token) : null;
   if (!user) {
-    return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { 'Content-Type': 'application/json' } });
+    return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: handleCors(req) });
   }
   if (user.role !== 'Admin' && !user.modulePermissions?.includes('CANDIDATES_VIEW')) {
-    return new Response(JSON.stringify({ error: 'Forbidden: Insufficient permissions to view candidates' }), { status: 403, headers: { 'Content-Type': 'application/json' } });
+    return new Response(JSON.stringify({ error: 'Forbidden: Insufficient permissions to view candidates' }), { status: 403, headers: handleCors(req) });
   }
   const { searchParams } = new URL(req.url);
   const page = parseInt(searchParams.get('page') || '1', 10);
@@ -120,20 +120,20 @@ export async function POST(req: NextRequest) {
   const token = authHeader?.split(' ')[1];
   const user = token ? await verifyApiToken(token) : null;
   if (!user) {
-    return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { 'Content-Type': 'application/json' } });
+    return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: handleCors(req) });
   }
   if (user.role !== 'Admin' && !user.modulePermissions?.includes('CANDIDATES_MANAGE')) {
-    return new Response(JSON.stringify({ error: 'Forbidden: Insufficient permissions to create candidates' }), { status: 403, headers: { 'Content-Type': 'application/json' } });
+    return new Response(JSON.stringify({ error: 'Forbidden: Insufficient permissions to create candidates' }), { status: 403, headers: handleCors(req) });
   }
   let body;
   try {
     body = await req.json();
   } catch {
-    return new Response(JSON.stringify({ error: 'Invalid JSON body' }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+    return new Response(JSON.stringify({ error: 'Invalid JSON body' }), { status: 400, headers: handleCors(req) });
   }
   const validationResult = createCandidateSchema.safeParse(body);
   if (!validationResult.success) {
-    return new Response(JSON.stringify({ error: 'Invalid input', details: validationResult.error.flatten().fieldErrors }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+    return new Response(JSON.stringify({ error: 'Invalid input', details: validationResult.error.flatten().fieldErrors }), { status: 400, headers: handleCors(req) });
   }
   const { name, email, phone, positionId, recruiterId, fitScore, status, parsedData, custom_attributes, resumePath } = validationResult.data;
   const newCandidateId = uuidv4();
@@ -162,7 +162,7 @@ export async function POST(req: NextRequest) {
   } catch (error) {
     await client.query('ROLLBACK');
     if ((error as any).code === '23505' && (error as any).constraint === 'Candidate_email_key') {
-      return new Response(JSON.stringify({ error: `A candidate with the email "${email}" already exists.` }), { status: 409, headers: { 'Content-Type': 'application/json' } });
+      return new Response(JSON.stringify({ error: `A candidate with the email "${email}" already exists.` }), { status: 409, headers: handleCors(req) });
     }
     return new Response(JSON.stringify({ error: 'Error creating candidate', details: (error as Error).message }), { status: 500, headers: handleCors(req) });
   } finally {

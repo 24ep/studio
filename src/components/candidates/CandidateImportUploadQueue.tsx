@@ -416,7 +416,6 @@ export const CandidateImportUploadQueue: React.FC = () => {
               <TableHead>Status</TableHead>
               <TableHead>Completed Date</TableHead>
               <TableHead>Upload Date</TableHead>
-              <TableHead>Upload ID</TableHead>
               <TableHead>Actions</TableHead>
             </TableRow>
           </TableHeader>
@@ -473,7 +472,6 @@ export const CandidateImportUploadQueue: React.FC = () => {
                   </TableCell>
                   <TableCell>{item.completed_date ? new Date(item.completed_date).toLocaleString() : '-'}</TableCell>
                   <TableCell>{item.upload_date ? new Date(item.upload_date).toLocaleString() : '-'}</TableCell>
-                  <TableCell>{item.upload_id || '-'}</TableCell>
                   <TableCell className="flex gap-1">
                     {item.file_path && (
                       <Button
