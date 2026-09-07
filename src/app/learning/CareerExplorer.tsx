@@ -26,38 +26,7 @@ import {
 
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-
-type ExplorerMode = 'map' | 'compare';
-type RoleId = string;
-
-interface CareerRole {
-  id: RoleId;
-  title: string;
-  department: string;
-  readiness: number;
-  comparisonReadiness: number;
-  months: string;
-  destinationMonths: string;
-  intermediateRole: string;
-  description: string;
-  change: string;
-  strengths: Array<{ title: string; detail: string }>;
-  gaps: Array<{ title: string; detail: string }>;
-  course: { id: string; title: string; category: string | null; description: string | null; durationHours: number | null } | null;
-  icon: React.ComponentType<{ className?: string }>;
-  tone: 'teal' | 'indigo';
-}
-
-interface CareerExplorerPayload {
-  state: 'ready' | 'unlinked';
-  message?: string;
-  data: null | {
-    employee: { id: string; name: string; jobTitle: string | null; department: string | null };
-    evidence: { skills: string[]; completedCourses: number; verifiedCertificates: number };
-    roles: Array<Omit<CareerRole, 'icon' | 'tone'>>;
-    goal: { id: string; title: string; keyResults: unknown } | null;
-  };
-}
+import type { CareerExplorerPayload, CareerRole, ExplorerMode, RoleId } from './career-explorer-types';
 
 const roleIcons = [ChartBarIcon, BriefcaseIcon, PresentationChartLineIcon];
 
@@ -264,9 +233,7 @@ function CareerMap({
       <div className="grid gap-8 xl:grid-cols-[minmax(0,1fr)_385px]">
         <div className="min-w-0">
           <p className="text-sm font-semibold text-[#4f6485] dark:text-zinc-400">{new Intl.DateTimeFormat('en', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' }).format(new Date())}</p>
-          <h1 className="mt-4 max-w-4xl text-[clamp(2.25rem,3.25vw,3rem)] font-semibold leading-[1.02] tracking-[-.052em]">
-            Where could your experience take you next?
-          </h1>
+          <h1 className="mt-4 max-w-4xl text-[clamp(2.25rem,3.25vw,3rem)] font-semibold leading-[1.02] tracking-[-.052em]">Where could your experience take you next?</h1>
           <p className="mt-3 text-lg text-[#5b6c86] dark:text-zinc-300">Explore potential roles and see how your skills can open new doors.</p>
 
           <div className="relative mt-[45px] min-h-0 md:min-h-[620px] xl:min-h-[610px]">
@@ -274,30 +241,18 @@ function CareerMap({
             <article className="relative z-20 mt-3 w-full max-w-[300px] rounded-[10px] border border-[#ddd9d0] bg-white/95 p-5 shadow-[0_7px_18px_rgba(36,45,66,.08)] dark:border-white/10 dark:bg-[#202532]/95 md:absolute md:left-0 md:top-[204px] md:mt-0">
               <div className="flex items-start gap-4">
                 <span className="grid h-14 w-14 shrink-0 place-items-center rounded-full bg-indigo-600 text-white shadow-sm"><UserCircleIcon className="h-8 w-8" /></span>
-                <div>
-                  <p className="text-sm font-medium text-indigo-600 dark:text-indigo-300">Your current role</p>
-                  <h2 className="mt-1 text-xl font-semibold tracking-[-.025em]">{currentRole}</h2>
-                  <p className="mt-3 text-sm leading-5 text-[#62718a] dark:text-zinc-400">Based on your employee profile,<br />learning, and verified credentials.</p>
-                </div>
+                <div><p className="text-sm font-medium text-indigo-600 dark:text-indigo-300">Your current role</p><h2 className="mt-1 text-xl font-semibold tracking-[-.025em]">{currentRole}</h2><p className="mt-3 text-sm leading-5 text-[#62718a] dark:text-zinc-400">Based on your employee profile,<br />learning, and verified credentials.</p></div>
               </div>
               <span aria-hidden="true" className="absolute -right-4 top-1/2 grid h-8 w-8 -translate-y-1/2 place-items-center rounded-full border-[5px] border-[#fbfaf6] bg-[#59687d] shadow-sm dark:border-[#151924]"><span className="h-2 w-2 rounded-full bg-white" /></span>
             </article>
 
             <div className="relative z-20 mt-5 grid w-full max-w-[320px] gap-5 md:absolute md:left-[55%] md:top-[10px] md:mt-0 md:w-[286px] xl:left-[58%]">
-              {roles.map(role => (
-                <RoleMapCard key={role.id} role={role} selected={selectedRole.id === role.id} onClick={() => onSelect(role.id)} />
-              ))}
+              {roles.map(role => <RoleMapCard key={role.id} role={role} selected={selectedRole.id === role.id} onClick={() => onSelect(role.id)} />)}
             </div>
           </div>
         </div>
 
-        <RoleDetailPanel
-          role={selectedRole}
-          goalSelected={goalRoleId === selectedRole.id}
-          onChooseGoal={onChooseGoal}
-          onCompare={onCompare}
-          isSavingGoal={isSavingGoal}
-        />
+        <RoleDetailPanel role={selectedRole} goalSelected={goalRoleId === selectedRole.id} onChooseGoal={onChooseGoal} onCompare={onCompare} isSavingGoal={isSavingGoal} />
       </div>
     </section>
   );
@@ -306,26 +261,12 @@ function CareerMap({
 function RoleMapCard({ role, selected, onClick }: { role: CareerRole; selected: boolean; onClick: () => void }) {
   const Icon = role.icon;
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      aria-pressed={selected}
-      className={cn(
-        'relative w-full rounded-[10px] border bg-white/95 p-5 text-left shadow-[0_7px_18px_rgba(36,45,66,.08)] transition-[border-color,box-shadow,transform] hover:-translate-y-0.5 dark:bg-[#202532]/95',
-        selected
-          ? 'border-2 border-indigo-600 shadow-[0_8px_22px_rgba(79,70,229,.16)] dark:border-indigo-400'
-          : 'border-[#ddd9d0] hover:border-indigo-300 dark:border-white/10 dark:hover:border-indigo-500/60',
-      )}
-    >
+    <button type="button" onClick={onClick} aria-pressed={selected} className={cn('relative w-full rounded-[10px] border bg-white/95 p-5 text-left shadow-[0_7px_18px_rgba(36,45,66,.08)] transition-[border-color,box-shadow,transform] hover:-translate-y-0.5 dark:bg-[#202532]/95', selected ? 'border-2 border-indigo-600 shadow-[0_8px_22px_rgba(79,70,229,.16)] dark:border-indigo-400' : 'border-[#ddd9d0] hover:border-indigo-300 dark:border-white/10 dark:hover:border-indigo-500/60')}>
       <div className="flex items-start gap-4">
         <span className={cn('grid h-12 w-12 shrink-0 place-items-center rounded-full text-white', role.tone === 'indigo' ? 'bg-indigo-600' : 'bg-[#338d87]')}><Icon className="h-6 w-6" /></span>
         <div className="min-w-0 flex-1">
           <h3 className="text-xl font-semibold tracking-[-.03em]">{role.title}</h3>
-          <div className="mt-2 flex items-start gap-4">
-            <div><p className={cn('text-xl font-semibold', role.tone === 'indigo' ? 'text-indigo-600 dark:text-indigo-300' : 'text-[#16877c] dark:text-emerald-300')}>{role.readiness}%</p><p className="text-xs text-[#64728a] dark:text-zinc-400">ready</p></div>
-            <span className="h-9 w-px bg-[#ddd9d0] dark:bg-white/10" />
-            <div className="flex items-start gap-2"><ClockIcon className="mt-0.5 h-5 w-5 text-[#60718b]" /><div><p className="text-sm font-semibold">{role.months}</p><p className="text-xs text-[#64728a] dark:text-zinc-400">months</p></div></div>
-          </div>
+          <div className="mt-2 flex items-start gap-4"><div><p className={cn('text-xl font-semibold', role.tone === 'indigo' ? 'text-indigo-600 dark:text-indigo-300' : 'text-[#16877c] dark:text-emerald-300')}>{role.readiness}%</p><p className="text-xs text-[#64728a] dark:text-zinc-400">ready</p></div><span className="h-9 w-px bg-[#ddd9d0] dark:bg-white/10" /><div className="flex items-start gap-2"><ClockIcon className="mt-0.5 h-5 w-5 text-[#60718b]" /><div><p className="text-sm font-semibold">{role.months}</p><p className="text-xs text-[#64728a] dark:text-zinc-400">months</p></div></div></div>
         </div>
       </div>
       <p className="mt-4 text-sm leading-5 text-[#586980] dark:text-zinc-400">{role.description}</p>
@@ -334,19 +275,7 @@ function RoleMapCard({ role, selected, onClick }: { role: CareerRole; selected: 
   );
 }
 
-function RoleDetailPanel({
-  role,
-  goalSelected,
-  onChooseGoal,
-  onCompare,
-  isSavingGoal,
-}: {
-  role: CareerRole;
-  goalSelected: boolean;
-  onChooseGoal: () => void;
-  onCompare: () => void;
-  isSavingGoal: boolean;
-}) {
+function RoleDetailPanel({ role, goalSelected, onChooseGoal, onCompare, isSavingGoal }: { role: CareerRole; goalSelected: boolean; onChooseGoal: () => void; onCompare: () => void; isSavingGoal: boolean }) {
   return (
     <aside className="sticky top-5 flex h-fit flex-col rounded-[12px] border border-[#dedad2] bg-white/95 p-7 shadow-[0_8px_24px_rgba(37,45,68,.05)] backdrop-blur-sm dark:border-white/10 dark:bg-[#1d222e]/95 xl:min-h-[830px]">
       <p className="text-[10px] font-bold uppercase tracking-[.13em] text-indigo-600 dark:text-indigo-300">Selected path</p>
@@ -357,10 +286,7 @@ function RoleDetailPanel({
         <h3 className="text-sm font-semibold">Your transferable strengths</h3>
         <ul className="mt-4 space-y-4">
           {role.strengths.map(strength => (
-            <li key={strength.title} className="flex gap-3">
-              <CheckCircleIcon className="mt-0.5 h-5 w-5 shrink-0 text-emerald-600 dark:text-emerald-300" />
-              <div><p className="text-sm font-semibold">{strength.title}</p><p className="mt-1 text-xs leading-5 text-[#63718a] dark:text-zinc-400">{strength.detail}</p></div>
-            </li>
+            <li key={strength.title} className="flex gap-3"><CheckCircleIcon className="mt-0.5 h-5 w-5 shrink-0 text-emerald-600 dark:text-emerald-300" /><div><p className="text-sm font-semibold">{strength.title}</p><p className="mt-1 text-xs leading-5 text-[#63718a] dark:text-zinc-400">{strength.detail}</p></div></li>
           ))}
           {role.strengths.length === 0 && <li className="text-xs leading-5 text-[#63718a]">Add skills to your employee profile or complete learning to build evidence for this role.</li>}
         </ul>
@@ -370,57 +296,27 @@ function RoleDetailPanel({
         <h3 className="text-sm font-semibold">Skill gaps to build</h3>
         <ul className="mt-4 space-y-4">
           {role.gaps.map(gap => (
-            <li key={gap.title} className="flex gap-3">
-              <span className="mt-0.5 h-5 w-5 shrink-0 rounded-full border-2 border-dashed border-indigo-500" />
-              <div><p className="text-sm font-semibold">{gap.title}</p><p className="mt-1 text-xs leading-5 text-[#63718a] dark:text-zinc-400">{gap.detail}</p></div>
-            </li>
+            <li key={gap.title} className="flex gap-3"><span className="mt-0.5 h-5 w-5 shrink-0 rounded-full border-2 border-dashed border-indigo-500" /><div><p className="text-sm font-semibold">{gap.title}</p><p className="mt-1 text-xs leading-5 text-[#63718a] dark:text-zinc-400">{gap.detail}</p></div></li>
           ))}
           {role.gaps.length === 0 && <li className="text-xs leading-5 text-[#63718a]">No configured position skill requirements are missing from your current evidence.</li>}
         </ul>
       </div>
 
       <div className="mt-auto pt-6">
-        <Button type="button" onClick={onChooseGoal} disabled={isSavingGoal} className="h-12 w-full rounded-[7px] bg-indigo-600 text-sm font-semibold text-white hover:bg-indigo-700">
-          {isSavingGoal ? 'Saving goal…' : goalSelected ? <><CheckIcon className="mr-2 h-4 w-4" />Career goal set</> : <>Set as career goal <ArrowRightIcon className="ml-2 h-4 w-4" /></>}
-        </Button>
+        <Button type="button" onClick={onChooseGoal} disabled={isSavingGoal} className="h-12 w-full rounded-[7px] bg-indigo-600 text-sm font-semibold text-white hover:bg-indigo-700">{isSavingGoal ? 'Saving goal…' : goalSelected ? <><CheckIcon className="mr-2 h-4 w-4" />Career goal set</> : <>Set as career goal <ArrowRightIcon className="ml-2 h-4 w-4" /></>}</Button>
         {role.course && <Button asChild variant="outline" className="mt-3 h-11 w-full rounded-[7px] border-indigo-200 bg-indigo-50 text-indigo-700 hover:bg-indigo-100"><Link href={`/learning/courses/${role.course.id}`}>Start {role.course.title}<ArrowRightIcon className="ml-2 h-4 w-4" /></Link></Button>}
-        <Button type="button" variant="outline" onClick={onCompare} className="mt-3 h-11 w-full rounded-[7px] border-[#d8d8d5] bg-white text-sm font-semibold hover:bg-[#f7f6f2] dark:border-white/15 dark:bg-transparent dark:hover:bg-white/5">
-          Compare roles <ScaleIcon className="ml-2 h-4 w-4" />
-        </Button>
+        <Button type="button" variant="outline" onClick={onCompare} className="mt-3 h-11 w-full rounded-[7px] border-[#d8d8d5] bg-white text-sm font-semibold hover:bg-[#f7f6f2] dark:border-white/15 dark:bg-transparent dark:hover:bg-white/5">Compare roles <ScaleIcon className="ml-2 h-4 w-4" /></Button>
       </div>
     </aside>
   );
 }
 
-function CareerComparison({
-  roles,
-  currentRole,
-  selectedRole,
-  onSelect,
-  goalRoleId,
-  onChooseGoal,
-  isSavingGoal,
-}: {
-  roles: CareerRole[];
-  currentRole: string;
-  selectedRole: CareerRole;
-  onSelect: (roleId: RoleId) => void;
-  goalRoleId: RoleId | null;
-  onChooseGoal: () => void;
-  isSavingGoal: boolean;
-}) {
+function CareerComparison({ roles, currentRole, selectedRole, onSelect, goalRoleId, onChooseGoal, isSavingGoal }: { roles: CareerRole[]; currentRole: string; selectedRole: CareerRole; onSelect: (roleId: RoleId) => void; goalRoleId: RoleId | null; onChooseGoal: () => void; isSavingGoal: boolean }) {
   return (
     <section className="relative isolate min-h-[calc(100vh-7.25rem)] overflow-hidden px-6 pb-7 pt-14 lg:px-14">
       <Image src="/learning/adventure-trail-hero.png" alt="" fill priority unoptimized sizes="100vw" className="-z-20 object-cover object-[82%_10%] opacity-[.18] dark:opacity-[.08]" />
       <div aria-hidden="true" className="absolute inset-0 -z-10 bg-[#fbfaf6]/86 dark:bg-[#151924]/90" />
-
-      <div>
-        <div>
-          <p className="text-sm font-semibold text-[#4f6485] dark:text-zinc-400">{new Intl.DateTimeFormat('en', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' }).format(new Date())}</p>
-          <h1 className="mt-3 text-[clamp(2.25rem,3.25vw,3rem)] font-semibold leading-none tracking-[-.052em]">Choose where to grow next</h1>
-          <p className="mt-3 text-lg text-[#5b6c86] dark:text-zinc-300">Compare paths built from the skills you already have.</p>
-        </div>
-      </div>
+      <div><div><p className="text-sm font-semibold text-[#4f6485] dark:text-zinc-400">{new Intl.DateTimeFormat('en', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' }).format(new Date())}</p><h1 className="mt-3 text-[clamp(2.25rem,3.25vw,3rem)] font-semibold leading-none tracking-[-.052em]">Choose where to grow next</h1><p className="mt-3 text-lg text-[#5b6c86] dark:text-zinc-300">Compare paths built from the skills you already have.</p></div></div>
 
       <section className="mt-5 grid gap-5 rounded-[10px] border border-[#dedad2] bg-white/95 px-7 py-5 shadow-[0_5px_16px_rgba(37,45,68,.04)] dark:border-white/10 dark:bg-[#1d222e]/95 lg:grid-cols-[330px_minmax(0,1fr)_310px] lg:items-center">
         <div className="flex items-center gap-5"><span className="grid h-14 w-14 shrink-0 place-items-center rounded-full bg-indigo-600 text-white"><UserCircleIcon className="h-8 w-8" /></span><div><p className="text-sm text-[#5b6b83] dark:text-zinc-400">Starting from</p><h2 className="mt-1 text-2xl font-semibold tracking-[-.035em]">{currentRole}</h2></div></div>
@@ -428,11 +324,7 @@ function CareerComparison({
         <div className="border-[#e2ded6] lg:border-l lg:pl-7 dark:border-white/10"><p className="text-sm text-[#5b6b83] dark:text-zinc-400">Best destination match</p><div className="mt-2 flex items-center gap-5"><p className="text-3xl font-semibold text-indigo-600 dark:text-indigo-300">{roles[0]?.readiness || 0}%</p><div className="h-2 flex-1 overflow-hidden rounded-full bg-[#e5e6e8] dark:bg-white/10"><div className="h-full rounded-full bg-indigo-600" style={{ width: `${roles[0]?.readiness || 0}%` }} /></div></div><p className="mt-1 text-xs text-[#63718a] dark:text-zinc-400">Profile match</p></div>
       </section>
 
-      <section className="mt-4 grid gap-3 xl:grid-cols-3">
-        {roles.map((role, index) => (
-          <ComparisonLane key={role.id} role={role} currentRole={currentRole} pathNumber={index + 1} selected={selectedRole.id === role.id} goalSelected={goalRoleId === role.id} onSelect={() => onSelect(role.id)} onChooseGoal={onChooseGoal} isSavingGoal={isSavingGoal} />
-        ))}
-      </section>
+      <section className="mt-4 grid gap-3 xl:grid-cols-3">{roles.map((role, index) => <ComparisonLane key={role.id} role={role} currentRole={currentRole} pathNumber={index + 1} selected={selectedRole.id === role.id} goalSelected={goalRoleId === role.id} onSelect={() => onSelect(role.id)} onChooseGoal={onChooseGoal} isSavingGoal={isSavingGoal} />)}</section>
       <p className="mt-4 flex items-center gap-2 text-xs text-[#66748a] dark:text-zinc-400"><MapIcon className="h-4 w-4" />Readiness reflects how well your current skills match the requirements for each role.</p>
     </section>
   );
@@ -442,51 +334,18 @@ function StrengthSummary({ icon: Icon, title, detail }: { icon: React.ComponentT
   return <div className="flex items-start gap-3"><Icon className="h-7 w-7 shrink-0 text-indigo-600 dark:text-indigo-300" /><div><p className="text-sm font-semibold">{title}</p><p className="mt-0.5 text-xs text-[#63718a] dark:text-zinc-400">{detail}</p></div></div>;
 }
 
-function ComparisonLane({
-  role,
-  currentRole,
-  pathNumber,
-  selected,
-  goalSelected,
-  onSelect,
-  onChooseGoal,
-  isSavingGoal,
-}: {
-  role: CareerRole;
-  currentRole: string;
-  pathNumber: number;
-  selected: boolean;
-  goalSelected: boolean;
-  onSelect: () => void;
-  onChooseGoal: () => void;
-  isSavingGoal: boolean;
-}) {
+function ComparisonLane({ role, currentRole, pathNumber, selected, goalSelected, onSelect, onChooseGoal, isSavingGoal }: { role: CareerRole; currentRole: string; pathNumber: number; selected: boolean; goalSelected: boolean; onSelect: () => void; onChooseGoal: () => void; isSavingGoal: boolean }) {
   return (
     <article onClick={onSelect} className={cn('flex min-h-[540px] cursor-pointer flex-col rounded-[10px] border bg-white/95 p-5 transition-[border-color,box-shadow] dark:bg-[#1d222e]/95', selected ? 'border-2 border-indigo-500 shadow-[0_8px_22px_rgba(79,70,229,.12)]' : 'border-[#dedad2] hover:border-indigo-300 dark:border-white/10')}>
       <div className="flex items-start justify-between gap-4">
         <div><span className={cn('inline-flex rounded px-2 py-1 text-[10px] font-bold uppercase tracking-[.08em]', selected ? 'bg-[#1f4fb8] text-white' : 'bg-[#edf2fb] text-[#3156a7] dark:bg-white/10 dark:text-indigo-200')}>{selected ? <><SparklesIcon className="mr-1 h-3 w-3" />Selected</> : `Path ${pathNumber}`}</span><h2 className="mt-3 text-xl font-semibold tracking-[-.03em]">{role.title}</h2></div>
         <div className="text-right"><p className="text-xs text-[#5d6c83] dark:text-zinc-400">Path readiness</p><p className={cn('mt-1 text-2xl font-semibold', role.tone === 'teal' ? 'text-emerald-600 dark:text-emerald-300' : 'text-indigo-600 dark:text-indigo-300')}>{role.comparisonReadiness}%</p><div className="mt-2 h-1.5 w-24 overflow-hidden rounded-full bg-[#e5e6e8] dark:bg-white/10"><div className={cn('h-full rounded-full', role.tone === 'teal' ? 'bg-emerald-600' : 'bg-indigo-600')} style={{ width: `${role.comparisonReadiness}%` }} /></div></div>
       </div>
-
-      <ol className="mt-5 space-y-0">
-        <PathStep icon={UserCircleIcon} title={currentRole} detail="Current role" first />
-        <PathStep icon={role.icon} title={role.intermediateRole} detail={`Next step · ~${role.months} months`} />
-        <PathStep icon={FlagIcon} title={role.title} detail={`Destination role · ~${role.destinationMonths}`} last />
-      </ol>
-
+      <ol className="mt-5 space-y-0"><PathStep icon={UserCircleIcon} title={currentRole} detail="Current role" first /><PathStep icon={role.icon} title={role.intermediateRole} detail={`Next step · ~${role.months} months`} /><PathStep icon={FlagIcon} title={role.title} detail={`Destination role · ~${role.destinationMonths}`} last /></ol>
       {selected && <div className="mt-3 border-t border-[#dedad2] pt-3 dark:border-white/10"><p className="text-xs font-semibold">What changes in this role</p><p className="mt-1.5 text-xs leading-5 text-[#63718a] dark:text-zinc-400">{role.change}</p></div>}
-
-      <div className="mt-3 grid grid-cols-2 gap-4 border-t border-[#dedad2] pt-3 text-xs dark:border-white/10">
-        <div><p className="font-semibold">Your strengths that translate</p><ul className="mt-3 space-y-2 text-[#53647c] dark:text-zinc-300">{role.strengths.slice(0, 2).map(item => <li key={item.title} className="flex items-center gap-2"><CheckCircleIcon className="h-4 w-4 shrink-0 text-emerald-600" />{item.title}</li>)}</ul></div>
-        <div><p className="font-semibold">Skills to build</p><ul className="mt-3 space-y-2 text-[#53647c] dark:text-zinc-300">{role.gaps.slice(0, 2).map(item => <li key={item.title} className="flex items-center gap-2"><span className="h-2 w-2 shrink-0 rounded-full bg-amber-500" />{item.title}</li>)}</ul></div>
-      </div>
-
+      <div className="mt-3 grid grid-cols-2 gap-4 border-t border-[#dedad2] pt-3 text-xs dark:border-white/10"><div><p className="font-semibold">Your strengths that translate</p><ul className="mt-3 space-y-2 text-[#53647c] dark:text-zinc-300">{role.strengths.slice(0, 2).map(item => <li key={item.title} className="flex items-center gap-2"><CheckCircleIcon className="h-4 w-4 shrink-0 text-emerald-600" />{item.title}</li>)}</ul></div><div><p className="font-semibold">Skills to build</p><ul className="mt-3 space-y-2 text-[#53647c] dark:text-zinc-300">{role.gaps.slice(0, 2).map(item => <li key={item.title} className="flex items-center gap-2"><span className="h-2 w-2 shrink-0 rounded-full bg-amber-500" />{item.title}</li>)}</ul></div></div>
       {selected && role.course && <Link href={`/learning/courses/${role.course.id}`} onClick={event => event.stopPropagation()} className="mt-3 flex items-center justify-between rounded-[7px] border border-[#d9dce5] bg-[#f8f9fc] px-3 py-2 hover:border-indigo-300 dark:border-white/10 dark:bg-white/5"><div><p className="text-[10px] font-semibold text-indigo-600 dark:text-indigo-300">Recommended first step</p><p className="mt-0.5 text-xs font-semibold">{role.course.title}</p></div><div className="flex items-center gap-2 text-xs text-[#5c6b82] dark:text-zinc-400"><ClockIcon className="h-4 w-4" />{role.course.durationHours || 0}h <ArrowRightIcon className="h-4 w-4" /></div></Link>}
-
-      <div className="mt-auto pt-3">
-        <div className="mb-3 flex items-center justify-between border-t border-[#dedad2] pt-3 text-xs dark:border-white/10"><span className="inline-flex items-center gap-2 text-[#5c6b82] dark:text-zinc-400"><ClockIcon className="h-4 w-4" />Est. time to destination</span><span className="font-semibold">~{role.destinationMonths}</span></div>
-        {selected ? <Button type="button" disabled={isSavingGoal} onClick={event => { event.stopPropagation(); onChooseGoal(); }} className="h-10 w-full rounded-[7px] bg-[#194eae] font-semibold text-white hover:bg-[#123f91]">{isSavingGoal ? 'Saving goal…' : goalSelected ? <><CheckIcon className="mr-2 h-4 w-4" />Career goal set</> : 'Set as career goal'}</Button> : <button type="button" onClick={event => { event.stopPropagation(); onSelect(); }} className="inline-flex items-center gap-2 text-sm font-semibold text-indigo-600 hover:text-indigo-800 dark:text-indigo-300">View full role profile <ArrowRightIcon className="h-4 w-4" /></button>}
-      </div>
+      <div className="mt-auto pt-3"><div className="mb-3 flex items-center justify-between border-t border-[#dedad2] pt-3 text-xs dark:border-white/10"><span className="inline-flex items-center gap-2 text-[#5c6b82] dark:text-zinc-400"><ClockIcon className="h-4 w-4" />Est. time to destination</span><span className="font-semibold">~{role.destinationMonths}</span></div>{selected ? <Button type="button" disabled={isSavingGoal} onClick={event => { event.stopPropagation(); onChooseGoal(); }} className="h-10 w-full rounded-[7px] bg-[#194eae] font-semibold text-white hover:bg-[#123f91]">{isSavingGoal ? 'Saving goal…' : goalSelected ? <><CheckIcon className="mr-2 h-4 w-4" />Career goal set</> : 'Set as career goal'}</Button> : <button type="button" onClick={event => { event.stopPropagation(); onSelect(); }} className="inline-flex items-center gap-2 text-sm font-semibold text-indigo-600 hover:text-indigo-800 dark:text-indigo-300">View full role profile <ArrowRightIcon className="h-4 w-4" /></button>}</div>
     </article>
   );
 }

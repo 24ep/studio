@@ -1,5 +1,5 @@
-import { LearningPageClient } from '../LearningPageClient';
+import { EmployeeCertificatesPageClient } from '../EmployeeCertificatesPageClient';
 
 export default function LearningCertificatesPage() {
-  return <LearningPageClient view="certificates" />;
+  return <EmployeeCertificatesPageClient />;
 }

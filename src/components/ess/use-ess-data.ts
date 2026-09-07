@@ -49,7 +49,7 @@ export function useEssData(view: EssView) {
 
   const mutate = React.useCallback(async (
     url: string,
-    method: 'POST' | 'PATCH',
+    method: 'POST' | 'PATCH' | 'PUT',
     body: unknown,
     successMessage: string,
   ) => {
@@ -104,4 +104,3 @@ export function useEssData(view: EssView) {
 
   return { data, team, loading, backgroundLoading, submitting, error, load, mutate, upload };
 }
-

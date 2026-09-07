@@ -1,5 +1,5 @@
-import { LearningPageClient } from '../LearningPageClient';
+import { CourseCatalogPageClient } from '../CourseCatalogPageClient';
 
 export default function LearningCoursesPage() {
-  return <LearningPageClient view="courses" />;
+  return <CourseCatalogPageClient />;
 }

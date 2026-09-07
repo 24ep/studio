@@ -2,12 +2,8 @@
 
 import * as React from 'react';
 import {
-  ArrowRightLeft,
   Check,
-  ClockArrowUp,
-  FileClock,
   RefreshCw,
-  RotateCcw,
   Send,
   Undo2,
   X,
@@ -15,8 +11,6 @@ import {
 
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
 import {
@@ -40,6 +34,9 @@ import {
 } from '../shift-types';
 import { useShiftAttendance } from '../use-shift-attendance';
 import { AttendanceRequestsReview } from './AttendanceRequestsReview';
+import { AttendanceCorrectionRequestForm } from './AttendanceCorrectionRequestForm';
+import { ShiftRequestComposer } from './ShiftRequestComposer';
+import { AttendanceCorrectionOwnerActions, ShiftRequestOwnerActions } from './TimeRequestOwnerActions';
 
 export function RequestsView({
   mode,
@@ -48,9 +45,10 @@ export function RequestsView({
   mode: 'shift' | 'attendance';
   employeeSelfService?: boolean;
 }) {
-  const query = React.useMemo(() => new URLSearchParams(), []);
+  const query = React.useMemo(() => new URLSearchParams(employeeSelfService ? { scope: 'self' } : {}), [employeeSelfService]);
   const state = useShiftAttendance('requests', query);
   const [requestDialogOpen, setRequestDialogOpen] = React.useState(false);
+  const [editingRequest, setEditingRequest] = React.useState<ShiftRecord | null>(null);
 
   const designPreview = process.env.NODE_ENV !== 'production'
     && typeof window !== 'undefined'
@@ -85,7 +83,9 @@ export function RequestsView({
   const requests = mode === 'shift' ? arrayValue(state.data.shiftRequests) : arrayValue(state.data.attendanceRequests);
   const assignments = arrayValue(state.data.assignments);
   const colleagues = arrayValue(state.data.colleagues);
-  const headerActions = <div className="flex flex-wrap gap-2"><Button size="sm" onClick={() => setRequestDialogOpen(true)}><Send className="mr-2 h-4 w-4" />{mode === 'shift' ? 'New shift request' : 'Request correction'}</Button><Button variant="outline" size="sm" onClick={() => state.reload()} disabled={state.refreshing}><RefreshCw className={cn('mr-2 h-4 w-4', state.refreshing && 'animate-spin')} />Refresh</Button></div>;
+  const eligibleAssignments = arrayValue(state.data.eligibleSwapAssignments);
+  const openShifts = arrayValue(state.data.openShifts);
+  const headerActions = <div className="flex flex-wrap gap-2"><Button size="sm" onClick={() => { setEditingRequest(null); setRequestDialogOpen(true); }}><Send className="mr-2 h-4 w-4" />{mode === 'shift' ? 'New shift request' : 'Request correction'}</Button><Button variant="outline" size="sm" onClick={() => state.reload()} disabled={state.refreshing}><RefreshCw className={cn('mr-2 h-4 w-4', state.refreshing && 'animate-spin')} />Refresh</Button></div>;
 
   if (mode === 'attendance' && !employeeSelfService) {
     return (
@@ -124,11 +124,15 @@ export function RequestsView({
           requests={requests}
           canApprove={!employeeSelfService && state.capabilities.canApproveTeamRecords}
           saving={state.saving}
-          onDecision={(body, message) => state.mutate(body, message)}
+          employeeSelfService={employeeSelfService}
+          onEdit={request => { setEditingRequest(request); setRequestDialogOpen(true); }}
+          onDecision={(body, message) => mode === 'attendance'
+            ? state.mutate(body, message, { url: '/api/ess/requests', method: 'PATCH' })
+            : state.mutate(body, message)}
         />
       </div>
 
-      <Dialog open={requestDialogOpen} onOpenChange={setRequestDialogOpen}>
+      <Dialog open={requestDialogOpen} onOpenChange={open => { setRequestDialogOpen(open); if (!open) setEditingRequest(null); }}>
         <DialogContent className="max-h-[92dvh] max-w-3xl gap-0 overflow-hidden p-0">
           <DialogHeader className="sr-only">
             <DialogTitle>{mode === 'shift' ? 'New shift request' : 'Request attendance correction'}</DialogTitle>
@@ -136,9 +140,9 @@ export function RequestsView({
           </DialogHeader>
           <div className="overflow-y-auto">
             {mode === 'shift' ? (
-              <ShiftRequestForm assignments={assignments} colleagues={colleagues} saving={state.saving} onSave={async body => { const result = await state.mutate(body, body.saveAsDraft ? 'Shift request draft saved.' : 'Shift request submitted.'); if (result) setRequestDialogOpen(false); return result; }} />
+              <ShiftRequestComposer assignments={assignments} eligibleAssignments={eligibleAssignments} openShifts={openShifts} colleagues={colleagues} initialRequest={editingRequest} saving={state.saving} onSave={async body => { const editing = body.action === 'update_shift_request'; const result = await state.mutate(body, editing ? 'Shift request changes saved.' : body.saveAsDraft ? 'Shift request draft saved.' : 'Shift request submitted.'); if (result) setRequestDialogOpen(false); return result; }} />
             ) : (
-              <AttendanceCorrectionForm assignments={assignments} saving={state.saving} onSave={async body => { const result = await state.mutate(body, body.saveAsDraft ? 'Attendance correction draft saved.' : 'Attendance correction submitted.', { url: '/api/ess/requests' }); if (result) setRequestDialogOpen(false); return result; }} />
+              <AttendanceCorrectionRequestForm initialRequest={editingRequest} saving={state.saving} onSave={async body => { const editing = Boolean(editingRequest?.id); const result = await state.mutate(body, editing ? 'Attendance correction changes saved.' : body.saveAsDraft ? 'Attendance correction draft saved.' : 'Attendance correction submitted.', { url: '/api/ess/requests', method: editing ? 'PUT' : 'POST' }); if (result) setRequestDialogOpen(false); return result; }} />
             )}
           </div>
         </DialogContent>
@@ -164,171 +168,21 @@ function Panel({ title, description, children }: { title: string; description?: 
   );
 }
 
-function ShiftRequestForm({
-  assignments,
-  colleagues,
-  saving,
-  onSave,
-}: {
-  assignments: ShiftRecord[];
-  colleagues: ShiftRecord[];
-  saving: boolean;
-  onSave: (body: Record<string, unknown>) => Promise<unknown>;
-}) {
-  const today = new Date().toISOString().slice(0, 10);
-  const [form, setForm] = React.useState({
-    requestType: 'shift_change',
-    assignmentId: '',
-    requestedAssignmentId: '',
-    swapEmployeeId: '',
-    effectiveStart: today,
-    effectiveEnd: today,
-    workLocation: '',
-    reason: '',
-  });
-  const [acknowledged, setAcknowledged] = React.useState(false);
-  const isSwap = form.requestType === 'shift_swap';
-  const current = assignments.find(row => row.id === form.assignmentId);
-  const requested = assignments.find(row => row.id === form.requestedAssignmentId);
-  const submit = (saveAsDraft: boolean) => onSave({
-    action: 'create_shift_request',
-    ...form,
-    assignmentId: form.assignmentId || null,
-    requestedAssignmentId: form.requestedAssignmentId || null,
-    swapEmployeeId: form.swapEmployeeId || null,
-    workLocation: form.workLocation || null,
-    saveAsDraft,
-  });
-  return (
-    <Panel title="New shift request" description="Drafts remain private until submitted.">
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-1">
-        <Field label="Request type" id="shift-request-type">
-          <select id="shift-request-type" value={form.requestType} onChange={event => setForm(value => ({ ...value, requestType: event.target.value }))} className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm">
-            <option value="shift_change">Shift change</option><option value="shift_swap">Shift swap</option><option value="open_shift">Open-shift request</option>
-            <option value="temporary_schedule_change">Temporary schedule change</option><option value="work_location_change">Work-location change</option>
-            <option value="rest_day_change">Rest-day change</option><option value="drop_shift">Drop a shift</option><option value="cover_shift">Cover another shift</option>
-            <option value="availability_update">Availability update</option>
-          </select>
-        </Field>
-        <Field label="Current shift" id="current-shift">
-          <select id="current-shift" value={form.assignmentId} onChange={event => setForm(value => ({ ...value, assignmentId: event.target.value }))} className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm">
-            <option value="">No related assignment</option>
-            {assignments.map(row => <option key={String(row.id)} value={String(row.id)}>{formatDate(row.shift_date)} · {formatTime(row.start_time)}–{formatTime(row.end_time)}</option>)}
-          </select>
-        </Field>
-        {isSwap && (
-          <>
-            <Field label="Swap colleague" id="swap-colleague">
-              <select id="swap-colleague" value={form.swapEmployeeId} onChange={event => setForm(value => ({ ...value, swapEmployeeId: event.target.value }))} className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm">
-                <option value="">Select eligible colleague</option>
-                {colleagues.map(row => <option key={String(row.id)} value={String(row.id)}>{employeeName(row)} · {stringValue(row.job_title)}</option>)}
-              </select>
-            </Field>
-            <Field label="Requested shift" id="requested-shift">
-              <select id="requested-shift" value={form.requestedAssignmentId} onChange={event => setForm(value => ({ ...value, requestedAssignmentId: event.target.value }))} className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm">
-                <option value="">Select colleague shift</option>
-                {assignments.map(row => <option key={String(row.id)} value={String(row.id)}>{formatDate(row.shift_date)} · {formatTime(row.start_time)}–{formatTime(row.end_time)}</option>)}
-              </select>
-            </Field>
-          </>
-        )}
-        <Field label="Effective start" id="effective-start"><Input id="effective-start" type="date" value={form.effectiveStart} onChange={event => setForm(value => ({ ...value, effectiveStart: event.target.value }))} /></Field>
-        <Field label="Effective end" id="effective-end"><Input id="effective-end" type="date" value={form.effectiveEnd} onChange={event => setForm(value => ({ ...value, effectiveEnd: event.target.value }))} /></Field>
-        {form.requestType === 'work_location_change' && <Field label="Requested work location" id="requested-location"><Input id="requested-location" value={form.workLocation} onChange={event => setForm(value => ({ ...value, workLocation: event.target.value }))} /></Field>}
-        <div className="sm:col-span-2 xl:col-span-1"><Field label="Business reason" id="shift-reason"><Textarea id="shift-reason" value={form.reason} onChange={event => setForm(value => ({ ...value, reason: event.target.value }))} className="min-h-24" placeholder="Explain why this change is needed" /></Field></div>
-      </div>
-      {(current || requested) && (
-        <div className="mt-4 grid gap-2 rounded-md border border-slate-200 bg-slate-50 p-3 sm:grid-cols-[1fr_auto_1fr] dark:border-zinc-800 dark:bg-zinc-900/60">
-          <Comparison label="Current" row={current} />
-          <ArrowRightLeft className="self-center justify-self-center text-slate-400" />
-          <Comparison label="Requested" row={requested} />
-        </div>
-      )}
-      <label className="mt-4 flex items-start gap-2 text-xs text-slate-600 dark:text-zinc-400">
-        <input className="mt-0.5" type="checkbox" checked={acknowledged} onChange={event => setAcknowledged(event.target.checked)} />
-        I understand the roster will not change until colleague acceptance and all configured approvals are complete.
-      </label>
-      <div className="sticky bottom-0 mt-4 flex justify-end gap-2 border-t border-slate-200 bg-white pt-4 dark:border-zinc-800 dark:bg-zinc-950">
-        <Button variant="outline" disabled={saving || form.reason.trim().length < 3} onClick={() => void submit(true)}>Save draft</Button>
-        <Button disabled={saving || !acknowledged || form.reason.trim().length < 3 || (isSwap && (!form.swapEmployeeId || !form.requestedAssignmentId))} onClick={() => void submit(false)}><Send className="mr-2 h-4 w-4" />Submit request</Button>
-      </div>
-    </Panel>
-  );
-}
-
-function AttendanceCorrectionForm({
-  assignments,
-  saving,
-  onSave,
-}: {
-  assignments: ShiftRecord[];
-  saving: boolean;
-  onSave: (body: Record<string, unknown>) => Promise<unknown>;
-}) {
-  const [form, setForm] = React.useState({ workDate: '', clockIn: '', clockOut: '', breakMinutes: '0', reason: '', correctionType: 'missing_check_in', evidenceName: '', evidenceUrl: '' });
-  const assignment = assignments.find(row => String(row.shift_date || '').slice(0, 10) === form.workDate);
-  const submit = (saveAsDraft: boolean) => onSave({
-    requestType: 'attendance_correction',
-    title: `${form.correctionType.replace(/_/g, ' ')} · ${form.workDate}`,
-    reason: form.reason,
-    values: {
-      workDate: form.workDate,
-      clockIn: form.clockIn ? new Date(`${form.workDate}T${form.clockIn}:00`).toISOString() : null,
-      clockOut: form.clockOut ? new Date(`${form.workDate}T${form.clockOut}:00`).toISOString() : null,
-      breakMinutes: Number(form.breakMinutes || 0),
-    },
-    originalValues: assignment ? { scheduledStart: assignment.start_time, scheduledEnd: assignment.end_time } : {},
-    supportingDocuments: form.evidenceUrl ? [{ name: form.evidenceName || 'Supporting evidence', url: form.evidenceUrl }] : [],
-    saveAsDraft,
-  });
-  return (
-    <Panel title="Request attendance correction" description="Approved changes update and recalculate the authoritative attendance record.">
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-1">
-        <Field label="Correction type" id="correction-type">
-          <select id="correction-type" value={form.correctionType} onChange={event => setForm(value => ({ ...value, correctionType: event.target.value }))} className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm">
-            <option value="missing_check_in">Missing check-in</option><option value="missing_check_out">Missing check-out</option>
-            <option value="incorrect_check_in">Incorrect check-in</option><option value="incorrect_check_out">Incorrect check-out</option>
-            <option value="missing_break">Missing break</option><option value="incorrect_break">Incorrect break</option>
-            <option value="incorrect_attendance_status">Incorrect attendance status</option><option value="work_from_home_correction">Work-from-home correction</option>
-            <option value="off_site_work_correction">Off-site-work correction</option><option value="incorrect_shift_assignment">Incorrect shift assignment</option>
-          </select>
-        </Field>
-        <Field label="Attendance date" id="attendance-date"><Input id="attendance-date" type="date" value={form.workDate} onChange={event => setForm(value => ({ ...value, workDate: event.target.value }))} /></Field>
-        <Field label="Requested check-in" id="requested-in"><Input id="requested-in" type="time" value={form.clockIn} onChange={event => setForm(value => ({ ...value, clockIn: event.target.value }))} /></Field>
-        <Field label="Requested check-out" id="requested-out"><Input id="requested-out" type="time" value={form.clockOut} onChange={event => setForm(value => ({ ...value, clockOut: event.target.value }))} /></Field>
-        <Field label="Break minutes" id="requested-break"><Input id="requested-break" type="number" min="0" max="720" value={form.breakMinutes} onChange={event => setForm(value => ({ ...value, breakMinutes: event.target.value }))} /></Field>
-        <div className="sm:col-span-2 xl:col-span-1"><Field label="Reason and evidence context" id="correction-reason"><Textarea id="correction-reason" value={form.reason} onChange={event => setForm(value => ({ ...value, reason: event.target.value }))} className="min-h-24" placeholder="Explain the issue and the evidence a reviewer should consider" /></Field></div>
-        <Field label="Evidence name (optional)" id="evidence-name"><Input id="evidence-name" value={form.evidenceName} onChange={event => setForm(value => ({ ...value, evidenceName: event.target.value }))} /></Field>
-        <Field label="Evidence URL (optional)" id="evidence-url"><Input id="evidence-url" type="url" value={form.evidenceUrl} onChange={event => setForm(value => ({ ...value, evidenceUrl: event.target.value }))} placeholder="https://…" /></Field>
-      </div>
-      <div className="mt-4 grid gap-2 rounded-md border border-slate-200 bg-slate-50 p-3 sm:grid-cols-[1fr_auto_1fr] dark:border-zinc-800 dark:bg-zinc-900/60">
-        <div><p className="text-[11px] font-bold uppercase tracking-wide text-slate-500">Original</p><p className="mt-2 text-sm font-semibold">{assignment ? `${formatTime(assignment.start_time)}–${formatTime(assignment.end_time)} scheduled` : 'No shift found'}</p></div>
-        <ClockArrowUp className="self-center justify-self-center text-slate-400" />
-        <div><p className="text-[11px] font-bold uppercase tracking-wide text-slate-500">Requested</p><p className="mt-2 text-sm font-semibold">{form.clockIn || '—'}–{form.clockOut || '—'} · {form.breakMinutes || 0}m break</p></div>
-      </div>
-      <div className="sticky bottom-0 mt-4 flex justify-end gap-2 border-t border-slate-200 bg-white pt-4 dark:border-zinc-800 dark:bg-zinc-950">
-        <Button variant="outline" disabled={saving || !form.workDate || form.reason.trim().length < 3} onClick={() => void submit(true)}>Save draft</Button>
-        <Button disabled={saving || !form.workDate || form.reason.trim().length < 3} onClick={() => void submit(false)}><Send className="mr-2 h-4 w-4" />Submit correction</Button>
-      </div>
-    </Panel>
-  );
-}
-
-function Comparison({ label, row }: { label: string; row?: ShiftRecord }) {
-  return <div><p className="text-[11px] font-bold uppercase tracking-wide text-slate-500">{label}</p><p className="mt-2 text-sm font-semibold">{row ? formatDate(row.shift_date) : 'Not selected'}</p><p className="mt-0.5 text-xs text-slate-500">{row ? `${formatTime(row.start_time)}–${formatTime(row.end_time)} · ${stringValue(row.schedule_name)}` : 'Choose a shift to compare'}</p></div>;
-}
-
 function RequestHistory({
   mode,
   requests,
   canApprove,
   saving,
+  employeeSelfService,
+  onEdit,
   onDecision,
 }: {
   mode: 'shift' | 'attendance';
   requests: ShiftRecord[];
   canApprove: boolean;
   saving: boolean;
+  employeeSelfService: boolean;
+  onEdit: (request: ShiftRecord) => void;
   onDecision: (body: Record<string, unknown>, message: string) => Promise<unknown>;
 }) {
   const [comments, setComments] = React.useState<Record<string, string>>({});
@@ -365,6 +219,8 @@ function RequestHistory({
                   ]} />
                 </div>
                 <PolicyWarnings warnings={request.policy_warnings} />
+                {employeeSelfService && mode === 'shift' && <ShiftRequestOwnerActions request={request} saving={saving} onEdit={onEdit} onAction={onDecision} />}
+                {employeeSelfService && mode === 'attendance' && <AttendanceCorrectionOwnerActions request={request} saving={saving} onEdit={onEdit} onAction={onDecision} />}
                 {mode === 'shift' && status === 'awaiting_employee' && (
                   <Button className="mt-3" size="sm" disabled={saving} onClick={() => void onDecision({ action: 'decide_shift_request', requestId: id, decision: 'accept_swap', expectedVersion: numberValue(request.version) }, 'Shift swap accepted and sent for manager approval.')}><Check className="mr-2 h-4 w-4" />Accept swap</Button>
                 )}
@@ -393,6 +249,3 @@ function RequestHistory({
   );
 }
 
-function Field({ label, id, children }: { label: string; id: string; children: React.ReactNode }) {
-  return <div className="space-y-1.5"><Label htmlFor={id}>{label}</Label>{children}</div>;
-}

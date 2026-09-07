@@ -2,13 +2,18 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
-const migrationPath = resolve(
+const legacyMigrationPath = resolve(
   process.cwd(),
-  'prisma/migrations/20260801170000_canonical_cost_centers_projects/migration.sql',
+  'prisma/migrations-legacy/20260801170000_canonical_cost_centers_projects/migration.sql',
+);
+const preservationMigrationPath = resolve(
+  process.cwd(),
+  'prisma/migrations/20260815073000_restore_business_constraints/migration.sql',
 );
 
 describe('canonical financial dimensions migration', () => {
-  const sql = readFileSync(migrationPath, 'utf8');
+  const sql = readFileSync(legacyMigrationPath, 'utf8');
+  const preservationSql = readFileSync(preservationMigrationPath, 'utf8');
 
   it('creates company-scoped cost center and project registries', () => {
     expect(sql).toContain('CREATE TABLE IF NOT EXISTS hr_cost_centers');
@@ -34,9 +39,13 @@ describe('canonical financial dimensions migration', () => {
     expect(sql).not.toMatch(/DROP COLUMN/i);
   });
 
-  it('protects historical references from destructive deletion', () => {
+  it('protects historical references and preserves non-Prisma constraints after baselining', () => {
     expect(sql).toContain('REFERENCES hr_cost_centers(id) ON DELETE RESTRICT');
     expect(sql).toContain('REFERENCES hr_projects(id) ON DELETE RESTRICT');
     expect(sql).toContain('effective_to IS NULL OR effective_to >= effective_from');
+    expect(preservationSql).toContain('hr_cost_centers_dates_ck');
+    expect(preservationSql).toContain('hr_projects_status_ck');
+    expect(preservationSql).toContain('hr_cost_centers_company_code_uq');
+    expect(preservationSql).toContain('hr_projects_company_code_uq');
   });
 });

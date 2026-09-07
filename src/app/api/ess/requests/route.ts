@@ -3,13 +3,18 @@ import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { logAudit } from '@/lib/auditLog';
 import { hasAnyPermission } from '@/lib/permissions';
-import { essRequestActionSchema, essRequestCreateSchema } from '@/lib/hr/ess-contracts';
+import { essRequestActionSchema, essRequestCreateSchema, essRequestUpdateSchema } from '@/lib/hr/ess-contracts';
+import {
+  attendanceCorrectionUpdateSchema,
+  updateOwnAttendanceCorrection,
+} from '@/lib/hr/attendance-correction-request-update';
 import {
   actOnEssRequest,
   createEssRequest,
   listManagerEssApprovals,
   listOwnEssRequests,
 } from '@/lib/hr/ess-request-service';
+import { updateOwnEssRequest } from '@/lib/hr/ess-request-update-service';
 
 function errorResponse(error: unknown) {
   const code = error instanceof Error ? error.message : 'UNKNOWN';
@@ -50,6 +55,42 @@ export async function POST(request: NextRequest) {
       status: data.status,
     });
     return NextResponse.json({ data }, { status: 201 });
+  } catch (error) {
+    return errorResponse(error);
+  }
+}
+
+export async function PUT(request: NextRequest) {
+  const session = await auth();
+  if (!session?.user?.id) return NextResponse.json({ message: 'Authentication required.' }, { status: 401 });
+  const body = await request.json().catch(() => null) as { requestType?: unknown } | null;
+
+  if (body?.requestType === 'profile_change' || body?.requestType === 'document_request') {
+    const parsed = essRequestUpdateSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json({ message: 'Please correct the revised request fields.', errors: parsed.error.flatten() }, { status: 400 });
+    }
+    try {
+      const data = await updateOwnEssRequest(session.user.id, session.user.email, parsed.data);
+      await logAudit('AUDIT', `ESS ${parsed.data.requestType} request revised.`, 'API:ESS:Request:Update', session.user.id, {
+        requestId: parsed.data.id,
+      });
+      return NextResponse.json({ data });
+    } catch (error) {
+      return errorResponse(error);
+    }
+  }
+
+  const parsed = attendanceCorrectionUpdateSchema.safeParse(body);
+  if (!parsed.success) {
+    return NextResponse.json({ message: 'Please correct the attendance correction fields.', errors: parsed.error.flatten() }, { status: 400 });
+  }
+  try {
+    const data = await updateOwnAttendanceCorrection({ userId: session.user.id, email: session.user.email, input: parsed.data });
+    await logAudit('AUDIT', 'ESS attendance correction updated.', 'API:ESS:AttendanceCorrection:Update', session.user.id, {
+      requestId: parsed.data.id,
+    });
+    return NextResponse.json({ data });
   } catch (error) {
     return errorResponse(error);
   }

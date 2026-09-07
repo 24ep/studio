@@ -1,5 +1,4 @@
 "use client";
-
 import * as React from "react";
 import {
   ArrowLeft,
@@ -15,7 +14,6 @@ import {
   Send,
   SlidersHorizontal,
 } from "lucide-react";
-
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -45,10 +43,8 @@ import {
   sheetBillableMinutes,
   sheetTotalMinutes,
 } from "./timesheet-command-center-utils";
-
 type WorkspaceView = "matrix" | "timeline" | "project";
-
-export function TimesheetCommandCenter() {
+export function TimesheetCommandCenter({ employeeSelfService = false }: { employeeSelfService?: boolean } = {}) {
   const [week, setWeek] = React.useState(() => mondayFor());
   const [view, setView] = React.useState<WorkspaceView>("matrix");
   const [query, setQuery] = React.useState("");
@@ -60,12 +56,12 @@ export function TimesheetCommandCenter() {
   );
   const [entryDate, setEntryDate] = React.useState(() => dateKey(new Date()));
   const [entryOpen, setEntryOpen] = React.useState(false);
+  const [editingEntry, setEditingEntry] = React.useState<ShiftRecord | null>(null);
   const searchParams = React.useMemo(
-    () => new URLSearchParams({ week }),
-    [week],
+    () => new URLSearchParams({ week, ...(employeeSelfService ? { scope: 'self' } : {}) }),
+    [employeeSelfService, week],
   );
   const state = useShiftAttendance("timesheet", searchParams);
-
   const rawResources = arrayValue(state.data?.timesheets);
   const selfEmployeeId = stringValue(state.data?.selfEmployeeId);
   React.useEffect(() => {
@@ -78,7 +74,6 @@ export function TimesheetCommandCenter() {
         selfEmployeeId || stringValue(rawResources[0].employee_id),
       );
   }, [rawResources, selectedEmployeeId, selfEmployeeId]);
-
   if (state.loading)
     return (
       <Page>
@@ -172,6 +167,7 @@ export function TimesheetCommandCenter() {
     setSelectedDay(nextWeek);
   };
   const openEntry = (workDate: string) => {
+    setEditingEntry(null);
     setEntryDate(workDate);
     setEntryOpen(true);
   };
@@ -358,14 +354,15 @@ export function TimesheetCommandCenter() {
                     key={entryDate}
                     initialDate={entryDate}
                     timesheet={ownSheet}
+                    entry={editingEntry}
                     saving={state.saving}
-                    onCancel={() => setEntryOpen(false)}
+                    onCancel={() => { setEntryOpen(false); setEditingEntry(null); }}
                     onSave={async (body) => {
                       const result = await state.mutate(
                         body,
                         "Timesheet entry saved.",
                       );
-                      if (result) setEntryOpen(false);
+                      if (result) { setEntryOpen(false); setEditingEntry(null); }
                     }}
                   />
                 </div>
@@ -373,7 +370,7 @@ export function TimesheetCommandCenter() {
               {selectedEmployeeId === selfEmployeeId && ['draft', 'returned'].includes(stringValue(ownSheet?.status)) && arrayValue(ownSheet?.entries).length > 0 && (
                 <div className="mt-3 rounded-md border border-slate-200 dark:border-zinc-800">
                   <div className="border-b border-slate-200 px-3 py-2 text-xs font-bold dark:border-zinc-800">Editable entries</div>
-                  {arrayValue(ownSheet?.entries).map(entry => <div key={String(entry.id)} className="flex items-center justify-between gap-3 border-b border-slate-100 px-3 py-2 text-sm last:border-0 dark:border-zinc-900"><span className="min-w-0 truncate">{formatDate(entry.work_date)} · {stringValue(entry.project)} · {formatDuration(entry.duration_minutes)}</span><Button variant="ghost" size="sm" className="text-rose-600" disabled={state.saving} onClick={() => void state.mutate({ action: 'delete_timesheet_entry', entryId: entry.id, expectedVersion: numberValue(entry.version) }, 'Timesheet entry deleted.')}>Delete</Button></div>)}
+                  {arrayValue(ownSheet?.entries).map(entry => <div key={String(entry.id)} className="flex items-center justify-between gap-3 border-b border-slate-100 px-3 py-2 text-sm last:border-0 dark:border-zinc-900"><span className="min-w-0 truncate">{formatDate(entry.workDate || entry.work_date)} · {stringValue(entry.project)} · {formatDuration(entry.durationMinutes || entry.duration_minutes)}</span><span className="flex gap-1"><Button variant="ghost" size="sm" disabled={state.saving} onClick={() => { setEditingEntry(entry); setEntryDate(String(entry.workDate || entry.work_date).slice(0, 10)); setEntryOpen(true); }}>Edit</Button><Button variant="ghost" size="sm" className="text-rose-600" disabled={state.saving} onClick={() => void state.mutate({ action: 'delete_timesheet_entry', entryId: entry.id, expectedVersion: numberValue(entry.version) }, 'Timesheet entry deleted.')}>Delete</Button></span></div>)}
                 </div>
               )}
               <div className="mt-4">
@@ -1662,33 +1659,34 @@ function ProjectResourceMatrix({
     </section>
   );
 }
-
 function EntryPanel({
   initialDate,
   timesheet,
+  entry,
   saving,
   onCancel,
   onSave,
 }: {
   initialDate: string;
   timesheet?: ShiftRecord;
+  entry?: ShiftRecord | null;
   saving: boolean;
   onCancel: () => void;
   onSave: (body: Record<string, unknown>) => Promise<void>;
 }) {
   const [form, setForm] = React.useState({
-    workDate: initialDate,
-    project: "",
-    task: "",
-    durationHours: "8",
-    description: "",
-    billable: false,
+    workDate: String(entry?.workDate || entry?.work_date || initialDate).slice(0, 10),
+    project: stringValue(entry?.project, ""),
+    task: stringValue(entry?.task, ""),
+    durationHours: String(numberValue(entry?.durationMinutes || entry?.duration_minutes || 480) / 60),
+    description: stringValue(entry?.description, ""),
+    billable: Boolean(entry?.billable),
   });
   return (
     <section className="border border-blue-300 bg-blue-50/50 p-4 dark:border-blue-900 dark:bg-blue-950/15">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h2 className="font-bold">Add time allocation</h2>
+          <h2 className="font-bold">{entry ? "Edit time allocation" : "Add time allocation"}</h2>
           <p className="mt-1 text-sm text-slate-600 dark:text-zinc-400">
             Entries update allocation only; attendance evidence stays unchanged.
           </p>
@@ -1787,6 +1785,7 @@ function EntryPanel({
               void onSave({
                 action: "save_timesheet_entry",
                 timesheetId: timesheet?.id || null,
+                entryId: entry?.id || null,
                 workDate: form.workDate,
                 project: form.project,
                 task: form.task || null,
@@ -1802,13 +1801,14 @@ function EntryPanel({
               })
             }
           >
-            Save entry
+            {entry ? "Save changes" : "Save entry"}
           </Button>
         </div>
       </div>
     </section>
   );
 }
+
 
 function Field({
   id,

@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
+import { logAudit } from "@/lib/auditLog";
 import prisma from "@/lib/prisma";
+import { buildPayrollCsv } from "@/lib/payroll/csv-export";
 import { getPayrollAccess } from "@/lib/payroll/permissions";
 import { getPayrollOperationsConfig } from "@/lib/payroll-approval-route-config";
 import {
@@ -10,17 +12,13 @@ import {
 import { payrollExportAllowedForRun } from "@/lib/payroll/workflow-rules";
 
 type Row = Record<string, unknown>;
-const cell = (value: unknown) =>
-  `"${String(value ?? "").replaceAll('"', '""')}"`;
-const csv = (headers: string[], rows: unknown[][]) =>
-  [headers, ...rows].map((row) => row.map(cell).join(",")).join("\r\n");
 
 export async function GET(
   _request: NextRequest,
   context: { params: Promise<{ id: string; type: string }> },
 ) {
   const session = await auth();
-  if (!session?.user)
+  if (!session?.user?.id)
     return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
   const access = await getPayrollAccess(session.user);
   if (!access.canExport)
@@ -66,6 +64,7 @@ export async function GET(
   let body: string;
   let contentType = "text/csv; charset=utf-8";
   let extension = "csv";
+  let rowCount = 0;
   if (type === "bank") {
     const rows = await prisma.$queryRawUnsafe<Row[]>(
       `SELECT employee.employee_number, concat(employee.first_name, ' ', employee.last_name) employee_name,
@@ -77,6 +76,7 @@ export async function GET(
         WHERE batch.payroll_run_id = $1::uuid ORDER BY employee.employee_number`,
       id,
     );
+    rowCount = rows.length;
     if (operations.bankExportFormat === "custom_delimited") {
       extension = "txt";
       contentType = "text/plain; charset=utf-8";
@@ -95,7 +95,7 @@ export async function GET(
         )
         .join("\r\n");
     } else {
-      body = csv(
+      body = buildPayrollCsv(
         [
           "Employee number",
           "Employee name",
@@ -124,12 +124,13 @@ export async function GET(
         WHERE entry.payroll_run_id = $1::uuid ORDER BY line.created_at, line.id`,
       id,
     );
+    rowCount = rows.length;
     if (operations.accountingExportFormat === "json") {
       extension = "json";
       contentType = "application/json; charset=utf-8";
       body = JSON.stringify({ payrollRunId: id, entries: rows }, null, 2);
     } else {
-      body = csv(
+      body = buildPayrollCsv(
         [
           "Reference",
           "Accounting date",
@@ -177,6 +178,7 @@ export async function GET(
         ORDER BY employee.employee_number`,
       id,
     );
+    rowCount = rows.length;
     if (type === "sso") {
       body = buildSso110DetailCsv(rows);
     } else if (operations.statutoryExportFormat === "pnd1_v1") {
@@ -196,7 +198,7 @@ export async function GET(
         employerBranchNumber: operations.employerBranchNumber || "0000",
       });
     } else {
-      body = csv(
+      body = buildPayrollCsv(
         [
           "Employee number",
           "Employee name",
@@ -226,11 +228,28 @@ export async function GET(
       : type === "statutory" && operations.statutoryExportFormat === "pnd1_v1"
         ? "PND1.txt"
         : `payroll-${id.slice(0, 8)}-${type}.${extension}`;
+
+  await logAudit(
+    "AUDIT",
+    `Payroll ${type} export downloaded.`,
+    "Payroll:FinancialExport:Download",
+    session.user.id,
+    {
+      payrollRunId: id,
+      exportType: type,
+      runType: runs[0].run_type,
+      runStatus: runs[0].status,
+      fileName,
+      rowCount,
+    },
+  );
+
   return new NextResponse(body, {
     headers: {
       "content-type": contentType,
       "content-disposition": `attachment; filename="${fileName}"`,
-      "cache-control": "no-store",
+      "cache-control": "private, no-store",
+      "x-content-type-options": "nosniff",
     },
   });
 }

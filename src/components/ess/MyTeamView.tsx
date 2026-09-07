@@ -1,11 +1,10 @@
 "use client";
 
 import * as React from 'react';
-import { AlertTriangle, CalendarRange, CheckCircle2, ClockAlert, Users } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, ClockAlert, Users } from 'lucide-react';
 
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   HrisApprovalInbox,
@@ -37,6 +36,18 @@ export function MyTeamView({
   const approvalTasks = approvals.map(toApprovalTask);
   const decideApproval = (task: HrisApprovalTask, action: HrisApprovalDecision, comment: string) => {
     const item = task.source as EssRow;
+    const isBenefit = item.request_type === 'benefit_enrollment';
+    if (isBenefit) {
+      const benefitAction = action === 'approve' ? 'approve_benefit' : action === 'reject' ? 'reject_benefit' : 'return_benefit';
+      return mutate(
+        '/api/ess/team',
+        'POST',
+        { id: item.id, action: benefitAction, comment: comment || null, expectedVersion: item.version },
+        action === 'approve' && item.status === 'pending_termination'
+          ? 'Benefit termination approved.'
+          : `Benefit request ${action.replace(/_/g, ' ')}d.`,
+      );
+    }
     const isLeave = item.request_type === 'leave_request' || Boolean(item.start_date);
     if (isLeave) {
       const leaveAction = action === 'approve' ? 'approve_leave' : action === 'reject' ? 'reject_leave' : 'return_leave';
@@ -87,7 +98,7 @@ export function MyTeamView({
         </TabsContent>
 
         <TabsContent value="approvals">
-          <Section title="Unified approval inbox" description="Profile, leave, attendance, document, and performance requests share the same decision pattern.">
+          <Section title="Unified approval inbox" description="Profile, leave, attendance, documents, performance, and benefits share the same decision pattern.">
             <HrisApprovalInbox tasks={approvalTasks} submitting={submitting} onDecision={decideApproval} />
             <HrisUnifiedTaskInbox />
           </Section>
@@ -137,12 +148,20 @@ export function MyTeamView({
 }
 
 function toApprovalTask(item: EssRow): HrisApprovalTask {
-  const isLeave = item.request_type === 'leave_request' || Boolean(item.start_date);
+  const isBenefit = item.request_type === 'benefit_enrollment';
+  const isLeave = !isBenefit && (item.request_type === 'leave_request' || Boolean(item.start_date));
   const requestedValues = item.requested_values && typeof item.requested_values === 'object'
     ? item.requested_values as Record<string, unknown>
     : {};
   const requestType = statusLabel(item.request_type || 'leave request');
-  const summary = isLeave ? (
+  const summary = isBenefit ? (
+    <dl className="grid gap-2 sm:grid-cols-2">
+      <div><dt className="text-xs font-medium text-muted-foreground">Benefit</dt><dd className="text-sm font-semibold">{stringValue(item.benefit_name, 'Benefit plan')}</dd></div>
+      <div><dt className="text-xs font-medium text-muted-foreground">Requested coverage</dt><dd className="text-sm">{dateValue(item.effective_from)}</dd></div>
+      <div><dt className="text-xs font-medium text-muted-foreground">Employee contribution</dt><dd className="text-sm">THB {Number(item.employee_contribution || 0).toLocaleString()}</dd></div>
+      <div><dt className="text-xs font-medium text-muted-foreground">Request</dt><dd className="text-sm capitalize">{item.status === 'pending_termination' ? 'End coverage' : statusLabel(item.life_event_type || 'enrollment')}</dd></div>
+    </dl>
+  ) : isLeave ? (
     <p>{dateValue(item.start_date)} – {dateValue(item.end_date)} · {Number(item.days || 0)} day(s)</p>
   ) : Object.entries(requestedValues).length ? (
     <dl className="grid gap-2">
@@ -159,7 +178,7 @@ function toApprovalTask(item: EssRow): HrisApprovalTask {
     id: stringValue(item.request_type, 'request') + '-' + String(item.id),
     type: requestType,
     title: personName(item),
-    meta: requestType + ' · submitted ' + dateValue(item.submitted_at || item.created_at),
+    meta: requestType + ' · submitted ' + dateValue(item.submitted_at || item.created_at || item.updated_at),
     status: item.status,
     summary,
     reason: Boolean(item.reason) ? stringValue(item.reason) : null,

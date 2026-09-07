@@ -5,6 +5,7 @@ export type EssView =
   | 'shift-requests'
   | 'attendance-corrections'
   | 'overtime'
+  | 'timesheet'
   | 'documents'
   | 'performance'
   | 'team';

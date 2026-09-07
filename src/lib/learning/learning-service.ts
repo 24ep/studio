@@ -1,4 +1,7 @@
 import { getPool } from '@/lib/db';
+import { assertEnrollmentContentAccess, assertLearningEnrollmentMutable } from '@/lib/learning/learning-integrity';
+
+export { employeeForUser } from '@/lib/learning/learning-access';
 
 export type LearningBlockType = 'text' | 'video' | 'attachment' | 'acknowledgement' | 'break' | 'quiz' | 'assignment';
 
@@ -41,14 +44,6 @@ export interface CourseDetail {
 }
 
 const defaultRules: CourseRules = { sequential: true, passingScore: 80, maxAttempts: 3, requiredWatchPercent: 90 };
-
-export async function employeeForUser(userId: string, email?: string | null) {
-  const result = await getPool().query<{ id: string }>(
-    `SELECT id FROM hr_employees WHERE user_id = $1 OR (user_id IS NULL AND lower(email) = lower($2)) ORDER BY user_id NULLS LAST LIMIT 1`,
-    [userId, email || ''],
-  );
-  return result.rows[0]?.id || null;
-}
 
 export async function getCourseDetail(courseId: string, employeeId?: string | null, allowDraft = false): Promise<CourseDetail | null> {
   const courseResult = await getPool().query(
@@ -135,11 +130,14 @@ export async function startCourse(courseId: string, employeeId: string) {
 export async function recordHeartbeat(input: {
   enrollmentId: string; lessonId: string; employeeId: string; seconds: number; furthestSecond?: number;
 }) {
+  const access = await assertEnrollmentContentAccess({
+    enrollmentId: input.enrollmentId,
+    employeeId: input.employeeId,
+    lessonId: input.lessonId,
+  });
+  assertLearningEnrollmentMutable(access);
+
   const seconds = Math.max(0, Math.min(30, Math.floor(input.seconds)));
-  const owned = await getPool().query(
-    `SELECT id FROM hr_learning_enrollments WHERE id = $1 AND employee_id = $2 AND status <> 'completed'`, [input.enrollmentId, input.employeeId],
-  );
-  if (!owned.rowCount) throw new Error('Enrollment not found.');
   const client = await getPool().connect();
   try {
     await client.query('BEGIN');
@@ -151,16 +149,16 @@ export async function recordHeartbeat(input: {
          status = CASE WHEN hr_learning_lesson_progress.status = 'locked' THEN 'in_progress' ELSE hr_learning_lesson_progress.status END,
          active_seconds = hr_learning_lesson_progress.active_seconds + $3,
          furthest_second = GREATEST(hr_learning_lesson_progress.furthest_second, $4), updated_at = NOW()`,
-      [input.enrollmentId, input.lessonId, seconds, Math.max(0, Math.floor(input.furthestSecond || 0))],
+      [input.enrollmentId, access.lessonId, seconds, Math.max(0, Math.floor(input.furthestSecond || 0))],
     );
     await client.query(
       `UPDATE hr_learning_enrollments SET active_seconds = active_seconds + $2, current_lesson_id = $3, last_activity_at = NOW(), updated_at = NOW() WHERE id = $1`,
-      [input.enrollmentId, seconds, input.lessonId],
+      [input.enrollmentId, seconds, access.lessonId],
     );
     await client.query(
       `INSERT INTO hr_learning_activity_events (id, enrollment_id, lesson_id, type, seconds, created_at)
        VALUES (gen_random_uuid(), $1, $2, 'heartbeat', $3, NOW())`,
-      [input.enrollmentId, input.lessonId, seconds],
+      [input.enrollmentId, access.lessonId, seconds],
     );
     await client.query('COMMIT');
   } catch (error) {
@@ -172,67 +170,83 @@ export async function recordHeartbeat(input: {
 }
 
 export async function completeBlock(input: { enrollmentId: string; lessonId: string; blockId: string; employeeId: string }) {
-  const requirement = await getPool().query(
-    `SELECT b.type,b.content,lp.furthest_second,c.passing_score
-      FROM hr_learning_enrollments e JOIN hr_learning_courses c ON c.id=e.course_id
-      JOIN hr_learning_lesson_progress lp ON lp.enrollment_id=e.id AND lp.lesson_id=$2
-      JOIN hr_learning_content_blocks b ON b.id=$4 AND b.lesson_id=$2
-      WHERE e.id=$1 AND e.employee_id=$3`, [input.enrollmentId,input.lessonId,input.employeeId,input.blockId],
+  const access = await assertEnrollmentContentAccess({
+    enrollmentId: input.enrollmentId,
+    employeeId: input.employeeId,
+    lessonId: input.lessonId,
+    blockId: input.blockId,
+  });
+  assertLearningEnrollmentMutable(access);
+
+  const progressResult = await getPool().query<{ furthest_second: number }>(
+    `SELECT furthest_second FROM hr_learning_lesson_progress WHERE enrollment_id=$1 AND lesson_id=$2 LIMIT 1`,
+    [input.enrollmentId, access.lessonId],
   );
-  if (!requirement.rowCount) throw new Error('Lesson progress not found.');
-  const required = requirement.rows[0];
-  if (required.type === 'video') {
-    const duration = Number(required.content?.durationSeconds || 0);
-    const watchPercent = Number(required.content?.requiredWatchPercent || 90);
-    if (!duration || required.furthest_second < Math.ceil(duration * watchPercent / 100)) {
+  const progress = progressResult.rows[0];
+  if (!progress) throw new Error('Lesson progress not found.');
+
+  if (access.blockType === 'video') {
+    const duration = Number(access.blockContent?.durationSeconds || 0);
+    const watchPercent = Number(access.blockContent?.requiredWatchPercent || 90);
+    if (!duration || progress.furthest_second < Math.ceil(duration * watchPercent / 100)) {
       throw new Error(`Watch at least ${watchPercent}% of the video before completing this lesson.`);
     }
   }
+
   const result = await getPool().query(
     `UPDATE hr_learning_lesson_progress lp SET completed_blocks =
        CASE WHEN lp.completed_blocks ? $4 THEN lp.completed_blocks ELSE lp.completed_blocks || to_jsonb($4::text) END, updated_at = NOW()
       FROM hr_learning_enrollments e
       WHERE lp.enrollment_id = $1 AND lp.lesson_id = $2 AND e.id = lp.enrollment_id AND e.employee_id = $3 RETURNING lp.*`,
-    [input.enrollmentId, input.lessonId, input.employeeId, input.blockId],
+    [input.enrollmentId, access.lessonId, input.employeeId, input.blockId],
   );
   if (!result.rowCount) throw new Error('Lesson progress not found.');
-  await recalculateCompletion(input.enrollmentId, input.lessonId);
+  await recalculateCompletion(input.enrollmentId, access.lessonId);
   return result.rows[0];
 }
 
 export async function submitQuiz(input: { enrollmentId: string; blockId: string; employeeId: string; answers: Record<string, string> }) {
-  const owned = await getPool().query(
-    `SELECT e.id, e.course_id, c.passing_score, c.max_attempts, b.lesson_id, b.content
-       FROM hr_learning_enrollments e JOIN hr_learning_courses c ON c.id=e.course_id
-       JOIN hr_learning_content_blocks b ON b.id=$2
-      WHERE e.id=$1 AND e.employee_id=$3`,
-    [input.enrollmentId, input.blockId, input.employeeId],
+  const access = await assertEnrollmentContentAccess({
+    enrollmentId: input.enrollmentId,
+    employeeId: input.employeeId,
+    blockId: input.blockId,
+  });
+  assertLearningEnrollmentMutable(access);
+  if (access.blockType !== 'quiz') throw new Error('Quiz not found.');
+
+  const prior = await getPool().query<{ count: number }>(
+    `SELECT count(*)::int AS count FROM hr_learning_quiz_attempts WHERE enrollment_id=$1 AND block_id=$2`,
+    [input.enrollmentId, input.blockId],
   );
-  if (!owned.rowCount) throw new Error('Quiz not found.');
-  const row = owned.rows[0];
-  const prior = await getPool().query(`SELECT count(*)::int AS count FROM hr_learning_quiz_attempts WHERE enrollment_id=$1 AND block_id=$2`, [input.enrollmentId, input.blockId]);
   const attempt = prior.rows[0].count + 1;
-  if (attempt > row.max_attempts) throw new Error('No quiz attempts remaining.');
-  const questions = Array.isArray(row.content?.questions) ? row.content.questions : [];
+  if (attempt > access.maxAttempts) throw new Error('No quiz attempts remaining.');
+  const questions = Array.isArray(access.blockContent?.questions) ? access.blockContent.questions : [];
   const correct = questions.filter((question: { id: string; correctAnswer: string }) => input.answers[question.id] === question.correctAnswer).length;
   const score = questions.length ? Math.round(correct / questions.length * 100) : 0;
-  const passed = score >= row.passing_score;
+  const passed = score >= access.passingScore;
   await getPool().query(
     `INSERT INTO hr_learning_quiz_attempts (id,enrollment_id,block_id,answers,score,passed,attempt,created_at)
      VALUES(gen_random_uuid(),$1,$2,$3,$4,$5,$6,NOW())`,
     [input.enrollmentId, input.blockId, input.answers, score, passed, attempt],
   );
-  if (passed) await completeBlock({ enrollmentId: input.enrollmentId, lessonId: row.lesson_id, blockId: input.blockId, employeeId: input.employeeId });
-  return { score, passed, attempt, attemptsRemaining: Math.max(0, row.max_attempts - attempt) };
+  if (passed) await completeBlock({
+    enrollmentId: input.enrollmentId,
+    lessonId: access.lessonId,
+    blockId: input.blockId,
+    employeeId: input.employeeId,
+  });
+  return { score, passed, attempt, attemptsRemaining: Math.max(0, access.maxAttempts - attempt) };
 }
 
 export async function submitAssignment(input: { enrollmentId: string; blockId: string; employeeId: string; text?: string; fileUrl?: string }) {
-  const owned = await getPool().query(
-    `SELECT b.lesson_id FROM hr_learning_enrollments e JOIN hr_learning_content_blocks b ON b.id=$2
-      WHERE e.id=$1 AND e.employee_id=$3 AND b.type='assignment'`,
-    [input.enrollmentId, input.blockId, input.employeeId],
-  );
-  if (!owned.rowCount) throw new Error('Assignment not found.');
+  const access = await assertEnrollmentContentAccess({
+    enrollmentId: input.enrollmentId,
+    employeeId: input.employeeId,
+    blockId: input.blockId,
+  });
+  assertLearningEnrollmentMutable(access);
+  if (access.blockType !== 'assignment') throw new Error('Assignment not found.');
+
   const result = await getPool().query(
     `INSERT INTO hr_learning_assignment_submissions(id,enrollment_id,block_id,text,file_url,status,created_at,updated_at)
      VALUES(gen_random_uuid(),$1,$2,$3,$4,'pending',NOW(),NOW())

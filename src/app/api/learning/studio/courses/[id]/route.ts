@@ -2,7 +2,8 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { z } from 'zod';
 import { auth } from '@/auth';
 import { hasAnyPermission } from '@/lib/permissions';
-import { getCourseDetail, saveCurriculum } from '@/lib/learning/learning-service';
+import { getCourseDetail } from '@/lib/learning/learning-service';
+import { saveCourseCurriculumRevision } from '@/lib/learning/learning-course-authoring';
 
 const block = z.object({ type: z.enum(['text','video','attachment','acknowledgement','break','quiz','assignment']), title: z.string().optional(), required: z.boolean().optional(), content: z.record(z.string(), z.unknown()) });
 const payload = z.object({
@@ -30,7 +31,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
   const parsed = payload.safeParse(await request.json().catch(() => null));
   if (!parsed.success) return NextResponse.json({ message: 'Invalid curriculum', errors: parsed.error.flatten() }, { status: 400 });
   try {
-    const data = await saveCurriculum((await params).id, parsed.data.sections, parsed.data.rules, session.user.id, parsed.data.publish);
+    const data = await saveCourseCurriculumRevision((await params).id, parsed.data.sections, parsed.data.rules, session.user.id, parsed.data.publish);
     return NextResponse.json({ data });
   } catch (error) {
     return NextResponse.json({ message: error instanceof Error ? error.message : 'Unable to save curriculum' }, { status: 400 });

@@ -1,7 +1,8 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { z } from 'zod';
 import { auth } from '@/auth';
-import { completeBlock, employeeForUser, recordHeartbeat, submitAssignment, submitQuiz } from '@/lib/learning/learning-service';
+import { employeeForUser } from '@/lib/learning/learning-access';
+import { completeBlock, recordHeartbeat, submitAssignment, submitQuiz } from '@/lib/learning/learning-service';
 
 const schema = z.discriminatedUnion('action', [
   z.object({ action: z.literal('heartbeat'), enrollmentId: z.string().uuid(), lessonId: z.string().uuid(), seconds: z.number().min(0).max(30), furthestSecond: z.number().min(0).optional() }),

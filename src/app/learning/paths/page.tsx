@@ -1,5 +1,5 @@
-import { LearningPageClient } from '../LearningPageClient';
+import { LearningPathsPageClient } from '../LearningPathsPageClient';
 
 export default function LearningPathsPage() {
-  return <LearningPageClient view="paths" />;
+  return <LearningPathsPageClient />;
 }

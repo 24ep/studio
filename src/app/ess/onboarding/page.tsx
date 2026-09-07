@@ -1,5 +1,5 @@
-import { redirect } from 'next/navigation';
+import { OnboardingView } from '@/components/ess/OnboardingView';
 
 export default function EssOnboardingPage() {
-  redirect('/people/onboarding');
+  return <OnboardingView />;
 }

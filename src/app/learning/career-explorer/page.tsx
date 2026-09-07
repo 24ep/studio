@@ -1,5 +1,5 @@
-import { LearningPageClient } from '../LearningPageClient';
+import { CareerExplorer } from "../CareerExplorer";
 
 export default function LearningCareerExplorerPage() {
-  return <LearningPageClient view="career-explorer" />;
+  return <CareerExplorer />;
 }

@@ -71,14 +71,6 @@ export interface CertificateForm {
   policyChangeNote: string;
 }
 
-export interface OnboardingForm {
-  employeeId: string;
-  status: string;
-  progress: string;
-  startDate: string;
-  targetDate: string;
-}
-
 export interface LearningPathForm {
   title: string;
   description: string;
@@ -132,14 +124,6 @@ export const certificateFormDefault: CertificateForm = {
   verificationRequirements:
     "Credential ID must be provided and match the official registry.\nCredential must be in active status.\nName on credential must match employee record.\nVerification must be performed through the official issuer registry.",
   policyChangeNote: "",
-};
-
-export const onboardingFormDefault: OnboardingForm = {
-  employeeId: "",
-  status: "not_started",
-  progress: "0",
-  startDate: "",
-  targetDate: "",
 };
 
 export const learningPathFormDefault: LearningPathForm = {

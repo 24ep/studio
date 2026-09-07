@@ -10,7 +10,6 @@ import {
   CheckCircle2,
   Clock3,
   FileSignature,
-  Mail,
   Plus,
   RefreshCw,
   Search,
@@ -19,10 +18,14 @@ import {
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
+import {
+  JobOfferCreateDialog,
+  emptyOfferForm,
+  type ApplicantOption,
+  type PositionOption,
+} from './JobOfferCreateDialog';
 
 interface OfferRow {
   id: string;
@@ -38,30 +41,6 @@ interface OfferRow {
   signed_name: string | null;
   signature_hash: string | null;
 }
-
-interface ApplicantOption {
-  id: string;
-  name: string;
-  email: string;
-  positionId: string | null;
-}
-
-interface PositionOption {
-  id: string;
-  title: string;
-  department: string;
-}
-
-const emptyForm = {
-  applicantId: '',
-  positionId: '',
-  recipientName: '',
-  recipientEmail: '',
-  jobTitle: '',
-  salaryAmount: '',
-  currency: 'THB',
-  startDate: '',
-};
 
 type OfferFilter = 'all' | 'draft' | 'sent' | 'accepted';
 
@@ -168,7 +147,7 @@ export function JobOffersPageClient() {
   const [offers, setOffers] = useState<OfferRow[]>([]);
   const [applicants, setApplicants] = useState<ApplicantOption[]>([]);
   const [positions, setPositions] = useState<PositionOption[]>([]);
-  const [form, setForm] = useState(emptyForm);
+  const [form, setForm] = useState(emptyOfferForm);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [sendingId, setSendingId] = useState<string | null>(null);
@@ -255,7 +234,7 @@ export function JobOffersPageClient() {
       if (!response.ok) throw new Error(data.message || 'Failed to create offer');
       toast.success(sendNow ? 'Offer created and sent' : 'Offer created');
       setOpen(false);
-      setForm(emptyForm);
+      setForm(emptyOfferForm);
       await loadOffers();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Failed to create offer');
@@ -501,86 +480,16 @@ export function JobOffersPageClient() {
         </section>
       </div>
 
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-w-2xl overflow-hidden p-0">
-          <DialogHeader className="border-b bg-muted/25 px-6 py-5">
-            <div className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-primary">
-              <FileSignature className="h-4 w-4" /> New candidate offer
-            </div>
-            <DialogTitle className="text-xl tracking-tight">Prepare the offer details</DialogTitle>
-            <p className="text-sm leading-5 text-muted-foreground">Select a candidate to prefill their details, then review the package before sending.</p>
-          </DialogHeader>
-          <div className="grid max-h-[65vh] gap-5 overflow-y-auto px-6 py-5 sm:grid-cols-2">
-            <div className="space-y-2 sm:col-span-2">
-              <Label htmlFor="offer-applicant">Applicant</Label>
-              <select
-                id="offer-applicant"
-                className="h-10 w-full rounded-md border bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-                value={form.applicantId}
-                onChange={(event) => setForm({ ...form, applicantId: event.target.value })}
-              >
-                <option value="">Create a manual offer</option>
-                {applicants.map((applicant) => (
-                  <option key={applicant.id} value={applicant.id}>{applicant.name} / {applicant.email}</option>
-                ))}
-              </select>
-              <p className="text-xs text-muted-foreground">Candidate details and their linked position will be filled automatically.</p>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="offer-name">Candidate name</Label>
-              <Input id="offer-name" value={form.recipientName} onChange={(event) => setForm({ ...form, recipientName: event.target.value })} />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="offer-email">Email address</Label>
-              <Input id="offer-email" type="email" value={form.recipientEmail} onChange={(event) => setForm({ ...form, recipientEmail: event.target.value })} />
-            </div>
-            <div className="space-y-2 sm:col-span-2">
-              <Label htmlFor="offer-position">Linked position</Label>
-              <select
-                id="offer-position"
-                className="h-10 w-full rounded-md border bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-                value={form.positionId}
-                onChange={(event) => {
-                  const position = positions.find((item) => item.id === event.target.value);
-                  setForm({ ...form, positionId: event.target.value, jobTitle: position?.title || form.jobTitle });
-                }}
-              >
-                <option value="">No linked position</option>
-                {positions.map((position) => (
-                  <option key={position.id} value={position.id}>{position.title} / {position.department}</option>
-                ))}
-              </select>
-            </div>
-            <div className="space-y-2 sm:col-span-2">
-              <Label htmlFor="offer-title">Job title</Label>
-              <Input id="offer-title" value={form.jobTitle} onChange={(event) => setForm({ ...form, jobTitle: event.target.value })} />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="offer-salary">Annual salary</Label>
-              <div className="flex gap-2">
-                <Input id="offer-salary" className="min-w-0 flex-1" type="number" min="0" placeholder="0" value={form.salaryAmount} onChange={(event) => setForm({ ...form, salaryAmount: event.target.value })} />
-                <Input aria-label="Currency" className="w-20 text-center font-medium uppercase" value={form.currency} maxLength={3} onChange={(event) => setForm({ ...form, currency: event.target.value.toUpperCase() })} />
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="offer-start-date">Proposed start date</Label>
-              <Input id="offer-start-date" type="date" value={form.startDate} onChange={(event) => setForm({ ...form, startDate: event.target.value })} />
-            </div>
-          </div>
-          <DialogFooter className="flex-col-reverse gap-2 border-t bg-muted/20 px-6 py-4 sm:flex-row sm:justify-between sm:space-x-0">
-            <Button variant="ghost" onClick={() => setOpen(false)} disabled={saving}>Cancel</Button>
-            <div className="flex flex-col-reverse gap-2 sm:flex-row">
-              <Button variant="outline" onClick={() => createOffer(false)} disabled={saving}>
-                Save as draft
-              </Button>
-              <Button onClick={() => createOffer(true)} disabled={saving}>
-                <Mail className="mr-2 h-4 w-4" />
-                Create and send
-              </Button>
-            </div>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <JobOfferCreateDialog
+        applicants={applicants}
+        form={form}
+        onCreate={createOffer}
+        onFormChange={setForm}
+        onOpenChange={setOpen}
+        open={open}
+        positions={positions}
+        saving={saving}
+      />
     </main>
   );
 }

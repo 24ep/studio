@@ -103,3 +103,6 @@ scratch/
 /scripts/mc.exe
 .next.recovery-*
 /.tmpdev/
+
+# Local Git worktrees
+/.worktrees/

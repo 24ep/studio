@@ -8,6 +8,10 @@ export const payrollRunTypes = [
   'retroactive', 'final', 'termination', 'reversal', 'simulation',
 ] as const;
 
+const payrollPaymentMethodSchema = z
+  .enum(['bank_transfer', 'cash', 'cheque', 'check'])
+  .transform(value => value === 'check' ? 'cheque' : value);
+
 export const createPayrollRunSchema = z.object({
   action: z.literal('create_run'),
   companyId: z.string().uuid().nullish(),
@@ -35,14 +39,14 @@ export const createPayrollGroupSchema = z.object({
   payFrequency: z.string().trim().min(2).max(40).default('monthly'),
   currency: z.string().trim().length(3).transform(value => value.toUpperCase()).default('THB'),
   timezone: z.string().trim().min(2).max(80).default('Asia/Bangkok'),
-  paymentMethod: z.string().trim().min(2).max(80).default('bank_transfer'),
+  paymentMethod: payrollPaymentMethodSchema.default('bank_transfer'),
 });
 
 export const assignPayrollProfileSchema = z.object({
   action: z.literal('assign_payroll_profile'),
   employeeId: z.string().uuid(),
   payrollGroupId: z.string().uuid(),
-  paymentMethod: z.enum(['bank_transfer', 'cash', 'cheque']),
+  paymentMethod: payrollPaymentMethodSchema,
   paymentCurrency: z.string().trim().length(3).transform(value => value.toUpperCase()).default('THB'),
   payrollStartDate: z.string().date(),
   bankAccountReference: z.string().trim().max(160).nullish(),
@@ -113,6 +117,7 @@ export type PayrollActionInput = z.infer<typeof payrollActionSchema>;
 
 export interface PayrollAccess {
   canView: boolean;
+  canViewAmounts: boolean;
   canManage: boolean;
   canApprove: boolean;
   canExport: boolean;
@@ -128,7 +133,7 @@ export interface PayrollWorkspacePayload {
   resource: PayrollResource;
   generatedAt: string;
   companyId: string | null;
-  access: Omit<PayrollAccess, 'actorCompanyId' | 'actorEmployeeId'>;
+  access: Omit<PayrollAccess, 'actorCompanyId' | 'actorEmployeeId' | 'canViewAmounts'> & { canViewAmounts?: boolean };
   summary: Record<string, number | string | null>;
   records: Array<Record<string, unknown>>;
   secondary: Array<Record<string, unknown>>;

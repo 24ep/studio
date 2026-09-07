@@ -5,22 +5,34 @@ import { auth } from "@/auth";
 import { logAudit } from "@/lib/auditLog";
 import { getPool } from "@/lib/db";
 import { ensureBucketExists, minioClient, MINIO_BUCKET } from "@/lib/minio";
-import { getPayrollAccess } from "@/lib/payroll/permissions";
-import { PayrollFileSecurityError, verifyPayrollFile } from "@/lib/payroll/file-security";
+import {
+  canAccessPayrollSettlementEvidence,
+  getPayrollAccess,
+} from "@/lib/payroll/permissions";
+import {
+  PayrollFileSecurityError,
+  verifyPayrollFile,
+} from "@/lib/payroll/file-security";
 import { getPayrollOperationsConfig } from "@/lib/payroll-approval-route-config";
 
 export const runtime = "nodejs";
 const MAX_BYTES = 15 * 1024 * 1024;
 const ALLOWED = new Set(["application/pdf", "image/png", "image/jpeg"]);
 
-async function runContext(id: string, manage = false) {
+type EvidenceAccess = "manage" | "settlement";
+
+async function runContext(id: string, required: EvidenceAccess) {
   const session = await auth();
   if (!session?.user?.id)
     return {
       response: NextResponse.json({ message: "Unauthorized" }, { status: 401 }),
     };
   const access = await getPayrollAccess(session.user);
-  if (!(manage ? access.canManage : access.canView))
+  const allowed =
+    required === "manage"
+      ? access.canManage
+      : canAccessPayrollSettlementEvidence(access);
+  if (!allowed)
     return {
       response: NextResponse.json({ message: "Forbidden" }, { status: 403 }),
     };
@@ -48,7 +60,7 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> },
 ) {
   const { id } = await params;
-  const resolved = await runContext(id, true);
+  const resolved = await runContext(id, "manage");
   if ("response" in resolved) return resolved.response;
   if (!["finalized", "payment_processing"].includes(resolved.run.status))
     return NextResponse.json(
@@ -79,9 +91,17 @@ export async function POST(
   const buffer = Buffer.from(await file.arrayBuffer());
   let detected;
   try {
-    detected = await verifyPayrollFile(buffer, ALLOWED, Boolean((await getPayrollOperationsConfig()).requireMalwareScan));
+    detected = await verifyPayrollFile(
+      buffer,
+      ALLOWED,
+      Boolean((await getPayrollOperationsConfig()).requireMalwareScan),
+    );
   } catch (error) {
-    if (error instanceof PayrollFileSecurityError) return NextResponse.json({ message: error.message }, { status: error.status });
+    if (error instanceof PayrollFileSecurityError)
+      return NextResponse.json(
+        { message: error.message },
+        { status: error.status },
+      );
     throw error;
   }
   await ensureBucketExists();
@@ -126,7 +146,7 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> },
 ) {
   const { id } = await params;
-  const resolved = await runContext(id);
+  const resolved = await runContext(id, "settlement");
   if ("response" in resolved) return resolved.response;
   const result = await getPool().query<{ file_path: string | null }>(
     `SELECT file_path FROM hr_payroll_payment_batches WHERE payroll_run_id = $1::uuid ORDER BY created_at DESC LIMIT 1`,
@@ -154,6 +174,7 @@ export async function GET(
       ),
       "Content-Disposition": 'attachment; filename="payment-evidence"',
       "Cache-Control": "private, no-store",
+      "X-Content-Type-Options": "nosniff",
     },
   });
 }

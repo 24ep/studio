@@ -10,6 +10,7 @@ import {
 } from './ess-contracts';
 import { getEmployeeForUser } from './ess-service';
 import { calculateAttendance } from './attendance-calculation';
+import { mergeAttendanceCorrection } from './attendance-correction';
 
 type QueryClient = Prisma.TransactionClient | typeof prisma;
 
@@ -298,33 +299,93 @@ async function applyApprovedRequest(
   }
 
   if (request.request_type === 'attendance_correction') {
+    const requested = values as Record<string, unknown>;
+    const workDate = String(requested.workDate || '');
+    const correctionType = String(requested.correctionType || '');
+    const currentRows = await client.$queryRawUnsafe<Array<{
+      id: string;
+      clock_in: Date | null;
+      clock_out: Date | null;
+      break_minutes: number | null;
+      work_location: string | null;
+      status: string | null;
+      assignment_id: string | null;
+    }>>(
+      `SELECT id, clock_in, clock_out, break_minutes, work_location, status, assignment_id
+       FROM "hr_attendance_records"
+       WHERE employee_id = $1::uuid AND work_date::date = $2::date
+         AND ($3::uuid IS NULL OR id = $3::uuid)
+       LIMIT 1 FOR UPDATE`,
+      request.requester_employee_id,
+      workDate,
+      requested.attendanceRecordId || null,
+    );
+    const current = currentRows[0] || null;
+
+    if (correctionType === 'incorrect_shift_assignment') {
+      const replacementId = requested.assignmentId ? String(requested.assignmentId) : '';
+      const replacement = await client.$queryRawUnsafe<{ id: string }[]>(
+        `SELECT id FROM "hr_shift_assignments"
+         WHERE id = $1::uuid AND employee_id = $2::uuid
+           AND shift_date::date = $3::date AND status <> 'cancelled'
+         LIMIT 1`,
+        replacementId,
+        request.requester_employee_id,
+        workDate,
+      );
+      if (!replacement[0]) throw new Error('FORBIDDEN');
+    }
+
+    const merged = mergeAttendanceCorrection({
+      clockIn: current?.clock_in ? current.clock_in.toISOString() : null,
+      clockOut: current?.clock_out ? current.clock_out.toISOString() : null,
+      breakMinutes: Number(current?.break_minutes || 0),
+      workLocation: current?.work_location || null,
+      status: current?.status || null,
+      assignmentId: current?.assignment_id || null,
+    }, {
+      correctionType: correctionType as Parameters<typeof mergeAttendanceCorrection>[1]['correctionType'],
+      clockIn: requested.clockIn == null ? undefined : String(requested.clockIn),
+      clockOut: requested.clockOut == null ? undefined : String(requested.clockOut),
+      breakMinutes: requested.breakMinutes == null ? undefined : Number(requested.breakMinutes),
+      workLocation: requested.workLocation == null ? undefined : String(requested.workLocation),
+      requestedStatus: requested.requestedStatus == null ? undefined : String(requested.requestedStatus),
+      assignmentId: requested.assignmentId == null ? undefined : String(requested.assignmentId),
+    });
+
     const corrected = await client.$queryRawUnsafe<Array<{ id: string }>>(
       `INSERT INTO "hr_attendance_records"
-        ("id", "employee_id", "work_date", "clock_in", "clock_out", "break_minutes",
-         "hours_worked", "status", "source", "created_at", "updated_at")
+        ("id", "employee_id", "assignment_id", "work_date", "clock_in", "clock_out", "break_minutes",
+         "hours_worked", "status", "work_location", "source", "created_at", "updated_at")
        VALUES (
-         $1::uuid, $2::uuid, $3::date, $4::timestamptz, $5::timestamptz, $6,
-         CASE WHEN $4::timestamptz IS NULL OR $5::timestamptz IS NULL THEN 0
-           ELSE GREATEST(0, EXTRACT(EPOCH FROM ($5::timestamptz - $4::timestamptz)) / 3600 - ($6::numeric / 60))
+         $1::uuid, $2::uuid, $3::uuid, $4::date, $5::timestamptz, $6::timestamptz, $7,
+         CASE WHEN $5::timestamptz IS NULL OR $6::timestamptz IS NULL THEN 0
+           ELSE GREATEST(0, EXTRACT(EPOCH FROM ($6::timestamptz - $5::timestamptz)) / 3600 - ($7::numeric / 60))
          END,
-         'present', 'employee_correction', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+         COALESCE($8, 'present'), $9, 'employee_correction', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
        )
        ON CONFLICT ("employee_id", "work_date")
        DO UPDATE SET
+         "assignment_id" = EXCLUDED."assignment_id",
          "clock_in" = EXCLUDED."clock_in",
          "clock_out" = EXCLUDED."clock_out",
          "break_minutes" = EXCLUDED."break_minutes",
          "hours_worked" = EXCLUDED."hours_worked",
+         "status" = EXCLUDED."status",
+         "work_location" = EXCLUDED."work_location",
          "source" = 'employee_correction',
          "version" = "hr_attendance_records"."version" + 1,
          "updated_at" = CURRENT_TIMESTAMP
        RETURNING id`,
-      randomUUID(),
+      current?.id || randomUUID(),
       request.requester_employee_id,
-      values.workDate,
-      values.clockIn || null,
-      values.clockOut || null,
-      Number(values.breakMinutes || 0),
+      merged.assignmentId,
+      workDate,
+      merged.clockIn,
+      merged.clockOut,
+      merged.breakMinutes,
+      merged.status,
+      merged.workLocation,
     );
     const attendanceId = corrected[0]?.id;
     if (attendanceId) {
@@ -360,19 +421,21 @@ async function applyApprovedRequest(
           approvedOvertimeMinutes: Number(row.approved_overtime_minutes || 0),
           workLocation: row.work_location ? String(row.work_location) : null,
         });
+        const semanticStatus = ['incorrect_attendance_status', 'work_from_home_correction', 'off_site_work_correction'].includes(correctionType)
+          ? merged.status || result.status
+          : result.status;
         await client.$executeRawUnsafe(
           `UPDATE "hr_attendance_records" SET status = $2, scheduled_minutes = $3, worked_minutes = $4,
              regular_minutes = $5, overtime_minutes = $6, late_minutes = $7, early_departure_minutes = $8,
              paid_break_minutes = $9, unpaid_break_minutes = $10, holiday_minutes = $11,
              exception_status = CASE WHEN cardinality($12::text[]) > 0 THEN 'open' ELSE 'clear' END,
              calculation_version = $13, updated_at = CURRENT_TIMESTAMP WHERE id = $1::uuid`,
-          attendanceId, result.status, result.scheduledMinutes, result.workedMinutes, result.regularMinutes,
+          attendanceId, semanticStatus, result.scheduledMinutes, result.workedMinutes, result.regularMinutes,
           result.overtimeMinutes, result.lateMinutes, result.earlyDepartureMinutes, result.paidBreakMinutes,
           result.unpaidBreakMinutes, result.holidayMinutes, result.exceptionCodes, result.calculationVersion,
         );
         await client.$executeRawUnsafe(
-          `UPDATE "hr_attendance_calculations"
-           SET is_current = FALSE
+          `UPDATE "hr_attendance_calculations" SET is_current = FALSE
            WHERE attendance_record_id = $1::uuid AND is_current = TRUE`,
           attendanceId,
         );
@@ -384,20 +447,16 @@ async function applyApprovedRequest(
                    TRUE, $7::uuid, CURRENT_TIMESTAMP)`,
           randomUUID(), attendanceId, result.calculationVersion,
           JSON.stringify({
-            logicalDate: String(row.work_date),
-            scheduledStart: row.scheduled_start || null,
-            scheduledEnd: row.scheduled_end || null,
-            clockIn: row.clock_in || null,
-            clockOut: row.clock_out || null,
-            breakMinutes: Number(row.break_minutes || 0),
-            approvedLeave: Boolean(row.approved_leave),
-            publicHoliday: Boolean(row.public_holiday),
+            logicalDate: String(row.work_date), scheduledStart: row.scheduled_start || null,
+            scheduledEnd: row.scheduled_end || null, clockIn: merged.clockIn, clockOut: merged.clockOut,
+            breakMinutes: merged.breakMinutes, workLocation: merged.workLocation,
+            assignmentId: merged.assignmentId, correctionType,
+            approvedLeave: Boolean(row.approved_leave), publicHoliday: Boolean(row.public_holiday),
           }),
-          JSON.stringify(result), JSON.stringify(result.reasons), actorUserId,
+          JSON.stringify({ ...result, status: semanticStatus }), JSON.stringify(result.reasons), actorUserId,
         );
         await client.$executeRawUnsafe(
-          `DELETE FROM "hr_attendance_exceptions"
-           WHERE attendance_record_id = $1::uuid AND status = 'open'`,
+          `DELETE FROM "hr_attendance_exceptions" WHERE attendance_record_id = $1::uuid AND status = 'open'`,
           attendanceId,
         );
         for (const code of result.exceptionCodes) {
@@ -417,9 +476,9 @@ async function applyApprovedRequest(
            VALUES ($1::uuid, $2::uuid, $3::uuid, 'correction_applied', CURRENT_TIMESTAMP,
                    $4::date, 'employee_correction', $5, $6::jsonb, $7::uuid, CURRENT_TIMESTAMP)
            ON CONFLICT (employee_id, idempotency_key) DO NOTHING`,
-          randomUUID(), attendanceId, request.requester_employee_id, values.workDate,
+          randomUUID(), attendanceId, request.requester_employee_id, workDate,
           `ess-correction:${request.id}:${request.version}`,
-          JSON.stringify({ requestId: request.id, requestNumber: request.request_id, correctedValues: values }),
+          JSON.stringify({ requestId: request.id, requestNumber: request.request_id, correctedValues: requested, mergedValues: merged }),
           actorUserId,
         );
       }

@@ -3,28 +3,13 @@
 import React from 'react';
 import { useRouter } from 'next/navigation';
 import { signIn } from 'next-auth/react';
-import {
-  ArrowLeft,
-  ArrowRight,
-  Check,
-  CheckCircle2,
-  Eye,
-  EyeOff,
-  KeyRound,
-  Loader2,
-  LockKeyhole,
-  ShieldCheck,
-  Sparkles,
-  UsersRound,
-  Workflow,
-} from 'lucide-react';
+import { Eye, EyeOff, Loader2, LockKeyhole, ShieldCheck } from 'lucide-react';
 
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Progress } from '@/components/ui/progress';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { fetchAiAvailableModels, saveAiApiKeys } from '@/components/settings/ai-api-keys-api';
 import {
   getProviderDefaultModel,
@@ -32,48 +17,15 @@ import {
 } from '@/components/settings/ai-api-keys-utils';
 import { getJsonErrorMessage, readJsonObject } from '@/lib/response-json';
 import { EnvironmentSetupStep, type InstallationEnvironment } from './EnvironmentSetupStep';
+import {
+  ActivationTourStep,
+  AiConnectionStep,
+  SetupCompleteStep,
+  TOUR_STEP_COUNT,
+} from './PlatformSetupGuidedSteps';
 import { SetupAside } from './SetupAside';
 
 type SetupStage = 'account' | 'environment' | 'ai' | 'tour' | 'complete';
-
-type TourStep = {
-  eyebrow: string;
-  title: string;
-  description: string;
-  icon: React.ComponentType<{ className?: string }>;
-  points: string[];
-};
-
-const tourSteps: TourStep[] = [
-  {
-    eyebrow: 'Your first activation step',
-    title: 'Shape the hiring workflow',
-    description: 'After account creation, start with the company profile and the hiring defaults your team will use every day.',
-    icon: Workflow,
-    points: ['Confirm the company profile', 'Review recruitment stages and sources', 'Set position levels and grades'],
-  },
-  {
-    eyebrow: 'Your second activation step',
-    title: 'Prepare people operations',
-    description: 'Build the minimum workforce structure before inviting the wider team into the workspace.',
-    icon: UsersRound,
-    points: ['Create departments and employee records', 'Configure attendance and leave', 'Review roles before inviting teammates'],
-  },
-  {
-    eyebrow: 'Your final activation step',
-    title: 'Open the first hiring flow',
-    description: 'The dashboard will keep one activation checklist visible until the required workspace tasks are complete.',
-    icon: Sparkles,
-    points: ['Create or review an open position', 'Invite the people who will manage hiring', 'Return to the checklist whenever you need'],
-  },
-];
-
-const aiProviders: Array<{ value: AiProvider; label: string }> = [
-  { value: 'openai', label: 'OpenAI' },
-  { value: 'gemini', label: 'Google Gemini' },
-  { value: 'deepseek', label: 'DeepSeek' },
-];
-
 type EnvironmentJob = { id: string; status: string; progress: number; error?: string | null; result?: { stage?: string } | null };
 
 export default function PlatformSetupClient({ initialAdminCreated = false }: { initialAdminCreated?: boolean }) {
@@ -140,7 +92,7 @@ export default function PlatformSetupClient({ initialAdminCreated = false }: { i
           return;
         }
         window.setTimeout(poll, 1200);
-      } catch (error) {
+      } catch {
         if (!cancelled) window.setTimeout(poll, 2500);
       }
     };
@@ -164,9 +116,7 @@ export default function PlatformSetupClient({ initialAdminCreated = false }: { i
         body: JSON.stringify({ name, email, password, confirmPassword }),
       });
       const payload = await readJsonObject(response);
-      if (!response.ok) {
-        throw new Error(getJsonErrorMessage(payload, 'Unable to create the administrator account.'));
-      }
+      if (!response.ok) throw new Error(getJsonErrorMessage(payload, 'Unable to create the administrator account.'));
 
       const normalizedEmail = email.trim().toLowerCase();
       const authentication = await signIn('credentials', {
@@ -199,7 +149,9 @@ export default function PlatformSetupClient({ initialAdminCreated = false }: { i
         ? { environment: 'demo', employeeCount: Number(employeeCount), historyMonths: Number(historyMonths) }
         : { environment: 'production' };
       const response = await fetch('/api/settings/installation-environment', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
       });
       const payload = await readJsonObject(response);
       if (!response.ok) throw new Error(getJsonErrorMessage(payload, 'Unable to initialize the installation environment.'));
@@ -222,14 +174,15 @@ export default function PlatformSetupClient({ initialAdminCreated = false }: { i
     }
   };
 
-  const finishSetup = () => {
-    router.replace(isAuthenticated ? '/' : '/auth/signin');
-    router.refresh();
-  };
-
   const updateAiProvider = (provider: AiProvider) => {
     setAiProvider(provider);
     setAiModel(getProviderDefaultModel(provider));
+    setAiConnectionStatus('idle');
+    setAiMessage('');
+  };
+
+  const updateAiApiKey = (value: string) => {
+    setAiApiKey(value);
     setAiConnectionStatus('idle');
     setAiMessage('');
   };
@@ -254,9 +207,7 @@ export default function PlatformSetupClient({ initialAdminCreated = false }: { i
         body: JSON.stringify([{ key: 'aiProviderSelection', value: aiProvider }]),
       });
       const providerPayload = await readJsonObject(providerResponse);
-      if (!providerResponse.ok) {
-        throw new Error(getJsonErrorMessage(providerPayload, 'Unable to select the AI provider.'));
-      }
+      if (!providerResponse.ok) throw new Error(getJsonErrorMessage(providerPayload, 'Unable to select the AI provider.'));
 
       await saveAiApiKeys({
         provider: aiProvider,
@@ -282,8 +233,13 @@ export default function PlatformSetupClient({ initialAdminCreated = false }: { i
     }
   };
 
+  const finishSetup = () => {
+    router.replace(isAuthenticated ? '/' : '/auth/signin');
+    router.refresh();
+  };
+
   const advanceTour = () => {
-    if (tourIndex < tourSteps.length - 1) {
+    if (tourIndex < TOUR_STEP_COUNT - 1) {
       setTourIndex((current) => current + 1);
       return;
     }
@@ -294,11 +250,11 @@ export default function PlatformSetupClient({ initialAdminCreated = false }: { i
     ? 12
     : stage === 'environment'
       ? 28
-    : stage === 'ai'
-      ? 44
-    : stage === 'complete'
-      ? 100
-      : 58 + Math.round(((tourIndex + 1) / tourSteps.length) * 30);
+      : stage === 'ai'
+        ? 44
+        : stage === 'complete'
+          ? 100
+          : 58 + Math.round(((tourIndex + 1) / TOUR_STEP_COUNT) * 30);
 
   return (
     <main className="min-h-screen bg-background text-foreground">
@@ -386,9 +342,7 @@ export default function PlatformSetupClient({ initialAdminCreated = false }: { i
                       {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                     </button>
                   </div>
-                  <p className="text-xs leading-5 text-slate-500">
-                    Use uppercase, lowercase, a number, and a special character.
-                  </p>
+                  <p className="text-xs leading-5 text-slate-500">Use uppercase, lowercase, a number, and a special character.</p>
                 </div>
 
                 <div className="space-y-2">
@@ -406,9 +360,7 @@ export default function PlatformSetupClient({ initialAdminCreated = false }: { i
                 </div>
 
                 <div className="flex flex-col gap-3 border-t border-slate-200 pt-5 sm:flex-row sm:items-center sm:justify-between dark:border-slate-800">
-                  <p className="max-w-xs text-xs leading-5 text-slate-500">
-                    You will choose Demo or Production before setup closes.
-                  </p>
+                  <p className="max-w-xs text-xs leading-5 text-slate-500">You will choose Demo or Production before setup closes.</p>
                   <Button type="submit" disabled={isSubmitting} className="sm:min-w-44">
                     {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <ShieldCheck className="mr-2 h-4 w-4" />}
                     Create administrator
@@ -417,202 +369,53 @@ export default function PlatformSetupClient({ initialAdminCreated = false }: { i
               </form>
             )}
 
-            {stage === 'environment' && <EnvironmentSetupStep
-              employeeCount={employeeCount} environment={installationEnvironment} errorMessage={errorMessage}
-              historyMonths={historyMonths} isAuthenticated={isAuthenticated} isInitializing={isInitializingEnvironment}
-              progress={environmentProgress} progressStage={environmentStage} onEmployeeCountChange={setEmployeeCount}
-              onEnvironmentChange={setInstallationEnvironment} onHistoryMonthsChange={setHistoryMonths} onSubmit={saveInstallationEnvironment}
-            />}
-
-            {stage === 'ai' && (
-              <form onSubmit={saveAiConnection} className="space-y-6">
-                <div className="flex items-start gap-4">
-                  <div className="grid h-11 w-11 shrink-0 place-items-center rounded-lg bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-200">
-                    <KeyRound className="h-5 w-5" />
-                  </div>
-                  <div>
-                    <p className="text-xs font-semibold uppercase tracking-[0.14em] text-blue-700 dark:text-blue-300">Step 3 · Optional</p>
-                    <h2 className="mt-2 text-2xl font-semibold tracking-tight">Connect your AI provider</h2>
-                    <p className="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-300">
-                      Add one key to activate matching, evaluation, and writing assistance. The key is encrypted by the existing platform key manager.
-                    </p>
-                  </div>
-                </div>
-
-                {aiMessage && (
-                  <Alert variant={aiConnectionStatus === 'idle' ? 'destructive' : 'default'}>
-                    <AlertDescription className="flex items-start gap-2">
-                      {aiConnectionStatus !== 'idle' && <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" />}
-                      {aiMessage}
-                    </AlertDescription>
-                  </Alert>
-                )}
-
-                <div className="grid gap-5 sm:grid-cols-2">
-                  <div className="space-y-2">
-                    <Label htmlFor="setup-ai-provider">AI provider</Label>
-                    <Select value={aiProvider} onValueChange={(value) => updateAiProvider(value as AiProvider)} disabled={isSavingAi}>
-                      <SelectTrigger id="setup-ai-provider">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {aiProviders.map((provider) => (
-                          <SelectItem key={provider.value} value={provider.value}>{provider.label}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="setup-ai-model">Default model</Label>
-                    <Input
-                      id="setup-ai-model"
-                      value={aiModel}
-                      onChange={(event) => setAiModel(event.target.value)}
-                      disabled={isSavingAi}
-                      required
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="setup-ai-key">API key</Label>
-                  <div className="relative">
-                    <KeyRound className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-                    <Input
-                      id="setup-ai-key"
-                      type={showAiApiKey ? 'text' : 'password'}
-                      value={aiApiKey}
-                      onChange={(event) => {
-                        setAiApiKey(event.target.value);
-                        setAiConnectionStatus('idle');
-                        setAiMessage('');
-                      }}
-                      autoComplete="off"
-                      spellCheck={false}
-                      className="px-9"
-                      placeholder={aiProvider === 'openai' ? 'sk-…' : 'Paste provider API key'}
-                      disabled={isSavingAi || aiConnectionStatus === 'verified'}
-                      required={aiConnectionStatus === 'idle'}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowAiApiKey((current) => !current)}
-                      className="absolute right-0 top-1/2 grid h-11 w-11 -translate-y-1/2 place-items-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-                      aria-label={showAiApiKey ? 'Hide API key' : 'Show API key'}
-                    >
-                      {showAiApiKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                    </button>
-                  </div>
-                  <p className="text-xs leading-5 text-slate-500">
-                    The browser sends this key only to the authenticated settings API. It is never returned in full.
-                  </p>
-                </div>
-
-                <div className="flex flex-col-reverse gap-3 border-t border-slate-200 pt-5 sm:flex-row sm:items-center sm:justify-between dark:border-slate-800">
-                  <Button type="button" variant="ghost" disabled={isSavingAi} onClick={() => setStage('tour')}>
-                    {aiConnectionStatus === 'idle' ? 'Skip for now' : 'Continue to tour'}
-                  </Button>
-                  {aiConnectionStatus === 'verified' ? (
-                    <Button type="button" onClick={() => setStage('tour')}>
-                      Continue to tour
-                      <ArrowRight className="ml-2 h-4 w-4" />
-                    </Button>
-                  ) : (
-                    <Button type="submit" disabled={isSavingAi || !isAuthenticated} className="sm:min-w-44">
-                      {isSavingAi ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <ShieldCheck className="mr-2 h-4 w-4" />}
-                      Save and verify
-                    </Button>
-                  )}
-                </div>
-              </form>
+            {stage === 'environment' && (
+              <EnvironmentSetupStep
+                employeeCount={employeeCount}
+                environment={installationEnvironment}
+                errorMessage={errorMessage}
+                historyMonths={historyMonths}
+                isAuthenticated={isAuthenticated}
+                isInitializing={isInitializingEnvironment}
+                progress={environmentProgress}
+                progressStage={environmentStage}
+                onEmployeeCountChange={setEmployeeCount}
+                onEnvironmentChange={setInstallationEnvironment}
+                onHistoryMonthsChange={setHistoryMonths}
+                onSubmit={saveInstallationEnvironment}
+              />
             )}
 
-            {stage === 'tour' && (() => {
-              const step = tourSteps[tourIndex];
-              const TourIcon = step.icon;
-              return (
-                <div className="space-y-7">
-                  <div className="flex items-start gap-4">
-                    <div className="grid h-11 w-11 shrink-0 place-items-center rounded-lg bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-200">
-                      <TourIcon className="h-5 w-5" />
-                    </div>
-                    <div>
-                      <p className="text-xs font-semibold uppercase tracking-[0.14em] text-blue-700 dark:text-blue-300">
-                        {step.eyebrow}
-                      </p>
-                      <h2 className="mt-2 text-2xl font-semibold tracking-tight">{step.title}</h2>
-                      <p className="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-300">{step.description}</p>
-                    </div>
-                  </div>
+            {stage === 'ai' && (
+              <AiConnectionStep
+                provider={aiProvider}
+                apiKey={aiApiKey}
+                model={aiModel}
+                showApiKey={showAiApiKey}
+                isSaving={isSavingAi}
+                connectionStatus={aiConnectionStatus}
+                message={aiMessage}
+                isAuthenticated={isAuthenticated}
+                onSubmit={saveAiConnection}
+                onProviderChange={updateAiProvider}
+                onModelChange={setAiModel}
+                onApiKeyChange={updateAiApiKey}
+                onToggleApiKey={() => setShowAiApiKey((current) => !current)}
+                onContinue={() => setStage('tour')}
+              />
+            )}
 
-                  <div className="divide-y divide-slate-200 border-y border-slate-200 dark:divide-slate-800 dark:border-slate-800">
-                    {step.points.map((point) => (
-                      <div key={point} className="flex items-center gap-3 py-3.5 text-sm">
-                        <span className="grid h-5 w-5 place-items-center rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300">
-                          <Check className="h-3 w-3" />
-                        </span>
-                        <span className="font-medium">{point}</span>
-                      </div>
-                    ))}
-                  </div>
-
-                  <div className="flex items-center justify-between">
-                    <div className="flex gap-1.5" aria-label={`Tour step ${tourIndex + 1} of ${tourSteps.length}`}>
-                      {tourSteps.map((tourStep, index) => (
-                        <span
-                          key={tourStep.title}
-                          className={`h-1.5 rounded-full transition-all ${index === tourIndex ? 'w-7 bg-blue-700 dark:bg-blue-300' : 'w-2 bg-slate-300 dark:bg-slate-700'}`}
-                        />
-                      ))}
-                    </div>
-                    <div className="flex gap-2">
-                      {tourIndex > 0 && (
-                        <Button type="button" variant="ghost" onClick={() => setTourIndex((current) => current - 1)}>
-                          <ArrowLeft className="mr-2 h-4 w-4" />
-                          Back
-                        </Button>
-                      )}
-                      <Button type="button" onClick={advanceTour}>
-                        {tourIndex === tourSteps.length - 1 ? 'Complete tour' : 'Next'}
-                        <ArrowRight className="ml-2 h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={() => setStage('complete')}
-                    className="text-xs font-medium text-slate-500 underline-offset-4 hover:text-slate-800 hover:underline dark:hover:text-slate-200"
-                  >
-                    Skip the tour
-                  </button>
-                </div>
-              );
-            })()}
+            {stage === 'tour' && (
+              <ActivationTourStep
+                index={tourIndex}
+                onBack={() => setTourIndex((current) => current - 1)}
+                onNext={advanceTour}
+                onSkip={() => setStage('complete')}
+              />
+            )}
 
             {stage === 'complete' && (
-              <div className="space-y-7">
-                <div className="grid h-12 w-12 place-items-center rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300">
-                  <CheckCircle2 className="h-6 w-6" />
-                </div>
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-[0.14em] text-emerald-700 dark:text-emerald-300">Ready to continue</p>
-                  <h2 className="mt-2 text-3xl font-semibold tracking-tight">Your administrator account is ready.</h2>
-                  <p className="mt-3 max-w-lg text-sm leading-6 text-slate-600 dark:text-slate-300">
-                    Next, initialize the recommended workspace foundation. After that, one activation checklist will guide the remaining organization tasks.
-                  </p>
-                </div>
-                <div className="flex flex-col gap-3 border-t border-slate-200 pt-5 sm:flex-row sm:items-center sm:justify-between dark:border-slate-800">
-                  <div>
-                    <p className="text-xs font-medium uppercase tracking-wide text-slate-500">Administrator login</p>
-                    <p className="mt-1 text-sm font-semibold">{email}</p>
-                  </div>
-                  <Button type="button" onClick={finishSetup} className="sm:min-w-44">
-                    {isAuthenticated ? 'Continue setup' : 'Continue to sign in'}
-                    <ArrowRight className="ml-2 h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
+              <SetupCompleteStep email={email} isAuthenticated={isAuthenticated} onFinish={finishSetup} />
             )}
           </div>
         </section>

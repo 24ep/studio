@@ -1,5 +1,5 @@
-import { redirect } from 'next/navigation';
+import { PayslipsView } from '@/components/ess/PayslipsView';
 
 export default function EssPayslipsPage() {
-  redirect('/ess/documents?tab=payslips');
+  return <PayslipsView />;
 }

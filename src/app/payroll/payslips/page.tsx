@@ -1,5 +1,5 @@
-import { PayrollWorkspace } from '@/components/payroll/PayrollWorkspace';
+import { PayrollPayslipsWorkspace } from '@/components/payroll/PayrollPayslipsWorkspace';
 
 export default function PayrollPayslipsPage() {
-  return <PayrollWorkspace resource="payslips" />;
+  return <PayrollPayslipsWorkspace />;
 }

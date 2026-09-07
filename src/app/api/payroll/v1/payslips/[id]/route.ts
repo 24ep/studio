@@ -136,7 +136,7 @@ export async function POST(
       type: "payroll",
       title: "Your payslip is available",
       message: `${String(payslip.period_name || "Payroll")} is ready to view.`,
-      data: { href: "/payroll/payslips", payslipId: id },
+      data: { href: "/ess/payslips", payslipId: id },
     },
     session.user.id,
   );

@@ -11,8 +11,14 @@ describe('standalone person profile contract', () => {
     const schema = readWorkspaceFile('prisma', 'schema.prisma');
     const migration = readWorkspaceFile(
       'prisma',
-      'migrations',
+      'migrations-legacy',
       '20260731103000_add_shared_person_profiles',
+      'migration.sql',
+    );
+    const triggerMigration = readWorkspaceFile(
+      'prisma',
+      'migrations',
+      '20260815072000_restore_person_profile_triggers',
       'migration.sql',
     );
 
@@ -23,6 +29,8 @@ describe('standalone person profile contract', () => {
     expect(migration).toContain('CREATE TRIGGER "Applicant_initialize_person_profile"');
     expect(migration).toContain('CREATE TRIGGER "hr_employees_link_person_profile"');
     expect(migration).toContain('SET "person_profile_id" = applicant."person_profile_id"');
+    expect(triggerMigration).toContain('CREATE TRIGGER "Applicant_initialize_person_profile"');
+    expect(triggerMigration).toContain('CREATE TRIGGER "hr_employees_link_person_profile"');
   });
 
   it('keeps background information out of the employee Recruitment tab', () => {

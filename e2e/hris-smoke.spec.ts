@@ -15,6 +15,27 @@ test.describe('HRIS protected surfaces', () => {
     await expect(page.locator('body')).toBeVisible();
   });
 
+  test('career explorer is a valid Learning route', async ({ page }) => {
+    const response = await page.goto('/learning/career-explorer');
+
+    expect(response?.status()).toBeLessThan(500);
+    await expect(page.locator('body')).toBeVisible();
+  });
+
+  test('trusted certificates is a valid Learning route', async ({ page }) => {
+    const response = await page.goto('/learning/trusted-certificates');
+
+    expect(response?.status()).toBeLessThan(500);
+    await expect(page.locator('body')).toBeVisible();
+  });
+
+  test('achievements is a valid dedicated Learning route', async ({ page }) => {
+    const response = await page.goto('/learning/achievements');
+
+    expect(response?.status()).toBeLessThan(500);
+    await expect(page.locator('body')).toBeVisible();
+  });
+
   test('HR API requires an authenticated session', async ({ request }) => {
     const response = await request.get('/api/hr/v1/assignments?pageSize=1');
 
@@ -24,6 +45,18 @@ test.describe('HRIS protected surfaces', () => {
         code: 'UNAUTHORIZED',
       },
     });
+  });
+
+  test('headcount bulk actions require an authenticated session', async ({ request }) => {
+    const response = await request.post('/api/hiring/headcount-requests/bulk-action', {
+      data: {
+        ids: ['00000000-0000-0000-0000-000000000000'],
+        action: 'approve',
+      },
+    });
+
+    expect(response.status()).toBe(401);
+    await expect(response.json()).resolves.toMatchObject({ message: 'Unauthorized' });
   });
 
   test('payroll preview requires an authenticated session', async ({ request }) => {

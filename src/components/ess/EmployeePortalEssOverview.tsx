@@ -79,6 +79,7 @@ export function EmployeePortalEssOverview() {
   const attendanceStatus = attendance?.clock_in && !attendance?.clock_out ? 'Checked in' : attendance?.clock_out ? 'Completed' : 'Not checked in';
   const performanceActions = data.performance.filter(item => ['not_started', 'in_progress', 'returned_for_revision', 'completed'].includes(String(item.status))).length;
   const acknowledgmentCount = data.documents.filter(item => item.requires_acknowledgment && !item.acknowledged_at).length;
+  const requestActions = data.requests.filter(item => ['draft', 'returned_for_revision'].includes(String(item.status))).length;
 
   return (
     <main className="min-h-full bg-[hsl(var(--app-page-background,var(--background)))] px-4 py-6" aria-labelledby="ess-overview-title">
@@ -96,7 +97,7 @@ export function EmployeePortalEssOverview() {
             <Button asChild size="sm"><Link href="/ess/leave">Request leave</Link></Button>
             <Button type="button" size="sm" variant="outline" onClick={() => setReferralUploadOpen(true)}><UserPlus className="mr-2 h-4 w-4" />Friend referrals</Button>
             <Button asChild size="sm" variant="outline"><Link href="/ess/attendance">Attendance</Link></Button>
-            <Button asChild size="sm" variant="outline"><Link href="/expenses/claims">Submit expense</Link></Button>
+            <Button asChild size="sm" variant="outline"><Link href="/ess/expenses">Submit expense</Link></Button>
           </div>
         </div>
         <div className="grid divide-y divide-border/60 sm:grid-cols-2 sm:divide-x sm:divide-y-0 lg:grid-cols-6">
@@ -104,11 +105,25 @@ export function EmployeePortalEssOverview() {
           <PortalMetric icon={Clock3} label="Attendance" value={attendanceStatus} href="/ess/attendance" />
           <PortalMetric icon={FileCheck2} label="Acknowledgments" value={String(acknowledgmentCount)} href="/ess/documents" />
           <PortalMetric icon={Target} label="Performance actions" value={String(performanceActions)} href="/ess/performance" />
-          <PortalMetric icon={GraduationCap} label="Assigned learning" value={String(data.metrics.activeLearning)} href="/learning" />
+          <PortalMetric icon={GraduationCap} label="Assigned learning" value={String(data.metrics.activeLearning)} href="/ess/learning" />
           {data.metrics.directReports > 0
             ? <PortalMetric icon={Users} label="Manager approvals" value={String(data.metrics.directReports)} href="/ess/team" />
-            : <PortalMetric icon={FileCheck2} label="Latest payroll" value={data.payslips.length ? 'Available' : 'Not published'} href="/ess/documents?tab=payslips" />}
+            : <PortalMetric icon={FileCheck2} label="Latest payroll" value={data.payslips.length ? 'Available' : 'Not published'} href="/ess/payslips" />}
         </div>
+        <section className="border-t border-border/60 px-4 py-4 sm:px-5" aria-labelledby="employee-services-title">
+          <div className="mb-3 flex items-end justify-between gap-4">
+            <div><h2 id="employee-services-title" className="text-sm font-semibold">Employee services</h2><p className="mt-0.5 text-xs text-muted-foreground">Complete employee-owned journeys without entering HR or finance workspaces.</p></div>
+          </div>
+          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+            <ServiceLink icon={FileCheck2} label="My requests" description={requestActions ? `${requestActions} need your action` : 'Approvals and revisions'} href="/ess/requests" />
+            <ServiceLink icon={UserPlus} label="My onboarding" description={`${data.metrics.latestOnboardingProgress}% complete`} href="/ess/onboarding" />
+            <ServiceLink icon={FileCheck2} label="My benefits" description="Coverage and applications" href="/ess/benefits" />
+            <ServiceLink icon={Banknote} label="Expenses" description="Claims and reimbursement" href="/ess/expenses" />
+            <ServiceLink icon={FileCheck2} label="Payslips" description="Published payroll documents" href="/ess/payslips" />
+            <ServiceLink icon={GraduationCap} label="Learning" description="Courses, paths, and credentials" href="/ess/learning" />
+            <ServiceLink icon={Target} label="Surveys" description="Required and optional responses" href="/ess/surveys" />
+          </div>
+        </section>
         <RoleWorkspaceLinks user={session?.user} directReports={data.metrics.directReports} />
         <div className="border-t border-border/60 p-4 sm:p-5">
           <div className="relative isolate overflow-hidden rounded-lg border border-primary/15 bg-primary/5 px-5 py-5 text-foreground sm:flex sm:items-center sm:justify-between sm:px-6">
@@ -137,6 +152,10 @@ export function EmployeePortalEssOverview() {
       />
     </main>
   );
+}
+
+function ServiceLink({ icon: Icon, label, description, href }: { icon: React.ElementType; label: string; description: string; href: string }) {
+  return <Link href={href} className="group flex min-h-16 items-center gap-3 rounded-lg border border-border px-3 py-3 hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"><span className="grid h-9 w-9 shrink-0 place-items-center rounded-md bg-primary/10 text-primary"><Icon className="h-4 w-4" /></span><span className="min-w-0 flex-1"><span className="block text-sm font-semibold">{label}</span><span className="block truncate text-xs text-muted-foreground">{description}</span></span><ChevronRight className="h-4 w-4 text-muted-foreground transition-transform group-hover:translate-x-0.5" /></Link>;
 }
 
 function RoleWorkspaceLinks({ user, directReports }: { user?: Parameters<typeof hasAnyPermission>[0]; directReports: number }) {

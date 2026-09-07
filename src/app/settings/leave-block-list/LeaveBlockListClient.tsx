@@ -1,14 +1,7 @@
 "use client";
 
-import * as React from 'react';
-import {
-  CalendarOff,
-  CalendarRange,
-  Pencil,
-  Plus,
-  Search,
-  Trash2,
-} from 'lucide-react';
+import * as React from "react";
+import { CalendarOff, CalendarRange, Plus, Search } from "lucide-react";
 
 import {
   AlertDialog,
@@ -19,42 +12,25 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Checkbox } from '@/components/ui/checkbox';
+} from "@/components/ui/alert-dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+  type SortDirection,
+  sortRowsByColumn,
+  type SortValueResolverMap,
+} from "@/components/ui/sortable-table";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
-import { Textarea } from '@/components/ui/textarea';
-import { SortableTableHead, type SortDirection, sortRowsByColumn, type SortValueResolverMap } from '@/components/ui/sortable-table';
-
-interface LeaveBlockRecord {
-  id: string;
-  name: string;
-  startDate: string;
-  endDate: string;
-  leaveType: string;
-  scope: string;
-  targetValue?: string | null;
-  reason?: string | null;
-  isActive: boolean | string;
-}
+  emptyLeaveBlockForm,
+  LeaveBlockDialog,
+  type LeaveBlockForm,
+} from "./LeaveBlockDialog";
+import { LeaveBlockTable } from "./LeaveBlockTable";
+import {
+  dateValue,
+  isLeaveBlockActive,
+  type LeaveBlockRecord,
+} from "./leave-block-list-model";
 
 interface LeaveBlockResponse {
   resource?: {
@@ -62,46 +38,20 @@ interface LeaveBlockResponse {
   };
 }
 
-const apiPath = '/api/hr/leave?view=blocks';
-const emptyForm = {
-  name: '',
-  startDate: '',
-  endDate: '',
-  leaveType: 'all',
-  scope: 'all',
-  targetValue: '',
-  reason: '',
-  isActive: 'true',
-};
-
-function dateValue(value: string) {
-  return value.slice(0, 10);
-}
-
-function formatDate(value: string) {
-  return new Intl.DateTimeFormat('en', { dateStyle: 'medium' }).format(new Date(value));
-}
-
-function isActive(value: LeaveBlockRecord['isActive']) {
-  return value === true || value === 'true';
-}
-
-function formatLabel(value: string) {
-  return value.replaceAll('_', ' ').replace(/\b\w/g, character => character.toUpperCase());
-}
+const apiPath = "/api/hr/leave?view=blocks";
 
 export function LeaveBlockListClient() {
   const [records, setRecords] = React.useState<LeaveBlockRecord[]>([]);
-  const [query, setQuery] = React.useState('');
+  const [query, setQuery] = React.useState("");
   const [loading, setLoading] = React.useState(true);
   const [saving, setSaving] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const [dialogOpen, setDialogOpen] = React.useState(false);
   const [editing, setEditing] = React.useState<LeaveBlockRecord | null>(null);
   const [deleting, setDeleting] = React.useState<LeaveBlockRecord | null>(null);
-  const [form, setForm] = React.useState(emptyForm);
+  const [form, setForm] = React.useState<LeaveBlockForm>(emptyLeaveBlockForm);
   const [selectedIds, setSelectedIds] = React.useState<Set<string>>(new Set());
-  const [bulkActive, setBulkActive] = React.useState('true');
+  const [bulkActive, setBulkActive] = React.useState("true");
   const [bulkUpdating, setBulkUpdating] = React.useState(false);
   const [sortColumn, setSortColumn] = React.useState<string | null>(null);
   const [sortDirection, setSortDirection] = React.useState<SortDirection>(null);
@@ -109,25 +59,32 @@ export function LeaveBlockListClient() {
   const filteredRecords = React.useMemo(() => {
     const normalized = query.trim().toLowerCase();
     if (!normalized) return records;
-    return records.filter(record => [
-      record.name,
-      record.leaveType,
-      record.scope,
-      record.targetValue || '',
-      record.reason || '',
-    ].join(' ').toLowerCase().includes(normalized));
+    return records.filter((record) =>
+      [
+        record.name,
+        record.leaveType,
+        record.scope,
+        record.targetValue || "",
+        record.reason || "",
+      ]
+        .join(" ")
+        .toLowerCase()
+        .includes(normalized),
+    );
   }, [query, records]);
 
   const metrics = React.useMemo(() => {
     const today = new Date().toISOString().slice(0, 10);
     return {
       total: records.length,
-      active: records.filter(record => isActive(record.isActive)).length,
-      current: records.filter(record => (
-        isActive(record.isActive) &&
-        dateValue(record.startDate) <= today &&
-        dateValue(record.endDate) >= today
-      )).length,
+      active: records.filter((record) => isLeaveBlockActive(record.isActive))
+        .length,
+      current: records.filter(
+        (record) =>
+          isLeaveBlockActive(record.isActive) &&
+          dateValue(record.startDate) <= today &&
+          dateValue(record.endDate) >= today,
+      ).length,
     };
   }, [records]);
 
@@ -135,12 +92,19 @@ export function LeaveBlockListClient() {
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch(apiPath, { cache: 'no-store', credentials: 'include' });
-      if (!response.ok) throw new Error('Unable to load leave blocks.');
-      const payload = await response.json() as LeaveBlockResponse;
+      const response = await fetch(apiPath, {
+        cache: "no-store",
+        credentials: "include",
+      });
+      if (!response.ok) throw new Error("Unable to load leave blocks.");
+      const payload = (await response.json()) as LeaveBlockResponse;
       setRecords(payload.resource?.records || []);
     } catch (loadError) {
-      setError(loadError instanceof Error ? loadError.message : 'Unable to load leave blocks.');
+      setError(
+        loadError instanceof Error
+          ? loadError.message
+          : "Unable to load leave blocks.",
+      );
     } finally {
       setLoading(false);
     }
@@ -153,7 +117,7 @@ export function LeaveBlockListClient() {
   function openCreateDialog() {
     const today = new Date().toISOString().slice(0, 10);
     setEditing(null);
-    setForm({ ...emptyForm, startDate: today, endDate: today });
+    setForm({ ...emptyLeaveBlockForm, startDate: today, endDate: today });
     setDialogOpen(true);
   }
 
@@ -165,45 +129,59 @@ export function LeaveBlockListClient() {
       endDate: dateValue(record.endDate),
       leaveType: record.leaveType,
       scope: record.scope,
-      targetValue: record.targetValue || '',
-      reason: record.reason || '',
-      isActive: isActive(record.isActive) ? 'true' : 'false',
+      targetValue: record.targetValue || "",
+      reason: record.reason || "",
+      isActive: isLeaveBlockActive(record.isActive) ? "true" : "false",
     });
     setDialogOpen(true);
   }
 
   async function submitRecord() {
     if (form.endDate < form.startDate) {
-      setError('End date must be on or after start date.');
+      setError("End date must be on or after start date.");
       return;
     }
-    if (form.scope !== 'all' && !form.targetValue.trim()) {
+    if (form.scope !== "all" && !form.targetValue.trim()) {
       setError(`Target ${form.scope} is required.`);
       return;
     }
 
     setSaving(true);
     setError(null);
-    const url = editing ? `${apiPath}&id=${encodeURIComponent(editing.id)}` : apiPath;
+    const url = editing
+      ? `${apiPath}&id=${encodeURIComponent(editing.id)}`
+      : apiPath;
     try {
       const response = await fetch(url, {
-        method: editing ? 'PATCH' : 'POST',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
+        method: editing ? "PATCH" : "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...form,
-          targetValue: form.scope === 'all' ? null : form.targetValue.trim(),
+          targetValue:
+            form.scope === "all" ? null : form.targetValue.trim(),
         }),
       });
       if (!response.ok) {
-        const payload = await response.json().catch(() => ({})) as { message?: string; errors?: Record<string, string[]> };
-        const detail = payload.errors ? Object.values(payload.errors).flat()[0] : null;
-        throw new Error(detail || payload.message || 'Unable to save leave block.');
+        const payload = (await response.json().catch(() => ({}))) as {
+          message?: string;
+          errors?: Record<string, string[]>;
+        };
+        const detail = payload.errors
+          ? Object.values(payload.errors).flat()[0]
+          : null;
+        throw new Error(
+          detail || payload.message || "Unable to save leave block.",
+        );
       }
       setDialogOpen(false);
       await loadRecords();
     } catch (saveError) {
-      setError(saveError instanceof Error ? saveError.message : 'Unable to save leave block.');
+      setError(
+        saveError instanceof Error
+          ? saveError.message
+          : "Unable to save leave block.",
+      );
     } finally {
       setSaving(false);
     }
@@ -214,15 +192,19 @@ export function LeaveBlockListClient() {
     setSaving(true);
     setError(null);
     try {
-      const response = await fetch(`${apiPath}&id=${encodeURIComponent(deleting.id)}`, {
-        method: 'DELETE',
-        credentials: 'include',
-      });
-      if (!response.ok) throw new Error('Unable to delete leave block.');
+      const response = await fetch(
+        `${apiPath}&id=${encodeURIComponent(deleting.id)}`,
+        { method: "DELETE", credentials: "include" },
+      );
+      if (!response.ok) throw new Error("Unable to delete leave block.");
       setDeleting(null);
       await loadRecords();
     } catch (deleteError) {
-      setError(deleteError instanceof Error ? deleteError.message : 'Unable to delete leave block.');
+      setError(
+        deleteError instanceof Error
+          ? deleteError.message
+          : "Unable to delete leave block.",
+      );
     } finally {
       setSaving(false);
     }
@@ -234,33 +216,49 @@ export function LeaveBlockListClient() {
     setBulkUpdating(true);
     setError(null);
     try {
-      const results = await Promise.allSettled(ids.map(async id => {
-        const response = await fetch(`${apiPath}&id=${encodeURIComponent(id)}`, {
-          method: 'PATCH',
-          credentials: 'include',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ isActive: bulkActive }),
-        });
-        if (!response.ok) throw new Error(`Unable to update leave block ${id}`);
-      }));
-      const failedIds = ids.filter((_, index) => results[index].status === 'rejected');
+      const results = await Promise.allSettled(
+        ids.map(async (id) => {
+          const response = await fetch(
+            `${apiPath}&id=${encodeURIComponent(id)}`,
+            {
+              method: "PATCH",
+              credentials: "include",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ isActive: bulkActive }),
+            },
+          );
+          if (!response.ok)
+            throw new Error(`Unable to update leave block ${id}`);
+        }),
+      );
+      const failedIds = ids.filter(
+        (_, index) => results[index].status === "rejected",
+      );
       setSelectedIds(new Set(failedIds));
-      if (failedIds.length > 0) setError(`${ids.length - failedIds.length} updated; ${failedIds.length} failed.`);
+      if (failedIds.length > 0) {
+        setError(
+          `${ids.length - failedIds.length} updated; ${failedIds.length} failed.`,
+        );
+      }
       await loadRecords();
     } finally {
       setBulkUpdating(false);
     }
   }
 
-  const allFilteredSelected = filteredRecords.length > 0 && filteredRecords.every(record => selectedIds.has(record.id));
   const sortValueResolvers: SortValueResolverMap<LeaveBlockRecord> = {
-    name: record => record.name,
-    dateRange: record => record.startDate,
-    leaveType: record => record.leaveType,
-    scope: record => `${record.scope} ${record.targetValue || ''}`.trim(),
-    status: record => String(isActive(record.isActive)),
+    name: (record) => record.name,
+    dateRange: (record) => record.startDate,
+    leaveType: (record) => record.leaveType,
+    scope: (record) => `${record.scope} ${record.targetValue || ""}`.trim(),
+    status: (record) => String(isLeaveBlockActive(record.isActive)),
   };
-  const sortedRecords = sortRowsByColumn(filteredRecords, sortColumn, sortDirection, sortValueResolvers);
+  const sortedRecords = sortRowsByColumn(
+    filteredRecords,
+    sortColumn,
+    sortDirection,
+    sortValueResolvers,
+  );
   const handleSort = (column: string | null, direction: SortDirection) => {
     setSortColumn(column);
     setSortDirection(direction);
@@ -273,10 +271,16 @@ export function LeaveBlockListClient() {
           <div>
             <h1 className="text-lg font-semibold">Leave Block List</h1>
             <p className="mt-1 text-xs text-muted-foreground">
-              Prevent leave requests during restricted dates by leave type and employee scope.
+              Prevent leave requests during restricted dates by leave type and
+              employee scope.
             </p>
           </div>
-          <Button type="button" size="sm" className="gap-2" onClick={openCreateDialog}>
+          <Button
+            type="button"
+            size="sm"
+            className="gap-2"
+            onClick={openCreateDialog}
+          >
             <Plus className="h-4 w-4" />
             Add leave block
           </Button>
@@ -284,15 +288,23 @@ export function LeaveBlockListClient() {
 
         <div className="grid gap-3 sm:grid-cols-3">
           <Metric label="Total blocks" value={metrics.total} icon={CalendarOff} />
-          <Metric label="Active blocks" value={metrics.active} icon={CalendarRange} />
-          <Metric label="In effect today" value={metrics.current} icon={CalendarOff} />
+          <Metric
+            label="Active blocks"
+            value={metrics.active}
+            icon={CalendarRange}
+          />
+          <Metric
+            label="In effect today"
+            value={metrics.current}
+            icon={CalendarOff}
+          />
         </div>
 
         <div className="relative max-w-sm">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             value={query}
-            onChange={event => setQuery(event.target.value)}
+            onChange={(event) => setQuery(event.target.value)}
             placeholder="Search leave blocks"
             className="pl-9"
           />
@@ -304,95 +316,26 @@ export function LeaveBlockListClient() {
           </div>
         )}
 
-        <div className="overflow-x-auto border-y border-border bg-card">
-          {selectedIds.size > 0 && (
-            <div className="flex min-h-12 flex-wrap items-center gap-2 border-b border-primary/20 bg-primary/5 px-4 py-2">
-              <span className="text-sm font-semibold text-foreground">{selectedIds.size} selected</span>
-              <Label htmlFor="leave-block-bulk-status" className="ml-2 text-sm">Update status</Label>
-              <select id="leave-block-bulk-status" value={bulkActive} onChange={event => setBulkActive(event.target.value)} disabled={bulkUpdating} className="h-9 rounded border border-input bg-background px-2 text-sm text-foreground">
-                <option value="true">Active</option>
-                <option value="false">Inactive</option>
-              </select>
-              <Button type="button" size="sm" disabled={bulkUpdating} onClick={() => void updateSelectedStatus()}>{bulkUpdating ? 'Updating...' : 'Apply'}</Button>
-              <Button type="button" variant="ghost" size="sm" disabled={bulkUpdating} onClick={() => setSelectedIds(new Set())} className="ml-auto">Clear</Button>
-            </div>
-          )}
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-12">
-                  <Checkbox
-                    aria-label="Select all leave blocks"
-                    checked={allFilteredSelected ? true : selectedIds.size > 0 && filteredRecords.some(record => selectedIds.has(record.id)) ? 'indeterminate' : false}
-                    onCheckedChange={checked => setSelectedIds(checked === true ? new Set(filteredRecords.map(record => record.id)) : new Set())}
-                  />
-                </TableHead>
-                <SortableTableHead column="name" label="Name" sortColumn={sortColumn} sortDirection={sortDirection} onSort={handleSort} />
-                <SortableTableHead column="dateRange" label="Date range" sortColumn={sortColumn} sortDirection={sortDirection} onSort={handleSort} />
-                <SortableTableHead column="leaveType" label="Leave type" sortColumn={sortColumn} sortDirection={sortDirection} onSort={handleSort} />
-                <SortableTableHead column="scope" label="Applies to" sortColumn={sortColumn} sortDirection={sortDirection} onSort={handleSort} />
-                <SortableTableHead column="status" label="Status" sortColumn={sortColumn} sortDirection={sortDirection} onSort={handleSort} />
-                <TableHead className="w-24 text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {loading ? (
-                <TableRow>
-                  <TableCell colSpan={7} className="h-28 text-center text-sm text-muted-foreground">Loading leave blocks...</TableCell>
-                </TableRow>
-              ) : sortedRecords.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={7} className="h-28 text-center text-sm text-muted-foreground">No leave blocks found.</TableCell>
-                </TableRow>
-              ) : sortedRecords.map(record => (
-                <TableRow key={record.id}>
-                  <TableCell>
-                    <Checkbox
-                      aria-label={`Select ${record.name}`}
-                      checked={selectedIds.has(record.id)}
-                      onCheckedChange={checked => setSelectedIds(current => {
-                        const next = new Set(current);
-                        checked === true ? next.add(record.id) : next.delete(record.id);
-                        return next;
-                      })}
-                    />
-                  </TableCell>
-                  <TableCell>
-                    <div className="font-medium">{record.name}</div>
-                    {record.reason && <div className="mt-0.5 max-w-xs truncate text-xs text-muted-foreground" title={record.reason}>{record.reason}</div>}
-                  </TableCell>
-                  <TableCell>{formatDate(record.startDate)} - {formatDate(record.endDate)}</TableCell>
-                  <TableCell>{formatLabel(record.leaveType)}</TableCell>
-                  <TableCell>
-                    {record.scope === 'all' ? 'All employees' : `${formatLabel(record.scope)}: ${record.targetValue || '-'}`}
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant="outline" className={isActive(record.isActive)
-                      ? 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900 dark:bg-emerald-950/30 dark:text-emerald-300'
-                      : 'border-border bg-muted/50 text-muted-foreground'}
-                    >
-                      {isActive(record.isActive) ? 'Active' : 'Inactive'}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex justify-end gap-1">
-                      <Button type="button" variant="ghost" size="icon" aria-label={`Edit ${record.name}`} title="Edit leave block" onClick={() => openEditDialog(record)}>
-                        <Pencil className="h-4 w-4" />
-                      </Button>
-                      <Button type="button" variant="ghost" size="icon" aria-label={`Delete ${record.name}`} title="Delete leave block" className="text-destructive" onClick={() => setDeleting(record)}>
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
+        <LeaveBlockTable
+          bulkActive={bulkActive}
+          bulkUpdating={bulkUpdating}
+          filteredRecords={filteredRecords}
+          loading={loading}
+          onBulkActiveChange={setBulkActive}
+          onDelete={setDeleting}
+          onEdit={openEditDialog}
+          onSort={handleSort}
+          onUpdateSelectedStatus={updateSelectedStatus}
+          selectedIds={selectedIds}
+          setSelectedIds={setSelectedIds}
+          sortColumn={sortColumn}
+          sortDirection={sortDirection}
+          sortedRecords={sortedRecords}
+        />
       </div>
 
       <LeaveBlockDialog
-        editing={editing}
+        isEditing={Boolean(editing)}
         form={form}
         onFormChange={setForm}
         onOpenChange={setDialogOpen}
@@ -401,7 +344,10 @@ export function LeaveBlockListClient() {
         saving={saving}
       />
 
-      <AlertDialog open={Boolean(deleting)} onOpenChange={open => !open && setDeleting(null)}>
+      <AlertDialog
+        open={Boolean(deleting)}
+        onOpenChange={(open) => !open && setDeleting(null)}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Delete leave block?</AlertDialogTitle>
@@ -411,8 +357,12 @@ export function LeaveBlockListClient() {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={saving}>Cancel</AlertDialogCancel>
-            <AlertDialogAction disabled={saving} onClick={() => void deleteRecord()} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-              {saving ? 'Deleting...' : 'Delete'}
+            <AlertDialogAction
+              disabled={saving}
+              onClick={() => void deleteRecord()}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {saving ? "Deleting..." : "Delete"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -421,117 +371,23 @@ export function LeaveBlockListClient() {
   );
 }
 
-function LeaveBlockDialog({
-  editing,
-  form,
-  onFormChange,
-  onOpenChange,
-  onSubmit,
-  open,
-  saving,
+function Metric({
+  icon: Icon,
+  label,
+  value,
 }: {
-  editing: LeaveBlockRecord | null;
-  form: typeof emptyForm;
-  onFormChange: React.Dispatch<React.SetStateAction<typeof emptyForm>>;
-  onOpenChange: (open: boolean) => void;
-  onSubmit: () => Promise<void>;
-  open: boolean;
-  saving: boolean;
+  icon: typeof CalendarOff;
+  label: string;
+  value: number;
 }) {
-  const update = (key: keyof typeof emptyForm, value: string) => {
-    onFormChange(current => ({ ...current, [key]: value }));
-  };
-
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="w-[min(92vw,680px)] max-w-[680px] rounded-[8px]">
-        <DialogHeader>
-          <DialogTitle>{editing ? 'Edit leave block' : 'Add leave block'}</DialogTitle>
-          <DialogDescription>
-            Requests overlapping an active block are rejected for matching employees and leave types.
-          </DialogDescription>
-        </DialogHeader>
-        <div className="grid gap-4 sm:grid-cols-2">
-          <Field label="Name" className="sm:col-span-2">
-            <Input value={form.name} onChange={event => update('name', event.target.value)} placeholder="Year-end payroll freeze" />
-          </Field>
-          <Field label="Start date">
-            <Input type="date" value={form.startDate} onChange={event => update('startDate', event.target.value)} />
-          </Field>
-          <Field label="End date">
-            <Input type="date" value={form.endDate} onChange={event => update('endDate', event.target.value)} />
-          </Field>
-          <Field label="Leave type">
-            <Select value={form.leaveType} onChange={value => update('leaveType', value)}>
-              <option value="all">All leave types</option>
-              <option value="annual">Annual</option>
-              <option value="sick">Sick</option>
-              <option value="personal">Personal</option>
-              <option value="maternity">Maternity</option>
-              <option value="unpaid">Unpaid</option>
-              <option value="other">Other</option>
-            </Select>
-          </Field>
-          <Field label="Scope">
-            <Select value={form.scope} onChange={value => update('scope', value)}>
-              <option value="all">All employees</option>
-              <option value="department">Department</option>
-              <option value="location">Location</option>
-            </Select>
-          </Field>
-          {form.scope !== 'all' && (
-            <Field label={form.scope === 'department' ? 'Department name or ID' : 'Location'} className="sm:col-span-2">
-              <Input value={form.targetValue} onChange={event => update('targetValue', event.target.value)} placeholder={form.scope === 'department' ? 'Finance' : 'Bangkok'} />
-            </Field>
-          )}
-          <Field label="Status">
-            <Select value={form.isActive} onChange={value => update('isActive', value)}>
-              <option value="true">Active</option>
-              <option value="false">Inactive</option>
-            </Select>
-          </Field>
-          <Field label="Reason" className="sm:col-span-2">
-            <Textarea value={form.reason} onChange={event => update('reason', event.target.value)} rows={3} placeholder="Explain why leave is restricted during this period" />
-          </Field>
-        </div>
-        <DialogFooter>
-          <Button type="button" variant="outline" disabled={saving} onClick={() => onOpenChange(false)}>Cancel</Button>
-          <Button type="button" disabled={saving || !form.name || !form.startDate || !form.endDate} onClick={() => void onSubmit()}>
-            {saving ? 'Saving...' : editing ? 'Update block' : 'Create block'}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
-}
-
-function Field({ children, className, label }: { children: React.ReactNode; className?: string; label: string }) {
-  return (
-    <div className={className}>
-      <Label className="mb-2 block">{label}</Label>
-      {children}
-    </div>
-  );
-}
-
-function Select({ children, onChange, value }: { children: React.ReactNode; onChange: (value: string) => void; value: string }) {
-  return (
-    <select
-      value={value}
-      onChange={event => onChange(event.target.value)}
-      className="h-9 w-full rounded-[4px] border border-input bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring"
-    >
-      {children}
-    </select>
-  );
-}
-
-function Metric({ icon: Icon, label, value }: { icon: typeof CalendarOff; label: string; value: number }) {
   return (
     <div className="relative overflow-hidden rounded-[4px] border border-border bg-card px-4 py-3">
       <div className="text-xs text-muted-foreground">{label}</div>
       <div className="mt-1 text-xl font-semibold">{value}</div>
-      <Icon className="absolute -bottom-2 right-1 h-12 w-12 text-muted-foreground/15" aria-hidden="true" />
+      <Icon
+        className="absolute -bottom-2 right-1 h-12 w-12 text-muted-foreground/15"
+        aria-hidden="true"
+      />
     </div>
   );
 }

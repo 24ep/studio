@@ -35,7 +35,6 @@ export const POLICY_CONFIGURATION_SETTING_KEYS = [
   'integrationGovernanceConfiguration',
   'securityGovernanceConfiguration',
   'dataGovernanceConfiguration',
-  'billingConfiguration',
 ] as const;
 
 export type PolicyConfigurationSettingKey = (typeof POLICY_CONFIGURATION_SETTING_KEYS)[number];
@@ -391,44 +390,6 @@ export const policyConfigurationAreas: PolicyAreaDefinition[] = [
           { key: 'backupRetentionDays', label: 'Backup retention', description: 'Days that backup snapshots should be retained.', type: 'number', min: 1, max: 3650 },
           { key: 'dataResidencyRegion', label: 'Data residency region', description: 'Declared primary region for tenant data.', type: 'text' },
           { key: 'dateFormat', label: 'Default date format', description: 'Date format used in exports and administrative reports.', type: 'select', options: [{ label: 'DD/MM/YYYY', value: 'DD/MM/YYYY' }, { label: 'MM/DD/YYYY', value: 'MM/DD/YYYY' }, { label: 'YYYY-MM-DD', value: 'YYYY-MM-DD' }] },
-        ],
-      },
-    ],
-  },
-  {
-    id: 'billing',
-    title: 'Billing preferences',
-    description: 'Manage invoice delivery, billing identity, purchase-order, tax, and renewal contacts.',
-    settingKey: 'billingConfiguration',
-    defaults: {
-      billingEmail: '',
-      financeContactEmail: '',
-      invoiceCurrency: 'THB',
-      invoiceDelivery: 'email',
-      purchaseOrderRequired: false,
-      purchaseOrderNumber: '',
-      taxRegistrationNumber: '',
-      renewalNoticeDays: 30,
-    },
-    sections: [
-      {
-        title: 'Invoice delivery',
-        description: 'Billing recipients and invoice preferences.',
-        fields: [
-          { key: 'billingEmail', label: 'Billing email', description: 'Primary recipient for invoices and statements.', type: 'text' },
-          { key: 'financeContactEmail', label: 'Finance contact', description: 'Contact for billing and renewal questions.', type: 'text' },
-          { key: 'invoiceCurrency', label: 'Invoice currency', description: 'Preferred currency for subscription invoices.', type: 'select', options: [{ label: 'Thai baht (THB)', value: 'THB' }, { label: 'US dollar (USD)', value: 'USD' }, { label: 'Euro (EUR)', value: 'EUR' }] },
-          { key: 'invoiceDelivery', label: 'Invoice delivery', description: 'Preferred invoice delivery method.', type: 'select', options: [{ label: 'Email', value: 'email' }, { label: 'Portal only', value: 'portal' }, { label: 'Email and portal', value: 'both' }] },
-        ],
-      },
-      {
-        title: 'Purchase order and tax',
-        description: 'Information displayed on subscription invoices.',
-        fields: [
-          { key: 'purchaseOrderRequired', label: 'Purchase order required', description: 'Require a purchase-order reference on invoices.', type: 'boolean' },
-          { key: 'purchaseOrderNumber', label: 'Purchase order number', description: 'Default purchase-order reference.', type: 'text' },
-          { key: 'taxRegistrationNumber', label: 'Tax registration number', description: 'Organization tax identifier printed on invoices.', type: 'text' },
-          { key: 'renewalNoticeDays', label: 'Renewal notice', description: 'Days before renewal to notify billing contacts.', type: 'number', min: 1, max: 365 },
         ],
       },
     ],

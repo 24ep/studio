@@ -4,8 +4,6 @@ import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from 're
 import {
   ArrowLeft,
   CheckCircle2,
-  ChevronDown,
-  ChevronRight,
   Clock3,
   History,
   Inbox,
@@ -14,13 +12,11 @@ import {
   MessageSquareText,
   Paperclip,
   RefreshCw,
-  Search,
   Send,
   XCircle,
 } from 'lucide-react';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { useLocalization } from '@/contexts/LocalizationContext';
 import { useServiceDeskCategories } from '@/hooks/use-service-desk-categories';
@@ -33,33 +29,17 @@ import {
   type ServiceDeskAction,
 } from '@/lib/service-desk-contract';
 import { PrivacySupportShell, StatusPill } from './PrivacySupportShell';
-
-type TicketActivity = {
-  id?: string;
-  action: string;
-  message: string | null;
-  createdAt: string;
-  actorId?: string | null;
-  actor?: string | null;
-};
-
-type SupportTicket = {
-  id: string;
-  requesterId?: string;
-  requestNumber: string;
-  requester: string;
-  requesterEmail?: string;
-  assignee?: string | null;
-  category: string;
-  subject: string;
-  description: string;
-  status: string;
-  priority: string;
-  submittedAt: string;
-  updatedAt: string;
-  resolvedAt?: string | null;
-  activities: TicketActivity[];
-};
+import {
+  avatarTone,
+  ConversationMessage,
+  formatDate,
+  formatListDate,
+  initials,
+  ServiceDeskTicketList,
+  statusTone,
+  type StatusFilter,
+  type SupportTicket,
+} from './ServiceDeskParts';
 
 type ApiPayload = {
   message?: string;
@@ -69,93 +49,7 @@ type ApiPayload = {
   support?: SupportTicket[];
 };
 
-type StatusFilter = 'all' | 'open' | 'closed';
 type PendingConfirmation = 'close' | 'withdraw' | null;
-
-function formatDate(value: string, locale: string) {
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return value;
-  return new Intl.DateTimeFormat(locale, { dateStyle: 'medium', timeStyle: 'short' }).format(date);
-}
-
-function formatListDate(value: string, locale: string) {
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return value;
-  const now = new Date();
-  const sameDay = date.toDateString() === now.toDateString();
-  if (sameDay) return new Intl.DateTimeFormat(locale, { hour: 'numeric', minute: '2-digit' }).format(date);
-  const yesterday = new Date(now);
-  yesterday.setDate(now.getDate() - 1);
-  if (date.toDateString() === yesterday.toDateString()) return 'Yesterday';
-  return new Intl.DateTimeFormat(locale, { month: 'short', day: 'numeric' }).format(date);
-}
-
-function initials(name: string) {
-  return name.split(/\s+/).filter(Boolean).slice(0, 2).map(part => part[0]?.toUpperCase()).join('') || '?';
-}
-
-function avatarTone(value: string) {
-  const tones = [
-    'bg-teal-600 text-white',
-    'bg-indigo-500 text-white',
-    'bg-emerald-600 text-white',
-    'bg-orange-500 text-white',
-    'bg-blue-600 text-white',
-    'bg-pink-500 text-white',
-  ];
-  return tones[[...value].reduce((total, character) => total + character.charCodeAt(0), 0) % tones.length];
-}
-
-function ConversationMessage({
-  actor,
-  email,
-  message,
-  createdAt,
-  locale,
-  requesterMessage,
-}: {
-  actor: string;
-  email?: string;
-  message: string;
-  createdAt: string;
-  locale: string;
-  requesterMessage: boolean;
-}) {
-  const avatar = (
-    <Avatar size="md" className="mt-5 shrink-0 rounded-full">
-      <AvatarFallback className={cn('rounded-full text-[11px] font-semibold', avatarTone(actor))}>{initials(actor)}</AvatarFallback>
-    </Avatar>
-  );
-
-  return (
-    <article className={cn('flex items-start gap-3', requesterMessage ? 'justify-end' : 'justify-start')}>
-      {!requesterMessage && avatar}
-      <div className={cn('min-w-0 max-w-[min(78%,44rem)]', requesterMessage && 'text-end')}>
-        <div className={cn('mb-1.5 flex min-w-0 flex-wrap items-center gap-x-2 gap-y-0.5', requesterMessage && 'justify-end')}>
-          <span className="text-xs font-semibold text-foreground">{actor}</span>
-          {email && <span className="break-all text-[10px] text-muted-foreground">{email}</span>}
-        </div>
-        <div className={cn(
-          'inline-block max-w-full whitespace-pre-wrap break-words rounded-2xl px-4 py-3 text-start text-sm leading-6 [overflow-wrap:anywhere]',
-          requesterMessage
-            ? 'rounded-se-sm bg-primary text-primary-foreground'
-            : 'rounded-ss-sm border border-border bg-muted/65 text-foreground',
-        )}>
-          {message}
-        </div>
-        <time className="mt-1.5 block text-[10px] text-muted-foreground">{formatDate(createdAt, locale)}</time>
-      </div>
-      {requesterMessage && avatar}
-    </article>
-  );
-}
-
-function statusTone(status: string): 'neutral' | 'good' | 'warn' | 'bad' {
-  if (status === 'closed' || status === 'resolved') return 'good';
-  if (status === 'action_required') return 'warn';
-  if (status === 'withdrawn') return 'bad';
-  return 'neutral';
-}
 
 async function readPayload(response: Response): Promise<ApiPayload> {
   return response.json().catch(() => ({})) as Promise<ApiPayload>;
@@ -336,6 +230,14 @@ export function ServiceDeskPage({
           ? (isHr ? 'Waiting on HR' : 'Submitted')
           : status.replaceAll('_', ' '),
   );
+  const categoryLabel = (category: string) => t(
+    `serviceDesk.category.${category}`,
+    serviceDeskCategories.find(item => item.key === category)?.label || category.replaceAll('_', ' '),
+  );
+  const selectTicket = (ticketId: string) => {
+    setShowTicketHistory(false);
+    setActiveId(ticketId);
+  };
 
   return (
     <PrivacySupportShell
@@ -347,120 +249,30 @@ export function ServiceDeskPage({
     >
       <section className="flex h-full min-h-0 w-full flex-col overflow-hidden bg-background">
         <div className="grid min-h-0 flex-1 lg:grid-cols-[minmax(280px,24%)_minmax(0,1fr)]">
-        <aside className={cn(
-          'min-h-0 min-w-0 flex-col bg-card lg:flex lg:border-e lg:border-border',
-          active ? 'hidden' : 'flex',
-        )} aria-label={t('serviceDesk.ticketList', 'Support ticket list')}>
-          <div className="border-b border-border px-4 pb-3 pt-4 sm:px-5">
-            <div className="flex items-center justify-between gap-4">
-              <h2 className="text-base font-semibold tracking-[-0.01em]">{isHr ? t('serviceDesk.inbox', 'Ticket inbox') : t('serviceDesk.yourTickets', 'Your tickets')}</h2>
-              <p className="shrink-0 text-xs text-muted-foreground">
-                {isHistoryMode
-                  ? t('serviceDesk.closedCount', '{count} closed tickets').replace('{count}', String(closedCount))
-                  : t('serviceDesk.openCount', '{count} open tickets').replace('{count}', String(openCount))}
-              </p>
-            </div>
-            <label className="relative mt-3 block">
-              <span className="sr-only">{t('serviceDesk.searchLabel', 'Search tickets')}</span>
-              <Search className="absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input value={query} onChange={event => setQuery(event.target.value)} className="h-10 bg-background ps-9 shadow-none" placeholder={t('serviceDesk.searchPlaceholder', 'Search tickets or employees')} />
-            </label>
-            <div className="mt-3 flex items-center gap-3">
-              <label className="relative block w-full">
-                <span className="sr-only">{t('serviceDesk.filterLabel', 'Filter tickets by status')}</span>
-                <select value={statusFilter} onChange={event => setStatusFilter(event.target.value as StatusFilter)} className="h-9 w-full appearance-none rounded-md border border-input bg-background py-0 pe-9 ps-3 text-xs font-medium outline-none focus-visible:ring-2 focus-visible:ring-ring">
-                  <option value="all">{t('serviceDesk.filter.all', 'All tickets')}</option>
-                  <option value="open">{t('serviceDesk.filter.open', 'Open tickets')}</option>
-                  <option value="closed">{t('serviceDesk.filter.closed', 'Closed and withdrawn')}</option>
-                </select>
-                <ChevronDown className="pointer-events-none absolute end-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
-              </label>
-            </div>
-          </div>
+          <ServiceDeskTicketList
+            activeId={activeId}
+            categoryLabel={categoryLabel}
+            closedCount={closedCount}
+            displayStatus={displayStatus}
+            error={error}
+            filtered={filtered}
+            hasActiveTicket={Boolean(active)}
+            isHistoryMode={isHistoryMode}
+            isHr={isHr}
+            loading={loading}
+            locale={locale}
+            onQueryChange={setQuery}
+            onRetry={() => void load()}
+            onSelectTicket={selectTicket}
+            onStatusFilterChange={setStatusFilter}
+            openCount={openCount}
+            query={query}
+            statusFilter={statusFilter}
+            t={t}
+            ticketCount={tickets.length}
+          />
 
-          <div className="min-h-0 flex-1 overflow-y-auto">
-            {error && !active && (
-              <div role="alert" className="border-b border-red-200 bg-red-50 p-4 text-sm text-red-800 dark:border-red-950 dark:bg-red-950/30 dark:text-red-200 lg:hidden">
-                <p>{error}</p>
-                <Button type="button" size="sm" variant="ghost" className="mt-2" onClick={() => void load()}><RefreshCw className="me-1.5 h-4 w-4" />{t('common.retry', 'Try again')}</Button>
-              </div>
-            )}
-            {loading && tickets.length === 0 && <div className="flex items-center gap-2 p-6 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" />{t('serviceDesk.loading', 'Loading tickets…')}</div>}
-            {!loading && filtered.length === 0 && (
-              <div className="p-6 text-sm">
-                <p className="font-medium">{query || statusFilter !== 'all' ? t('serviceDesk.noMatches', 'No tickets match these filters.') : t('serviceDesk.empty', 'No support tickets yet.')}</p>
-                <p className="mt-1 leading-5 text-muted-foreground">{query || statusFilter !== 'all' ? t('serviceDesk.adjustFilters', 'Try another search or status.') : t('serviceDesk.emptyHint', 'Start a private conversation when you need help from the People team.')}</p>
-              </div>
-            )}
-            {isHistoryMode ? (
-              <div className="overflow-x-auto border-y border-border">
-                <table className="w-full min-w-full text-sm">
-                  <thead className="bg-muted/40 text-xs uppercase tracking-[0.08em] text-muted-foreground">
-                    <tr>
-                      <th className="px-4 py-3 text-start sm:px-5">#</th>
-                      <th className="px-4 py-3 text-start sm:px-5">{t('serviceDesk.ticketTitle', 'Subject')}</th>
-                      <th className="px-4 py-3 text-start sm:px-5">{t('serviceDesk.requester', 'Requester')}</th>
-                      <th className="px-4 py-3 text-start sm:px-5">{t('serviceDesk.category', 'Category')}</th>
-                      <th className="px-4 py-3 text-start sm:px-5">{t('serviceDesk.updatedAt', 'Updated')}</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filtered.length === 0 ? (
-                      <tr>
-                        <td className="px-4 py-6 text-center text-sm text-muted-foreground sm:px-5" colSpan={5}>
-                          <p className="font-medium">{query ? t('serviceDesk.noMatches', 'No tickets match these filters.') : t('serviceDesk.noClosedTickets', 'No closed or withdrawn tickets yet.')}</p>
-                          <p className="mt-1 leading-5 text-muted-foreground">{query ? t('serviceDesk.adjustFilters', 'Try another search or status.') : t('serviceDesk.noClosedTicketsHint', 'Closed and withdrawn conversations will appear here.')}</p>
-                        </td>
-                      </tr>
-                    ) : (
-                      filtered.map(ticket => (
-                        <tr
-                          key={ticket.id}
-                          role="button"
-                          tabIndex={0}
-                          onClick={() => { setShowTicketHistory(false); setActiveId(ticket.id); }}
-                          onKeyDown={event => {
-                            if (event.key === 'Enter' || event.key === ' ') {
-                              event.preventDefault();
-                              setShowTicketHistory(false);
-                              setActiveId(ticket.id);
-                            }
-                          }}
-                          className="cursor-pointer border-b border-border transition-colors hover:bg-muted/45 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
-                        >
-                          <td className="px-4 py-3 sm:px-5">{ticket.requestNumber}</td>
-                          <td className="px-4 py-3 sm:px-5">
-                            <span className="font-medium">{ticket.subject}</span>
-                          </td>
-                          <td className="px-4 py-3 sm:px-5"><span className="truncate">{ticket.requester}</span></td>
-                          <td className="px-4 py-3 sm:px-5">{t(`serviceDesk.category.${ticket.category}`, serviceDeskCategories.find(category => category.key === ticket.category)?.label || ticket.category.replaceAll('_', ' '))}</td>
-                          <td className="px-4 py-3 text-xs text-muted-foreground sm:px-5">{formatListDate(ticket.updatedAt, locale)}</td>
-                        </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            ) : filtered.map(ticket => (
-              <button
-                key={ticket.id}
-                type="button"
-                onClick={() => { setShowTicketHistory(false); setActiveId(ticket.id); }}
-                aria-current={activeId === ticket.id ? 'true' : undefined}
-                className={cn(
-                  'relative grid w-full grid-cols-[40px_minmax(0,1fr)_auto] gap-x-3 border-b border-border px-4 py-3 text-start transition-colors hover:bg-muted/45 focus-visible:z-10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring sm:px-5',
-                  activeId === ticket.id && 'bg-primary/[0.075] before:absolute before:inset-y-0 before:start-0 before:w-0.5 before:bg-primary',
-                )}
-              >
-                <Avatar size="md" className="mt-0.5 rounded-full"><AvatarFallback className={cn('rounded-full text-[11px] font-semibold', avatarTone(ticket.requester))}>{initials(ticket.requester)}</AvatarFallback></Avatar>
-                <span className="min-w-0"><span className="block truncate text-sm font-semibold">{ticket.requester}</span><span className="mt-0.5 block truncate text-xs text-foreground/80">{ticket.subject}</span><span className="mt-1 block truncate text-[11px] text-muted-foreground">{ticket.requestNumber} <span aria-hidden>·</span> {t(`serviceDesk.category.${ticket.category}`, serviceDeskCategories.find(category => category.key === ticket.category)?.label || ticket.category.replaceAll('_', ' '))}</span></span>
-                <span className="flex min-w-[94px] flex-col items-end gap-2"><time className="text-[11px] text-muted-foreground">{formatListDate(ticket.updatedAt, locale)}</time><span className="flex items-center gap-1.5"><StatusPill tone={statusTone(ticket.status)}>{displayStatus(ticket.status)}</StatusPill><ChevronRight className="h-3.5 w-3.5 text-muted-foreground" /></span></span>
-              </button>
-            ))}
-          </div>
-        </aside>
-
-        <div className={cn(
+          <div className={cn(
             'min-h-0 min-w-0 flex-col overflow-hidden bg-card lg:flex',
             active ? 'flex' : 'hidden',
           )}>
@@ -492,7 +304,7 @@ export function ServiceDeskPage({
                   </div>
                   <div className="min-w-0 flex-1 border-e border-border pe-5">
                     <div className="flex min-w-0 flex-wrap items-center gap-2"><h2 className="min-w-0 break-words font-semibold">{active.subject}</h2><StatusPill tone={statusTone(active.status)}>{displayStatus(active.status)}</StatusPill></div>
-                    <p className="mt-1 break-words text-xs text-muted-foreground">{active.requestNumber} · {t(`serviceDesk.category.${active.category}`, serviceDeskCategories.find(category => category.key === active.category)?.label || active.category.replaceAll('_', ' '))}</p>
+                    <p className="mt-1 break-words text-xs text-muted-foreground">{active.requestNumber} · {categoryLabel(active.category)}</p>
                   </div>
                   <div className="min-w-24"><p className="text-[10px] text-muted-foreground">{t('serviceDesk.submittedLabel', 'Submitted')}</p><p className="mt-1 text-xs font-medium">{formatListDate(active.submittedAt, locale)}</p></div>
                   <Button type="button" size="sm" variant="outline" className="shrink-0" onClick={() => showTicketHistory ? setShowTicketHistory(false) : openTicketHistory()}>
@@ -512,11 +324,11 @@ export function ServiceDeskPage({
                 </div>
               )}
 
-                {!showTicketHistory && <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border bg-emerald-50/60 px-5 py-3 dark:bg-emerald-950/20 sm:px-6">
-                  <p className="text-xs text-muted-foreground"><LockKeyhole className="me-2 inline h-3.5 w-3.5 text-emerald-700 dark:text-emerald-300" /><span className="font-semibold text-emerald-800 dark:text-emerald-200">{t('serviceDesk.privateConversation', 'Private conversation')}</span><span className="ms-2">{t('serviceDesk.historyNotice', 'Replies and status changes are saved permanently in the employee ticket history.')}</span></p>
-                  {canClose && <Button variant="outline" size="sm" onClick={() => setPendingConfirmation('close')} disabled={saving}><CheckCircle2 className="me-2 h-4 w-4" />{t('serviceDesk.close', 'Close ticket')}</Button>}
-                  {canWithdraw && <Button variant="outline" size="sm" onClick={() => setPendingConfirmation('withdraw')} disabled={saving}><XCircle className="me-2 h-4 w-4" />{t('serviceDesk.withdraw', 'Withdraw request')}</Button>}
-                </div>}
+              {!showTicketHistory && <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border bg-emerald-50/60 px-5 py-3 dark:bg-emerald-950/20 sm:px-6">
+                <p className="text-xs text-muted-foreground"><LockKeyhole className="me-2 inline h-3.5 w-3.5 text-emerald-700 dark:text-emerald-300" /><span className="font-semibold text-emerald-800 dark:text-emerald-200">{t('serviceDesk.privateConversation', 'Private conversation')}</span><span className="ms-2">{t('serviceDesk.historyNotice', 'Replies and status changes are saved permanently in the employee ticket history.')}</span></p>
+                {canClose && <Button variant="outline" size="sm" onClick={() => setPendingConfirmation('close')} disabled={saving}><CheckCircle2 className="me-2 h-4 w-4" />{t('serviceDesk.close', 'Close ticket')}</Button>}
+                {canWithdraw && <Button variant="outline" size="sm" onClick={() => setPendingConfirmation('withdraw')} disabled={saving}><XCircle className="me-2 h-4 w-4" />{t('serviceDesk.withdraw', 'Withdraw request')}</Button>}
+              </div>}
               {showTicketHistory ? (
                 <section className="min-h-0 flex-1 overflow-y-auto bg-background" aria-labelledby="ticket-history-heading">
                   <div className="border-b border-border px-5 py-6 sm:px-8">
@@ -534,7 +346,7 @@ export function ServiceDeskPage({
                       <button
                         key={ticket.id}
                         type="button"
-                        onClick={() => { setShowTicketHistory(false); setActiveId(ticket.id); }}
+                        onClick={() => selectTicket(ticket.id)}
                         className="grid w-full gap-3 px-5 py-5 text-start transition-colors hover:bg-muted/45 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring sm:grid-cols-[minmax(0,1fr)_auto] sm:px-8"
                       >
                         <span className="min-w-0">
@@ -542,7 +354,7 @@ export function ServiceDeskPage({
                             <span className="break-words text-sm font-semibold">{ticket.subject}</span>
                             {ticket.id === active.id && <span className="text-[10px] font-semibold uppercase tracking-[0.1em] text-primary">{t('serviceDesk.currentTicket', 'Current ticket')}</span>}
                           </span>
-                          <span className="mt-1.5 block text-xs text-muted-foreground">{ticket.requestNumber} · {t(`serviceDesk.category.${ticket.category}`, serviceDeskCategories.find(category => category.key === ticket.category)?.label || ticket.category.replaceAll('_', ' '))}</span>
+                          <span className="mt-1.5 block text-xs text-muted-foreground">{ticket.requestNumber} · {categoryLabel(ticket.category)}</span>
                           <span className="mt-2 line-clamp-2 block text-xs leading-5 text-foreground/70">{ticket.description}</span>
                         </span>
                         <span className="flex shrink-0 items-center justify-between gap-4 sm:flex-col sm:items-end sm:justify-start">
@@ -555,75 +367,74 @@ export function ServiceDeskPage({
                   </div>
                 </section>
               ) : <>
-              <div className="min-h-0 flex-1 overflow-y-auto bg-background px-5 sm:px-8">
-                <div className="mx-auto max-w-5xl space-y-6 py-6">
-                  <ConversationMessage
-                    actor={active.requester}
-                    email={active.requesterEmail}
-                    message={active.description}
-                    createdAt={active.submittedAt}
-                    locale={locale}
-                    requesterMessage
-                  />
-                  {active.activities.length === 0 && <p className="py-8 text-center text-sm text-muted-foreground">{t('serviceDesk.noActivity', 'No activity has been recorded yet.')}</p>}
-                  {active.activities.map((activity, index) => {
-                    const actor = activity.actor || (activity.action === 'reply' ? t('serviceDesk.participant', 'Ticket participant') : t('serviceDesk.system', 'System'));
-                    const splitAfter = activity.action === 'closed' || activity.action === 'withdrawn';
-                    const requesterMessage = activity.actorId
-                      ? activity.actorId === active.requesterId
-                      : actor.replace(/\s*\(HR\)\s*$/i, '') === active.requester;
-                    return (
-                      <div key={activity.id || `${activity.createdAt}-${index}`} className="space-y-4">
-                        {activity.action === 'reply' && activity.message ? (
-                          <ConversationMessage actor={actor} message={activity.message} createdAt={activity.createdAt} locale={locale} requesterMessage={requesterMessage} />
-                        ) : (
-                          <div className="flex items-center gap-3 py-1 text-[10px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">
-                            <span className="h-px flex-1 bg-border" />
-                            <span>{t(`serviceDesk.activity.${activity.action}`, activity.action.replaceAll('_', ' '))} · {formatDate(activity.createdAt, locale)}</span>
-                            <span className="h-px flex-1 bg-border" />
-                          </div>
-                        )}
-                        {splitAfter && (
-                          <div className="pt-1">
-                            <div className="relative mx-auto flex max-w-4xl items-center gap-3 text-[11px] uppercase tracking-[0.1em] text-muted-foreground">
-                              <span className="h-px flex-1 bg-border"></span>
-                              <span className="px-2 text-center">{t('serviceDesk.conversationSplitWidget', 'This conversation ended. Start a new request from the support widget.')}</span>
-                              <span className="h-px flex-1 bg-border"></span>
+                <div className="min-h-0 flex-1 overflow-y-auto bg-background px-5 sm:px-8">
+                  <div className="mx-auto max-w-5xl space-y-6 py-6">
+                    <ConversationMessage
+                      actor={active.requester}
+                      email={active.requesterEmail}
+                      message={active.description}
+                      createdAt={active.submittedAt}
+                      locale={locale}
+                      requesterMessage
+                    />
+                    {active.activities.length === 0 && <p className="py-8 text-center text-sm text-muted-foreground">{t('serviceDesk.noActivity', 'No activity has been recorded yet.')}</p>}
+                    {active.activities.map((activity, index) => {
+                      const actor = activity.actor || (activity.action === 'reply' ? t('serviceDesk.participant', 'Ticket participant') : t('serviceDesk.system', 'System'));
+                      const splitAfter = activity.action === 'closed' || activity.action === 'withdrawn';
+                      const requesterMessage = activity.actorId
+                        ? activity.actorId === active.requesterId
+                        : actor.replace(/\s*\(HR\)\s*$/i, '') === active.requester;
+                      return (
+                        <div key={activity.id || `${activity.createdAt}-${index}`} className="space-y-4">
+                          {activity.action === 'reply' && activity.message ? (
+                            <ConversationMessage actor={actor} message={activity.message} createdAt={activity.createdAt} locale={locale} requesterMessage={requesterMessage} />
+                          ) : (
+                            <div className="flex items-center gap-3 py-1 text-[10px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">
+                              <span className="h-px flex-1 bg-border" />
+                              <span>{t(`serviceDesk.activity.${activity.action}`, activity.action.replaceAll('_', ' '))} · {formatDate(activity.createdAt, locale)}</span>
+                              <span className="h-px flex-1 bg-border" />
                             </div>
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
+                          )}
+                          {splitAfter && (
+                            <div className="pt-1">
+                              <div className="relative mx-auto flex max-w-4xl items-center gap-3 text-[11px] uppercase tracking-[0.1em] text-muted-foreground">
+                                <span className="h-px flex-1 bg-border"></span>
+                                <span className="px-2 text-center">{t('serviceDesk.conversationSplitWidget', 'This conversation ended. Start a new request from the support widget.')}</span>
+                                <span className="h-px flex-1 bg-border"></span>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
-              </div>
 
-              <form key={active.id} onSubmit={sendReply} className="border-t border-border bg-card px-3 py-2 sm:px-5">
-                <div className="relative w-full">
-                  <button type="button" className="absolute start-1.5 top-1/2 z-10 grid h-8 w-8 -translate-y-1/2 place-items-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" aria-label={t('serviceDesk.attach', 'Attach file')}>
-                    <Paperclip className="h-4 w-4" />
-                  </button>
-                  <Textarea
-                    name="message"
-                    aria-label={t('serviceDesk.replyLabel', 'Reply to this ticket')}
-                    className="h-11 min-h-11 resize-none rounded-xl border border-input bg-background py-2.5 pe-12 ps-12 shadow-none"
-                    maxLength={3000}
-                    required
-                    disabled={saving || !canReply}
-                    placeholder={canReply ? (isHr ? t('serviceDesk.hrReplyPlaceholder', 'Write an HR reply…') : t('serviceDesk.employeeReplyPlaceholder', 'Add information or reply to HR…')) : t('serviceDesk.terminalPlaceholder', 'This ticket is read-only.')}
-                  />
-                  <Button type="submit" size="icon" className="absolute inset-y-0 end-1.5 z-10 my-auto h-8 w-8 rounded-md transition-none motion-safe:hover:translate-y-0 motion-safe:active:translate-y-0 hover:shadow-none" aria-label={t('serviceDesk.sendReply', 'Send reply')} title={t('serviceDesk.sendReply', 'Send reply')} disabled={saving || !canReply}>
-                    {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-                  </Button>
-                </div>
-                <p className="mt-1.5 flex items-center gap-1.5 px-1 text-[10px] text-muted-foreground"><Clock3 className="h-3 w-3" />{t('serviceDesk.ticketLifecycle', 'This conversation remains one ticket until it is closed.')}</p>
-              </form>
+                <form key={active.id} onSubmit={sendReply} className="border-t border-border bg-card px-3 py-2 sm:px-5">
+                  <div className="relative w-full">
+                    <button type="button" className="absolute start-1.5 top-1/2 z-10 grid h-8 w-8 -translate-y-1/2 place-items-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" aria-label={t('serviceDesk.attach', 'Attach file')}>
+                      <Paperclip className="h-4 w-4" />
+                    </button>
+                    <Textarea
+                      name="message"
+                      aria-label={t('serviceDesk.replyLabel', 'Reply to this ticket')}
+                      className="h-11 min-h-11 resize-none rounded-xl border border-input bg-background py-2.5 pe-12 ps-12 shadow-none"
+                      maxLength={3000}
+                      required
+                      disabled={saving || !canReply}
+                      placeholder={canReply ? (isHr ? t('serviceDesk.hrReplyPlaceholder', 'Write an HR reply…') : t('serviceDesk.employeeReplyPlaceholder', 'Add information or reply to HR…')) : t('serviceDesk.terminalPlaceholder', 'This ticket is read-only.')}
+                    />
+                    <Button type="submit" size="icon" className="absolute inset-y-0 end-1.5 z-10 my-auto h-8 w-8 rounded-md transition-none motion-safe:hover:translate-y-0 motion-safe:active:translate-y-0 hover:shadow-none" aria-label={t('serviceDesk.sendReply', 'Send reply')} title={t('serviceDesk.sendReply', 'Send reply')} disabled={saving || !canReply}>
+                      {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                    </Button>
+                  </div>
+                  <p className="mt-1.5 flex items-center gap-1.5 px-1 text-[10px] text-muted-foreground"><Clock3 className="h-3 w-3" />{t('serviceDesk.ticketLifecycle', 'This conversation remains one ticket until it is closed.')}</p>
+                </form>
               </>}
             </>}
-        </div>
+          </div>
         </div>
       </section>
     </PrivacySupportShell>
   );
 }
-

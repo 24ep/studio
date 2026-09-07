@@ -24,6 +24,12 @@ describe('policy configuration model', () => {
     }
   });
 
+  it('keeps subscription billing out of the local policy/settings store', () => {
+    expect([...POLICY_CONFIGURATION_SETTING_KEYS] as string[]).not.toContain('billingConfiguration');
+    expect([...SYSTEM_SETTING_KEYS] as string[]).not.toContain('billingConfiguration');
+    expect(policyConfigurationAreas.map(area => area.id)).not.toContain('billing');
+  });
+
   it('falls back safely when an unknown area is requested', () => {
     expect(getPolicyConfigurationArea('missing')).toBe(policyConfigurationAreas[0]);
   });

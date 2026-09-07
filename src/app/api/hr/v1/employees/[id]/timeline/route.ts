@@ -4,6 +4,7 @@ import { auth } from '@/auth';
 import { hasAnyPermission } from '@/lib/permissions';
 import prisma from '@/lib/prisma';
 import { getEmployeeForUser } from '@/lib/hr/ess-service';
+import { getPayrollAccess } from '@/lib/payroll/permissions';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -19,7 +20,7 @@ interface TimelineRow {
   details: Record<string, unknown>;
 }
 
-const timelineModules = ['Onboarding', 'Leave', 'Attendance', 'Learning', 'Performance', 'Payroll'] as const;
+const timelineModules = ['Timeline', 'Onboarding', 'Leave', 'Attendance', 'Learning', 'Performance', 'Payroll'] as const;
 type TimelineModule = (typeof timelineModules)[number];
 
 export async function GET(request: Request, context: Context) {
@@ -29,9 +30,13 @@ export async function GET(request: Request, context: Context) {
   if (!/^[0-9a-f-]{36}$/i.test(id)) {
     return NextResponse.json({ error: { code: 'INVALID_ID', message: 'Valid employee id required.' } }, { status: 400 });
   }
-  if (!hasAnyPermission(session.user, ['HR_PEOPLE_VIEW', 'HR_PEOPLE_MANAGE'])) {
+
+  const hasPeopleAccess = hasAnyPermission(session.user, ['HR_PEOPLE_VIEW', 'HR_PEOPLE_MANAGE']);
+  let ownEmployeeId: string | null = null;
+  if (!hasPeopleAccess) {
     const ownEmployee = await getEmployeeForUser(session.user.id, session.user.email);
-    if (ownEmployee?.id !== id) {
+    ownEmployeeId = ownEmployee?.id || null;
+    if (ownEmployeeId !== id) {
       return NextResponse.json({ error: { code: 'FORBIDDEN', message: 'HR people permission required.' } }, { status: 403 });
     }
   }
@@ -44,6 +49,85 @@ export async function GET(request: Request, context: Context) {
   try {
     let rows: TimelineRow[];
     switch (requestedModule as TimelineModule) {
+      case 'Timeline':
+        rows = await prisma.$queryRaw<TimelineRow[]>`
+          SELECT employee.id,
+            'Timeline' AS module,
+            'Joined company' AS title,
+            employee.status,
+            COALESCE(employee.hire_date, employee.created_at) AS "occurredAt",
+            jsonb_build_object(
+              'kind', 'hire',
+              'employeeNumber', employee.employee_number,
+              'jobTitle', employee.job_title,
+              'employmentType', employee.employment_type,
+              'location', employee.location
+            ) AS details
+          FROM hr_employees employee
+          WHERE employee.id = ${id}::uuid
+
+          UNION ALL
+
+          SELECT event.id,
+            'Timeline' AS module,
+            initcap(replace(event.event_type, '_', ' ')) AS title,
+            event.status,
+            event.effective_date::timestamptz AS "occurredAt",
+            jsonb_build_object(
+              'kind', 'employment_event',
+              'reason', event.reason,
+              'previousValues', event.previous_values,
+              'proposedValues', event.proposed_values,
+              'requestId', event.request_id,
+              'approvedAt', event.approved_at,
+              'appliedAt', event.applied_at
+            ) AS details
+          FROM hr_employment_events event
+          WHERE event.employee_id = ${id}::uuid
+
+          UNION ALL
+
+          SELECT request.id,
+            'Timeline' AS module,
+            'Profile change · ' || initcap(replace(request.field, '_', ' ')) AS title,
+            request.status,
+            COALESCE(request.submitted_at, request.created_at) AS "occurredAt",
+            jsonb_build_object(
+              'kind', 'profile_change',
+              'field', request.field,
+              'currentValue', request.current_value,
+              'requestedValue', request.requested_value,
+              'originalValues', request.original_values,
+              'requestedValues', request.requested_values,
+              'reason', request.reason,
+              'requestId', request.request_id,
+              'decidedAt', request.decided_at
+            ) AS details
+          FROM hr_employee_profile_change_requests request
+          WHERE request.employee_id = ${id}::uuid
+
+          UNION ALL
+
+          SELECT document.id,
+            'Timeline' AS module,
+            document.title,
+            document.status,
+            document.created_at AS "occurredAt",
+            jsonb_build_object(
+              'kind', 'document',
+              'type', document.type,
+              'category', document.category,
+              'issueDate', document.issue_date,
+              'expiresAt', document.expires_at,
+              'acknowledgedAt', document.acknowledged_at,
+              'version', document.version_number
+            ) AS details
+          FROM hr_employee_documents document
+          WHERE document.employee_id = ${id}::uuid
+
+          ORDER BY "occurredAt" DESC
+          LIMIT 250`;
+        break;
       case 'Onboarding':
         rows = await prisma.$queryRaw<TimelineRow[]>`
           SELECT onboarding.id, 'Onboarding' AS module, COALESCE(template.name, 'Employee onboarding') AS title,
@@ -98,19 +182,53 @@ export async function GET(request: Request, context: Context) {
         WHERE review.employee_id = ${id}::uuid
           ORDER BY "occurredAt" DESC LIMIT 250`;
         break;
-      case 'Payroll':
+      case 'Payroll': {
+        const payrollAccess = await getPayrollAccess(session.user);
+        if (!payrollAccess.canView) {
+          if (ownEmployeeId !== id) {
+            return NextResponse.json({ error: { code: 'FORBIDDEN', message: 'Payroll view permission required.' } }, { status: 403 });
+          }
+          // Self-service never exposes in-progress payroll run items. Employees
+          // only see statements after Payroll has explicitly released them.
+          rows = await prisma.$queryRaw<TimelineRow[]>`
+            SELECT payslip.id, 'Payroll' AS module, COALESCE(period.name, 'Payslip') AS title,
+              payslip.status, COALESCE(payslip.published_at, payslip.created_at) AS "occurredAt",
+              jsonb_build_object(
+                'grossPay', payslip.gross_pay,
+                'totalDeductions', payslip.total_deductions,
+                'netPay', payslip.net_pay,
+                'payslipId', payslip.id,
+                'released', true
+              ) AS details
+            FROM hr_payslips payslip
+            LEFT JOIN hr_payroll_periods period ON period.id = payslip.payroll_period_id
+            WHERE payslip.employee_id = ${id}::uuid
+              AND payslip.status = 'released'
+            ORDER BY "occurredAt" DESC
+            LIMIT 250`;
+          break;
+        }
+
         rows = await prisma.$queryRaw<TimelineRow[]>`
           SELECT item.id, 'Payroll' AS module, period.name AS title, item.status,
             item.created_at AS "occurredAt",
-        jsonb_build_object('grossPay', item.gross_pay, 'netPay', item.net_pay,
-          'payrollRunId', item.payroll_run_id, 'baseSalary', item.base_salary,
-          'totalDeductions', item.total_deductions, 'paymentDestination', item.payment_destination,
-          'variancePercent', item.variance_percent) AS details FROM hr_payroll_run_items item
-        JOIN hr_payroll_runs run ON run.id = item.payroll_run_id
-        JOIN hr_payroll_periods period ON period.id = run.period_id
-        WHERE item.employee_id = ${id}::uuid
+            jsonb_build_object(
+              'grossPay', CASE WHEN ${payrollAccess.canViewAmounts}::boolean THEN item.gross_pay ELSE NULL END,
+              'netPay', CASE WHEN ${payrollAccess.canViewAmounts}::boolean THEN item.net_pay ELSE NULL END,
+              'payrollRunId', item.payroll_run_id,
+              'baseSalary', CASE WHEN ${payrollAccess.canViewAmounts}::boolean THEN item.base_salary ELSE NULL END,
+              'totalDeductions', CASE WHEN ${payrollAccess.canViewAmounts}::boolean THEN item.total_deductions ELSE NULL END,
+              'variancePercent', item.variance_percent,
+              'amountVisibility', CASE WHEN ${payrollAccess.canViewAmounts}::boolean THEN 'visible' ELSE 'restricted' END
+            ) AS details
+          FROM hr_payroll_run_items item
+          JOIN hr_payroll_runs run ON run.id = item.payroll_run_id
+          JOIN hr_payroll_periods period ON period.id = run.period_id
+          WHERE item.employee_id = ${id}::uuid
+            AND (${payrollAccess.actorCompanyId}::uuid IS NULL OR run.company_id = ${payrollAccess.actorCompanyId}::uuid)
           ORDER BY "occurredAt" DESC LIMIT 250`;
         break;
+      }
     }
     return NextResponse.json({ data: rows });
   } catch (cause) {

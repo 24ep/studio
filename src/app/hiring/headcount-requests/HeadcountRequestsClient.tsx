@@ -46,6 +46,13 @@ import { Textarea } from "@/components/ui/textarea";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
 import { HeadcountRequestPositionChoiceDialog } from "./HeadcountRequestPositionChoiceDialog";
+import {
+  formatDate,
+  formatDateTime,
+  getDecisionAction,
+  getStatusBadgeClass,
+  getStatusLabel,
+} from "./headcount-request-view-utils";
 
 interface PositionOption {
   id: string;
@@ -132,53 +139,6 @@ const initialForm = {
   approvalRoute: "standard",
   notes: "",
 };
-
-function formatDate(value: string | null) {
-  if (!value) return "-";
-  return new Intl.DateTimeFormat("en", { dateStyle: "medium" }).format(new Date(value));
-}
-
-function formatDateTime(value: string | null) {
-  if (!value) return null;
-  return new Intl.DateTimeFormat("en", {
-    dateStyle: "medium",
-    timeStyle: "short",
-  }).format(new Date(value));
-}
-
-function getDecisionAction(request: HeadcountRequestItem) {
-  if (request.approvalAction) return request.approvalAction;
-  if (request.status === "approved") return "approve";
-  if (request.status === "rejected") return "reject";
-  return null;
-}
-
-function getStatusBadgeClass(status: HeadcountRequestItem["status"]) {
-  switch (status) {
-    case "draft":
-      return "border-border bg-muted text-muted-foreground";
-    case "in_review":
-      return "border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-300";
-    case "approved":
-      return "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900 dark:bg-emerald-950/30 dark:text-emerald-300";
-    case "filled":
-      return "border-blue-200 bg-blue-50 text-blue-700";
-    case "rejected":
-      return "border-red-200 bg-red-50 text-red-700 dark:border-red-900 dark:bg-red-950/30 dark:text-red-300";
-    default:
-      return "border-border bg-muted/50 text-muted-foreground";
-  }
-}
-
-function getStatusLabel(status: HeadcountRequestItem["status"]) {
-  return {
-    draft: "Draft",
-    in_review: "In review",
-    approved: "Approved",
-    rejected: "Declined",
-    filled: "Filled",
-  }[status];
-}
 
 function buildRequestGroups(requests: HeadcountRequestItem[], mode: GroupMode) {
   if (mode === "status") {
@@ -434,21 +394,42 @@ export function HeadcountRequestsClient() {
   async function handleBulkRequestAction(action: "approve" | "reject") {
     const ids = Array.from(selectedIds);
     if (!ids.length || bulkLoading) return;
-    const reason = action === 'reject' ? window.prompt('Rejection reason for the selected requests:')?.trim() : undefined;
-    if (action === 'reject' && !reason) return;
+    const reason = action === "reject"
+      ? window.prompt("Rejection reason for the selected requests:")?.trim()
+      : undefined;
+    if (action === "reject" && !reason) return;
+
     setBulkLoading(true);
-    const results = await Promise.allSettled(ids.map(async id => {
-      const response = await fetch('/api/hiring/headcount-requests', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id, action, reason }) });
-      if (!response.ok) throw new Error('Update failed');
-      return (await response.json() as { data: HeadcountRequestItem }).data;
-    }));
-    const updated = results.flatMap(result => result.status === 'fulfilled' ? [result.value] : []);
-    const updatedById = new Map(updated.map(item => [item.id, item]));
-    setRequests(previous => previous.map(item => updatedById.get(item.id) || item));
-    const failed = ids.filter((_, index) => results[index].status === 'rejected');
-    setSelectedIds(new Set(failed));
-    failed.length ? toast.error(`${updated.length} updated; ${failed.length} failed.`) : toast.success(`${updated.length} requests ${action === 'approve' ? 'approved' : 'rejected'}.`);
-    setBulkLoading(false);
+    try {
+      const response = await fetch("/api/hiring/headcount-requests/bulk-action", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ids, action, reason }),
+      });
+      const payload = await response.json().catch(() => ({})) as {
+        message?: string;
+        count?: number;
+      };
+      if (!response.ok) {
+        throw new Error(
+          payload.message || `Failed to ${action} selected requests`,
+        );
+      }
+
+      await loadRequests();
+      setSelectedIds(new Set());
+      toast.success(
+        `${payload.count ?? ids.length} requests ${action === "approve" ? "approved" : "rejected"}.`,
+      );
+    } catch (actionError) {
+      toast.error(
+        actionError instanceof Error
+          ? actionError.message
+          : `Failed to ${action} selected requests`,
+      );
+    } finally {
+      setBulkLoading(false);
+    }
   }
 
   return (

@@ -1,5 +1,5 @@
-import { LearningPageClient } from '../LearningPageClient';
+import { AchievementsPageClient } from "../AchievementsPageClient";
 
 export default function LearningAchievementsPage() {
-  return <LearningPageClient view="achievements" />;
+  return <AchievementsPageClient />;
 }

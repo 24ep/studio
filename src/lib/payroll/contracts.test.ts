@@ -50,6 +50,25 @@ describe('payroll contracts', () => {
     })).toMatchObject({ action: 'assign_payroll_profile', paymentCurrency: 'THB' });
   });
 
+  it('normalizes legacy check payroll groups to cheque', () => {
+    expect(payrollActionSchema.parse({
+      action: 'create_group',
+      code: 'TH-CHECK',
+      name: 'Cheque employees',
+      paymentMethod: 'check',
+    })).toMatchObject({ action: 'create_group', paymentMethod: 'cheque' });
+  });
+
+  it('normalizes legacy check profile assignments to cheque', () => {
+    expect(payrollActionSchema.parse({
+      action: 'assign_payroll_profile',
+      employeeId: '00000000-0000-4000-8000-000000000001',
+      payrollGroupId: '00000000-0000-4000-8000-000000000002',
+      paymentMethod: 'check',
+      payrollStartDate: '2026-08-11',
+    })).toMatchObject({ action: 'assign_payroll_profile', paymentMethod: 'cheque' });
+  });
+
   it('accepts rule-based multi-employee benefit enrollment', () => {
     expect(payrollActionSchema.parse({
       action: 'enroll',

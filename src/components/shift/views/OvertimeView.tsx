@@ -1,5 +1,4 @@
 "use client";
-
 import * as React from "react";
 import {
   AlertTriangle,
@@ -22,7 +21,6 @@ import {
   TriangleAlert,
   X,
 } from "lucide-react";
-
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -59,12 +57,12 @@ import {
   type ShiftRecord,
 } from "../shift-types";
 import { useShiftAttendance } from "../use-shift-attendance";
+import { OvertimeOwnerActions } from "./TimeRequestOwnerActions";
 import {
   overtimeEstimatedCost as requestCost,
   overtimeRequestDuration as requestDuration,
   overtimeRequestRisk as requestRisk,
 } from "./overtime-view-utils";
-
 function overtimeWeekStart(value = new Date()) {
   const date = new Date(
     Date.UTC(value.getFullYear(), value.getMonth(), value.getDate()),
@@ -73,15 +71,15 @@ function overtimeWeekStart(value = new Date()) {
   date.setUTCDate(date.getUTCDate() - day + 1);
   return date.toISOString().slice(0, 10);
 }
-
 export function OvertimeView({
   employeeSelfService = false,
 }: {
   employeeSelfService?: boolean;
 }) {
-  const query = React.useMemo(() => new URLSearchParams(), []);
+  const query = React.useMemo(() => new URLSearchParams(employeeSelfService ? { scope: 'self' } : {}), [employeeSelfService]);
   const state = useShiftAttendance("overtime", query);
   const [requestDialogOpen, setRequestDialogOpen] = React.useState(false);
+  const [editingRequest, setEditingRequest] = React.useState<ShiftRecord | null>(null);
   const [view, setView] = React.useState<"requests" | "capacity">("requests");
   const [selectedId, setSelectedId] = React.useState<string | null>(
     "__first__",
@@ -90,7 +88,6 @@ export function OvertimeView({
   const [weekStart, setWeekStart] = React.useState(() => overtimeWeekStart());
   const [location, setLocation] = React.useState("");
   const [department, setDepartment] = React.useState("");
-
   if (state.loading)
     return (
       <Workspace>
@@ -104,7 +101,6 @@ export function OvertimeView({
       </Workspace>
     );
   if (!state.data || !state.capabilities) return null;
-
   const serverRequests = arrayValue(state.data.requests);
   const requests = serverRequests;
   const assignments = arrayValue(state.data.assignments);
@@ -143,7 +139,7 @@ export function OvertimeView({
         : null;
   const headerActions = (
     <div className="flex flex-wrap gap-2">
-      <Button size="sm" onClick={() => setRequestDialogOpen(true)}>
+      <Button size="sm" onClick={() => { setEditingRequest(null); setRequestDialogOpen(true); }}>
         <Send className="mr-2 h-4 w-4" />
         New overtime request
       </Button>
@@ -160,7 +156,6 @@ export function OvertimeView({
       </Button>
     </div>
   );
-
   return (
     <Workspace>
       {employeeSelfService ? (
@@ -171,7 +166,7 @@ export function OvertimeView({
         <OvertimeHeader
           searchText={searchText}
           onSearchChange={setSearchText}
-          onNew={() => setRequestDialogOpen(true)}
+          onNew={() => { setEditingRequest(null); setRequestDialogOpen(true); }}
           view={view}
           onViewChange={setView}
           weekStart={weekStart}
@@ -235,6 +230,7 @@ export function OvertimeView({
                 !employeeSelfService && state.capabilities.canApproveTeamRecords
               }
               saving={state.saving}
+              employeeSelfService={employeeSelfService}
               onDecision={(body, message) => state.mutate(body, message)}
             />
           ) : (
@@ -252,11 +248,12 @@ export function OvertimeView({
           }
           saving={state.saving}
           onClose={() => setSelectedId(null)}
+          employeeSelfService={employeeSelfService}
+          onEdit={request => { setEditingRequest(request); setRequestDialogOpen(true); setSelectedId(null); }}
           onDecision={(body, message) => state.mutate(body, message)}
         />
       </div>
-
-      <Dialog open={requestDialogOpen} onOpenChange={setRequestDialogOpen}>
+      <Dialog open={requestDialogOpen} onOpenChange={open => { setRequestDialogOpen(open); if (!open) setEditingRequest(null); }}>
         <DialogContent className="max-h-[92dvh] max-w-3xl gap-0 overflow-hidden p-0">
           <DialogHeader className="sr-only">
             <DialogTitle>New overtime request</DialogTitle>
@@ -267,13 +264,16 @@ export function OvertimeView({
           <div className="overflow-y-auto">
             <OvertimeForm
               assignments={assignments}
+              initialRequest={editingRequest}
               saving={state.saving}
               onSave={async (body) => {
                 const result = await state.mutate(
                   body,
-                  body.saveAsDraft
-                    ? "Overtime draft saved."
-                    : "Overtime request submitted.",
+                  body.action === 'update_overtime'
+                    ? 'Overtime request changes saved.'
+                    : body.saveAsDraft
+                      ? "Overtime draft saved."
+                      : "Overtime request submitted.",
                 );
                 if (result) setRequestDialogOpen(false);
                 return result;
@@ -285,7 +285,6 @@ export function OvertimeView({
     </Workspace>
   );
 }
-
 function OvertimeHeader({
   searchText,
   onSearchChange,
@@ -422,7 +421,6 @@ function OvertimeHeader({
     </header>
   );
 }
-
 function OvertimeSummary({
   metrics,
   requests,
@@ -472,7 +470,6 @@ function OvertimeSummary({
     </section>
   );
 }
-
 function SummaryMetric({
   icon: Icon,
   label,
@@ -498,7 +495,6 @@ function SummaryMetric({
     </div>
   );
 }
-
 function ViewButton({
   active,
   onClick,
@@ -524,13 +520,13 @@ function ViewButton({
     </button>
   );
 }
-
 function RequestQueue({
   requests,
   selectedId,
   onSelect,
   canApprove,
   saving,
+  employeeSelfService = false,
   onDecision,
 }: {
   requests: ShiftRecord[];
@@ -538,6 +534,7 @@ function RequestQueue({
   onSelect: (id: string) => void;
   canApprove: boolean;
   saving: boolean;
+  employeeSelfService?: boolean;
   onDecision: (
     body: Record<string, unknown>,
     message: string,
@@ -545,7 +542,7 @@ function RequestQueue({
 }) {
   const [queue, setQueue] = React.useState<
     "pending_approval" | "approved" | "rejected" | "all"
-  >("pending_approval");
+  >(employeeSelfService ? "all" : "pending_approval");
   const [newestFirst, setNewestFirst] = React.useState(true);
   const pending = requests.filter(
     (row) => stringValue(row.status) === "pending_approval",
@@ -774,6 +771,7 @@ function RequestQueue({
   );
 }
 
+
 function CapacityPlanner({
   requests,
   onSelect,
@@ -848,7 +846,6 @@ function CapacityPlanner({
     </section>
   );
 }
-
 function OvertimeOverview({
   requests,
   metrics,
@@ -968,12 +965,13 @@ function OvertimeOverview({
     </div>
   );
 }
-
 function RequestDrawer({
   row,
   open,
   canApprove,
   saving,
+  employeeSelfService = false,
+  onEdit,
   onClose,
   onDecision,
 }: {
@@ -981,6 +979,8 @@ function RequestDrawer({
   open: boolean;
   canApprove: boolean;
   saving: boolean;
+  employeeSelfService?: boolean;
+  onEdit?: (request: ShiftRecord) => void;
   onClose: () => void;
   onDecision: (
     body: Record<string, unknown>,
@@ -1034,11 +1034,7 @@ function RequestDrawer({
       <section className="border-t border-zinc-800 py-4">
         <h3 className="text-sm font-bold">Policy assessment</h3>
         <div className="mt-3 space-y-3 text-xs">
-          <PolicyLine
-            label="Weekly overtime total"
-            value="43h / 48h limit"
-            ok
-          />
+          <PolicyLine label="Weekly scheduled hours" value={`${formatDuration(row.scheduled_minutes)} / ${formatDuration(row.weekly_limit_minutes)} configured`} ok={numberValue(row.scheduled_minutes) + requestDuration(row) <= numberValue(row.weekly_limit_minutes)} />
           <PolicyLine label="Rest period" value="11h before next shift" ok />
           <PolicyLine
             label="Budget impact"
@@ -1072,7 +1068,7 @@ function RequestDrawer({
           </span>
         </div>
       </section>
-      <label className="block border-t border-zinc-800 pt-4 text-xs font-bold">
+      {!employeeSelfService && <label className="block border-t border-zinc-800 pt-4 text-xs font-bold">
         Manager note
         <Textarea
           value={note}
@@ -1080,7 +1076,8 @@ function RequestDrawer({
           placeholder="Add a note for the employee"
           className="mt-2 min-h-20"
         />
-      </label>
+      </label>}
+      {employeeSelfService && onEdit && <OvertimeOwnerActions request={row} saving={saving} onEdit={onEdit} onAction={onDecision} />}
       {canApprove && stringValue(row.status) === "pending_approval" && (
         <div className="mt-4 grid grid-cols-3 gap-2">
           <Button
@@ -1179,6 +1176,7 @@ function RequestDrawer({
   );
 }
 
+
 function PolicyLine({
   label,
   value,
@@ -1245,29 +1243,30 @@ function Panel({
     </section>
   );
 }
-
 function OvertimeForm({
   assignments,
+  initialRequest,
   saving,
   onSave,
 }: {
   assignments: ShiftRecord[];
+  initialRequest?: ShiftRecord | null;
   saving: boolean;
   onSave: (body: Record<string, unknown>) => Promise<unknown>;
 }) {
   const today = new Date().toISOString().slice(0, 10);
   const [form, setForm] = React.useState({
-    date: today,
-    assignmentId: "",
-    startTime: "18:00",
-    endTime: "20:00",
-    breakMinutes: "0",
-    overtimeType: "planned",
-    reason: "",
-    project: "",
-    costCenter: "",
-    workLocation: "Bangkok Office",
-    compensationMethod: "paid",
+    date: String(initialRequest?.work_date || today).slice(0, 10),
+    assignmentId: stringValue(initialRequest?.assignment_id, ""),
+    startTime: initialRequest?.requested_start_at ? new Date(String(initialRequest.requested_start_at)).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false }) : "18:00",
+    endTime: initialRequest?.requested_end_at ? new Date(String(initialRequest.requested_end_at)).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false }) : "20:00",
+    breakMinutes: String(initialRequest?.break_minutes ?? 0),
+    overtimeType: stringValue(initialRequest?.overtime_type, "planned"),
+    reason: stringValue(initialRequest?.business_reason, ""),
+    project: stringValue(initialRequest?.project, ""),
+    costCenter: stringValue(initialRequest?.cost_center, ""),
+    workLocation: stringValue(initialRequest?.work_location, "Bangkok Office"),
+    compensationMethod: stringValue(initialRequest?.compensation_method, "paid"),
   });
   const assignment = assignments.find((row) => row.id === form.assignmentId);
   const requestedMinutes = React.useMemo(() => {
@@ -1282,7 +1281,8 @@ function OvertimeForm({
   }, [form.breakMinutes, form.date, form.endTime, form.startTime]);
   const submit = (saveAsDraft: boolean) =>
     onSave({
-      action: "create_overtime",
+      action: initialRequest?.id ? "update_overtime" : "create_overtime",
+      ...(initialRequest?.id ? { overtimeId: initialRequest.id, expectedVersion: numberValue(initialRequest.version) } : { saveAsDraft }),
       date: form.date,
       assignmentId: form.assignmentId || null,
       startAt: new Date(`${form.date}T${form.startTime}:00`).toISOString(),
@@ -1299,7 +1299,6 @@ function OvertimeForm({
       costCenter: form.costCenter || null,
       workLocation: form.workLocation || null,
       compensationMethod: form.compensationMethod,
-      saveAsDraft,
     });
   const warnings = [
     ...(requestedMinutes > 240
@@ -1311,7 +1310,7 @@ function OvertimeForm({
   ];
   return (
     <Panel
-      title="New overtime request"
+      title={initialRequest ? "Edit overtime request" : "New overtime request"}
       description="Server policy determines eligibility, rounding, and limits."
     >
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-1">
@@ -1487,7 +1486,7 @@ function OvertimeForm({
         <PolicyWarnings warnings={warnings} />
       </div>
       <div className="sticky bottom-0 mt-4 flex justify-end gap-2 border-t border-slate-200 bg-white pt-4 dark:border-zinc-800 dark:bg-zinc-950">
-        <Button
+        {!initialRequest && <Button
           variant="outline"
           disabled={
             saving || requestedMinutes <= 0 || form.reason.trim().length < 3
@@ -1495,7 +1494,7 @@ function OvertimeForm({
           onClick={() => void submit(true)}
         >
           Save draft
-        </Button>
+        </Button>}
         <Button
           disabled={
             saving || requestedMinutes <= 0 || form.reason.trim().length < 3
@@ -1503,12 +1502,13 @@ function OvertimeForm({
           onClick={() => void submit(false)}
         >
           <Send className="mr-2 h-4 w-4" />
-          Submit overtime
+          {initialRequest ? 'Save changes' : 'Submit overtime'}
         </Button>
       </div>
     </Panel>
   );
 }
+
 
 function OvertimeHistory({
   requests,

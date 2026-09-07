@@ -1,4 +1,4 @@
-import { fromBuffer } from "file-type";
+import { fileTypeFromBuffer } from "file-type";
 
 export class PayrollFileSecurityError extends Error {
   constructor(
@@ -14,7 +14,7 @@ export async function verifyPayrollFile(
   allowedMimeTypes: Set<string>,
   requireMalwareScan: boolean,
 ) {
-  const detected = await fromBuffer(buffer);
+  const detected = await fileTypeFromBuffer(buffer);
   if (!detected || !allowedMimeTypes.has(detected.mime))
     throw new PayrollFileSecurityError(
       "The file content does not match an allowed payroll document type.",

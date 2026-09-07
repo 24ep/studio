@@ -11,7 +11,7 @@ describe('employee applicant link contract', () => {
     const schema = readWorkspaceFile('prisma', 'schema.prisma');
     const migration = readWorkspaceFile(
       'prisma',
-      'migrations',
+      'migrations-legacy',
       '20260729143000_link_employees_to_applicants',
       'migration.sql',
     );

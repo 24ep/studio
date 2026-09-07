@@ -12,6 +12,7 @@ import { MyTeamView } from '@/components/ess/MyTeamView';
 import { PerformanceView } from '@/components/ess/PerformanceView';
 import { OvertimeView } from '@/components/shift/views/OvertimeView';
 import { RequestsView } from '@/components/shift/views/RequestsView';
+import { TimesheetView } from '@/components/shift/views/TimesheetView';
 import { useEssData } from '@/components/ess/use-ess-data';
 import { essAttendancePreviewData } from '@/components/ess/ess-attendance-preview-data';
 import { essLeavePreviewData } from '@/components/ess/ess-leave-preview-data';
@@ -70,6 +71,7 @@ export function EmployeeSelfServicePage({
     'shift-requests': <RequestsView mode="shift" employeeSelfService />,
     'attendance-corrections': <RequestsView mode="attendance" employeeSelfService />,
     overtime: <OvertimeView employeeSelfService />,
+    timesheet: <TimesheetView />,
     documents: <DocumentsView data={data} submitting={state.submitting} mutate={state.mutate} upload={state.upload} />,
     performance: <PerformanceView data={data} submitting={state.submitting} mutate={state.mutate} />,
     team: <MyTeamView data={data} team={state.team} submitting={state.submitting} mutate={state.mutate} />,

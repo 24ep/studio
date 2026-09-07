@@ -1,5 +1,5 @@
-import { PayrollWorkspace } from '@/components/payroll/PayrollWorkspace';
+import { PayrollCompensationWorkspace } from '@/components/payroll/PayrollCompensationWorkspace';
 
 export default function PayrollCompensationPage() {
-  return <PayrollWorkspace resource="compensation" />;
+  return <PayrollCompensationWorkspace />;
 }

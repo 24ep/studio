@@ -11,10 +11,15 @@ export async function getPayrollAccess(
 ): Promise<PayrollAccess> {
   const isAdmin = isAdminUser(user);
   const requestedManage = hasAnyPermission(user, ["HR_PAYROLL_MANAGE"]);
-  const requestedView =
-    requestedManage || hasAnyPermission(user, ["HR_PAYROLL_VIEW"]);
   const requestedApprove = hasAnyPermission(user, ["HR_PAYROLL_APPROVE"]);
   const requestedExport = hasAnyPermission(user, ["HR_PAYROLL_EXPORT"]);
+  const requestedAmountView = hasAnyPermission(user, ["HR_PAYROLL_AMOUNT_VIEW"]);
+  const requestedView =
+    requestedManage ||
+    requestedApprove ||
+    requestedExport ||
+    requestedAmountView ||
+    hasAnyPermission(user, ["HR_PAYROLL_VIEW"]);
   const employee = user.id
     ? await prisma
         .$queryRawUnsafe<
@@ -37,9 +42,14 @@ export async function getPayrollAccess(
     : [];
 
   const hasCompanyScope = Boolean(employee[0]?.company_id);
+  const scoped = isAdmin || hasCompanyScope;
   return {
     isAdmin,
     canView: isAdmin || (hasCompanyScope && requestedView),
+    canViewAmounts:
+      isAdmin ||
+      (hasCompanyScope &&
+        (requestedAmountView || requestedManage || requestedApprove || requestedExport)),
     canManage: isAdmin || (hasCompanyScope && requestedManage),
     canApprove: isAdmin || (hasCompanyScope && requestedApprove),
     canExport: isAdmin || (hasCompanyScope && requestedExport),
@@ -48,7 +58,18 @@ export async function getPayrollAccess(
     actorUserRole: user.role || null,
     actorJobTitle: employee[0]?.job_title || null,
     actorDepartment: employee[0]?.department || null,
-  };
+  } satisfies PayrollAccess;
+}
+
+/**
+ * Settlement evidence is more sensitive than ordinary payroll viewing because it
+ * can contain bank confirmations, account references, and finance-operation
+ * metadata. View-only payroll access therefore does not grant evidence access.
+ */
+export function canAccessPayrollSettlementEvidence(
+  access: Pick<PayrollAccess, "canManage" | "canApprove" | "canExport">,
+) {
+  return access.canManage || access.canApprove || access.canExport;
 }
 
 export function maskPayrollReference(value: unknown) {

@@ -15,7 +15,7 @@ interface WorkforceAttendancePageProps {
 export default async function WorkforceAttendancePage({ searchParams }: WorkforceAttendancePageProps) {
   const resolvedSearchParams = await searchParams;
   const requested = resolvedSearchParams?.view;
-  const view: ShiftWorkspaceView = requested && ['roster', 'attendance', 'requests', 'overtime', 'timesheet'].includes(requested)
+  const view: ShiftWorkspaceView = requested && ['roster', 'attendance', 'requests', 'overtime', 'timesheet', 'reports'].includes(requested)
     ? requested as ShiftWorkspaceView
     : 'attendance';
   return (

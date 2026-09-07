@@ -1,5 +1,5 @@
-import { LearningPageClient } from '../LearningPageClient';
+import { TrustedCertificatesPageClient } from "../TrustedCertificatesPageClient";
 
 export default function TrustedCertificatesPage() {
-  return <LearningPageClient view="trusted-certificates" />;
+  return <TrustedCertificatesPageClient />;
 }

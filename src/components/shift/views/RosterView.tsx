@@ -1,5 +1,4 @@
 "use client";
-
 import * as React from "react";
 import {
   AlertTriangle,
@@ -25,7 +24,6 @@ import {
   TriangleAlert,
   Users,
 } from "lucide-react";
-
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -58,10 +56,9 @@ import {
   stringValue,
   type ShiftRecord,
 } from "../shift-types";
-import { useShiftAttendance } from "../use-shift-attendance";
-
+import { useShiftAttendance } from '../use-shift-attendance';
+import { RosterSetupDialog } from './RosterSetupDialog';
 type RosterLayout = "employees" | "calendar" | "list";
-
 function startOfWeek(value = new Date()) {
   const date = new Date(
     Date.UTC(value.getFullYear(), value.getMonth(), value.getDate()),
@@ -70,7 +67,6 @@ function startOfWeek(value = new Date()) {
   date.setUTCDate(date.getUTCDate() - day + 1);
   return date.toISOString().slice(0, 10);
 }
-
 function weekDays(start: string) {
   return Array.from({ length: 7 }, (_, index) => {
     const value = new Date(`${start}T00:00:00.000Z`);
@@ -78,7 +74,6 @@ function weekDays(start: string) {
     return value;
   });
 }
-
 export function RosterView() {
   const [start, setStart] = React.useState(() => startOfWeek());
   const [layout, setLayout] = React.useState<RosterLayout>("employees");
@@ -89,6 +84,7 @@ export function RosterView() {
   const [location, setLocation] = React.useState("");
   const [searchText, setSearchText] = React.useState("");
   const [showAssignment, setShowAssignment] = React.useState(false);
+  const [setupOpen, setSetupOpen] = React.useState(false);
   const [assignmentContext, setAssignmentContext] = React.useState<{
     employeeId?: string;
     shiftDate?: string;
@@ -116,7 +112,6 @@ export function RosterView() {
     return params;
   }, [employeeQuery, start]);
   const state = useShiftAttendance("roster", query);
-
   if (state.loading)
     return (
       <Workspace>
@@ -192,13 +187,12 @@ export function RosterView() {
         activePeriod={activePeriod}
         saving={state.saving}
         canManage={state.capabilities.canManageWorkforce}
-        onPublish={(body) =>
-          state.mutate(
-            body,
-            "Roster published and affected employees queued for notification.",
-          )
-        }
+        onSetup={() => setSetupOpen(true)}
+        onCopy={() => { const source = new Date(`${start}T00:00:00Z`); source.setUTCDate(source.getUTCDate() - 7); return state.mutate({ action: 'copy_roster', sourceStart: source.toISOString().slice(0, 10), targetStart: start, reason: 'Copy previous week roster' }, 'Previous week roster copied.'); }}
+        onPublish={(body) => state.mutate(body, "Roster published.")}
       />
+
+      <RosterSetupDialog open={setupOpen} onOpenChange={setSetupOpen} saving={state.saving} definitions={definitions} currentStart={start} onSave={(body, message) => state.mutate(body, message)} />
 
       <PermissionBanner scope={state.capabilities.dataScope} />
       {state.error && <InlineError message={state.error} />}
@@ -339,7 +333,6 @@ export function RosterView() {
     </Workspace>
   );
 }
-
 function RosterHeader({
   start,
   days,
@@ -355,6 +348,8 @@ function RosterHeader({
   activePeriod,
   saving,
   canManage,
+  onSetup,
+  onCopy,
   onPublish,
 }: {
   start: string;
@@ -371,6 +366,8 @@ function RosterHeader({
   activePeriod?: ShiftRecord;
   saving: boolean;
   canManage: boolean;
+  onSetup: () => void;
+  onCopy: () => Promise<unknown>;
   onPublish: (body: Record<string, unknown>) => Promise<unknown>;
 }) {
   const moveWeek = (amount: number) => {
@@ -452,6 +449,8 @@ function RosterHeader({
               className="h-9 w-48 pl-9"
             />
           </label>
+          {canManage && <Button variant="outline" size="sm" onClick={onSetup}>Time setup</Button>}
+          {canManage && <Button variant="outline" size="sm" disabled={saving} onClick={() => void onCopy()}>Copy previous week</Button>}
           {canManage && activePeriod && (
             <PublishButton
               period={activePeriod}
@@ -464,6 +463,7 @@ function RosterHeader({
     </header>
   );
 }
+
 
 function RosterSummary({
   metrics,

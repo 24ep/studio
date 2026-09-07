@@ -8,35 +8,25 @@ import {
   BarChart3,
   BookOpenCheck,
   CalendarClock,
-  ChevronDown,
   ClipboardCheck,
   LayoutDashboard,
   MessageSquareText,
-  RefreshCw,
-  Search,
   ShieldCheck,
-  Target,
-  TrendingUp,
   Users,
   WifiOff,
 } from "lucide-react";
 
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import {
-  HrisStatusBadge,
-  HrisWorkspaceHeader,
-} from "@/components/hris/HrisWorkspacePrimitives";
+import { HrisWorkspaceHeader } from "@/components/hris/HrisWorkspacePrimitives";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { PerformanceWorkspaceData } from "@/lib/performance/performance-contracts";
-import { cn } from "@/lib/utils";
 import {
   PerformanceActionSheet,
   type PerformanceComposerMode,
 } from "./PerformanceActionSheet";
 import { PerformanceOverview } from "./PerformanceOverview";
+import { PerformanceTeamMemberSidebar } from "./PerformanceTeamMemberSidebar";
 import {
   CheckInsView,
   CompetenciesView,
@@ -251,7 +241,7 @@ export function PerformanceWorkspace() {
         ) : null}
 
         <div className="grid min-h-full items-stretch border-y border-border lg:grid-cols-[280px_minmax(0,1fr)]">
-          <TeamMemberSidebar
+          <PerformanceTeamMemberSidebar
             employees={viewData.employees}
             selectedEmployeeId={selectedEmployeeId}
             loading={backgroundLoading}
@@ -411,216 +401,4 @@ export function PerformanceWorkspace() {
       />
     </main>
   );
-}
-
-function TeamMemberSidebar({
-  employees,
-  selectedEmployeeId,
-  loading,
-  onSelectEmployee,
-}: {
-  employees: PerformanceWorkspaceData["employees"];
-  selectedEmployeeId: string | null;
-  loading: boolean;
-  onSelectEmployee: (employeeId: string) => void;
-}) {
-  const [query, setQuery] = React.useState("");
-  const normalizedQuery = query.trim().toLowerCase();
-  const visibleEmployees = normalizedQuery
-    ? employees.filter((employee) =>
-        [
-          employee.name,
-          employee.employeeNumber,
-          employee.jobTitle,
-          employee.department,
-        ].some((value) =>
-          String(value || "")
-            .toLowerCase()
-            .includes(normalizedQuery),
-        ),
-      )
-    : employees;
-
-  return (
-    <aside
-      aria-label="Team members"
-      className="hidden min-h-full overflow-hidden bg-background lg:flex lg:flex-col"
-    >
-      <div className="border-b border-slate-100 px-4 py-4 dark:border-slate-800">
-        <div className="flex items-center justify-between gap-3">
-          <div>
-            <p className="text-sm font-bold text-slate-950 dark:text-slate-50">
-              Team members
-            </p>
-            <p className="mt-0.5 text-xs text-slate-500">
-              {employees.length} in your scope
-            </p>
-          </div>
-          <Users
-            className="h-5 w-5 text-[#3459a8] dark:text-blue-300"
-            aria-hidden
-          />
-        </div>
-        {employees.length > 5 ? (
-          <div className="relative mt-3">
-            <Search
-              className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400"
-              aria-hidden
-            />
-            <Input
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-              placeholder="Search members"
-              aria-label="Search team members"
-              className="h-9 pl-9"
-            />
-          </div>
-        ) : null}
-      </div>
-      <div className="min-h-0 flex-1 overflow-y-auto p-2">
-        {visibleEmployees.length ? (
-          <div className="space-y-1">
-            {visibleEmployees.map((member) => {
-              const selected = member.id === selectedEmployeeId;
-              return (
-                <button
-                  key={member.id}
-                  type="button"
-                  onClick={() => onSelectEmployee(member.id)}
-                  aria-current={selected ? "true" : undefined}
-                  disabled={loading && selected}
-                  className={cn(
-                    "flex w-full items-center gap-3 rounded-lg px-3 py-3 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3459a8]",
-                    selected
-                      ? "bg-[#eef3ff] text-[#263f73] dark:bg-blue-950/40 dark:text-blue-100"
-                      : "text-slate-700 hover:bg-slate-50 dark:text-slate-200 dark:hover:bg-slate-900",
-                  )}
-                >
-                  <Avatar className="h-9 w-9 shrink-0 rounded-full border border-slate-200 dark:border-slate-700">
-                    {member.profilePhotoUrl ? (
-                      <AvatarImage src={member.profilePhotoUrl} alt="" />
-                    ) : null}
-                    <AvatarFallback className="rounded-full bg-slate-100 text-xs font-bold text-slate-700 dark:bg-slate-800 dark:text-slate-200">
-                      {initials(member.name)}
-                    </AvatarFallback>
-                  </Avatar>
-                  <span className="min-w-0 flex-1">
-                    <span className="block truncate text-sm font-semibold">
-                      {member.name}
-                    </span>
-                    <span className="mt-0.5 block truncate text-xs text-slate-500">
-                      {member.jobTitle ||
-                        member.department ||
-                        member.employeeNumber}
-                    </span>
-                  </span>
-                  {loading && selected ? (
-                    <RefreshCw
-                      className="h-4 w-4 shrink-0 animate-spin text-slate-400"
-                      aria-label="Loading employee"
-                    />
-                  ) : null}
-                </button>
-              );
-            })}
-          </div>
-        ) : (
-          <p className="px-3 py-8 text-center text-sm text-slate-500">
-            No team members match your search.
-          </p>
-        )}
-      </div>
-    </aside>
-  );
-}
-
-function GrowthProfileHeader({
-  data,
-  onStartCheckIn,
-}: {
-  data: PerformanceWorkspaceData;
-  onStartCheckIn: () => void;
-}) {
-  const employee = data.selectedEmployee;
-  return (
-    <header className="border-b border-border px-6 py-5">
-      <p className="text-xs text-blue-400">
-        Team & Performance Management <span className="mx-2">›</span>{" "}
-        {employee?.name || "Employee"}
-      </p>
-      <div className="mt-5 flex flex-wrap items-center gap-5">
-        <Avatar className="h-16 w-16 rounded-lg border border-border">
-          <AvatarFallback className="rounded-lg bg-slate-800 text-xl font-bold">
-            {initials(employee?.name)}
-          </AvatarFallback>
-        </Avatar>
-        <div className="min-w-60">
-          <div className="flex items-center gap-3">
-            <h1 className="text-2xl font-bold">
-              {employee?.name || "Employee"}
-            </h1>
-            <HrisStatusBadge value="on_track" />
-          </div>
-          <p className="mt-1 text-sm text-muted-foreground">
-            {employee?.jobTitle || "Employee"} <span className="mx-2">•</span>{" "}
-            {employee?.department || "Unassigned"}
-          </p>
-          <p className="mt-1 text-xs text-muted-foreground">
-            Manager: {employee?.managerName || "Ben Thompson"}{" "}
-            <span className="mx-2">•</span> Hired: Jan 10, 2022
-          </p>
-        </div>
-        <div className="ml-auto flex items-stretch divide-x divide-border border-l border-border">
-          <HeaderMetric
-            label="Overall progress"
-            value="78%"
-            helper="On track"
-          />
-          <HeaderMetric label="Goals" value="3" helper="On track" />
-          <HeaderMetric label="Check-ins" value="2" helper="On track" />
-          <HeaderMetric
-            label="Next check-in"
-            value="Aug 20, 2026"
-            helper="In 7 days"
-            wide
-          />
-        </div>
-        <Button
-          className="h-11 bg-blue-600 px-7 text-white hover:bg-blue-500"
-          onClick={onStartCheckIn}
-        >
-          Start check-in
-        </Button>
-      </div>
-    </header>
-  );
-}
-
-function HeaderMetric({
-  label,
-  value,
-  helper,
-  wide = false,
-}: {
-  label: string;
-  value: string;
-  helper: string;
-  wide?: boolean;
-}) {
-  return (
-    <div className={wide ? "min-w-40 px-6" : "min-w-24 px-6"}>
-      <p className="text-xs text-muted-foreground">{label}</p>
-      <p className="mt-1 text-lg font-bold">{value}</p>
-      <p className="mt-1 text-xs text-emerald-400">{helper}</p>
-    </div>
-  );
-}
-
-function initials(name?: string | null) {
-  return String(name || "Employee")
-    .split(/\s+/)
-    .map((part) => part[0])
-    .join("")
-    .slice(0, 2)
-    .toUpperCase();
 }

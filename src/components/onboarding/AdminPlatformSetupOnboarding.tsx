@@ -3,30 +3,11 @@
 import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import {
-  BadgeCheck,
-  AtSign,
-  Building2,
-  CalendarDays,
-  ClipboardCheck,
-  Check,
-  CircleDot,
-  Layers3,
-  Loader2,
-  Mail,
-  FileOutput,
-  Eye,
-  ShieldCheck,
-  MailCheck,
-  Palette,
-  Rocket,
-  Sparkles,
-  Workflow,
-} from 'lucide-react';
+import { Check, Loader2, Rocket } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 
-import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -38,9 +19,9 @@ import {
 } from '@/components/ui/dialog';
 import { Progress } from '@/components/ui/progress';
 import {
+  areRequiredPlatformFeaturesReady,
   getPlatformSetupProgress,
   getRecommendedPlatformInitializationIds,
-  areRequiredPlatformFeaturesReady,
   platformSetupFeatures,
   type PlatformSetupFeatureId,
   type PlatformSetupFeatureStatus,
@@ -48,76 +29,16 @@ import {
 import type { AppKitSetupPreviewGroup } from '@/lib/appkit-setup-preview';
 import { getJsonErrorMessage, readJsonObject } from '@/lib/response-json';
 
+import { AdminPlatformSetupPreviewDialog } from './AdminPlatformSetupPreviewDialog';
+import {
+  featureGroups,
+  featureIcons,
+  isFeatureStatus,
+} from './admin-platform-setup-config';
+
 interface AdminPlatformSetupOnboardingProps {
   isAdmin: boolean;
   userId: string;
-}
-
-const featureIcons: Record<PlatformSetupFeatureId, React.ComponentType<{ className?: string }>> = {
-  'company-reference': Building2,
-  'company-email-domain': AtSign,
-  'email-service': Mail,
-  'platform-defaults': Palette,
-  'recruitment-stages': Workflow,
-  'applicant-sources': CircleDot,
-  'position-levels': Layers3,
-  grades: BadgeCheck,
-  'headcount-types': Layers3,
-  'evaluation-configuration': ClipboardCheck,
-  'dropdown-options': Layers3,
-  'leave-policies': CalendarDays,
-  'holiday-calendar': CalendarDays,
-  'document-templates': FileOutput,
-  'policy-documents': ShieldCheck,
-  'email-operations': MailCheck,
-  'onboarding-templates': ClipboardCheck,
-  'ai-prompts': Sparkles,
-};
-
-const featureGroups: Array<{
-  label: string;
-  description: string;
-  featureIds: PlatformSetupFeatureId[];
-}> = [
-  {
-    label: 'Foundation',
-    description: 'Identity and communication',
-    featureIds: ['company-reference', 'company-email-domain', 'email-service', 'platform-defaults'],
-  },
-  {
-    label: 'Hiring',
-    description: 'Recruiting workflow defaults',
-    featureIds: [
-      'recruitment-stages',
-      'applicant-sources',
-      'position-levels',
-      'grades',
-      'headcount-types',
-      'evaluation-configuration',
-      'dropdown-options',
-      'ai-prompts',
-    ],
-  },
-  {
-    label: 'People & operations',
-    description: 'Employee-facing essentials',
-    featureIds: [
-      'leave-policies',
-      'holiday-calendar',
-      'document-templates',
-      'policy-documents',
-      'email-operations',
-      'onboarding-templates',
-    ],
-  },
-];
-
-function isFeatureStatus(value: unknown): value is PlatformSetupFeatureStatus {
-  if (!value || typeof value !== 'object') return false;
-  const candidate = value as Partial<PlatformSetupFeatureStatus>;
-  return platformSetupFeatures.some((feature) => feature.id === candidate.id)
-    && typeof candidate.count === 'number'
-    && typeof candidate.ready === 'boolean';
 }
 
 export function AdminPlatformSetupOnboarding({
@@ -351,262 +272,215 @@ export function AdminPlatformSetupOnboarding({
   if (!isAdmin) return null;
 
   return (
-    <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent dialogId="admin-platform-setup" className="max-h-[88vh] gap-0 overflow-y-auto p-0 sm:max-w-4xl sm:overflow-hidden">
-        <DialogHeader className="space-y-4 px-6 pb-5 pt-6 pr-14 sm:px-8 sm:pr-14">
-          <div className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
-            <div className="max-w-xl space-y-2">
-              <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em] text-primary">
-                <Rocket className="h-3.5 w-3.5" />
-                Phase 2 · Workspace setup
-              </div>
-              <DialogTitle className="text-2xl tracking-tight">Prepare your workspace</DialogTitle>
-              <DialogDescription className="max-w-lg leading-6">
-                Complete the essentials before inviting your team. Start with recommended defaults, then add your organization details.
-              </DialogDescription>
-            </div>
-
-            <div className="w-full space-y-2 sm:w-56" aria-live="polite">
-              <div className="flex items-center justify-between text-xs">
-                <span className="font-medium text-foreground">Platform readiness</span>
-                <span className="tabular-nums text-muted-foreground">{progress.completed} of {progress.total}</span>
-              </div>
-              <Progress
-                value={progress.percentage}
-                className="h-2"
-                aria-label="Workspace foundation readiness"
-                aria-valuetext={`${progress.completed} of ${progress.total} required defaults ready`}
-              />
-            </div>
-          </div>
-
-          {setupMessage ? (
-            <Alert variant={Object.keys(failedFeatures).length > 0 ? 'destructive' : 'default'}>
-              <AlertDescription>{setupMessage}</AlertDescription>
-            </Alert>
-          ) : null}
-        </DialogHeader>
-
-        <div className="grid min-h-0 border-y md:grid-cols-[16rem_minmax(0,1fr)]">
-          <nav
-            className="max-h-[30vh] overflow-y-auto border-b bg-muted/20 p-3 md:max-h-[52vh] md:border-b-0 md:border-r"
-            aria-label="Workspace setup sections"
-          >
-            <div className="space-y-5">
-              {featureGroups.map((group) => (
-                <section key={group.label} aria-labelledby={`setup-group-${group.label.replaceAll(' ', '-').toLowerCase()}`}>
-                  <div className="px-2 pb-2">
-                    <h3
-                      id={`setup-group-${group.label.replaceAll(' ', '-').toLowerCase()}`}
-                      className="text-xs font-semibold uppercase tracking-[0.14em] text-foreground"
-                    >
-                      {group.label}
-                    </h3>
-                    <p className="mt-0.5 text-[11px] leading-4 text-muted-foreground">{group.description}</p>
-                  </div>
-                  <div className="space-y-1">
-                    {group.featureIds.map((featureId) => {
-                      const feature = platformSetupFeatures.find((item) => item.id === featureId);
-                      if (!feature) return null;
-                      const ready = statuses.find((item) => item.id === feature.id)?.ready === true;
-                      const FeatureIcon = featureIcons[feature.id];
-                      const selected = selectedFeature.id === feature.id;
-
-                      return (
-                        <button
-                          key={feature.id}
-                          type="button"
-                          aria-current={selected ? 'step' : undefined}
-                          onClick={() => setSelectedFeatureId(feature.id)}
-                          className={`flex min-h-11 w-full items-center gap-3 rounded-md px-2.5 py-2 text-left transition-colors ${
-                            selected
-                              ? 'bg-primary/10 text-foreground'
-                              : 'text-muted-foreground hover:bg-muted hover:text-foreground'
-                          }`}
-                        >
-                          <FeatureIcon className={`h-4 w-4 shrink-0 ${selected ? 'text-primary' : ''}`} />
-                          <span className="min-w-0 flex-1 truncate text-xs font-medium">{feature.title}</span>
-                          {ready ? (
-                            <span className="grid h-5 w-5 shrink-0 place-items-center rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400">
-                              <Check className="h-3 w-3" />
-                            </span>
-                          ) : (
-                            <span className="h-2 w-2 shrink-0 rounded-full bg-muted-foreground/35" />
-                          )}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </section>
-              ))}
-            </div>
-          </nav>
-
-          <div className="max-h-[52vh] min-h-[22rem] overflow-y-auto p-6 sm:p-8">
-          {isLoading && statuses.length === 0 ? (
-            <div className="flex min-h-48 items-center justify-center gap-2 text-sm text-muted-foreground">
-              <Loader2 className="h-4 w-4 animate-spin" />
-              Checking platform setup…
-            </div>
-          ) : (
-            <>
-              <div className="flex min-h-full flex-col">
-                <div className="flex items-start gap-4">
-                  <SelectedFeatureIcon className="mt-1 h-5 w-5 shrink-0 text-primary" />
-                  <div className="min-w-0 flex-1">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <h2 className="text-xl font-semibold tracking-tight">{selectedFeature.title}</h2>
-                      {selectedReady && <Badge variant="success">Ready</Badge>}
-                      {selectedFeature.optional && <Badge variant="secondary">Optional</Badge>}
-                    </div>
-                    <p className="mt-2 max-w-xl text-sm leading-6 text-muted-foreground">
-                      {selectedFeature.description}
-                    </p>
-                  </div>
+    <>
+      <Dialog open={open} onOpenChange={handleOpenChange}>
+        <DialogContent dialogId="admin-platform-setup" className="max-h-[88vh] gap-0 overflow-y-auto p-0 sm:max-w-4xl sm:overflow-hidden">
+          <DialogHeader className="space-y-4 px-6 pb-5 pt-6 pr-14 sm:px-8 sm:pr-14">
+            <div className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
+              <div className="max-w-xl space-y-2">
+                <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em] text-primary">
+                  <Rocket className="h-3.5 w-3.5" />
+                  Phase 2 · Workspace setup
                 </div>
-
-                <div className="my-6 border-t" />
-
-                <div className="space-y-4">
-                  <div>
-                    <h3 className="text-sm font-semibold">What this setup includes</h3>
-                    <ul className="mt-3 space-y-2.5 text-sm text-muted-foreground">
-                      <li className="flex items-start gap-2.5">
-                        <Check className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
-                        <span>{selectedFeature.requiredCount} required configuration {selectedFeature.requiredCount === 1 ? 'record' : 'records'} for readiness.</span>
-                      </li>
-                      <li className="flex items-start gap-2.5">
-                        <Check className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
-                        <span>
-                          {selectedFeature.endpoint
-                            ? 'Recommended starter data can be initialized automatically.'
-                            : 'Organization-specific information is configured manually.'}
-                        </span>
-                      </li>
-                      {selectedFeature.href ? (
-                        <li className="flex items-start gap-2.5">
-                          <Check className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
-                          <span>You can review and adjust this item later in HR Setup.</span>
-                        </li>
-                      ) : null}
-                    </ul>
-                  </div>
-
-                  {failedFeatures[selectedFeature.id] ? (
-                    <Alert variant="destructive">
-                      <AlertDescription>{failedFeatures[selectedFeature.id]}</AlertDescription>
-                    </Alert>
-                  ) : null}
-                </div>
-
-                <div className="mt-auto flex flex-wrap items-center gap-3 pt-8">
-                  {selectedFeature.href && (selectedReady || !selectedFeature.endpoint) ? (
-                    <Button asChild>
-                      <Link href={selectedFeature.href} onClick={() => setOpen(false)}>
-                        {selectedReady ? 'Manage configuration' : 'Configure now'}
-                      </Link>
-                    </Button>
-                  ) : (
-                    <Button
-                      type="button"
-                      disabled={selectedReady || isBusy}
-                      onClick={() => void previewInitialization([selectedFeature.id])}
-                    >
-                      {activeFeature === selectedFeature.id && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                      {selectedReady ? 'Ready' : 'Initialize this default'}
-                    </Button>
-                  )}
-                  {selectedFeature.href && selectedFeature.endpoint && !selectedReady ? (
-                    <Button variant="ghost" asChild>
-                      <Link href={selectedFeature.href} onClick={() => setOpen(false)}>Open configuration</Link>
-                    </Button>
-                  ) : null}
-                </div>
-              </div>
-            </>
-          )}
-        </div>
-        </div>
-
-        <DialogFooter className="items-center gap-2 px-6 py-4 sm:justify-between sm:space-x-0 sm:px-8">
-          <Button type="button" variant="ghost" asChild>
-            <Link href="/settings" onClick={() => dismiss(allReady ? 'completed' : 'dismissed')}>
-              Open HR Setup
-            </Link>
-          </Button>
-          <div className="flex flex-col-reverse gap-2 sm:flex-row">
-            {!allReady && (
-              <Button type="button" variant="ghost" disabled={isBusy} onClick={() => dismiss('dismissed')}>
-                Remind me later
-              </Button>
-            )}
-            <Button
-              type="button"
-              disabled={isLoading || isBusy}
-              onClick={() => allReady ? dismiss('completed') : reviewRecommendedInitialization()}
-            >
-              {isInitializingAll && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {allReady ? 'Continue to activation' : 'Initialize recommended defaults'}
-            </Button>
-          </div>
-        </DialogFooter>
-      </DialogContent>
-      <Dialog open={isPreviewOpen} onOpenChange={(nextOpen) => !isBusy && setIsPreviewOpen(nextOpen)}>
-        <DialogContent dialogId="admin-platform-setup-preview" className="max-h-[85vh] overflow-hidden p-0 sm:max-w-2xl">
-          <DialogHeader className="border-b px-6 pb-5 pt-6 pr-14">
-            <div className="flex items-start gap-3">
-              <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-primary/10 text-primary"><Eye className="h-4 w-4" /></span>
-              <div>
-                <DialogTitle>Preview AppKit data</DialogTitle>
-                <DialogDescription className="mt-1 leading-5">
-                  Review the production starter data below. Nothing is saved until you confirm.
+                <DialogTitle className="text-2xl tracking-tight">Prepare your workspace</DialogTitle>
+                <DialogDescription className="max-w-lg leading-6">
+                  Complete the essentials before inviting your team. Start with recommended defaults, then add your organization details.
                 </DialogDescription>
               </div>
+
+              <div className="w-full space-y-2 sm:w-56" aria-live="polite">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="font-medium text-foreground">Platform readiness</span>
+                  <span className="tabular-nums text-muted-foreground">{progress.completed} of {progress.total}</span>
+                </div>
+                <Progress
+                  value={progress.percentage}
+                  className="h-2"
+                  aria-label="Workspace foundation readiness"
+                  aria-valuetext={`${progress.completed} of ${progress.total} required defaults ready`}
+                />
+              </div>
             </div>
+
+            {setupMessage ? (
+              <Alert variant={Object.keys(failedFeatures).length > 0 ? 'destructive' : 'default'}>
+                <AlertDescription>{setupMessage}</AlertDescription>
+              </Alert>
+            ) : null}
           </DialogHeader>
-          <div className="max-h-[55vh] overflow-y-auto px-6 py-5">
-            {isLoadingPreview ? (
-              <div className="flex min-h-40 items-center justify-center gap-2 text-sm text-muted-foreground">
-                <Loader2 className="h-4 w-4 animate-spin" /> Loading preview from AppKit…
+
+          <div className="grid min-h-0 border-y md:grid-cols-[16rem_minmax(0,1fr)]">
+            <nav
+              className="max-h-[30vh] overflow-y-auto border-b bg-muted/20 p-3 md:max-h-[52vh] md:border-b-0 md:border-r"
+              aria-label="Workspace setup sections"
+            >
+              <div className="space-y-5">
+                {featureGroups.map((group) => (
+                  <section key={group.label} aria-labelledby={`setup-group-${group.label.replaceAll(' ', '-').toLowerCase()}`}>
+                    <div className="px-2 pb-2">
+                      <h3
+                        id={`setup-group-${group.label.replaceAll(' ', '-').toLowerCase()}`}
+                        className="text-xs font-semibold uppercase tracking-[0.14em] text-foreground"
+                      >
+                        {group.label}
+                      </h3>
+                      <p className="mt-0.5 text-[11px] leading-4 text-muted-foreground">{group.description}</p>
+                    </div>
+                    <div className="space-y-1">
+                      {group.featureIds.map((featureId) => {
+                        const feature = platformSetupFeatures.find((item) => item.id === featureId);
+                        if (!feature) return null;
+                        const ready = statuses.find((item) => item.id === feature.id)?.ready === true;
+                        const FeatureIcon = featureIcons[feature.id];
+                        const selected = selectedFeature.id === feature.id;
+
+                        return (
+                          <button
+                            key={feature.id}
+                            type="button"
+                            aria-current={selected ? 'step' : undefined}
+                            onClick={() => setSelectedFeatureId(feature.id)}
+                            className={`flex min-h-11 w-full items-center gap-3 rounded-md px-2.5 py-2 text-left transition-colors ${
+                              selected
+                                ? 'bg-primary/10 text-foreground'
+                                : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                            }`}
+                          >
+                            <FeatureIcon className={`h-4 w-4 shrink-0 ${selected ? 'text-primary' : ''}`} />
+                            <span className="min-w-0 flex-1 truncate text-xs font-medium">{feature.title}</span>
+                            {ready ? (
+                              <span className="grid h-5 w-5 shrink-0 place-items-center rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400">
+                                <Check className="h-3 w-3" />
+                              </span>
+                            ) : (
+                              <span className="h-2 w-2 shrink-0 rounded-full bg-muted-foreground/35" />
+                            )}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </section>
+                ))}
               </div>
-            ) : (
-              <div className="space-y-3">
-                {previewGroups.map(group => {
-                  const feature = platformSetupFeatures.find(item => item.id === group.featureId);
-                  return (
-                    <section key={group.featureId} className="rounded-lg border bg-muted/15 p-4">
-                      <div className="flex items-center justify-between gap-3">
-                        <h3 className="text-sm font-semibold">{feature?.title || group.featureId}</h3>
-                        <Badge variant="secondary">{group.count} {group.count === 1 ? 'record' : 'records'}</Badge>
+            </nav>
+
+            <div className="max-h-[52vh] min-h-[22rem] overflow-y-auto p-6 sm:p-8">
+              {isLoading && statuses.length === 0 ? (
+                <div className="flex min-h-48 items-center justify-center gap-2 text-sm text-muted-foreground">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Checking platform setup…
+                </div>
+              ) : (
+                <div className="flex min-h-full flex-col">
+                  <div className="flex items-start gap-4">
+                    <SelectedFeatureIcon className="mt-1 h-5 w-5 shrink-0 text-primary" />
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <h2 className="text-xl font-semibold tracking-tight">{selectedFeature.title}</h2>
+                        {selectedReady && <Badge variant="success">Ready</Badge>}
+                        {selectedFeature.optional && <Badge variant="secondary">Optional</Badge>}
                       </div>
-                      {group.items.length ? (
-                        <ul className="mt-3 divide-y text-sm">
-                          {group.items.map((item, index) => (
-                            <li key={`${item.label}-${index}`} className="py-2 first:pt-0 last:pb-0">
-                              <p className="font-medium">{item.label}</p>
-                              {item.detail && <p className="mt-0.5 line-clamp-2 text-xs text-muted-foreground">{item.detail}</p>}
-                            </li>
-                          ))}
-                        </ul>
-                      ) : <p className="mt-2 text-xs text-muted-foreground">No AppKit records were returned for this item.</p>}
-                      {group.count > group.items.length && <p className="mt-3 text-xs font-medium text-primary">+ {group.count - group.items.length} more</p>}
-                    </section>
-                  );
-                })}
-              </div>
-            )}
+                      <p className="mt-2 max-w-xl text-sm leading-6 text-muted-foreground">
+                        {selectedFeature.description}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="my-6 border-t" />
+
+                  <div className="space-y-4">
+                    <div>
+                      <h3 className="text-sm font-semibold">What this setup includes</h3>
+                      <ul className="mt-3 space-y-2.5 text-sm text-muted-foreground">
+                        <li className="flex items-start gap-2.5">
+                          <Check className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+                          <span>{selectedFeature.requiredCount} required configuration {selectedFeature.requiredCount === 1 ? 'record' : 'records'} for readiness.</span>
+                        </li>
+                        <li className="flex items-start gap-2.5">
+                          <Check className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+                          <span>
+                            {selectedFeature.endpoint
+                              ? 'Recommended starter data can be initialized automatically.'
+                              : 'Organization-specific information is configured manually.'}
+                          </span>
+                        </li>
+                        {selectedFeature.href ? (
+                          <li className="flex items-start gap-2.5">
+                            <Check className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+                            <span>You can review and adjust this item later in HR Setup.</span>
+                          </li>
+                        ) : null}
+                      </ul>
+                    </div>
+
+                    {failedFeatures[selectedFeature.id] ? (
+                      <Alert variant="destructive">
+                        <AlertDescription>{failedFeatures[selectedFeature.id]}</AlertDescription>
+                      </Alert>
+                    ) : null}
+                  </div>
+
+                  <div className="mt-auto flex flex-wrap items-center gap-3 pt-8">
+                    {selectedFeature.href && (selectedReady || !selectedFeature.endpoint) ? (
+                      <Button asChild>
+                        <Link href={selectedFeature.href} onClick={() => setOpen(false)}>
+                          {selectedReady ? 'Manage configuration' : 'Configure now'}
+                        </Link>
+                      </Button>
+                    ) : (
+                      <Button
+                        type="button"
+                        disabled={selectedReady || isBusy}
+                        onClick={() => void previewInitialization([selectedFeature.id])}
+                      >
+                        {activeFeature === selectedFeature.id && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                        {selectedReady ? 'Ready' : 'Initialize this default'}
+                      </Button>
+                    )}
+                    {selectedFeature.href && selectedFeature.endpoint && !selectedReady ? (
+                      <Button variant="ghost" asChild>
+                        <Link href={selectedFeature.href} onClick={() => setOpen(false)}>Open configuration</Link>
+                      </Button>
+                    ) : null}
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
-          <DialogFooter className="border-t px-6 py-4 sm:justify-between">
-            <p className="text-xs text-muted-foreground">Existing records may be updated by matching keys or names.</p>
-            <div className="flex gap-2">
-              <Button type="button" variant="ghost" disabled={isLoadingPreview} onClick={() => setIsPreviewOpen(false)}>Cancel</Button>
-              <Button type="button" disabled={isLoadingPreview || previewGroups.length === 0} onClick={() => void confirmPreviewInitialization()}>
-                Confirm and initialize
+
+          <DialogFooter className="items-center gap-2 px-6 py-4 sm:justify-between sm:space-x-0 sm:px-8">
+            <Button type="button" variant="ghost" asChild>
+              <Link href="/settings" onClick={() => dismiss(allReady ? 'completed' : 'dismissed')}>
+                Open HR Setup
+              </Link>
+            </Button>
+            <div className="flex flex-col-reverse gap-2 sm:flex-row">
+              {!allReady && (
+                <Button type="button" variant="ghost" disabled={isBusy} onClick={() => dismiss('dismissed')}>
+                  Remind me later
+                </Button>
+              )}
+              <Button
+                type="button"
+                disabled={isLoading || isBusy}
+                onClick={() => allReady ? dismiss('completed') : reviewRecommendedInitialization()}
+              >
+                {isInitializingAll && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                {allReady ? 'Continue to activation' : 'Initialize recommended defaults'}
               </Button>
             </div>
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </Dialog>
+
+      <AdminPlatformSetupPreviewDialog
+        open={isPreviewOpen}
+        busy={isBusy}
+        loading={isLoadingPreview}
+        groups={previewGroups}
+        onOpenChange={setIsPreviewOpen}
+        onConfirm={() => void confirmPreviewInitialization()}
+      />
+    </>
   );
 }

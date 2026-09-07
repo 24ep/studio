@@ -49,7 +49,7 @@ export function useShiftAttendance(view: string, query: URLSearchParams) {
   const mutate = React.useCallback(async (
     body: Record<string, unknown>,
     successMessage: string,
-    options?: { url?: string; method?: 'POST' | 'PATCH'; skipRefresh?: boolean },
+    options?: { url?: string; method?: 'POST' | 'PUT' | 'PATCH'; skipRefresh?: boolean },
   ) => {
     setSaving(true);
     setError(null);

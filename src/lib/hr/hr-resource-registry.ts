@@ -697,7 +697,6 @@ export function buildHrResourceSchema(config: HrResourceConfig, partial = false)
     });
   }
   if (config.key !== 'certifications' || partial) return schema;
-
   return schema.superRefine((values, context) => {
     if (values.recordType === 'employee' && !values.employeeId) {
       context.addIssue({
@@ -744,14 +743,7 @@ export function buildHrResourceSchema(config: HrResourceConfig, partial = false)
   });
 }
 
-export function coerceHrFieldValue(field: HrResourceField, value: unknown) {
-  if (value === undefined || value === null || value === '') return null;
-  if (field.type === 'number') return Number(value);
-  if (field.type === 'json' || field.type === 'jsonValue') return JSON.stringify(value);
-  if (field.type === 'select' && (value === 'true' || value === 'false')) return value === 'true';
-  if (field.type === 'date') return new Date(String(value));
-  return value;
-}
+export { coerceHrFieldValue } from './hr-resource-value-utils';
 
 export function isValidHrStatus(value: string) {
   return statusOptions.includes(value);

@@ -3,6 +3,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { logAudit } from '@/lib/auditLog';
 import { NotificationService } from '@/lib/notificationService';
+import prisma from '@/lib/prisma';
+import { timeMutationEmployeeIds, timeNotificationHref } from '@/lib/hr/shift-notification-recipients';
 import {
   SHIFT_VIEWS,
   shiftAttendanceMutationSchema,
@@ -103,31 +105,16 @@ export async function POST(request: NextRequest) {
       },
     );
 
-    const record = data && typeof data === 'object' && !Array.isArray(data)
-      ? data as Record<string, unknown>
-      : null;
-    const employeeId = record?.employee_id;
-    if (employeeId && actor.employee?.id !== employeeId) {
-      const users = await (await import('@/lib/prisma')).default.$queryRawUnsafe<{ user_id: string | null }[]>(
-        `SELECT user_id FROM "hr_employees" WHERE id = $1::uuid LIMIT 1`,
-        String(employeeId),
-      );
-      if (users[0]?.user_id) {
-        await NotificationService.createNotification(users[0].user_id, {
-          type: `shift_attendance_${parsed.data.action}`,
-          title: 'Shift & Attendance updated',
-          message: `Your ${parsed.data.action.replace(/_/g, ' ')} action has been processed.`,
-          data: {
-            href: parsed.data.action.includes('timesheet')
-              ? '/workforce/attendance?view=timesheet'
-              : parsed.data.action.includes('overtime')
-                ? '/workforce/attendance?view=overtime'
-                : parsed.data.action.includes('shift_request')
-                  ? '/workforce/leave?type=shift-request'
-                  : '/workforce/attendance',
-          },
-        }, session.user.id).catch(() => null);
-      }
+    const employeeIds = timeMutationEmployeeIds(data).filter(employeeId => employeeId !== actor.employee?.id);
+    if (employeeIds.length > 0) {
+      const users = await prisma.$queryRawUnsafe<Array<{ id: string; user_id: string | null }>>(
+        `SELECT id, user_id FROM "hr_employees" WHERE id = ANY($1::uuid[])`, employeeIds);
+      await Promise.all(users.flatMap(employee => employee.user_id ? [NotificationService.createNotification(employee.user_id, {
+        type: `shift_attendance_${parsed.data.action}`,
+        title: 'Shift & Attendance updated',
+        message: `Your ${parsed.data.action.replace(/_/g, ' ')} has been processed.`,
+        data: { href: timeNotificationHref(parsed.data.action, true) },
+      }, session.user.id).catch(() => null)] : []));
     }
     return NextResponse.json({ data });
   } catch (error) {

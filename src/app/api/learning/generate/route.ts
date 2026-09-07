@@ -4,7 +4,6 @@ import { auth } from '@/auth';
 import { logAudit } from '@/lib/auditLog';
 import { executeWithApiKeyFallback } from '@/lib/aiApiKeyManager';
 import { generateTextWithProvider, getProviderLabel } from '@/lib/aiProvider';
-import { getPool } from '@/lib/db';
 import { hasAnyPermission } from '@/lib/permissions';
 import { extractLearningDocument } from '@/lib/learning/learning-document-parser';
 import {
@@ -14,7 +13,7 @@ import {
   generatedPathResponseSchema,
   type GeneratedCourse,
 } from '@/lib/learning/generated-learning';
-import { saveCurriculum } from '@/lib/learning/learning-service';
+import { createCourseWithCurriculum, createLearningPathWithCourses, type CreateCourseAuthoringInput } from '@/lib/learning/learning-course-authoring';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -34,17 +33,21 @@ function pathShape() {
   return `{"path":{"title":"...","description":"...","courses":[${courseShape().replace(/^\{"course":|\}$/g, '')}]}}`;
 }
 
-async function createCourseDraft(course: GeneratedCourse, userId: string) {
-  const objectives = JSON.stringify(course.objectives);
-  const result = await getPool().query<{ id: string }>(
-    `INSERT INTO hr_learning_courses
-      (id,title,category,description,duration_hours,is_required,is_active,status,objectives,owner_name,created_at,updated_at)
-     VALUES(gen_random_uuid(),$1,$2,$3,$4,false,true,'draft',$5::json,'AI course builder',NOW(),NOW()) RETURNING id`,
-    [course.title, course.category, course.description, estimatedCourseHours(course), objectives],
-  );
-  const id = result.rows[0].id;
-  await saveCurriculum(id, generatedCourseToCurriculum(course), {}, userId, false);
-  return id;
+function authoringCourse(course: GeneratedCourse): CreateCourseAuthoringInput {
+  return {
+    metadata: {
+      title: course.title,
+      category: course.category,
+      description: course.description,
+      durationHours: estimatedCourseHours(course),
+      isRequired: false,
+      objectives: course.objectives,
+      ownerName: 'AI course builder',
+    },
+    sections: generatedCourseToCurriculum(course),
+    rules: {},
+    publish: false,
+  };
 }
 
 export async function POST(request: NextRequest) {
@@ -92,21 +95,19 @@ ${sources}`;
     const raw = JSON.parse(jsonrepair(stripCodeFence(aiResult.data))) as unknown;
     if (!isPath) {
       const generated = generatedCourseResponseSchema.parse(raw).course;
-      const id = await createCourseDraft(generated, session.user.id);
+      const result = await createCourseWithCurriculum(authoringCourse(generated), session.user.id);
       await logAudit('AUDIT', `AI course draft generated: ${generated.title}`, 'API:Learning:Generate', session.user.id, { outputType, sourceFiles: documents.map(item => item.name) });
-      return NextResponse.json({ data: { type: 'course', id, title: generated.title, courseCount: 1 } });
+      return NextResponse.json({ data: { type: 'course', id: result.courseId, title: generated.title, courseCount: 1 } });
     }
 
     const generated = generatedPathResponseSchema.parse(raw).path;
-    const courseIds: string[] = [];
-    for (const course of generated.courses) courseIds.push(await createCourseDraft(course, session.user.id));
-    const pathResult = await getPool().query<{ id: string }>(
-      `INSERT INTO hr_learning_paths(id,title,description,status,course_ids,created_at,updated_at)
-       VALUES(gen_random_uuid(),$1,$2,'draft',$3,NOW(),NOW()) RETURNING id`,
-      [generated.title, generated.description, courseIds],
-    );
-    await logAudit('AUDIT', `AI learning path generated: ${generated.title}`, 'API:Learning:Generate', session.user.id, { outputType, sourceFiles: documents.map(item => item.name), courseCount: courseIds.length });
-    return NextResponse.json({ data: { type: 'path', id: pathResult.rows[0].id, title: generated.title, courseCount: courseIds.length } });
+    const result = await createLearningPathWithCourses({
+      title: generated.title,
+      description: generated.description,
+      courses: generated.courses.map(authoringCourse),
+    }, session.user.id);
+    await logAudit('AUDIT', `AI learning path generated: ${generated.title}`, 'API:Learning:Generate', session.user.id, { outputType, sourceFiles: documents.map(item => item.name), courseCount: result.courseIds.length });
+    return NextResponse.json({ data: { type: 'path', id: result.pathId, title: generated.title, courseCount: result.courseIds.length } });
   } catch (error) {
     console.error('Unable to generate learning content:', error);
     const message = error instanceof Error ? error.message : 'Unable to generate learning content.';
