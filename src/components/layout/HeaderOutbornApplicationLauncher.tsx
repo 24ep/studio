@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import Image from "next/image";
 import {
   ArrowTopRightOnSquareIcon,
   Squares2X2Icon,
@@ -41,8 +42,9 @@ function applicationInitials(name: string): string {
 }
 
 function ApplicationMark({ application }: { application: LauncherApplication }) {
-  const [imageFailed, setImageFailed] = React.useState(false);
-  const showImage = Boolean(application.iconUrl) && !imageFailed;
+  const [failedIconUrl, setFailedIconUrl] = React.useState<string | null>(null);
+  const iconUrl = application.iconUrl;
+  const showImage = iconUrl !== null && iconUrl !== "" && iconUrl !== failedIconUrl;
 
   return (
     <span
@@ -55,17 +57,15 @@ function ApplicationMark({ application }: { application: LauncherApplication }) 
       )}
     >
       {showImage ? (
-        // Account catalog icons can be hosted by any registered Outborn product,
-        // so use the catalog URL directly instead of Next Image's static host allowlist.
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
+        <Image
           alt=""
           className="h-9 w-9 object-contain dark:drop-shadow-[0_0_1px_rgba(255,255,255,0.7)]"
           decoding="async"
           height={36}
           loading="lazy"
-          onError={() => setImageFailed(true)}
-          src={application.iconUrl!}
+          onError={() => setFailedIconUrl(iconUrl)}
+          src={iconUrl}
+          unoptimized
           width={36}
         />
       ) : (
@@ -82,7 +82,7 @@ function ApplicationItem({
   application: LauncherApplication;
   onNavigate: () => void;
 }) {
-  const enabled = application.accessible && Boolean(application.launchUrl);
+  const launchUrl = application.launchUrl;
   const content = (
     <>
       <ApplicationMark application={application} />
@@ -99,7 +99,7 @@ function ApplicationItem({
     </>
   );
 
-  if (!enabled) {
+  if (!application.accessible || !launchUrl) {
     return (
       <div
         aria-disabled="true"
@@ -114,7 +114,7 @@ function ApplicationItem({
   return (
     <a
       className="flex min-h-[62px] min-w-0 items-center gap-3 rounded-xl px-3 py-2 no-underline transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-      href={application.launchUrl!}
+      href={launchUrl}
       onClick={onNavigate}
       title={`Open ${application.name}`}
     >
