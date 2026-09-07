@@ -6,7 +6,8 @@ const root = process.cwd();
 const read = (...parts: string[]) => readFileSync(join(root, ...parts), 'utf8');
 
 describe('audit governance platform contract', () => {
-  const migration = read('prisma', 'migrations', '20260802153000_add_audit_governance_platform', 'migration.sql');
+  const migration = read('prisma', 'migrations-legacy', '20260802153000_add_audit_governance_platform', 'migration.sql');
+  const preservationMigration = read('prisma', 'migrations', '20260815073000_restore_business_constraints', 'migration.sql');
 
   it('creates the canonical evidence and governance records', () => {
     for (const table of [
@@ -21,6 +22,8 @@ describe('audit governance platform contract', () => {
     expect(migration).toContain("RAISE EXCEPTION 'audit records are append-only'");
     expect(migration).toContain('CREATE TRIGGER "audit_evidence_locked_period_guard"');
     expect(migration).toContain("evidence in a locked audit period is immutable");
+    expect(preservationMigration).toContain('CREATE TRIGGER "audit_events_immutable"');
+    expect(preservationMigration).toContain('CREATE TRIGGER "audit_evidence_locked_period_guard"');
   });
 
   it('exposes role-scoped operations and a scheduled control endpoint', () => {

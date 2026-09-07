@@ -23,11 +23,11 @@ export function applyThemeClass(theme: ThemeMode) {
   }
 
   const root = document.documentElement;
-  if (theme === 'dark') {
-    root.classList.add('dark');
-  } else {
-    root.classList.remove('dark');
-  }
+  const isDark = theme === 'dark';
+
+  root.classList.toggle('dark', isDark);
+  root.style.colorScheme = isDark ? 'dark' : 'light';
+  root.dataset.resolvedTheme = isDark ? 'dark' : 'light';
 }
 
 export function scheduleSidebarColorReapply(isUpdatingRef: MutableRefObject<boolean>) {

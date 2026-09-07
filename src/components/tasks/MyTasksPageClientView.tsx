@@ -26,7 +26,7 @@ export function MyTasksPageClientView({
   state: MyTasksPageViewState;
 }) {
   return (
-    <div className={embedded ? "flex h-full min-h-0 flex-col bg-background" : "flex h-screen flex-col bg-background"}>
+    <div className="flex h-full min-h-0 flex-col bg-background">
       <MyTasksBoardHeader
         applicants={state.applicants}
         loading={state.loading}
@@ -54,7 +54,7 @@ export function MyTasksPageClientView({
         onClearFilters={actions.clearFilters}
       />
 
-      <div className="flex-1 bg-background">
+      <div className="min-h-0 flex-1 bg-background">
         <MyTasksBoardContent
           loading={state.loading}
           viewMode={embedded ? "kanban" : state.viewMode}

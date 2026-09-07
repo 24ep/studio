@@ -1,5 +1,5 @@
 import React from 'react';
-import { DM_Sans, IBM_Plex_Sans_Thai } from 'next/font/google';
+import { IBM_Plex_Sans, IBM_Plex_Sans_Thai } from 'next/font/google';
 import Script from 'next/script';
 import { ClientProviders } from '@/components/providers/ClientProviders';
 import './globals.css';
@@ -31,11 +31,11 @@ function getMetadataBaseUrl() {
   return new URL('http://localhost:3000');
 }
 
-const dmSans = DM_Sans({
+const ibmPlexSans = IBM_Plex_Sans({
   subsets: ['latin'],
   weight: ['300', '400', '500', '600', '700'],
   display: 'swap',
-  variable: '--font-dm-sans',
+  variable: '--font-ibm-plex-sans',
   fallback: ['sans-serif'],
   adjustFontFallback: true,
   preload: true,
@@ -114,7 +114,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   const session = fastDev ? null : await getValidatedAuthSession();
 
   return (
-    <html lang="en" suppressHydrationWarning className={`${dmSans.variable} ${ibmPlexSansThai.variable}`}>
+    <html lang="en" suppressHydrationWarning className={`${ibmPlexSans.variable} ${ibmPlexSansThai.variable}`}>
       <head>
         {/* PWA Configuration - Will be conditionally added via PWAMetaTags component in body */}
         {/* Font preloading for better performance */}
@@ -145,4 +145,3 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     </html>
   );
 }
-

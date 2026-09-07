@@ -21,7 +21,7 @@ chmod +x fix-db-schema.sh
 ### Manual Fix
 ```bash
 npx prisma generate
-npx prisma db push --force-reset --accept-data-loss
+npx prisma migrate reset --force --schema=prisma/schema.prisma
 npx prisma db seed
 ```
 

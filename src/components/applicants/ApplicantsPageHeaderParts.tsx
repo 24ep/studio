@@ -91,8 +91,8 @@ export function ApplicantsHeaderActions({
   const actionsDisabled = isLoading || tableLoading;
 
   return (
-    <div className="ml-3 flex items-center gap-2">
-      {viewSwitcherProps && <ApplicantsRecruitmentViewSwitch {...viewSwitcherProps} />}
+    <div className="flex flex-wrap items-center gap-2 xl:ml-3 xl:flex-nowrap xl:justify-end">
+      {viewSwitcherProps ? <ApplicantsRecruitmentViewSwitch {...viewSwitcherProps} /> : null}
 
       <ApplicantFilterPopover
         filters={filters}
@@ -122,7 +122,6 @@ export function ApplicantsHeaderActions({
         exportImportFeatureEnabled={exportImportFeatureEnabled}
         groupBy={groupBy}
         onAddApplicant={onAddApplicant}
-        onBulkUpload={onBulkUpload}
         onExport={onExport}
         onGroupByChange={onGroupByChange}
         onImport={onImport}
@@ -139,15 +138,15 @@ export function AiSearchResultBanner({
   if (!aiSearchReasoning) return null;
 
   return (
-    <div className="mt-4 p-3 bg-primary/5 dark:bg-primary/10">
+    <div className="mt-3 rounded-lg bg-primary/5 p-3 dark:bg-primary/10">
       <div className="flex items-start gap-2">
-        <Brain className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
-        <div className="flex-1">
-          <div className="flex items-center justify-between mb-1">
+        <Brain className="mt-0.5 h-4 w-4 flex-shrink-0 text-primary" />
+        <div className="min-w-0 flex-1">
+          <div className="mb-1 flex items-center justify-between gap-3">
             <span className="text-sm font-medium text-primary">
-              AI Search Results
+              AI search results
             </span>
-            <Badge className="text-xs bg-primary/20 text-primary dark:bg-primary/30 dark:text-primary-foreground">
+            <Badge className="bg-primary/20 text-xs text-primary dark:bg-primary/30 dark:text-primary-foreground">
               {aiRecordCount} matched
             </Badge>
           </div>

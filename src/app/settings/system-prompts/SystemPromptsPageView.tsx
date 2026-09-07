@@ -34,10 +34,10 @@ export function SystemPromptsPageView(page: SystemPromptsPageViewProps) {
   }
 
   return (
-    <div className="h-full flex flex-col p-6">
-      <div className="flex-1 overflow-hidden">
-        <div className="h-full flex flex-col">
-          <div className="flex w-full border-b border-border/50 mb-6">
+    <div className="flex h-full min-h-0 flex-col p-6">
+      <div className="min-h-0 flex-1 overflow-hidden">
+        <div className="flex h-full min-h-0 flex-col">
+          <div className="mb-6 flex w-full flex-shrink-0 border-b border-border/50">
             <SystemPromptsTabButton
               active={page.activeTab === 'prompts'}
               icon={<FileText className="h-4 w-4" />}
@@ -52,7 +52,7 @@ export function SystemPromptsPageView(page: SystemPromptsPageViewProps) {
             />
           </div>
 
-          <div className="flex-1 overflow-hidden">
+          <div className="min-h-0 flex-1 overflow-hidden">
             {page.activeTab === 'prompts' && (
               <SystemPromptsListTab
                 isLoading={page.isLoading}

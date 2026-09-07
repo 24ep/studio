@@ -17,7 +17,7 @@ export function NotificationTabs({
   onTabChange,
 }: NotificationTabsProps) {
   return (
-    <div className="flex w-full border-b border-border/50 mb-2">
+    <div className="mb-2 flex w-full border-b border-border/50">
       <NotificationTabButton
         active={activeTab === 'unread'}
         count={unreadCount}
@@ -63,13 +63,13 @@ function NotificationTabButton({
       onClick={() => onTabChange(tab)}
       className={cn(
         getUnderlineNavTriggerClassName(active),
-        'px-6 py-3',
+        'px-4 py-2',
       )}
     >
       {icon}
       {label}
       {count > 0 && (
-        <Badge variant={variant} className="h-5 min-w-5 rounded-full px-1.5 text-xs flex items-center justify-center ml-1">
+        <Badge variant={variant} className="ml-1 flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-xs">
           {formatNotificationBadgeCount(count)}
         </Badge>
       )}

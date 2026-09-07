@@ -58,7 +58,7 @@ export function TaskBoardColumn({
   return (
     <div
       className={cn(
-        "flex-shrink-0 border-r border-gray-200 dark:border-gray-800 h-full",
+        "h-full min-h-0 flex-shrink-0 border-r border-gray-200 dark:border-gray-800",
         isLastColumn && "border-r-0"
       )}
       style={{
@@ -67,14 +67,14 @@ export function TaskBoardColumn({
         ...getCardWidth().style,
       }}
     >
-      <div className="h-full flex flex-col">
-        <div className="bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 px-4 py-3 flex-shrink-0 sticky z-10">
+      <div className="flex h-full min-h-0 flex-col">
+        <div className="sticky z-10 flex-shrink-0 border-b border-gray-200 bg-gray-50 px-4 py-3 dark:border-gray-800 dark:bg-gray-900">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">
                 {stage.name}
               </h3>
-              <span className="px-2 py-0.5 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded text-xs font-medium">
+              <span className="rounded bg-gray-200 px-2 py-0.5 text-xs font-medium text-gray-700 dark:bg-gray-700 dark:text-gray-300">
                 {tasks.length}
               </span>
             </div>
@@ -82,10 +82,10 @@ export function TaskBoardColumn({
               <Button
                 variant="ghost"
                 size="sm"
-                className="h-6 w-6 p-0 hover:bg-gray-200 dark:hover:bg-gray-700 rounded"
+                className="h-6 w-6 rounded p-0 hover:bg-gray-200 dark:hover:bg-gray-700"
                 onClick={() => onAddTask(stage.id)}
               >
-                <Plus className="w-3 h-3" />
+                <Plus className="h-3 w-3" />
               </Button>
             )}
           </div>
@@ -93,7 +93,7 @@ export function TaskBoardColumn({
 
         <div
           className={cn(
-            "flex-1 flex flex-col bg-gray-50 dark:bg-gray-900 transition-all duration-200 relative min-h-0",
+            "relative flex min-h-0 flex-1 flex-col bg-gray-50 transition-all duration-200 dark:bg-gray-900",
             isDragOver && !isCurrentStage && "bg-blue-50/50 dark:bg-blue-900/20"
           )}
           onDragOver={onDragOver}
@@ -102,17 +102,17 @@ export function TaskBoardColumn({
           onDragEnter={onDragEnter}
         >
           {isDragOver && !isCurrentStage && (
-            <div className="absolute inset-0 border-2 border-dashed border-blue-400/60 bg-blue-50/30 dark:bg-blue-900/20 pointer-events-none z-10 flex items-center justify-center">
+            <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center border-2 border-dashed border-blue-400/60 bg-blue-50/30 dark:bg-blue-900/20">
               <div className="text-center">
-                <Plus className="w-8 h-8 mx-auto mb-2 text-blue-500" />
+                <Plus className="mx-auto mb-2 h-8 w-8 text-blue-500" />
                 <p className="text-sm font-medium text-blue-600 dark:text-blue-400">Drop here</p>
                 <p className="text-xs text-blue-500/70 dark:text-blue-400/70">Move to {stage.name}</p>
               </div>
             </div>
           )}
 
-          <div className="flex-1 overflow-y-auto min-h-[calc(100vh-200px)]">
-            <div className="p-4 space-y-3">
+          <div className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain [scrollbar-gutter:stable]">
+            <div className="space-y-3 p-4">
               {visibleTasks.map((task) => (
                 <TaskCard
                   key={task.id}

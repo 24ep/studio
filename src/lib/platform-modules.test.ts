@@ -4,7 +4,7 @@ import { PLATFORM_MODULE_CATEGORIES, PLATFORM_MODULES } from './platform-modules
 
 describe('platform modules catalog', () => {
   it('preserves the complete ordered permission catalog', () => {
-    expect(PLATFORM_MODULES).toHaveLength(123);
+    expect(PLATFORM_MODULES).toHaveLength(124);
     expect(PLATFORM_MODULES[0]?.id).toBe('FRIEND_REFERRALS_ACCESS');
     expect(PLATFORM_MODULES.at(-1)?.id).toBe('EXPENSES_AUDIT');
   });

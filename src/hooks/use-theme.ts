@@ -1,12 +1,12 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import {
   applyThemeClass,
-  canApplyThemeChange,
   scheduleSidebarColorReapply,
 } from './use-theme-dom';
 import { useThemeUserIdRef } from './use-theme-session';
 import {
   getBrowserThemeState,
+  isThemePreference,
   resolveThemeFromPreference,
   type ThemeMode,
   type ThemePreference,
@@ -15,50 +15,59 @@ import {
 
 export type { ThemePreference } from './use-theme-utils';
 
+const THEME_STATE_EVENT = 'hrive-theme-state-changed';
+
+type ThemeStateEventDetail = {
+  preference: ThemePreference;
+  theme: ThemeMode;
+};
+
+function publishThemeState(preference: ThemePreference, theme: ThemeMode) {
+  if (typeof window === 'undefined') return;
+  window.dispatchEvent(new CustomEvent<ThemeStateEventDetail>(THEME_STATE_EVENT, {
+    detail: { preference, theme },
+  }));
+}
+
 export function useTheme() {
   const [mounted, setMounted] = useState(false);
   const [currentTheme, setCurrentTheme] = useState<ThemeMode>('light');
   const [themePreference, setThemePreference] = useState<ThemePreference>('system');
-  const lastThemeChange = useRef<number>(0);
   const hasInitializedRef = useRef<boolean>(false);
   const userIdRef = useThemeUserIdRef();
   const isUpdatingRef = useRef<boolean>(false);
   const isSidebarUpdatingRef = useRef<boolean>(false);
   const lastUpdateTimeRef = useRef(0);
 
-  // Memoize the apply theme function to prevent recreation
+  // The user action already has its own debounce below. Applying the resolved
+  // class must be deterministic; an extra DOM throttle could save a preference
+  // without actually changing the visible theme when clicked after startup.
   const applyTheme = useCallback((theme: ThemeMode) => {
-    if (!canApplyThemeChange(lastThemeChange)) {
-      return;
-    }
-
     applyThemeClass(theme);
     scheduleSidebarColorReapply(isSidebarUpdatingRef);
   }, []);
 
-  // Memoize the set theme function with enhanced debouncing
   const setTheme = useCallback(async (preference: ThemePreference) => {
     const now = Date.now();
-    // Prevent rapid theme changes
-    if (isUpdatingRef.current || now - lastUpdateTimeRef.current < 500) { // Increased from 300ms to 500ms
+    if (isUpdatingRef.current || now - lastUpdateTimeRef.current < 500) {
       return;
     }
-    
+
     isUpdatingRef.current = true;
     lastUpdateTimeRef.current = now;
-    
+
     setThemePreference(preference);
     localStorage.setItem('theme', preference);
-    
+
     const newTheme = resolveThemeFromPreference(
       preference,
       window.matchMedia('(prefers-color-scheme: dark)').matches
     );
-    
+
     setCurrentTheme(newTheme);
     applyTheme(newTheme);
+    publishThemeState(preference, newTheme);
 
-    // Save to user preferences if authenticated
     if (userIdRef.current) {
       try {
         await fetch('/api/user-preferences?modelType=appearance', {
@@ -76,27 +85,22 @@ export function useTheme() {
         console.warn('Failed to save theme preference:', error);
       }
     }
-    
-    // Reset update flag after a delay
+
     setTimeout(() => {
       isUpdatingRef.current = false;
-    }, 300); // Increased from 200ms to 300ms
-  }, [applyTheme]);
+    }, 300);
+  }, [applyTheme, userIdRef]);
 
-  // Memoize the toggle theme function
   const toggleTheme = useCallback(() => {
     const newTheme = currentTheme === 'light' ? 'dark' : 'light';
-    const newPreference = newTheme as ThemePreference;
-    setTheme(newPreference);
+    void setTheme(newTheme);
   }, [currentTheme, setTheme]);
 
-  // Memoize initialization dependencies
   const initDependencies = useMemo(() => ({
     hasInitialized: hasInitializedRef.current,
     applyTheme
   }), [applyTheme]);
 
-  // Initialize theme on mount
   useEffect(() => {
     if (initDependencies.hasInitialized) return;
     hasInitializedRef.current = true;
@@ -110,20 +114,35 @@ export function useTheme() {
     if (!browserThemeState.wasPreloaded) {
       initDependencies.applyTheme(browserThemeState.theme);
     }
-    
+
     setThemePreference(browserThemeState.preference);
     setCurrentTheme(browserThemeState.theme);
     setMounted(true);
   }, [initDependencies]);
 
-  // Memoize media query effect dependencies
+  // Keep every useTheme consumer synchronized. Header, layout and settings can
+  // each mount their own hook instance, but they should all expose the same
+  // resolved mode and preference immediately after one instance changes it.
+  useEffect(() => {
+    const handleThemeStateChange = (event: Event) => {
+      const detail = (event as CustomEvent<ThemeStateEventDetail>).detail;
+      if (!detail || !isThemePreference(detail.preference)) return;
+      if (detail.theme !== 'light' && detail.theme !== 'dark') return;
+
+      setThemePreference(detail.preference);
+      setCurrentTheme(detail.theme);
+    };
+
+    window.addEventListener(THEME_STATE_EVENT, handleThemeStateChange);
+    return () => window.removeEventListener(THEME_STATE_EVENT, handleThemeStateChange);
+  }, []);
+
   const mediaQueryDependencies = useMemo(() => ({
     mounted,
     themePreference,
     applyTheme
   }), [mounted, themePreference, applyTheme]);
 
-  // Listen for system theme changes
   useEffect(() => {
     if (!mediaQueryDependencies.mounted) return;
 
@@ -133,6 +152,7 @@ export function useTheme() {
         const newTheme = mediaQuery.matches ? 'dark' : 'light';
         setCurrentTheme(newTheme);
         mediaQueryDependencies.applyTheme(newTheme);
+        publishThemeState('system', newTheme);
       }
     };
 
@@ -140,7 +160,6 @@ export function useTheme() {
     return () => mediaQuery.removeEventListener('change', handleChange);
   }, [mediaQueryDependencies]);
 
-  // Memoize the return value to prevent unnecessary re-renders
   const memoizedValue = useMemo(() => ({
     mounted,
     currentTheme,

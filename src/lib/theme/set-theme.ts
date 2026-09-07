@@ -17,6 +17,17 @@ function normalizePrimaryDefault(value: string | undefined, legacyValue: string,
 }
 
 /**
+ * Keep the document root as the single source of truth for resolved theme.
+ * Setting color-scheme at the same time prevents native controls and portalled
+ * UI from retaining the previous dark appearance after switching to light.
+ */
+function applyResolvedTheme(root: HTMLElement, shouldBeDark: boolean) {
+  root.classList.toggle('dark', shouldBeDark);
+  root.style.colorScheme = shouldBeDark ? 'dark' : 'light';
+  root.dataset.resolvedTheme = shouldBeDark ? 'dark' : 'light';
+}
+
+/**
  * Set theme and apply colors
  */
 export function setThemeAndColors({
@@ -49,15 +60,10 @@ export function setThemeAndColors({
   } else if (themePreference === 'light') {
     shouldBeDark = false;
   } else if (themePreference === 'system') {
-    shouldBeDark = typeof window !== 'undefined' ? window.matchMedia('(prefers-color-scheme: dark)').matches : false;
+    shouldBeDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
   }
 
-  // Set theme class
-  if (shouldBeDark) {
-    root.classList.add('dark');
-  } else {
-    root.classList.remove('dark');
-  }
+  applyResolvedTheme(root, shouldBeDark);
 
   // Extract start/end from primary gradient for CSS variables
   let gradientStart = primaryGradientStart;

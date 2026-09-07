@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from 'react';
-import { Database, Eye, Loader2, Sparkles } from 'lucide-react';
+import { AlertTriangle, Database, Eye, Loader2, Sparkles } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 
 import { Button } from '@/components/ui/button';
@@ -12,7 +12,10 @@ import {
   platformSetupFeatures,
   type PlatformSetupFeatureStatus,
 } from '@/lib/admin-platform-setup';
-import type { AppKitSetupPreviewGroup } from '@/lib/appkit-setup-preview';
+import {
+  getImportableAppKitFeatureIds,
+  type AppKitSetupPreviewGroup,
+} from '@/lib/appkit-setup-preview';
 import { getJsonErrorMessage, readJsonObject } from '@/lib/response-json';
 
 type AppKitEnvironment = 'development' | 'production';
@@ -30,6 +33,8 @@ export function HrSetupExampleDataControls({
   const [loadingPreview, setLoadingPreview] = useState(false);
   const [applying, setApplying] = useState(false);
   const pendingIds = useMemo(() => getRecommendedPlatformInitializationIds(statuses), [statuses]);
+  const importableIds = useMemo(() => getImportableAppKitFeatureIds(previewGroups), [previewGroups]);
+  const unavailableCount = previewGroups.length - importableIds.length;
 
   const preview = async () => {
     if (pendingIds.length === 0) {
@@ -57,24 +62,32 @@ export function HrSetupExampleDataControls({
   };
 
   const apply = async () => {
+    if (importableIds.length === 0) {
+      toast.error(`No example data is available from AppKit ${environment}. Check the AppKit connection and selected environment.`);
+      return;
+    }
+
     setApplying(true);
-    const results = await Promise.allSettled(pendingIds.map(async featureId => {
-      const feature = platformSetupFeatures.find(candidate => candidate.id === featureId);
-      if (!feature?.endpoint) return;
-      const response = await fetch(feature.endpoint, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ environment }),
-      });
-      const payload = await readJsonObject(response);
-      if (!response.ok) throw new Error(getJsonErrorMessage(payload, `Unable to apply ${feature.title}`));
-    }));
-    const failures = results.filter(result => result.status === 'rejected');
-    await onApplied();
-    setApplying(false);
-    setPreviewOpen(false);
-    if (failures.length === 0) toast.success('Example data applied to HR Setup');
-    else toast.error(`${results.length - failures.length} items applied; ${failures.length} need attention`);
+    try {
+      const results = await Promise.allSettled(importableIds.map(async featureId => {
+        const feature = platformSetupFeatures.find(candidate => candidate.id === featureId);
+        if (!feature?.endpoint) return;
+        const response = await fetch(feature.endpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ environment }),
+        });
+        const payload = await readJsonObject(response);
+        if (!response.ok) throw new Error(getJsonErrorMessage(payload, `Unable to apply ${feature.title}`));
+      }));
+      const failures = results.filter(result => result.status === 'rejected');
+      await onApplied();
+      setPreviewOpen(false);
+      if (failures.length === 0) toast.success('Example data applied to HR Setup');
+      else toast.error(`${results.length - failures.length} items applied; ${failures.length} need attention`);
+    } finally {
+      setApplying(false);
+    }
   };
 
   return (
@@ -112,15 +125,25 @@ export function HrSetupExampleDataControls({
               <div className="flex min-h-40 items-center justify-center gap-2 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /> Loading preview…</div>
             ) : (
               <div className="space-y-3">
+                {unavailableCount > 0 && (
+                  <div className="flex gap-2 rounded-lg border border-amber-300/60 bg-amber-50 px-3 py-2.5 text-xs text-amber-900 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-200">
+                    <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+                    <p>{unavailableCount} pending {unavailableCount === 1 ? 'configuration has' : 'configurations have'} no records in AppKit {environment} and will be skipped.</p>
+                  </div>
+                )}
                 {previewGroups.map(group => (
                   <section key={group.featureId} className="rounded-lg border bg-muted/15 p-4">
                     <div className="flex items-center justify-between gap-3">
                       <h3 className="text-sm font-semibold">{platformSetupFeatures.find(feature => feature.id === group.featureId)?.title ?? group.featureId}</h3>
                       <Badge variant="secondary">{group.count} {group.count === 1 ? 'record' : 'records'}</Badge>
                     </div>
-                    <ul className="mt-3 divide-y text-sm">
-                      {group.items.map((item, index) => <li key={`${item.label}-${index}`} className="py-2 first:pt-0 last:pb-0"><p className="font-medium">{item.label}</p>{item.detail && <p className="mt-0.5 text-xs text-muted-foreground">{item.detail}</p>}</li>)}
-                    </ul>
+                    {group.count === 0 ? (
+                      <p className="mt-3 text-xs text-muted-foreground">No records are available for this configuration in the selected AppKit environment.</p>
+                    ) : (
+                      <ul className="mt-3 divide-y text-sm">
+                        {group.items.map((item, index) => <li key={`${item.label}-${index}`} className="py-2 first:pt-0 last:pb-0"><p className="font-medium">{item.label}</p>{item.detail && <p className="mt-0.5 text-xs text-muted-foreground">{item.detail}</p>}</li>)}
+                      </ul>
+                    )}
                   </section>
                 ))}
               </div>
@@ -128,8 +151,8 @@ export function HrSetupExampleDataControls({
           </div>
           <DialogFooter className="border-t px-6 py-4">
             <Button variant="ghost" disabled={applying} onClick={() => setPreviewOpen(false)}>Cancel</Button>
-            <Button disabled={loadingPreview || applying || previewGroups.length === 0} onClick={() => void apply()}>
-              {applying && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} Confirm and apply
+            <Button disabled={loadingPreview || applying || importableIds.length === 0} onClick={() => void apply()}>
+              {applying && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} Confirm and apply{importableIds.length > 0 ? ` (${importableIds.length})` : ''}
             </Button>
           </DialogFooter>
         </DialogContent>

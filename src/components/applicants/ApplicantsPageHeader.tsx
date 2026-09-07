@@ -94,16 +94,14 @@ export function ApplicantsPageHeader({
   onGroupByChange,
   viewSwitcherProps,
 }: ApplicantsPageHeaderProps) {
-  // Don't show header on mobile
   if (isMobile) {
     return null;
   }
 
-
   return (
-    <div className="border-b border-border/60 px-4 py-3">
-      <div className="flex items-center justify-between gap-4">
-        <div className="flex-1">
+    <div className="border-b border-border/60 px-4 py-3 sm:px-6 lg:px-8">
+      <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between xl:gap-4">
+        <div className="min-w-0 flex-1 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           <ApplicantsFitScoreTabs
             applicantSettings={applicantSettings}
             applicantScoreCounts={applicantScoreCounts}

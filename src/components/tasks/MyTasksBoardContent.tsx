@@ -45,7 +45,7 @@ export function MyTasksBoardContent({
     return (
       <div className="p-6">
         {viewMode === 'kanban' ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 stagger-fade-in">
+          <div className="grid grid-cols-1 gap-4 stagger-fade-in md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {Array.from({ length: 8 }).map((_, index) => (
               <SkeletonKanbanCard key={`skeleton-${index}`} />
             ))}
@@ -67,9 +67,9 @@ export function MyTasksBoardContent({
   }
 
   return (
-    <div className="h-full">
+    <div className="h-full min-h-0">
       {viewMode === 'kanban' ? (
-        <div className="h-full">
+        <div className="h-full min-h-0">
           <TaskBoard
             tasks={convertApplicantsToTasks(displayedApplicants)}
             stages={convertStagesToTaskStages(filteredStages)}

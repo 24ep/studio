@@ -10,14 +10,46 @@ import {
 } from './system-status-utils';
 import { checkStorageBucketStatus } from './system-status-api';
 
+export interface ProbeLatencySample {
+  at: number;
+  latencyMs: number;
+  ok: boolean;
+}
+
+const PROBE_INTERVAL_MS = 15_000;
+const MAX_PROBE_SAMPLES = 24;
+
 export function useSystemStatusPage() {
   const [isClient, setIsClient] = useState(false);
   const [statuses, setStatuses] = useState<StatusItem[]>([]);
+  const [probeLatency, setProbeLatency] = useState<ProbeLatencySample[]>([]);
   const { data: session, status: sessionStatus } = useSession();
   const currentPath = typeof window !== 'undefined' ? window.location.pathname : '';
 
   const updateStatusItem = useCallback((id: string, updates: Partial<StatusItem>) => {
     setStatuses((prev) => updateSystemStatusItem(prev, id, updates));
+  }, []);
+
+  const runLiveProbe = useCallback(async () => {
+    const startedAt = performance.now();
+    let ok = false;
+
+    try {
+      const response = await fetch('/api/health', {
+        cache: 'no-store',
+        headers: { Accept: 'application/json' },
+      });
+      ok = response.ok;
+      await response.body?.cancel().catch(() => undefined);
+    } catch {
+      ok = false;
+    }
+
+    const latencyMs = Math.max(1, Math.round(performance.now() - startedAt));
+    setProbeLatency((current) => [
+      ...current.slice(-(MAX_PROBE_SAMPLES - 1)),
+      { at: Date.now(), latencyMs, ok },
+    ]);
   }, []);
 
   const handleCheckStorageBucket = useCallback(async () => {
@@ -83,6 +115,17 @@ export function useSystemStatusPage() {
   }, [sessionStatus, currentPath]);
 
   useEffect(() => {
+    if (sessionStatus !== 'authenticated') return;
+
+    void runLiveProbe();
+    const interval = window.setInterval(() => {
+      void runLiveProbe();
+    }, PROBE_INTERVAL_MS);
+
+    return () => window.clearInterval(interval);
+  }, [runLiveProbe, sessionStatus]);
+
+  useEffect(() => {
     setStatuses((prev) => prev.map((item) => {
       if (item.id === 'storage_bucket_check') {
         return { ...item, action: handleCheckStorageBucket };
@@ -103,6 +146,7 @@ export function useSystemStatusPage() {
   return {
     canCheckStorageBucket: canCheckSystemStatus(session?.user),
     isLoading,
+    probeLatency,
     statuses,
   };
 }

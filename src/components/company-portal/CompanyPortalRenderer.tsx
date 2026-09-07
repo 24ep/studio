@@ -20,13 +20,17 @@ import type {
   CompanyPortalLiveRecords,
 } from '@/lib/company-portal-builder';
 import { resolveCompanyPortalBlockStyle } from '@/lib/company-portal-builder';
-import {
-  resolveCompanyPortalButtonAction,
-  resolveCompanyPortalItemClickAction,
-} from '@/lib/company-portal-actions';
+import { resolveCompanyPortalItemClickAction } from '@/lib/company-portal-actions';
 import { resolveCompanyPortalLinkAnchor } from '@/lib/company-portal-links';
 import { getCompanyPortalMetrics } from '@/lib/company-portal-metrics';
 import { cn } from '@/lib/utils';
+import {
+  DataComponentEmpty,
+  DataListItem,
+  PortalButtonLink,
+  activateItemAction,
+  getDataRowSpacing,
+} from './CompanyPortalRendererParts';
 
 const SECTION_SPACING = {
   compact: 'py-5',
@@ -349,14 +353,14 @@ export function PortalBlock({
           {metrics.length > 0 ? (
             <div className={cn('mt-5 grid gap-5', COLUMN_LAYOUT[style.columns || 3])}>
               {metrics.map((metric, index) => {
-              const Icon = variant === 'job' ? [BriefcaseBusiness, CalendarCheck, MapPin][index % 3] : null;
-              return (
-                <div key={metric.id} className={cn('p-5', CARD_STYLE[style.cardStyle || 'soft'], alignmentClass)}>
-                  {Icon && <Icon className="mb-4 h-5 w-5 text-emerald-700" />}
-                  <p className="text-2xl font-bold">{metric.value}</p>
-                  <p className="mt-1 text-sm text-slate-600">{metric.label}</p>
-                </div>
-              );
+                const Icon = variant === 'job' ? [BriefcaseBusiness, CalendarCheck, MapPin][index % 3] : null;
+                return (
+                  <div key={metric.id} className={cn('p-5', CARD_STYLE[style.cardStyle || 'soft'], alignmentClass)}>
+                    {Icon && <Icon className="mb-4 h-5 w-5 text-emerald-700" />}
+                    <p className="text-2xl font-bold">{metric.value}</p>
+                    <p className="mt-1 text-sm text-slate-600">{metric.label}</p>
+                  </div>
+                );
               })}
             </div>
           ) : (
@@ -488,78 +492,5 @@ export function PortalBlock({
         )}
       </div>
     </section>
-  );
-}
-
-function DataListItem({ block, editable, fields, record, spacing }: {
-  block: CompanyPortalBlock;
-  editable: boolean;
-  fields: CompanyPortalCmsCollection['fields'];
-  record: CompanyPortalCmsCollection['records'][number];
-  spacing: 'compact' | 'comfortable' | 'spacious' | undefined;
-}) {
-  const action = resolveCompanyPortalItemClickAction(block, record);
-  const className = cn(
-    'grid gap-2 sm:grid-cols-[minmax(180px,1fr)_2fr]',
-    getDataRowSpacing(spacing),
-    action && !editable && 'group transition-colors hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500',
-  );
-  const content = <>
-    <p className="font-semibold">{record.values[fields[0].key] || '—'}</p>
-    <p className="flex items-center justify-between gap-3 text-sm text-slate-600">
-      <span>{fields.slice(1).map(field => record.values[field.key]).filter(Boolean).join(' · ') || 'No additional details'}</span>
-      {action && !editable && <ArrowRight className="h-4 w-4 shrink-0 text-slate-400 transition-transform group-hover:translate-x-1" />}
-    </p>
-  </>;
-
-  return action && !editable ? (
-    <a href={action.href} target={action.opensNewTab ? '_blank' : undefined} rel={action.opensNewTab ? 'noopener noreferrer' : undefined} className={className}>{content}</a>
-  ) : <article className={className}>{content}</article>;
-}
-
-function activateItemAction(action: { href: string; opensNewTab: boolean }) {
-  if (action.opensNewTab) {
-    window.open(action.href, '_blank', 'noopener,noreferrer');
-    return;
-  }
-  window.location.assign(action.href);
-}
-
-function DataComponentEmpty({ editable }: { editable: boolean }) {
-  if (!editable) return null;
-  return (
-    <div className="mt-6 border border-dashed border-slate-300 bg-slate-50 px-4 py-8 text-center">
-      <p className="text-sm font-semibold text-slate-700">Connect a data module</p>
-      <p className="mt-1 text-xs text-slate-500">Choose a model and the properties to display.</p>
-    </div>
-  );
-}
-
-function getDataRowSpacing(spacing: 'compact' | 'comfortable' | 'spacious' | undefined) {
-  if (spacing === 'compact') return 'py-2';
-  if (spacing === 'spacious') return 'py-4';
-  return 'py-3';
-}
-
-function PortalButtonLink({
-  block,
-  children,
-  className,
-}: {
-  block: CompanyPortalBlock;
-  children: React.ReactNode;
-  className: string;
-}) {
-  const action = resolveCompanyPortalButtonAction(block);
-
-  return (
-    <a
-      href={action.href}
-      className={className}
-      target={action.opensNewTab ? '_blank' : undefined}
-      rel={action.opensNewTab ? 'noopener noreferrer' : undefined}
-    >
-      {children}
-    </a>
   );
 }

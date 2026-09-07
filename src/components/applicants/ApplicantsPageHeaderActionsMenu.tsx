@@ -21,7 +21,6 @@ import type { ApplicantGroupBy } from './applicant-settings-types';
 
 type HeaderActionHandlers = {
   onAddApplicant: () => void;
-  onBulkUpload: () => void;
   onExport: () => void;
   onImport: () => void;
   onSettings: () => void;
@@ -34,17 +33,22 @@ interface ApplicantsHeaderActionsMenuProps extends HeaderActionHandlers {
   onGroupByChange: (groupBy: ApplicantGroupBy) => Promise<void>;
 }
 
+interface ApplicantsHeaderUploadButtonProps {
+  disabled: boolean;
+  onBulkUpload: () => void;
+}
+
 export function ApplicantsHeaderUploadButton({
   disabled,
   onBulkUpload,
-}: Pick<ApplicantsHeaderActionsMenuProps, 'disabled' | 'onBulkUpload'>) {
+}: ApplicantsHeaderUploadButtonProps) {
   return (
     <Button
       onClick={onBulkUpload}
       disabled={disabled}
-      className="h-8 px-3"
+      className="h-9 px-3"
     >
-      Upload CVs
+      Add resumes
     </Button>
   );
 }
@@ -66,7 +70,7 @@ export function ApplicantsHeaderActionsMenu({
           disabled={disabled}
           variant="ghost"
           size="icon"
-          className="h-9 w-9 shrink-0 rounded-full p-0 hover:bg-muted/60"
+          className="h-9 w-9 shrink-0 rounded-lg p-0 hover:bg-muted/60"
           aria-label="Applicant actions"
         >
           <MoreVertical className="h-4 w-4 text-muted-foreground" />
@@ -81,25 +85,25 @@ export function ApplicantsHeaderActionsMenu({
           />
         </div>
         <DropdownMenuSeparator />
-        <DropdownMenuItem onClick={onAddApplicant} className="text-sm py-2">
+        <DropdownMenuItem onClick={onAddApplicant} className="py-2 text-sm">
           <PlusCircle className="mr-2 h-4 w-4" />
-          Add Applicant
+          Add applicant
         </DropdownMenuItem>
-        {exportImportFeatureEnabled && (
+        {exportImportFeatureEnabled ? (
           <>
-            <DropdownMenuItem onClick={onExport} className="text-sm py-2">
+            <DropdownMenuItem onClick={onExport} className="py-2 text-sm">
               <FileDown className="mr-2 h-4 w-4" />
               Export to Excel
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={onImport} className="text-sm py-2">
+            <DropdownMenuItem onClick={onImport} className="py-2 text-sm">
               <FileSpreadsheet className="mr-2 h-4 w-4" />
-              Import Data
+              Import data
             </DropdownMenuItem>
           </>
-        )}
-        <DropdownMenuItem onClick={onSettings} className="text-sm py-2">
+        ) : null}
+        <DropdownMenuItem onClick={onSettings} className="py-2 text-sm">
           <Settings className="mr-2 h-4 w-4" />
-          Settings Page
+          Applicant settings
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

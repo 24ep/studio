@@ -1,8 +1,6 @@
-# Multi-stage Dockerfile for Next.js application (Optimized)
-# Stage 1: Base image with build tools
-FROM node:20-alpine AS base
+# Multi-stage Dockerfile for Next.js application
+FROM node:22-alpine AS base
 
-# Install necessary build tools and dependencies
 RUN apk add --no-cache \
     python3 \
     make \
@@ -11,122 +9,105 @@ RUN apk add --no-cache \
     curl \
     wget \
     dos2unix \
-    libc6-compat
+    libc6-compat && \
+    npm install --global npm@11.6.2
 
 WORKDIR /app
 
-# Stage 2: Dependencies
+# Dependencies are installed strictly from the committed lockfile and the
+# repository's explicit peer-resolution policy.
 FROM base AS deps
-
-# Copy package files first for better caching
-COPY package.json package-lock.json* ./
-
-# Copy Prisma schema for client generation
+COPY package.json package-lock.json .npmrc ./
 COPY prisma ./prisma
+# Account Directory 0.1.1 was retired by the release service after 0.1.2 was
+# published. Normalize only this immutable first-party tarball pin in the
+# container build so clean deploys do not depend on a removed historical URL.
+# Keep the rewrite scoped to this package; all other lockfile integrity entries
+# remain untouched and npm ci still validates the complete dependency graph.
+RUN node - <<'NODE'
+const fs = require('node:fs');
+const nextUrl = 'https://account-directory-sdk-release-production.up.railway.app/outborn-account-directory-0.1.2.tgz';
+const packageJson = JSON.parse(fs.readFileSync('package.json', 'utf8'));
+const lock = JSON.parse(fs.readFileSync('package-lock.json', 'utf8'));
 
-# Install dependencies with parallel connections for speed
-RUN if [ -f package-lock.json ]; then \
-    sed -i.bak '/@next\/swc-win32/d' package-lock.json 2>/dev/null || true; \
-    fi && \
-    npm config set maxsockets 10 && \
-    npm install --no-audit --legacy-peer-deps
+if (packageJson.dependencies?.['@outborn/account-directory']) {
+  packageJson.dependencies['@outborn/account-directory'] = nextUrl;
+}
+if (lock.packages?.['']?.dependencies?.['@outborn/account-directory']) {
+  lock.packages[''].dependencies['@outborn/account-directory'] = nextUrl;
+}
+const lockedDirectory = lock.packages?.['node_modules/@outborn/account-directory'];
+if (lockedDirectory) {
+  lockedDirectory.version = '0.1.2';
+  lockedDirectory.resolved = nextUrl;
+  delete lockedDirectory.integrity;
+}
 
-# Stage 2.5: Production Dependencies (for runtime tools like Prisma CLI)
-# Stage 2.5: Production Dependencies (Pruned from deps for speed)
+fs.writeFileSync('package.json', `${JSON.stringify(packageJson, null, 2)}\n`);
+fs.writeFileSync('package-lock.json', `${JSON.stringify(lock, null, 2)}\n`);
+NODE
+RUN npm config set maxsockets 10 && \
+    npm ci
+
+# Runtime dependencies retain the Prisma CLI because migrations are deployed
+# by entrypoint.sh before the standalone Next.js server starts.
 FROM deps AS prod-deps
-RUN npm prune --production && \
+RUN npm prune --omit=dev && \
     npx prisma generate --generator client
 
-# Stage 3: Builder
 FROM base AS builder
-
-# Copy dependencies from deps stage
 COPY --from=deps /app/node_modules ./node_modules
 COPY --from=deps /app/package*.json ./
+COPY --from=deps /app/.npmrc ./.npmrc
 COPY --from=deps /app/prisma ./prisma
-
-# Copy source code
 COPY . ./
 
-# Fix line endings for shell scripts (important for Windows development)
-RUN dos2unix ./entrypoint.sh ./entrypoint-processor.sh 2>/dev/null || true
-
-# Generate Prisma client
+RUN dos2unix ./entrypoint.sh ./entrypoint-processor.sh ./entrypoint-local.sh 2>/dev/null || true
 RUN npx prisma generate
+RUN test -f src/lib/db.ts
 
-# Debug: check if src/lib/db.ts exists
-RUN ls -l src/lib/db.ts || (echo 'src/lib/db.ts not found!' && exit 1)
-
-# Build the application
-# Use minimal global env; do not force a dummy DATABASE_URL during build
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV CI=true
 ENV NODE_ENV=production
-ENV SKIP_TYPESCRIPT_CHECK=true
 
-# Build the application (standalone output enabled in next.config.js)
+# Do not bypass TypeScript/lint failures in the deployment image. The same
+# production build must succeed here that succeeds in the Quality Gates.
 RUN set -e && \
-    NEXT_PHASE=phase-production-build \
-    npm run build && \
+    NEXT_PHASE=phase-production-build npm run build && \
     echo "=== Build completed successfully ===" && \
-    # Copy static files to standalone
     cp -r .next/static .next/standalone/.next/static && \
     cp -r public .next/standalone/public
 
-# Stage 4: Runner (production) - Clean minimal image
-FROM node:20-alpine AS runner
-
-# Install only runtime dependencies (no build tools)
+FROM node:22-alpine AS runner
 RUN apk add --no-cache postgresql-client openssl && \
+    npm install --global npm@11.6.2 && \
     addgroup --system --gid 1001 nodejs && \
     adduser --system --uid 1001 nextjs
 
 WORKDIR /app
 
-# Copy only the standalone output (includes all necessary node_modules)
 COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static
 COPY --from=builder /app/public ./public
-
-# Copy the complete Prisma schema and seed files
 COPY --from=builder /app/prisma ./prisma
-
-# Copy full production node_modules to ensure all transitive deps (jiti, etc) are present for CLI
 COPY --from=prod-deps /app/node_modules ./node_modules
-
-# Copy entrypoint scripts
 COPY --from=builder /app/entrypoint.sh ./entrypoint.sh
 COPY --from=builder /app/entrypoint-processor.sh ./entrypoint-processor.sh
 COPY --from=builder /app/entrypoint-local.sh ./entrypoint-local.sh
-
-# Copy runtime scripts and seed dependencies
 COPY --from=builder /app/scripts ./scripts
 COPY --from=builder /app/src/scripts ./src/scripts
-
-# The Prisma seed imports the email template catalog at runtime. Standalone
-# output does not include source files that are only referenced by seed.ts.
 COPY --from=builder /app/src/lib/email-template-catalog.ts ./src/lib/email-template-catalog.ts
 COPY --from=builder /app/src/lib/email-template-requirements.ts ./src/lib/email-template-requirements.ts
 
-# Make entrypoint scripts executable
-RUN chmod +x ./entrypoint.sh && \
-    chmod +x ./entrypoint-processor.sh && \
-    chmod +x ./entrypoint-local.sh
+RUN chmod +x ./entrypoint.sh ./entrypoint-processor.sh ./entrypoint-local.sh && \
+    chown -R nextjs:nodejs /app
 
-# Set ownership
-RUN chown -R nextjs:nodejs /app
-
-# Set environment variables
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV PORT=8021
 ENV HOSTNAME="0.0.0.0"
-# Production deploys preserve existing data. Seed only when explicitly requested.
 ENV SKIP_SEED=true
-# Switch to non-root user
+
 USER nextjs
-
 EXPOSE 8021
-
-# Start the application using the entrypoint script
 CMD ["/bin/sh", "/app/entrypoint.sh"]

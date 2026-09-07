@@ -34,7 +34,7 @@ export function PositionLevelsTab() {
   }
 
   return (
-    <div className="flex flex-col h-full overflow-hidden">
+    <div className="flex h-full min-h-0 flex-col overflow-hidden">
       <div className="flex-shrink-0 space-y-6 pb-6">
         <div className="flex flex-wrap justify-between items-start gap-3">
           <div>
@@ -82,7 +82,7 @@ export function PositionLevelsTab() {
         </div>
       </div>
 
-      <div className="flex-1 min-h-0 overflow-y-auto pr-4 custom-scrollbar">
+      <div className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain pr-4 custom-scrollbar">
         <PositionLevelsList
           levels={tab.levels}
           onDelete={tab.setLevelToDelete}

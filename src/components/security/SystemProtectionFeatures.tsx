@@ -7,11 +7,19 @@ import { ScreenCaptureProtection } from "./ScreenCaptureProtection";
 
 export function SystemProtectionFeatures() {
   const { settings } = useGlobalSettings();
+  const rightClickProtectionEnabled = getBooleanSystemSetting(
+    settings,
+    "rightClickProtectionEnabled",
+  );
+  const screenCaptureProtectionEnabled = getBooleanSystemSetting(
+    settings,
+    "screenCaptureProtectionEnabled",
+  );
 
   return (
     <>
-      <RightClickProtection enabled={settings.rightClickProtectionEnabled} />
-      <ScreenCaptureProtection enabled={settings.screenCaptureProtectionEnabled} />
+      <RightClickProtection enabled={rightClickProtectionEnabled} />
+      <ScreenCaptureProtection enabled={screenCaptureProtectionEnabled} />
     </>
   );
 }

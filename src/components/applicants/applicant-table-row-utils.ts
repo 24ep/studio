@@ -1,7 +1,7 @@
 import { differenceInDays, formatDistanceToNow, isValid, parseISO } from 'date-fns';
 import { z } from 'zod';
 
-import { formatDateInTimezone } from '../../lib/dateUtils';
+import { getApplicationTimezone } from '../../lib/dateUtils';
 import { formatScoreWithGrade } from '../../lib/scoreUtils';
 import type { Applicant } from '@/lib/types';
 
@@ -25,6 +25,23 @@ export function displayApplicantFitScoreWithGrade(score: number | undefined | nu
   return formatScoreWithGrade(score);
 }
 
+function formatApplicantAbsoluteDate(date: Date): string {
+  const formatter = new Intl.DateTimeFormat('en-US', {
+    timeZone: getApplicationTimezone(),
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    hourCycle: 'h23',
+  });
+  const parts = formatter.formatToParts(date);
+  const part = (type: Intl.DateTimeFormatPartTypes) =>
+    parts.find(value => value.type === type)?.value ?? '';
+
+  return `${part('month')} ${part('day')}, ${part('year')} ${part('hour')}:${part('minute')}`;
+}
+
 export function displayApplicantTableDate(
   dateString: string | undefined | null,
   daysThreshold = 7,
@@ -40,7 +57,7 @@ export function displayApplicantTableDate(
     return formatDistanceToNow(date, { addSuffix: true });
   }
 
-  return formatDateInTimezone(date, 'MMM d, yyyy HH:mm');
+  return formatApplicantAbsoluteDate(date);
 }
 
 export function getRowHeightStyle(rowHeight: ApplicantTableRowHeight = 'normal') {

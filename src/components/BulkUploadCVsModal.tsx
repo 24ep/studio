@@ -23,9 +23,17 @@ interface BulkUploadCVsModalProps {
   onUploadSuccess?: () => void;
   initialSourceName?: string;
   lockSource?: boolean;
+  presentation?: 'dialog' | 'drawer' | 'page';
 }
 
-function BulkUploadCVsModal({ isOpen, onOpenChange, onUploadSuccess, initialSourceName, lockSource = false }: BulkUploadCVsModalProps) {
+function BulkUploadCVsModal({
+  isOpen,
+  onOpenChange,
+  onUploadSuccess,
+  initialSourceName,
+  lockSource = false,
+  presentation = 'drawer',
+}: BulkUploadCVsModalProps) {
   const {
     availableSources,
     canBulkUpload,
@@ -61,7 +69,6 @@ function BulkUploadCVsModal({ isOpen, onOpenChange, onUploadSuccess, initialSour
     initialSourceName,
   });
 
-  // Early return check - must happen after all hooks
   if (!canBulkUpload) {
     return (
       <BulkUploadAccessDeniedDialog
@@ -71,76 +78,137 @@ function BulkUploadCVsModal({ isOpen, onOpenChange, onUploadSuccess, initialSour
     );
   }
 
+  if (!isOpen) {
+    return null;
+  }
+
   const totalFiles = selectedFiles.length;
   const layoutClasses = getBulkUploadLayoutClasses(totalFiles);
-  return (
-    <Dialog open={isOpen} onOpenChange={handleModalClose}>
-      <DialogContent 
-        ref={modalContentRef}
-        className="w-full max-w-5xl" 
-        dialogId="bulk-upload-cvs-modal"
-        onEscapeKeyDown={(e) => e.preventDefault()}
-        onOpenAutoFocus={(e) => e.preventDefault()}
-      >
-        <DialogHeader>
-          <DialogTitle>{initialSourceName ? 'Upload CV' : 'Process Queue'}</DialogTitle>
-          <DialogDescription>
-            {initialSourceName
-              ? 'Upload your friend\'s CV and optionally assign it to an open position.'
-              : 'Upload multiple resumes and (optionally) assign them to a position.'}
-          </DialogDescription>
-        </DialogHeader>
-        <div className="space-y-4 p-4 pb-5 pt-2">
-          <BulkUploadSelectionFields
-            availableSources={availableSources}
-            selectedPositionIds={selectedPositionIds}
-            selectedSourceId={selectedSourceId}
-            subSource={subSource}
-            uploading={uploading}
-            onPositionChange={handlePositionChange}
-            onSourceChange={setSelectedSourceId}
-            onSubSourceChange={setSubSource}
-            sourceLocked={lockSource}
-          />
+  const title = initialSourceName ? 'Upload CV' : 'Add resumes';
+  const description = initialSourceName
+    ? 'Upload your friend\'s CV and optionally assign it to an open position.'
+    : 'Upload multiple resumes, set their source, and optionally assign them to open positions.';
 
-          <BulkUploadMainContent
-            dragActive={dragActive}
-            fileBatchMap={fileBatchMap}
-            layoutClasses={layoutClasses}
-            previewUrl={previewUrl}
-            selectedFileIndex={selectedFileIndex}
-            selectedFiles={selectedFiles}
-            onDragActiveChange={handleDragActiveChange}
-            onFiles={handleFiles}
-            onRemoveFile={removeFile}
-            onSelectedFileIndexChange={setSelectedFileIndex}
-            onViewerFileChange={setFileViewerFile}
-            onViewerOpenChange={setFileViewerOpen}
-          />
+  const workflowBody = (
+    <>
+      <BulkUploadSelectionFields
+        availableSources={availableSources}
+        selectedPositionIds={selectedPositionIds}
+        selectedSourceId={selectedSourceId}
+        subSource={subSource}
+        uploading={uploading}
+        onPositionChange={handlePositionChange}
+        onSourceChange={setSelectedSourceId}
+        onSubSourceChange={setSubSource}
+        sourceLocked={lockSource}
+      />
+
+      <BulkUploadMainContent
+        dragActive={dragActive}
+        fileBatchMap={fileBatchMap}
+        layoutClasses={layoutClasses}
+        previewUrl={previewUrl}
+        selectedFileIndex={selectedFileIndex}
+        selectedFiles={selectedFiles}
+        onDragActiveChange={handleDragActiveChange}
+        onFiles={handleFiles}
+        onRemoveFile={removeFile}
+        onSelectedFileIndexChange={setSelectedFileIndex}
+        onViewerFileChange={setFileViewerFile}
+        onViewerOpenChange={setFileViewerOpen}
+      />
+
+      {shouldShowBulkUploadProgress(uploading) ? (
+        <BulkUploadProgress
+          totalFiles={totalFiles}
+          uploadProgress={uploadProgress}
+        />
+      ) : null}
+    </>
+  );
+
+  const viewer = (
+    <FileViewerModal
+      isOpen={fileViewerOpen}
+      onOpenChange={setFileViewerOpen}
+      file={fileViewerFile}
+    />
+  );
+
+  if (presentation === 'page') {
+    return (
+      <section className="overflow-hidden rounded-xl border border-border/70 bg-background shadow-sm">
+        <div className="border-b border-border/70 px-5 py-5 sm:px-6">
+          <h2 className="text-lg font-semibold tracking-[-0.015em]">{title}</h2>
+          <p className="mt-1 text-sm leading-5 text-muted-foreground">{description}</p>
         </div>
-        
-        {/* Upload Progress Indicator */}
-        {shouldShowBulkUploadProgress(uploading) && (
-          <BulkUploadProgress
-            totalFiles={totalFiles}
-            uploadProgress={uploadProgress}
-          />
-        )}
-        
+        <div className="space-y-5 px-5 py-5 sm:px-6 sm:py-6">
+          {workflowBody}
+        </div>
         <BulkUploadFooter
           totalFiles={totalFiles}
           uploading={uploading}
           onCancelUpload={cancelUpload}
           onConfirmUpload={handleConfirmUpload}
+          embedded
+          onClose={() => handleModalClose(false)}
         />
-        <FileViewerModal
-          isOpen={fileViewerOpen}
-          onOpenChange={setFileViewerOpen}
-          file={fileViewerFile}
-        />
+        {viewer}
+      </section>
+    );
+  }
+
+  const isDrawer = presentation === 'drawer';
+
+  return (
+    <Dialog open={isOpen} onOpenChange={handleModalClose}>
+      <DialogContent
+        ref={modalContentRef}
+        placement={isDrawer ? 'right' : 'center'}
+        className={isDrawer ? 'sm:max-w-3xl lg:max-w-4xl' : 'max-w-5xl'}
+        dialogId={isDrawer ? 'bulk-upload-cvs-drawer' : 'bulk-upload-cvs-dialog'}
+        onEscapeKeyDown={(event) => {
+          if (uploading) event.preventDefault();
+        }}
+        onOpenAutoFocus={(event) => event.preventDefault()}
+      >
+        {isDrawer ? (
+          <>
+            <DialogHeader className="border-b border-border/70 px-5 py-5 sm:px-6">
+              <DialogTitle>{title}</DialogTitle>
+              <DialogDescription>{description}</DialogDescription>
+            </DialogHeader>
+            <div className="min-h-0 space-y-5 overflow-y-auto px-5 py-5 sm:px-6 sm:py-6">
+              {workflowBody}
+            </div>
+            <div className="border-t border-border/70 px-5 py-4 sm:px-6">
+              <BulkUploadFooter
+                totalFiles={totalFiles}
+                uploading={uploading}
+                onCancelUpload={cancelUpload}
+                onConfirmUpload={handleConfirmUpload}
+              />
+            </div>
+          </>
+        ) : (
+          <>
+            <DialogHeader>
+              <DialogTitle>{title}</DialogTitle>
+              <DialogDescription>{description}</DialogDescription>
+            </DialogHeader>
+            <div className="space-y-5">{workflowBody}</div>
+            <BulkUploadFooter
+              totalFiles={totalFiles}
+              uploading={uploading}
+              onCancelUpload={cancelUpload}
+              onConfirmUpload={handleConfirmUpload}
+            />
+          </>
+        )}
+        {viewer}
       </DialogContent>
     </Dialog>
   );
 }
 
-export default BulkUploadCVsModal; 
+export default BulkUploadCVsModal;

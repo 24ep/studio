@@ -1,6 +1,6 @@
 import { DEFAULT_APP_NAME } from './constants';
 
-const LEGACY_APP_NAMES = new Set(['fitscan', 'hri']);
+const LEGACY_APP_NAMES = new Set(['hrive', 'fitscan', 'hri']);
 
 export function normalizeAppName(value: unknown, fallback = DEFAULT_APP_NAME) {
   if (typeof value !== 'string') {

@@ -1,14 +1,24 @@
 // src/app/api/auth/[...nextauth]/route.ts
 /**
  * NextAuth v5 (Auth.js) Route Handler
- * 
- * This is the simplified route handler for NextAuth v5.
- * NextAuth v5 is designed for Next.js 15 App Router and doesn't have
- * the route detection issues that v4 had.
+ *
+ * Wraps Auth.js with sanitized production diagnostics while preserving normal
+ * OAuth redirects as successful control flow.
  */
 
 import { handlers } from '@/auth';
 import { NextRequest, NextResponse } from 'next/server';
+
+const SENSITIVE_OAUTH_PARAMS = new Set([
+  'code',
+  'token',
+  'access_token',
+  'refresh_token',
+  'id_token',
+  'session_state',
+  'state',
+  'nonce',
+]);
 
 function getErrorCause(error: unknown): unknown {
   return error instanceof Error && 'cause' in error
@@ -16,109 +26,92 @@ function getErrorCause(error: unknown): unknown {
     : undefined;
 }
 
-// Wrap handlers with error logging for OAuth callback errors
+function sanitizedSearchParams(url: URL): Record<string, string> {
+  const sanitized: Record<string, string> = {};
+  url.searchParams.forEach((value, key) => {
+    sanitized[key] = SENSITIVE_OAUTH_PARAMS.has(key.toLowerCase()) ? '[REDACTED]' : value;
+  });
+  return sanitized;
+}
+
+function publicRequestUrl(req: NextRequest, parsed: URL): string {
+  const host = req.headers.get('x-forwarded-host') || req.headers.get('host');
+  const proto = req.headers.get('x-forwarded-proto') || 'https';
+  if (!host) return `${parsed.pathname}${parsed.search}`;
+  return `${proto}://${host}${parsed.pathname}${parsed.search}`;
+}
+
 async function handleRequest(
   handler: (req: NextRequest) => Promise<Response>,
-  req: NextRequest
+  req: NextRequest,
 ): Promise<Response> {
+  const parsed = new URL(req.url);
+  const diagnosticUrl = publicRequestUrl(req, parsed);
+
   try {
-    const url = new URL(req.url);
-    
-    // Log all callback requests for debugging (sanitized to avoid logging sensitive tokens)
-    if (url.pathname.includes('/callback/')) {
-      // Sanitize search params - mask sensitive OAuth tokens/codes
-      const sanitizedParams: Record<string, string> = {};
-      url.searchParams.forEach((value, key) => {
-        const sensitiveKeys = ['code', 'token', 'access_token', 'refresh_token', 'id_token', 'session_state'];
-        sanitizedParams[key] = sensitiveKeys.includes(key.toLowerCase()) ? '[REDACTED]' : value;
-      });
+    if (parsed.pathname.includes('/callback/')) {
       console.log('[NEXTAUTH HANDLER] OAuth callback request:', {
-        pathname: url.pathname,
-        searchParams: sanitizedParams,
+        pathname: parsed.pathname,
+        searchParams: sanitizedSearchParams(parsed),
         method: req.method,
         headers: {
           host: req.headers.get('host'),
           referer: req.headers.get('referer'),
           'user-agent': req.headers.get('user-agent'),
-        }
+        },
       });
     }
-    
-    // Log OAuth callback errors from Azure AD if present in URL
-    if (url.searchParams.has('error')) {
-      const error = url.searchParams.get('error');
-      const errorDescription = url.searchParams.get('error_description');
-      const errorUri = url.searchParams.get('error_uri');
-      const state = url.searchParams.get('state');
-      
-      // Sanitize params to avoid logging sensitive tokens
-      const sanitizedAllParams: Record<string, string> = {};
-      url.searchParams.forEach((value, key) => {
-        const sensitiveKeys = ['code', 'token', 'access_token', 'refresh_token', 'id_token', 'session_state'];
-        sanitizedAllParams[key] = sensitiveKeys.includes(key.toLowerCase()) ? '[REDACTED]' : value;
-      });
-      console.error('[NEXTAUTH HANDLER] Azure AD OAuth error detected in callback URL:', {
-        error,
-        errorDescription: errorDescription ? decodeURIComponent(errorDescription) : null,
-        errorUri,
-        state: state ? '[REDACTED]' : null,
-        pathname: url.pathname,
-        allParams: sanitizedAllParams
+
+    if (parsed.searchParams.has('error')) {
+      console.error('[NEXTAUTH HANDLER] OAuth error returned to application:', {
+        error: parsed.searchParams.get('error'),
+        errorDescription: parsed.searchParams.get('error_description'),
+        errorUri: parsed.searchParams.get('error_uri'),
+        pathname: parsed.pathname,
+        allParams: sanitizedSearchParams(parsed),
       });
     }
-    
+
     const response = await handler(req);
-    
-    // Check response for errors
-    if (!response.ok) {
+
+    // Redirects are normal OAuth control flow. Log only actual client/server errors.
+    if (response.status >= 400) {
       const responseClone = response.clone();
       try {
         const responseText = await responseClone.text();
-        console.error('[NEXTAUTH HANDLER] Non-OK response from handler:', {
+        console.error('[NEXTAUTH HANDLER] Error response from handler:', {
           status: response.status,
           statusText: response.statusText,
-          body: responseText.substring(0, 1000), // Limit log size
-          url: url.toString()
+          body: responseText.substring(0, 1000),
+          url: diagnosticUrl,
         });
-      } catch (e) {
-        console.error('[NEXTAUTH HANDLER] Failed to read error response body:', e);
+      } catch (error) {
+        console.error('[NEXTAUTH HANDLER] Failed to read error response body:', error);
       }
     }
-    
+
     return response;
   } catch (error) {
     console.error('[NEXTAUTH HANDLER] Unhandled error:', error);
     const errorMessage = error instanceof Error ? error.message : String(error);
     const errorStack = error instanceof Error ? error.stack : undefined;
     const errorCause = getErrorCause(error);
-    
+
     console.error('[NEXTAUTH HANDLER] Error details:', {
       message: errorMessage,
       stack: errorStack,
       cause: errorCause,
-      url: req.url,
-      method: req.method
+      url: diagnosticUrl,
+      method: req.method,
     });
-    
-    // Try to extract OAuth error from the error message
-    let oauthError = null;
-    if (errorMessage.includes('OAuthCallbackError') || errorMessage.includes('OAuth Provider returned an error')) {
-      oauthError = {
-        type: 'OAuthCallbackError',
-        message: 'Azure AD returned an error during authentication',
-        suggestion: 'Check Azure AD App Registration redirect URI and client secret configuration'
-      };
-    }
-    
-    // Return a proper error response
+
     return NextResponse.json(
-      { 
+      {
         error: 'OAuthCallbackError',
         message: 'An error occurred during authentication. Please try again.',
         details: process.env.NODE_ENV === 'development' ? errorMessage : undefined,
-        oauthError: process.env.NODE_ENV === 'development' ? oauthError : undefined
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

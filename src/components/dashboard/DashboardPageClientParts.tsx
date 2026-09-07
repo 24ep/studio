@@ -1,21 +1,18 @@
 "use client";
 
-import { type RefObject, useEffect, useState } from "react";
+import type { RefObject } from "react";
 import {
   ArrowRight,
   CalendarDays,
   RefreshCw,
   Sparkles,
 } from "lucide-react";
-import { useSession } from "next-auth/react";
 
-import { HrisUnifiedTaskInbox } from "@/components/hris/HrisUnifiedTaskInbox";
 import { PositionDetailDrawer } from "@/components/positions/PositionDetailDrawer";
 import { ApplicantAvatarCompact } from "@/components/ui/applicant-avatar";
-import { OnboardingProgress, type OnboardingProgressPayload, type RawOnboardingStep } from "@/components/onboarding/OnboardingProgress";
 import { formatApplicantNameWithLang } from "@/lib/applicantUtils";
-import { hasAnyPermission } from "@/lib/permissions";
 import type { Applicant } from "@/lib/types";
+import { DashboardAdminPortalPanel, DashboardRoleWorkspace } from "./DashboardAdminPanels";
 import type { DashboardHeadcountSummary } from "./DashboardHeadcountStatusCard";
 import {
   DashboardChartsSection,
@@ -64,149 +61,8 @@ interface DashboardMainContentProps {
   stageNames: Record<string, string>;
 }
 
-interface AdminPortalOnboardingResponse {
-  onboarding?: {
-    steps?: RawOnboardingStep[];
-    progress?: {
-      completed: number;
-      percentage: number;
-      total: number;
-    };
-    subtitle?: string;
-    title?: string;
-  };
-  progress?: {
-    completed: number;
-    percentage: number;
-    total: number;
-  };
-}
-
-function AdminPortalPanel({
-  onNavigate,
-}: {
-  onNavigate: (href: string) => void;
-}) {
-  const [progressPayload, setProgressPayload] = useState<OnboardingProgressPayload>({
-    title: "Activate your workspace",
-    subtitle: "Complete the real organization tasks required before inviting your wider team. Progress is saved automatically.",
-    steps: [],
-    progress: {
-      completed: 0,
-      total: 0,
-      percentage: 0,
-    },
-  });
-  const [isLoadingProgress, setIsLoadingProgress] = useState(true);
-  const [isPanelDismissed, setIsPanelDismissed] = useState(false);
-
-  useEffect(() => {
-    const controller = new AbortController();
-    const timeoutId = window.setTimeout(() => controller.abort(), 6000);
-    const loadAdminSnapshots = async () => {
-      setIsLoadingProgress(true);
-      try {
-        const response = await fetch('/api/settings/platform-setup/status', {
-          cache: 'no-store',
-          signal: controller.signal,
-        });
-        if (!response.ok) {
-          setProgressPayload({
-            title: "Activate your workspace",
-            subtitle: "Complete the real organization tasks required before inviting your wider team. Progress is saved automatically.",
-            steps: [],
-            progress: {
-              completed: 0,
-              total: 0,
-              percentage: 0,
-            },
-          });
-          return;
-        }
-        const payload = (await response.json()) as AdminPortalOnboardingResponse;
-        const steps = Array.isArray(payload?.onboarding?.steps) ? payload?.onboarding?.steps : [];
-        const fallbackProgress = payload?.onboarding?.progress || payload?.progress;
-        const requiredSteps = steps.filter((step) => step.required);
-        const fallbackCalculatedCompleted = requiredSteps.filter((step) => step.ready).length;
-        setProgressPayload({
-          title: payload?.onboarding?.title ?? "Activate your workspace",
-          subtitle: payload?.onboarding?.subtitle ?? "Complete the real organization tasks required before inviting your wider team. Progress is saved automatically.",
-          steps,
-          progress: fallbackProgress
-            ? {
-              completed: fallbackProgress.completed,
-              percentage: fallbackProgress.percentage,
-              total: fallbackProgress.total,
-            }
-            : {
-              completed: fallbackCalculatedCompleted,
-              total: requiredSteps.length,
-              percentage: requiredSteps.length === 0
-                ? 100
-                : Math.round((fallbackCalculatedCompleted / requiredSteps.length) * 100),
-            },
-        });
-      } catch (error) {
-        console.error('Failed to load admin onboarding progress.', error);
-        setProgressPayload({
-          title: "Workspace setup needs attention",
-          subtitle: "Setup progress could not be loaded. Open HR Setup to review configuration and service connectivity.",
-          steps: [{
-            id: 'setup-recovery',
-            title: 'Review HR Setup',
-            description: 'Check required modules and retry the setup status service.',
-            href: '/settings',
-            required: true,
-            ready: false,
-            count: 0,
-            requiredCount: 1,
-            actionLabel: 'Open HR Setup',
-          }],
-          progress: { completed: 0, total: 1, percentage: 0 },
-        });
-      } finally {
-        window.clearTimeout(timeoutId);
-        setIsLoadingProgress(false);
-      }
-    };
-
-    void loadAdminSnapshots();
-    return () => {
-      window.clearTimeout(timeoutId);
-      controller.abort();
-    };
-  }, []);
-
-  if (isPanelDismissed) return null;
-
-  return (
-    <section className="dashboard-card dashboard-full-panel onboarding-dashboard-panel" aria-labelledby="admin-portal-onboarding-title">
-      <OnboardingProgress
-        onNavigate={onNavigate}
-        // Platform setup has its own request lifecycle. A slower analytics
-        // request must not hold this independent journey in a skeleton state.
-        isLoading={isLoadingProgress}
-        payload={progressPayload}
-        onDismiss={() => setIsPanelDismissed(true)}
-      />
-    </section>
-  );
-}
-
 function formatMetric(value: number, options?: Intl.NumberFormatOptions) {
   return new Intl.NumberFormat("en-US", options).format(value);
-}
-
-function DashboardCommonAdminPanel({ isLoading, onNavigate }: {
-  isLoading: boolean;
-  onNavigate: NavigateHandler;
-}) {
-  void isLoading;
-  return (
-    <AdminPortalPanel
-      onNavigate={onNavigate}
-    />
-  );
 }
 
 function buildCurrentMonthRangeQuery(status: string) {
@@ -286,7 +142,7 @@ function DashboardInterviewPanel({
 
       <div className="dashboard-interview-list">
         {interviewRows.length > 0 ? (
-          interviewRows.map((applicant, index) => {
+          interviewRows.map((applicant) => {
             const nameInfo = formatApplicantNameWithLang(applicant);
 
             return (
@@ -303,7 +159,9 @@ function DashboardInterviewPanel({
                 />
                 <div className="dashboard-interview-copy">
                   <div className="dashboard-interview-topline">
-                    <span className={nameInfo.fontClass} lang={nameInfo.lang}>{nameInfo.name}</span>
+                    <span className={nameInfo.fontClass} lang={nameInfo.lang}>
+                      {nameInfo.name}
+                    </span>
                     <strong>Interview stage</strong>
                   </div>
                   <p>{applicant.position?.title || "Open role"}</p>
@@ -330,40 +188,6 @@ function DashboardInterviewPanel({
         )}
       </div>
     </aside>
-  );
-}
-
-function DashboardRoleWorkspace({ onNavigate }: { onNavigate: NavigateHandler }) {
-  const { data: session } = useSession();
-  const user = session?.user;
-  const destinations = [
-    { label: "My workspace", description: "Profile, leave, attendance, documents, and learning", href: "/employee-portal", show: true },
-    { label: "My team", description: "Direct reports, approvals, and manager actions", href: "/ess/team", show: user?.role === "Hiring Manager" || hasAnyPermission(user, ["HR_WORKFORCE_VIEW", "HR_WORKFORCE_MANAGE"]) },
-    { label: "People operations", description: "Employee records, movements, probation, and cases", href: "/people", show: hasAnyPermission(user, ["HR_PEOPLE_VIEW", "HR_PEOPLE_MANAGE"]) },
-    { label: "Payroll & finance", description: "Runs, exceptions, expenses, and reconciliation", href: "/payroll", show: hasAnyPermission(user, ["HR_PAYROLL_VIEW", "HR_PAYROLL_MANAGE", "EXPENSES_FINANCE"]) },
-  ].filter(destination => destination.show);
-
-  return (
-    <section className="dashboard-card dashboard-full-panel p-5" aria-labelledby="role-workspace-title">
-      <div className="mb-4">
-        <h2 id="role-workspace-title" className="text-base font-semibold text-foreground">Your HR workspace</h2>
-        <p className="mt-1 text-sm text-muted-foreground">Shortcuts and pending work are scoped to your role and permissions.</p>
-      </div>
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        {destinations.map(destination => (
-          <button
-            key={destination.href}
-            type="button"
-            onClick={() => onNavigate(destination.href)}
-            className="min-h-11 rounded-xl border border-border/70 bg-background p-4 text-left transition-colors hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
-          >
-            <span className="text-sm font-semibold text-foreground">{destination.label}</span>
-            <span className="mt-1 block text-xs leading-5 text-muted-foreground">{destination.description}</span>
-          </button>
-        ))}
-      </div>
-      <HrisUnifiedTaskInbox />
-    </section>
   );
 }
 
@@ -404,107 +228,151 @@ export function DashboardMainContent({
   sharedRef,
   stageNames,
 }: DashboardMainContentProps) {
+  void activeApplicants;
+  void applicationsThisWeek;
+  void averageTimeToHire;
+  void adminPositionsCount;
+  void adminUsersCount;
+  void headcountData;
+  void headcountLoading;
+  void onPositionClick;
+  void openHeadcounts;
+
   return (
     <div className={`dashboard-container dashboard-shell dashboard-shell--${pageMode}`}>
       <div className="dashboard-content">
         <header className="dashboard-header">
           <div className="dashboard-header-copy">
-            <div className="dashboard-header-mark" aria-hidden="true"><Sparkles /></div>
+            <div className="dashboard-header-mark" aria-hidden="true">
+              <Sparkles />
+            </div>
             <div>
               <p className="dashboard-header-eyebrow">
                 {pageMode === "hr" ? "Recruitment workspace" : "Hiring command center"}
               </p>
-              <h1 className="dashboard-page-title">{pageMode === "hr" ? "HR Dashboard" : "Admin Portal"}</h1>
+              <h1 className="dashboard-page-title">
+                {pageMode === "hr" ? "HR Dashboard" : "Admin Portal"}
+              </h1>
               <p className="dashboard-page-subtitle">
                 {pageMode === "hr"
                   ? "Track hiring outcomes, interviews, recruiting trends, and pipeline movement."
                   : isAdminPortal
-                  ? "Review recruiting activity, team workload, and workspace setup."
-                  : "Track your applicants, priorities, and recruiting pipeline."}
+                    ? "Review recruiting activity, team workload, and workspace setup."
+                    : "Track your applicants, priorities, and recruiting pipeline."}
               </p>
             </div>
           </div>
           <div className="dashboard-header-actions">
-            <span className={`dashboard-status-chip ${hasSSEUpdated ? "is-live" : "is-ready"}`}>
+            <span
+              className={`dashboard-status-chip ${hasSSEUpdated ? "is-live" : "is-ready"}`}
+            >
               <span className="dashboard-status-dot" />
               {hasSSEUpdated ? "Live updates" : "Up to date"}
             </span>
-            {pageMode === "hr" && <button
-              type="button"
-              className="dashboard-filter-button"
-              onClick={onDataUpdate}
-              aria-label="Refresh dashboard data"
-            >
-              <RefreshCw aria-hidden="true" />
-              <span>Refresh</span>
-            </button>}
+            {pageMode === "hr" && (
+              <button
+                type="button"
+                className="dashboard-filter-button"
+                onClick={onDataUpdate}
+                aria-label="Refresh dashboard data"
+              >
+                <RefreshCw aria-hidden="true" />
+                <span>Refresh</span>
+              </button>
+            )}
           </div>
         </header>
 
         {pageMode === "admin" && isAdminPortal ? (
-          <DashboardCommonAdminPanel isLoading={isLoading} onNavigate={onNavigate} />
+          <DashboardAdminPortalPanel onNavigate={onNavigate} />
         ) : null}
 
-        {pageMode === "admin" && !isAdminPortal && <DashboardRoleWorkspace onNavigate={onNavigate} />}
+        {pageMode === "admin" && !isAdminPortal && (
+          <DashboardRoleWorkspace onNavigate={onNavigate} />
+        )}
 
-        {pageMode === "hr" && <section className="dashboard-overview-grid" aria-label="Recruitment summary">
-          <div className="dashboard-card dashboard-activity-panel">
-            <div className="dashboard-panel-header">
-              <div>
-                <h2>Hiring outcomes</h2>
-                <p>A quick view of this month&apos;s movement.</p>
+        {pageMode === "hr" && (
+          <section
+            className="dashboard-overview-grid"
+            aria-label="Recruitment summary"
+          >
+            <div className="dashboard-card dashboard-activity-panel">
+              <div className="dashboard-panel-header">
+                <div>
+                  <h2>Hiring outcomes</h2>
+                  <p>A quick view of this month&apos;s movement.</p>
+                </div>
+              </div>
+              <div className="dashboard-status-stack">
+                <DashboardMiniStat
+                  label="Hired this month"
+                  description="Applicants who joined the team"
+                  value={formatMetric(hiredThisMonth)}
+                  onClick={() =>
+                    onNavigate(
+                      "/applicants?query=" +
+                        encodeURIComponent(buildCurrentMonthRangeQuery("Hired")),
+                    )
+                  }
+                />
+                <DashboardMiniStat
+                  label="Rejected this month"
+                  description="Applications closed this month"
+                  value={formatMetric(rejectedThisMonth)}
+                  onClick={() =>
+                    onNavigate(
+                      "/applicants?query=" +
+                        encodeURIComponent(buildCurrentMonthRangeQuery("Rejected")),
+                    )
+                  }
+                />
+                <DashboardMiniStat
+                  label="High-fit applicants"
+                  description="Applicants with an 80+ fit score"
+                  value={formatMetric(highScoreApplicants)}
+                  onClick={() =>
+                    onNavigate(
+                      "/applicants?query=" +
+                        encodeURIComponent("minAppliedJobFitScore:80"),
+                    )
+                  }
+                />
               </div>
             </div>
-            <div className="dashboard-status-stack">
-              <DashboardMiniStat
-                label="Hired this month"
-                description="Applicants who joined the team"
-                value={formatMetric(hiredThisMonth)}
-                onClick={() => onNavigate('/applicants?query=' + encodeURIComponent(buildCurrentMonthRangeQuery('Hired')))}
-              />
-              <DashboardMiniStat
-                label="Rejected this month"
-                description="Applications closed this month"
-                value={formatMetric(rejectedThisMonth)}
-                onClick={() => onNavigate('/applicants?query=' + encodeURIComponent(buildCurrentMonthRangeQuery('Rejected')))}
-              />
-              <DashboardMiniStat
-                label="High-fit applicants"
-                description="Applicants with an 80+ fit score"
-                value={formatMetric(highScoreApplicants)}
-                onClick={() => onNavigate('/applicants?query=' + encodeURIComponent('minAppliedJobFitScore:80'))}
-              />
-            </div>
-          </div>
 
-          <DashboardInterviewPanel
-            filteredApplicants={filteredApplicants}
-            interviewCount={myApplicantsInInterviewCount}
-          />
-        </section>}
+            <DashboardInterviewPanel
+              filteredApplicants={filteredApplicants}
+              interviewCount={myApplicantsInInterviewCount}
+            />
+          </section>
+        )}
 
         <section className="dashboard-lower-grid" aria-label="Dashboard analytics">
-          {pageMode === "hr" && <section className="dashboard-analytics-section dashboard-full-panel">
-            <DashboardChartsSection
-              applicants={filteredApplicants}
-              canViewAllApplicants={canViewAllApplicants}
-              dynamicHeight={sharedHeight}
-              isLoading={isLoading}
-              onDataUpdate={onDataUpdate}
-              recruiterId={recruiterId}
-              sharedRef={sharedRef}
-            />
-          </section>}
+          {pageMode === "hr" && (
+            <section className="dashboard-analytics-section dashboard-full-panel">
+              <DashboardChartsSection
+                applicants={filteredApplicants}
+                canViewAllApplicants={canViewAllApplicants}
+                dynamicHeight={sharedHeight}
+                isLoading={isLoading}
+                onDataUpdate={onDataUpdate}
+                recruiterId={recruiterId}
+                sharedRef={sharedRef}
+              />
+            </section>
+          )}
 
-          {pageMode === "hr" && <section className="dashboard-analytics-section dashboard-full-panel">
-            <DashboardPipelineAnalyticsSection
-              hasSSEUpdated={hasSSEUpdated}
-              isLoading={isLoading}
-              isPageRefresh={isPageRefresh}
-              onProcessByRecruiter={onProcessByRecruiter}
-              onProcessByStage={onProcessByStage}
-            />
-          </section>}
+          {pageMode === "hr" && (
+            <section className="dashboard-analytics-section dashboard-full-panel">
+              <DashboardPipelineAnalyticsSection
+                hasSSEUpdated={hasSSEUpdated}
+                isLoading={isLoading}
+                isPageRefresh={isPageRefresh}
+                onProcessByRecruiter={onProcessByRecruiter}
+                onProcessByStage={onProcessByStage}
+              />
+            </section>
+          )}
 
           {pageMode === "admin" && !canViewAllApplicants && (
             <div className="dashboard-card dashboard-tall-panel">
@@ -514,7 +382,9 @@ export function DashboardMainContent({
                 isPageRefresh={isPageRefresh}
                 myActiveApplicantsCount={myActiveApplicantsCount}
                 myApplicantsInInterviewCount={myApplicantsInInterviewCount}
-                newApplicantsAssignedTodayCount={newApplicantsAssignedToMeTodayList.length}
+                newApplicantsAssignedTodayCount={
+                  newApplicantsAssignedToMeTodayList.length
+                }
                 onNavigate={onNavigate}
                 recruiterId={recruiterId}
               />
@@ -525,7 +395,9 @@ export function DashboardMainContent({
             <div className="dashboard-card dashboard-full-panel">
               <DashboardPersonalActionItemsSection
                 myActionItemsList={myActionItemsList}
-                newApplicantsAssignedToMeTodayList={newApplicantsAssignedToMeTodayList}
+                newApplicantsAssignedToMeTodayList={
+                  newApplicantsAssignedToMeTodayList
+                }
                 recruiterId={recruiterId}
                 stageNames={stageNames}
               />

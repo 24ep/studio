@@ -15,7 +15,7 @@ type QueueTab = 'queue' | 'analytics' | 'screening';
 
 export default function ProcessQueuePage() {
   const [activeTab, setActiveTab] = React.useState<QueueTab>('queue');
-  const [isBulkUploadModalOpen, setIsBulkUploadModalOpen] = React.useState(false);
+  const [showUploadWorkspace, setShowUploadWorkspace] = React.useState(false);
 
   return (
     <div className="min-h-full bg-[linear-gradient(145deg,hsl(var(--muted)/.42),transparent_34rem)]">
@@ -25,51 +25,72 @@ export default function ProcessQueuePage() {
             <span>Hiring</span>
             <ChevronRight className="h-3 w-3" aria-hidden="true" />
             <span>AI operations</span>
+            {showUploadWorkspace ? (
+              <>
+                <ChevronRight className="h-3 w-3" aria-hidden="true" />
+                <span className="text-foreground">Add resumes</span>
+              </>
+            ) : null}
           </div>
           <div className="flex flex-wrap items-end justify-between gap-5">
             <div>
               <div className="flex items-center gap-3">
-                <h1 className="text-2xl font-semibold tracking-[-0.025em] sm:text-3xl">AI processing queue</h1>
-                <span className="hidden items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300 sm:flex">
-                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" /> Live
-                </span>
+                <h1 className="text-2xl font-semibold tracking-[-0.025em] sm:text-3xl">
+                  {showUploadWorkspace ? 'Add resumes' : 'AI processing queue'}
+                </h1>
+                {!showUploadWorkspace ? (
+                  <span className="hidden items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300 sm:flex">
+                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" /> Live
+                  </span>
+                ) : null}
               </div>
               <p className="mt-1.5 max-w-2xl text-sm leading-6 text-muted-foreground">
-                Follow every resume from upload to a ready-to-review candidate profile.
+                {showUploadWorkspace
+                  ? 'Upload and assign resumes in one workspace. Processing starts after you confirm the batch.'
+                  : 'Follow every resume from upload to a ready-to-review candidate profile.'}
               </p>
             </div>
-            {activeTab === 'queue' && (
-              <Button className="h-10 rounded-xl px-4 shadow-sm" onClick={() => setIsBulkUploadModalOpen(true)}>
+            {activeTab === 'queue' && !showUploadWorkspace ? (
+              <Button className="h-10 rounded-xl px-4 shadow-sm" onClick={() => setShowUploadWorkspace(true)}>
                 <Upload className="mr-2 h-4 w-4" /> Add resumes
               </Button>
-            )}
+            ) : null}
           </div>
         </div>
 
-        <nav className="mx-auto flex max-w-[1600px] gap-7 overflow-x-auto" aria-label="AI processing queue views">
-          <QueueTabButton
-            active={activeTab === 'queue'}
-            icon={ListTodo}
-            label="Processing"
-            onClick={() => setActiveTab('queue')}
-          />
-          <QueueTabButton
-            active={activeTab === 'analytics'}
-            icon={BarChart3}
-            label="Analytics"
-            onClick={() => setActiveTab('analytics')}
-          />
-          <QueueTabButton
-            active={activeTab === 'screening'}
-            icon={ShieldAlert}
-            label="Screening review"
-            onClick={() => setActiveTab('screening')}
-          />
-        </nav>
+        {!showUploadWorkspace ? (
+          <nav className="mx-auto flex max-w-[1600px] gap-7 overflow-x-auto" aria-label="AI processing queue views">
+            <QueueTabButton
+              active={activeTab === 'queue'}
+              icon={ListTodo}
+              label="Processing"
+              onClick={() => setActiveTab('queue')}
+            />
+            <QueueTabButton
+              active={activeTab === 'analytics'}
+              icon={BarChart3}
+              label="Analytics"
+              onClick={() => setActiveTab('analytics')}
+            />
+            <QueueTabButton
+              active={activeTab === 'screening'}
+              icon={ShieldAlert}
+              label="Screening review"
+              onClick={() => setActiveTab('screening')}
+            />
+          </nav>
+        ) : null}
       </header>
 
       <main className="mx-auto w-full max-w-[1600px] px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
-        {activeTab === 'queue' ? (
+        {showUploadWorkspace ? (
+          <BulkUploadCVsModal
+            isOpen
+            presentation="page"
+            onOpenChange={setShowUploadWorkspace}
+            onUploadSuccess={() => setShowUploadWorkspace(false)}
+          />
+        ) : activeTab === 'queue' ? (
           <ApplicantImportUploadQueue />
         ) : activeTab === 'screening' ? (
           <ScreeningReviewQueue />
@@ -79,12 +100,6 @@ export default function ProcessQueuePage() {
           </ErrorBoundary>
         )}
       </main>
-
-      <BulkUploadCVsModal
-        isOpen={isBulkUploadModalOpen}
-        onOpenChange={setIsBulkUploadModalOpen}
-        onUploadSuccess={() => setIsBulkUploadModalOpen(false)}
-      />
     </div>
   );
 }

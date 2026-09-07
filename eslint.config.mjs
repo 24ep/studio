@@ -18,10 +18,12 @@ const eslintConfig = [
       "@next/next/no-img-element": "error",
       "@next/next/no-before-interactive-script-outside-document": "off",
       "react-hooks/rules-of-hooks": "error",
-      "react-hooks/exhaustive-deps": "off",
+      // Surface dependency mistakes without breaking the existing quiet lint path.
+      // `npm run lint:strict` promotes warnings to a failing quality gate.
+      "react-hooks/exhaustive-deps": "warn",
       "import/no-anonymous-default-export": "off",
       "jsx-a11y/alt-text": "error",
-      // Warn about console.log to encourage using logger utility
+      // Warn about console.log to encourage using logger utility.
       "no-console": ["warn", { allow: ["warn", "error"] }],
     },
   },

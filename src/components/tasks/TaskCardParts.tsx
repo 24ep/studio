@@ -15,22 +15,22 @@ export function TaskCardHeader({
   task,
 }: TaskCardHeaderProps) {
   return (
-    <div className="flex items-start gap-3 mb-1">
+    <div className="mb-1 flex items-start gap-3">
       {(!cardPreferences || cardPreferences.showAvatar) && (
         <TaskCardAvatar task={task} />
       )}
 
-      <div className="flex-1 min-w-0">
+      <div className="min-w-0 flex-1">
         <div className="flex items-start justify-between">
-          <div className="flex-1 min-w-0">
+          <div className="min-w-0 flex-1">
             {(!cardPreferences || cardPreferences.showName) && (
-              <h4 className="font-medium text-sm line-clamp-2 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+              <h4 className="line-clamp-2 text-sm font-medium text-foreground transition-colors group-hover:text-primary">
                 {task.title}
               </h4>
             )}
 
             {(!cardPreferences || cardPreferences.showEmail) && task.email && (
-              <p className="text-xs text-gray-600 dark:text-gray-400 mt-0.5">
+              <p className="mt-0.5 text-xs text-muted-foreground">
                 {task.email}
               </p>
             )}

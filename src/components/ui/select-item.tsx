@@ -18,7 +18,7 @@ const SelectItem = React.forwardRef<
       ref={ref}
       className={cn(
         "relative flex w-full cursor-default select-none items-center rounded-sm outline-none focus:bg-accent focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
-        isMobile ? "py-4 pl-4 pr-12 text-base" : "py-1 pl-7 pr-2 text-[12px]",
+        isMobile ? "py-4 pl-4 pr-12 text-base" : "py-2 pl-8 pr-3 text-[13px]",
         className
       )}
       {...props}
@@ -26,11 +26,11 @@ const SelectItem = React.forwardRef<
       <span
         className={cn(
           "absolute flex items-center justify-center",
-          isMobile ? "left-3 h-5 w-5" : "left-2 h-3.5 w-3.5"
+          isMobile ? "left-3 h-5 w-5" : "left-2.5 h-4 w-4"
         )}
       >
         <SelectPrimitive.ItemIndicator>
-          <CheckIcon className={cn(isMobile ? "h-5 w-5" : "h-3.5 w-3.5")} />
+          <CheckIcon className={cn(isMobile ? "h-5 w-5" : "h-4 w-4")} />
         </SelectPrimitive.ItemIndicator>
       </span>
 

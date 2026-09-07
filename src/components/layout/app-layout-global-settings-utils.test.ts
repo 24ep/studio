@@ -6,7 +6,7 @@ import {
 } from './app-layout-global-settings-utils';
 
 describe('app-layout-global-settings-utils', () => {
-  it('applies sparse app config updates from custom events', () => {
+  it('applies sparse app config updates from custom events without overriding the Account-owned logo', () => {
     const updateAppConfig = vi.fn();
     const event = new CustomEvent('appConfigChanged', {
       detail: {
@@ -23,7 +23,6 @@ describe('app-layout-global-settings-utils', () => {
     });
 
     expect(updateAppConfig).toHaveBeenCalledWith({
-      appLogoUrl: null,
       currentAppName: 'Acme Hiring',
       sidebarLogoSize: 64,
     });

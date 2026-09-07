@@ -1,13 +1,15 @@
 'use client';
 
-import type { ComponentType } from 'react';
+import type { ComponentProps, ComponentType } from 'react';
 import dynamic from 'next/dynamic';
-import type { SwaggerUIProps } from 'swagger-ui-react/swagger-ui-react';
+import type SwaggerUIComponent from 'swagger-ui-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ApiDocsSwaggerTheme } from './ApiDocsSwaggerTheme';
 import type { OpenApiSpec, OpenApiTag } from './api-docs-utils';
 
 import 'swagger-ui-react/swagger-ui.css';
+
+type SwaggerUIProps = ComponentProps<typeof SwaggerUIComponent>;
 
 const SwaggerUI = dynamic(
   () => import('swagger-ui-react').then((module) => module.default),
@@ -20,8 +22,8 @@ const SwaggerUI = dynamic(
     ),
   },
 ) as ComponentType<SwaggerUIProps>;
-const passThroughRequestInterceptor: NonNullable<SwaggerUIProps['requestInterceptor']> = (request) => request;
-const passThroughResponseInterceptor: NonNullable<SwaggerUIProps['responseInterceptor']> = (response) => response;
+const passThroughRequestInterceptor: NonNullable<SwaggerUIProps['requestInterceptor']> = request => request;
+const passThroughResponseInterceptor: NonNullable<SwaggerUIProps['responseInterceptor']> = response => response;
 
 interface ApiDocsPageViewProps {
   availableTags: OpenApiTag[];

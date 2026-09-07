@@ -27,19 +27,22 @@ export function UserPreferencesModal({
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent
-        className="max-w-4xl max-h-[90vh] overflow-hidden"
-        dialogId="user-preferences-modal"
+        placement="right"
+        className="flex w-full flex-col gap-0 overflow-hidden sm:max-w-2xl"
+        dialogId="user-preferences-drawer"
       >
         <UserPreferencesModalHeader user={user} />
 
         {state.isLoading ? (
           <UserPreferencesLoadingState />
         ) : state.preferences ? (
-          <div className="flex flex-col h-full">
-            <UserPreferencesTabs
-              actions={state.actions}
-              preferences={state.preferences}
-            />
+          <div className="flex min-h-0 flex-1 flex-col">
+            <div className="min-h-0 flex-1 overflow-y-auto">
+              <UserPreferencesTabs
+                actions={state.actions}
+                preferences={state.preferences}
+              />
+            </div>
             <UserPreferencesModalFooter
               actions={state.actions}
               hasChanges={state.hasChanges}

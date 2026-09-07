@@ -53,8 +53,8 @@ export function TaskCard({
   return (
     <div
       className={cn(
-        "group cursor-pointer p-3 hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors border-l-8 rounded-lg bg-white dark:bg-gray-900 shadow-md hover:shadow-lg",
-        isDragging && "opacity-60 scale-95",
+        "group cursor-pointer rounded-lg border-l-8 bg-card p-3 text-card-foreground shadow-sm transition-[background-color,box-shadow,transform,opacity] hover:bg-accent/55 hover:shadow-md",
+        isDragging && "scale-95 opacity-60",
         getTaskFitScoreBorderClass(task.fitScore)
       )}
       draggable

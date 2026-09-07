@@ -33,7 +33,7 @@ export function UnifiedUserModal(props: UnifiedUserModalProps) {
   if (isMobile) {
     return (
       <Drawer open={props.isOpen} onOpenChange={props.onOpenChange}>
-        <DrawerContent className="h-[95vh] p-0" drawerId="unified-user-drawer" hideCloseButton>
+        <DrawerContent className="h-[95dvh] p-0" drawerId="unified-user-drawer" hideCloseButton>
           <UnifiedUserModalContent {...props} />
         </DrawerContent>
       </Drawer>
@@ -42,9 +42,10 @@ export function UnifiedUserModal(props: UnifiedUserModalProps) {
 
   return (
     <Dialog open={props.isOpen} onOpenChange={props.onOpenChange}>
-      <DialogContent 
-        className="max-w-[95vw] sm:max-w-4xl h-[85vh] sm:h-[90vh] p-0 flex flex-col gap-0 rounded-lg overflow-hidden" 
-        dialogId="unified-user-dialog"
+      <DialogContent
+        placement="right"
+        className="flex w-full flex-col gap-0 overflow-hidden p-0 sm:max-w-3xl"
+        dialogId="unified-user-profile-drawer"
         hideCloseButton
       >
         <UnifiedUserModalContent {...props} />
@@ -53,5 +54,4 @@ export function UnifiedUserModal(props: UnifiedUserModalProps) {
   );
 }
 
-// Export for use in other components
 export type { UnifiedUserFormValues, ModalMode } from './unified-user-modal/types';

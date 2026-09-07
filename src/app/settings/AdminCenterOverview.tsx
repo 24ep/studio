@@ -32,6 +32,7 @@ import {
   type HealthProbePoint,
 } from './admin-center-overview-model';
 import type { SettingsPageItem } from './settings-page-model';
+import { AdminCenterProbeChart } from './AdminCenterProbeChart';
 
 const POLL_INTERVAL_MS = 30_000;
 const PROBE_STORAGE_KEY = 'admin-center-health-probes';
@@ -150,7 +151,7 @@ export function AdminCenterOverview({
 
         <div className="mt-4 grid gap-4 xl:grid-cols-[minmax(0,1.65fr)_minmax(310px,0.75fr)]">
           <Panel title="Live probe latency" subtitle="Real round-trip samples collected while this console is open" action={<span className="text-[11px] text-muted-foreground dark:text-[#77869a]">Last {probes.length} probes</span>}>
-            <ProbeChart probes={probes} />
+            <AdminCenterProbeChart probes={probes} />
           </Panel>
           <Panel title="Setup health" subtitle="Required platform configuration" action={<Link href="/settings?adminTab=hr-setup" className="text-[11px] font-semibold text-info dark:text-[#71b5f5] hover:text-info dark:hover:text-[#a6d4ff]">Open setup</Link>}>
             <SetupGauge progress={setup} />
@@ -310,42 +311,6 @@ function Panel({ title, subtitle, action, children }: { title: string; subtitle:
       </div>
       {children}
     </section>
-  );
-}
-
-function ProbeChart({ probes }: { probes: HealthProbePoint[] }) {
-  const chart = useMemo(() => {
-    if (!probes.length) return undefined;
-    const values = probes.map(probe => probe.latencyMs);
-    const max = Math.max(...values, 10);
-    const min = Math.min(...values, 0);
-    const range = Math.max(1, max - min);
-    const points = probes.map((probe, index) => {
-      const x = probes.length === 1 ? 50 : (index / (probes.length - 1)) * 100;
-      const y = 88 - ((probe.latencyMs - min) / range) * 70;
-      return `${x},${y}`;
-    }).join(' ');
-    return { points, max, latest: values.at(-1) || 0, average: Math.round(values.reduce((sum, value) => sum + value, 0) / values.length) };
-  }, [probes]);
-
-  return (
-    <div className="p-4">
-      <div className="mb-3 flex items-center gap-5 text-[11px] text-muted-foreground dark:text-[#7f8da0]">
-        <span><strong className="mr-1.5 text-base font-semibold text-foreground dark:text-[#eaf2fb]">{chart?.latest ?? '—'}</strong> ms latest</span>
-        <span><strong className="mr-1.5 text-base font-semibold text-foreground dark:text-[#eaf2fb]">{chart?.average ?? '—'}</strong> ms average</span>
-      </div>
-      <div className="relative h-[178px] overflow-hidden rounded-md border border-border dark:border-[#202a36] bg-background dark:bg-[#0d131b]">
-        <div className="absolute inset-0 opacity-70" style={{ backgroundImage: 'linear-gradient(hsl(var(--border)) 1px, transparent 1px), linear-gradient(90deg, hsl(var(--border)) 1px, transparent 1px)', backgroundSize: '100% 25%, 12.5% 100%' }} />
-        {chart ? (
-          <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="absolute inset-0 h-full w-full" aria-label={`Latest API probe latency ${chart.latest} milliseconds`} role="img">
-            <defs><linearGradient id="probe-fill" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="hsl(var(--info))" stopOpacity="0.32" /><stop offset="1" stopColor="hsl(var(--info))" stopOpacity="0" /></linearGradient></defs>
-            <polygon points={`0,100 ${chart.points} 100,100`} fill="url(#probe-fill)" />
-            <polyline points={chart.points} fill="none" stroke="hsl(var(--info))" strokeWidth="1.4" vectorEffect="non-scaling-stroke" />
-          </svg>
-        ) : <div className="absolute inset-0 grid place-items-center text-xs text-muted-foreground dark:text-[#68778a]">Collecting the first live probe…</div>}
-        {probes.length < 2 && chart && <div className="absolute bottom-3 left-3 rounded bg-card dark:bg-[#111821]/90 px-2 py-1 text-[10px] text-muted-foreground dark:text-[#7f8da0]">The trend appears after the next refresh</div>}
-      </div>
-    </div>
   );
 }
 

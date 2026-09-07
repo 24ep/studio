@@ -70,6 +70,9 @@ export const payrollOperationsConfigSchema = z
     requirePaymentEvidence: z.boolean().default(false),
     requireMalwareScan: z.boolean().default(false),
     varianceReviewThresholdPercent: z.number().min(0).max(1000).default(10),
+    overtimeMultiplier: z.number().positive().max(10).default(1.5),
+    standardHoursPerDay: z.number().positive().max(24).default(8),
+    salaryDaysPerMonth: z.number().positive().max(31).default(30),
     bankExportFormat: z
       .preprocess(
         (value) => (value === "aba" ? "custom_delimited" : value),

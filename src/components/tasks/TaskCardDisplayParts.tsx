@@ -18,7 +18,7 @@ export function TaskCardAvatar({ task }: { task: Task }) {
         email: task.email,
       }}
       size="sm"
-      className="ring-1 ring-gray-200 dark:ring-gray-700"
+      className="ring-1 ring-border"
     />
   );
 }
@@ -56,23 +56,23 @@ export function TaskCardFields({
   return (
     <>
       {cardPreferences.showAssignee && task.assignee && (
-        <div className="flex items-center gap-1 mt-1">
-          <span className="text-xs text-gray-500 dark:text-gray-400">Assigned to:</span>
-          <span className="text-xs text-gray-700 dark:text-gray-300 font-medium">
+        <div className="mt-1 flex items-center gap-1">
+          <span className="text-xs text-muted-foreground">Assigned to:</span>
+          <span className="text-xs font-medium text-foreground">
             {task.assignee.name}
           </span>
         </div>
       )}
 
       {cardPreferences.showSkills && task.skills && task.skills.length > 0 && (
-        <div className="flex flex-wrap gap-1 mt-2">
+        <div className="mt-2 flex flex-wrap gap-1">
           {task.skills.slice(0, 2).map((skill, idx) => (
-            <span key={idx} className="px-2 py-0.5 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded-full text-xs">
+            <span key={idx} className="rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">
               {skill.skill_string || skill.segment_skill || 'Skill'}
             </span>
           ))}
           {task.skills.length > 2 && (
-            <span className="px-2 py-0.5 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded-full text-xs">
+            <span className="rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">
               +{task.skills.length - 2}
             </span>
           )}
@@ -80,9 +80,9 @@ export function TaskCardFields({
       )}
 
       {cardPreferences.showJobApplied && task.tags && task.tags.length > 0 && (
-        <div className="mt-2 pt-2 border-t border-gray-200 dark:border-gray-700">
-          <div className="text-xs text-gray-600 dark:text-gray-400 flex items-center gap-1 min-w-0">
-            <span className="font-medium flex-shrink-0">Applied for: </span>
+        <div className="mt-2 border-t border-border pt-2">
+          <div className="flex min-w-0 items-center gap-1 text-xs text-muted-foreground">
+            <span className="flex-shrink-0 font-medium">Applied for: </span>
             <span className="truncate">{task.tags[0]}</span>
           </div>
         </div>

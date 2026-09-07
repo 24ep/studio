@@ -38,6 +38,8 @@ export function buildBasicSystemPreferencesState(rawSettings: unknown): BasicSys
 
   return {
     appName: asString(settings[APP_NAME_KEY], DEFAULT_APP_NAME),
+    // Kept for backwards-compatible settings reads only. Runtime application
+    // branding no longer consumes this value; Outborn Account owns the logo.
     appLogoUrl: asNullableString(settings[APP_LOGO_DATA_URL_KEY]),
     appFaviconUrl: asNullableString(settings[APP_FAVICON_DATA_URL_KEY]),
     themePreference: (settings[APP_THEME_KEY] as ThemePreference) || DEFAULT_BASIC_THEME,
@@ -48,7 +50,6 @@ export function buildBasicSystemPreferencesState(rawSettings: unknown): BasicSys
 
 export function buildBasicSystemPreferencesSavePayload({
   appFaviconUrl,
-  appLogoUrl,
   appName,
   showLogoOnly,
   sidebarLogoSize,
@@ -56,7 +57,6 @@ export function buildBasicSystemPreferencesSavePayload({
 }: BasicSystemPreferencesState): BasicSystemPreferenceEntry[] {
   return [
     { key: APP_NAME_KEY, value: appName },
-    { key: APP_LOGO_DATA_URL_KEY, value: appLogoUrl || '' },
     { key: APP_FAVICON_DATA_URL_KEY, value: appFaviconUrl || '' },
     { key: APP_THEME_KEY, value: themePreference },
     { key: SHOW_LOGO_ONLY_KEY, value: showLogoOnly.toString() },

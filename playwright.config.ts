@@ -2,6 +2,7 @@ import { defineConfig, devices } from '@playwright/test';
 
 const port = Number(process.env.PORT ?? 8021);
 const baseURL = process.env.PLAYWRIGHT_BASE_URL ?? `http://127.0.0.1:${port}`;
+const ciChromeChannel = process.env.CI ? 'chrome' : undefined;
 
 export default defineConfig({
   testDir: './e2e',
@@ -16,12 +17,18 @@ export default defineConfig({
     baseURL,
     trace: 'retain-on-failure',
     screenshot: 'only-on-failure',
-    video: 'retain-on-failure',
+    // CI uses the system Chrome shipped on GitHub-hosted runners. Disabling
+    // Playwright video there avoids its separate FFmpeg binary dependency while
+    // retaining traces and screenshots for failure diagnostics.
+    video: process.env.CI ? 'off' : 'retain-on-failure',
   },
   projects: [
     {
       name: 'chromium',
-      use: { ...devices['Desktop Chrome'] },
+      // GitHub-hosted Ubuntu runners already ship Chrome. Use that system
+      // browser in CI so the production gate does not depend on downloading a
+      // separate Playwright Chromium binary before every run.
+      use: { ...devices['Desktop Chrome'], channel: ciChromeChannel },
     },
     {
       name: 'mobile-chromium',
@@ -31,7 +38,9 @@ export default defineConfig({
   webServer: process.env.PLAYWRIGHT_BASE_URL
     ? undefined
     : {
-        command: 'npm run dev',
+        // Do not route browser tests through `npm run dev`: the local developer
+        // script historically used PowerShell and made Linux CI unable to start.
+        command: `npx next dev -p ${port} --turbo`,
         url: baseURL,
         reuseExistingServer: !process.env.CI,
         timeout: 120_000,

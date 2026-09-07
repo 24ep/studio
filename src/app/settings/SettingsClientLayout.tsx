@@ -87,10 +87,10 @@ function SettingsLayoutContent({ children }: { children: ReactNode }) {
   return (
     <div
       data-settings-layout="true"
-      className="flex h-full flex-col overflow-hidden bg-[hsl(var(--app-page-background))]"
+      className="flex h-full min-h-0 flex-col overflow-hidden bg-[hsl(var(--app-page-background))]"
     >
-      <div className="flex flex-1 flex-col overflow-hidden">
-        <div className="flex-1 overflow-y-auto">
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain">
           {children}
         </div>
       </div>

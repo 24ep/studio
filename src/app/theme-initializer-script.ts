@@ -16,26 +16,22 @@ export const themeInitializerScript = `
       }
       
       const root = document.documentElement;
-      if (shouldBeDark) {
-        root.classList.add('dark');
-      } else {
-        root.classList.remove('dark');
-      }
+      const applyResolvedTheme = (isDark) => {
+        root.classList.toggle('dark', isDark);
+        root.style.colorScheme = isDark ? 'dark' : 'light';
+        root.dataset.resolvedTheme = isDark ? 'dark' : 'light';
+        window.__THEME_IS_DARK__ = isDark;
+      };
+
+      applyResolvedTheme(shouldBeDark);
       
       window.__THEME_INITIALIZED__ = true;
       window.__THEME_PREFERENCE__ = preference;
-      window.__THEME_IS_DARK__ = shouldBeDark;
       
       if (preference === 'system') {
         const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
         const handleSystemThemeChange = () => {
-          const newShouldBeDark = mediaQuery.matches;
-          if (newShouldBeDark) {
-            root.classList.add('dark');
-          } else {
-            root.classList.remove('dark');
-          }
-          window.__THEME_IS_DARK__ = newShouldBeDark;
+          applyResolvedTheme(mediaQuery.matches);
         };
         mediaQuery.addEventListener('change', handleSystemThemeChange);
       }

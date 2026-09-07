@@ -31,7 +31,7 @@ export function NotificationDrawerContent({
     <>
       <NotificationDrawerHeader isMobile={isMobile} onClose={onClose} />
       <ScrollArea className="flex-1 bg-background">
-        <div className="p-4">
+        <div className="px-4 pb-4 pt-2">
           {isLoading ? (
             <NotificationLoadingState />
           ) : !hasNotifications ? (

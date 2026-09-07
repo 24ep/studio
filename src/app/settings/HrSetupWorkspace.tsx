@@ -1,12 +1,11 @@
 "use client";
 
 import Link from 'next/link';
-import { useCallback, useEffect, useMemo, useState, type ComponentType } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import {
   AlertTriangle,
   ArrowRight,
-  BadgeCheck,
   BookOpen,
   BriefcaseBusiness,
   Building2,
@@ -14,10 +13,7 @@ import {
   ChevronDown,
   ChevronRight,
   Circle,
-  FileText,
-  GitBranch,
   ListChecks,
-  Map,
   Maximize2,
   Minus,
   Network,
@@ -26,7 +22,6 @@ import {
   Search,
   Settings2,
   ShieldCheck,
-  Sparkles,
   UsersRound,
 } from 'lucide-react';
 
@@ -47,6 +42,7 @@ import {
   type HrSetupReadiness,
   type HrSetupView,
 } from './hr-setup-workspace-model';
+import { getHrSetupRelationships, setupIcons } from './hr-setup-workspace-config';
 import type { SettingsPageItem } from './settings-page-model';
 import { HrSetupExampleDataControls } from './HrSetupExampleDataControls';
 
@@ -54,26 +50,6 @@ interface SetupStatusResponse {
   features: PlatformSetupFeatureStatus[];
   progress: { completed: number; total: number; percentage: number };
 }
-
-const setupIcons: Record<string, ComponentType<{ className?: string; strokeWidth?: number }>> = {
-  'Company Info': Building2,
-  'Company References': Building2,
-  Department: Network,
-  Branch: Map,
-  Designation: BriefcaseBusiness,
-  Grades: BadgeCheck,
-  'Position Levels': GitBranch,
-  'Headcount Types': UsersRound,
-  'Leave Policies': ShieldCheck,
-  'Leave & Absence Policies': ShieldCheck,
-  'Leave Policy Assignments': UsersRound,
-  'Policy Documents': BookOpen,
-  'Employee Documents': FileText,
-  'Onboarding Checklist': ListChecks,
-  'Recruitment Stages': GitBranch,
-  'Applicant Sources': UsersRound,
-  'Evaluation Configuration': Sparkles,
-};
 
 export function HrSetupWorkspace({
   items,
@@ -224,11 +200,8 @@ function GuidedSetupView({ items, statuses, progress, progressLoading, selectedI
   const toggleMilestone = (index: number) => {
     setExpandedMilestones(previous => {
       const next = new Set(previous);
-      if (next.has(index)) {
-        next.delete(index);
-      } else {
-        next.add(index);
-      }
+      if (next.has(index)) next.delete(index);
+      else next.add(index);
       return next;
     });
   };
@@ -318,14 +291,7 @@ function ChecklistItem({ item, readiness, active, onClick }: { item: SettingsPag
           : 'text-[#3d424b] hover:bg-[#eef1f5] dark:text-zinc-300 dark:hover:bg-zinc-900',
       )}
     >
-      <span
-        className={cn(
-          'grid h-7 w-7 shrink-0 place-items-center rounded-[4px] border transition-colors',
-          active
-            ? 'border-[#cbdaf0] bg-white/70 text-[#2f6db2] dark:border-blue-900 dark:bg-blue-950 dark:text-blue-300'
-            : 'border-[#e1e6ed] bg-white text-[#69778b] group-hover:text-[#315f9f] dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-400',
-        )}
-      >
+      <span className={cn('grid h-7 w-7 shrink-0 place-items-center rounded-[4px] border transition-colors', active ? 'border-[#cbdaf0] bg-white/70 text-[#2f6db2] dark:border-blue-900 dark:bg-blue-950 dark:text-blue-300' : 'border-[#e1e6ed] bg-white text-[#69778b] group-hover:text-[#315f9f] dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-400')}>
         <Icon className="h-3.5 w-3.5" strokeWidth={1.7} />
       </span>
       <span className="min-w-0 flex-1 truncate text-[12px] font-medium leading-5">{item.label}</span>
@@ -337,9 +303,7 @@ function ChecklistItem({ item, readiness, active, onClick }: { item: SettingsPag
 function ConfigurationWorkbench({ item }: { item: SettingsPageItem }) {
   const embeddedHref = buildEmbeddedSettingsHref(item.href);
   const [loading, setLoading] = useState(true);
-
   useEffect(() => setLoading(true), [embeddedHref]);
-
   return (
     <section className="flex min-h-0 min-w-0 flex-col bg-card dark:bg-[#111a24]">
       <div className="relative min-h-0 flex-1 bg-background dark:bg-[#0b1118]">
@@ -355,26 +319,17 @@ function ConfigurationWorkbenchSkeleton({ label }: { label: string }) {
     <div className="absolute inset-0 z-10 bg-background dark:bg-[#0b1118] p-5" aria-busy="true" aria-label={`Loading ${label.toLowerCase()} configuration`}>
       <div className="mx-auto max-w-4xl space-y-4">
         <div className="flex items-center justify-between border-b border-border dark:border-[#222d39] pb-4">
-          <div className="space-y-2">
-            <Skeleton className="h-4 w-44 rounded-[4px] bg-muted dark:bg-[#202c39]" />
-            <Skeleton className="h-3 w-72 max-w-full rounded-[4px] bg-muted/50 dark:bg-[#1a2531]" />
-          </div>
+          <div className="space-y-2"><Skeleton className="h-4 w-44 rounded-[4px] bg-muted dark:bg-[#202c39]" /><Skeleton className="h-3 w-72 max-w-full rounded-[4px] bg-muted/50 dark:bg-[#1a2531]" /></div>
           <Skeleton className="h-8 w-24 rounded-[4px] bg-muted dark:bg-[#202c39]" />
         </div>
         <div className="grid gap-4 lg:grid-cols-[220px_minmax(0,1fr)]">
           <div className="space-y-2 rounded-md border border-border dark:border-[#25303c] bg-card dark:bg-[#0e161f] p-3">
             <Skeleton className="h-3 w-24 rounded-[4px] bg-muted dark:bg-[#263240]" />
-            {Array.from({ length: 6 }).map((_, index) => (
-              <Skeleton key={index} className={`h-9 rounded-[4px] bg-muted dark:bg-[#1d2936] ${index === 1 ? 'w-[88%]' : 'w-full'}`} />
-            ))}
+            {Array.from({ length: 6 }).map((_, index) => <Skeleton key={index} className={`h-9 rounded-[4px] bg-muted dark:bg-[#1d2936] ${index === 1 ? 'w-[88%]' : 'w-full'}`} />)}
           </div>
           <div className="space-y-4 rounded-md border border-border dark:border-[#25303c] bg-card dark:bg-[#0e161f] p-4">
             {Array.from({ length: 4 }).map((_, index) => (
-              <div key={index} className="space-y-2 border-b border-border dark:border-[#222d39] pb-4 last:border-b-0">
-                <Skeleton className="h-3 w-36 rounded-[4px] bg-muted dark:bg-[#263240]" />
-                <Skeleton className="h-3 w-64 max-w-full rounded-[4px] bg-muted/50 dark:bg-[#1a2531]" />
-                <Skeleton className="h-9 w-full rounded-[4px] bg-muted dark:bg-[#202c39]" />
-              </div>
+              <div key={index} className="space-y-2 border-b border-border dark:border-[#222d39] pb-4 last:border-b-0"><Skeleton className="h-3 w-36 rounded-[4px] bg-muted dark:bg-[#263240]" /><Skeleton className="h-3 w-64 max-w-full rounded-[4px] bg-muted/50 dark:bg-[#1a2531]" /><Skeleton className="h-9 w-full rounded-[4px] bg-muted dark:bg-[#202c39]" /></div>
             ))}
           </div>
         </div>
@@ -389,10 +344,7 @@ function SetupMapView({ items, statuses, selectedItem, onSelect, onConfigure }: 
   const ready = items.filter(item => getHrSetupReadiness(item, statuses) === 'ready').length;
   const attention = items.filter(item => getHrSetupReadiness(item, statuses) === 'attention').length;
   const available = items.length - ready - attention;
-  const openConfiguration = (item: SettingsPageItem) => {
-    onSelect(item);
-    setDialogItem(item);
-  };
+  const openConfiguration = (item: SettingsPageItem) => { onSelect(item); setDialogItem(item); };
   return (
     <div className="space-y-4 p-4">
       <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
@@ -445,9 +397,7 @@ function MapConfigurationDialog({ item, readiness, onOpenChange }: { item: Setti
   const [loading, setLoading] = useState(true);
   const embeddedHref = item ? buildEmbeddedSettingsHref(item.href) : '';
   const Icon = item ? setupIcons[item.label] ?? Settings2 : Settings2;
-
   useEffect(() => setLoading(true), [embeddedHref]);
-
   return (
     <Dialog open={Boolean(item)} onOpenChange={onOpenChange}>
       <DialogContent className="flex h-[min(820px,88vh)] max-w-[1120px] flex-col gap-0 overflow-hidden border-border dark:border-[#344150] bg-card dark:bg-[#0f1720] p-0 text-foreground dark:text-[#e9eef5] sm:max-w-[min(1120px,94vw)]">
@@ -494,7 +444,7 @@ function MapNode({ item, readiness, active, onClick }: { item: SettingsPageItem;
 
 function MapDetail({ item, items, statuses, readiness, onSelect, onConfigure }: { item: SettingsPageItem; items: SettingsPageItem[]; statuses: PlatformSetupFeatureStatus[]; readiness: HrSetupReadiness; onSelect: (item: SettingsPageItem) => void; onConfigure: () => void }) {
   const Icon = setupIcons[item.label] ?? Settings2;
-  const relationships = getRelationships(item.label);
+  const relationships = getHrSetupRelationships(item.label);
   const relatedItems = items.filter(candidate => relationships.related.includes(candidate.label)).slice(0, 2);
   return (
     <aside className="flex min-h-[610px] flex-col overflow-hidden rounded-lg border border-border dark:border-[#293441] bg-card dark:bg-[#111a24]">
@@ -512,17 +462,6 @@ function MapDetail({ item, items, statuses, readiness, onSelect, onConfigure }: 
 function RelationshipCard({ item, readiness, onClick, labelOverride }: { item: SettingsPageItem; readiness: HrSetupReadiness; onClick: () => void; labelOverride?: string }) {
   const Icon = setupIcons[item.label] ?? Settings2;
   return <button type="button" onClick={onClick} className="flex min-h-10 w-full items-center gap-2 rounded border border-border bg-card px-3 text-left hover:border-info dark:border-[#303b48] dark:bg-[#0e161f] dark:hover:border-[#4c5b6d]"><Icon className="h-3.5 w-3.5 shrink-0 text-muted-foreground dark:text-[#9aa8b8]" /><span className="min-w-0 flex-1 truncate text-[10px] font-medium text-foreground/80 dark:text-[#cbd4df]">{labelOverride ?? item.label}</span><StatusLabel readiness={readiness} compact /><ChevronRight className="h-3 w-3 text-muted-foreground dark:text-[#77869a]" /></button>;
-}
-
-function getRelationships(label: string) {
-  const relationships: Record<string, { dependsOn: string; usedBy: string; related: string[] }> = {
-    Designation: { dependsOn: 'Departments and position levels', usedBy: 'Headcount planning', related: ['Department', 'Position Levels'] },
-    Grades: { dependsOn: 'Position structure', usedBy: 'Compensation & progression', related: ['Designation', 'Position Levels'] },
-    'Leave Policies': { dependsOn: 'Company foundation', usedBy: 'Leave requests & approvals', related: ['Company Info', 'Department'] },
-    'Onboarding Checklist': { dependsOn: 'Departments and owners', usedBy: 'Employee onboarding', related: ['Department', 'Designation'] },
-    'Recruitment Stages': { dependsOn: 'Position structure', usedBy: 'Applicant hiring workflows', related: ['Designation', 'Position Levels'] },
-  };
-  return relationships[label] ?? { dependsOn: 'Workspace foundation', usedBy: 'Connected HR workflows', related: ['Company Info', 'Department'] };
 }
 
 function ReadinessIcon({ readiness }: { readiness: HrSetupReadiness }) {

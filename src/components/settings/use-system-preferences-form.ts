@@ -115,7 +115,6 @@ export function useSystemPreferencesForm({ onSave }: UseSystemPreferencesFormOpt
         detail: {
           appName,
           faviconDataUrl: appFaviconUrl,
-          logoUrl: appLogoUrl,
           showLogoOnly,
           sidebarLogoSize,
           themePreference,

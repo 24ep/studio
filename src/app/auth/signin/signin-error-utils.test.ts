@@ -7,14 +7,15 @@ describe('getSignInErrorMessage', () => {
     expect(getSignInErrorMessage(null)).toBe('');
   });
 
-  it('normalizes credential errors', () => {
-    expect(getSignInErrorMessage('CredentialsSignin')).toBe('Invalid email or password. Please try again.');
-    expect(getSignInErrorMessage('Configuration')).toBe('Invalid email or password. Please try again.');
+  it('routes legacy credential and configuration failures back to Account', () => {
+    const message = 'Sign-in could not be completed. Continue with Outborn Account or contact support.';
+    expect(getSignInErrorMessage('CredentialsSignin')).toBe(message);
+    expect(getSignInErrorMessage('Configuration')).toBe(message);
   });
 
-  it('maps session and Azure AD errors to friendly messages', () => {
+  it('maps session and Account OAuth errors to friendly messages', () => {
     expect(getSignInErrorMessage('SessionExpired')).toBe('Your session has expired. Please sign in again.');
-    expect(getSignInErrorMessage('OAuthCallback')).toBe('There was an error signing in with Azure AD. Please try again or contact support.');
+    expect(getSignInErrorMessage('OAuthCallback')).toBe('There was an error signing in with Outborn Account. Please try again or contact support.');
   });
 
   it('decodes unknown error messages', () => {

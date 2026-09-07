@@ -40,8 +40,8 @@ export function TaskBoard({
   }
 
   return (
-    <div className={cn("flex flex-col h-full bg-gray-100/50 dark:bg-gray-800/50", className)}>
-      <div className="relative flex-1">
+    <div className={cn("flex h-full min-h-0 flex-col bg-gray-100/50 dark:bg-gray-800/50", className)}>
+      <div className="relative min-h-0 flex-1">
         <TaskBoardScrollButton
           direction="left"
           visible={board.canScrollLeft}
@@ -55,10 +55,10 @@ export function TaskBoard({
 
         <div
           ref={board.scrollContainerRef}
-          className="flex gap-0 h-full overflow-x-auto overflow-y-hidden scrollbar-hide"
+          className="flex h-full gap-0 overflow-x-auto overflow-y-hidden scrollbar-hide"
           style={{ WebkitOverflowScrolling: 'touch' }}
         >
-          <div className="flex gap-0 h-full" style={{ minWidth: 'max-content' }}>
+          <div className="flex h-full gap-0" style={{ minWidth: 'max-content' }}>
             {board.sortedStages.map((stage, index) => (
               <TaskBoardColumn
                 key={stage.id}

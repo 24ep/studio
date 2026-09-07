@@ -47,16 +47,6 @@ const nextConfig = {
     : undefined,
 
 
-  typescript: {
-    // Keep production builds honest by default. Use the explicit escape hatch only
-    // for emergency deployments where CI already captured the type failures.
-    ignoreBuildErrors: process.env.SKIP_TYPESCRIPT_CHECK === 'true',
-  },
-
-  eslint: {
-    // Keep lint validation enabled during builds unless explicitly bypassed.
-    ignoreDuringBuilds: process.env.SKIP_ESLINT_CHECK === 'true',
-  },
 
 
   // Force Node.js runtime for all API routes to avoid Edge Runtime issues

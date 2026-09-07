@@ -41,6 +41,12 @@ function firstDisplayValue(record: Record<string, unknown>, keys: readonly strin
   return '';
 }
 
+export function getImportableAppKitFeatureIds(groups: AppKitSetupPreviewGroup[]) {
+  return groups
+    .filter(group => group.count > 0)
+    .map(group => group.featureId);
+}
+
 export function summarizeAppKitRecords(
   featureId: PlatformSetupFeatureId,
   records: Array<Record<string, unknown>>,

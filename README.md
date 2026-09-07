@@ -57,6 +57,22 @@ STORAGE_BUCKET=your-bucket-name
 STORAGE_PUBLIC_BASE_URL=https://your-storage-public-base-url
 ```
 
+For Outborn-managed identity and commercial capabilities, configure:
+
+```env
+OUTBORN_ACCOUNT_AUTH_URL=https://account.example.com
+OUTBORN_HRIVE_WEB_CLIENT_ID=outborn-hrive-web
+OUTBORN_CORE_URL=https://core.example.com
+```
+
+If the signed-in Account user can belong to more than one Outborn organization, bind this Hrive deployment explicitly:
+
+```env
+OUTBORN_HRIVE_ORGANIZATION_ID=<canonical-outborn-organization-uuid>
+```
+
+Hrive keeps the Account OAuth access token only inside Auth.js's encrypted server JWT. Browser code calls Hrive's same-origin `/api/outborn-core/*` BFF routes; it never receives the Account bearer token or Stripe secrets.
+
 For the initial admin account, set these before the first seed:
 
 ```env
@@ -65,6 +81,14 @@ ADMIN_PASSWORD=your-secure-password
 ```
 
 If `ADMIN_PASSWORD` is not provided, the seed script generates a random password and prints it once in startup logs.
+
+## Outborn Core Ownership
+
+Outborn Core is Hrive's commercial source of truth. Hrive's Billing workspace reads subscription/plan state, invoices, shared billing details, Hrive entitlements, and Hrive usage from Core and opens the Core-managed Stripe billing portal. Hrive does not maintain a second subscription or invoice store.
+
+Outborn Account owns human identity and organization memberships. AppKit remains responsible for technical application infrastructure. Hrive owns HR-domain data and Hrive-specific fine-grained authorization.
+
+Hrive capabilities and usage registered in Core should use the `hrive.*` key namespace so the Hrive UI can isolate its product entitlements and metrics from other Outborn products sharing the same organization billing account.
 
 ## Deployment Notes
 
@@ -104,7 +128,7 @@ npm run test:run     # Run tests
 Database:
 
 ```bash
-npx prisma db push --schema=prisma/schema.prisma
+npx prisma migrate dev --schema=prisma/schema.prisma
 npx prisma db seed
 npx prisma studio
 ```
@@ -146,6 +170,7 @@ studio-1/
 - Always set `ADMIN_PASSWORD` before first production seed.
 - Do not commit real `.env` files or production secrets.
 - Keep object storage private unless a specific public asset workflow requires otherwise.
+- Do not expose the Outborn Account access token or Outborn Core/Stripe service credentials to browser JavaScript.
 
 ## License
 

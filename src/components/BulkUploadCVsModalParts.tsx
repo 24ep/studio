@@ -52,6 +52,8 @@ interface BulkUploadFooterProps {
   uploading: boolean;
   onCancelUpload: () => void;
   onConfirmUpload: (event: React.MouseEvent) => void;
+  embedded?: boolean;
+  onClose?: () => void;
 }
 
 export function BulkUploadAccessDeniedDialog({
@@ -62,7 +64,7 @@ export function BulkUploadAccessDeniedDialog({
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Access Denied</DialogTitle>
+          <DialogTitle>Access denied</DialogTitle>
           <DialogDescription>
             You don&apos;t have permission to perform bulk uploads. Please contact your administrator.
           </DialogDescription>
@@ -107,8 +109,8 @@ export function BulkUploadFileList({
               }
             }}
           >
-            <div className="flex-1 min-w-0">
-              <span className="truncate block text-sm font-medium">{file.name}</span>
+            <div className="min-w-0 flex-1">
+              <span className="block truncate text-sm font-medium">{file.name}</span>
               <span className="text-xs text-muted-foreground">
                 {getBulkUploadFileBatchLabel(fileBatchMap[file.name])}
               </span>
@@ -136,26 +138,26 @@ export function BulkUploadProgress({
   uploadProgress,
 }: BulkUploadProgressProps) {
   return (
-    <div className="px-4 py-3 bg-muted/20 rounded-lg border">
-      <div className="flex items-center justify-center space-x-2">
+    <div className="rounded-lg border bg-muted/20 px-4 py-3">
+      <div className="flex items-center justify-center gap-2">
         <Loader2 className="h-4 w-4 animate-spin" />
         <span className="text-sm font-medium">
           {getBulkUploadProgressLabel(totalFiles)}
-          {uploadProgress && (
-            <span className="text-xs text-muted-foreground ml-2">
+          {uploadProgress ? (
+            <span className="ml-2 text-xs text-muted-foreground">
               {getBulkUploadProgressCountLabel(uploadProgress)}
             </span>
-          )}
+          ) : null}
         </span>
       </div>
-      {uploadProgress && (
-        <div className="mt-2 w-full bg-background rounded-full h-2">
+      {uploadProgress ? (
+        <div className="mt-2 h-2 w-full rounded-full bg-background">
           <div
-            className="bg-primary h-2 rounded-full transition-all duration-300"
+            className="h-2 rounded-full bg-primary transition-all duration-300"
             style={{ width: getBulkUploadProgressBarWidth(uploadProgress) }}
           />
         </div>
-      )}
+      ) : null}
     </div>
   );
 }
@@ -165,20 +167,28 @@ export function BulkUploadFooter({
   uploading,
   onCancelUpload,
   onConfirmUpload,
+  embedded = false,
+  onClose,
 }: BulkUploadFooterProps) {
+  const cancelButton = uploading ? (
+    <Button type="button" variant="outline" onClick={onCancelUpload}>
+      Cancel upload
+    </Button>
+  ) : embedded ? (
+    <Button type="button" variant="outline" onClick={onClose}>
+      Back to queue
+    </Button>
+  ) : (
+    <DialogClose asChild>
+      <Button type="button" variant="outline">
+        Cancel
+      </Button>
+    </DialogClose>
+  );
+
   return (
-    <DialogFooter>
-      {uploading ? (
-        <Button type="button" variant="outline" onClick={onCancelUpload}>
-          Cancel Upload
-        </Button>
-      ) : (
-        <DialogClose asChild>
-          <Button type="button" variant="outline" disabled={uploading}>
-            Cancel
-          </Button>
-        </DialogClose>
-      )}
+    <DialogFooter className={embedded ? "border-t border-border/70 bg-background px-5 py-4 sm:px-6" : undefined}>
+      {cancelButton}
       <Button
         type="button"
         onClick={(event) => {

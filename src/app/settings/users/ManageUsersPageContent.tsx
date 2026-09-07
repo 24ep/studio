@@ -1,96 +1,14 @@
 "use client";
 
 import { useState } from 'react';
-import { Loader2 } from 'lucide-react';
-
-import { CreateUserAccountFlow } from '@/components/users/CreateUserAccountFlow';
-import { UnifiedUserModal } from '@/components/users/UnifiedUserModal';
-import { SafeGroupsTab, UsersPageHeader, UsersPageTabs } from './UsersPageParts';
-import { UsersPageUsersTab } from './UsersPageUsersTab';
-import { UsersDeleteDialog } from './UsersDeleteDialog';
-import { useUsersPageController } from './use-users-page-controller';
+import { OutbornAccountDirectoryPanel } from './OutbornAccountDirectoryPanel';
+import { SafeGroupsTab, UsersPageHeader, UsersPageTabs, type UsersSettingsTabId } from './UsersPageParts';
 
 export function ManageUsersPageContent({ accountsOnly = false }: { accountsOnly?: boolean }) {
-  const controller = useUsersPageController();
-  const [createSourceOpen, setCreateSourceOpen] = useState(false);
-
-  if (controller.isInitialLoading) {
-    return (
-      <div className="flex h-full items-center justify-center" role="status" aria-label="Loading user accounts">
-        <Loader2 className="h-16 w-16 animate-spin text-primary" aria-hidden="true" />
-      </div>
-    );
-  }
-
-  return (
-    <div className="flex h-full flex-col">
-      <UsersPageHeader
-        activeTab={controller.activeTab}
-        canCreateUsers={controller.canCreateUsers}
-        isSyncing={controller.isSyncing}
-        onSyncFromAD={controller.handleSyncFromAD}
-        onAddUser={() => setCreateSourceOpen(true)}
-      />
-
-      {!accountsOnly && (
-        <UsersPageTabs activeTab={controller.activeTab} onTabChange={controller.setActiveTab} />
-      )}
-
-      <div className="min-h-0 flex-1 overflow-auto px-6 pb-6">
-        <div className="h-full min-h-0">
-          {controller.activeTab === 'users' && (
-            <UsersPageUsersTab
-              users={controller.users}
-              teams={controller.teams}
-              roles={controller.roles}
-              nameFilter={controller.nameFilter}
-              emailFilter={controller.emailFilter}
-              roleFilter={controller.roleFilter}
-              teamFilter={controller.teamFilter}
-              selectedUserIds={controller.selectedUserIds}
-              isAllSelectedOnPage={controller.isAllSelectedOnPage}
-              isBulkUpdating={controller.isBulkUpdating}
-              canEditUsers={controller.canEditUsers}
-              onNameFilterChange={controller.setNameFilter}
-              onEmailFilterChange={controller.setEmailFilter}
-              onRoleFilterChange={controller.setRoleFilter}
-              onTeamFilterChange={controller.setTeamFilter}
-              onApplyFilters={controller.handleApplyFilters}
-              onSelectAllOnPage={controller.handleSelectAllOnPage}
-              onSelectUser={controller.handleSelectUser}
-              onBulkUpdateStatus={controller.handleBulkUpdateStatus}
-              onClearSelection={controller.clearSelection}
-              onOpenUserModal={controller.openUserModal}
-              onEditUser={controller.handleEditUser}
-              onToggleUserStatus={controller.handleToggleUserStatus}
-              onConfirmDeleteUser={controller.setUserToDelete}
-            />
-          )}
-          {!accountsOnly && controller.activeTab === 'groups' && <SafeGroupsTab />}
-        </div>
-      </div>
-
-      <UnifiedUserModal
-        isOpen={controller.isUserModalOpen}
-        onOpenChange={controller.setIsUserModalOpen}
-        mode={controller.modalMode}
-        user={controller.selectedUser}
-        onSave={controller.handleSaveUser}
-        onEditUser={controller.handleEditUser}
-        onAddUser={controller.handleAddUser}
-      />
-      <CreateUserAccountFlow
-        open={createSourceOpen}
-        onOpenChange={setCreateSourceOpen}
-        onCreateStandalone={controller.handleAddUser}
-        roles={controller.roles}
-        onAccountCreated={controller.refreshUsers}
-      />
-      <UsersDeleteDialog
-        user={controller.userToDelete}
-        onCancel={() => controller.setUserToDelete(null)}
-        onConfirm={controller.handleDeleteUser}
-      />
-    </div>
-  );
+  const [activeTab, setActiveTab] = useState<UsersSettingsTabId>('users');
+  return <div className="flex h-full flex-col">
+    <UsersPageHeader activeTab={activeTab} />
+    {!accountsOnly && <UsersPageTabs activeTab={activeTab} onTabChange={setActiveTab} />}
+    <div className="min-h-0 flex-1 overflow-auto px-6 pb-6"><div className="h-full min-h-0">{activeTab === 'users' && <OutbornAccountDirectoryPanel />}{!accountsOnly && activeTab === 'groups' && <SafeGroupsTab />}</div></div>
+  </div>;
 }

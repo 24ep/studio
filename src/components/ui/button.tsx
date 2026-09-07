@@ -5,7 +5,7 @@ import { cva, type VariantProps } from "class-variance-authority"
 import { cn } from "@/lib/utils"
 
 const buttonVariants = cva(
-  "border inline-flex items-center justify-center whitespace-nowrap !rounded-md text-[12px] font-medium leading-4 ring-offset-background transition-[background-color,border-color,color,box-shadow,transform] duration-200 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 motion-reduce:transition-none motion-reduce:hover:transform-none max-sm:min-h-11 max-sm:text-sm [border-radius:0.375rem!important]",
+  "border inline-flex items-center justify-center whitespace-nowrap !rounded-md text-[13px] font-medium leading-5 ring-offset-background transition-[background-color,border-color,color,box-shadow,transform] duration-200 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 motion-reduce:transition-none motion-reduce:hover:transform-none max-sm:min-h-11 max-sm:text-sm [border-radius:0.375rem!important]",
   {
     variants: {
       variant: {
@@ -20,10 +20,10 @@ const buttonVariants = cva(
         link: "text-primary underline-offset-4 hover:underline shadow-none",
       },
       size: {
-        default: "h-8 px-3 py-1.5",
-        sm: "h-7 !rounded-md px-2.5 py-1 text-[11.5px] [border-radius:0.375rem!important] shadow-none hover:shadow-sm",
-        lg: "h-8 !rounded-md px-4 [border-radius:0.375rem!important] shadow-sm hover:shadow",
-        icon: "h-8 w-8 !rounded-md max-sm:min-w-11 [border-radius:0.375rem!important] shadow-none hover:shadow-sm",
+        default: "h-9 px-3.5 py-2",
+        sm: "h-8 !rounded-md px-3 py-1.5 text-[12px] [border-radius:0.375rem!important] shadow-none hover:shadow-sm",
+        lg: "h-10 !rounded-md px-5 [border-radius:0.375rem!important] shadow-sm hover:shadow",
+        icon: "h-9 w-9 !rounded-md max-sm:min-w-11 [border-radius:0.375rem!important] shadow-none hover:shadow-sm",
       },
     },
     defaultVariants: {
@@ -55,5 +55,3 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
 Button.displayName = "Button"
 
 export { Button, buttonVariants }
-
-    

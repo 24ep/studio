@@ -4,12 +4,14 @@ import type {
   HeaderUserSummary,
 } from "./HeaderUserMenu.types";
 import type { HeaderUserMenuLabels } from "./header-user-menu-i18n";
+import type { HeaderThemePreference } from "./HeaderTypes";
 
 export interface HeaderMobileUserDrawerProps {
   labels: HeaderUserMenuLabels;
   user: HeaderUserSummary;
   refreshAvatar: boolean;
-  currentTheme: string;
+  currentTheme: "light" | "dark";
+  themePreference: HeaderThemePreference;
   currentLocale: "en-US" | "th-TH";
   isAdminPreviewEnabled: boolean;
   previewUsers: HeaderPreviewUserSummary[];
@@ -17,6 +19,7 @@ export interface HeaderMobileUserDrawerProps {
   onOpenProfile: () => void;
   onOpenSecurity: () => void;
   onClearCache: () => void;
+  onThemeChange: (theme: HeaderThemePreference) => void | Promise<void>;
   onLocaleChange: (locale: "en-US" | "th-TH") => void;
   onSignOut: () => void;
   onUserSearch: (query: string) => void;
@@ -24,7 +27,7 @@ export interface HeaderMobileUserDrawerProps {
 }
 
 export type MobileThemeOption = {
-  id: "light" | "dark" | "system";
+  id: HeaderThemePreference;
   label: string;
   icon: ComponentType<{ className?: string }>;
 };

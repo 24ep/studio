@@ -2,7 +2,7 @@ import { existsSync } from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 
-import { sidebarConfigData } from './SidebarNavConfig';
+import { sidebarConfigDataWithLearningManagement as sidebarConfigData } from './SidebarNavLearningConfig';
 
 const hrRoutePrefixes = ['/ess', '/my-workday', '/my-tasks', '/people', '/clients', '/workforce', '/payroll', '/expenses', '/broadcast', '/learning', '/job-portal', '/employee-portal', '/hr-dashboard'];
 
@@ -55,6 +55,16 @@ describe('HR sidebar links', () => {
       ['My Learning', '/learning'],
       ['Courses', '/learning/courses'],
     ]);
+  });
+
+  it('adds direct Learning Management routes only behind Learning manage permission', () => {
+    const learning = (sidebarConfigData as Array<{ label: string; items: Array<{ label: string; href: string; permissionId?: string }> }> )
+      .find(group => group.label === 'Learning');
+    expect(learning?.items).toEqual(expect.arrayContaining([
+      expect.objectContaining({ label: 'Learning Management', href: '/learning/manage', permissionId: 'HR_LEARNING_MANAGE' }),
+      expect.objectContaining({ label: 'Assignment Reviews', href: '/learning/manage/reviews', permissionId: 'HR_LEARNING_MANAGE' }),
+      expect.objectContaining({ label: 'Learning Reports', href: '/learning/manage/reports', permissionId: 'HR_LEARNING_MANAGE' }),
+    ]));
   });
 
   it('does not expose My Tasks in the sidebar', () => {

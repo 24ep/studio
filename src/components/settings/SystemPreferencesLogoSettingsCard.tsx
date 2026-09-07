@@ -1,6 +1,6 @@
 "use client";
 
-import { ImageUp, X } from "lucide-react";
+import { ImageUp, ShieldCheck, X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -76,13 +76,10 @@ function SystemPreferenceImageUploadField({
 }
 
 export function SystemPreferencesLogoSettingsCard({
-  appLogoUrl,
   appFaviconUrl,
   showLogoOnly,
   sidebarLogoSize,
-  onAppLogoUpload,
   onAppFaviconUpload,
-  onRemoveAppLogo,
   onRemoveAppFavicon,
   onShowLogoOnlyChange,
   onSidebarLogoSizeChange,
@@ -92,43 +89,39 @@ export function SystemPreferencesLogoSettingsCard({
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <ImageUp className="h-5 w-5" />
-          Logo Settings
+          Branding & icon display
         </CardTitle>
-        <CardDescription>Configure application logo and branding</CardDescription>
+        <CardDescription>Control Hrive display preferences without duplicating account-managed branding.</CardDescription>
       </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="space-y-4">
-          <SystemPreferenceImageUploadField
-            id="appLogo"
-            label="Application Logo"
-            imageUrl={appLogoUrl}
-            imageAlt="App Logo"
-            imageClassName="h-16 w-16"
-            accept="image/*"
-            actionLabel="Upload Logo"
-            replacementActionLabel="Change Logo"
-            helperText="Recommended: 64x64px or larger, PNG/SVG"
-            onUpload={onAppLogoUpload}
-            onRemove={onRemoveAppLogo}
-          />
-
-          <SystemPreferenceImageUploadField
-            id="appFavicon"
-            label="Application Favicon"
-            imageUrl={appFaviconUrl}
-            imageAlt="App Favicon"
-            imageClassName="h-8 w-8"
-            accept="image/x-icon,image/png,image/svg+xml"
-            actionLabel="Upload Favicon"
-            replacementActionLabel="Change Favicon"
-            helperText="Recommended: 32x32px .ico or .png"
-            onUpload={onAppFaviconUpload}
-            onRemove={onRemoveAppFavicon}
-          />
+      <CardContent className="space-y-5">
+        <div className="flex items-start gap-3 rounded-lg border border-border/70 bg-muted/30 p-4">
+          <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-background text-foreground shadow-sm">
+            <ShieldCheck className="h-5 w-5" aria-hidden="true" />
+          </span>
+          <div className="min-w-0">
+            <p className="text-sm font-medium text-foreground">Application logo is managed by Outborn Account</p>
+            <p className="mt-1 text-sm leading-5 text-muted-foreground">
+              Hrive automatically uses the icon from its Outborn Account application record. Change the application icon in Outborn Account; local Hrive settings cannot override it.
+            </p>
+          </div>
         </div>
 
+        <SystemPreferenceImageUploadField
+          id="appFavicon"
+          label="Application Favicon"
+          imageUrl={appFaviconUrl}
+          imageAlt="App Favicon"
+          imageClassName="h-8 w-8"
+          accept="image/x-icon,image/png,image/svg+xml"
+          actionLabel="Upload Favicon"
+          replacementActionLabel="Change Favicon"
+          helperText="Recommended: 32x32px .ico or .png"
+          onUpload={onAppFaviconUpload}
+          onRemove={onRemoveAppFavicon}
+        />
+
         <div className="space-y-2">
-          <Label htmlFor="sidebarLogoSize">Sidebar Logo Size</Label>
+          <Label htmlFor="sidebarLogoSize">Application Logo Size</Label>
           <Select
             value={sidebarLogoSize.toString()}
             onValueChange={value => onSidebarLogoSizeChange(parseInt(value, 10))}

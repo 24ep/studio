@@ -82,7 +82,7 @@ export function RoleSelector({
         />
       )}
 
-      <div className={cn('p-0 flex-1 overflow-hidden flex flex-col', noCard ? 'pt-0' : '')}>
+      <div className={cn('flex min-h-0 flex-1 flex-col overflow-hidden p-0', noCard ? 'pt-0' : '')}>
         {multiple && (
           <RoleSelectorToolbar
             disabled={disabled}
@@ -98,7 +98,7 @@ export function RoleSelector({
           searchQuery={searchQuery}
         />
 
-        <div className="flex-1 overflow-y-auto min-h-0">
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain">
           {ROLE_SELECTOR_CATEGORY_ORDER.map(category => (
             <RoleCategorySection
               key={category}
@@ -124,14 +124,14 @@ export function RoleSelector({
 
   if (noCard) {
     return (
-      <div className={cn('flex flex-col h-full', className)}>
+      <div className={cn('flex h-full min-h-0 flex-col', className)}>
         {content}
       </div>
     );
   }
 
   return (
-    <Card className={cn('border border-border shadow-sm flex flex-col', className)}>
+    <Card className={cn('flex min-h-0 flex-col border border-border shadow-sm', className)}>
       {content}
     </Card>
   );

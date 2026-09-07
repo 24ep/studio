@@ -9,7 +9,7 @@ interface FontPreloaderProps {
 }
 
 export function FontPreloader({ 
-  criticalFonts = ['dm-sans', 'ibm-plex-sans-thai'],
+  criticalFonts = ['ibm-plex-sans', 'ibm-plex-sans-thai'],
   detectLanguage = true 
 }: FontPreloaderProps = {}) {
   const [shouldPreloadThai, setShouldPreloadThai] = useState(true);
@@ -42,8 +42,8 @@ export function FontPreloader({
           __html: `
             // Font loading optimization script
             (function() {
-              // Track only DM Sans and IBM Plex Sans Thai
-            const fontsToLoad = ['DM Sans', 'IBM Plex Sans Thai'];
+              // Track the OBSI UI font family and Thai fallback
+              const fontsToLoad = ['IBM Plex Sans', 'IBM Plex Sans Thai'];
               
               // Check font availability and add loaded class
               if ('fonts' in document) {

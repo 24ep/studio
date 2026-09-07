@@ -1,129 +1,129 @@
-#!/bin/bash
-# Script to run migrations and seed on remote server
+#!/bin/sh
+# Safely deploy Prisma migrations and seed an explicitly targeted database.
 # Usage: ./scripts/run-migrations-and-seed.sh [DATABASE_URL]
 
-set -e  # Exit on error
+set -eu
 
-# Colors for output
+BASELINE_MIGRATION="00000000000000_baseline"
+PRISMA_SCHEMA="prisma/schema.prisma"
+
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
-NC='\033[0m' # No Color
+NC='\033[0m'
 
-# Function to print colored messages
-print_info() {
-    echo -e "${BLUE}ℹ️  $1${NC}"
-}
+print_info() { printf "%b\n" "${BLUE}INFO: $1${NC}"; }
+print_success() { printf "%b\n" "${GREEN}OK: $1${NC}"; }
+print_warning() { printf "%b\n" "${YELLOW}WARN: $1${NC}"; }
+print_error() { printf "%b\n" "${RED}ERROR: $1${NC}"; }
 
-print_success() {
-    echo -e "${GREEN}✅ $1${NC}"
-}
-
-print_warning() {
-    echo -e "${YELLOW}⚠️  $1${NC}"
-}
-
-print_error() {
-    echo -e "${RED}❌ $1${NC}"
-}
-
-# Get DATABASE_URL from argument or environment variable
-if [ -n "$1" ]; then
+if [ -n "${1:-}" ]; then
     export DATABASE_URL="$1"
     print_info "Using DATABASE_URL from argument"
-elif [ -n "$DATABASE_URL" ]; then
+elif [ -n "${DATABASE_URL:-}" ]; then
     print_info "Using DATABASE_URL from environment"
 else
-    print_error "DATABASE_URL is not set. Please provide it as an argument or set it as an environment variable."
+    print_error "DATABASE_URL is not set."
     echo "Usage: $0 [DATABASE_URL]"
-    echo "Example: $0 postgresql://user:password@host:port/database"
     exit 1
 fi
 
-# Mask password in displayed URL
 DISPLAY_URL=$(echo "$DATABASE_URL" | sed 's/:[^:@]*@/:***@/')
 print_info "Database: $DISPLAY_URL"
 
-# Check if we're in the project root
-if [ ! -f "package.json" ]; then
-    print_error "package.json not found. Please run this script from the project root directory."
+if [ ! -f "package.json" ] || [ ! -f "$PRISMA_SCHEMA" ]; then
+    print_error "Run this script from the Studio project root."
     exit 1
 fi
 
-# Check if Prisma is available
-if ! command -v npx &> /dev/null; then
-    print_error "npx is not installed. Please install Node.js and npm."
+if ! command -v npx >/dev/null 2>&1; then
+    print_error "npx is not installed."
     exit 1
 fi
 
-print_info "Starting database migration and seeding process..."
-echo ""
-
-# Step 1: Check database connection
-print_info "Step 1: Checking database connection..."
-if pg_isready -d "$DATABASE_URL"; then
-    print_success "Database connection verified"
-else
-    print_error "Failed to connect to database. Please check your DATABASE_URL."
+if ! pg_isready -d "$DATABASE_URL" >/dev/null 2>&1; then
+    print_error "Failed to connect to database."
     exit 1
 fi
+print_success "Database connection verified"
 
-# Step 2: Generate Prisma client
-print_info "Step 2: Generating Prisma client..."
-if npx prisma generate --schema=prisma/schema.prisma; then
-    print_success "Prisma client generated"
-else
-    print_error "Failed to generate Prisma client"
-    exit 1
-fi
+table_exists() {
+    TABLE_NAME=$1
+    EXISTS=$(psql "$DATABASE_URL" -Atc "SELECT to_regclass('public.\"${TABLE_NAME}\"') IS NOT NULL;" 2>/dev/null || echo "f")
+    [ "$EXISTS" = "t" ]
+}
 
-# Step 3: Check migration status
-print_info "Step 3: Checking migration status..."
-MIGRATION_STATUS=$(npx prisma migrate status --schema=prisma/schema.prisma 2>&1 || echo "")
+migration_is_recorded() {
+    MIGRATION_NAME=$1
+    if ! table_exists "_prisma_migrations"; then
+        return 1
+    fi
+    RECORDED=$(psql "$DATABASE_URL" -Atc \
+      "SELECT COUNT(*) FROM \"_prisma_migrations\" WHERE migration_name = '${MIGRATION_NAME}' AND finished_at IS NOT NULL AND rolled_back_at IS NULL;" \
+      2>/dev/null || echo "0")
+    [ "$RECORDED" -gt 0 ] 2>/dev/null
+}
 
-if echo "$MIGRATION_STATUS" | grep -q "Database schema is up to date"; then
-    print_success "Database schema is up to date"
-    SKIP_MIGRATIONS=true
-elif echo "$MIGRATION_STATUS" | grep -q "Pending migrations"; then
-    print_warning "Pending migrations detected"
-    SKIP_MIGRATIONS=false
-else
-    print_info "Migration status check completed"
-    SKIP_MIGRATIONS=false
-fi
+adopt_baseline_if_needed() {
+    if ! table_exists "User"; then
+        print_info "Fresh database detected; baseline migration will create the schema."
+        return 0
+    fi
 
-# Step 4: Run migrations
-if [ "$SKIP_MIGRATIONS" = false ]; then
-    print_info "Step 4: Running database migrations..."
-    if npx prisma migrate deploy --schema=prisma/schema.prisma; then
-        print_success "Migrations applied successfully"
-    else
-        print_error "Failed to apply migrations"
+    if migration_is_recorded "$BASELINE_MIGRATION"; then
+        print_info "Baseline migration is already recorded."
+        return 0
+    fi
+
+    print_warning "Existing Studio schema has no squashed baseline record; checking Prisma-managed drift before adoption."
+    if ! node scripts/check-prisma-schema-drift.cjs; then
+        print_error "Existing database differs from the Prisma-managed schema. Refusing to hide drift."
         exit 1
     fi
-else
-    print_info "Step 4: Skipping migrations (database is up to date)"
+
+    npx prisma migrate resolve --applied "$BASELINE_MIGRATION" --schema="$PRISMA_SCHEMA"
+    print_success "Existing schema adopted into Prisma migration history."
+}
+
+print_info "Validating Prisma schema..."
+npx prisma validate --schema="$PRISMA_SCHEMA"
+
+print_info "Ensuring required PostgreSQL extensions..."
+npx prisma db execute --schema="$PRISMA_SCHEMA" --file=scripts/ensure-postgresql-extensions.sql
+
+if table_exists "service_desk_knowledge_documents"; then
+    print_info "Deduplicating service desk knowledge documents before migration..."
+    npx prisma db execute --schema="$PRISMA_SCHEMA" --file=scripts/dedupe-service-desk-knowledge-documents.sql
 fi
 
-# Step 5: Apply database comments
-print_info "Step 5: Applying database comments..."
+adopt_baseline_if_needed
+
+print_info "Deploying committed Prisma migrations..."
+npx prisma migrate deploy --schema="$PRISMA_SCHEMA"
+print_success "Migrations applied successfully"
+
+print_info "Verifying migration status and Prisma-managed schema drift..."
+npx prisma migrate status --schema="$PRISMA_SCHEMA"
+node scripts/check-prisma-schema-drift.cjs
+print_success "Database matches the Prisma-managed schema and documented raw SQL invariants are preserved"
+
+print_info "Generating Prisma client..."
+npx prisma generate --schema="$PRISMA_SCHEMA"
+
+print_info "Applying database comments..."
 if npm run db:comments; then
-    print_success "Database comments applied successfully"
+    print_success "Database comments applied"
 else
-    print_warning "Failed to apply database comments (continuing...)"
+    print_warning "Database comments failed; continuing because comments do not change schema correctness."
 fi
 
-# Step 6: Run seed
-print_info "Step 6: Seeding database..."
+print_info "Seeding database..."
 if npx tsx prisma/seed.ts; then
     print_success "Database seeded successfully"
 else
-    print_error "Failed to seed database"
+    print_error "Seed failed"
     exit 1
 fi
 
-echo ""
-print_success "All operations completed successfully!"
-print_info "Database migrations and seeding are complete."
-
+print_success "Migration and seed workflow completed."

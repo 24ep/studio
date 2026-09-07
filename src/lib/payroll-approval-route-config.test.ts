@@ -53,6 +53,9 @@ describe("payroll administration configuration", () => {
       allowBlockingWaivers: false,
       requirePaymentReference: true,
       varianceReviewThresholdPercent: 10,
+      overtimeMultiplier: 1.5,
+      standardHoursPerDay: 8,
+      salaryDaysPerMonth: 30,
     });
   });
 

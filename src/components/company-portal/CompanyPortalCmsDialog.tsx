@@ -19,7 +19,6 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import {
   Select,
   SelectContent,
@@ -39,6 +38,14 @@ import {
   normalizeCompanyPortalFilterOperator,
 } from '@/lib/company-portal-filter-operators';
 import { isSupportedCompanyPortalField } from '@/lib/company-portal-platform-fields';
+import {
+  CompanyPortalCmsActivityTab,
+  CompanyPortalCmsDataTab,
+  EmptyState,
+  Field,
+  mapPlatformFieldType,
+  slugify,
+} from './CompanyPortalCmsDialogParts';
 
 interface PlatformModelField {
   isList: boolean;
@@ -245,7 +252,7 @@ export function CompanyPortalCmsDialog({
         dialogId="portal-cms-collection"
       >
         <DialogHeader className="shrink-0 border-b px-5 py-4 pr-14">
-            <DialogTitle>{isNew ? 'Add data module' : `Configure ${draft.name}`}</DialogTitle>
+          <DialogTitle>{isNew ? 'Add data module' : `Configure ${draft.name}`}</DialogTitle>
           <DialogDescription>
             Define the data module fields, manage its records, and review configuration activity.
           </DialogDescription>
@@ -333,31 +340,31 @@ export function CompanyPortalCmsDialog({
             </div>
 
             {draft.sourceType === 'custom' && (
-            <div className="grid gap-3 rounded-[6px] border bg-muted/50 p-3 sm:grid-cols-[1fr_170px_auto_auto] sm:items-end">
-              <Field label="Field name">
-                <Input value={fieldName} onChange={event => setFieldName(event.target.value)} placeholder="Article title" />
-              </Field>
-              <Field label="Type">
-                <Select value={fieldType} onValueChange={value => setFieldType(value as CompanyPortalCmsFieldType)}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {FIELD_TYPES.map(type => <SelectItem key={type.value} value={type.value}>{type.label}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </Field>
-              <label className="flex h-9 items-center gap-2 text-xs font-medium">
-                <input
-                  type="checkbox"
-                  checked={fieldRequired}
-                  onChange={event => setFieldRequired(event.target.checked)}
-                />
-                Required
-              </label>
-              <Button type="button" onClick={addField} disabled={!fieldName.trim()}>
-                <Plus className="mr-1.5 h-4 w-4" />
-                Add
-              </Button>
-            </div>
+              <div className="grid gap-3 rounded-[6px] border bg-muted/50 p-3 sm:grid-cols-[1fr_170px_auto_auto] sm:items-end">
+                <Field label="Field name">
+                  <Input value={fieldName} onChange={event => setFieldName(event.target.value)} placeholder="Article title" />
+                </Field>
+                <Field label="Type">
+                  <Select value={fieldType} onValueChange={value => setFieldType(value as CompanyPortalCmsFieldType)}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {FIELD_TYPES.map(type => <SelectItem key={type.value} value={type.value}>{type.label}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </Field>
+                <label className="flex h-9 items-center gap-2 text-xs font-medium">
+                  <input
+                    type="checkbox"
+                    checked={fieldRequired}
+                    onChange={event => setFieldRequired(event.target.checked)}
+                  />
+                  Required
+                </label>
+                <Button type="button" onClick={addField} disabled={!fieldName.trim()}>
+                  <Plus className="mr-1.5 h-4 w-4" />
+                  Add
+                </Button>
+              </div>
             )}
 
             <div className="mt-4 divide-y rounded-[6px] border">
@@ -440,134 +447,23 @@ export function CompanyPortalCmsDialog({
             )}
           </TabsContent>
 
-          <TabsContent value="data" className="min-h-0 flex-1 overflow-y-auto p-5">
-            {draft.sourceType === 'platform' ? (
-              <EmptyState title="Live application data" description={`Records come from the ${draft.sourceModel || 'selected'} application model and are controlled by the configured filter conditions.`} />
-            ) : draft.fields.length === 0 ? (
-              <EmptyState title="Fields required" description="Create collection fields before adding CMS records." />
-            ) : (
-              <>
-                <div className="grid gap-3 rounded-[6px] border bg-muted/50 p-3 sm:grid-cols-2">
-                  {draft.fields.map(field => (
-                    <Field key={field.id} label={`${field.name}${field.required ? ' *' : ''}`}>
-                      <Input
-                        type={field.type === 'number' ? 'number' : field.type === 'date' ? 'date' : 'text'}
-                        value={recordValues[field.key] || ''}
-                        onChange={event => setRecordValues(current => ({
-                          ...current,
-                          [field.key]: event.target.value,
-                        }))}
-                      />
-                    </Field>
-                  ))}
-                  <div className="flex items-end sm:col-span-2">
-                    <Button type="button" onClick={addRecord}>
-                      <Plus className="mr-1.5 h-4 w-4" />
-                      Add record
-                    </Button>
-                  </div>
-                </div>
-
-                <div className="mt-4 overflow-x-auto rounded-[6px] border">
-                  <table className="w-full min-w-[560px] text-left text-xs">
-                    <thead className="bg-muted/50 text-muted-foreground">
-                      <tr>
-                        {draft.fields.map(field => <th key={field.id} className="px-3 py-2 font-medium">{field.name}</th>)}
-                        <th className="w-12 px-3 py-2" />
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y">
-                      {draft.records.map(record => (
-                        <tr key={record.id}>
-                          {draft.fields.map(field => (
-                            <td key={field.id} className="max-w-[220px] truncate px-3 py-2.5">
-                              {record.values[field.key] || '-'}
-                            </td>
-                          ))}
-                          <td className="px-2 py-1">
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="icon"
-                              className="h-7 w-7 text-destructive"
-                              onClick={() => removeRecord(record.id)}
-                              aria-label="Delete CMS record"
-                            >
-                              <Trash2 className="h-3.5 w-3.5" />
-                            </Button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                  {draft.records.length === 0 && (
-                    <p className="border-t px-3 py-8 text-center text-xs text-muted-foreground">No CMS records yet.</p>
-                  )}
-                </div>
-              </>
-            )}
-          </TabsContent>
-
-          <TabsContent value="activity" className="min-h-0 flex-1 overflow-y-auto p-5">
-            <div className="divide-y rounded-[6px] border">
-              {draft.activity.length === 0 && (
-                <EmptyState title="No activity yet" description="Collection changes will be recorded here." />
-              )}
-              {draft.activity.map(item => (
-                <div key={item.id} className="flex gap-3 px-3 py-3">
-                  <Clock3 className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
-                  <div>
-                    <p className="text-sm font-medium">{item.action}</p>
-                    <p className="mt-0.5 text-xs text-muted-foreground">
-                      {new Date(item.createdAt).toLocaleString()}
-                    </p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </TabsContent>
+          <CompanyPortalCmsDataTab
+            draft={draft}
+            recordValues={recordValues}
+            setRecordValues={setRecordValues}
+            onAddRecord={addRecord}
+            onRemoveRecord={removeRecord}
+          />
+          <CompanyPortalCmsActivityTab activity={draft.activity} />
         </Tabs>
 
         <DialogFooter className="shrink-0 border-t px-5 py-3">
           <Button type="button" variant="outline" onClick={onClose}>Cancel</Button>
           <Button type="button" onClick={save} disabled={!draft.name.trim() || !draft.slug.trim()}>
-              {isNew ? 'Create data module' : 'Save data module'}
+            {isNew ? 'Create data module' : 'Save data module'}
           </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
-  );
-}
-
-function mapPlatformFieldType(type: string): CompanyPortalCmsFieldType {
-  if (['Int', 'Float', 'Decimal', 'BigInt'].includes(type)) return 'number';
-  if (type === 'Boolean') return 'boolean';
-  if (type === 'DateTime') return 'date';
-  return 'text';
-}
-
-function slugify(value: string) {
-  return value
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '');
-}
-
-function Field({ children, label }: { children: React.ReactNode; label: string }) {
-  return (
-    <div className="space-y-1.5">
-      <Label className="text-xs">{label}</Label>
-      {children}
-    </div>
-  );
-}
-
-function EmptyState({ description, title }: { description: string; title: string }) {
-  return (
-    <div className="px-4 py-8 text-center">
-      <p className="text-sm font-medium">{title}</p>
-      <p className="mt-1 text-xs text-muted-foreground">{description}</p>
-    </div>
   );
 }

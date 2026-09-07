@@ -2651,6 +2651,7 @@ model OpenShift {
   status            String   @default("open")
   createdAt         DateTime @default(now()) @map("created_at")
   updatedAt         DateTime @updatedAt @map("updated_at")
+  shiftRequests     ShiftRequest[]
 
   @@index([shiftDate, status])
   @@map("hr_open_shifts")
@@ -2760,6 +2761,7 @@ model ShiftRequest {
   requestType           String    @map("request_type")
   assignmentId          String?   @map("assignment_id") @db.Uuid
   requestedAssignmentId String?   @map("requested_assignment_id") @db.Uuid
+  openShiftId           String?   @map("open_shift_id") @db.Uuid
   swapEmployeeId        String?   @map("swap_employee_id") @db.Uuid
   effectiveStart        DateTime  @map("effective_start") @db.Date
   effectiveEnd          DateTime  @map("effective_end") @db.Date
@@ -2775,8 +2777,10 @@ model ShiftRequest {
   version               Int       @default(1)
   createdAt             DateTime  @default(now()) @map("created_at")
   updatedAt             DateTime  @updatedAt @map("updated_at")
+  openShift             OpenShift? @relation(fields: [openShiftId], references: [id], onDelete: SetNull, onUpdate: NoAction)
 
   @@index([employeeId, status])
+  @@index([openShiftId])
   @@map("hr_shift_requests")
 }
 

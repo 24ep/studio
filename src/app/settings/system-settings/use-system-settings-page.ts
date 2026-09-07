@@ -157,8 +157,11 @@ function publishAppConfigChange(settingsToSave: Array<{ key: string; value: stri
         faviconDataUrl: appConfigChange.faviconDataUrl,
       },
     }));
-    window.dispatchEvent(new CustomEvent('globalSettingsChanged'));
   }
+
+  // Runtime consumers such as right-click and screen-capture protection must refresh
+  // after every successful system-settings save, even when no branding field changed.
+  window.dispatchEvent(new CustomEvent('globalSettingsChanged'));
 }
 
 function getSystemSettingsSaveToastMessage(error: unknown) {

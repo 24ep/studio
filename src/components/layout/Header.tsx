@@ -16,7 +16,7 @@ import { HeaderActionsSection } from "./HeaderActionsSection";
 import { HeaderBrandSection } from "./HeaderBrandSection";
 import { HeaderBrandLockup } from "./HeaderBrandLockup";
 import { HeaderProfileModals } from "./HeaderProfileModals";
-import { HeaderPrimaryNavigation, HeaderSecondaryNavigation } from "./HeaderPrimaryNavigation";
+import { HeaderPrimaryNavigation } from "./HeaderPrimaryNavigation";
 import type { HeaderProps, HeaderUserMenuSharedProps } from "./HeaderTypes";
 import {
   isHeaderHiddenOnMobileDetail,
@@ -39,7 +39,7 @@ export function Header({
   const router = useRouter();
   const pathname = usePathname();
   const { refreshKey, forceRefresh } = useAvatarRefresh();
-  const { currentTheme } = useTheme();
+  const { currentTheme, themePreference, setTheme } = useTheme();
   const { t } = useLocalization();
   const userMenuLabels = useHeaderUserMenuLabels();
   const { currentLocale, changeLocale } = useHeaderLocale();
@@ -91,6 +91,7 @@ export function Header({
       user: userActions.user,
       refreshAvatar: refreshKey > 0,
       currentTheme,
+      themePreference,
       currentLocale,
       isAdminPreviewEnabled,
       previewUsers: userActions.previewUsers,
@@ -98,6 +99,7 @@ export function Header({
       onOpenProfile: userActions.handleOpenProfileModal,
       onOpenSecurity: () => userActions.setIsChangePasswordModalOpen(true),
       onClearCache: userActions.handleClearCache,
+      onThemeChange: setTheme,
       onLocaleChange: changeLocale,
       onSignOut: userActions.handleSignOut,
       onUserSearch: userActions.handleUserSearch,
@@ -109,12 +111,9 @@ export function Header({
     <>
       <header
         className={cn(
-          "sticky z-50 flex h-16 shrink-0 items-center justify-between border-b border-slate-700/80 bg-[#111827] bg-clip-padding bg-cover bg-center px-3 text-white shadow-none transition-[background-color,border-color] duration-300 sm:px-4 lg:px-8",
+          "sticky z-50 flex h-16 shrink-0 items-center justify-between border-b border-border/70 bg-transparent px-3 text-foreground shadow-none transition-[background-color,border-color] duration-300 sm:px-4 lg:px-8",
           (session?.user?.impersonatedUserId || session?.user?.impersonatedRole) ? "top-8" : "top-0"
         )}
-        style={{
-          color: "white",
-        }}
       >
         {isMobile ? (
           <HeaderBrandSection
@@ -131,8 +130,8 @@ export function Header({
           <div className="flex min-w-0 items-center gap-4 xl:gap-6">
             <Link
               href="/dashboard"
-              aria-label={`${currentAppName} — hrive — ${initialPageTitle}`}
-              className="flex h-11 min-w-0 shrink-0 items-center rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400"
+              aria-label={`${currentAppName} — ${initialPageTitle}`}
+              className="flex h-11 min-w-0 shrink-0 items-center rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
               <HeaderBrandLockup
                 appLogoUrl={appLogoUrl}
@@ -152,10 +151,6 @@ export function Header({
           userMenuProps={userMenuProps}
         />
       </header>
-
-      {supportsHeaderSearch && (
-        <HeaderSecondaryNavigation pathname={pathname || ""} />
-      )}
 
       <HeaderProfileModals
         user={userActions.user}

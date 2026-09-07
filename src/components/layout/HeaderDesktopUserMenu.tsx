@@ -39,7 +39,9 @@ export function HeaderDesktopUserMenu(props: HeaderUserMenuSharedProps) {
         />
         <HeaderDesktopAppearanceSection
           currentTheme={props.currentTheme}
+          themePreference={props.themePreference}
           currentLocale={props.currentLocale}
+          onThemeChange={props.onThemeChange}
           onLocaleChange={props.onLocaleChange}
           onClearCache={props.onClearCache}
           labels={props.labels}

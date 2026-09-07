@@ -6,7 +6,7 @@ import { useSession } from "next-auth/react";
 import { useHasAssignedPositions } from "@/hooks/use-has-assigned-positions";
 import { useUserPreferences } from "@/hooks/use-user-preferences";
 import type { PlatformModuleId } from "@/lib/types";
-import { sidebarConfig } from "./SidebarNavConfig";
+import { sidebarConfigWithLearningManagement as sidebarConfig } from "./SidebarNavLearningConfig";
 import type { AppLayoutContextualLogos } from "./app-layout-settings";
 import { SidebarSinglePanel } from "./SidebarSinglePanel";
 import { isAdminUser } from "@/lib/permissions";

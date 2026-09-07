@@ -14,15 +14,18 @@ import type {
   HeaderMobileUserDrawerProps,
   MobileThemeOption,
 } from "./HeaderMobileUserDrawerTypes";
+import type { HeaderThemePreference } from "./HeaderTypes";
 
 type HeaderMobileUserDrawerAppearanceProps = Pick<
   HeaderMobileUserDrawerProps,
-  "currentTheme" | "currentLocale" | "onLocaleChange" | "labels"
+  "currentTheme" | "themePreference" | "currentLocale" | "onThemeChange" | "onLocaleChange" | "labels"
 >;
 
 export function HeaderMobileUserDrawerAppearance({
   currentTheme,
+  themePreference,
   currentLocale,
+  onThemeChange,
   onLocaleChange,
   labels,
 }: HeaderMobileUserDrawerAppearanceProps) {
@@ -33,7 +36,7 @@ export function HeaderMobileUserDrawerAppearance({
   ];
   return (
     <div className="space-y-3 p-1">
-      <h4 className="text-[11px] font-black uppercase tracking-[0.2em] text-zinc-400 px-4">
+      <h4 className="px-4 text-[11px] font-black uppercase tracking-[0.2em] text-muted-foreground">
         {labels.appearance}
       </h4>
       <div className="flex items-center gap-2 px-1">
@@ -41,7 +44,9 @@ export function HeaderMobileUserDrawerAppearance({
           <ThemeOptionButton
             key={themeOption.id}
             currentTheme={currentTheme}
+            themePreference={themePreference}
             themeOption={themeOption}
+            onThemeChange={onThemeChange}
           />
         ))}
       </div>
@@ -92,10 +97,10 @@ export function HeaderMobileUserDrawerSessionActions({
         <button
           type="button"
           onClick={onClearCache}
-          className="flex items-center w-full px-4 py-3.5 rounded-2xl hover:bg-amber-50 dark:hover:bg-amber-900/10 transition-all group gap-4 text-amber-600 dark:text-amber-400"
+          className="group flex w-full items-center gap-4 rounded-2xl px-4 py-3.5 text-warning transition-colors hover:bg-warning/10"
         >
-          <div className="w-10 h-10 rounded-xl bg-amber-50 dark:bg-amber-900/20 flex items-center justify-center">
-            <Trash2 className="w-5 h-5" />
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-warning/10">
+            <Trash2 className="h-5 w-5" />
           </div>
           <div className="flex flex-col text-left">
             <span className="text-sm font-bold">{labels.clearCache}</span>
@@ -108,10 +113,10 @@ export function HeaderMobileUserDrawerSessionActions({
         <button
           type="button"
           onClick={onSignOut}
-          className="flex items-center w-full px-4 py-3.5 rounded-2xl hover:bg-red-50 dark:hover:bg-red-900/10 transition-all group gap-4 text-red-600 dark:text-red-400"
+          className="group flex w-full items-center gap-4 rounded-2xl px-4 py-3.5 text-destructive transition-colors hover:bg-destructive/10"
         >
-          <div className="w-10 h-10 rounded-xl bg-red-50 dark:bg-red-900/20 flex items-center justify-center">
-            <LogOut className="w-5 h-5" />
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-destructive/10">
+            <LogOut className="h-5 w-5" />
           </div>
           <div className="flex flex-col text-left">
             <span className="text-sm font-bold tracking-tight">{labels.signOut}</span>
@@ -122,8 +127,8 @@ export function HeaderMobileUserDrawerSessionActions({
         </button>
       </div>
 
-      <div className="text-center pt-2">
-        <span className="text-[10px] font-black uppercase tracking-[0.3em] text-zinc-300 dark:text-zinc-600">
+      <div className="pt-2 text-center">
+        <span className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground/50">
           {labels.version} {APP_VERSION}
         </span>
       </div>
@@ -133,31 +138,36 @@ export function HeaderMobileUserDrawerSessionActions({
 
 function ThemeOptionButton({
   currentTheme,
+  themePreference,
   themeOption,
+  onThemeChange,
 }: {
-  currentTheme: string;
+  currentTheme: "light" | "dark";
+  themePreference: HeaderThemePreference;
   themeOption: MobileThemeOption;
+  onThemeChange: (theme: HeaderThemePreference) => void | Promise<void>;
 }) {
   const Icon = themeOption.icon;
+  const selected = themePreference === themeOption.id;
+  const resolvedLabel = themeOption.id === "system"
+    ? ` (${currentTheme})`
+    : "";
 
   return (
     <button
       type="button"
-      onClick={() =>
-        import("@/lib/themeUtils").then((module) =>
-          module.setThemeAndColors({ themePreference: themeOption.id }),
-        )
-      }
+      aria-pressed={selected}
+      onClick={() => void onThemeChange(themeOption.id)}
       className={cn(
-        "flex-1 flex flex-col items-center py-3 rounded-2xl border transition-all gap-1.5",
-        currentTheme === themeOption.id
-          ? "bg-white dark:bg-zinc-800 border-primary text-primary shadow-sm"
-          : "bg-zinc-50 dark:bg-zinc-900 border-zinc-100 dark:border-zinc-800 text-zinc-500",
+        "flex flex-1 flex-col items-center gap-1.5 rounded-2xl border py-3 transition-colors",
+        selected
+          ? "border-primary bg-primary/10 text-primary shadow-sm"
+          : "border-border bg-muted/30 text-muted-foreground hover:bg-muted hover:text-foreground",
       )}
     >
-      <Icon className="w-4 h-4" />
+      <Icon className="h-4 w-4" />
       <span className="text-[10px] font-bold uppercase tracking-wider">
-        {themeOption.label}
+        {themeOption.label}{resolvedLabel}
       </span>
     </button>
   );

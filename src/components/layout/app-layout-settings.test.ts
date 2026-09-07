@@ -5,6 +5,7 @@ import {
   buildAppLayoutConfigUpdates,
   buildAppLayoutThemeConfig,
   parseAppLayoutSettingsResponse,
+  resolveAppLayoutThemePreference,
 } from './app-layout-settings';
 
 describe('app-layout-settings', () => {
@@ -86,14 +87,19 @@ describe('app-layout-settings', () => {
     });
   });
 
-  it('builds sparse app config updates from change events', () => {
+  it('preserves the already resolved user theme when app palette settings are reapplied', () => {
+    expect(resolveAppLayoutThemePreference('system', 'dark')).toBe('dark');
+    expect(resolveAppLayoutThemePreference('dark', 'light')).toBe('light');
+    expect(resolveAppLayoutThemePreference('system', null)).toBe('system');
+  });
+
+  it('never lets local app config events override the Outborn Account logo', () => {
     expect(buildAppConfigChangedUpdates({
       appName: 'Acme Hiring',
-      logoUrl: null,
+      logoUrl: 'local-logo-that-must-be-ignored.png',
       sidebarLogoSize: 64,
     })).toEqual({
       currentAppName: 'Acme Hiring',
-      appLogoUrl: null,
       sidebarLogoSize: 64,
     });
   });

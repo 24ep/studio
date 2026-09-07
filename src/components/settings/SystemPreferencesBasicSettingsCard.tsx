@@ -33,7 +33,9 @@ export function SystemPreferencesBasicSettingsCard({
           <Settings2 className="h-5 w-5" />
           Basic Settings
         </CardTitle>
-        <CardDescription>Configure basic application settings</CardDescription>
+        <CardDescription>
+          Configure application defaults. Signed-in users control their personal appearance from the user menu.
+        </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="space-y-2">
@@ -47,16 +49,21 @@ export function SystemPreferencesBasicSettingsCard({
         </div>
 
         <div className="space-y-2">
-          <Label>Theme Preference</Label>
+          <div>
+            <Label>Default theme</Label>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Used for public and default application surfaces when no personal theme preference is available.
+            </p>
+          </div>
           <RadioGroup
             value={themePreference}
             onValueChange={value => onThemePreferenceChange(value as ThemePreference)}
-            className="flex space-x-4"
+            className="flex flex-wrap gap-4"
           >
             {THEME_OPTIONS.map(({ value, label, icon: Icon, iconClassName }) => (
               <div key={value} className="flex items-center space-x-2">
-                <RadioGroupItem value={value} id={value} />
-                <Label htmlFor={value} className="flex items-center gap-2">
+                <RadioGroupItem value={value} id={`default-theme-${value}`} />
+                <Label htmlFor={`default-theme-${value}`} className="flex items-center gap-2">
                   <Icon className={`h-4 w-4 ${iconClassName}`} />
                   <span className="text-sm">{label}</span>
                 </Label>
@@ -68,4 +75,3 @@ export function SystemPreferencesBasicSettingsCard({
     </Card>
   );
 }
-

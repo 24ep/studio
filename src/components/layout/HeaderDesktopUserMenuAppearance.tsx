@@ -1,6 +1,5 @@
 "use client";
 
-import type React from "react";
 import {
   ComputerDesktopIcon as Monitor,
   MoonIcon as Moon,
@@ -17,40 +16,57 @@ import {
   DropdownMenuSubContent,
   DropdownMenuSubTrigger,
 } from "@/components/ui/dropdown-menu";
-import type { HeaderUserMenuSharedProps } from "./HeaderTypes";
+import type { HeaderUserMenuSharedProps, HeaderThemePreference } from "./HeaderTypes";
 import { LocaleFlag } from "./locale-flags";
 
 type HeaderDesktopMenuProps = HeaderUserMenuSharedProps;
 
 export function HeaderDesktopAppearanceSection({
   currentTheme,
+  themePreference,
   currentLocale,
+  onThemeChange,
   onLocaleChange,
   onClearCache,
   labels,
-}: Pick<HeaderDesktopMenuProps, "currentTheme" | "currentLocale" | "onLocaleChange" | "onClearCache" | "labels">) {
+}: Pick<HeaderDesktopMenuProps, "currentTheme" | "themePreference" | "currentLocale" | "onThemeChange" | "onLocaleChange" | "onClearCache" | "labels">) {
   return (
     <>
-      <DropdownMenuSeparator className="bg-gray-100 dark:bg-zinc-800/60" />
+      <DropdownMenuSeparator className="bg-border" />
       <div className="p-2">
-        <p className="mb-1.5 px-2 text-[10px] font-bold uppercase tracking-widest text-gray-400 dark:text-zinc-500">{labels.appearance}</p>
+        <p className="mb-1.5 px-2 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">{labels.appearance}</p>
         <DropdownMenuSub>
-          <DropdownMenuSubTrigger className="flex items-center rounded-lg px-3 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50/80 dark:text-zinc-300 dark:hover:bg-zinc-800/80">
+          <DropdownMenuSubTrigger className="flex items-center rounded-lg px-3 py-2 text-sm font-medium text-foreground transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground">
             {currentTheme === "dark" ? <Moon className="mr-2 h-4 w-4" /> : <Sun className="mr-2 h-4 w-4" />}
             <span>{labels.appearance}</span>
           </DropdownMenuSubTrigger>
-          <DropdownMenuSubContent className="p-1 min-w-[150px] rounded-xl border-gray-100 dark:border-zinc-800 bg-white/95 dark:bg-zinc-950/95 backdrop-blur-xl shadow-xl">
-            <ThemeOptionItem themePreference="light" icon={<Sun className="mr-2 h-3.5 w-3.5" />} label={labels.light} />
-            <ThemeOptionItem themePreference="dark" icon={<Moon className="mr-2 h-3.5 w-3.5" />} label={labels.dark} />
-            <ThemeOptionItem themePreference="system" icon={<Monitor className="mr-2 h-3.5 w-3.5" />} label={labels.system} />
+          <DropdownMenuSubContent className="min-w-[160px] rounded-xl border-border bg-popover p-1 text-popover-foreground shadow-xl backdrop-blur-xl">
+            <DropdownMenuRadioGroup
+              value={themePreference}
+              onValueChange={(value) => void onThemeChange(value as HeaderThemePreference)}
+            >
+              <DropdownMenuRadioItem value="light" className="cursor-pointer rounded-lg py-2 pl-8 pr-3 text-xs font-medium">
+                <Sun className="mr-2 h-3.5 w-3.5" />
+                {labels.light}
+              </DropdownMenuRadioItem>
+              <DropdownMenuRadioItem value="dark" className="cursor-pointer rounded-lg py-2 pl-8 pr-3 text-xs font-medium">
+                <Moon className="mr-2 h-3.5 w-3.5" />
+                {labels.dark}
+              </DropdownMenuRadioItem>
+              <DropdownMenuRadioItem value="system" className="cursor-pointer rounded-lg py-2 pl-8 pr-3 text-xs font-medium">
+                <Monitor className="mr-2 h-3.5 w-3.5" />
+                {labels.system}
+                <span className="ml-auto text-[10px] text-muted-foreground">{currentTheme}</span>
+              </DropdownMenuRadioItem>
+            </DropdownMenuRadioGroup>
           </DropdownMenuSubContent>
         </DropdownMenuSub>
         <DropdownMenuSub>
-          <DropdownMenuSubTrigger className="flex items-center rounded-lg px-3 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50/80 dark:text-zinc-300 dark:hover:bg-zinc-800/80">
+          <DropdownMenuSubTrigger className="flex items-center rounded-lg px-3 py-2 text-sm font-medium text-foreground transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground">
             <Languages className="mr-2 h-4 w-4" />
             <span>{labels.localization}</span>
           </DropdownMenuSubTrigger>
-          <DropdownMenuSubContent className="min-w-[170px] rounded-xl border-gray-100 bg-white/95 p-1 shadow-xl backdrop-blur-xl dark:border-zinc-800 dark:bg-zinc-950/95">
+          <DropdownMenuSubContent className="min-w-[170px] rounded-xl border-border bg-popover p-1 text-popover-foreground shadow-xl backdrop-blur-xl">
             <DropdownMenuRadioGroup
               value={currentLocale}
               onValueChange={(value) => onLocaleChange(value as "en-US" | "th-TH")}
@@ -76,31 +92,11 @@ export function HeaderDesktopAppearanceSection({
             </DropdownMenuRadioGroup>
           </DropdownMenuSubContent>
         </DropdownMenuSub>
-        <DropdownMenuItem onClick={onClearCache} className="mt-0.5 flex items-center rounded-lg px-3 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-amber-50 hover:text-amber-600 dark:text-zinc-300 dark:hover:bg-amber-500/10 dark:hover:text-amber-400">
+        <DropdownMenuItem onClick={onClearCache} className="mt-0.5 flex items-center rounded-lg px-3 py-2 text-sm font-medium text-warning transition-colors hover:bg-warning/10 focus:bg-warning/10 focus:text-warning">
           <Trash2 className="mr-2 h-4 w-4" />
           <span>{labels.clearCache}</span>
         </DropdownMenuItem>
       </div>
     </>
-  );
-}
-
-function ThemeOptionItem({
-  themePreference,
-  icon,
-  label,
-}: {
-  themePreference: "light" | "dark" | "system";
-  icon: React.ReactNode;
-  label: string;
-}) {
-  return (
-    <DropdownMenuItem
-      onClick={() => import("@/lib/themeUtils").then((module) => module.setThemeAndColors({ themePreference }))}
-      className="flex items-center px-3 py-2 rounded-lg cursor-pointer text-[12px] font-medium"
-    >
-      {icon}
-      {label}
-    </DropdownMenuItem>
   );
 }

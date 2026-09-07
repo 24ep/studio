@@ -2,10 +2,17 @@ import { hasPermission, type SessionLikeUser } from "@/lib/permissions";
 import type { PlatformModuleId } from "@/lib/types";
 import type { SidebarNavItem } from "./SidebarNavConfig";
 
+function includesAnyModulePermission(
+  modulePermissions: readonly PlatformModuleId[],
+  permissionIds: readonly PlatformModuleId[],
+) {
+  return permissionIds.some(permissionId => modulePermissions.includes(permissionId));
+}
+
 export function hasSidebarItemPermission(
   item: SidebarNavItem,
   isAdmin: boolean,
-  modulePermissions: PlatformModuleId[],
+  modulePermissions: readonly PlatformModuleId[],
   user: SessionLikeUser | null | undefined,
 ) {
   if (isAdmin) return true;
@@ -27,32 +34,38 @@ export function hasSidebarItemPermission(
   if (item.permissionId || item.permissionIds?.length) return false;
 
   if (item.href === "/dashboard" || item.href === "/") {
-    return modulePermissions.includes("DASHBOARD_VIEW");
+    return includesAnyModulePermission(modulePermissions, ["DASHBOARD_VIEW"]);
   }
   if (item.href === "/positions") {
-    return modulePermissions.includes("POSITIONS_VIEW");
+    return includesAnyModulePermission(modulePermissions, ["POSITIONS_VIEW"]);
   }
   if (item.href === "/calendar") {
-    return modulePermissions.includes("EVALUATION_LINKS_VIEW") ||
-      modulePermissions.includes("EVALUATION_LINKS_CREATE_OWN") ||
-      modulePermissions.includes("EVALUATION_LINKS_CREATE_ALL") ||
-      modulePermissions.includes("EVALUATION_LINKS_MANAGE_OWN") ||
-      modulePermissions.includes("EVALUATION_LINKS_MANAGE_ALL");
+    return includesAnyModulePermission(modulePermissions, [
+      "EVALUATION_LINKS_VIEW",
+      "EVALUATION_LINKS_CREATE_OWN",
+      "EVALUATION_LINKS_CREATE_ALL",
+      "EVALUATION_LINKS_MANAGE_OWN",
+      "EVALUATION_LINKS_MANAGE_ALL",
+    ]);
   }
   if (item.href.startsWith("/settings/users")) {
-    return modulePermissions.includes("USERS_VIEW") || isAdmin;
+    return includesAnyModulePermission(modulePermissions, ["USERS_VIEW"]);
   }
-  if (item.href === "/settings/system-settings" || item.href === "/settings/system-preferences" || item.href === "/settings/system-prompts") {
-    return modulePermissions.includes("SYSTEM_SETTINGS_VIEW") || isAdmin;
+  if (
+    item.href === "/settings/system-settings"
+    || item.href === "/settings/system-preferences"
+    || item.href === "/settings/system-prompts"
+  ) {
+    return includesAnyModulePermission(modulePermissions, ["SYSTEM_SETTINGS_VIEW"]);
   }
   if (item.href === "/settings/data-configuration") {
-    return modulePermissions.includes("RECRUITMENT_STAGES_VIEW") || isAdmin;
+    return includesAnyModulePermission(modulePermissions, ["RECRUITMENT_STAGES_VIEW"]);
   }
   if (item.href === "/settings/webhooks") {
-    return modulePermissions.includes("WEBHOOKS_VIEW") || isAdmin;
+    return includesAnyModulePermission(modulePermissions, ["WEBHOOKS_VIEW"]);
   }
   if (item.href === "/settings/logs") {
-    return modulePermissions.includes("LOGS_VIEW") || isAdmin;
+    return includesAnyModulePermission(modulePermissions, ["LOGS_VIEW"]);
   }
 
   return true;

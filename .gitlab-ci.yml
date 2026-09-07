@@ -140,7 +140,8 @@ test:audit-database:
     DATABASE_URL: postgresql://postgres:audit_test_password@postgres:5432/audit_test
     AUDIT_TEST_ALLOW_RESET: "true"
   script:
-    - npx prisma db push --force-reset --skip-generate
+    - npx prisma db execute --schema=prisma/schema.prisma --file=scripts/ensure-postgresql-extensions.sql
+    - npx prisma migrate deploy --schema=prisma/schema.prisma
     - npm run audit:verify-database
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"

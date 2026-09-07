@@ -16,6 +16,7 @@ export function HeaderMobileUserDrawer({
   user,
   refreshAvatar,
   currentTheme,
+  themePreference,
   currentLocale,
   isAdminPreviewEnabled,
   previewUsers,
@@ -23,6 +24,7 @@ export function HeaderMobileUserDrawer({
   onOpenProfile,
   onOpenSecurity,
   onClearCache,
+  onThemeChange,
   onLocaleChange,
   onSignOut,
   onUserSearch,
@@ -47,8 +49,8 @@ export function HeaderMobileUserDrawer({
         </button>
       </DrawerTrigger>
       <DrawerContent className="max-h-[85vh]">
-        <div className="max-w-md mx-auto w-full overflow-y-auto px-4 pb-8 pt-4 custom-scrollbar">
-          <div className="space-y-6 mt-4">
+        <div className="mx-auto w-full max-w-md overflow-y-auto px-4 pb-8 pt-4 custom-scrollbar">
+          <div className="mt-4 space-y-6">
             <HeaderMobileUserDrawerProfile
               user={user}
               refreshAvatar={refreshAvatar}
@@ -69,7 +71,9 @@ export function HeaderMobileUserDrawer({
 
             <HeaderMobileUserDrawerAppearance
               currentTheme={currentTheme}
+              themePreference={themePreference}
               currentLocale={currentLocale}
+              onThemeChange={onThemeChange}
               onLocaleChange={onLocaleChange}
               labels={labels}
             />

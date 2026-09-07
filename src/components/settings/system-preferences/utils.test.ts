@@ -144,7 +144,7 @@ describe('system preferences utilities', () => {
         });
     });
 
-    it('builds basic system preference save payloads', () => {
+    it('builds basic system preference save payloads without persisting the Account-owned app logo', () => {
         expect(buildBasicSystemPreferencesSavePayload({
             appName: 'Studio',
             appLogoUrl: null,
@@ -154,7 +154,6 @@ describe('system preferences utilities', () => {
             sidebarLogoSize: 72,
         })).toEqual([
             { key: APP_NAME_KEY, value: 'Studio' },
-            { key: 'appLogoDataUrl', value: '' },
             { key: 'appFaviconDataUrl', value: '/favicon.ico' },
             { key: APP_THEME_KEY, value: 'dark' },
             { key: SHOW_LOGO_ONLY_KEY, value: 'true' },

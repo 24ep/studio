@@ -42,6 +42,7 @@ export function useSignInPageSettings({
     isThemeDark: state.isThemeDark,
   });
   const loginHeroCopy = useMemo(() => getSignInHeroCopy(initialSettings), [initialSettings]);
+  const outbornAccountEnabled = process.env.NEXT_PUBLIC_OUTBORN_ACCOUNT_AUTH_ENABLED !== 'false';
 
   return {
     activeBgEnd,
@@ -51,7 +52,9 @@ export function useSignInPageSettings({
     basicAuthEnabled: state.basicAuthEnabled,
     contextualLogos: state.contextualLogos,
     currentAppName: state.currentAppName,
-    isAzureAdConfigured: state.isAzureAdConfigured,
+    // Compatibility key consumed by the existing login-layout components. The
+    // button behind it is Outborn Account after the identity cutover.
+    isAzureAdConfigured: outbornAccountEnabled,
     isClient: state.isClient,
     isThemeDark: state.isThemeDark,
     loginLayoutType: state.loginLayoutType,

@@ -35,16 +35,16 @@ export function RecruitmentStagesPageView({
   onConfirmDeleteWithReplacement,
 }: RecruitmentStagesPageViewProps) {
   return (
-    <div className="h-full flex flex-col p-6">
+    <div className="flex h-full min-h-0 flex-col p-6">
       <RecruitmentStagesHeader
         showLogoOnly={showLogoOnly}
         onOpenModal={onOpenModal}
       />
 
-      <div className="flex-1 overflow-hidden">
-        <div className="h-full flex flex-col">
-          <div className="flex-1 overflow-hidden">
-            <ScrollArea className="h-full pr-4">
+      <div className="min-h-0 flex-1 overflow-hidden">
+        <div className="flex h-full min-h-0 flex-col">
+          <div className="min-h-0 flex-1 overflow-hidden">
+            <ScrollArea className="h-full min-h-0 pr-4">
               <div className="space-y-6">
                 <RecruitmentStagesList
                   stages={stages}

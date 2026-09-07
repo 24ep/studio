@@ -27,10 +27,10 @@ export function UnifiedUserModalHeader({
   onClose,
 }: UnifiedUserModalHeaderProps) {
   return (
-    <div className="bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-100/20 dark:from-slate-900 dark:via-slate-800/50 dark:to-slate-700/30 shadow-sm p-4 flex-shrink-0 relative">
+    <div className="relative flex-shrink-0 border-b border-border/70 bg-background px-5 py-5 sm:px-6">
       <UnifiedUserModalCloseButton onClose={onClose} />
 
-      <div className="flex flex-col md:flex-row items-center gap-4">
+      <div className="flex flex-col items-start gap-4 pr-10 md:flex-row md:items-center">
         <UnifiedUserAvatarField form={form} user={user} />
         <UnifiedUserIdentityFields form={form} mode={mode} user={user} />
         <UnifiedUserHeaderActions isSaving={isSaving} onClose={onClose} />
@@ -40,7 +40,7 @@ export function UnifiedUserModalHeader({
 }
 
 const TAB_TRIGGER_CLASS =
-  "h-12 !rounded-none border-b-2 border-transparent data-[state=active]:border-foreground data-[state=active]:bg-transparent data-[state=active]:shadow-none px-2 font-medium transition-all text-muted-foreground data-[state=active]:text-foreground hover:text-foreground relative bottom-[-2px] z-10";
+  "relative bottom-[-1px] z-10 h-11 !rounded-none border-b-2 border-transparent px-1 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground data-[state=active]:border-foreground data-[state=active]:bg-transparent data-[state=active]:text-foreground data-[state=active]:shadow-none";
 
 type UnifiedUserModalTabsListProps = {
   mode: ModalMode;
@@ -49,8 +49,8 @@ type UnifiedUserModalTabsListProps = {
 
 export function UnifiedUserModalTabsList({ mode, user }: UnifiedUserModalTabsListProps) {
   return (
-    <div className="border-b-2 border-zinc-200 dark:border-zinc-800 px-6 bg-background/95 backdrop-blur-sm sticky top-0 z-10 w-full">
-      <TabsList className="h-12 bg-transparent p-0 gap-6 w-full justify-start overflow-x-auto no-scrollbar">
+    <div className="sticky top-0 z-10 w-full border-b border-border/70 bg-background/95 px-5 backdrop-blur-sm sm:px-6">
+      <TabsList className="h-11 w-full justify-start gap-5 overflow-x-auto bg-transparent p-0 no-scrollbar">
         <TabsTrigger value="personal" className={TAB_TRIGGER_CLASS}>
           Personal Info
         </TabsTrigger>
@@ -60,12 +60,7 @@ export function UnifiedUserModalTabsList({ mode, user }: UnifiedUserModalTabsLis
         <TabsTrigger value="security" className={TAB_TRIGGER_CLASS}>
           Security
         </TabsTrigger>
-        {(mode === 'profile' || (mode === 'edit' && user)) && (
-          <TabsTrigger value="preferences" className={TAB_TRIGGER_CLASS}>
-            Preferences
-          </TabsTrigger>
-        )}
-        {user?.id && (
+        {mode !== 'create' && user?.id && (
           <TabsTrigger value="hiring" className={TAB_TRIGGER_CLASS}>
             Hiring
           </TabsTrigger>

@@ -38,11 +38,10 @@ export async function buildResizedPreviewImageResponse(request: NextRequest, inp
   }
 
   const outputFormat = input.filePath.toLowerCase().endsWith('.png') ? 'png' : 'jpeg';
-  const formatOptions: sharp.JpegOptions | sharp.PngOptions = outputFormat === 'jpeg'
-    ? { quality: input.thumbnail ? 60 : 85, mozjpeg: true }
-    : { quality: input.thumbnail ? 60 : 85 };
-
-  const resizedBuffer = await sharpInstance.toFormat(outputFormat, formatOptions).toBuffer();
+  const quality = input.thumbnail ? 60 : 85;
+  const resizedBuffer = outputFormat === 'jpeg'
+    ? await sharpInstance.jpeg({ quality, mozjpeg: true }).toBuffer()
+    : await sharpInstance.png({ quality }).toBuffer();
   const headers = await getPreviewHeaders(
     outputFormat === 'png' ? 'image/png' : 'image/jpeg',
     getPreviewFileName(input.fileName, input.filePath),

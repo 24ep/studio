@@ -4,14 +4,14 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from '@/lib/utils';
-import { HardDrive, Info, Loader2, Settings } from "lucide-react";
+import { Activity, HardDrive, Info, Loader2, Settings } from "lucide-react";
 import type { StatusItem } from './system-status-types';
 import {
   getSystemStatusBadgeVariant,
   getSystemStatusColor,
   getSystemStatusToggleIcon,
 } from './system-status-utils';
-import type { SystemStatusPageModel } from './use-system-status-page';
+import type { ProbeLatencySample, SystemStatusPageModel } from './use-system-status-page';
 
 export function SystemStatusPageView({ page }: { page: SystemStatusPageModel }) {
   if (page.isLoading) {
@@ -24,6 +24,7 @@ export function SystemStatusPageView({ page }: { page: SystemStatusPageModel }) 
 
   return (
     <div className="space-y-6 p-6">
+      <LiveProbeLatencyCard samples={page.probeLatency} />
       <Card className="shadow-lg">
         <CardHeader>
           <CardTitle className="flex items-center text-2xl">
@@ -49,13 +50,138 @@ export function SystemStatusPageView({ page }: { page: SystemStatusPageModel }) 
   );
 }
 
-function SystemStatusCard({
-  canCheckStorageBucket,
-  item,
-}: {
-  canCheckStorageBucket: boolean;
-  item: StatusItem;
-}) {
+function LiveProbeLatencyCard({ samples }: { samples: ProbeLatencySample[] }) {
+  const values = samples.map(sample => sample.latencyMs);
+  const latest = values.at(-1) ?? 0;
+  const average = values.length
+    ? Math.round(values.reduce((sum, value) => sum + value, 0) / values.length)
+    : 0;
+  const sorted = [...values].sort((a, b) => a - b);
+  const p95 = sorted.length
+    ? sorted[Math.min(sorted.length - 1, Math.ceil(sorted.length * 0.95) - 1)]
+    : 0;
+  const maxValue = Math.max(50, ...values);
+  const yMax = Math.ceil(maxValue / 25) * 25;
+  const width = 720;
+  const height = 170;
+  const padding = { top: 12, right: 16, bottom: 26, left: 46 };
+  const chartWidth = width - padding.left - padding.right;
+  const chartHeight = height - padding.top - padding.bottom;
+  const xFor = (index: number) => padding.left + (samples.length <= 1 ? chartWidth : index * chartWidth / (samples.length - 1));
+  const yFor = (value: number) => padding.top + chartHeight - (value / yMax) * chartHeight;
+  const points = samples.map((sample, index) => `${xFor(index)},${yFor(sample.latencyMs)}`).join(' ');
+  const areaPoints = samples.length
+    ? `${padding.left},${padding.top + chartHeight} ${points} ${xFor(samples.length - 1)},${padding.top + chartHeight}`
+    : '';
+
+  return (
+    <Card className="overflow-hidden border-border/70 shadow-sm">
+      <CardHeader className="pb-2">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <CardTitle className="flex items-center gap-2 text-base">
+              <Activity className="h-4 w-4 text-primary" />
+              Live probe latency
+            </CardTitle>
+            <CardDescription className="mt-1">
+              Real round-trip time to the application health endpoint. Refreshes every 15 seconds.
+            </CardDescription>
+          </div>
+          <div className="flex items-center gap-5 text-right">
+            <Metric label="Current" value={latest} />
+            <Metric label="Average" value={average} />
+            <Metric label="P95" value={p95} />
+          </div>
+        </div>
+      </CardHeader>
+      <CardContent className="pt-1">
+        {samples.length === 0 ? (
+          <div className="flex h-40 items-center justify-center text-sm text-muted-foreground">
+            Collecting the first live probe…
+          </div>
+        ) : (
+          <div className="w-full overflow-hidden">
+            <svg
+              viewBox={`0 0 ${width} ${height}`}
+              role="img"
+              aria-label={`Live probe latency. Current ${latest} milliseconds, average ${average} milliseconds, p95 ${p95} milliseconds.`}
+              className="h-44 w-full text-primary"
+              preserveAspectRatio="none"
+            >
+              {[0, 0.25, 0.5, 0.75, 1].map((ratio) => {
+                const y = padding.top + chartHeight * ratio;
+                const value = Math.round(yMax * (1 - ratio));
+                return (
+                  <g key={ratio}>
+                    <line
+                      x1={padding.left}
+                      x2={width - padding.right}
+                      y1={y}
+                      y2={y}
+                      stroke="currentColor"
+                      strokeOpacity="0.1"
+                      vectorEffect="non-scaling-stroke"
+                    />
+                    <text
+                      x={padding.left - 8}
+                      y={y + 3}
+                      textAnchor="end"
+                      className="fill-muted-foreground text-[10px]"
+                    >
+                      {value} ms
+                    </text>
+                  </g>
+                );
+              })}
+              {areaPoints && (
+                <polygon points={areaPoints} fill="currentColor" fillOpacity="0.08" />
+              )}
+              <polyline
+                points={points}
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.5"
+                strokeLinejoin="round"
+                strokeLinecap="round"
+                vectorEffect="non-scaling-stroke"
+              />
+              {samples.map((sample, index) => (
+                <circle
+                  key={`${sample.at}-${index}`}
+                  cx={xFor(index)}
+                  cy={yFor(sample.latencyMs)}
+                  r={sample.ok ? 2.8 : 4}
+                  fill="currentColor"
+                  opacity={sample.ok ? 0.9 : 0.35}
+                  vectorEffect="non-scaling-stroke"
+                >
+                  <title>{`${new Date(sample.at).toLocaleTimeString()} · ${sample.latencyMs} ms${sample.ok ? '' : ' · probe failed'}`}</title>
+                </circle>
+              ))}
+              <text x={padding.left} y={height - 6} className="fill-muted-foreground text-[10px]">
+                {new Date(samples[0].at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+              </text>
+              <text x={width - padding.right} y={height - 6} textAnchor="end" className="fill-muted-foreground text-[10px]">
+                now
+              </text>
+            </svg>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function Metric({ label, value }: { label: string; value: number }) {
+  return (
+    <div>
+      <div className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">{label}</div>
+      <div className="mt-0.5 font-mono text-sm font-semibold text-foreground">{value ? `${value} ms` : '—'}</div>
+    </div>
+  );
+}
+
+function SystemStatusCard({ canCheckStorageBucket, item }: { canCheckStorageBucket: boolean; item: StatusItem }) {
   const Icon = item.icon;
   const storageActionDisabled = item.id === 'storage_bucket_check' && !canCheckStorageBucket;
 
@@ -108,17 +234,8 @@ function SystemStatusCard({
 }
 
 function getSystemStatusActionIcon(item: StatusItem) {
-  if (item.isLoading) {
-    return <Loader2 className="mr-2 h-4 w-4 animate-spin" />;
-  }
-
-  if (item.id === 'azure_ad_sso_conceptual') {
-    return getSystemStatusToggleIcon(item.status);
-  }
-
-  if (item.id === 'storage_bucket_check') {
-    return <HardDrive className="mr-2 h-4 w-4" />;
-  }
-
+  if (item.isLoading) return <Loader2 className="mr-2 h-4 w-4 animate-spin" />;
+  if (item.id === 'azure_ad_sso_conceptual') return getSystemStatusToggleIcon(item.status);
+  if (item.id === 'storage_bucket_check') return <HardDrive className="mr-2 h-4 w-4" />;
   return null;
 }

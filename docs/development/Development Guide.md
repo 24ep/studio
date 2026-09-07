@@ -37,7 +37,7 @@ cp env.local.template .env.local
 # - MINIO credentials
 
 # Run database migrations
-npx prisma db push
+npx prisma migrate dev --schema=prisma/schema.prisma
 
 # Generate Prisma client
 npx prisma generate
@@ -228,7 +228,7 @@ export default function ExamplePage() {
 ### 5.3 Adding a New Database Model
 
 1. Update `prisma/schema.prisma`
-2. Run `npx prisma db push` or create migration
+2. Run `npx prisma migrate dev --schema=prisma/schema.prisma` or create migration
 3. Generate Prisma client: `npx prisma generate`
 4. Update types if needed
 
