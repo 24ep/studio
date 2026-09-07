@@ -1,5 +1,4 @@
 {
-
   "src/swagger/index.ts": 1245,
   "src/components/company-portal/CompanyPortalEditor.tsx": 1570,
   "src/components/leaves/LeaveAllocationGuidedFlow.tsx": 1670,
@@ -26,6 +25,5 @@
   "src/app/settings/payroll-approval-routes/PayrollApprovalRoutesClient.tsx": 1175,
   "src/app/settings/settings-page-model.ts": 853,
   "src/lib/performance/performance-service.ts": 1099,
-  "src/lib/payroll/service.ts": 2802,
   "src/lib/survey/survey-service.ts": 1344
 }
