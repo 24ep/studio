@@ -5,64 +5,84 @@ on:
     branches: [audit/security-legacy-large-cleanup]
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   audit:
+    if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
+        with:
+          ref: audit/security-legacy-large-cleanup
       - uses: actions/setup-node@v5
         with:
           node-version: 22
       - run: npm install --global npm@11.6.2
+      - name: Refresh lockfile
+        run: npm install --package-lock-only --ignore-scripts --no-audit --no-fund
+      - name: Commit refreshed lockfile
+        shell: bash
+        run: |
+          if git diff --quiet -- package-lock.json; then
+            echo 'package-lock.json already current'
+          else
+            git config user.name 'github-actions[bot]'
+            git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+            git add package-lock.json
+            git commit -m 'chore(deps): refresh security-patched lockfile'
+            git push
+          fi
       - name: Install dependencies
         run: npm ci --ignore-scripts --no-fund
       - name: Dependency provenance
-        shell: bash
-        run: |
-          npm ls @xmldom/xmldom js-yaml sharp swagger-ui-react minio csv-parse @tiptap/core nodemailer next || true
+        run: npm ls @xmldom/xmldom js-yaml sharp swagger-ui-react minio csv-parse @tiptap/core nodemailer next || true
       - name: Production dependency audit
         shell: bash
         run: |
           set +e
           npm audit --omit=dev --json > /tmp/npm-audit.json
-          status=$?
           set -e
           node <<'NODE'
           const fs = require('fs')
           const audit = JSON.parse(fs.readFileSync('/tmp/npm-audit.json','utf8'))
-          console.log('NPM_AUDIT_COUNTS', JSON.stringify(audit.metadata?.vulnerabilities || {}))
+          const counts = audit.metadata?.vulnerabilities || {}
+          console.log('NPM_AUDIT_COUNTS', JSON.stringify(counts))
           const order = ['critical','high','moderate','low','info']
           const vulns = Object.entries(audit.vulnerabilities || {})
-            .map(([name,v]) => ({name, severity:v.severity, direct:Boolean(v.isDirect), range:v.range, nodes:v.nodes, via:(v.via||[]).map(x=>typeof x==='string'?x:{source:x.source,title:x.title,url:x.url,range:x.range,severity:x.severity}), fixAvailable:v.fixAvailable}))
+            .map(([name,v]) => ({name, severity:v.severity, direct:Boolean(v.isDirect), range:v.range, via:(v.via||[]).map(x=>typeof x==='string'?x:{title:x.title,url:x.url,range:x.range,severity:x.severity}), fixAvailable:v.fixAvailable}))
             .sort((a,b) => order.indexOf(a.severity)-order.indexOf(b.severity))
           for (const v of vulns) console.log('NPM_AUDIT_VULN', JSON.stringify(v))
+          if ((counts.critical || 0) + (counts.high || 0) > 0) process.exit(1)
           NODE
-          echo "NPM_AUDIT_EXIT=$status"
+      - name: Verify generated artifacts are not tracked
+        shell: bash
+        run: |
+          if git ls-files | grep -E '^(\.codex|audit)/'; then
+            echo 'Generated review artifacts are still tracked' >&2
+            exit 1
+          fi
+          if git grep -n 'audit/' -- ':!audit/**' ':!.github/workflows/security-cleanup-audit.yml'; then
+            echo 'Unexpected audit artifact reference remains' >&2
+            exit 1
+          fi
+          if git grep -n '\.codex/' -- ':!.codex/**' ':!.github/workflows/security-cleanup-audit.yml'; then
+            echo 'Unexpected Codex artifact reference remains' >&2
+            exit 1
+          fi
       - name: Largest tracked files
         shell: bash
         run: |
           python3 - <<'PY'
           import os, subprocess
-          files = subprocess.check_output(['git','ls-files','-z']).decode().split('\0')
+          files = [x for x in subprocess.check_output(['git','ls-files','-z']).decode().split('\0') if x]
           rows=[]
           for f in files:
-            if not f: continue
             try: rows.append((os.path.getsize(f), f))
             except OSError: pass
-          for size,path in sorted(rows, reverse=True)[:80]:
+          for size,path in sorted(rows, reverse=True)[:30]:
             print(f'LARGE_FILE {size} {path}')
-          for prefix in ['.codex/','audit/','coverage/','.next/','out/','build/','test-results/','playwright-report/']:
-            vals=[(s,p) for s,p in rows if p.startswith(prefix)]
-            if vals:
-              print(f'TRACKED_GENERATED {prefix} files={len(vals)} bytes={sum(s for s,_ in vals)}')
           PY
-      - name: Generated artifact references
-        shell: bash
-        run: |
-          echo 'REFERENCES_TO_CODEX_OR_AUDIT_OUTSIDE_GENERATED_DIRS'
-          git grep -nE '(^|["'"'`/(])(?:\.codex|audit)/' -- ':!.codex/**' ':!audit/**' ':!.github/workflows/security-cleanup-audit.yml' || true
       - name: Legacy artifact candidates
         shell: bash
         run: |
@@ -70,32 +90,7 @@ jobs:
           import re, subprocess
           files = [x for x in subprocess.check_output(['git','ls-files','-z']).decode().split('\0') if x]
           legacy = re.compile(r'(^|/)(archive|backup|backups|tmp|temp|dist|coverage|test-results|playwright-report)(/|$)|\.(bak|old|orig|rej|tmp|log|zip|tar|tgz|dump|sqlite|sqlite3|db-journal)$', re.I)
-          for f in files:
-            if legacy.search(f): print('LEGACY_CANDIDATE', f)
-          PY
-      - name: Security pattern inventory
-        shell: bash
-        run: |
-          python3 - <<'PY'
-          import pathlib,re
-          rules = {
-            'UNSAFE_HTML': re.compile(r'dangerouslySetInnerHTML'),
-            'PRISMA_RAW_UNSAFE': re.compile(r'\$(?:queryRawUnsafe|executeRawUnsafe)'),
-            'CHILD_PROCESS': re.compile(r"(?:from\s+['\"]node:child_process['\"]|require\(['\"](?:node:)?child_process['\"]\))"),
-            'JWT_DECODE': re.compile(r'\b(?:jwt|jsonwebtoken)\.decode\s*\('),
-            'CORS_WILDCARD': re.compile(r"(?:Access-Control-Allow-Origin[^\n]*\*|origin\s*:\s*['\"]\*['\"])"),
-            'PRIVATE_KEY_LITERAL': re.compile(r'BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY'),
-            'SECRET_ASSIGNMENT': re.compile(r'(?i)\b(?:api[_-]?key|client[_-]?secret|secret[_-]?key|password|access[_-]?token)\b\s*[:=]\s*[\"\'][^\"\'${}]{8,}[\"\']'),
-          }
-          skip = {'.git','node_modules','.next','coverage','.codex','audit'}
-          exts={'.js','.cjs','.mjs','.jsx','.ts','.tsx','.json','.yml','.yaml','.env','.md','.prisma','.sh'}
-          for p in pathlib.Path('.').rglob('*'):
-            if not p.is_file() or any(part in skip for part in p.parts) or (p.suffix.lower() not in exts and p.name not in {'.npmrc'}): continue
-            try: text=p.read_text(errors='ignore')
-            except Exception: continue
-            for name,rx in rules.items():
-              matches=list(rx.finditer(text))
-              if matches:
-                lines=sorted({text.count('\n',0,m.start())+1 for m in matches})
-                print(f'SECURITY_PATTERN {name} {p.as_posix()} count={len(matches)} lines={",".join(map(str,lines[:20]))}')
+          candidates=[f for f in files if legacy.search(f)]
+          for f in candidates: print('LEGACY_CANDIDATE', f)
+          if candidates: raise SystemExit(1)
           PY
