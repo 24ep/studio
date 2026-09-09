@@ -90,8 +90,9 @@ prisma/seed.js
 # Ignore local environment setup scripts with secrets
 scripts/fix-local-env.js
 
-# Local scratch/debug scripts should not contain checked-in credentials
+# Local scratch/debug scripts and generated Codex review artifacts
 scratch/
+/.codex/
 
 # Browser E2E artifacts
 /.playwright/
