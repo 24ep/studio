@@ -1,0 +1,27 @@
+name: Hrive SDK and MCP packages
+
+on:
+  pull_request:
+    paths:
+      - 'packages/hrive-sdk/**'
+      - 'packages/hrive-mcp/**'
+      - 'scripts/hrive-package-overlay.mjs'
+      - 'Dockerfile.hrive-packages'
+      - '.github/workflows/hrive-packages.yml'
+  push:
+    branches: [dev]
+    paths:
+      - 'packages/hrive-sdk/**'
+      - 'packages/hrive-mcp/**'
+      - 'scripts/hrive-package-overlay.mjs'
+      - 'Dockerfile.hrive-packages'
+      - '.github/workflows/hrive-packages.yml'
+
+jobs:
+  package-image:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+      - name: Build SDK, MCP, and registry overlay image
+        run: docker build --file Dockerfile.hrive-packages --tag hrive-packages:${{ github.sha }} .

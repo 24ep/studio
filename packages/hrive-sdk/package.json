@@ -1,0 +1,35 @@
+{
+  "name": "@outborn/hrive-sdk",
+  "version": "0.1.0",
+  "description": "Typed SDK for the Hrive HRIS API",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.outborn.co"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/poojaroonwit/studio.git",
+    "directory": "packages/hrive-sdk"
+  },
+  "license": "MIT",
+  "engines": {
+    "node": ">=20"
+  }
+}

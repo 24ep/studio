@@ -1,0 +1,39 @@
+{
+  "name": "@outborn/hrive-mcp",
+  "version": "0.1.0",
+  "description": "MCP server for Hrive HRIS",
+  "type": "module",
+  "bin": {
+    "hrive-mcp": "./dist/index.js"
+  },
+  "main": "./dist/index.js",
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/server": "2.0.0",
+    "@outborn/hrive-sdk": "0.1.0",
+    "zod": "4.5.4"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0"
+  },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.outborn.co"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/poojaroonwit/studio.git",
+    "directory": "packages/hrive-mcp"
+  },
+  "license": "MIT",
+  "engines": {
+    "node": ">=20"
+  }
+}
