@@ -1,0 +1,44 @@
+name: Refresh AppKit registry lockfile
+
+on:
+  push:
+    branches: [audit/security-legacy-large-cleanup]
+
+permissions:
+  contents: write
+
+jobs:
+  refresh-lock:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: audit/security-legacy-large-cleanup
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+      - run: npm install --global npm@11.6.2
+      - name: Regenerate lockfile from Outborn Registry
+        run: npm install --package-lock-only --ignore-scripts --no-audit --no-fund
+      - name: Verify AppKit registry release
+        shell: bash
+        run: |
+          grep -q 'npm:@outborn/appkit-sdk@2.1.2' package-lock.json
+          grep -q 'registry.outborn.co/@outborn/appkit-sdk' package-lock.json
+          if grep -q 'appkit-sdk-release-production.up.railway.app' package-lock.json; then
+            echo 'Legacy direct AppKit release URL remains' >&2
+            exit 1
+          fi
+      - name: Commit refreshed lockfile
+        shell: bash
+        run: |
+          if git diff --quiet -- package-lock.json; then
+            echo 'package-lock.json already current'
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add package-lock.json
+          git commit -m 'chore(deps): lock AppKit SDK 2.1.2 from Registry'
+          git push
