@@ -99,7 +99,7 @@
     "@tiptap/react": "^2.26.1",
     "@tiptap/starter-kit": "^2.26.1",
     "@types/bcryptjs": "^2.4.6",
-    "@types/formidable": "^3.5.4",
+    "@types/formidable": "^3.5.1",
     "@types/jsonwebtoken": "^9.0.10",
     "@types/pdfkit": "^0.17.6",
     "@types/qrcode": "^1.5.6",
