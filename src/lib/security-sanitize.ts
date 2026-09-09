@@ -11,6 +11,20 @@ export function sanitizeHtml(input: string): string {
   });
 }
 
+const SAFE_RICH_TEXT_STYLES = {
+  '*': {
+    color: [/^(?:#[0-9a-f]{3,8}|rgba?\([^)]*\)|hsla?\([^)]*\)|[a-z]+)$/i],
+    'background-color': [/^(?:#[0-9a-f]{3,8}|rgba?\([^)]*\)|hsla?\([^)]*\)|[a-z]+)$/i],
+    'font-size': [/^\d+(?:\.\d+)?(?:px|pt|em|rem|%)$/i],
+    'font-weight': [/^(?:normal|bold|bolder|lighter|[1-9]00)$/i],
+    'font-style': [/^(?:normal|italic|oblique)$/i],
+    'font-family': [/^[\w\s'",.-]+$/],
+    'text-align': [/^(?:left|right|center|justify|start|end)$/i],
+    'text-decoration': [/^(?:none|underline|line-through|overline)(?:\s+(?:underline|line-through|overline))*$/i],
+    'white-space': [/^(?:normal|nowrap|pre|pre-wrap|pre-line|break-spaces)$/i],
+  },
+} as const;
+
 export function sanitizeRichHtml(input: string): string {
   if (typeof input !== 'string') return '';
 
@@ -22,18 +36,27 @@ export function sanitizeRichHtml(input: string): string {
     ],
     allowedAttributes: {
       '*': [
-        'style', 'class', 'id', 'href', 'target', 'src', 'alt', 'title',
-        'width', 'height', 'align', 'valign', 'colspan', 'rowspan',
-        'border', 'cellpadding', 'cellspacing',
+        'style', 'class', 'id', 'title', 'width', 'height', 'align', 'valign',
+        'colspan', 'rowspan', 'border', 'cellpadding', 'cellspacing',
       ],
-      a: ['href', 'name', 'target'],
-      img: ['src', 'srcset', 'alt', 'title', 'width', 'height', 'loading'],
+      a: ['href', 'name', 'target', 'rel', 'title', 'class', 'id', 'style'],
+      img: ['src', 'srcset', 'alt', 'title', 'width', 'height', 'loading', 'class', 'id', 'style'],
     },
-    allowedSchemes: ['http', 'https', 'ftp', 'mailto', 'tel', 'data'],
+    allowedSchemes: ['http', 'https', 'mailto', 'tel'],
     allowedSchemesByTag: {
+      a: ['http', 'https', 'mailto', 'tel'],
       img: ['http', 'https', 'data'],
     },
-    allowProtocolRelative: true,
+    allowProtocolRelative: false,
+    allowedStyles: SAFE_RICH_TEXT_STYLES,
+    transformTags: {
+      a: (tagName, attribs) => ({
+        tagName,
+        attribs: attribs.target === '_blank'
+          ? { ...attribs, rel: 'noopener noreferrer' }
+          : attribs,
+      }),
+    },
   });
 }
 
