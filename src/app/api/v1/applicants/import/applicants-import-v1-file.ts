@@ -95,8 +95,11 @@ async function parseExcelV1ImportRows(buffer: Buffer) {
 }
 
 function parseCsvV1ImportRows(buffer: Buffer) {
-  const records = parseCsv(buffer.toString('utf-8'), { columns: true, skip_empty_lines: true });
-  return records.map((row: ImportRow) => mapV1ImportRow(row));
+  const records = parseCsv(buffer.toString('utf-8'), {
+    columns: true,
+    skip_empty_lines: true,
+  }) as ImportRow[];
+  return records.map(mapV1ImportRow);
 }
 
 export async function parseV1ApplicantImportFile(file: File) {
