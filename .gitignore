@@ -90,9 +90,10 @@ prisma/seed.js
 # Ignore local environment setup scripts with secrets
 scripts/fix-local-env.js
 
-# Local scratch/debug scripts and generated Codex review artifacts
+# Local scratch/debug scripts and generated review artifacts
 scratch/
 /.codex/
+/audit/
 
 # Browser E2E artifacts
 /.playwright/
