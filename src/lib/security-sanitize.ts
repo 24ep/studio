@@ -11,7 +11,7 @@ export function sanitizeHtml(input: string): string {
   });
 }
 
-const SAFE_RICH_TEXT_STYLES = {
+const SAFE_RICH_TEXT_STYLES: Record<string, Record<string, RegExp[]>> = {
   '*': {
     color: [/^(?:#[0-9a-f]{3,8}|rgba?\([^)]*\)|hsla?\([^)]*\)|[a-z]+)$/i],
     'background-color': [/^(?:#[0-9a-f]{3,8}|rgba?\([^)]*\)|hsla?\([^)]*\)|[a-z]+)$/i],
@@ -23,7 +23,7 @@ const SAFE_RICH_TEXT_STYLES = {
     'text-decoration': [/^(?:none|underline|line-through|overline)(?:\s+(?:underline|line-through|overline))*$/i],
     'white-space': [/^(?:normal|nowrap|pre|pre-wrap|pre-line|break-spaces)$/i],
   },
-} as const;
+};
 
 export function sanitizeRichHtml(input: string): string {
   if (typeof input !== 'string') return '';
