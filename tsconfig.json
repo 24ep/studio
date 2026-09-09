@@ -43,6 +43,8 @@
     "node_modules",
     "prisma",
     "vitest.config.ts",
-    "alphayard-ref"
+    "alphayard-ref",
+    "packages/hrive-sdk",
+    "packages/hrive-mcp"
   ]
 }
