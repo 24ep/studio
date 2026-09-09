@@ -104,8 +104,11 @@ async function parseExcelApplicants(buffer: Buffer): Promise<Partial<ApplicantIm
 }
 
 function parseCsvApplicants(buffer: Buffer): Partial<ApplicantImportInput>[] {
-  const records = parseCsv(buffer.toString('utf-8'), { columns: true, skip_empty_lines: true });
-  return records.map((row: ImportRow) => mapImportRow(row));
+  const records = parseCsv(buffer.toString('utf-8'), {
+    columns: true,
+    skip_empty_lines: true,
+  }) as ImportRow[];
+  return records.map(mapImportRow);
 }
 
 export async function parseApplicantImportFile(file: File): Promise<ParsedApplicantImportFile> {
