@@ -1,0 +1,91 @@
+name: Security and repository cleanup audit
+
+on:
+  push:
+    branches: [audit/security-legacy-large-cleanup]
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+      - run: npm install --global npm@11.6.2
+      - name: Install dependencies
+        run: npm ci --ignore-scripts --no-fund
+      - name: Production dependency audit
+        shell: bash
+        run: |
+          set +e
+          npm audit --omit=dev --json > /tmp/npm-audit.json
+          status=$?
+          set -e
+          node <<'NODE'
+          const fs = require('fs')
+          const audit = JSON.parse(fs.readFileSync('/tmp/npm-audit.json','utf8'))
+          console.log('NPM_AUDIT_COUNTS', JSON.stringify(audit.metadata?.vulnerabilities || {}))
+          const vulns = Object.entries(audit.vulnerabilities || {})
+            .map(([name,v]) => ({name, severity:v.severity, direct:Boolean(v.isDirect), fixAvailable:v.fixAvailable}))
+            .sort((a,b) => ['critical','high','moderate','low','info'].indexOf(a.severity)-['critical','high','moderate','low','info'].indexOf(b.severity))
+          for (const v of vulns) console.log('NPM_AUDIT_VULN', JSON.stringify(v))
+          NODE
+          echo "NPM_AUDIT_EXIT=$status"
+      - name: Largest tracked files
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import os, subprocess
+          files = subprocess.check_output(['git','ls-files','-z']).decode().split('\0')
+          rows=[]
+          for f in files:
+            if not f: continue
+            try: rows.append((os.path.getsize(f), f))
+            except OSError: pass
+          for size,path in sorted(rows, reverse=True)[:80]:
+            print(f'LARGE_FILE {size} {path}')
+          for prefix in ['.codex/','coverage/','.next/','out/','build/','test-results/','playwright-report/']:
+            vals=[(s,p) for s,p in rows if p.startswith(prefix)]
+            if vals:
+              print(f'TRACKED_GENERATED {prefix} files={len(vals)} bytes={sum(s for s,_ in vals)}')
+          PY
+      - name: Legacy artifact candidates
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import re, subprocess
+          files = [x for x in subprocess.check_output(['git','ls-files','-z']).decode().split('\0') if x]
+          legacy = re.compile(r'(^|/)(archive|backup|backups|tmp|temp|dist|coverage|test-results|playwright-report)(/|$)|\.(bak|old|orig|rej|tmp|log|zip|tar|tgz|dump|sqlite|sqlite3|db-journal)$', re.I)
+          for f in files:
+            if legacy.search(f): print('LEGACY_CANDIDATE', f)
+          PY
+      - name: Security pattern inventory
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import pathlib,re
+          rules = {
+            'UNSAFE_HTML': re.compile(r'dangerouslySetInnerHTML'),
+            'PRISMA_RAW_UNSAFE': re.compile(r'\$(?:queryRawUnsafe|executeRawUnsafe)'),
+            'CHILD_PROCESS': re.compile(r"(?:from\s+['\"]node:child_process['\"]|require\(['\"](?:node:)?child_process['\"]\))"),
+            'JWT_DECODE': re.compile(r'\b(?:jwt|jsonwebtoken)\.decode\s*\('),
+            'CORS_WILDCARD': re.compile(r"(?:Access-Control-Allow-Origin[^\n]*\*|origin\s*:\s*['\"]\*['\"])"),
+            'PRIVATE_KEY_LITERAL': re.compile(r'BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY'),
+            'SECRET_ASSIGNMENT': re.compile(r'(?i)\b(?:api[_-]?key|client[_-]?secret|secret[_-]?key|password|access[_-]?token)\b\s*[:=]\s*[\"\'][^\"\'${}]{8,}[\"\']'),
+          }
+          skip = {'.git','node_modules','.next','coverage'}
+          exts={'.js','.cjs','.mjs','.jsx','.ts','.tsx','.json','.yml','.yaml','.env','.md','.prisma','.sh'}
+          for p in pathlib.Path('.').rglob('*'):
+            if not p.is_file() or any(part in skip for part in p.parts) or (p.suffix.lower() not in exts and p.name not in {'.npmrc'}): continue
+            try: text=p.read_text(errors='ignore')
+            except Exception: continue
+            for name,rx in rules.items():
+              matches=list(rx.finditer(text))
+              if matches:
+                lines=sorted({text.count('\n',0,m.start())+1 for m in matches})
+                print(f'SECURITY_PATTERN {name} {p.as_posix()} count={len(matches)} lines={",".join(map(str,lines[:20]))}')
+          PY
