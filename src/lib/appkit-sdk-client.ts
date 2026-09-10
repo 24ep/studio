@@ -1,4 +1,4 @@
-import { AppKit, type CMSCollectionItem } from '@alphayard/appkit';
+import { AppKit, type CMSCollectionItem } from '@outborn/appkit-sdk';
 
 import { getSystemSetting } from '@/lib/systemSettings';
 
