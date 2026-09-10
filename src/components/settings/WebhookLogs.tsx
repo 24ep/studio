@@ -36,6 +36,8 @@ export default function WebhookLogs({ webhookId, webhookName }: WebhookLogsProps
             error={logs.error}
             pagination={logs.pagination}
             onPageChange={logs.handlePageChange}
+            onReplay={logs.replayLog}
+            replayingLogId={logs.replayingLogId}
           />
         </CardContent>
       </Card>

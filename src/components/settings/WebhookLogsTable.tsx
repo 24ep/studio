@@ -1,7 +1,18 @@
 'use client';
 
-import { ChevronLeft, ChevronRight, Eye, RefreshCw } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Eye, RefreshCw, RotateCcw } from 'lucide-react';
 
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -34,6 +45,8 @@ interface WebhookLogsTableProps {
   error: string | null;
   pagination: WebhookLogsPagination;
   onPageChange: (newPage: number) => void;
+  onReplay: (logId: string) => Promise<void>;
+  replayingLogId: string | null;
 }
 
 export function WebhookLogsTable({
@@ -42,6 +55,8 @@ export function WebhookLogsTable({
   error,
   pagination,
   onPageChange,
+  onReplay,
+  replayingLogId,
 }: WebhookLogsTableProps) {
   if (loading) {
     return (
@@ -78,43 +93,79 @@ export function WebhookLogsTable({
           </TableRow>
         </TableHeader>
         <TableBody>
-          {logs.map(log => (
-            <TableRow key={log.id}>
-              <TableCell>
-                <Badge variant="outline" className="text-xs">
-                  {log.event_type}
-                </Badge>
-              </TableCell>
-              <TableCell>
-                <Badge className={`text-xs ${getWebhookLogStatusColor(log.success, log.response_status)}`}>
-                  {getWebhookLogStatusText(log.success, log.response_status)}
-                </Badge>
-              </TableCell>
-              <TableCell className="text-sm">
-                {formatWebhookLogDuration(log.duration_ms)}
-              </TableCell>
-              <TableCell>
-                {log.response_status ? (
-                  <span className="font-mono text-sm">{log.response_status}</span>
-                ) : (
-                  <span className="text-sm text-muted-foreground">-</span>
-                )}
-              </TableCell>
-              <TableCell className="text-sm">
-                {formatWebhookLogDate(log.createdAt)}
-              </TableCell>
-              <TableCell className="text-right">
-                <Dialog>
-                  <DialogTrigger asChild>
-                    <Button variant="ghost" size="sm">
-                      <Eye className="h-4 w-4" />
-                    </Button>
-                  </DialogTrigger>
-                  <WebhookLogDetailsDialogContent log={log} />
-                </Dialog>
-              </TableCell>
-            </TableRow>
-          ))}
+          {logs.map(log => {
+            const isReplaying = replayingLogId === log.id;
+
+            return (
+              <TableRow key={log.id}>
+                <TableCell>
+                  <Badge variant="outline" className="text-xs">
+                    {log.event_type}
+                  </Badge>
+                </TableCell>
+                <TableCell>
+                  <Badge className={`text-xs ${getWebhookLogStatusColor(log.success, log.response_status)}`}>
+                    {getWebhookLogStatusText(log.success, log.response_status)}
+                  </Badge>
+                </TableCell>
+                <TableCell className="text-sm">
+                  {formatWebhookLogDuration(log.duration_ms)}
+                </TableCell>
+                <TableCell>
+                  {log.response_status ? (
+                    <span className="font-mono text-sm">{log.response_status}</span>
+                  ) : (
+                    <span className="text-sm text-muted-foreground">-</span>
+                  )}
+                </TableCell>
+                <TableCell className="text-sm">
+                  {formatWebhookLogDate(log.createdAt)}
+                </TableCell>
+                <TableCell className="text-right">
+                  <div className="inline-flex items-center gap-1">
+                    {!log.success && (
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            disabled={Boolean(replayingLogId)}
+                            aria-label={`Replay ${log.event_type} delivery`}
+                            title="Replay failed delivery"
+                          >
+                            <RotateCcw className={`h-4 w-4 ${isReplaying ? 'animate-spin' : ''}`} />
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Replay failed delivery?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              This sends the original event to the configured endpoint again. If the downstream system processed the first request before returning an error, replaying may create a duplicate action.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogAction onClick={() => void onReplay(log.id)}>
+                              Replay delivery
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    )}
+
+                    <Dialog>
+                      <DialogTrigger asChild>
+                        <Button variant="ghost" size="sm" aria-label={`View ${log.event_type} delivery details`}>
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                      </DialogTrigger>
+                      <WebhookLogDetailsDialogContent log={log} />
+                    </Dialog>
+                  </div>
+                </TableCell>
+              </TableRow>
+            );
+          })}
         </TableBody>
       </Table>
 
@@ -162,4 +213,3 @@ function WebhookLogsPaginationControls({
     </div>
   );
 }
-

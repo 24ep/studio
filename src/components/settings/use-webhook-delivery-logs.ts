@@ -22,9 +22,10 @@ export function useWebhookDeliveryLogs({ webhookId, webhookName }: WebhookLogsPr
   const [logs, setLogs] = useState<WebhookLog[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [replayingLogId, setReplayingLogId] = useState<string | null>(null);
   const [pagination, setPagination] = useState(DEFAULT_WEBHOOK_LOGS_PAGINATION);
   const [filters, setFilters] = useState<WebhookLogsFiltersState>(DEFAULT_WEBHOOK_LOGS_FILTERS);
-  const { error: showError } = useToast();
+  const { error: showError, success: showSuccess } = useToast();
 
   const fetchLogs = useCallback(async () => {
     if (!webhookId) {
@@ -70,6 +71,31 @@ export function useWebhookDeliveryLogs({ webhookId, webhookName }: WebhookLogsPr
     }
   }, [fetchLogs, webhookId, webhookName]);
 
+  const replayLog = useCallback(async (logId: string) => {
+    if (!webhookId || replayingLogId) return;
+
+    try {
+      setReplayingLogId(logId);
+      const response = await fetch(
+        `/api/settings/webhooks/${webhookId}/logs/${logId}/replay`,
+        { method: 'POST' }
+      );
+      const data = await readJsonObject(response);
+
+      if (!response.ok) {
+        showError(getJsonErrorMessage(data, 'Webhook replay failed'));
+        return;
+      }
+
+      showSuccess('Webhook delivery replayed successfully');
+    } catch (replayError) {
+      showError(replayError instanceof Error ? replayError.message : 'Webhook replay failed');
+    } finally {
+      setReplayingLogId(null);
+      await fetchLogs();
+    }
+  }, [fetchLogs, replayingLogId, showError, showSuccess, webhookId]);
+
   const handlePageChange = (newPage: number) => {
     setPagination(prev => ({ ...prev, page: newPage }));
   };
@@ -94,5 +120,7 @@ export function useWebhookDeliveryLogs({ webhookId, webhookName }: WebhookLogsPr
     loading,
     logs,
     pagination,
+    replayLog,
+    replayingLogId,
   };
 }

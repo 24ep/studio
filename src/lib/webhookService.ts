@@ -1,8 +1,10 @@
 import prisma from './prisma';
 import type { Webhook } from '@prisma/client';
+import type { ProcessedWebhookPayload } from './webhook/webhook-body-types';
 import type { WebhookData } from './webhook/webhook-dispatcher-types';
 import { isDemoInstallation } from './installation-environment';
 import {
+  replayServiceWebhook,
   sendServiceWebhook,
   type WebhookDeliveryResult,
 } from './webhook/webhook-service-delivery';
@@ -37,6 +39,10 @@ export class WebhookService {
 
   static async sendWebhook(webhook: Webhook, event: string, data: WebhookData): Promise<WebhookDeliveryResult> {
     return sendServiceWebhook(webhook, event, data);
+  }
+
+  static async replayWebhook(webhook: Webhook, payload: ProcessedWebhookPayload): Promise<WebhookDeliveryResult> {
+    return replayServiceWebhook(webhook, payload);
   }
 
   static async sendApplicantWebhook(event: string, applicant: WebhookData): Promise<void> {

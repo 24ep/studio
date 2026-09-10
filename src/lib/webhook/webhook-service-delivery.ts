@@ -29,6 +29,26 @@ export async function sendServiceWebhook(
   return attempt.result;
 }
 
+/**
+ * Re-deliver the exact processed payload captured in a delivery log.
+ *
+ * This intentionally bypasses WebhookBodyProcessor. Running a historical
+ * payload through the processor again could apply a changed/custom template
+ * twice and would no longer be a faithful replay of the failed request.
+ */
+export async function replayServiceWebhook(
+  webhook: Webhook,
+  payload: ProcessedWebhookPayload
+): Promise<WebhookDeliveryResult> {
+  const result = await sendProcessedWebhookAttempt(webhook, payload);
+
+  if (!result.success && webhook.retry_count > 0) {
+    await retryProcessedWebhook(webhook, payload, webhook.retry_count);
+  }
+
+  return result;
+}
+
 async function sendServiceWebhookAttempt(
   webhook: Webhook,
   event: string,
@@ -55,6 +75,29 @@ async function sendServiceWebhookAttempt(
   return { processedPayload, result };
 }
 
+async function sendProcessedWebhookAttempt(
+  webhook: Webhook,
+  payload: ProcessedWebhookPayload
+): Promise<WebhookDeliveryResult> {
+  const startTime = Date.now();
+  let result: WebhookDeliveryResult;
+
+  try {
+    const headers = createWebhookHeaders(webhook, payload.event, payload);
+    await validateServiceWebhookUrl(webhook.url);
+    result = await deliverWebhookRequest(webhook, payload, headers, startTime);
+  } catch (error) {
+    result = {
+      success: false,
+      error: getErrorMessage(error),
+      duration_ms: Date.now() - startTime,
+    };
+  }
+
+  await logWebhookDelivery(webhook.id, payload, result);
+  return result;
+}
+
 async function retryServiceWebhook(
   webhook: Webhook,
   event: string,
@@ -65,6 +108,21 @@ async function retryServiceWebhook(
     await wait(RETRY_DELAYS_MS[attempt]);
 
     const { result } = await sendServiceWebhookAttempt(webhook, event, data);
+    if (result.success) {
+      break;
+    }
+  }
+}
+
+async function retryProcessedWebhook(
+  webhook: Webhook,
+  payload: ProcessedWebhookPayload,
+  retryCount: number
+) {
+  for (let attempt = 0; attempt < Math.min(retryCount, RETRY_DELAYS_MS.length); attempt++) {
+    await wait(RETRY_DELAYS_MS[attempt]);
+
+    const result = await sendProcessedWebhookAttempt(webhook, payload);
     if (result.success) {
       break;
     }
