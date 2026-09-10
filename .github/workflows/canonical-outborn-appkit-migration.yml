@@ -1,0 +1,120 @@
+name: Canonical Outborn AppKit migration
+
+on:
+  push:
+    branches:
+      - fix/canonical-outborn-appkit-sdk
+
+permissions:
+  contents: write
+
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+
+      - name: Use repository npm version
+        run: npm install --global npm@11.6.2
+
+      - name: Replace legacy AppKit package namespace
+        run: |
+          node <<'NODE'
+          const fs = require('node:fs')
+          const path = require('node:path')
+
+          const root = process.cwd()
+          const legacy = '@alpha' + 'yard/appkit'
+          const canonical = '@outborn/appkit-sdk'
+          const ignoredDirs = new Set(['.git', 'node_modules', '.next', 'coverage', '.codex'])
+          const textExtensions = new Set(['.ts', '.tsx', '.js', '.jsx', '.mjs', '.cjs', '.md', '.mdx', '.yml', '.yaml'])
+          const changed = []
+
+          const manifestPath = path.join(root, 'package.json')
+          const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'))
+          if (manifest.dependencies?.[legacy]) {
+            const entries = Object.entries(manifest.dependencies).map(([name, version]) =>
+              name === legacy ? [canonical, '2.1.1'] : [name, version]
+            )
+            manifest.dependencies = Object.fromEntries(entries)
+            fs.writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`)
+            changed.push('package.json')
+          }
+          if (manifest.dependencies?.[canonical] && manifest.dependencies[canonical] !== '2.1.1') {
+            manifest.dependencies[canonical] = '2.1.1'
+            fs.writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`)
+            if (!changed.includes('package.json')) changed.push('package.json')
+          }
+
+          function walk(directory) {
+            for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
+              if (ignoredDirs.has(entry.name)) continue
+              const absolute = path.join(directory, entry.name)
+              if (entry.isDirectory()) {
+                walk(absolute)
+                continue
+              }
+              if (!entry.isFile()) continue
+              if (!textExtensions.has(path.extname(entry.name))) continue
+              if (absolute === manifestPath) continue
+              const before = fs.readFileSync(absolute, 'utf8')
+              if (!before.includes(legacy)) continue
+              const after = before.split(legacy).join(canonical)
+              fs.writeFileSync(absolute, after)
+              changed.push(path.relative(root, absolute))
+            }
+          }
+
+          walk(root)
+          console.log(JSON.stringify({ event: 'canonical_outborn_appkit_migration', changed }, null, 2))
+          NODE
+
+      - name: Refresh lockfile from Outborn Registry
+        run: npm install --package-lock-only --ignore-scripts --no-audit --no-fund
+
+      - name: Verify canonical registry dependency contract
+        run: |
+          node <<'NODE'
+          const fs = require('node:fs')
+          const legacy = '@alpha' + 'yard/appkit'
+          const canonical = '@outborn/appkit-sdk'
+          const manifest = JSON.parse(fs.readFileSync('package.json', 'utf8'))
+          const lock = fs.readFileSync('package-lock.json', 'utf8')
+          const npmrc = fs.readFileSync('.npmrc', 'utf8')
+          if (manifest.dependencies?.[legacy]) throw new Error('Legacy AppKit dependency key remains')
+          if (manifest.dependencies?.[canonical] !== '2.1.1') throw new Error('Canonical AppKit SDK dependency is missing or unexpected')
+          if (manifest.dependencies?.['@outborn/account-directory'] !== '0.1.4') throw new Error('Account Directory is not pinned to registry version 0.1.4')
+          if (!npmrc.includes('@outborn:registry=https://registry.outborn.co')) throw new Error('Outborn npm scope is not routed to canonical registry')
+          if (lock.includes(legacy)) throw new Error('Legacy AppKit alias remains in lockfile')
+          if (!lock.includes('https://registry.outborn.co/@outborn/appkit-sdk/')) throw new Error('AppKit SDK lock entry is not resolved from Outborn Registry')
+          if (!lock.includes('https://registry.outborn.co/@outborn/account-directory/')) throw new Error('Account Directory lock entry is not resolved from Outborn Registry')
+          if (lock.includes('account-directory-sdk-release-production.up.railway.app')) throw new Error('Direct Account Directory Railway tarball remains')
+          if (lock.includes('appkit-sdk-release-production.up.railway.app')) throw new Error('Direct AppKit Railway tarball remains')
+          console.log(JSON.stringify({ event: 'canonical_outborn_registry_dependencies_verified', appkit: '2.1.1', accountDirectory: '0.1.4' }))
+          NODE
+
+      - name: Install and type-check
+        run: |
+          npm ci --ignore-scripts --no-audit --no-fund
+          npm run type-check
+
+      - name: Commit migration result
+        run: |
+          if git diff --quiet; then
+            echo 'No migration changes to commit.'
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add package.json package-lock.json src scripts test tests README.md 2>/dev/null || true
+          git add -u
+          git commit -m 'refactor: use canonical Outborn AppKit SDK package'
+          git push origin HEAD:fix/canonical-outborn-appkit-sdk
