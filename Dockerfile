@@ -15,37 +15,11 @@ RUN apk add --no-cache \
 WORKDIR /app
 
 # Dependencies are installed strictly from the committed lockfile and the
-# repository's explicit peer-resolution policy.
+# repository's explicit peer-resolution policy. First-party @outborn packages
+# resolve through .npmrc to the canonical Outborn Registry.
 FROM base AS deps
 COPY package.json package-lock.json .npmrc ./
 COPY prisma ./prisma
-# Account Directory 0.1.1 was retired by the release service after 0.1.2 was
-# published. Normalize only this immutable first-party tarball pin in the
-# container build so clean deploys do not depend on a removed historical URL.
-# Keep the rewrite scoped to this package; all other lockfile integrity entries
-# remain untouched and npm ci still validates the complete dependency graph.
-RUN node - <<'NODE'
-const fs = require('node:fs');
-const nextUrl = 'https://account-directory-sdk-release-production.up.railway.app/outborn-account-directory-0.1.2.tgz';
-const packageJson = JSON.parse(fs.readFileSync('package.json', 'utf8'));
-const lock = JSON.parse(fs.readFileSync('package-lock.json', 'utf8'));
-
-if (packageJson.dependencies?.['@outborn/account-directory']) {
-  packageJson.dependencies['@outborn/account-directory'] = nextUrl;
-}
-if (lock.packages?.['']?.dependencies?.['@outborn/account-directory']) {
-  lock.packages[''].dependencies['@outborn/account-directory'] = nextUrl;
-}
-const lockedDirectory = lock.packages?.['node_modules/@outborn/account-directory'];
-if (lockedDirectory) {
-  lockedDirectory.version = '0.1.2';
-  lockedDirectory.resolved = nextUrl;
-  delete lockedDirectory.integrity;
-}
-
-fs.writeFileSync('package.json', `${JSON.stringify(packageJson, null, 2)}\n`);
-fs.writeFileSync('package-lock.json', `${JSON.stringify(lock, null, 2)}\n`);
-NODE
 RUN npm config set maxsockets 10 && \
     npm ci
 
