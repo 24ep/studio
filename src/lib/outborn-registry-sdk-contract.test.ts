@@ -35,6 +35,16 @@ describe('Outborn Registry SDK dependency contract', () => {
     expect(serializedLock).not.toContain('account-directory-sdk-release-production.up.railway.app')
   })
 
+  it('loads the canonical AppKit release with Node ESM resolution', async () => {
+    const rootSdk = await import('@outborn/appkit-sdk')
+    const applicationsSdk = await import('@outborn/appkit-sdk/applications')
+    const paymentsSdk = await import('@outborn/appkit-sdk/payments')
+
+    expect(rootSdk.AppKit).toBeTypeOf('function')
+    expect(Object.keys(applicationsSdk).length).toBeGreaterThan(0)
+    expect(Object.keys(paymentsSdk).length).toBeGreaterThan(0)
+  })
+
   it('keeps the Outborn npm scope canonical and Docker builds free of release-service fallbacks', () => {
     const npmrc = readFileSync(join(root, '.npmrc'), 'utf8')
     const dockerfile = readFileSync(join(root, 'Dockerfile'), 'utf8')
