@@ -106,3 +106,7 @@ scratch/
 
 # Local Git worktrees
 /.worktrees/
+
+# Generated agent and visual-audit artifacts
+/.codex/
+/audit/
