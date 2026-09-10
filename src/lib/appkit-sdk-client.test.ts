@@ -7,7 +7,7 @@ const mocks = vi.hoisted(() => ({
   appKitConstructor: vi.fn(),
 }));
 
-vi.mock('@alphayard/appkit', () => ({
+vi.mock('@outborn/appkit-sdk', () => ({
   AppKit: class MockAppKit {
     cms = { getCollectionItems: mocks.getCollectionItems };
     localization = { getConfig: mocks.getLocalizationConfig };

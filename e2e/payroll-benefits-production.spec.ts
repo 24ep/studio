@@ -176,6 +176,7 @@ test.describe("Benefits production journey", () => {
     const createPlan = waitForBenefitMutation(page);
     await planDialog.getByRole("button", { name: "Save plan" }).click();
     await createPlan;
+    await expect(planDialog).toBeHidden();
     await expect(page.getByText("Health Plus", { exact: true }).first()).toBeVisible();
 
     await page.getByRole("button", { name: "Enroll employee" }).first().click();
@@ -189,6 +190,7 @@ test.describe("Benefits production journey", () => {
       .getByRole("button", { name: "Enroll 1 employee" })
       .click();
     await enroll;
+    await expect(enrollmentDialog).toBeHidden();
 
     await page.getByText("Health Plus", { exact: true }).first().click();
     const planDrawer = page.getByRole("dialog", {
