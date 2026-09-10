@@ -1,0 +1,125 @@
+name: Production auth smoke
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [dev]
+    paths:
+      - 'src/auth.ts'
+      - 'src/lib/auth-outborn-account-provider.ts'
+      - 'src/app/auth/signin/**'
+      - '.github/workflows/production-auth-smoke.yml'
+
+concurrency:
+  group: production-auth-smoke
+  cancel-in-progress: true
+
+jobs:
+  live-auth-handoff:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      APP_BASE_URL: https://people.outborn.co
+      ACCOUNT_BASE_URL: https://account.outborn.co
+      EXPECTED_CLIENT_ID: outborn-hrive-web
+    steps:
+      - name: Wait for canonical provider set to reach production
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 60); do
+            if providers="$(curl --fail-with-body --silent --show-error --max-time 15 "$APP_BASE_URL/api/auth/providers" 2>/tmp/providers.err)"; then
+              printf '%s' "$providers" > /tmp/providers.json
+              if jq -e '
+                has("outborn-account") and
+                (has("credentials") | not) and
+                (.["outborn-account"].type == "oidc")
+              ' /tmp/providers.json >/dev/null; then
+                echo "Canonical Outborn Account provider is live."
+                jq '{providers: keys}' /tmp/providers.json
+                exit 0
+              fi
+              echo "Attempt $attempt: deployment reachable but provider set is not canonical yet."
+              jq '{providers: keys}' /tmp/providers.json || true
+            else
+              echo "Attempt $attempt: production not ready yet: $(cat /tmp/providers.err 2>/dev/null || true)"
+            fi
+            sleep 15
+          done
+          echo "Timed out waiting for the canonical production provider set."
+          exit 1
+
+      - name: Start the real Auth.js Outborn Account flow
+        shell: bash
+        run: |
+          set -euo pipefail
+          cookie_jar="$(mktemp)"
+          csrf_json="$(curl --fail-with-body --silent --show-error --max-time 15 -c "$cookie_jar" "$APP_BASE_URL/api/auth/csrf")"
+          csrf_token="$(printf '%s' "$csrf_json" | jq -r '.csrfToken')"
+          test -n "$csrf_token"
+          test "$csrf_token" != "null"
+
+          sign_in_json="$(curl --fail-with-body --silent --show-error --max-time 20 \
+            -b "$cookie_jar" -c "$cookie_jar" \
+            -H 'Content-Type: application/x-www-form-urlencoded' \
+            -H 'X-Auth-Return-Redirect: 1' \
+            --data-urlencode "csrfToken=$csrf_token" \
+            --data-urlencode "callbackUrl=$APP_BASE_URL/" \
+            -X POST "$APP_BASE_URL/api/auth/signin/outborn-account")"
+
+          auth_url="$(printf '%s' "$sign_in_json" | jq -r '.url')"
+          test -n "$auth_url"
+          test "$auth_url" != "null"
+          printf 'Auth handoff host/path: %s\n' "$(AUTH_URL="$auth_url" node -e 'const u=new URL(process.env.AUTH_URL); console.log(u.host+u.pathname)')"
+
+          AUTH_URL="$auth_url" APP_BASE_URL="$APP_BASE_URL" ACCOUNT_BASE_URL="$ACCOUNT_BASE_URL" EXPECTED_CLIENT_ID="$EXPECTED_CLIENT_ID" node -e '
+            const u = new URL(process.env.AUTH_URL);
+            const expectedAccount = new URL(process.env.ACCOUNT_BASE_URL);
+            const expectedCallback = `${process.env.APP_BASE_URL}/api/auth/callback/outborn-account`;
+            const scopes = new Set((u.searchParams.get("scope") || "").split(/\s+/).filter(Boolean));
+            const hasCanonicalScopes = scopes.size === 3 && ["openid", "profile", "email"].every(scope => scopes.has(scope));
+            const checks = [
+              [u.origin === expectedAccount.origin, `origin=${u.origin}`],
+              [u.pathname === "/api/auth/oauth2/authorize", `pathname=${u.pathname}`],
+              [u.searchParams.get("client_id") === process.env.EXPECTED_CLIENT_ID, `client_id=${u.searchParams.get("client_id")}`],
+              [u.searchParams.get("redirect_uri") === expectedCallback, `redirect_uri=${u.searchParams.get("redirect_uri")}`],
+              [u.searchParams.get("response_type") === "code", `response_type=${u.searchParams.get("response_type")}`],
+              [hasCanonicalScopes, `scope=${u.searchParams.get("scope")}`],
+              [!scopes.has("offline_access"), "offline_access absent"],
+              [!scopes.has("organizations"), "organizations absent"],
+              [Boolean(u.searchParams.get("state")), "state present"],
+              [Boolean(u.searchParams.get("code_challenge")), "PKCE code_challenge present"],
+              [u.searchParams.get("code_challenge_method") === "S256", `code_challenge_method=${u.searchParams.get("code_challenge_method")}`],
+            ];
+            for (const [ok, detail] of checks) {
+              if (!ok) throw new Error(`Production OAuth handoff check failed: ${detail}`);
+              console.log(`OK: ${detail}`);
+            }
+          '
+
+      - name: Verify the Outborn Account authorization endpoint accepts the request
+        shell: bash
+        run: |
+          set -euo pipefail
+          cookie_jar="$(mktemp)"
+          csrf_token="$(curl --fail-with-body --silent --show-error --max-time 15 -c "$cookie_jar" "$APP_BASE_URL/api/auth/csrf" | jq -r '.csrfToken')"
+          auth_url="$(curl --fail-with-body --silent --show-error --max-time 20 \
+            -b "$cookie_jar" -c "$cookie_jar" \
+            -H 'Content-Type: application/x-www-form-urlencoded' \
+            -H 'X-Auth-Return-Redirect: 1' \
+            --data-urlencode "csrfToken=$csrf_token" \
+            --data-urlencode "callbackUrl=$APP_BASE_URL/" \
+            -X POST "$APP_BASE_URL/api/auth/signin/outborn-account" | jq -r '.url')"
+
+          headers="$(mktemp)"
+          body="$(mktemp)"
+          status="$(curl --silent --show-error --max-time 20 -D "$headers" -o "$body" -w '%{http_code}' "$auth_url")"
+          echo "Outborn Account authorize status: $status"
+          test "$status" -ge 200
+          test "$status" -lt 400
+          if grep -Eqi 'application not registered|not been registered|invalid_scope|invalid_request|unsupported|redirect_uri.*invalid|client.*invalid' "$body"; then
+            echo 'Outborn Account rejected the generated authorization request.'
+            cat "$body"
+            exit 1
+          fi
+          echo 'Real production OAuth authorization request was accepted far enough to require user interaction.'

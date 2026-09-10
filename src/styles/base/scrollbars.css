@@ -1,0 +1,204 @@
+/* UNIVERSAL MINIMAL SCROLLBAR DESIGN - APPLIES TO ENTIRE APPLICATION */
+/* This affects ALL scrollbars: body, div, table, textarea, select, etc. */
+
+/* Firefox scrollbars */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: hsl(var(--muted-foreground) / 0.2) transparent;
+}
+
+/* Webkit scrollbars (Chrome, Safari, Edge) */
+*::-webkit-scrollbar {
+  width: 4px;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: hsl(var(--muted-foreground) / 0.2);
+  border-radius: 2px;
+  transition: background 0.15s ease;
+  min-height: 20px;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--muted-foreground) / 0.4);
+}
+
+*::-webkit-scrollbar-thumb:active {
+  background: hsl(var(--muted-foreground) / 0.5);
+}
+
+/* Completely remove ALL scrollbar buttons/arrows */
+*::-webkit-scrollbar-button {
+  display: none;
+  width: 0;
+  height: 0;
+  background: transparent;
+  border: none;
+  margin: 0;
+  padding: 0;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  position: absolute;
+  left: -9999px;
+  top: -9999px;
+  -webkit-appearance: none;
+}
+
+/* Remove scrollbar corners */
+*::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+/* Dark mode - applies to ALL elements */
+.dark * {
+  scrollbar-color: hsl(var(--muted-foreground) / 0.3) transparent;
+}
+
+.dark *::-webkit-scrollbar-thumb {
+  background: hsl(var(--muted-foreground) / 0.3);
+}
+
+.dark *::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--muted-foreground) / 0.5);
+}
+
+.dark *::-webkit-scrollbar-thumb:active {
+  background: hsl(var(--muted-foreground) / 0.6);
+}
+
+/* Ensure these styles override any existing scrollbar styles */
+html,
+body,
+div,
+section,
+article,
+aside,
+nav,
+header,
+footer,
+main,
+table,
+textarea,
+select,
+input,
+iframe,
+embed,
+object,
+video,
+audio,
+[class*="scroll"],
+[class*="overflow"],
+[style*="overflow"] {
+  scrollbar-width: thin;
+  scrollbar-color: hsl(var(--muted-foreground) / 0.2) transparent;
+}
+
+html::-webkit-scrollbar,
+body::-webkit-scrollbar,
+div::-webkit-scrollbar,
+section::-webkit-scrollbar,
+article::-webkit-scrollbar,
+aside::-webkit-scrollbar,
+nav::-webkit-scrollbar,
+header::-webkit-scrollbar,
+footer::-webkit-scrollbar,
+main::-webkit-scrollbar,
+table::-webkit-scrollbar,
+textarea::-webkit-scrollbar,
+select::-webkit-scrollbar,
+input::-webkit-scrollbar,
+iframe::-webkit-scrollbar,
+embed::-webkit-scrollbar,
+object::-webkit-scrollbar,
+video::-webkit-scrollbar,
+audio::-webkit-scrollbar {
+  width: 4px;
+}
+
+html::-webkit-scrollbar-thumb,
+body::-webkit-scrollbar-thumb,
+div::-webkit-scrollbar-thumb,
+section::-webkit-scrollbar-thumb,
+article::-webkit-scrollbar-thumb,
+aside::-webkit-scrollbar-thumb,
+nav::-webkit-scrollbar-thumb,
+header::-webkit-scrollbar-thumb,
+footer::-webkit-scrollbar-thumb,
+main::-webkit-scrollbar-thumb,
+table::-webkit-scrollbar-thumb,
+textarea::-webkit-scrollbar-thumb,
+select::-webkit-scrollbar-thumb,
+input::-webkit-scrollbar-thumb,
+iframe::-webkit-scrollbar-thumb,
+embed::-webkit-scrollbar-thumb,
+object::-webkit-scrollbar-thumb,
+video::-webkit-scrollbar-thumb,
+audio::-webkit-scrollbar-thumb {
+  background: hsl(var(--muted-foreground) / 0.2);
+  border-radius: 2px;
+  transition: background 0.15s ease;
+  min-height: 20px;
+}
+
+html::-webkit-scrollbar-thumb:hover,
+body::-webkit-scrollbar-thumb:hover,
+div::-webkit-scrollbar-thumb:hover,
+section::-webkit-scrollbar-thumb:hover,
+article::-webkit-scrollbar-thumb:hover,
+aside::-webkit-scrollbar-thumb:hover,
+nav::-webkit-scrollbar-thumb:hover,
+header::-webkit-scrollbar-thumb:hover,
+footer::-webkit-scrollbar-thumb:hover,
+main::-webkit-scrollbar-thumb:hover,
+table::-webkit-scrollbar-thumb:hover,
+textarea::-webkit-scrollbar-thumb:hover,
+select::-webkit-scrollbar-thumb:hover,
+input::-webkit-scrollbar-thumb:hover,
+iframe::-webkit-scrollbar-thumb:hover,
+embed::-webkit-scrollbar-thumb:hover,
+object::-webkit-scrollbar-thumb:hover,
+video::-webkit-scrollbar-thumb:hover,
+audio::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--muted-foreground) / 0.4);
+}
+
+/* Remove buttons from all specific elements */
+html::-webkit-scrollbar-button,
+body::-webkit-scrollbar-button,
+div::-webkit-scrollbar-button,
+section::-webkit-scrollbar-button,
+article::-webkit-scrollbar-button,
+aside::-webkit-scrollbar-button,
+nav::-webkit-scrollbar-button,
+header::-webkit-scrollbar-button,
+footer::-webkit-scrollbar-button,
+main::-webkit-scrollbar-button,
+table::-webkit-scrollbar-button,
+textarea::-webkit-scrollbar-button,
+select::-webkit-scrollbar-button,
+input::-webkit-scrollbar-button,
+iframe::-webkit-scrollbar-button,
+embed::-webkit-scrollbar-button,
+object::-webkit-scrollbar-button,
+video::-webkit-scrollbar-button,
+audio::-webkit-scrollbar-button {
+  display: none;
+  width: 0;
+  height: 0;
+  background: transparent;
+  border: none;
+  margin: 0;
+  padding: 0;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  position: absolute;
+  left: -9999px;
+  top: -9999px;
+  -webkit-appearance: none;
+}

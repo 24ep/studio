@@ -1,0 +1,2575 @@
+{
+  "name": "HRI [Inbound applicant] PROD",
+  "nodes": [
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $('Code').item.json.additionalCount }}",
+                    "rightValue": 0,
+                    "operator": {
+                      "type": "number",
+                      "operation": "equals"
+                    },
+                    "id": "a74b4dc0-9b65-4584-aabf-eb836020ec08"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "0"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "88dcbc99-2c9d-4c0a-8ac8-7585ee37a4db",
+                    "leftValue": "={{ $('Code').item.json.additionalCount }}",
+                    "rightValue": 1,
+                    "operator": {
+                      "type": "number",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "1"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "722b4e47-2181-45a2-985c-1a8ca8a3fd67",
+                    "leftValue": "={{ $('Code').item.json.additionalCount }}",
+                    "rightValue": 2,
+                    "operator": {
+                      "type": "number",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "2"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "2b1a8cac-1e0b-4d98-b0f2-e397b77a9a2c",
+                    "leftValue": "={{ $('Code').item.json.additionalCount }}",
+                    "rightValue": 3,
+                    "operator": {
+                      "type": "number",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "3"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "02d5ecfd-1fc6-44b2-9259-e72adb915c17",
+                    "leftValue": "={{ $('Code').item.json.additionalCount }}",
+                    "rightValue": 4,
+                    "operator": {
+                      "type": "number",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "4"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "27713582-3804-4521-b988-6c4f2875b3dc",
+                    "leftValue": "={{ $('Code').item.json.additionalCount }}",
+                    "rightValue": 5,
+                    "operator": {
+                      "type": "number",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "5"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "ecfd2ed3-55d8-4ec9-bc56-4411ff37dc34",
+                    "leftValue": "={{ $('Code').item.json.additionalCount }}",
+                    "rightValue": 6,
+                    "operator": {
+                      "type": "number",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "6"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "0b81e618-437a-4f6b-a3b4-c2996151bbd8",
+                    "leftValue": "={{ $('Code').item.json.additionalCount }}",
+                    "rightValue": 0,
+                    "operator": {
+                      "type": "number",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "7"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "cfe3837c-d6f2-443a-b251-3313bf67b45e",
+                    "leftValue": "={{ $('Code').item.json.additionalCount }}",
+                    "rightValue": 8,
+                    "operator": {
+                      "type": "number",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "8"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "17b9b3c7-c761-452e-81e2-cf738cd7170b",
+                    "leftValue": "={{ $('Code').item.json.additionalCount }}",
+                    "rightValue": 9,
+                    "operator": {
+                      "type": "number",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "9"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "008b985d-71a9-4073-8955-afaec8f38d6f",
+                    "leftValue": "={{ $('Code').item.json.additionalCount }}",
+                    "rightValue": 9,
+                    "operator": {
+                      "type": "number",
+                      "operation": "gt"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        3296,
+        1792
+      ],
+      "id": "fcd92801-ab72-43a3-8e6b-97bb9a65e612",
+      "name": "Switch"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "6bee08c4-1073-4cab-bd4a-45e6b594e602",
+              "leftValue": "={{ $('Move to In process folder').item.json.from.emailAddress.address }}",
+              "rightValue": "apply@jobbkk.com",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -144,
+        2560
+      ],
+      "id": "9e0a8f02-3cac-466b-8a34-07dd60a27e26",
+      "name": "check email form"
+    },
+    {
+      "parameters": {
+        "jsCode": "// n8n Function Item\n// Rebuild HTML from numeric-keyed object, then extract jobbkk links\n// PDFs are sorted to the top\n\n// turn the weird object into a string\nconst obj = $('Move to In process folder').first().json.body.content;\nlet html = '';\n\nif (typeof obj === 'object' && !Array.isArray(obj)) {\n  // numeric-keyed object -> join chars\n  const keys = Object.keys(obj)\n    .filter(k => /^\\d+$/.test(k))\n    .map(k => Number(k))\n    .sort((a, b) => a - b);\n  html = keys.map(k => obj[k]).join('');\n} else if (Array.isArray(obj)) {\n  html = obj.join('');\n} else if (typeof obj === 'string') {\n  html = obj;\n}\n\n// allowed prefixes\nconst prefixes = [\n  \"https://www.jobbkk.com/upload/jobseeker/00/000/000000/document\",\n  \"https://jobbkk.com/upload/jobseeker/00/000/000000/document\",\n  \"https://www.jobbkk.com/resumes/view/detail\",\n  \"https://jobbkk.com/resumes/view/detail\",\n  \"https://www.jobbkk.com/upload/jobseeker\",\n  \"https://www.jobbkk.com/assets/template/jobbkk\"\n];\n\n// find all links in HTML\nconst linkRegex = /https:\\/\\/(?:www\\.)?jobbkk\\.com\\/[^\\s\"'<>]+/g;\nconst found = html.match(linkRegex) || [];\n\n// keep only exact prefix matches\nconst filtered = found.filter(url =>\n  prefixes.some(p => url.startsWith(p))\n);\n\n// remove duplicates\nconst unique = [...new Set(filtered)];\n\n// sort so PDFs are on top\nunique.sort((a, b) => {\n  const aIsPdf = a.toLowerCase().endsWith('.pdf');\n  const bIsPdf = b.toLowerCase().endsWith('.pdf');\n\n  if (aIsPdf && !bIsPdf) return -1;\n  if (!aIsPdf && bIsPdf) return 1;\n  return a.localeCompare(b);\n});\n\nreturn {\n  ...$json,\n  jobbkk: unique\n};\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        32,
+        2496
+      ],
+      "id": "0f09979a-850d-4a5d-88ca-d95cc0bec4da",
+      "name": "Code1"
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.jobbkk[0] }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        464,
+        2592
+      ],
+      "id": "472f5c95-4368-470c-8ce2-170f3b8d5073",
+      "name": "download PDF",
+      "alwaysOutputData": false,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "options": {
+          "temperature": 0.5
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        2192,
+        2368
+      ],
+      "id": "c2287eb3-21ea-447c-a2c1-e7710cc2707e",
+      "name": "Google Gemini Chat Model2",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "haKNG2mVTO561SVW",
+          "name": "Google Gemini(PaLM) Jaroonwit"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=<email context>\n{{ $('Move to In process folder').first().json.subject }}\n---\n{{ $json.text }}\n</email context>\n<open position>\n{{ $('Extract list of job').all().toJsonString() }}\n</open position> ",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "### Task Description\n\nYou are given a applicant's email and a list of open positions. Your task is to:\nIdentify the position the applicant is applying for by analyzing the content of the email.\nReturn only one matching position where the attribute is_ground_position is set to true.\n\n### Output Format (json)\n\n# If a valid match is found then retrun json format like this :\n\n{\n  \"id\": \"<position_id>\",\n  \"position_name\": \"<position_name>\"\n}\n\n\n# If no matching position is identified by position name then retrun json format like this:\n\n{\n  \"id\": \"unknown\",\n  \"position_name\": \"have no position applied\"\n}\n\n### Constraints\n\n- Do not create or infer any new positions not present in the provided list.\n- Only return positions from the given list.\n- Return a single position that best matches the applicant's intent.\n- Trim all whitespace (spaces, tabs, newlines) from both id and position_name before returning the output.\n- Ensure the final output strictly matches the JSON structure shown above - no additional fields, no formatting errors.\n"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2,
+      "position": [
+        2192,
+        2160
+      ],
+      "id": "d2bbdb8c-7050-4d12-a324-c8dbc744e24d",
+      "name": "AI Agent1",
+      "alwaysOutputData": false,
+      "executeOnce": true,
+      "retryOnFail": false,
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://worker.example.com/api/w/analyst-hub/jobs/run_wait_result/p/f/windmill/hri_convert_html_pdf",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer O7p83kaLRI786G3cE0MWefRTifM5DqDu"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "form-urlencoded",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "=html",
+              "value": "={{ $('Get a message').first().json.body.content }}"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "responseFormat": "text"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        736,
+        2656
+      ],
+      "id": "f2fb688d-7678-460e-aa3d-8da358a9272e",
+      "name": "HTML to PDF1"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "messageId": {
+          "__rl": true,
+          "value": "={{ $('Move to In process folder').first().json.id }}",
+          "mode": "id"
+        },
+        "updateFields": {
+          "folderId": {
+            "__rl": true,
+            "value": "AAMkADg3OTYyOTBmLTI0YjUtNDY0My1iYTY4LWRlYjBmNjhkZTc5OAAuAAAAAADlYFLv-43lTb4iPz8O_PK4AQALQvY3wJvsSYioU32ZFjSlAAAHb9O7AAA=",
+            "mode": "list",
+            "cachedResultName": "Server down",
+            "cachedResultUrl": "https://outlook.office365.com/mail/AAMkADg3OTYyOTBmLTI0YjUtNDY0My1iYTY4LWRlYjBmNjhkZTc5OAAuAAAAAADlYFLv%2F43lTb4iPz8O_PK4AQALQvY3wJvsSYioU32ZFjSlAAAHb9O7AAA%3D"
+          }
+        }
+      },
+      "type": "n8n-nodes-base.microsoftOutlook",
+      "typeVersion": 2,
+      "position": [
+        1376,
+        2400
+      ],
+      "id": "f92fa28a-1111-448c-b21b-35594d34f41a",
+      "name": "Move to Server down forder1",
+      "webhookId": "50d6cd9f-3620-4785-84a9-ce9f907b9437",
+      "credentials": {
+        "microsoftOutlookOAuth2Api": {
+          "id": "Pi5hz0QRJuqKcJJV",
+          "name": "Microsoft Outlook account production cont"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "messageId": {
+          "__rl": true,
+          "value": "={{ $('Move to In process folder').first().json.id }}",
+          "mode": "id"
+        },
+        "updateFields": {
+          "folderId": {
+            "__rl": true,
+            "value": "AAMkADg3OTYyOTBmLTI0YjUtNDY0My1iYTY4LWRlYjBmNjhkZTc5OAAuAAAAAADlYFLv-43lTb4iPz8O_PK4AQALQvY3wJvsSYioU32ZFjSlAAAHb9O7AAA=",
+            "mode": "list",
+            "cachedResultName": "Server down",
+            "cachedResultUrl": "https://outlook.office365.com/mail/AAMkADg3OTYyOTBmLTI0YjUtNDY0My1iYTY4LWRlYjBmNjhkZTc5OAAuAAAAAADlYFLv%2F43lTb4iPz8O_PK4AQALQvY3wJvsSYioU32ZFjSlAAAHb9O7AAA%3D"
+          }
+        }
+      },
+      "type": "n8n-nodes-base.microsoftOutlook",
+      "typeVersion": 2,
+      "position": [
+        2688,
+        2320
+      ],
+      "id": "4c82da41-5e11-4174-a304-9ff99382596d",
+      "name": "Move to Model error  forder1",
+      "webhookId": "fddd9f64-6051-49b7-8169-f5f1e0052a59",
+      "credentials": {
+        "microsoftOutlookOAuth2Api": {
+          "id": "Pi5hz0QRJuqKcJJV",
+          "name": "Microsoft Outlook account production cont"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "messageId": {
+          "__rl": true,
+          "value": "={{ $('get inprogress id').first().json.id }}",
+          "mode": "id"
+        },
+        "updateFields": {
+          "folderId": {
+            "__rl": true,
+            "value": "AAMkADg3OTYyOTBmLTI0YjUtNDY0My1iYTY4LWRlYjBmNjhkZTc5OAAuAAAAAADlYFLv-43lTb4iPz8O_PK4AQALQvY3wJvsSYioU32ZFjSlAAAF8t1cAAA=",
+            "mode": "list",
+            "cachedResultName": "Unknow position",
+            "cachedResultUrl": "https://outlook.office365.com/mail/AAMkADg3OTYyOTBmLTI0YjUtNDY0My1iYTY4LWRlYjBmNjhkZTc5OAAuAAAAAADlYFLv%2F43lTb4iPz8O_PK4AQALQvY3wJvsSYioU32ZFjSlAAAF8t1cAAA%3D"
+          }
+        }
+      },
+      "type": "n8n-nodes-base.microsoftOutlook",
+      "typeVersion": 2,
+      "position": [
+        3024,
+        2272
+      ],
+      "id": "65699f55-c232-4820-be97-5b78758592ab",
+      "name": "Move to No position found folder2",
+      "webhookId": "be274fb1-3cce-4a97-9548-37ff6eefe5c8",
+      "credentials": {
+        "microsoftOutlookOAuth2Api": {
+          "id": "Pi5hz0QRJuqKcJJV",
+          "name": "Microsoft Outlook account production cont"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "messageId": {
+          "__rl": true,
+          "value": "={{ $('Move to In process folder').first().json.id }}",
+          "mode": "id"
+        },
+        "updateFields": {
+          "folderId": {
+            "__rl": true,
+            "value": "AAMkADg3OTYyOTBmLTI0YjUtNDY0My1iYTY4LWRlYjBmNjhkZTc5OAAuAAAAAADlYFLv-43lTb4iPz8O_PK4AQALQvY3wJvsSYioU32ZFjSlAAAF8t1dAAA=",
+            "mode": "list",
+            "cachedResultName": "Other",
+            "cachedResultUrl": "https://outlook.office365.com/mail/AAMkADg3OTYyOTBmLTI0YjUtNDY0My1iYTY4LWRlYjBmNjhkZTc5OAAuAAAAAADlYFLv%2F43lTb4iPz8O_PK4AQALQvY3wJvsSYioU32ZFjSlAAAF8t1dAAA%3D"
+          }
+        }
+      },
+      "type": "n8n-nodes-base.microsoftOutlook",
+      "typeVersion": 2,
+      "position": [
+        4240,
+        2160
+      ],
+      "id": "32c9a62a-5eb2-4bad-9574-c6a6e4cc9e63",
+      "name": "Move to No position found folder3",
+      "webhookId": "15aafc48-01dc-4f2b-9e86-6cc4f22695c2",
+      "credentials": {
+        "microsoftOutlookOAuth2Api": {
+          "id": "Pi5hz0QRJuqKcJJV",
+          "name": "Microsoft Outlook account production cont"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "messageId": {
+          "__rl": true,
+          "value": "={{ $('Move to In process folder').first().json.id }}",
+          "mode": "id"
+        },
+        "updateFields": {
+          "folderId": {
+            "__rl": true,
+            "value": "AAMkADg3OTYyOTBmLTI0YjUtNDY0My1iYTY4LWRlYjBmNjhkZTc5OAAuAAAAAADlYFLv-43lTb4iPz8O_PK4AQALQvY3wJvsSYioU32ZFjSlAAABGUayAAA=",
+            "mode": "list",
+            "cachedResultName": "Processed",
+            "cachedResultUrl": "https://outlook.office365.com/mail/AAMkADg3OTYyOTBmLTI0YjUtNDY0My1iYTY4LWRlYjBmNjhkZTc5OAAuAAAAAADlYFLv%2F43lTb4iPz8O_PK4AQALQvY3wJvsSYioU32ZFjSlAAABGUayAAA%3D"
+          }
+        }
+      },
+      "type": "n8n-nodes-base.microsoftOutlook",
+      "typeVersion": 2,
+      "position": [
+        4256,
+        1776
+      ],
+      "id": "c521af19-7af3-4f14-9f2e-b42434068287",
+      "name": "Move to processed folder1",
+      "webhookId": "b765d9aa-4867-4a48-bd54-10493b0e14af",
+      "credentials": {
+        "microsoftOutlookOAuth2Api": {
+          "id": "Pi5hz0QRJuqKcJJV",
+          "name": "Microsoft Outlook account production cont"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.noOp",
+      "name": "Replace Me1",
+      "typeVersion": 1,
+      "position": [
+        4800,
+        2480
+      ],
+      "id": "bf0a0d07-dde3-445a-94fa-f63a360a88ff"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://your-app.example.com/api/v1/applicants/bulk-upload-cv",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "accept",
+              "value": "application/json"
+            },
+            {
+              "name": "Authorization",
+              "value": "=Bearee {{ $('Login to App server').first().json.data.token }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "multipart-form-data",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "parameterType": "formBinaryData",
+              "name": "file",
+              "inputDataFieldName": "primaryAttachement"
+            },
+            {
+              "name": "positionId",
+              "value": "={{ $('Json pharse').item.json.id }}"
+            },
+            {
+              "name": "sourceId",
+              "value": "={{ $('Lookup Source ID').first().json.sourceId }}"
+            },
+            {
+              "parameterType": "formBinaryData",
+              "name": "additionalAttachments",
+              "inputDataFieldName": "additionalAttachment_1"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        3568,
+        1008
+      ],
+      "id": "819ed9fc-dae9-441a-927e-0c55030239c3",
+      "name": "Send to app queue7",
+      "alwaysOutputData": false,
+      "executeOnce": true,
+      "retryOnFail": true,
+      "waitBetweenTries": 5000,
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://your-app.example.com/api/v1/applicants/bulk-upload-cv",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "accept",
+              "value": "application/json"
+            },
+            {
+              "name": "Authorization",
+              "value": "=Bearee {{ $('Login to App server').first().json.data.token }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "multipart-form-data",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "parameterType": "formBinaryData",
+              "name": "file",
+              "inputDataFieldName": "primaryAttachement"
+            },
+            {
+              "name": "positionId",
+              "value": "={{ $('Json pharse').first().json.id }}"
+            },
+            {
+              "name": "sourceId",
+              "value": "={{ $('Lookup Source ID').first().json.sourceId }}"
+            },
+            {
+              "parameterType": "formBinaryData",
+              "name": "additionalAttachments",
+              "inputDataFieldName": "additionalAttachment_1"
+            },
+            {
+              "parameterType": "formBinaryData",
+              "name": "additionalAttachments",
+              "inputDataFieldName": "additionalAttachment_2"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        3568,
+        1200
+      ],
+      "id": "9ce71092-1c16-4095-9724-9ff68673a33f",
+      "name": "Send to app queue8",
+      "alwaysOutputData": false,
+      "executeOnce": true,
+      "retryOnFail": true,
+      "waitBetweenTries": 5000,
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://your-app.example.com/api/v1/applicants/bulk-upload-cv",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "accept",
+              "value": "application/json"
+            },
+            {
+              "name": "Authorization",
+              "value": "=Bearee {{ $('Login to App server').first().json.data.token }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "multipart-form-data",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "parameterType": "formBinaryData",
+              "name": "file",
+              "inputDataFieldName": "primaryAttachement"
+            },
+            {
+              "name": "positionId",
+              "value": "={{ $('Json pharse').first().json.id }}"
+            },
+            {
+              "name": "sourceId",
+              "value": "={{ $('Lookup Source ID').first().json.sourceId }}"
+            },
+            {
+              "parameterType": "formBinaryData",
+              "name": "additionalAttachments",
+              "inputDataFieldName": "additionalAttachment_1"
+            },
+            {
+              "parameterType": "formBinaryData",
+              "name": "additionalAttachments",
+              "inputDataFieldName": "additionalAttachment_2"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        3568,
+        1376
+      ],
+      "id": "d96a4aad-df6c-49ae-bfdd-3749370cbc78",
+      "name": "Send to app queue9",
+      "alwaysOutputData": false,
+      "executeOnce": true,
+      "retryOnFail": true,
+      "waitBetweenTries": 5000,
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://your-app.example.com/api/v1/applicants/bulk-upload-cv",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "accept",
+              "value": "application/json"
+            },
+            {
+              "name": "Authorization",
+              "value": "=Bearee {{ $('Login to App server').first().json.data.token }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "multipart-form-data",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "parameterType": "formBinaryData",
+              "name": "file",
+              "inputDataFieldName": "primaryAttachement"
+            },
+            {
+              "name": "positionId",
+              "value": "={{ $('Json pharse').first().json.id }}"
+            },
+            {
+              "name": "sourceId",
+              "value": "={{ $('Lookup Source ID').first().json.sourceId }}"
+            },
+            {
+              "parameterType": "formBinaryData",
+              "name": "additionalAttachments",
+              "inputDataFieldName": "additionalAttachment_1"
+            },
+            {
+              "parameterType": "formBinaryData",
+              "name": "additionalAttachments",
+              "inputDataFieldName": "additionalAttachment_2"
+            },
+            {
+              "parameterType": "formBinaryData",
+              "name": "additionalAttachments",
+              "inputDataFieldName": "additionalAttachment_3"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        3568,
+        1552
+      ],
+      "id": "b8102397-f95d-4508-968d-aecb1ce73fc1",
+      "name": "Send to app queue10",
+      "alwaysOutputData": false,
+      "executeOnce": true,
+      "retryOnFail": true,
+      "waitBetweenTries": 5000,
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://your-app.example.com/api/v1/applicants/bulk-upload-cv",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "accept",
+              "value": "application/json"
+            },
+            {
+              "name": "Authorization",
+              "value": "=Bearee {{ $('Login to App server').first().json.data.token }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "multipart-form-data",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "parameterType": "formBinaryData",
+              "name": "file",
+              "inputDataFieldName": "primaryAttachement"
+            },
+            {
+              "name": "positionId",
+              "value": "={{ $('Json pharse').first().json.id }}"
+            },
+            {
+              "name": "sourceId",
+              "value": "={{ $('Lookup Source ID').first().json.sourceId }}"
+            },
+            {
+              "parameterType": "formBinaryData",
+              "name": "additionalAttachments",
+              "inputDataFieldName": "additionalAttachment_1"
+            },
+            {
+              "parameterType": "formBinaryData",
+              "name": "additionalAttachments",
+              "inputDataFieldName": "additionalAttachment_2"
+            },
+            {
+              "parameterType": "formBinaryData",
+              "name": "additionalAttachments",
+              "inputDataFieldName": "additionalAttachment_3"
+            },
+            {
+              "parameterType": "formBinaryData",
+              "name": "additionalAttachments",
+              "inputDataFieldName": "additionalAttachment_4"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        3568,
+        1696
+      ],
+      "id": "0dfb15d0-0000-4b3c-aa28-0aeb0c154be3",
+      "name": "Send to app queue11",
+      "alwaysOutputData": false,
+      "executeOnce": true,
+      "retryOnFail": true,
+      "waitBetweenTries": 5000,
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://your-app.example.com/api/v1/applicants/bulk-upload-cv",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "accept",
+              "value": "application/json"
+            },
+            {
+              "name": "Authorization",
+              "value": "=Bearee {{ $('Login to App server').first().json.data.token }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "multipart-form-data",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "parameterType": "formBinaryData",
+              "name": "file",
+              "inputDataFieldName": "primaryAttachement"
+            },
+            {
+              "name": "positionId",
+              "value": "={{ $('Json pharse').first().json.id }}"
+            },
+            {
+              "name": "sourceId",
+              "value": "={{ $('Lookup Source ID').first().json.sourceId }}"
+            },
+            {
+              "parameterType": "formBinaryData",
+              "name": "additionalAttachments",
+              "inputDataFieldName": "additionalAttachment_1"
+            },
+            {
+              "parameterType": "formBinaryData",
+              "name": "additionalAttachments",
+              "inputDataFieldName": "additionalAttachment_2"
+            },
+            {
+              "parameterType": "formBinaryData",
+              "name": "additionalAttachments",
+              "inputDataFieldName": "additionalAttachment_3"
+            },
+            {
+              "parameterType": "formBinaryData",
+              "name": "additionalAttachments",
+              "inputDataFieldName": "additionalAttachment_4"
+            },
+            {
+              "parameterType": "formBinaryData",
+              "name": "additionalAttachments",
+              "inputDataFieldName": "additionalAttachment_5"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        3568,
+        1840
+      ],
+      "id": "1ec8b023-4a6a-4349-9b4d-1d9be16c6c1a",
+      "name": "Send to app queue12",
+      "alwaysOutputData": false,
+      "executeOnce": true,
+      "retryOnFail": true,
+      "waitBetweenTries": 5000,
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://your-app.example.com/api/v1/applicants/bulk-upload-cv",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "accept",
+              "value": "application/json"
+            },
+            {
+              "name": "Authorization",
+              "value": "=Bearee {{ $('Login to App server').first().json.data.token }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "multipart-form-data",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "parameterType": "formBinaryData",
+              "name": "file",
+              "inputDataFieldName": "primaryAttachement"
+            },
+            {
+              "name": "positionId",
+              "value": "={{ $('Json pharse').first().json.id }}"
+            },
+            {
+              "name": "sourceId",
+              "value": "={{ $('Lookup Source ID').first().json.sourceId }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        3568,
+        848
+      ],
+      "id": "0e429fd3-c50a-4b81-945a-3e2aed0911f2",
+      "name": "Send to app queue13",
+      "alwaysOutputData": false,
+      "executeOnce": true,
+      "retryOnFail": true,
+      "waitBetweenTries": 5000,
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "operation": "toBinary",
+        "sourceProperty": "data",
+        "binaryPropertyName": "attachment_0",
+        "options": {
+          "fileName": "data.pdf",
+          "mimeType": "application/pdf"
+        }
+      },
+      "type": "n8n-nodes-base.convertToFile",
+      "typeVersion": 1.1,
+      "position": [
+        960,
+        2432
+      ],
+      "id": "d9d682de-2095-4423-b065-8f0421f81b2a",
+      "name": "Convert to File"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.jobbkk[0] }}",
+                    "rightValue": ".pdf",
+                    "operator": {
+                      "type": "string",
+                      "operation": "endsWith"
+                    },
+                    "id": "9433f27c-455f-4949-b612-e73153882eb3"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "pdf"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "4f3d5fb3-b6e7-4ec5-b0bf-437391f1b754",
+                    "leftValue": "={{ $json.jobbkk[0] }}",
+                    "rightValue": ".docx",
+                    "operator": {
+                      "type": "string",
+                      "operation": "endsWith"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "docx"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "573d3ea4-65d4-4ecb-8c55-d2b52f19b832",
+                    "leftValue": "={{ $json.jobbkk[0] }}",
+                    "rightValue": "pdf",
+                    "operator": {
+                      "type": "string",
+                      "operation": "notEndsWith"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "online"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        208,
+        2480
+      ],
+      "id": "7b2f89d8-7294-4e64-8585-4de12f2aa7f3",
+      "name": "Switch of file"
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.jobbkk[0] }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        464,
+        2464
+      ],
+      "id": "c0cdc429-b226-44ef-aa17-04089754fc3e",
+      "name": "download PDF from link"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://worker.example.com/api/w/analyst-hub/jobs/run_wait_result/p/f/windmill/hri_convert_html_pdf",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer O7p83kaLRI786G3cE0MWefRTifM5DqDu"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "form-urlencoded",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "=html",
+              "value": "={{ $('Move to In process folder').item.json.body.content }}\n{{ $json.data }}"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "responseFormat": "text"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        736,
+        2512
+      ],
+      "id": "0450ce60-31ec-44c3-8696-75025838cc79",
+      "name": "HTML to PDF"
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "messageId": {
+          "__rl": true,
+          "value": "={{ $('Move to In process folder').item.json.id }}",
+          "mode": "id"
+        },
+        "output": "fields",
+        "options": {
+          "downloadAttachments": true
+        }
+      },
+      "type": "n8n-nodes-base.microsoftOutlook",
+      "typeVersion": 2,
+      "position": [
+        -480,
+        2400
+      ],
+      "id": "945cd1d8-dbd0-4e58-b7f2-4788525da092",
+      "name": "get inprogress id",
+      "webhookId": "ac7e3524-2fc9-4d24-94d0-54598eafaf48",
+      "credentials": {
+        "microsoftOutlookOAuth2Api": {
+          "id": "Pi5hz0QRJuqKcJJV",
+          "name": "Microsoft Outlook account production cont"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "messageId": {
+          "__rl": true,
+          "value": "={{ $('Get a message').last().json.id }}",
+          "mode": "id"
+        },
+        "updateFields": {
+          "folderId": {
+            "__rl": true,
+            "value": "AAMkADg3OTYyOTBmLTI0YjUtNDY0My1iYTY4LWRlYjBmNjhkZTc5OAAuAAAAAADlYFLv-43lTb4iPz8O_PK4AQALQvY3wJvsSYioU32ZFjSlAAABGUaxAAA=",
+            "mode": "list",
+            "cachedResultName": "Processing",
+            "cachedResultUrl": "https://outlook.office365.com/mail/AAMkADg3OTYyOTBmLTI0YjUtNDY0My1iYTY4LWRlYjBmNjhkZTc5OAAuAAAAAADlYFLv%2F43lTb4iPz8O_PK4AQALQvY3wJvsSYioU32ZFjSlAAABGUaxAAA%3D"
+          }
+        }
+      },
+      "type": "n8n-nodes-base.microsoftOutlook",
+      "typeVersion": 2,
+      "position": [
+        -640,
+        2400
+      ],
+      "id": "3114189d-bd0d-4b37-8e0b-d88255204c8e",
+      "name": "Move to In process folder",
+      "webhookId": "464e35c5-fb52-4d3c-90d5-6a625969cc38",
+      "credentials": {
+        "microsoftOutlookOAuth2Api": {
+          "id": "Pi5hz0QRJuqKcJJV",
+          "name": "Microsoft Outlook account production cont"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "31fa786b-0a00-4edc-8275-d8a3ff37f8a7",
+              "leftValue": "={{ $('Move to In process folder').item.json.hasAttachments }}",
+              "rightValue": "true",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -336,
+        2400
+      ],
+      "id": "1bfe3dd6-f2ec-4a14-9592-56f1e11427ea",
+      "name": "check attachment",
+      "alwaysOutputData": false
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://your-app.example.com/api/v1/auth/login",
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "{   \"email\": \"admin@example.com\",   \"password\": \"CHANGE_THIS_PASSWORD\" }",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1120,
+        2384
+      ],
+      "id": "3123ffca-5aa5-4351-9e41-be26211ff9c4",
+      "name": "Login to App server",
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Get the array of sources (adjusting for nested structure)\nconst sources = $('Get source').all()[0].json.data.data;\n\n// Get the sender email\nconst email = $('Get a message').first().json.sender.emailAddress.address;\n\n// Helper to match email in source records\nfunction findSourceIdByEmail(emailToFind) {\n  if (!emailToFind) return null;\n\n  const lower = emailToFind.toLowerCase();\n\n  return sources.find(source => {\n    if (!source.email) return false;\n\n    // Support comma-separated emails\n    return source.email\n      .toLowerCase()\n      .split(',')\n      .map(e => e.trim())\n      .includes(lower);\n  })?.id || null;\n}\n\n// Get the matching source ID\nconst sourceId = findSourceIdByEmail(email);\n\n// Return in n8n-compatible format\nreturn [\n  {\n    json: {\n      sourceId: sourceId\n    }\n  }\n];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1456,
+        2160
+      ],
+      "id": "3bb97770-33ef-4488-b095-d7617a22f6e7",
+      "name": "Lookup Source ID"
+    },
+    {
+      "parameters": {
+        "url": "=https://your-app.example.com/api/v1/applicant-sources",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "isOpen",
+              "value": "true"
+            },
+            {
+              "name": "limit",
+              "value": "1000"
+            },
+            {
+              "name": "offset",
+              "value": "0"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearee {{ $('Login to App server').item.json.data.token }}"
+            },
+            {}
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1312,
+        2160
+      ],
+      "id": "6cc62d9f-aab5-49b7-a161-f69164bcaf59",
+      "name": "Get source"
+    },
+    {
+      "parameters": {
+        "url": "=https://your-app.example.com/api/v1/positions",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "isOpen",
+              "value": "true"
+            },
+            {
+              "name": "limit",
+              "value": "1000"
+            },
+            {
+              "name": "offset",
+              "value": "0"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearee {{ $('Login to App server').item.json.data.token }}"
+            },
+            {}
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1648,
+        2160
+      ],
+      "id": "ba35627a-1423-4336-a255-79bc06909d9c",
+      "name": "Get Open job"
+    },
+    {
+      "parameters": {
+        "jsCode": "const output = [];\n\n// Get jobs from the first input item\nconst jobs = items[0].json.data.data;\n\nfor (const job of jobs) {\n  output.push({\n    json: {\n      id: job.id,\n      title: job.title,\n      department: job.department,\n    }\n  });\n}\n\nreturn output;\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1824,
+        2160
+      ],
+      "id": "4a5393d0-e53a-4a75-92fe-b2d7305b5325",
+      "name": "Extract list of job"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Get the raw JSON string\nlet rawJson = $input.first().json.output\n\n// Clean unwanted characters like triple backticks and markdown tags\nrawJson = rawJson\n  .replace(/```json\\s*/g, '')  // Remove starting ```json\n  .replace(/```/g, '')         // Remove closing ```\n  .trim();                     // Remove extra whitespace\n\nlet parsed;\n\ntry {\n  parsed = JSON.parse(rawJson);\n} catch (error) {\n  throw new Error(\"Failed to parse JSON: \" + error.message);\n}\n\n// Return parsed JSON in n8n format\nreturn [\n  {\n    json: parsed\n  }\n];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2528,
+        2080
+      ],
+      "id": "5fc926df-a0d6-4a62-bf1b-4bbcd628168d",
+      "name": "Json pharse",
+      "retryOnFail": false,
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "da95a8b5-5d5e-4860-b1a8-f8040924238d",
+              "leftValue": "={{ $('Json pharse').item.json.id }}",
+              "rightValue": "=unknown",
+              "operator": {
+                "type": "string",
+                "operation": "notEquals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        2704,
+        2064
+      ],
+      "id": "2eced24e-9a01-4b4b-82ae-3c4f11f52953",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "jsCode": "// n8n Code node — Single output, SINGLE item\n// - Primary binary:   binary.primaryAttachement   (kept as-is per your flow)\n// - Additionals:      binary.additionalAttachment_1 ... _N  (suffix only)\n\n// -------- helpers to read other nodes --------\nfunction safeAll(nodeName) {\n  try { const items = $(nodeName).all(); return Array.isArray(items) ? items : []; }\n  catch { return []; }\n}\nfunction collectAllAttachments(nodeName) {\n  const items = safeAll(nodeName);\n  const files = [];\n  for (let idx = 0; idx < items.length; idx++) {\n    const it = items[idx];\n    if (!it || !it.binary) continue;\n    for (const key of Object.keys(it.binary)) {\n      files.push({\n        json: { __sourceNode: nodeName, __sourceItem: idx, __binaryKey: key },\n        binary: { [key]: it.binary[key] },\n      });\n    }\n  }\n  return files;\n}\nfunction getKeyAndFile(attItem) {\n  const keys = attItem?.binary ? Object.keys(attItem.binary) : [];\n  const k = keys[0];\n  const f = k ? attItem.binary[k] : null;\n  return [k, f];\n}\nfunction nameOf(attItem) {\n  const [k, f] = getKeyAndFile(attItem);\n  return ((f && f.fileName) || k || '').toLowerCase();\n}\nfunction fileMeta(attItem) {\n  const [k, f] = getKeyAndFile(attItem);\n  return {\n    key: k || '',\n    name: (f && f.fileName) || k || '',\n    mimeType: (f && f.mimeType) || '',\n    fileSize: (f && f.fileSize) !== undefined ? f.fileSize : undefined,\n    sourceNode: attItem.json.__sourceNode,\n    sourceItem: attItem.json.__sourceItem,\n  };\n}\n\n// -------- type checks --------\nfunction isPdf(file){\n  if (!file) return false;\n  const mt = (file.mimeType || '').toLowerCase();\n  const fn = (file.fileName || '').toLowerCase();\n  return mt === 'application/pdf' || fn.endsWith('.pdf');\n}\nfunction isWord(file){\n  if (!file) return false;\n  const mt = (file.mimeType || '').toLowerCase();\n  const fn = (file.fileName || '').toLowerCase();\n  return mt === 'application/msword' ||\n         mt === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' ||\n         fn.endsWith('.doc') || fn.endsWith('.docx');\n}\nfunction isImage(file){\n  if (!file) return false;\n  const mt = (file.mimeType || '').toLowerCase();\n  const fn = (file.fileName || '').toLowerCase();\n  return mt.startsWith('image/') || /\\.(png|jpe?g|webp|gif|bmp|tiff?|heic)$/.test(fn);\n}\n\n// -------- keyword priority (highest → lowest) --------\nconst keywordMatchers = [\n  { label: 'resume',    test: (n) => /resume/i.test(n) },\n  { label: 'cv',        test: (n) => /(^|[^a-z0-9])c[\\s._-]*v([^a-z0-9]|$)/i.test(n) },\n  { label: 'profile',   test: (n) => /(profile|prolfile)/i.test(n) },\n  { label: 'ประวัติ',    test: (n) => n.includes('ประวัติ') },\n  { label: 'portfolio', test: (n) => /portfolio/i.test(n) },\n  { label: 'ใบสมัคร',    test: (n) => n.includes('ใบสมัคร') },\n];\n\nfunction choosePrimaryIndex(attachments){\n  if (!attachments || attachments.length === 0) return { index: -1, reason: 'no-attachments' };\n\n  // 1) keywords first\n  for (const m of keywordMatchers) {\n    for (let i = 0; i < attachments.length; i++) {\n      if (m.test(nameOf(attachments[i]))) return { index: i, reason: `keyword:${m.label}` };\n    }\n  }\n  // 2) type fallback\n  const groups = [\n    { label: 'pdf',   pred: (f) => isPdf(f) },\n    { label: 'word',  pred: (f) => isWord(f) },\n    { label: 'image', pred: (f) => isImage(f) },\n  ];\n  for (const g of groups) {\n    for (let i = 0; i < attachments.length; i++) {\n      const [, f] = getKeyAndFile(attachments[i]);\n      if (g.pred(f)) return { index: i, reason: `type:${g.label}` };\n    }\n  }\n  // 3) first file\n  return { index: 0, reason: 'fallback:first' };\n}\n\n// -------- MAIN --------\nconst attachments = [\n  ...collectAllAttachments('get inprogress id'),\n  ...collectAllAttachments('Convert to File'),\n  ...collectAllAttachments('Switch of file'),\n  ...collectAllAttachments('download PDF from link')\n];\n\n// Always return ONE item\nif (attachments.length === 0) {\n  return [{\n    json: {\n      role: 'none',\n      primary: { key: '', name: '', mimeType: '', fileSize: undefined, sourceNode: '', sourceItem: undefined, reason: 'no-attachments' },\n      additionalKeys: [],\n      additionalNames: [],\n      additionalCount: 0,\n      totalFound: 0,\n      attachments: [],\n    },\n    binary: {},\n  }];\n}\n\nconst { index: primaryIdx, reason } = choosePrimaryIndex(attachments);\nconst primary = attachments[primaryIdx];\nconst others  = attachments.filter((_, i) => i !== primaryIdx);\n\nconst [pKey, pFile] = getKeyAndFile(primary);\n\n// Binary container (single item)\nconst binaryOut = {};\nif (pFile) binaryOut.primaryAttachement = pFile;\n\n// Add ALL additionals with suffixed keys only\nconst additionalKeys = [];\nconst additionalNames = [];\nothers.forEach((it, i) => {\n  const [k, f] = getKeyAndFile(it);\n  const idx = i + 1;\n  const binKey = `additionalAttachment_${idx}`;\n  if (f) {\n    binaryOut[binKey] = f;\n    additionalKeys.push(binKey);\n    additionalNames.push(f.fileName || k || '');\n  }\n});\n\nconst outItem0 = {\n  json: {\n    role: 'primary',\n    primary: { ...fileMeta(primary), reason },\n    primaryFileKey: pKey || null,\n    primaryFileName: (pFile && pFile.fileName) || pKey || '',\n    primaryFileReason: reason,\n    additionalKeys,               // e.g. [\"additionalAttachment_1\", \"additionalAttachment_2\"]\n    additionalNames,              // names in the same order\n    additionalCount: others.length,\n    totalFound: attachments.length,\n    attachments: attachments.map((att, idx) => ({ ...fileMeta(att), isPrimary: idx === primaryIdx })),\n  },\n  binary: binaryOut,\n};\n\nreturn [outItem0];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2880,
+        1872
+      ],
+      "id": "cb6560be-eecb-4ba3-9ef2-ecb353ec64c5",
+      "name": "Code"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://your-app.example.com/api/v1/applicants/bulk-upload-cv",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "accept",
+              "value": "application/json"
+            },
+            {
+              "name": "Authorization",
+              "value": "=Bearee {{ $('Login to App server').item.json.data.token }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "multipart-form-data",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "parameterType": "formBinaryData",
+              "name": "file",
+              "inputDataFieldName": "primaryAttachement"
+            },
+            {
+              "name": "positionId",
+              "value": "={{ $('Json pharse').first().json.id }}"
+            },
+            {
+              "name": "sourceId",
+              "value": "={{ $('Lookup Source ID').first().json.sourceId }}"
+            },
+            {
+              "parameterType": "formBinaryData",
+              "name": "additionalAttachments",
+              "inputDataFieldName": "additionalAttachment_1"
+            },
+            {
+              "parameterType": "formBinaryData",
+              "name": "additionalAttachments",
+              "inputDataFieldName": "additionalAttachment_2"
+            },
+            {
+              "parameterType": "formBinaryData",
+              "name": "additionalAttachments",
+              "inputDataFieldName": "additionalAttachment_3"
+            },
+            {
+              "parameterType": "formBinaryData",
+              "name": "additionalAttachments",
+              "inputDataFieldName": "additionalAttachment_4"
+            },
+            {
+              "parameterType": "formBinaryData",
+              "name": "additionalAttachments",
+              "inputDataFieldName": "additionalAttachment_5"
+            },
+            {
+              "parameterType": "formBinaryData",
+              "name": "additionalAttachments",
+              "inputDataFieldName": "additionalAttachment_6"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        3552,
+        1984
+      ],
+      "id": "5f7d11b0-7f80-4585-af8f-cbe6df11d862",
+      "name": "Send to app queue",
+      "alwaysOutputData": false,
+      "executeOnce": true,
+      "retryOnFail": true,
+      "waitBetweenTries": 5000,
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://your-app.example.com/api/v1/applicants/bulk-upload-cv",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "accept",
+              "value": "application/json"
+            },
+            {
+              "name": "Authorization",
+              "value": "=Bearee {{ $('Login to App server').first().json.data.token }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "multipart-form-data",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "parameterType": "formBinaryData",
+              "name": "file",
+              "inputDataFieldName": "primaryAttachement"
+            },
+            {
+              "name": "positionId",
+              "value": "={{ $('Json pharse').first().json.id }}"
+            },
+            {
+              "name": "sourceId",
+              "value": "={{ $('Lookup Source ID').first().json.sourceId }}"
+            },
+            {
+              "parameterType": "formBinaryData",
+              "name": "additionalAttachments",
+              "inputDataFieldName": "additionalAttachment_1"
+            },
+            {
+              "parameterType": "formBinaryData",
+              "name": "additionalAttachments",
+              "inputDataFieldName": "additionalAttachment_2"
+            },
+            {
+              "parameterType": "formBinaryData",
+              "name": "additionalAttachments",
+              "inputDataFieldName": "additionalAttachment_3"
+            },
+            {
+              "parameterType": "formBinaryData",
+              "name": "additionalAttachments",
+              "inputDataFieldName": "additionalAttachment_4"
+            },
+            {
+              "parameterType": "formBinaryData",
+              "name": "additionalAttachments",
+              "inputDataFieldName": "additionalAttachment_5"
+            },
+            {
+              "parameterType": "formBinaryData",
+              "name": "additionalAttachments",
+              "inputDataFieldName": "additionalAttachment_6"
+            },
+            {
+              "parameterType": "formBinaryData",
+              "name": "additionalAttachments",
+              "inputDataFieldName": "additionalAttachment_7"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        3536,
+        2128
+      ],
+      "id": "4ee2c8b0-5609-4b20-840d-d85fc244b0d8",
+      "name": "Send to app queue1",
+      "alwaysOutputData": false,
+      "executeOnce": true,
+      "retryOnFail": true,
+      "waitBetweenTries": 5000,
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://your-app.example.com/api/v1/applicants/bulk-upload-cv",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "accept",
+              "value": "application/json"
+            },
+            {
+              "name": "Authorization",
+              "value": "=Bearee {{ $('Login to App server').first().json.data.token }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "multipart-form-data",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "parameterType": "formBinaryData",
+              "name": "file",
+              "inputDataFieldName": "primaryAttachement"
+            },
+            {
+              "name": "positionId",
+              "value": "={{ $('Json pharse').first().json.id }}"
+            },
+            {
+              "name": "sourceId",
+              "value": "={{ $('Lookup Source ID').first().json.sourceId }}"
+            },
+            {
+              "parameterType": "formBinaryData",
+              "name": "additionalAttachments",
+              "inputDataFieldName": "additionalAttachment_1"
+            },
+            {
+              "parameterType": "formBinaryData",
+              "name": "additionalAttachments",
+              "inputDataFieldName": "additionalAttachment_2"
+            },
+            {
+              "parameterType": "formBinaryData",
+              "name": "additionalAttachments",
+              "inputDataFieldName": "additionalAttachment_3"
+            },
+            {
+              "parameterType": "formBinaryData",
+              "name": "additionalAttachments",
+              "inputDataFieldName": "additionalAttachment_4"
+            },
+            {
+              "parameterType": "formBinaryData",
+              "name": "additionalAttachments",
+              "inputDataFieldName": "additionalAttachment_5"
+            },
+            {
+              "parameterType": "formBinaryData",
+              "name": "additionalAttachments",
+              "inputDataFieldName": "additionalAttachment_6"
+            },
+            {
+              "parameterType": "formBinaryData",
+              "name": "additionalAttachments",
+              "inputDataFieldName": "additionalAttachment_7"
+            },
+            {
+              "parameterType": "formBinaryData",
+              "name": "additionalAttachments",
+              "inputDataFieldName": "additionalAttachment_8"
+            },
+            {
+              "name": "email_id",
+              "value": "={{ $('Move to In process folder').item.json.id }}"
+            },
+            {
+              "name": "email_date",
+              "value": "={{ $('Move to In process folder').item.json.sentDateTime }}"
+            },
+            {
+              "name": "email_subject",
+              "value": "={{ $('Move to In process folder').item.json.subject }}"
+            },
+            {
+              "name": "email_metadata",
+              "value": "=conversationID={{ $('Move to In process folder').item.json.conversationId }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        3520,
+        2336
+      ],
+      "id": "394ad1e9-540b-4e63-ac6d-cbd5adcf1ffa",
+      "name": "Send to app queue2",
+      "alwaysOutputData": false,
+      "executeOnce": true,
+      "retryOnFail": true,
+      "waitBetweenTries": 5000,
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Input: items[0].json.html (or adjust to your field)\nconst html = $('Move to In process folder').first().json.body.content || \"\";\n\n// Function to clean HTML completely\nfunction cleanHtml(html) {\n  return html\n    // remove CSS <style>...</style>\n    .replace(/<style[^>]*>[\\s\\S]*?<\\/style>/gi, \"\")\n    // remove all HTML comments\n    .replace(/<!--[\\s\\S]*?-->/g, \"\")\n    // remove all HTML tags\n    .replace(/<[^>]+>/g, \" \")\n    // decode common HTML entities\n    .replace(/&nbsp;/g, \" \")\n    .replace(/&amp;/g, \"&\")\n    .replace(/&lt;/g, \"<\")\n    .replace(/&gt;/g, \">\")\n    .replace(/&quot;/g, '\"')\n    .replace(/&#39;/g, \"'\")\n    // cleanup extra spaces\n    .replace(/\\s+/g, \" \")\n    .trim();\n}\n\nreturn [\n  {\n    json: {\n      text: cleanHtml(html)\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2032,
+        2160
+      ],
+      "id": "ddbf3177-f391-457f-ad88-677b64f907b5",
+      "name": "clean html email"
+    },
+    {
+      "parameters": {
+        "inputSource": "passthrough"
+      },
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        -1216,
+        2400
+      ],
+      "id": "b03e5140-8ec6-491d-999b-c3374ade9c27",
+      "name": "When Executed by Another Workflow"
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "messageId": {
+          "__rl": true,
+          "value": "={{ $('Get many messages').last().json.id }}",
+          "mode": "id"
+        },
+        "output": "raw",
+        "options": {
+          "downloadAttachments": true
+        }
+      },
+      "type": "n8n-nodes-base.microsoftOutlook",
+      "typeVersion": 2,
+      "position": [
+        -832,
+        2400
+      ],
+      "id": "d147abed-92fc-4983-b51c-c4c2ae2143c6",
+      "name": "Get a message",
+      "webhookId": "f2ff92bb-b68b-4973-bc57-63832351a22e",
+      "credentials": {
+        "microsoftOutlookOAuth2Api": {
+          "id": "Pi5hz0QRJuqKcJJV",
+          "name": "Microsoft Outlook account production cont"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "limit": 1,
+        "filtersUI": {
+          "values": {
+            "filters": {
+              "foldersToInclude": [
+                "AAMkADg3OTYyOTBmLTI0YjUtNDY0My1iYTY4LWRlYjBmNjhkZTc5OAAuAAAAAADlYFLv-43lTb4iPz8O_PK4AQALQvY3wJvsSYioU32ZFjSlAAABGUatAAA="
+              ]
+            }
+          }
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.microsoftOutlook",
+      "typeVersion": 2,
+      "position": [
+        -1008,
+        2400
+      ],
+      "id": "d5d42a8c-879a-4ad0-b62e-c69fa2151d1a",
+      "name": "Get many messages",
+      "webhookId": "5f4dab1c-e987-4019-9da8-61fa73572e4a",
+      "credentials": {
+        "microsoftOutlookOAuth2Api": {
+          "id": "Pi5hz0QRJuqKcJJV",
+          "name": "Microsoft Outlook account production cont"
+        }
+      }
+    }
+  ],
+  "pinData": {
+    "When Executed by Another Workflow": [
+      {
+        "json": {
+          "@odata.context": "https://graph.microsoft.com/v1.0/$metadata#users('004a5861-26c9-406f-bdbb-ab3c4ceccc46')/mailFolders/$entity",
+          "id": "AAMkADg3OTYyOTBmLTI0YjUtNDY0My1iYTY4LWRlYjBmNjhkZTc5OAAuAAAAAADlYFLv-43lTb4iPz8O_PK4AQALQvY3wJvsSYioU32ZFjSlAAABGUatAAA=",
+          "displayName": "Queue",
+          "parentFolderId": "AAMkADg3OTYyOTBmLTI0YjUtNDY0My1iYTY4LWRlYjBmNjhkZTc5OAAuAAAAAADlYFLv-43lTb4iPz8O_PK4AQALQvY3wJvsSYioU32ZFjSlAAABGUahAAA=",
+          "childFolderCount": 0,
+          "unreadItemCount": 21,
+          "totalItemCount": 21,
+          "sizeInBytes": 11051455,
+          "isHidden": false
+        },
+        "pairedItem": {
+          "item": 0
+        }
+      }
+    ]
+  },
+  "connections": {
+    "Switch": {
+      "main": [
+        [
+          {
+            "node": "Send to app queue13",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send to app queue7",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send to app queue8",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send to app queue9",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send to app queue10",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send to app queue11",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send to app queue12",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send to app queue",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send to app queue1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send to app queue2",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send to app queue2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "check email form": {
+      "main": [
+        [
+          {
+            "node": "Code1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "HTML to PDF1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code1": {
+      "main": [
+        [
+          {
+            "node": "Switch of file",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "download PDF": {
+      "main": [
+        [
+          {
+            "node": "HTML to PDF",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "Google Gemini Chat Model2": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent1",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent1": {
+      "main": [
+        [
+          {
+            "node": "Json pharse",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Move to Model error  forder1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTML to PDF1": {
+      "main": [
+        [
+          {
+            "node": "Convert to File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Move to No position found folder3": {
+      "main": [
+        [
+          {
+            "node": "Replace Me1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Move to processed folder1": {
+      "main": [
+        [
+          {
+            "node": "Replace Me1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Replace Me1": {
+      "main": [
+        []
+      ]
+    },
+    "Send to app queue7": {
+      "main": [
+        [
+          {
+            "node": "Move to processed folder1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Move to No position found folder3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send to app queue8": {
+      "main": [
+        [
+          {
+            "node": "Move to processed folder1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Move to No position found folder3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send to app queue9": {
+      "main": [
+        [
+          {
+            "node": "Move to processed folder1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Move to No position found folder3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send to app queue10": {
+      "main": [
+        [
+          {
+            "node": "Move to processed folder1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Move to No position found folder3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send to app queue11": {
+      "main": [
+        [
+          {
+            "node": "Move to processed folder1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Move to No position found folder3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send to app queue12": {
+      "main": [
+        [
+          {
+            "node": "Move to processed folder1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Move to No position found folder3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send to app queue13": {
+      "main": [
+        [
+          {
+            "node": "Move to processed folder1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Move to No position found folder3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Convert to File": {
+      "main": [
+        [
+          {
+            "node": "Login to App server",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch of file": {
+      "main": [
+        [
+          {
+            "node": "download PDF from link",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "download PDF from link",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "download PDF",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "download PDF from link": {
+      "main": [
+        [
+          {
+            "node": "Login to App server",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTML to PDF": {
+      "main": [
+        [
+          {
+            "node": "Convert to File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "get inprogress id": {
+      "main": [
+        [
+          {
+            "node": "check attachment",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Move to In process folder": {
+      "main": [
+        [
+          {
+            "node": "get inprogress id",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "check attachment": {
+      "main": [
+        [
+          {
+            "node": "Login to App server",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "check email form",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Login to App server": {
+      "main": [
+        [
+          {
+            "node": "Get source",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Move to Server down forder1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Lookup Source ID": {
+      "main": [
+        [
+          {
+            "node": "Get Open job",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get source": {
+      "main": [
+        [
+          {
+            "node": "Lookup Source ID",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Open job": {
+      "main": [
+        [
+          {
+            "node": "Extract list of job",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract list of job": {
+      "main": [
+        [
+          {
+            "node": "clean html email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Json pharse": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Move to Model error  forder1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Code",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Move to No position found folder2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code": {
+      "main": [
+        [
+          {
+            "node": "Switch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send to app queue": {
+      "main": [
+        [
+          {
+            "node": "Move to processed folder1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Move to No position found folder3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send to app queue1": {
+      "main": [
+        [
+          {
+            "node": "Move to processed folder1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Move to No position found folder3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send to app queue2": {
+      "main": [
+        [
+          {
+            "node": "Move to processed folder1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Move to No position found folder3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Move to Model error  forder1": {
+      "main": [
+        [
+          {
+            "node": "Replace Me1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Move to No position found folder2": {
+      "main": [
+        [
+          {
+            "node": "Replace Me1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Move to Server down forder1": {
+      "main": [
+        [
+          {
+            "node": "Replace Me1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "clean html email": {
+      "main": [
+        [
+          {
+            "node": "AI Agent1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "When Executed by Another Workflow": {
+      "main": [
+        [
+          {
+            "node": "Get many messages",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get a message": {
+      "main": [
+        [
+          {
+            "node": "Move to In process folder",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get many messages": {
+      "main": [
+        [
+          {
+            "node": "Get a message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "2a12d5cd-2411-4bdc-b975-fc803b6e6e1a",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "639713264b45d45a157074c1c6154cfb89a68900e30020c36c02bfae640e3409"
+  },
+  "id": "ne9PONstGfLZYpZg",
+  "tags": [
+    {
+      "updatedAt": "2025-08-01T08:39:07.923Z",
+      "createdAt": "2025-08-01T08:39:07.923Z",
+      "id": "LeLA1ptq3bUThpIH",
+      "name": "Production"
+    }
+  ]
+}

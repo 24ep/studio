@@ -1,0 +1,245 @@
+"use client";
+
+import type { ApplicantsPageClientProps } from '../ApplicantsPageClientTypes';
+import { useIsMobile } from '@/hooks/use-mobile';
+import {
+  useApplicantsPageFilterState,
+  useApplicantsPageRoutingSession,
+  useApplicantsPageSettingsState,
+} from './use-applicants-page-client-primitives';
+import { buildApplicantsPageClientController } from './applicants-page-client-controller-result';
+import { useApplicantsPageAiState } from './use-applicants-page-ai-state';
+import { useApplicantsPageDataController } from './use-applicants-page-data-controller';
+import { useApplicantsPageRuntimeController } from './use-applicants-page-runtime-controller';
+import { useApplicantsPageLocalState } from './use-applicants-page-local-state';
+
+export function useApplicantsPageClientController({
+  initialApplicants,
+  initialAvailablePositions,
+  initialAvailableStages,
+  authError: serverAuthError = false,
+  permissionError: serverPermissionError = false,
+  initialFetchError,
+  initialFilters,
+}: ApplicantsPageClientProps) {
+  const { router, pathname, searchParams, session, sessionStatus, sessionGateMessage } =
+    useApplicantsPageRoutingSession();
+
+  const {
+    sidebarFilterRef,
+    batchTimeoutRef,
+    page,
+    setPage,
+    total,
+    setTotal,
+    tableLoading,
+    setTableLoading,
+    tableError,
+    setTableError,
+    isClearingFilters,
+    setIsClearingFilters,
+    hasInitialDataFetch,
+    setHasInitialDataFetch,
+    tableHeight,
+    addFilterRef,
+    removeFilterRef,
+  } = useApplicantsPageLocalState();
+
+  const {
+    applicantSettings,
+    setApplicantSettings,
+    settingsLoading,
+    settingsError,
+    clearSettingsError,
+    pageSize,
+    sortColumn,
+    sortDirection,
+    showPinSection,
+    groupBy,
+  } = useApplicantsPageSettingsState();
+
+  const {
+    aiSearchReasoning,
+    setAiSearchReasoning,
+    aiMatchedApplicantIds,
+    setAiMatchedApplicantIds,
+    aiRecordCount,
+    setAiRecordCount,
+    isAiSearchActive,
+    setIsAiSearchActive,
+    isSearchDrawerOpen,
+    setIsSearchDrawerOpen,
+    stableSetAiMatchedApplicantIds,
+    stableSetAiSearchReasoning,
+    stableSetAiRecordCount,
+    stableSetIsAiSearchActive,
+    handleOpenSearchDrawer,
+  } = useApplicantsPageAiState();
+
+  const {
+    filters,
+    setFilters,
+    horizontalSelectedFitScoreGrades,
+    setHorizontalSelectedFitScoreGrades,
+    horizontalSelectedMatchingFitScoreGrades,
+    setHorizontalSelectedMatchingFitScoreGrades,
+    applyHorizontalFitScoreFilters,
+    handleFilterChange,
+    clearAllFilters,
+    filterChangeTimeoutRef,
+    advancedQuery,
+    filterData,
+    isFilterDataLoading,
+  } = useApplicantsPageFilterState(initialFilters, searchParams);
+
+  const applicantData = useApplicantsPageDataController({
+    initialApplicants,
+    initialAvailablePositions,
+    initialAvailableStages,
+    sessionStatus,
+    serverAuthError,
+    serverPermissionError,
+    initialFetchError,
+    filters,
+    filterData,
+    modulePermissions: session?.user?.modulePermissions,
+    isClearingFilters,
+    hasInitialDataFetch,
+    searchParams,
+    sortColumn,
+    sortDirection,
+    setTotal,
+    setTableError,
+    setTableLoading,
+    showPinSection,
+  });
+
+  const runtime = useApplicantsPageRuntimeController({
+    applicantData,
+    aiState: {
+      aiMatchedApplicantIds,
+      aiRecordCount,
+      isAiSearchActive,
+      setAiMatchedApplicantIds,
+      setAiRecordCount,
+      setAiSearchReasoning,
+      setIsAiSearchActive,
+      stableSetAiMatchedApplicantIds,
+      stableSetAiRecordCount,
+      stableSetAiSearchReasoning,
+      stableSetIsAiSearchActive,
+      handleOpenSearchDrawer,
+    },
+    filterState: {
+      advancedQuery,
+      applyHorizontalFitScoreFilters,
+      clearAllFilters,
+      filterChangeTimeoutRef,
+      filters,
+      handleFilterChange,
+      horizontalSelectedFitScoreGrades,
+      horizontalSelectedMatchingFitScoreGrades,
+      isFilterDataLoading,
+      setFilters,
+      setHorizontalSelectedFitScoreGrades,
+      setHorizontalSelectedMatchingFitScoreGrades,
+    },
+    initialApplicants,
+    localState: {
+      addFilterRef,
+      batchTimeoutRef,
+      hasInitialDataFetch,
+      isClearingFilters,
+      page,
+      removeFilterRef,
+      setHasInitialDataFetch,
+      setIsClearingFilters,
+      setPage,
+      setTableLoading,
+      setTableError,
+      setTotal,
+      sidebarFilterRef,
+      tableError,
+      tableHeight,
+      tableLoading,
+      total,
+    },
+    routing: {
+      pathname,
+      searchParams,
+      session,
+      sessionStatus,
+      serverAuthError,
+      serverPermissionError,
+      replaceUrl: router.replace,
+    },
+    settings: {
+      applicantSettings,
+      setApplicantSettings,
+      settingsError,
+      settingsLoading,
+      clearSettingsError,
+      pageSize,
+      sortColumn,
+      sortDirection,
+    },
+    initialFetchError,
+  });
+  const isMobile = useIsMobile();
+
+  const controllerParts = {
+    sessionGateMessage,
+    isMobile,
+    filterControls: runtime.filterControls,
+    sidebarFilterRef,
+    filters,
+    effectiveData: applicantData.effectiveData,
+    advancedQuery,
+    handleFilterChange,
+    horizontalSelectedFitScoreGrades,
+    horizontalSelectedMatchingFitScoreGrades,
+    aiSearchReasoning,
+    aiMatchedApplicantIds,
+    aiRecordCount,
+    isAiSearchActive,
+    isAiSearching: runtime.isAiSearching,
+    isSearchDrawerOpen,
+    setIsSearchDrawerOpen,
+    handleAiSearch: runtime.handleAiSearch,
+    cancelAiSearch: runtime.cancelAiSearch,
+    applicantSettings,
+    settingsLoading,
+    settingsError,
+    clearSettingsError,
+    pageSize,
+    sortColumn,
+    sortDirection,
+    groupBy,
+    importExport: runtime.importExport,
+    uiState: runtime.uiState,
+    availableStages: applicantData.availableStages,
+    applicantsToRender: runtime.applicantsToRender,
+    allPinnedApplicants: runtime.allPinnedApplicants,
+    displayedApplicants: runtime.displayedApplicants,
+    isLoading: applicantData.isLoading,
+    tableLoading,
+    tableHeight,
+    page,
+    setPage,
+    total,
+    totalPages: runtime.totalPages,
+    fetchTableData: applicantData.fetchTableData,
+    refreshApplicantInList: applicantData.refreshApplicantInList,
+    fetchAllPinnedApplicants: runtime.fetchAllPinnedApplicants,
+    applicantScoreCounts: runtime.applicantScoreCounts,
+    isFilterDataLoading,
+    rowActions: runtime.rowActions,
+    bulkActions: runtime.bulkActions,
+    filteredApplicants: applicantData.filteredApplicants,
+    refreshCurrentApplicantsPage: runtime.refreshCurrentApplicantsPage,
+  };
+
+  return buildApplicantsPageClientController(controllerParts);
+}
+
+export type ApplicantsPageClientController = ReturnType<typeof useApplicantsPageClientController>;

@@ -1,80 +1,149 @@
-
-// src/app/api/transitions/[id]/route.ts
+import { auth } from '@/auth';
 import { NextResponse, type NextRequest } from 'next/server';
-import pool from '../../../../lib/db';
-import { z } from 'zod';
+import { getPool, type DbClient } from '@/lib/db';
 import { logAudit } from '@/lib/auditLog';
+import { readRequestJsonResult } from '@/lib/request-json';
+import {
+  buildTransitionUpdateQuery,
+  getTransitionRouteErrorMessage,
+  updateTransitionSchema,
+} from './transition-detail-utils';
+import {
+  broadcastTransitionChange,
+  enforceTransitionOwnership,
+  fetchTransitionRecord,
+  requireTransitionRoutePermission,
+  resolveTransitionRouteId,
+  type TransitionRecordRow,
+} from './transition-detail-route-helpers';
 
-const updateTransitionNotesSchema = z.object({
-  notes: z.string().optional().nullable(),
-});
+export const dynamic = 'force-dynamic';
 
-export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {
-  let body;
-  try {
-    body = await request.json();
-  } catch (error) {
-    return NextResponse.json({ message: "Error parsing request body", error: (error as Error).message }, { status: 400 });
+export async function PUT(request: NextRequest) {
+  const idResult = resolveTransitionRouteId(request);
+  if ('response' in idResult) {
+    return idResult.response;
+  }
+  const { id } = idResult;
+  
+  const session = await auth();
+  const actingUserId = session?.user?.id;
+  const permission = await requireTransitionRoutePermission({ action: 'Update', actingUserId, session });
+  if ('response' in permission) {
+    return permission.response;
   }
 
-  const validationResult = updateTransitionNotesSchema.safeParse(body);
+  const bodyResult = await readRequestJsonResult(request);
+  if (!bodyResult.ok) {
+    return NextResponse.json({ message: "Error parsing request body", error: getTransitionRouteErrorMessage(bodyResult.error) }, { status: 400 });
+  }
+
+  const body = bodyResult.value;
+  const validationResult = updateTransitionSchema.safeParse(body);
   if (!validationResult.success) {
-    return NextResponse.json(
-      { message: "Invalid input for transition notes", errors: validationResult.error.flatten().fieldErrors },
-      { status: 400 }
-    );
+    return NextResponse.json({ message: "Invalid input", errors: validationResult.error.flatten().fieldErrors }, { status: 400 });
   }
-
-  const { notes } = validationResult.data;
-  const transitionId = params.id;
-
+  
+  const client: DbClient = await getPool().connect();
   try {
-    const updateQuery = `
-      UPDATE "TransitionRecord" 
-      SET notes = $1, "updatedAt" = NOW() 
-      WHERE id = $2 
-      RETURNING *;
-    `;
-    const result = await pool.query(updateQuery, [notes, transitionId]);
-
-    if (result.rows.length === 0) {
+    const currentTransition = await fetchTransitionRecord(client, id);
+    if (!currentTransition) {
       return NextResponse.json({ message: "Transition record not found" }, { status: 404 });
     }
+    
+    const ownershipResponse = await enforceTransitionOwnership({
+      action: 'Update',
+      actingUserId: actingUserId!,
+      hasGlobalPermission: permission.hasGlobalPermission,
+      session,
+      transition: currentTransition,
+    });
+    if (ownershipResponse) {
+      return ownershipResponse;
+    }
+    
+    const update = buildTransitionUpdateQuery(validationResult.data, id);
+    const result = await client.query<TransitionRecordRow>(update.query, update.values);
+
+    if (result.rowCount === 0) {
+      return NextResponse.json({ message: "Transition record not found" }, { status: 404 });
+    }
+    
     const updatedTransition = result.rows[0];
-    await logAudit('AUDIT', `Transition record (ID: ${transitionId}) notes updated. Candidate ID: ${updatedTransition.candidateId}.`, 'API:Transitions', null, { targetTransitionId: transitionId, candidateId: updatedTransition.candidateId });
+    
+    broadcastTransitionChange({
+      action: 'update',
+      actingUserId: session!.user!.id!,
+      applicantId: currentTransition.applicantId,
+      transition: updatedTransition,
+    });
+    
+    await logAudit('AUDIT', `Transition record (ID: ${id}) was updated.`, 'API:Transitions:Update', actingUserId, { transitionId: id });
     return NextResponse.json(updatedTransition, { status: 200 });
-  } catch (error) {
-    console.error(`Failed to update transition record ${transitionId}:`, error);
-    await logAudit('ERROR', `Failed to update transition record (ID: ${transitionId}). Error: ${(error as Error).message}`, 'API:Transitions', null, { targetTransitionId: transitionId });
-    return NextResponse.json({ message: "Error updating transition record", error: (error as Error).message }, { status: 500 });
+  } catch (error: unknown) {
+    const errorMessage = getTransitionRouteErrorMessage(error);
+    console.error(`Failed to update transition record ${id}:`, error);
+    await logAudit('ERROR', `Failed to update transition record (ID: ${id}). Error: ${errorMessage}`, 'API:Transitions:Update', actingUserId);
+    return NextResponse.json({ message: "Error updating transition record", error: errorMessage }, { status: 500 });
+  } finally {
+    client.release();
   }
 }
 
-export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
-  const transitionId = params.id;
-
+export async function DELETE(request: NextRequest) {
+  const idResult = resolveTransitionRouteId(request);
+  if ('response' in idResult) {
+    return idResult.response;
+  }
+  const { id } = idResult;
+  
+  const session = await auth();
+  const actingUserId = session?.user?.id;
+  const permission = await requireTransitionRoutePermission({ action: 'Delete', actingUserId, session });
+  if ('response' in permission) {
+    return permission.response;
+  }
+  
+  const client: DbClient = await getPool().connect();
   try {
-    const transitionQuery = 'SELECT "candidateId", stage FROM "TransitionRecord" WHERE id = $1';
-    const transitionRes = await pool.query(transitionQuery, [transitionId]);
-    
-    if (transitionRes.rows.length === 0) {
+    const transitionToDelete = await fetchTransitionRecord(client, id);
+    if (!transitionToDelete) {
       return NextResponse.json({ message: "Transition record not found" }, { status: 404 });
     }
-    const { candidateId, stage } = transitionRes.rows[0];
-
-    const deleteQuery = 'DELETE FROM "TransitionRecord" WHERE id = $1 RETURNING id;';
-    const result = await pool.query(deleteQuery, [transitionId]);
-
-    if (result.rowCount === 0) {
-      return NextResponse.json({ message: "Transition record not found or already deleted" }, { status: 404 });
+    
+    const ownershipResponse = await enforceTransitionOwnership({
+      action: 'Delete',
+      actingUserId: actingUserId!,
+      hasGlobalPermission: permission.hasGlobalPermission,
+      session,
+      transition: transitionToDelete,
+    });
+    if (ownershipResponse) {
+      return ownershipResponse;
     }
     
-    await logAudit('AUDIT', `Transition record (ID: ${transitionId}, Stage: ${stage}) deleted. Candidate ID: ${candidateId}.`, 'API:Transitions', null, { targetTransitionId: transitionId, candidateId: candidateId, deletedStage: stage });
+    const result = await client.query('DELETE FROM "TransitionRecord" WHERE id = $1', [id]);
+
+    if (result.rowCount === 0) {
+      return NextResponse.json({ message: "Transition record not found" }, { status: 404 });
+    }
+    
+    broadcastTransitionChange({
+      action: 'delete',
+      actingUserId: session!.user!.id!,
+      applicantId: transitionToDelete.applicantId,
+      transition: transitionToDelete,
+    });
+    
+    await logAudit('AUDIT', `Transition record (ID: ${id}) was deleted.`, 'API:Transitions:Delete', actingUserId, { transitionId: id });
     return NextResponse.json({ message: "Transition record deleted successfully" }, { status: 200 });
-  } catch (error) {
-    console.error(`Failed to delete transition record ${transitionId}:`, error);
-    await logAudit('ERROR', `Failed to delete transition record (ID: ${transitionId}). Error: ${(error as Error).message}`, 'API:Transitions', null, { targetTransitionId: transitionId });
-    return NextResponse.json({ message: "Error deleting transition record", error: (error as Error).message }, { status: 500 });
+  } catch (error: unknown) {
+    const errorMessage = getTransitionRouteErrorMessage(error);
+    console.error(`Failed to delete transition record ${id}:`, error);
+    await logAudit('ERROR', `Failed to delete transition record (ID: ${id}). Error: ${errorMessage}`, 'API:Transitions:Delete', actingUserId);
+    return NextResponse.json({ message: "Error deleting transition record", error: errorMessage }, { status: 500 });
+  } finally {
+    client.release();
   }
 }
 

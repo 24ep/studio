@@ -1,0 +1,7 @@
+.settings-page-grid {
+  background: #f5f6f9;
+}
+
+.dark .settings-page-grid {
+  background: #09090b;
+}

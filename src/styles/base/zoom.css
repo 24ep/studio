@@ -1,0 +1,42 @@
+/* Rem-based zoom system */
+:root {
+  --zoom-scale: 1;
+  font-size: 14px;
+  /* Base font size - reduced for more compact UI */
+}
+
+/* Ensure all elements scale with rem units */
+* {
+  box-sizing: border-box;
+}
+
+/* Scale elements that might not use rem units */
+img,
+svg,
+canvas,
+video,
+iframe {
+  max-width: 100%;
+  height: auto;
+}
+
+/* Ensure dropdowns and modals scale properly */
+[data-radix-popper-content-wrapper],
+[data-radix-dropdown-menu-content],
+[data-radix-dialog-content],
+[data-radix-popover-content] {
+  font-size: inherit;
+}
+
+/* Scale border widths and other properties that might not scale with rem */
+.border {
+  border-width: calc(1px * var(--zoom-scale));
+}
+
+.border-2 {
+  border-width: calc(2px * var(--zoom-scale));
+}
+
+.border-4 {
+  border-width: calc(4px * var(--zoom-scale));
+}

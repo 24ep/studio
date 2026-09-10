@@ -1,0 +1,30 @@
+import type { Interviewer, MeetingRoom, User } from './send-interview-invitation-api';
+
+export type SendInterviewInvitationScheduleStepProps = {
+  interviewDate?: Date;
+  interviewTime: string;
+  duration: number;
+  location: string;
+  locationEmail: string;
+  locationType: 'room' | 'custom';
+  rooms: MeetingRoom[];
+  loadingRooms: boolean;
+  interviewers: Interviewer[];
+  selectedInterviewerIds: Set<string>;
+  loadingInterviewers: boolean;
+  addInterviewerOpen: boolean;
+  filteredAvailableUsers: User[];
+  selectedUserIds: Set<string>;
+  loadingUsers: boolean;
+  addingInterviewers: boolean;
+  onInterviewDateChange: (date?: Date) => void;
+  onInterviewTimeChange: (time: string) => void;
+  onDurationChange: (duration: number) => void;
+  onLocationChange: (location: string) => void;
+  onLocationEmailChange: (email: string) => void;
+  onLocationTypeChange: (type: 'room' | 'custom') => void;
+  onAddInterviewerOpenChange: (open: boolean) => void;
+  onSelectedUserIdsChange: (ids: Set<string>) => void;
+  onAddInterviewers: () => void;
+  onToggleInterviewer: (userId: string) => void;
+};

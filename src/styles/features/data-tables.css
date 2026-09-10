@@ -1,0 +1,336 @@
+/* Responsive Table Height Utilities */
+.table-container-responsive {
+  /* Height is now controlled dynamically via JavaScript */
+  min-height: 200px;
+  /* max-height is controlled by inline styles */
+  width: 100%;
+  overflow: hidden;
+}
+
+/* Mobile screens */
+@media (max-width: 640px) {
+  .table-container-responsive {
+    min-height: 300px;
+    /* max-height controlled by inline styles */
+    margin: 0;
+    border-radius: 0.375rem;
+  }
+}
+
+/* Tablet screens */
+@media (min-width: 641px) and (max-width: 1024px) {
+  .table-container-responsive {
+    min-height: 400px;
+    /* max-height controlled by inline styles */
+  }
+}
+
+/* Desktop screens */
+@media (min-width: 1025px) {
+  .table-container-responsive {
+    min-height: 500px;
+    /* max-height controlled by inline styles */
+  }
+}
+
+/* Large desktop screens */
+@media (min-width: 1440px) {
+  .table-container-responsive {
+    min-height: 600px;
+    /* max-height controlled by inline styles */
+  }
+}
+
+/* Enhanced table scrolling */
+.table-scroll-container {
+  overflow: auto;
+  height: 100%;
+  position: relative;
+  max-height: calc(100vh - 200px);
+  scrollbar-width: thin;
+  scrollbar-color: hsl(var(--muted-foreground) / 0.45) transparent;
+}
+
+.table-scroll-container::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.table-scroll-container::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.table-scroll-container::-webkit-scrollbar-thumb {
+  background-color: hsl(var(--muted-foreground) / 0.3);
+  border-radius: 4px;
+}
+
+.table-scroll-container::-webkit-scrollbar-thumb:hover {
+  background-color: hsl(var(--muted-foreground) / 0.5);
+}
+
+.table-scroll-container::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+/* Dynamic table width */
+.table-dynamic-width {
+  width: auto;
+  min-width: 100%;
+  table-layout: auto;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+/* Ensure table columns can expand naturally */
+.table-dynamic-width th,
+.table-dynamic-width td {
+  white-space: nowrap;
+  min-width: 120px;
+  padding: 0.75rem 1rem;
+}
+
+/* Allow text content to wrap in specific columns */
+.table-dynamic-width td:nth-child(2) {
+  white-space: normal;
+  word-wrap: break-word;
+  max-width: 300px;
+}
+
+/* Allow specific columns to be wider */
+.table-dynamic-width th:first-child,
+.table-dynamic-width td:first-child {
+  min-width: 50px;
+  /* Checkbox column */
+}
+
+.table-dynamic-width th:nth-child(2),
+.table-dynamic-width td:nth-child(2) {
+  min-width: 150px;
+  /* Title column */
+}
+
+.table-dynamic-width th:nth-child(4),
+.table-dynamic-width td:nth-child(4) {
+  min-width: 100px;
+  /* Headcount column */
+}
+
+.table-dynamic-width th:last-child,
+.table-dynamic-width td:last-child {
+  min-width: 150px;
+  /* Actions column */
+}
+
+/* Responsive behavior for mobile */
+@media (max-width: 768px) {
+  .table-dynamic-width {
+    min-width: 800px;
+    /* Ensure minimum width for mobile scrolling */
+  }
+
+  .table-dynamic-width th,
+  .table-dynamic-width td {
+    min-width: 100px;
+  }
+
+  .table-dynamic-width th:nth-child(2),
+  .table-dynamic-width td:nth-child(2) {
+    min-width: 150px;
+    /* Smaller title column on mobile */
+  }
+}
+
+@media (max-width: 640px) {
+  .table-dynamic-width {
+    min-width: 600px;
+    /* Smaller minimum width for very small screens */
+  }
+
+  .table-dynamic-width th,
+  .table-dynamic-width td {
+    min-width: 80px;
+  }
+}
+
+/* Ensure table content is properly sized */
+.table-content-wrapper {
+  min-width: max-content;
+  width: 100%;
+  position: relative;
+}
+
+/* Force sticky header to work */
+.table-scroll-container thead,
+.table-scroll-container thead tr,
+.table-scroll-container thead th,
+.table-sticky-header,
+.table-sticky-header th,
+.table-sticky-header td {
+  background-color: hsl(var(--background));
+}
+
+.table-scroll-container thead {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+}
+
+.table-scroll-container thead th {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  border-bottom: 1px solid hsl(var(--border));
+}
+
+/* Additional sticky header support */
+.table-scroll-container table {
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.table-scroll-container thead tr {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+}
+
+/* Sticky table header */
+.table-sticky-header {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  border-bottom: 1px solid hsl(var(--border));
+}
+
+.table-sticky-header th,
+.table-sticky-header td {
+  border-bottom: 1px solid hsl(var(--border));
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  backdrop-filter: blur(8px);
+}
+
+/* Dynamic table height based on content */
+.table-height-auto {
+  height: auto;
+  min-height: 200px;
+  max-height: none;
+}
+
+.table-height-fixed {
+  height: 600px;
+  min-height: 500px;
+  max-height: 900px;
+}
+
+.table-height-large {
+  height: 700px;
+  min-height: 600px;
+  max-height: 1000px;
+}
+
+.table-height-extra-large {
+  height: 800px;
+  min-height: 700px;
+  max-height: 1200px;
+}
+
+.table-height-viewport {
+  height: calc(100vh - 200px);
+  min-height: 400px;
+  max-height: calc(100vh - 100px);
+}
+
+/* Responsive table wrapper */
+.table-wrapper-responsive {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+}
+
+.table-wrapper-responsive .table-content {
+  flex: 1;
+  overflow: auto;
+  min-height: 0;
+}
+
+/* Custom scrollbar for tables */
+.table-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: hsl(var(--muted-foreground) / 0.35) transparent;
+}
+
+/* Mobile table scroll indicators */
+.table-scroll-indicator {
+  position: relative;
+}
+
+.table-scroll-indicator::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 20px;
+  background: linear-gradient(to left, hsl(var(--background)), transparent);
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* Responsive table improvements */
+@media (max-width: 768px) {
+  .table-scroll-indicator::after {
+    width: 15px;
+  }
+}
+
+/* Theme-aware scrollbar for components */
+.custom-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: hsl(var(--muted-foreground) / 0.35) transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background-color: hsl(var(--muted-foreground) / 0.3);
+  border-radius: 3px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background-color: hsl(var(--muted-foreground) / 0.55);
+}
+
+.custom-scrollbar::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+@media (max-width: 640px) {
+  .table-scroll-indicator::after {
+    width: 10px;
+  }
+}
+
+/* Table content that can expand horizontally */
+.table-content-expandable {
+  width: 100%;
+  min-width: max-content;
+  table-layout: auto;
+  overflow: hidden;
+}
+
+/* Ensure table body can scroll */
+.table-content-expandable tbody {
+  overflow-y: auto;
+  max-height: calc(100vh - 600px);
+}

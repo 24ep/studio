@@ -1,52 +1,148 @@
+import { Client as Minio } from 'minio';
 
-import * as Minio from 'minio';
+import {
+  enforcePrivateBucketPolicyForClient,
+  isUnsupportedBucketPolicyError,
+} from './minio-security-policy';
+import { getMinioObjectUrl } from './minio-url-utils';
+import {
+  buildMinioClientConfig,
+  buildMinioSkippedResult,
+  getMinioErrorMessage,
+  isMinioBuildPhase,
+  MINIO_BUCKET,
+  MINIO_PUBLIC_BASE_URL,
+  warnForInsecureProductionMinioConfig,
+} from './minio-config';
+import {
+  checkMinioAvailability,
+  ensureMinioBucketExists,
+  getMinioBucketInfo,
+  initializeMinioClient,
+  setMinIOCORSForClient,
+} from './minio-bucket-lifecycle';
 
-const MINIO_ENDPOINT = process.env.MINIO_ENDPOINT || 'localhost';
-const MINIO_PORT = parseInt(process.env.MINIO_PORT || '9000', 10);
-const MINIO_ACCESS_KEY = process.env.MINIO_ACCESS_KEY || 'minioadmin';
-const MINIO_SECRET_KEY = process.env.MINIO_SECRET_KEY || 'minio_secret_password';
-const MINIO_USE_SSL = process.env.MINIO_USE_SSL === 'true';
+export { MINIO_BUCKET, MINIO_PUBLIC_BASE_URL } from './minio-config';
 
-if (!process.env.MINIO_ENDPOINT || !process.env.MINIO_ACCESS_KEY || !process.env.MINIO_SECRET_KEY) {
-  if (process.env.NODE_ENV === 'production') {
-    console.error('FATAL: MinIO environment variables (MINIO_ENDPOINT, MINIO_ACCESS_KEY, MINIO_SECRET_KEY) not fully configured for production!');
-  } else {
-    console.warn('MinIO environment variables not fully configured. Using defaults for development. Ensure these are set for production.');
-  }
-}
+warnForInsecureProductionMinioConfig();
 
-export const minioClient = new Minio.Client({
-  endPoint: MINIO_ENDPOINT,
-  port: MINIO_PORT,
-  useSSL: MINIO_USE_SSL,
-  accessKey: MINIO_ACCESS_KEY,
-  secretKey: MINIO_SECRET_KEY,
+export const minioClient = new Minio({
+  ...buildMinioClientConfig(),
 });
 
-export const MINIO_BUCKET_NAME = process.env.MINIO_BUCKET_NAME || 'canditrack-resumes';
+export async function setMinIOCORS() {
+  await setMinIOCORSForClient();
+}
 
-export async function ensureBucketExists(bucketName: string = MINIO_BUCKET_NAME, region: string = 'us-east-1') {
+export async function ensureBucketExists() {
+  return ensureMinioBucketExists({
+    bucket: MINIO_BUCKET,
+    client: minioClient,
+  });
+}
+
+export async function initializeMinIO() {
+  return initializeMinioClient({
+    bucket: MINIO_BUCKET,
+    client: minioClient,
+  });
+}
+
+export async function getBucketInfo() {
+  return getMinioBucketInfo({
+    bucket: MINIO_BUCKET,
+    client: minioClient,
+  });
+}
+
+export async function startupMinIOInitialization() {
+  if (isMinioBuildPhase()) {
+    return {
+      status: 'success',
+      message: 'MinIO initialization skipped during build',
+      bucket: MINIO_BUCKET,
+    };
+  }
+
   try {
-    // First, try a simple health check by listing buckets (requires listBuckets permission)
-    // This can help catch immediate connectivity or credential issues.
-    await minioClient.listBuckets(); 
-    console.log('Successfully connected to MinIO server.');
-
-    const bucketExists = await minioClient.bucketExists(bucketName);
-    if (!bucketExists) {
-      await minioClient.makeBucket(bucketName, region);
-      console.log(`MinIO: Bucket ${bucketName} created successfully in region ${region}.`);
-    } else {
-      console.log(`MinIO: Bucket ${bucketName} already exists.`);
+    const isAvailable = await checkMinioAvailability(minioClient, MINIO_BUCKET);
+    if (!isAvailable) {
+      console.warn('[MINIO] MinIO is not available. File uploads will not work.');
+      return {
+        status: 'warning',
+        message: 'MinIO is not available. File uploads will not work.',
+        bucket: MINIO_BUCKET,
+      };
     }
-  } catch (err: any) {
-    console.error(`MinIO Error: Failed to connect or ensure bucket ${bucketName} exists.`);
-    console.error(`MinIO Error Details: ${(err as Error).message}`);
-    // Depending on severity, you might want to handle this more strictly in production
-    // process.exit(1);
+
+    const result = await initializeMinIO();
+    await autoEnforceBucketSecurity();
+    return result;
+  } catch (error) {
+    console.error('[MINIO] Failed to initialize MinIO during startup:', error);
+    return {
+      status: 'error',
+      message: 'Failed to initialize MinIO during startup',
+      error: error instanceof Error ? error.message : 'Unknown error',
+      bucket: MINIO_BUCKET,
+    };
   }
 }
 
-// Perform the bucket check when this module is loaded.
-// This will run when the application starts and imports this module.
-ensureBucketExists();
+export async function getSignedUrl(objectName: string, expiresIn: number = 3600): Promise<string> {
+  try {
+    return await getMinioObjectUrl({
+      bucket: MINIO_BUCKET,
+      defaultClient: minioClient,
+      expiresIn,
+      objectName,
+    });
+  } catch (error) {
+    console.error(`[MINIO] Failed to generate signed URL for '${objectName}':`, error);
+    throw new Error(`Failed to generate signed URL: ${getMinioErrorMessage(error)}`);
+  }
+}
+
+export async function getSignedUrlWithExpiration(objectName: string, expiresInSeconds: number): Promise<string> {
+  try {
+    return await getSignedUrl(objectName, expiresInSeconds);
+  } catch (error) {
+    console.error(`[MINIO] Failed to generate signed URL for '${objectName}' with ${expiresInSeconds}s expiration:`, error);
+    throw new Error(`Failed to generate signed URL: ${getMinioErrorMessage(error)}`);
+  }
+}
+
+export async function enforcePrivateBucketPolicy(): Promise<void> {
+  try {
+    await enforcePrivateBucketPolicyForClient(minioClient, MINIO_BUCKET);
+  } catch (error) {
+    if (isUnsupportedBucketPolicyError(error)) {
+      console.warn(`[STORAGE] Bucket policy API is not implemented for '${MINIO_BUCKET}'. Continuing with provider-managed bucket access.`);
+      return;
+    }
+
+    console.error(`[MINIO] Failed to enforce private bucket policy for '${MINIO_BUCKET}':`, error);
+    throw new Error(`Failed to enforce private bucket policy: ${getMinioErrorMessage(error)}`);
+  }
+}
+
+export async function autoEnforceBucketSecurity(): Promise<void> {
+  try {
+    if (process.env.AUTO_ENFORCE_BUCKET_SECURITY === 'false') {
+      return;
+    }
+
+    if (process.env.ALLOW_PUBLIC_FILES === 'true') {
+      console.warn('[MINIO] WARNING: ALLOW_PUBLIC_FILES is set to true - this is a security risk!');
+      return;
+    }
+
+    if (isMinioBuildPhase()) {
+      return;
+    }
+
+    await enforcePrivateBucketPolicy();
+  } catch (error) {
+    console.error('[MINIO] Failed to auto-enforce bucket security:', error);
+  }
+}

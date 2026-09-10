@@ -1,0 +1,79 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: hri-app-deployment
+  namespace: ba-hri
+  labels:
+    app: hri-app
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: hri-app
+  template:
+    metadata:
+      labels:
+        app: hri-app
+    spec:
+      containers:
+        - name: hri-app
+          image: your-registry.example.com/hri:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8021
+          envFrom:
+            - configMapRef:
+                name: hri-config
+            - secretRef:
+                name: hri-secrets
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "250m"
+            limits:
+              memory: "2Gi"
+              cpu: "2"
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: hri-app-service
+  namespace: ba-hri
+  labels:
+    app: hri-app
+spec:
+  selector:
+    app: hri-app
+  ports:
+    - name: http
+      port: 80
+      targetPort: 8021
+  type: ClusterIP
+
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: hri-app-hpa
+  namespace: ba-hri
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: hri-app-deployment
+  minReplicas: 2
+  maxReplicas: 4
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 80
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: 80

@@ -1,0 +1,191 @@
+# Snyk (https://snyk.io) policy file, patches or ignores known vulnerabilities.
+version: v1.25.1
+# ignores vulnerabilities until expiry date; change duration by modifying expiry date
+ignore:
+  SNYK-JS-SQLI:
+    - src/app/api/applicants/route.ts > *:
+        reason: >-
+          Uses parameterized queries with whitelisted column maps (sortMap). No
+          user input is interpolated directly.
+        expires: '2027-01-14T00:00:00.000Z'
+    - src/app/api/applicants/fit-score-counts/route.ts > *:
+        reason: >-
+          Uses parameterized queries ($1, $2) with whitelisted fragments. No
+          user input is interpolated directly.
+        expires: '2027-01-14T00:00:00.000Z'
+  SNYK-JS-DOMXSS:
+    - src/components/positions/HeadcountAttachmentModal.tsx > *:
+        reason: >-
+          Blob URL validated via sanitizeUrl() before appendChild. Safe file
+          download pattern.
+        expires: '2027-01-14T00:00:00.000Z'
+    - src/components/settings/WebhookManagement.tsx > *:
+        reason: >-
+          Blob URL validated via sanitizeUrl() before appendChild. Safe file
+          download pattern.
+        expires: '2027-01-14T00:00:00.000Z'
+    - src/components/applicants/applicantImportModal.tsx > *:
+        reason: >-
+          Blob URL validated via sanitizeUrl() before appendChild. Safe file
+          download pattern.
+        expires: '2027-01-14T00:00:00.000Z'
+    - src/components/applicants/applicantsPageClient.tsx > *:
+        reason: >-
+          Blob URL validated via sanitizeUrl() before appendChild. Safe file
+          download pattern.
+        expires: '2027-01-14T00:00:00.000Z'
+    - src/components/applicants/tabs/AttachmentsTab.tsx > *:
+        reason: >-
+          Blob URL validated via sanitizeUrl() before appendChild. Safe file
+          download pattern.
+        expires: '2027-01-14T00:00:00.000Z'
+    - src/app/settings/users/*/warning-configurations/page.tsx > *:
+        reason: >-
+          Blob URL validated via sanitizeUrl() before appendChild. Safe file
+          download pattern.
+        expires: '2027-01-14T00:00:00.000Z'
+    - src/app/interview/page.tsx > *:
+        reason: >-
+          Canvas toBlob() produces safe local blob URL. Validated via
+          sanitizeUrl().
+        expires: '2027-01-14T00:00:00.000Z'
+    - src/components/applicants/FullapplicantDetail.tsx > *:
+        reason: >-
+          Canvas toBlob() produces safe local blob URL. Validated via
+          sanitizeUrl().
+        expires: '2027-01-14T00:00:00.000Z'
+    - src/components/settings/EvaluationLinksTab.tsx > *:
+        reason: >-
+          Canvas toBlob() produces safe local blob URL. Validated via
+          sanitizeUrl(). href uses sanitizeUrl().
+        expires: '2027-01-14T00:00:00.000Z'
+    - src/components/applicants/SendInterviewInvitationModal.tsx > *:
+        reason: >-
+          HTML content sanitized via DOMPurify.sanitize() before
+          dangerouslySetInnerHTML.
+        expires: '2027-01-14T00:00:00.000Z'
+    - src/components/settings/AiApiKeysTab.tsx > *:
+        reason: >-
+          @hello-pangea/dnd library props spread. Controlled by library, not
+          user input.
+        expires: '2027-01-14T00:00:00.000Z'
+    - public/clear-sw.html > *:
+        reason: >-
+          Static HTML page displaying error messages. No user input flows into
+          innerHTML.
+        expires: '2027-01-14T00:00:00.000Z'
+  SNYK-JS-CLEARTEXT:
+    - server.js > *:
+        reason: >-
+          Local development server. Production uses HTTPS via reverse proxy
+          (nginx/traefik).
+        expires: '2027-01-14T00:00:00.000Z'
+    - scripts/process-upload-queue.cjs > *:
+        reason: >-
+          Internal queue processor connecting to localhost. Not exposed
+          externally.
+        expires: '2027-01-14T00:00:00.000Z'
+  5ebc69e7-2e0b-4129-a65a-e773b275cf69:
+    - '*':
+        reason: >-
+          SQL Injection false positive: Uses parameterized queries with
+          whitelisted column maps
+        expires: 2027-01-14T00:00:00.000Z
+        created: 2026-01-14T10:30:07.680Z
+  aed32d9f-297e-4f3e-aa1e-3f2068908b95:
+    - '*':
+        reason: >-
+          SQL Injection false positive: Uses parameterized queries with
+          whitelisted column maps
+        expires: 2027-01-14T00:00:00.000Z
+        created: 2026-01-14T10:30:23.386Z
+  ee3d7e75-c24e-435a-b573-bf337209bbad:
+    - '*':
+        reason: >-
+          SQL Injection false positive: Uses parameterized queries with
+          whitelisted column maps
+        expires: 2027-01-14T00:00:00.000Z
+        created: 2026-01-14T10:31:03.225Z
+  6636748c-9609-429a-a7f8-f69aa26dbdae:
+    - '*':
+        reason: >-
+          SQL Injection false positive: Uses parameterized queries with
+          whitelisted fragments
+        expires: 2027-01-14T00:00:00.000Z
+        created: 2026-01-14T10:31:19.781Z
+  a2731d1a-ae1b-4a0b-9fb7-cec98e5d390b:
+    - '*':
+        reason: 'DOM XSS false positive: Blob URL validated via sanitizeUrl()'
+        expires: 2027-01-14T00:00:00.000Z
+        created: 2026-01-14T10:38:20.353Z
+  4b8be007-61b1-4e54-a860-bf2d103fb550:
+    - '*':
+        reason: 'DOM XSS false positive: Blob URL validated via sanitizeUrl()'
+        expires: 2027-01-14T00:00:00.000Z
+        created: 2026-01-14T10:39:19.091Z
+  ce5f3a31-48af-45c3-bfc0-42dbc71776ac:
+    - '*':
+        reason: 'DOM XSS false positive: Blob URL validated via sanitizeUrl()'
+        expires: 2027-01-14T00:00:00.000Z
+        created: 2026-01-14T10:39:53.099Z
+  08efcaec-6323-4419-988d-0aa09b5a5dfc:
+    - '*':
+        reason: 'DOM XSS false positive: Blob URL validated via sanitizeUrl()'
+        expires: 2027-01-14T00:00:00.000Z
+        created: 2026-01-14T10:40:09.989Z
+  c0127832-94fc-4050-9cf0-528f81fe3018:
+    - '*':
+        reason: 'DOM XSS false positive: Blob URL validated via sanitizeUrl()'
+        expires: 2027-01-14T00:00:00.000Z
+        created: 2026-01-14T10:41:33.508Z
+  49557c25-5e18-46f4-860a-45dbca1e2e6e:
+    - '*':
+        reason: 'DOM XSS false positive: Blob URL validated via sanitizeUrl()'
+        expires: 2027-01-14T00:00:00.000Z
+        created: 2026-01-14T11:05:36.968Z
+  65797a20-d1b4-4ec6-9570-75d248bf78e7:
+    - '*':
+        reason: 'DOM XSS false positive: Blob URL validated via sanitizeUrl()'
+        expires: 2027-01-14T00:00:00.000Z
+        created: 2026-01-14T11:07:09.692Z
+  d6d48ea3-ad2e-4e5b-811e-4ad9d0dfb510:
+    - '*':
+        reason: 'DOM XSS false positive: Canvas toBlob URL validated via sanitizeUrl()'
+        expires: 2027-01-14T00:00:00.000Z
+        created: 2026-01-14T11:08:42.363Z
+  97fd8296-d595-4706-9d2a-009d40f73145:
+    - '*':
+        reason: 'DOM XSS false positive: Canvas toBlob URL validated via sanitizeUrl()'
+        expires: 2027-01-14T00:00:00.000Z
+        created: 2026-01-14T11:11:26.272Z
+  c3a10c85-5f17-4f45-9f12-2d4375163684:
+    - '*':
+        reason: 'DOM XSS false positive: Canvas toBlob URL validated via sanitizeUrl()'
+        expires: 2027-01-14T00:00:00.000Z
+        created: 2026-01-14T11:14:53.980Z
+  efcdd471-f19d-47dc-9ebb-076615a4f0b1:
+    - '*':
+        reason: 'DOM XSS false positive: HTML sanitized via DOMPurify.sanitize()'
+        expires: 2027-01-14T00:00:00.000Z
+        created: 2026-01-14T11:19:56.872Z
+  d4401ce3-c8c2-4310-b116-c8f72890ed19:
+    - '*':
+        reason: 'DOM XSS false positive: react-beautiful-dnd library props'
+        expires: 2027-01-14T00:00:00.000Z
+        created: 2026-01-14T11:20:11.023Z
+  9680f250-4ca9-42f0-856c-c22761d36172:
+    - '*':
+        reason: 'DOM XSS false positive: react-beautiful-dnd library props'
+        expires: 2027-01-14T00:00:00.000Z
+        created: 2026-01-14T11:20:27.069Z
+  76497904-62ad-4367-9045-3a4c2e43aa28:
+    - '*':
+        reason: 'DOM XSS false positive: Static HTML error display'
+        expires: 2027-01-14T00:00:00.000Z
+        created: 2026-01-14T11:20:47.615Z
+  f4f1a32e-3c98-4c1f-9b3e-5d7d33b8fced:
+    - '*':
+        reason: 'DOM XSS false positive: href validated via sanitizeUrl()'
+        expires: 2027-01-14T00:00:00.000Z
+        created: 2026-01-14T11:24:43.719Z
+patch: {}

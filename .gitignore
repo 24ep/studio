@@ -12,10 +12,15 @@
 
 # testing
 /coverage
+/cypress/videos
+/cypress/screenshots
+playwright-report/
+test-results/
 
 # next.js
 /.next/
 /out/
+.next-build/
 
 # production
 /build
@@ -23,23 +28,85 @@
 # misc
 .DS_Store
 *.pem
+*.pid
+*.pid.lock
+*.tmp
+*.temp
 
 # debug
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
+.codex-*.log
+/tmp-dev-server.err
+/tmp-dev-server.log
+/tmp-*.csv
 
 # vercel
 .vercel
+
+# editor / IDE
+.vscode/
+.idea/
+.fleet/
+
+# local cache
+.turbo
+.cache/
+.pnpm-store/
 
 # typescript
 *.tsbuildinfo
 next-env.d.ts
 
 .genkit/*
-.env*
+/.env
+/.env.local
+/.env.local.*
+/.env.development
+/.env.development.local
+/.env.test
+/.env.test.local
+/.env.production
+/.env.production.local
+!/.env.example
 
 # firebase
 firebase-debug.log
 firestore-debug.log
+/src/generated/prisma
+
+# Ignore build output
+dist/
+# Ignore compiled JavaScript in dedicated output directories
+/public/build/
+/public/dist/
+# If you generate JS/JSX artifacts, keep them in explicit folders and add those folders here
+# Ignore legacy configs
+tailwind.config.js
+prisma/seed.js
+
+# Ignore local environment setup scripts with secrets
+scripts/fix-local-env.js
+
+# Local scratch/debug scripts should not contain checked-in credentials
+scratch/
+
+# Browser E2E artifacts
+/.playwright/
+
+# Generated AppKit localization audit payload
+.appkit-localization-audit.json
+
+# ignore generated/recovery artifacts
+/scripts/mc.exe
+.next.recovery-*
+/.tmpdev/
+
+# Local Git worktrees
+/.worktrees/
+
+# Generated agent and visual-audit artifacts
+/.codex/
+/audit/

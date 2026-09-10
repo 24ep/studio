@@ -1,0 +1,53 @@
+import { PLATFORM_MODULE_CATEGORIES, type PlatformModule } from './platform-module-types';
+
+export const EXPENSE_PLATFORM_MODULES: PlatformModule[] = [
+  {
+    id: 'EXPENSES_VIEW',
+    label: 'Use Expenses',
+    category: PLATFORM_MODULE_CATEGORIES.HR_OPERATIONS,
+    description: 'Create and view personal advances, claims, and travel requests.',
+    detailedDescription: 'Allows an employee to use the Expenses self-service workflows for records they own.',
+    impact: 'Read and create access to the employee’s own financial requests.',
+    riskLevel: 'MEDIUM',
+  },
+  {
+    id: 'EXPENSES_APPROVE',
+    label: 'Approve Expenses',
+    category: PLATFORM_MODULE_CATEGORIES.HR_OPERATIONS,
+    description: 'Review expense requests assigned through the employee manager hierarchy.',
+    detailedDescription: 'Allows managers and budget owners to decide requests that are explicitly assigned to them.',
+    impact: 'Can approve or reject employee financial requests within assigned scope.',
+    riskLevel: 'HIGH',
+    requiresApproval: true,
+  },
+  {
+    id: 'EXPENSES_FINANCE',
+    label: 'Finance Expense Review',
+    category: PLATFORM_MODULE_CATEGORIES.HR_OPERATIONS,
+    description: 'Review claims, payments, journals, posting, and reconciliation for authorized companies.',
+    detailedDescription: 'Provides dense Finance access to expense records, payment state, accounting mappings, and journals.',
+    impact: 'Can approve financial amounts and move journals through posting and reconciliation.',
+    riskLevel: 'CRITICAL',
+    requiresApproval: true,
+  },
+  {
+    id: 'EXPENSES_ADMIN',
+    label: 'Administer Expenses',
+    category: PLATFORM_MODULE_CATEGORIES.HR_OPERATIONS,
+    description: 'Configure policies, categories, exchange rates, taxes, and account mappings.',
+    detailedDescription: 'Allows effective-dated expense policy and financial mapping administration.',
+    impact: 'Can change rules used for future financial decisions.',
+    riskLevel: 'CRITICAL',
+    requiresApproval: true,
+  },
+  {
+    id: 'EXPENSES_AUDIT',
+    label: 'Audit Expenses',
+    category: PLATFORM_MODULE_CATEGORIES.LOGGING_AUDIT,
+    description: 'Read expense records and immutable activity history without modifying them.',
+    detailedDescription: 'Provides read-only, company-scoped access to expense evidence and audit history.',
+    impact: 'Can view sensitive financial and receipt metadata in masked form.',
+    riskLevel: 'HIGH',
+    requiresApproval: true,
+  },
+];

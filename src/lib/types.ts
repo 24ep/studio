@@ -1,55 +1,46 @@
+import type { JsonObject, JsonValue } from './json-types';
+import type { CustomFieldValues } from './custom-field-types';
+import type { PlatformModuleId } from './platform-modules';
 
-// This declares the shape of the user object returned by the session callback
-// and available in useSession() or getServerSession()
-// It needs to be augmented if you add custom properties to the session token
-import type { DefaultUser } from 'next-auth';
-
-// Define platform module IDs
-export const PLATFORM_MODULES = [
-  { id: 'CANDIDATES_VIEW', label: 'View Candidates' },
-  { id: 'CANDIDATES_MANAGE', label: 'Manage Candidates (Add, Edit, Delete)' },
-  { id: 'POSITIONS_VIEW', label: 'View Positions' },
-  { id: 'POSITIONS_MANAGE', label: 'Manage Positions (Add, Edit, Delete)' },
-  { id: 'USERS_MANAGE', label: 'Manage Users & Permissions' }, // This permission is for accessing the user management page
-  { id: 'USER_GROUPS_MANAGE', label: 'Manage User Groups' }, // New Permission
-  { id: 'SETTINGS_ACCESS', label: 'Access System Settings' },
-  { id: 'RECRUITMENT_STAGES_MANAGE', label: 'Manage Recruitment Stages' },
-  { id: 'DATA_MODELS_MANAGE', label: 'Manage Data Model Preferences (Client)' },
-  { id: 'CUSTOM_FIELDS_MANAGE', label: 'Manage Custom Field Definitions (Server)' },
-  { id: 'WEBHOOK_MAPPING_MANAGE', label: 'Manage Webhook Mappings' },
-  { id: 'LOGS_VIEW', label: 'View Application Logs' },
-] as const;
-
-export type PlatformModuleId = typeof PLATFORM_MODULES[number]['id'];
-
-
-declare module 'next-auth' {
-  interface Session {
-    user: {
-      id: string;
-      role?: UserProfile['role'];
-      modulePermissions?: PlatformModuleId[];
-    } & DefaultUser; // DefaultUser includes name, email, image
-  }
-
-  interface User extends DefaultUser { // NextAuth User object
-    id: string;
-    role?: UserProfile['role'];
-    modulePermissions?: PlatformModuleId[];
-  }
-}
-
-declare module 'next-auth/jwt' {
-  interface JWT {
-    id?: string;
-    role?: UserProfile['role'];
-    modulePermissions?: PlatformModuleId[];
-  }
-}
+export { CUSTOM_FIELD_TYPES } from './custom-field-types';
+export { PLATFORM_MODULE_CATEGORIES, PLATFORM_MODULES } from './platform-modules';
+export type {
+  AttributePreference,
+  CustomFieldDefinition,
+  CustomFieldOption,
+  CustomFieldType,
+  CustomFieldValue,
+  CustomFieldValues,
+  ModelAttributeDefinition,
+  UIDisplayPreference,
+} from './custom-field-types';
+export type {
+  Attachment,
+  CreateHeadcountRequest,
+  Headcount,
+  HeadcountStatus,
+  HeadcountType,
+  UpdateHeadcountRequest,
+} from './headcount-types';
+export type { PlatformModule, PlatformModuleCategory, PlatformModuleId } from './platform-modules';
+export type {
+  LoginPageBackgroundType,
+  LoginPageLayoutType,
+  SystemSetting,
+  SystemSettingKey,
+} from './system-setting-types';
+export type {
+  PaginationInfo,
+  UploadQueueCountResponse,
+  UploadQueueJob,
+  UploadQueuePendingCountResponse,
+  UploadQueueResponse,
+  UploadQueueSummary,
+} from './upload-queue-types';
 
 // Core system statuses - these might still be useful for specific logic,
 // but the full list of available stages will come from the RecruitmentStage table.
-export type CoreCandidateStatus =
+export type CoreApplicantStatus =
   | 'Applied'
   | 'Screening'
   | 'Shortlisted'
@@ -62,23 +53,44 @@ export type CoreCandidateStatus =
   | 'On Hold';
 
 // This type will represent any stage name, whether core or custom.
-export type CandidateStatus = string;
+export type ApplicantStatus = string;
+
+// Active Applicant statuses - Applicants that are not hired or rejected
+export const ACTIVE_APPLICANT_STATUSES: CoreApplicantStatus[] = [
+  'Applied',
+  'Screening',
+  'Shortlisted',
+  'Interview Scheduled',
+  'Interviewing',
+  'Offer Extended',
+  'Offer Accepted',
+  'On Hold'
+];
+
+// Utility function to get active Applicant statuses as a comma-separated string for queries
+export function getActiveApplicantStatusesQuery(): string {
+  return ACTIVE_APPLICANT_STATUSES.join(',');
+}
 
 export interface RecruitmentStage {
   id: string;
   name: string;
   description?: string | null;
-  is_system: boolean;
-  sort_order?: number | null;
+  isSystem: boolean;
+  is_system?: boolean;
+  sortOrder?: number | null;
   createdAt?: string;
   updatedAt?: string;
+  color_complete?: string | null; // Custom color for completed stage node
+  color_badge?: string | null; // Custom color for badge on Applicant list
 }
 
 export interface TransitionRecord {
   id: string;
-  candidateId?: string;
+  applicantId?: string;
+  positionId?: string | null;
   date: string;
-  stage: CandidateStatus; // Now a string to accommodate custom stages
+  stage: ApplicantStatus; // Now a string to accommodate custom stages
   notes?: string;
   actingUserId?: string | null;
   actingUserName?: string | null; // For display purposes, populated by JOIN
@@ -101,90 +113,125 @@ export interface ContactInfo {
   phone?: string;
 }
 
+// New structured education entry type
+export interface StructuredEducationEntry {
+  id?: string;
+  university: string;
+  major?: string;
+  field?: string;
+  campus?: string;
+  startMonth: number; // 1-12
+  startYear: number;
+  endMonth?: number; // 1-12 or null for current
+  endYear?: number; // null for current
+  isCurrent: boolean;
+  GPA?: string;
+  duration?: string; // Calculated field
+}
+
+// New structured experience entry type
+export interface StructuredExperienceEntry {
+  id?: string;
+  companyReferenceId?: string | null;
+  companyReference?: CompanyReference | null;
+  company: string;
+  position: string;
+  description?: string;
+  startMonth: number; // 1-12
+  startYear: number;
+  endMonth?: number; // 1-12 or null for current
+  endYear?: number; // null for current
+  isCurrent: boolean;
+  positionLevel?: string;
+  duration?: string; // Calculated field
+}
+
+// Legacy types (keep for backward compatibility)
 export interface EducationEntry {
   major?: string;
   field?: string;
-  period?: string;
+  period?: string; // Legacy: "Jan 2022 - Dec 2024"
   duration?: string;
   GPA?: string;
   university?: string;
   campus?: string;
+  // New structured fields (optional for migration)
+  startMonth?: number;
+  startYear?: number;
+  endMonth?: number;
+  endYear?: number;
+  isCurrent?: boolean;
 }
 
-export type PositionLevel =
-  | 'entry level'
-  | 'mid level'
-  | 'senior level'
-  | 'lead'
-  | 'manager'
-  | 'executive'
-  | 'officer'
-  | 'leader';
-
 export interface ExperienceEntry {
+  companyReferenceId?: string | null;
+  companyReference?: CompanyReference | null;
   company?: string;
   position?: string;
   description?: string;
-  period?: string;
+  period?: string; // Legacy: "Jan 2022 - Dec 2024"
   duration?: string;
-  is_current_position?: boolean | string; // Allow string for n8n, preprocess in Zod
-  postition_level?: string | null | undefined; // Changed to allow null
+  is_current_position?: boolean;
+  positionLevel?: string;
+  // New structured fields (optional for migration)
+  startMonth?: number;
+  startYear?: number;
+  endMonth?: number;
+  endYear?: number;
+  isCurrent?: boolean;
 }
 
 export interface SkillEntry {
   segment_skill?: string;
   skill?: string[];
+  skill_string?: string; // For UI binding if skills are comma-separated in input
 }
 
-export interface JobSuitableEntry {
-  suitable_career?: string;
-  suitable_job_position?: string;
-  suitable_job_level?: string;
-  suitable_salary_bath_month?: string;
+// Removed JobSuitableEntry and job suitability features
+
+export interface AutomationJobMatch {
+  jobId?: string;
+  jobTitle?: string | null;
+  fitScore: number;
+  matchReasons?: string[];
+  matchReasons_string?: string | null;
+  is_applied_job?: boolean;
 }
 
-export interface N8NJobMatch {
-  job_id?: string;
-  job_title?: string | null; // Changed to optional and nullable
-  fit_score: number;
-  match_reasons?: string[];
-}
-
-export interface CandidateDetails {
+export interface ApplicantDetails {
   cv_language?: string;
   personal_info: PersonalInfo;
   contact_info: ContactInfo;
   education?: EducationEntry[];
   experience?: ExperienceEntry[];
   skills?: SkillEntry[];
-  job_suitable?: JobSuitableEntry[];
-  associatedMatchDetails?: { // Details of the primary n8n match
+  // job_suitable removed
+  associatedMatchDetails?: {
     jobTitle: string;
     fitScore: number;
     reasons: string[];
-    n8nJobId?: string;
+    automationJobId?: string;
   };
-  job_matches?: N8NJobMatch[]; // All job matches from n8n
+  job_matches?: AutomationJobMatch[];
 }
 
-export interface N8NCandidateWebhookEntry {
-  candidate_info: CandidateDetails;
-  jobs?: N8NJobMatch[];
+export interface AutomationApplicantWebhookEntry {
+  applicant_info: ApplicantDetails;
+  jobs?: AutomationJobMatch[];
   targetPositionId?: string | null;
   targetPositionTitle?: string | null;
   targetPositionDescription?: string | null;
-  targetPositionLevel?: string | null;
+  targetpositionLevel?: string | null;
   job_applied?: {
-    job_id?: string | null;
-    job_title?: string | null;
-    fit_score?: number | null;
+    jobId?: string | null;
+    jobTitle?: string | null;
+    fitScore?: number | null;
     justification?: string[];
   } | null;
 }
 
-export type N8NWebhookPayload = N8NCandidateWebhookEntry;
+export type AutomationWebhookPayload = AutomationApplicantWebhookEntry;
 
-// Kept for potential backward compatibility if some candidates have old data structure
 export interface OldParsedResumeData {
   name?: string;
   email?: string;
@@ -195,48 +242,224 @@ export interface OldParsedResumeData {
   summary?: string;
 }
 
+export interface Grade {
+  id: string;
+  name: string;
+  label?: string | null;
+  description?: string | null;
+  minLevel: number;
+  maxLevel: number;
+  slaDays: number;
+  color?: string | null;
+  isActive: boolean;
+  sortOrder: number;
+  createdAt?: string;
+  updatedAt?: string;
+}
 
 export interface Position {
   id: string;
   title: string;
   department: string;
   description?: string | null;
+  matchCriteria?: string | null;
   isOpen: boolean;
-  position_level?: string | null;
-  custom_attributes?: Record<string, any> | null;
+  positionLevel?: string | null;
+  positionAttribute?: string | null;
+  probationPeriodDays?: number;
+  probationEvaluationFrequencyDays?: number;
+  companyId?: string | null;
+  company?: CompanyReference | null;
+  gradeId?: string | null;
+  grade?: Grade | null;
+  recruiterId?: string | null;
+  recruiterName?: string | null;
+  customAttributes?: CustomFieldValues | null;
+  custom_attributes?: CustomFieldValues | null;
+  customFields?: CustomFieldValues;
   createdAt?: string;
   updatedAt?: string;
-  candidates?: Candidate[]; // Relation for dashboard chart
+  applicants?: Applicant[];
+  webhook_payload?: JsonValue;
+  upload_id?: string;
+  applicantStats?: {
+    totalApplied: number;
+    appliedStatusCount: number;
+    totalMatching: number;
+  };
+  pipelineStats?: {
+    total: number;
+    shortlisted: number;
+    interviews: number;
+    offers: number;
+  };
+  hiringTeamCount?: number;
 }
 
-export interface UserGroup {
+export interface PositionLevel {
   id: string;
   name: string;
   description?: string | null;
+  color?: string | null;
+  isActive: boolean;
+  sortOrder: number;
   createdAt?: string;
   updatedAt?: string;
 }
 
-export interface Candidate {
+export interface UserGroup { // This is now "Role" in the UI
+  id: string;
+  name: string;
+  description?: string | null;
+  permissions?: PlatformModuleId[];
+  isDefault?: boolean; // Changed from is_default to match Prisma schema
+  isSystemRole?: boolean; // Changed from is_system_role to match Prisma schema
+  user_count?: number; // For API response
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface UserTeamAssignmentCondition {
+  department?: string[];
+  officeLocation?: string[];
+  positionTitle?: string[];
+  employeeType?: string[];
+  companyName?: string[];
+  manager?: string[];
+}
+
+export interface UserTeam {
+  id: string;
+  name: string;
+  description?: string | null;
+  color?: string;
+  isActive: boolean;
+  assignmentMode?: 'manual' | 'automatic';
+  assignmentConditions?: UserTeamAssignmentCondition;
+  member_count?: number; // For API response
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface ApplicantSource {
+  id: string;
+  name: string;
+  description?: string | null;
+  email?: string | null;
+  logo?: string | null;
+  allowSubSource: boolean;
+  sortOrder: number;
+  isActive: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface CompanyReference {
+  id: string;
+  name: string;
+  legalName?: string | null;
+  logo?: string | null;
+  website?: string | null;
+  domain?: string | null;
+  industry?: string | null;
+  description?: string | null;
+  email?: string | null;
+  phone?: string | null;
+  address?: string | null;
+  country?: string | null;
+  metadata?: JsonObject | null;
+  source?: string | null;
+  externalId?: string | null;
+  appkitAppId?: string | null;
+  sortOrder: number;
+  isActive: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface Applicant {
   id: string;
   name: string;
   email: string;
   phone?: string | null;
-  resumePath?: string | null;
-  parsedData: CandidateDetails | OldParsedResumeData | null;
+  expectedSalary?: number | null;
+  avatarUrl?: string | null; // For Applicant profile image
+  dataAiHint?: string | null; // For Applicant profile image
+  resumePath?: string | null; // Current/primary resume
+  parsedData: ApplicantDetails | OldParsedResumeData | null;
   positionId: string | null;
-  position?: Position | null; // For display, if joined
+  position?: Position | null;
+  companyId?: string | null;
+  company?: CompanyReference | null;
+  employee?: {
+    id: string;
+    employeeNumber: string;
+  } | null;
   fitScore: number;
-  status: CandidateStatus; // Now a string to accommodate custom stages
+  statusId: string; // Now references RecruitmentStage.id
+  status?: string | null; // For backward compatibility - the actual status name
+  recruitmentStage?: RecruitmentStage | null;
   applicationDate: string;
   recruiterId?: string | null;
-  recruiter?: Pick<UserProfile, 'id' | 'name' | 'email'> | null;
-  custom_attributes?: Record<string, any> | null;
+  recruiter?: (Pick<UserProfile, 'id' | 'name' | 'email' | 'personalColor'> & { avatarUrl?: string | null }) | null;
+  sourceId?: string | null;
+  source?: ApplicantSource | null;
+  subSource?: string | null;
+  customFields?: CustomFieldValues;
+  customAttributes?: CustomFieldValues | null;
+  assignmentJustification?: string | null;
   createdAt?: string;
   updatedAt?: string;
+  isPinned?: boolean;
+  pinnedAt?: string | null;
+  isBlacklisted?: boolean;
+  isRead?: boolean | null; // Per-user read status (null if not set for current user)
+  emailDate?: string | null; // Date from email when Applicant applied via email
+  emailSubject?: string | null; // Subject line of the application email
+  emailId?: string | null; // Unique email message ID
+  emailMetadata?: JsonObject | null; // Additional email metadata (headers, etc.)
   transitionHistory: TransitionRecord[];
+  educationData?: StructuredEducationEntry[];
+  experienceData?: StructuredExperienceEntry[];
+  jobMatches?: JobMatch[]; // Job matches from the JobMatch table
+  associationType?: 'applied' | 'matched' | 'applied_and_matched'; // For position-specific Applicant lists
 }
 
+export interface ResumeHistoryEntry {
+  id: string;
+  applicantId: string;
+  filePath: string;
+  originalFileName: string;
+  uploadedAt: string;
+  uploadedByUserId?: string | null;
+  uploadedByUserName?: string | null; // For display
+}
+
+// Database model for JobMatch (matches Prisma schema)
+export interface JobMatch {
+  id: string;
+  applicantId: string;
+  jobId?: string | null;
+  jobTitle?: string | null;
+  fitScore: number;
+  matchReasons?: string[] | null;
+  jobDescriptionSummary?: string | null;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+// Database model for ResumeHistory (now using Attachment table)
+export interface ResumeHistory {
+  id: string;
+  applicantId: string;
+  filePath: string;
+  originalFileName: string;
+  uploadedAt: string;
+  uploadedByUserId?: string | null;
+  uploadedByUserName?: string | null; // For display purposes, populated by JOIN
+  createdAt?: string;
+  updatedAt?: string;
+}
 
 export interface UserProfile {
   id: string;
@@ -244,13 +467,44 @@ export interface UserProfile {
   email: string;
   avatarUrl?: string;
   dataAiHint?: string;
-  role: 'Admin' | 'Recruiter' | 'Hiring Manager';
-  password?: string; // Only used for creation/validation, not sent to client
+  personalColor?: string;
+  role: 'Admin' | 'Recruiter' | 'Hiring Manager' | 'Employee';
+  password?: string;
+  authenticationMethods?: string[];
+  isActive?: boolean;
+  userTeamId?: string | null; // Direct foreign key to UserTeam
+  userGroupId?: string | null; // Direct foreign key to UserGroup
   modulePermissions?: PlatformModuleId[];
-  groups?: UserGroup[]; // New: Assigned groups
+  positionTitle?: string | null;
   createdAt?: string;
   updatedAt?: string;
+  // Derived/expanded fields for UI convenience
+  teams?: { id: string; name: string; color?: string }[];
+  userGroupName?: string | null;
+  lastLogin?: string | null; // Last login timestamp from audit logs
+  customFields?: CustomFieldValues;
+  twoFactorEnabled?: boolean;
+  twoFactorMethod?: 'totp' | 'email';
+
+  // Azure AD / HRIS Synced Fields
+  department?: string | null;
+  officeLocation?: string | null;
+  employeeType?: string | null;
+  jobTitle?: string | null;
+  companyName?: string | null;
+  employeeId?: string | null;
+  manager?: string | null;
+  managerEmail?: string | null;
+  phoneNumber?: string | null;
+  hireDate?: string | Date | null;
+  samAccountName?: string | null;
+  contactInfo?: UserContactInfo | null;
 }
+
+export type UserContactInfo = JsonObject & {
+  mobilePhone?: string | null;
+  businessPhone?: string | null;
+};
 
 export type LogLevel = 'INFO' | 'WARN' | 'ERROR' | 'DEBUG' | 'AUDIT';
 
@@ -261,68 +515,142 @@ export interface LogEntry {
   message: string;
   source?: string;
   actingUserId?: string | null;
-  actingUserName?: string | null; // Added for potential display
-  details?: Record<string, any> | null;
+  actingUserName?: string | null;
+  details?: JsonObject | null;
   createdAt?: string;
 }
 
-// Data Model Attribute Preferences
-export type UIDisplayPreference = "Standard" | "Emphasized" | "Hidden";
-
-export interface AttributePreference {
-  path: string; // e.g., "Candidate.name", "Position.description"
-  uiPreference: UIDisplayPreference;
-  customNote: string;
-}
-
-export interface DataModelPreferences {
-  candidateAttributes: Record<string, Partial<Pick<AttributePreference, 'uiPreference' | 'customNote'>>>;
-  positionAttributes: Record<string, Partial<Pick<AttributePreference, 'uiPreference' | 'customNote'>>>;
-}
-
-// Webhook Mapping Types
-export interface WebhookFieldMapping {
-  id?: string; // Optional: only present when fetched from DB
-  targetPath: string; // e.g., "candidate_info.personal_info.firstname"
-  sourcePath: string | null; // e.g., "data.profile.firstName" from n8n JSON - allow null
-  notes?: string | null;
-  createdAt?: string; // from DB
-  updatedAt?: string; // from DB
-}
-
-export interface WebhookMappingConfiguration { // This type might be less used if mappings are stored individually
-  webhookUrlName: string;
-  mappings: WebhookFieldMapping[];
-}
-
-
-// Definitions for Data Model Viewer
-export interface ModelAttributeDefinition {
-  key: string; // The actual key in the data object, e.g., 'name', 'personal_info.firstname'
-  label: string; // User-friendly label, e.g., 'Full Name', 'First Name'
-  type: string; // e.g., 'string', 'number', 'boolean', 'date', 'object', 'array'
-  description?: string;
-  subAttributes?: ModelAttributeDefinition[]; // For nested objects
-  arrayItemType?: string; // For arrays of simple types or objects
-}
-
-// Custom Field Definitions
-export type CustomFieldType = 'text' | 'textarea' | 'number' | 'boolean' | 'date' | 'select_single' | 'select_multiple';
-export const CUSTOM_FIELD_TYPES: CustomFieldType[] = ['text', 'textarea', 'number', 'boolean', 'date', 'select_single', 'select_multiple'];
-
-export interface CustomFieldOption {
-  value: string;
+// For the new Settings Layout sub-navigation
+export interface SettingsNavigationItem {
+  href: string;
   label: string;
+  icon: React.ElementType;
+  description: string;
+  adminOnly?: boolean;
+  permissionId?: PlatformModuleId;
+  adminOnlyOrPermission?: boolean;
 }
-export interface CustomFieldDefinition {
+
+export interface FilterableAttribute {
+  path: string; // e.g., "name", "parsedData.personal_info.location"
+  label: string; // e.g., "Applicant Name", "Location (Resume)"
+  type: 'string' | 'number' | 'date' | 'boolean' | 'array_string'; // To guide potential future UI or backend logic
+}
+
+// For Bulk Actions
+export type ApplicantBulkAction = 'delete' | 'change_status' | 'assign_recruiter';
+export type PositionBulkAction = 'delete' | 'change_status'; // Added 'change_status'
+
+export interface ApplicantBulkActionPayload {
+  action: ApplicantBulkAction;
+  applicantIds: string[];
+  newStatus?: ApplicantStatus; // For 'change_status'
+  notes?: string | null; // For 'change_status' transition notes
+  newRecruiterId?: string | null; // For 'assign_recruiter'
+}
+
+export interface PositionBulkActionPayload {
+  action: PositionBulkAction;
+  positionIds: string[];
+  newIsOpenStatus?: boolean; // For 'change_status'
+}
+
+
+
+export type positionLevel = string;
+
+export interface User {
   id: string;
-  model_name: 'Candidate' | 'Position';
-  field_key: string;
-  label: string;
-  field_type: CustomFieldType;
-  options?: CustomFieldOption[] | null; // For select types
-  is_required?: boolean;
-  sort_order?: number;
-  createdAt?: string;
-  updatedAt?: string;
+  name: string;
+  email: string;
+  role: string;
+  avatarUrl?: string;
+  image?: string;
+  dataAiHint?: string;
+  personalColor?: string;
+  authenticationMethods?: string[];
+  forcePasswordChange?: boolean;
+  emailVerified?: Date;
+  createdAt: Date;
+  updatedAt: Date;
+  azure_oid?: string;
+  department?: string | null;
+  phoneNumber?: string | null;
+  officeLocation?: string | null;
+  positionTitle?: string | null;
+  employeeId?: string | null;
+  companyName?: string | null;
+  employeeType?: string | null;
+  hireDate?: Date | null;
+  manager?: string | null;
+  managerEmail?: string | null;
+  samAccountName?: string | null;
+  contactInfo?: JsonObject | null; // To store full contact details JSON
 }
+
+export type ApplicantCustomFieldFilterValue =
+  | string
+  | number
+  | boolean
+  | Date
+  | string[]
+  | number[]
+  | null
+  | undefined;
+
+export interface ApplicantFilterValues {
+  name?: string;
+  nameOperator?: 'contains' | 'is' | 'startsWith' | 'endsWith';
+  email?: string;
+  emailOperator?: 'contains' | 'is' | 'startsWith' | 'endsWith';
+  phone?: string;
+  phoneOperator?: 'contains' | 'is' | 'startsWith' | 'endsWith';
+  selectedPositionIds?: string[];
+  selectedStatuses?: string[];
+  selectedRecruiterIds?: string[]; // Added
+  selectedSourceIds?: string[];
+  education?: string; // Education Keywords
+  skills?: string; // Skills Keywords
+  location?: string; // Location
+  locationOperator?: 'contains' | 'is' | 'startsWith' | 'endsWith' | 'other'; // Added
+  cvLanguage?: string; // CV Language
+  jobSuitableCareer?: string; // Job Suitable Career
+  jobSuitableLevel?: string; // Job Suitable Level
+  jobSuitablePosition?: string; // Job Suitable Position
+  minExperienceYears?: number; // Minimum Experience Years
+  maxExperienceYears?: number; // Maximum Experience Years
+  minAppliedJobFitScore?: number; // Min fit score for applied job
+  maxAppliedJobFitScore?: number; // Max fit score for applied job
+  minMatchingJobFitScore?: number; // Min fit score for matching job
+  maxMatchingJobFitScore?: number; // Max fit score for matching job
+  applicationDateStart?: Date;
+  applicationDateEnd?: Date;
+  includeNoScoreInApplied?: boolean;
+  includeNoScoreInMatching?: boolean;
+  
+  // AI Search fields
+  aiSearchQuery?: string;
+  aiSearchType?: 'semantic' | 'exact' | 'hybrid';
+  aiSearchFilters?: Record<string, unknown>;
+  
+  // Custom fields
+  customFieldFilters?: Record<string, ApplicantCustomFieldFilterValue>;
+}
+
+export interface CreateUserRequest {
+  name: string;
+  email: string;
+  role: string;
+  password?: string;
+  groupIds?: string[];
+}
+
+export interface UpdateUserRequest {
+  name?: string;
+  email?: string;
+  role?: string;
+  password?: string;
+  groupIds?: string[];
+}
+
+

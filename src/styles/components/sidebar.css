@@ -1,0 +1,691 @@
+/* Updated styles for sidebar and active menu item */
+/* This file is imported before Tailwind's layer directives, so its component
+   styles stay as ordinary CSS instead of opening a standalone @layer block. */
+  [data-settings-layout="true"] .card-gradient {
+    background: transparent !important;
+    box-shadow: none !important;
+  }
+
+  [data-settings-layout="true"] .bg-card,
+  [data-settings-layout="true"] [class*="bg-card"] {
+    background-color: transparent !important;
+  }
+
+  [data-settings-layout="true"] .ai-prompt-library-card {
+    background: #ffffff !important;
+    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.1) !important;
+  }
+
+  .dark [data-settings-layout="true"] .ai-prompt-library-card {
+    background: hsl(var(--card)) !important;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.28) !important;
+  }
+
+  /* Sidebar base style for light theme - Light Gray Gradient */
+  :root:not(.dark) [data-sidebar="sidebar"] {
+    background-image: var(--sidebar-background-l);
+    color: hsl(var(--sidebar-foreground-l));
+    border-right: 0;
+  }
+
+  :root:not(.dark)
+    [data-sidebar="sidebar"][data-sidebar-variant="figma-single-panel"],
+  .dark
+    [data-sidebar="sidebar"][data-sidebar-variant="figma-single-panel"] {
+    border-right: 1px solid;
+    box-shadow: none;
+  }
+
+  :root:not(.dark)
+    [data-sidebar="sidebar"][data-sidebar-variant="figma-single-panel"] {
+    border-color: hsl(var(--sidebar-border-l));
+  }
+
+  .dark [data-sidebar="sidebar"][data-sidebar-variant="figma-single-panel"] {
+    border-color: hsl(var(--sidebar-border-d));
+  }
+
+  /* Override background when custom settings are applied */
+  :root:not(.dark) [data-sidebar="sidebar"].custom-background {
+    background: transparent !important;
+  }
+
+  [data-sidebar="sidebar"].custom-background {
+    position: relative;
+    z-index: 0;
+    isolation: isolate;
+    overflow: hidden;
+    /* Blur the page beneath translucent sidebars as well as the custom layer. */
+    backdrop-filter: blur(var(--sidebar-background-blur, 0px));
+    -webkit-backdrop-filter: blur(var(--sidebar-background-blur, 0px));
+  }
+
+  [data-sidebar="sidebar"].custom-background::before {
+    content: "";
+    position: absolute;
+    /* Give the blurred layer room to feather without exposing hard edges. */
+    inset: calc(-1 * var(--sidebar-background-blur, 0px));
+    z-index: 0;
+    pointer-events: none;
+    background: var(--sidebar-custom-background);
+    background-size: var(--sidebar-custom-background-size, auto);
+    background-position: var(--sidebar-custom-background-position, center);
+    background-repeat: var(--sidebar-custom-background-repeat, repeat);
+    opacity: var(--sidebar-background-opacity, 1);
+    filter: blur(var(--sidebar-background-blur, 0px));
+  }
+
+  [data-sidebar="sidebar"].custom-background > * {
+    position: relative;
+    z-index: 1;
+  }
+
+  /* Light theme: Hover on non-active items */
+  :root:not(.dark)
+    [data-sidebar="menu-button"]:not([data-active="true"]):hover {
+    background-color: hsl(var(--sidebar-accent-l));
+    color: hsl(var(--sidebar-accent-foreground-l));
+  }
+
+  /* Light theme: Active menu item styles based on preference */
+  /* Default gradient style (original) */
+  :root:not(.dark) [data-sidebar="menu-button"][data-active="true"] {
+    background-image: var(--sidebar-active-background-l);
+    color: hsl(var(--sidebar-active-foreground-l)) !important;
+    box-shadow: 0 2px 8px -2px hsla(var(--primary-gradient-start-l), 0.3);
+  }
+
+  /* Solid background style */
+  :root:not(.dark).sidebar-active-solid
+    [data-sidebar="menu-button"][data-active="true"] {
+    background-color: hsl(var(--primary-gradient-start-l));
+    background-image: none;
+    color: hsl(var(--sidebar-active-foreground-l)) !important;
+    box-shadow: 0 2px 8px -2px hsla(var(--primary-gradient-start-l), 0.3);
+  }
+
+  /* Outline border style */
+  :root:not(.dark).sidebar-active-outline
+    [data-sidebar="menu-button"][data-active="true"] {
+    background-color: transparent;
+    background-image: none;
+    color: hsl(var(--primary-gradient-start-l)) !important;
+    border: 2px solid hsl(var(--primary-gradient-start-l));
+    box-shadow: none;
+  }
+
+  /* Subtle highlight style */
+  :root:not(.dark).sidebar-active-subtle
+    [data-sidebar="menu-button"][data-active="true"] {
+    background-color: hsla(var(--primary-gradient-start-l), 0.1);
+    background-image: none;
+    color: hsl(var(--primary-gradient-start-l)) !important;
+    box-shadow: none;
+  }
+
+  /* Light theme: Hover on active menu item - slightly adjust brightness */
+  :root:not(.dark) [data-sidebar="menu-button"][data-active="true"]:hover {
+    filter: brightness(1.05);
+  }
+
+  /* Sidebar base style for dark theme - Modern Dark Gradient */
+  .dark [data-sidebar="sidebar"] {
+    background-image: var(--sidebar-background-d);
+    color: hsl(var(--sidebar-foreground-d));
+    border-right: 0;
+  }
+
+  /* Override background when custom settings are applied */
+  .dark [data-sidebar="sidebar"].custom-background {
+    background: transparent !important;
+  }
+
+  /* Dark theme: Hover on non-active items */
+  .dark [data-sidebar="menu-button"]:not([data-active="true"]):hover {
+    background-color: hsl(var(--sidebar-accent-d));
+    color: hsl(var(--sidebar-accent-foreground-d));
+  }
+
+  /* Dark theme: Active menu item styles based on preference */
+  /* Default gradient style (original) */
+  .dark [data-sidebar="menu-button"][data-active="true"] {
+    background-image: var(--sidebar-active-background-d);
+    color: hsl(var(--sidebar-active-foreground-d)) !important;
+    box-shadow: 0 2px 10px -3px hsla(var(--primary-gradient-start-d), 0.4);
+  }
+
+  /* Solid background style */
+  .dark.sidebar-active-solid [data-sidebar="menu-button"][data-active="true"] {
+    background-color: hsl(var(--primary-gradient-start-d));
+    background-image: none;
+    color: hsl(var(--sidebar-active-foreground-d)) !important;
+    box-shadow: 0 2px 10px -3px hsla(var(--primary-gradient-start-d), 0.4);
+  }
+
+  /* Outline border style */
+  .dark.sidebar-active-outline
+    [data-sidebar="menu-button"][data-active="true"] {
+    background-color: transparent;
+    background-image: none;
+    color: hsl(var(--primary-gradient-start-d)) !important;
+    border: 2px solid hsl(var(--primary-gradient-start-d));
+    box-shadow: none;
+  }
+
+  /* Subtle highlight style */
+  .dark.sidebar-active-subtle [data-sidebar="menu-button"][data-active="true"] {
+    background-color: hsla(var(--primary-gradient-start-d), 0.15);
+    background-image: none;
+    color: hsl(var(--primary-gradient-start-d)) !important;
+    box-shadow: none;
+  }
+
+  /* Dark theme: Hover on active menu item - slightly adjust brightness */
+  .dark [data-sidebar="menu-button"][data-active="true"]:hover {
+    filter: brightness(1.1);
+  }
+
+  /* General menu button transitions */
+  [data-sidebar="menu-button"] {
+    transition:
+      background-color 0.15s ease-in-out,
+      color 0.15s ease-in-out,
+      box-shadow 0.15s ease-in-out,
+      background-image 0.15s ease-in-out,
+      filter 0.15s ease-in-out,
+      border 0.15s ease-in-out;
+  }
+
+  /* Ensure active text color takes precedence over Tailwind classes */
+  [data-sidebar="menu-button"][data-active="true"] {
+    color: hsl(var(--sidebar-active-foreground-l, 0 0% 100%)) !important;
+  }
+
+  .dark [data-sidebar="menu-button"][data-active="true"] {
+    color: hsl(var(--sidebar-active-foreground-d, 0 0% 100%)) !important;
+  }
+
+  /* Additional specificity for active menu items to override any Tailwind classes */
+  [data-sidebar="menu-button"][data-active="true"] * {
+    color: hsl(var(--sidebar-active-foreground-l, 0 0% 100%)) !important;
+  }
+
+  .dark [data-sidebar="menu-button"][data-active="true"] * {
+    color: hsl(var(--sidebar-active-foreground-d, 0 0% 100%)) !important;
+  }
+
+  :root:not(.dark) [data-sidebar="sidebar"][data-sidebar-panel="secondary"] {
+    --split-sidebar-active-background: hsl(
+      var(--sidebar-menu-item-background-active-l)
+    );
+    --split-sidebar-hover-background: hsl(
+      var(--sidebar-menu-item-background-hover-l)
+    );
+    --split-sidebar-active-foreground: hsl(
+      var(--sidebar-menu-item-color-active-l)
+    );
+  }
+
+  .dark [data-sidebar="sidebar"][data-sidebar-panel="secondary"] {
+    --split-sidebar-active-background: hsl(
+      var(--sidebar-menu-item-background-active-d)
+    );
+    --split-sidebar-hover-background: hsl(
+      var(--sidebar-menu-item-background-hover-d)
+    );
+    --split-sidebar-active-foreground: hsl(
+      var(--sidebar-menu-item-color-active-d)
+    );
+  }
+
+  [data-sidebar="sidebar"][data-sidebar-panel="secondary"]
+    [data-sidebar="menu"] {
+    gap: 0.125rem !important;
+  }
+
+  [data-sidebar="sidebar"][data-sidebar-panel="secondary"]
+    [data-sidebar="menu-button"] {
+    border-radius: 0.625rem !important;
+    min-height: 1.75rem;
+    padding: 0.375rem 0.75rem !important;
+  }
+
+  [data-sidebar="sidebar"][data-sidebar-panel="secondary"]
+    [data-sidebar="menu-button"]:hover {
+    background-color: var(--split-sidebar-hover-background) !important;
+    background-image: none !important;
+    box-shadow: none !important;
+    filter: none !important;
+  }
+
+  [data-sidebar="sidebar"][data-sidebar-panel="secondary"]
+    [data-sidebar="menu-button"][data-active="true"] {
+    background-color: var(--split-sidebar-active-background) !important;
+    background-image: none !important;
+    color: var(--split-sidebar-active-foreground) !important;
+    box-shadow: none !important;
+    filter: none !important;
+  }
+
+  [data-sidebar="sidebar"][data-sidebar-panel="secondary"]
+    [data-sidebar="menu-button"][data-active="true"] * {
+    color: var(--split-sidebar-active-foreground) !important;
+  }
+
+  [data-sidebar="sidebar"][data-sidebar-panel="secondary"]
+    [data-sidebar="menu-button"][data-active="true"]:hover {
+    filter: none !important;
+  }
+
+  /* Ensure active text color takes precedence for sub-buttons */
+  [data-sidebar="menu-sub-button"][data-active="true"] {
+    color: hsl(var(--sidebar-active-foreground-l, 0 0% 100%)) !important;
+  }
+
+  .dark [data-sidebar="menu-sub-button"][data-active="true"] {
+    color: hsl(var(--sidebar-active-foreground-d, 0 0% 100%)) !important;
+  }
+
+  /* Apply gradient to primary buttons */
+  .btn-primary-gradient {
+    /* Use full gradient if available, otherwise fall back to 2-stop gradient */
+    background-image: var(
+      --primary-gradient,
+      linear-gradient(
+        to right,
+        hsl(var(--primary-gradient-start-l)),
+        hsl(var(--primary-gradient-end-l))
+      )
+    );
+    color: var(--button-text-color-l, hsl(0 0% 100%)) !important;
+    border: none;
+    /* Strong, prominent shadow for primary button - uses CSS variable */
+    box-shadow: var(
+      --primary-button-shadow-l,
+      0 8px 32px 0 hsla(var(--primary-gradient-start-l), 0.35),
+      0 4px 16px 0 hsla(var(--primary-gradient-start-l), 0.25)
+    );
+  }
+
+  .dark .btn-primary-gradient {
+    /* Use full gradient if available, otherwise fall back to 2-stop gradient */
+    background-image: var(
+      --primary-gradient,
+      linear-gradient(
+        to right,
+        hsl(var(--primary-gradient-start-d)),
+        hsl(var(--primary-gradient-end-d))
+      )
+    );
+    color: var(--button-text-color-d, hsl(0 0% 100%)) !important;
+    box-shadow: var(
+      --primary-button-shadow-d,
+      0 8px 32px 0 hsla(var(--primary-gradient-start-d), 0.45),
+      0 4px 16px 0 hsla(var(--primary-gradient-start-d), 0.3)
+    );
+  }
+
+  .btn-primary-gradient:hover {
+    filter: brightness(1.1);
+    box-shadow: var(
+      --primary-button-shadow-hover-l,
+      0 12px 40px 0 hsla(var(--primary-gradient-start-l), 0.45),
+      0 6px 20px 0 hsla(var(--primary-gradient-start-l), 0.3)
+    );
+  }
+
+  .dark .btn-primary-gradient:hover {
+    box-shadow: var(
+      --primary-button-shadow-hover-d,
+      0 12px 40px 0 hsla(var(--primary-gradient-start-d), 0.55),
+      0 6px 20px 0 hsla(var(--primary-gradient-start-d), 0.35)
+    );
+  }
+
+  /* Destructive button gradient with shadow */
+  .btn-destructive-gradient {
+    background-color: hsl(var(--destructive));
+    color: var(--destructive-foreground) !important;
+    border: none;
+    box-shadow: var(
+      --destructive-button-shadow-l,
+      0 8px 32px 0 hsla(var(--destructive), 0.35),
+      0 4px 16px 0 hsla(var(--destructive), 0.25)
+    );
+  }
+
+  .dark .btn-destructive-gradient {
+    box-shadow: var(
+      --destructive-button-shadow-d,
+      0 8px 32px 0 hsla(var(--destructive), 0.45),
+      0 4px 16px 0 hsla(var(--destructive), 0.3)
+    );
+  }
+
+  .btn-destructive-gradient:hover {
+    filter: brightness(1.1);
+    box-shadow: var(
+      --destructive-button-shadow-hover-l,
+      0 12px 40px 0 hsla(var(--destructive), 0.45),
+      0 6px 20px 0 hsla(var(--destructive), 0.3)
+    );
+  }
+
+  .dark .btn-destructive-gradient:hover {
+    box-shadow: var(
+      --destructive-button-shadow-hover-d,
+      0 12px 40px 0 hsla(var(--destructive), 0.55),
+      0 6px 20px 0 hsla(var(--destructive), 0.35)
+    );
+  }
+
+  /* Blue gradient hover for secondary and outline button types */
+  .btn-hover-primary-gradient:hover {
+    background-image: linear-gradient(
+      to right,
+      hsl(var(--primary-gradient-start-l)),
+      hsl(var(--primary-gradient-end-l))
+    );
+    color: hsl(var(--primary-foreground)) !important;
+    border-color: transparent !important;
+    /* For outline buttons, ensure border goes away */
+    background-color: transparent !important;
+    /* Reset base background to ensure gradient shows */
+    filter: none !important;
+    /* Remove any inherited filters like brightness */
+    box-shadow:
+      0 4px 14px 0 hsla(var(--primary-gradient-start-l), 0.25),
+      0 2px 4px 0 hsla(var(--primary-gradient-start-l), 0.15);
+  }
+
+  .dark .btn-hover-primary-gradient:hover {
+    background-image: linear-gradient(
+      to right,
+      hsl(var(--primary-gradient-start-d)),
+      hsl(var(--primary-gradient-end-d))
+    );
+    color: hsl(var(--primary-foreground)) !important;
+    /* Ensure light text */
+    border-color: transparent !important;
+    background-color: transparent !important;
+    filter: none !important;
+    box-shadow:
+      0 4px 14px 0 hsla(var(--primary-gradient-start-d), 0.3),
+      0 2px 4px 0 hsla(var(--primary-gradient-start-d), 0.2);
+  }
+
+  /* Custom green styles for checked states */
+  .checkbox-green[data-state="checked"] {
+    @apply bg-green-600 border-green-600 text-white;
+  }
+
+  .dark .checkbox-green[data-state="checked"] {
+    @apply bg-green-500 border-green-500 text-white;
+  }
+
+  .switch-green[data-state="checked"] {
+    background-color: hsl(var(--custom-green-checked)) !important;
+  }
+
+  .dark .switch-green[data-state="checked"] {
+    background-color: hsl(var(--custom-green-checked)) !important;
+  }
+
+  /* Hide scrollbar utility class */
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    /* Internet Explorer 10+ */
+    scrollbar-width: none;
+    /* Firefox */
+  }
+
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+    /* Safari and Chrome */
+  }
+
+  /* Custom scrollbar for horizontal scrolling */
+  .scrollbar-custom {
+    scrollbar-width: thin;
+    scrollbar-color: hsl(var(--muted-foreground)) transparent;
+  }
+
+  .scrollbar-custom::-webkit-scrollbar {
+    height: 8px;
+  }
+
+  .scrollbar-custom::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .scrollbar-custom::-webkit-scrollbar-thumb {
+    background-color: hsl(var(--muted-foreground) / 0.3);
+    border-radius: 4px;
+  }
+
+  .scrollbar-custom::-webkit-scrollbar-thumb:hover {
+    background-color: hsl(var(--muted-foreground) / 0.5);
+  }
+
+  /* Smooth scrolling */
+  .scroll-smooth {
+    scroll-behavior: smooth;
+  }
+
+  /* Custom width for job match cards */
+  .w-70 {
+    width: 17.5rem;
+    /* 280px */
+  }
+
+  /* Ensure buttons have rounded corners */
+  button,
+  .btn,
+  [role="button"],
+  button[type="button"],
+  button[type="submit"],
+  button[type="reset"],
+  input[type="button"],
+  input[type="submit"],
+  input[type="reset"] {
+    border-radius: 0.375rem !important;
+  }
+
+  /* Exception for switch components - they should be round */
+  [role="switch"] {
+    border-radius: 9999px !important;
+  }
+
+  /* Ensure inputs have rounded corners */
+  input,
+  textarea,
+  select {
+    border-radius: 0.375rem !important;
+  }
+
+  /* Ensure all UI components have rounded corners */
+  .ui-component,
+  [data-ui-component] {
+    border-radius: 0.5rem !important;
+  }
+
+  /* Specific rule for Button component */
+  [class*="buttonVariants"] {
+    border-radius: 0.5rem !important;
+  }
+
+  /* Custom button classes */
+  .btn {
+    border-radius: 0.5rem !important;
+  }
+
+  .btn-primary,
+  .btn-secondary,
+  .btn-outline {
+    border-radius: 0.5rem !important;
+  }
+
+  /* Secondary button gradient with shadow */
+  .btn-secondary-gradient {
+    background-color: hsl(var(--secondary));
+    color: hsl(var(--secondary-foreground)) !important;
+    box-shadow: var(
+      --secondary-button-shadow-l,
+      0 8px 32px 0 hsla(var(--secondary), 0.25),
+      0 4px 16px 0 hsla(var(--secondary), 0.15)
+    );
+  }
+
+  .dark .btn-secondary-gradient {
+    box-shadow: var(
+      --secondary-button-shadow-d,
+      0 8px 32px 0 hsla(var(--secondary), 0.35),
+      0 4px 16px 0 hsla(var(--secondary), 0.2)
+    );
+  }
+
+  .btn-secondary-gradient:hover {
+    box-shadow: var(
+      --secondary-button-shadow-hover-l,
+      0 12px 40px 0 hsla(var(--secondary), 0.35),
+      0 6px 20px 0 hsla(var(--secondary), 0.2)
+    );
+  }
+
+  .dark .btn-secondary-gradient:hover {
+    box-shadow: var(
+      --secondary-button-shadow-hover-d,
+      0 12px 40px 0 hsla(var(--secondary), 0.45),
+      0 6px 20px 0 hsla(var(--secondary), 0.25)
+    );
+  }
+
+  /* Evaluate page card with increased rounded top corners */
+  .evaluate-card-rounded-top {
+    border-radius: 2rem 2rem 0 0 !important;
+  }
+
+  /* More specific selector to ensure it overrides Card's rounded-xl class */
+  .evaluate-card-rounded-top.rounded-xl,
+  .evaluate-card-rounded-top[class*="rounded"] {
+    border-radius: 2rem 2rem 0 0 !important;
+  }
+
+  /* Ensure rounded-lg class works */
+  .rounded-lg {
+    border-radius: 0.5rem !important;
+  }
+
+  /* Ensure rounded-md class works */
+  .rounded-md {
+    border-radius: 0.375rem !important;
+  }
+
+  /* Ensure rounded-xl class works */
+  .rounded-xl {
+    border-radius: 0.75rem !important;
+  }
+
+  /* Ensure rounded-md class works */
+  .rounded-md {
+    border-radius: 0.375rem !important;
+  }
+
+  /* Ensure rounded-full class works */
+  .rounded-full {
+    border-radius: 9999px !important;
+  }
+
+  /* Ensure navigation buttons with rounded-full are always circular */
+  button.rounded-full,
+  .btn.rounded-full,
+  [role="button"].rounded-full {
+    border-radius: 9999px !important;
+  }
+
+  /* Ensure rounded-sm class works */
+  .rounded-sm {
+    border-radius: 0.125rem !important;
+  }
+
+  /* Override global button styling for switch components only */
+  [role="switch"][data-state] {
+    border-radius: 9999px !important;
+  }
+
+  /* Ensure switch components are always round */
+  [role="switch"].peer[data-state] {
+    border-radius: 9999px !important;
+  }
+
+  /* Ensure switch thumb is always round */
+  [role="switch"].peer[data-state] > * {
+    border-radius: 9999px !important;
+  }
+
+  /* Additional specificity for switch components */
+  [role="switch"] {
+    border-radius: 9999px !important;
+  }
+
+  [role="switch"] > * {
+    border-radius: 9999px !important;
+  }
+
+  /* Force round styling specifically for switch components */
+  [role="switch"].peer.inline-flex.h-6.w-12 {
+    border-radius: 9999px !important;
+  }
+
+  [role="switch"].peer.inline-flex.h-6.w-12 > * {
+    border-radius: 9999px !important;
+  }
+
+  /* Override any conflicting styles for switch components only */
+  [role="switch"][data-state="checked"],
+  [role="switch"][data-state="unchecked"] {
+    border-radius: 9999px !important;
+  }
+
+  [role="switch"][data-state="checked"] > *,
+  [role="switch"][data-state="unchecked"] > * {
+    border-radius: 9999px !important;
+  }
+
+  /* Custom scrollbar styling for filter sidebar */
+  .custom-scrollbar {
+    scrollbar-width: thin;
+    scrollbar-color: hsl(var(--muted-foreground)) transparent;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+    border-radius: 3px;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: hsl(var(--muted-foreground));
+    border-radius: 3px;
+    transition: background-color 0.2s ease;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: hsl(var(--foreground));
+  }
+
+  /* Dark mode scrollbar */
+  .dark .custom-scrollbar {
+    scrollbar-color: hsl(var(--muted-foreground)) transparent;
+  }
+
+  .dark .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: hsl(var(--muted-foreground));
+  }
+
+  .dark .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: hsl(var(--foreground));
+  }

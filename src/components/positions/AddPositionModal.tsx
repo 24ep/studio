@@ -1,35 +1,35 @@
-
 "use client";
 
-import { useEffect } from 'react';
-import { useForm, Controller } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import * as z from 'zod';
+import type { FormEvent } from 'react';
+import { Check, CheckCircle2, ChevronLeft, ChevronRight, X } from 'lucide-react';
+
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Label } from '@/components/ui/label';
-import { Switch } from '@/components/ui/switch';
 import {
   Dialog,
+  DialogClose,
   DialogContent,
-  DialogHeader,
-  DialogTitle,
   DialogDescription,
   DialogFooter,
-  DialogClose,
+  DialogHeader,
+  DialogTitle,
 } from '@/components/ui/dialog';
-import { Briefcase } from 'lucide-react';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { cn } from '@/lib/utils';
 
-const addPositionFormSchema = z.object({
-  title: z.string().min(1, "Title is required"),
-  department: z.string().min(1, "Department is required"),
-  description: z.string().optional().nullable(),
-  isOpen: z.boolean().default(true),
-  position_level: z.string().optional().nullable(),
-});
+import {
+  AddPositionBasicInfoSection,
+  AddPositionCriteriaSection,
+  AddPositionDescriptionSection,
+  AddPositionEquipmentSection,
+} from './AddPositionModalSections';
+import { AddPositionReplaceDescriptionDialog } from './AddPositionReplaceDescriptionDialog';
+import type { AddPositionFormValues } from './add-position-form';
+import {
+  type AddPositionStep,
+  useAddPositionModalController,
+} from './use-add-position-modal-controller';
 
-export type AddPositionFormValues = z.infer<typeof addPositionFormSchema>;
+export type { AddPositionFormValues } from './add-position-form';
 
 interface AddPositionModalProps {
   isOpen: boolean;
@@ -37,98 +37,201 @@ interface AddPositionModalProps {
   onAddPosition: (data: AddPositionFormValues) => Promise<void>;
 }
 
-export function AddPositionModal({ isOpen, onOpenChange, onAddPosition }: AddPositionModalProps) {
-  const form = useForm<AddPositionFormValues>({
-    resolver: zodResolver(addPositionFormSchema),
-    defaultValues: {
-      title: '',
-      department: '',
-      description: '',
-      isOpen: true,
-      position_level: '',
-    },
-  });
+const ADD_POSITION_STEPS: Array<{ id: AddPositionStep; label: string; description: string }> = [
+  { id: 'basic', label: 'Basic Information', description: 'Tell us the essentials about this role.' },
+  { id: 'description', label: 'Job Description', description: 'Add responsibilities, requirements, and more.' },
+  { id: 'criteria', label: 'Match Criteria', description: 'Define must-haves and nice-to-haves.' },
+  { id: 'equipment', label: 'Equipment & Onboarding', description: 'Prepare client and day-one equipment.' },
+];
 
-  useEffect(() => {
-    if (isOpen) {
-      form.reset({
-        title: '',
-        department: '',
-        description: '',
-        isOpen: true,
-        position_level: '',
-      });
+export function AddPositionModal({
+  isOpen,
+  onAddPosition,
+  onOpenChange,
+}: AddPositionModalProps) {
+  const controller = useAddPositionModalController({ isOpen, onAddPosition });
+  const currentStepIndex = ADD_POSITION_STEPS.findIndex(
+    (step) => step.id === controller.currentStep,
+  );
+  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+    if (controller.currentStep !== 'equipment') {
+      event.preventDefault();
+      void controller.nextStep();
+      return;
     }
-  }, [isOpen, form]);
 
-  const onSubmit = async (data: AddPositionFormValues) => {
-    await onAddPosition(data);
+    void controller.form.handleSubmit(controller.onSubmit)(event);
   };
 
+  if (!isOpen) return null;
+
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => {
-      onOpenChange(open);
-      if (!open) {
-        form.reset();
-      }
-    }}>
-      <DialogContent className="sm:max-w-lg">
-        <DialogHeader>
-          <DialogTitle className="flex items-center">
-            <Briefcase className="mr-2 h-5 w-5 text-primary" /> Add New Position
-          </DialogTitle>
-          <DialogDescription>
-            Enter the details for the new job position.
-          </DialogDescription>
-        </DialogHeader>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-2">
-          <div>
-            <Label htmlFor="title-add">Position Title *</Label>
-            <Input id="title-add" {...form.register('title')} className="mt-1" />
-            {form.formState.errors.title && <p className="text-sm text-destructive mt-1">{form.formState.errors.title.message}</p>}
-          </div>
-          <div>
-            <Label htmlFor="department-add">Department *</Label>
-            <Input id="department-add" {...form.register('department')} className="mt-1" />
-            {form.formState.errors.department && <p className="text-sm text-destructive mt-1">{form.formState.errors.department.message}</p>}
-          </div>
-           <div>
-            <Label htmlFor="position_level-add">Position Level</Label>
-            <Input id="position_level-add" {...form.register('position_level')} className="mt-1" placeholder="e.g., Senior, Mid-Level, L3"/>
-            {form.formState.errors.position_level && <p className="text-sm text-destructive mt-1">{form.formState.errors.position_level.message}</p>}
-          </div>
-          <div>
-            <Label htmlFor="description-add">Description</Label>
-            <Textarea id="description-add" {...form.register('description')} className="mt-1" />
-          </div>
-          <div className="flex items-center space-x-2">
-            <Controller
-                name="isOpen"
-                control={form.control}
-                render={({ field }) => (
-                    <Switch
-                        id="isOpen-add"
-                        className="switch-green"
-                        checked={field.value}
-                        onCheckedChange={field.onChange}
-                    />
-                )}
-            />
-            <Label htmlFor="isOpen-add">Position is Open</Label>
-          </div>
-          
-          <DialogFooter className="pt-4">
+    <>
+      <Dialog open={isOpen} onOpenChange={onOpenChange}>
+        <DialogContent className="flex h-[min(88vh,830px)] min-h-[620px] w-[min(94vw,1060px)] max-w-[1060px] flex-col overflow-hidden p-0" dialogId="add-position-modal" hideCloseButton>
+          <DialogHeader className="relative flex-shrink-0 border-b px-7 pb-5 pr-16 pt-6">
+            <DialogTitle className="text-xl">Add New Position</DialogTitle>
+            <DialogDescription>Create a new role and define where it fits in your organization.</DialogDescription>
             <DialogClose asChild>
-              <Button type="button" variant="outline">
-                Cancel
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="absolute right-5 top-5 rounded-full text-muted-foreground hover:text-foreground"
+                aria-label="Close Add New Position"
+              >
+                <X className="h-5 w-5" />
               </Button>
             </DialogClose>
-            <Button type="submit" disabled={form.formState.isSubmitting}>
-              {form.formState.isSubmitting ? 'Adding Position...' : 'Add Position'}
-            </Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
+          </DialogHeader>
+
+          <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0 overflow-hidden">
+            <div className="flex min-h-0 flex-1">
+              <AddPositionStepRail
+                currentStep={controller.currentStep}
+                currentStepIndex={currentStepIndex}
+              />
+
+              <ScrollArea className="min-w-0 flex-1 px-6 py-5 overflow-auto sm:px-7">
+                <div className="pb-2">
+                {controller.currentStep === 'basic' && (
+                <AddPositionBasicInfoSection
+                  availableRecruiter={controller.availableRecruiter}
+                  form={controller.form}
+                  grades={controller.grades}
+                  isLoadingLevels={controller.isLoadingLevels}
+                  isSaving={controller.isSaving}
+                  positionLevels={controller.positionLevels}
+                  organizationUnits={controller.organizationUnits}
+                />
+                )}
+
+                {controller.currentStep === 'description' && (
+                <AddPositionDescriptionSection
+                  canGenerateDescription={controller.canGenerateDescription}
+                  form={controller.form}
+                  isGeneratingDescription={controller.isGeneratingDescription}
+                  isModalReady={controller.isModalReady}
+                  onGenerateJobDescription={controller.generateJobDescription}
+                />
+                )}
+
+                {controller.currentStep === 'criteria' && (
+                <AddPositionCriteriaSection
+                  defaultMatchCriteria={controller.defaultMatchCriteria}
+                  form={controller.form}
+                  isLoadingDefaultCriteria={controller.isLoadingDefaultCriteria}
+                  isModalReady={controller.isModalReady}
+                />
+                )}
+
+                {controller.currentStep === 'equipment' && (
+                <AddPositionEquipmentSection
+                  form={controller.form}
+                  isSaving={controller.isSaving}
+                />
+                )}
+                </div>
+              </ScrollArea>
+            </div>
+
+            <DialogFooter className="flex-shrink-0 border-t px-7 py-3.5">
+              <div className="flex w-full items-center justify-between gap-3">
+                {controller.currentStep === 'basic' ? (
+                  <button type="button" onClick={controller.saveDraft} className="text-left text-sm font-semibold text-primary hover:underline">
+                    <span className="block">Save draft</span>
+                    <span className="mt-0.5 block text-[11px] font-normal text-muted-foreground">You can continue later</span>
+                  </button>
+                ) : (
+                  <Button type="button" variant="outline" onClick={controller.previousStep}>
+                    <ChevronLeft className="mr-2 h-4 w-4" />
+                    Back
+                  </Button>
+                )}
+
+                {controller.currentStep === 'equipment' ? (
+                  <Button type="submit" disabled={controller.form.formState.isSubmitting}>
+                    {controller.form.formState.isSubmitting ? 'Adding Position...' : 'Add Position'}
+                  </Button>
+                ) : (
+                  <div className="flex flex-col items-end">
+                    <Button type="submit" className="min-w-32">
+                      Continue
+                      <ChevronRight className="ml-2 h-4 w-4" />
+                    </Button>
+                    <span className="mt-1 text-[11px] text-muted-foreground">Next: {ADD_POSITION_STEPS[currentStepIndex + 1].label}</span>
+                  </div>
+                )}
+              </div>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      <AddPositionReplaceDescriptionDialog
+        onConfirm={controller.handleConfirmReplace}
+        onOpenChange={controller.setShowReplaceConfirmation}
+        open={controller.showReplaceConfirmation}
+      />
+    </>
+  );
+}
+
+function AddPositionStepRail({
+  currentStep,
+  currentStepIndex,
+}: {
+  currentStep: AddPositionStep;
+  currentStepIndex: number;
+}) {
+  return (
+    <aside className="hidden w-[240px] shrink-0 flex-col border-r bg-muted/10 px-6 py-6 md:flex" aria-label="Position creation progress">
+      <ol className="relative">
+        {ADD_POSITION_STEPS.map((step, index) => {
+          const isComplete = index < currentStepIndex;
+          const isCurrent = step.id === currentStep;
+
+          return (
+            <li key={step.id} className={cn('relative', index < ADD_POSITION_STEPS.length - 1 && 'pb-11')}>
+              {index < ADD_POSITION_STEPS.length - 1 && (
+                <span
+                  aria-hidden="true"
+                  className={cn(
+                    'absolute bottom-0 left-[15px] top-8 w-px',
+                    index < currentStepIndex ? 'bg-primary' : 'bg-border',
+                  )}
+                />
+              )}
+              <div
+                className={cn(
+                  'flex items-start gap-3 text-sm font-medium',
+                  isCurrent || isComplete ? 'text-primary' : 'text-muted-foreground',
+                )}
+                aria-current={isCurrent ? 'step' : undefined}
+              >
+                <span
+                  className={cn(
+                    'relative z-10 flex h-8 w-8 shrink-0 items-center justify-center rounded-full border text-xs',
+                    isCurrent && 'border-primary bg-primary text-primary-foreground',
+                    isComplete && 'border-primary bg-primary/10 text-primary',
+                    !isCurrent && !isComplete && 'border-border bg-background',
+                  )}
+                >
+                  {isComplete ? <Check className="h-4 w-4" /> : index + 1}
+                </span>
+                <span className="pt-0.5">
+                  <span className="block whitespace-nowrap">{step.label}</span>
+                  <span className="mt-1 block text-xs font-normal leading-5 text-muted-foreground">{step.description}</span>
+                </span>
+              </div>
+            </li>
+          );
+        })}
+      </ol>
+      <div className="mt-auto flex items-center gap-2 text-xs text-muted-foreground">
+        <CheckCircle2 className="h-4 w-4" />
+        All changes are autosaved
+      </div>
+    </aside>
   );
 }

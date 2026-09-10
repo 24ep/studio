@@ -1,0 +1,71 @@
+@import "./theme-normalization.css";
+
+/*
+ * Global typography contract.
+ *
+ * Keep one predictable stack across the application. IBM Plex Sans is the
+ * primary OBSI UI face and IBM Plex Sans Thai is used as the Thai glyph
+ * fallback, so mixed English/Thai labels keep consistent sizing and rhythm.
+ */
+:root {
+  --app-font-family:
+    var(--font-ibm-plex-sans),
+    "IBM Plex Sans",
+    var(--font-ibm-plex-sans-thai),
+    "IBM Plex Sans Thai",
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    sans-serif;
+}
+
+html,
+body {
+  font-family: var(--app-font-family);
+}
+
+body {
+  background: hsl(var(--app-page-background, var(--background)));
+  font-synthesis: none;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+/* Components and portalled overlays inherit the exact same application stack. */
+*,
+*::before,
+*::after {
+  font-family: inherit;
+}
+
+.font-sans,
+.font-dm-sans,
+.font-ibm-plex-sans,
+.font-ibm-plex-sans-thai,
+.font-thai,
+.font-english,
+.font-auto,
+.force-thai-font,
+.thai-text,
+.english-text,
+[lang="th"],
+[lang="th-TH"],
+[lang="en"],
+[lang="en-US"],
+[lang="en-GB"] {
+  font-family: var(--app-font-family);
+}
+
+/* Keep shaping features consistent across languages without changing metrics. */
+.thai-text,
+.english-text,
+[lang="th"],
+[lang="th-TH"],
+[lang="en"],
+[lang="en-US"],
+[lang="en-GB"] {
+  font-feature-settings:
+    "liga" 1,
+    "kern" 1;
+}

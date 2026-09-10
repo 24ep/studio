@@ -1,0 +1,2773 @@
+{
+  "name": "HRI [Process applicant] PROD",
+  "nodes": [
+    {
+      "parameters": {
+        "jsonSchemaExample": "{\n  \"applicant_info\": {\n    \"personal_info\": {\n      \"firstname\": \"\",\n      \"lastname\": \"\",\n      \"title_honorific\": \".\",\n      \"nickname\": \"\",\n      \"location\": \"d\",\n      \"introduction_aboutme\": \"\"\n    },\n    \"contact_info\": {\n      \"email\": \"\",\n      \"phone\": \"\"\n    },\n    \"cv_language\": \"\",\n    \"skills\": [\n      {\n        \"segment_skill\": \"\",\n        \"skill\": [\n          \"JavaScript\",\n          \"TypeScript\"\n        ]\n      }\n    ],\n    \"job_suitable\": [\n      {\n        \"suitable_career\": \"Software Engineering\",\n        \"suitable_job_position\": \"Full Stack Developer\",\n        \"suitable_job_level\": \"Senior\",\n        \"suitable_salary_bath_month\": \"90000\"\n      }\n    ],\n    \"status\": \"Applied\"\n  },\n  \"educationData\": [\n    {\n      \"university\": \"Example University\",\n      \"major\": \"Computer Science\",\n      \"startMonth\": 9,\n      \"startYear\": 2018,\n      \"endMonth\": 6,\n      \"endYear\": 2022,\n      \"isCurrent\": false,\n      \"GPA\": \"3.8\"\n    }\n  ],\n  \"experienceData\": [\n    {\n      \"company\": \"Tech Corp\",\n      \"position\": \"Developer\",\n      \"startMonth\": 7,\n      \"startYear\": 2022,\n      \"endMonth\": 6,\n      \"endYear\": 2022,\n      \"isCurrent\": false,\n      \"description\": \"Developing web applications.\"\n    }\n  ]\n}",
+        "autoFix": true,
+        "customizeRetryPrompt": true
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        -4944,
+        1696
+      ],
+      "id": "8fea88cf-2a9f-4973-997b-fa1a8c65acea",
+      "name": "Structured Output Parser",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-2.0-flash",
+        "options": {
+          "temperature": 1,
+          "topK": 32,
+          "topP": 1
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        -4928,
+        1840
+      ],
+      "id": "740e0344-91f3-49d3-ad60-4b61a2678d95",
+      "name": "Google Gemini Chat Retry",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "uQtPuopjiWI6HU4I",
+          "name": "Google Gemini(PaLM) HRI Retry"
+        }
+      },
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://your-app.example.com/api/v1/applicants",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $('Login').all().last().json.data.token }}"
+            },
+            {
+              "name": "accept",
+              "value": "application/json"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $('applicant information').item.json}}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -1488,
+        256
+      ],
+      "id": "1eb00e88-dd1e-402c-945b-738e0298e61f",
+      "name": "Create applicant",
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "url": "=https://your-app.example.com/api/v1/positions",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "isOpen",
+              "value": "true"
+            },
+            {
+              "name": "limit",
+              "value": "1000"
+            },
+            {
+              "name": "offset",
+              "value": "0"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $('Extract Auth Token').item.json.token }}"
+            },
+            {}
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1072,
+        16
+      ],
+      "id": "e4f67dbb-979e-4ea2-b322-cc39fd5d031c",
+      "name": "Get Open job",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "respondWith": "allIncomingItems",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        1664,
+        784
+      ],
+      "id": "c42e4908-d59a-4867-89a9-3ed03ef6dfd0",
+      "name": "Respond to Webhook"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "exe-process",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*",
+          "binaryPropertyName": "data"
+        }
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -4384,
+        736
+      ],
+      "id": "2ec1328a-d48b-47e3-bea8-2a3d048e91b6",
+      "name": "Webhook",
+      "webhookId": "3b33a77f-1da7-4c68-b9e7-08fe9bb362f0"
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-2.0-flash",
+        "options": {
+          "maxOutputTokens": 655350,
+          "temperature": 0.7,
+          "topK": 32,
+          "topP": 1
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        -352,
+        1376
+      ],
+      "id": "5292152d-1c49-4862-8602-1989207cf6eb",
+      "name": "Google Gemini Chat Model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "haKNG2mVTO561SVW",
+          "name": "Google Gemini(PaLM) Jaroonwit"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "=https://your-app.example.com/api/v1/positions/{{ $('Webhook').item.json.body.inputs.applied_position_id }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $('Login').item.json.data.token }}"
+            },
+            {
+              "name": "accept",
+              "value": "application/json"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -3776,
+        656
+      ],
+      "id": "30a93620-6dd4-4a43-b0cb-aa6bdfe149da",
+      "name": "Get Applied Position info",
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://your-app.example.com/api/v1/applicants/{{ $json.body.inputs.applicant_id }}/job-applied",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "accept",
+              "value": "application/json"
+            },
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $('Login').all().last().json.data.token }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $('applied job parsed').first().json }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        752,
+        1152
+      ],
+      "id": "95c6b68c-af57-4626-84bf-4cd9e9aeed50",
+      "name": "Inset applied",
+      "alwaysOutputData": true,
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "5d1d8f06-8f42-4953-a8cd-5f132da4527a",
+              "leftValue": "={{ $json.id }}",
+              "rightValue": "={{ $('Webhook').item.json.body.inputs.applied_position_id }}",
+              "operator": {
+                "type": "string",
+                "operation": "notEquals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.2,
+      "position": [
+        1440,
+        16
+      ],
+      "id": "968dcb84-f78f-47fd-8765-4c0691b4dfe3",
+      "name": "Filter out applied job",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "language": "pythonNative",
+        "pythonCode": "const response = items[0].json;\n\n// Extract the job list\nconst jobs = response.data.data;\n\n// Return each job as a new item\nreturn jobs.map(job => ({ json: job }));\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1232,
+        16
+      ],
+      "id": "9b75d9b5-84a6-4701-b16d-1854e9a343c5",
+      "name": "convert array to json list",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "resource": "document",
+        "modelId": {
+          "__rl": true,
+          "value": "models/gemini-2.5-flash",
+          "mode": "list",
+          "cachedResultName": "models/gemini-2.5-flash"
+        },
+        "text": "## Role & Objective\nYou are an **expert extraction algorithm**. Your job is to read a given text and extract only the requested attributes into a **fixed JSON schema**. **First build the empty skeleton exactly as specified, then fill values from the text**. If a value is not present, leave it blank per the rules below. Do **not** invent, infer, or transform meaning beyond what is explicitly stated.\n\n## Input/Output Contract\n- **Input:** Arbitrary text that may contain applicant information.\n- **Output:** **Raw JSON only** matching the schema and **key order** below. No extra commentary, no explanations, no surrounding text.\n- **Status:** Always set `\"status\": \"new\"`.\n\n## Core Rules\n1. Read the entire source text before extracting. **Do not guess** or fabricate.\n2. Extract **only** the attributes present in the schema. Ignore everything else.\n3. If the same attribute appears multiple times, pick the **most relevant** or **most recent** by context; otherwise leave blank per policy.\n4. **Preserve the exact key names and key order** from the schema. **Do not add, remove, or rename** keys.\n5. Use only the text provided as the information source. **Never generate new content**.\n6. Keep array shapes exactly as in the schema (do **not** change array lengths or object shapes).\n7.Array rules:skills, educationData, and experienceData are variable-length arrays.\nEach array item must match exactly the object shape shown in the schema.\nIf the source text contains no items for an array, output an empty array ([]).\nDo not add fields to items, and do not omit required fields within an item.\n8. Return **JSON only** (no markdown fences, no prose).\n\n## Missing-Value Policy (STRICT)\n- **Strings:** `\"\"`\n- **Numbers (e.g., months/years/salaries):** `null`\n- **Booleans:** `null` unless explicitly stated in the text\n- **Arrays:** Keep arrays exactly as defined in the schema. If no items, use an empty array only where the schema shows an array of primitives; otherwise keep the single object with its fields blank.\n\n## Normalization (Non-destructive)\n- Trim leading/trailing whitespace in extracted strings.\n- Convert month names to numbers **only when unambiguous** (e.g., “June” → `6`). If ambiguous, leave as `null`.\n- **Email validation:** Must match a standard `name@domain` pattern; else set `\"\"`.\n- **Month range check:** 1–12 or `null`. **Year:** four digits or `null`.\n\n## Time Rules\n- If the text clearly indicates **present/current**, set `\"isCurrent\": true` and keep `\"endMonth\"`/`\"endYear\"` as `null`.\n- If an explicit end date is present, set `\"isCurrent\": false`.\n- If unclear, set `\"isCurrent\": null`.\n\n## Extraction Steps\n1. **Initialize:** Create the exact JSON skeleton below (same keys, same order).\n2. **Personal Info:** firstname, lastname, title_honorific, nickname, location, introduction_aboutme → `personal_info`.\n3. **Contact:** email, phone → `contact_info` (validate formats).\n4. **CV Language:** Only if explicitly stated → `cv_language`.\n5. **Skills:** Put the group name (if provided) in `segment_skill` and individual items in `skill` (deduplicate exact duplicates only).\n6. **Job Suitability:** Fill only values explicitly present; otherwise keep blank strings.\n7. **Education:** For each distinct education mention, append an object to educationData.\n8. **Experience:** For each distinct role/employer mention, append an object to experienceData.\n9. **Finalize:** Ensure `\"status\": \"new\"`. Enforce types and missing-value policy. Output **JSON only**.\n\n## Rule\nDo not use data from another or example, or create the new information of applicant. use only data from extract data only\n\n## Output Schema Json (exact keys & order)\n{\n  \"applicant_info\": {\n    \"personal_info\": {\n      \"firstname\": \"\",\n      \"lastname\": \"\",\n      \"title_honorific\": \"\",\n      \"nickname\": \"\",\n      \"location\": \"\",\n      \"introduction_aboutme\": \"\"\n    },\n    \"contact_info\": {\n      \"email\": \"\",\n      \"phone\": \"\"\n    },\n    \"cv_language\": \"\",\n    \"skills\": [\n      {\n        \"segment_skill\": \"\",\n        \"skill\": []\n      }\n    ],\n    \"status\": \"new\"\n  },\n  \"educationData\": [\n    {\n      \"university\": \"\",\n      \"major\": \"\",\n      \"startMonth\": null,\n      \"startYear\": null,\n      \"endMonth\": null,\n      \"endYear\": null,\n      \"isCurrent\": null,\n      \"GPA\": \"\"\n    }\n  ],\n  \"experienceData\": [\n    {\n      \"company\": \"\",\n      \"position\": \"\",\n      \"startMonth\": null,\n      \"startYear\": null,\n      \"endMonth\": null,\n      \"endYear\": null,\n      \"isCurrent\": null,\n      \"description\": \"\"\n    }\n  ]\n}\n",
+        "inputType": "binary",
+        "simplify": false,
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.googleGemini",
+      "typeVersion": 1,
+      "position": [
+        -1968,
+        240
+      ],
+      "id": "32928835-745e-477d-afe5-33a64655f978",
+      "name": "Analyze document",
+      "alwaysOutputData": false,
+      "executeOnce": false,
+      "retryOnFail": true,
+      "waitBetweenTries": 5000,
+      "credentials": {
+        "googlePalmApi": {
+          "id": "haKNG2mVTO561SVW",
+          "name": "Google Gemini(PaLM) Jaroonwit"
+        }
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "amount": 1
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        -4240,
+        736
+      ],
+      "id": "75abb3a5-6765-40f6-b62e-f58b1923c7bd",
+      "name": "Wait",
+      "webhookId": "8c262037-963b-4d24-8db6-e10a66ba3a06"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://your-app.example.com/api/v1/applicants/{{ $json.body.inputs.applicant_id }}/job-matches",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "accept",
+              "value": "application/json"
+            },
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $('Extract Auth Token').item.json.token }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{ $('Code1').item.json.toJsonString() }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2816,
+        32
+      ],
+      "id": "29fd8a85-83b9-4a2c-a4ff-f41a9cc04558",
+      "name": "Update job match",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "mode": "raw",
+        "jsonOutput": "{\n  \"job_matches\": \"done\"\n}\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        2816,
+        480
+      ],
+      "id": "fac26ea5-f8d6-4d7c-8b21-b96df3568701",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "mode": "chooseBranch",
+        "numberInputs": 5,
+        "output": "empty"
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        1440,
+        736
+      ],
+      "id": "fb59f067-2552-4f36-b5da-4fd8ea243372",
+      "name": "Merge"
+    },
+    {
+      "parameters": {
+        "jsonSchemaExample": "\n{\n  \"fitScore\": 0.89,\n  \"jobId\": \"3fa85f64-5717-4562-b3fc-2c963f66afa6\",\n  \"justification\": [\n    \"string\"\n  ]\n}\n"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        -2384,
+        1696
+      ],
+      "id": "c28d6684-a07a-465b-8cfe-8bcd43e09f72",
+      "name": "Structured Output Parser3",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=<Job applied>\n{{ $('Get Applied Position info').all().last().json.toJsonString() }}\n</Job applied>\n\n<applicant profile>\n{{ $json.body.inputs.applicant_info }}\n</applicant profile>\n\n<Job ID>\n{{ $('Webhook').all().last().json.body.inputs.applied_position_id }}\n</Job ID>\n",
+        "needsFallback": true,
+        "options": {
+          "systemMessage": "=<task_description>\nYou are a deterministic AI Agent responsible for scoring the match between a applicant and the job they applied for.\n\n## Input\nYou will receive exactly **two JSON objects**:\n1. `applicant information`: Includes personal info, education, experience, and skills.\n2. `Job applied`: The job details that the applicant applied for.\n\n---\n\n### Instructions\n\n- Analyze the applicant’s profile and compare it against the job's requirements.\n- Calculate a `fitScore` between **0.0 and 1.0** (as a float string, e.g., `\"0.85\"`), representing how well the applicant fits. A score of `\"1.0\"` means a perfect match, while `\"0.0\"` means no match.\n- Provide a list of `justification` entries explaining the alignment. Each item should specifically describe how the applicant's profile aligns or doesn't align with the job.\n- Output must be a valid JSON object with:\n  - `fitScore`: stringified float between `\"0.0\"` and `\"1.0\"`\n  - `justification`: list of concise English sentences.\n  - `jobId`: the job id from user input\n- Do not include any XML tags in your response.\n</task_description>\n\n<instruction>\n1. **Receive and Parse Input**\n   - Parse both input JSON objects: `applicant information` and `Job applied`.\n\n2. **Analyze applicant Information**\n   - Review education, work experience, skills, certifications, and any other relevant data.\n\n3. **Analyze Job Details**\n   - Identify key job requirements, preferred qualifications, responsibilities, and organizational values.\n\n4. **Score Caritra**\n{{ $('Get Applied Position info').all().last().json.data.matchCriteria }}\n\n6. **Calculate Fit Score**\n   - Add all weighted category scores.\n   - Return the total as a float string between `\"0.0\"` and `\"1.0\"` with 2 decimal places.\n\n7. **Provide Justification**\n   - List clear, concise Thai language sentences explaining as analyst thinking data-driven the decision.\n   - Each statement should:\n     - Point out strengths and alignment with the job\n     - Point out weekness concern that may not alignment with the job\n     - Include the percentage alignment per category (e.g., \"Skills match 75%.\")\n\n8. **Set jobId**\n   - Include a `jobId` field in the final JSON using the `id` from the job input.\n\n9. ** output format**\nyou must return as specific output Json format only\n\n<example>\n{\n  \"fitScore\": 0.85,\n  \"jobId\": \"3fa85f64-5717-4562-b3fc-2c963f66afa6\",\n  \"justification\": [\n    \"ผู้สมัครจบการศึกษาระดับปริญญาโท สาขา International Legal Studies จาก Golden Gate University (2539) และปริญญาตรี คณะนิติศาสตร์ มหาวิทยาลัยธรรมศาสตร์ (2535) และอนุปริญญา สาขาบริหารธุรกิจ จาก University of California (2540) ซึ่งถึงแม้จะเป็นสาขาการศึกษาที่เกี่ยวข้องกัน แต่ไม่ได้ตรงกับ job description 100% (Education match 75%).\",\n    \"ผู้สมัครมีประสบการณ์มากกว่า 25 ปี เป็น in-house legal counsel ให้กับหลากหลายธุรกิจ ได้แก่ Trading, Banking, FMCG, Electronic gadgets และ Food & Beverage ซึ่งมีความเชี่ยวชาญในด้านกฎหมายการกำกับดูแลกิจการ (Corporate Governance), การควบรวมกิจการ (Mergers & Acquisitions), การเจรจาสัญญา (Contract Negotiation) และการระงับข้อพิพาท (Dispute Resolution) (Experient match 100%).\"\n  ]\n}\n</example>\n\n</instruction>\n"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2.1,
+      "position": [
+        -336,
+        1168
+      ],
+      "id": "46c72703-77ee-489e-838b-1df384b49135",
+      "name": "LLM Applied Job",
+      "alwaysOutputData": true,
+      "retryOnFail": true,
+      "maxTries": 3,
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-2.0-flash",
+        "options": {
+          "maxOutputTokens": 655350,
+          "temperature": 1,
+          "topK": 32,
+          "topP": 1
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        1488,
+        384
+      ],
+      "id": "8f3f663f-407b-4ec8-8195-c2d8df0d9847",
+      "name": "Google Gemini Chat Model10",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "B1nuN4NhBUU82uuN",
+          "name": "Google Gemini(PaLM) inbound retry"
+        }
+      },
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-2.0-flash",
+        "options": {
+          "maxOutputTokens": 655350,
+          "temperature": 1,
+          "topK": 32,
+          "topP": 1
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        1616,
+        384
+      ],
+      "id": "a1098ca4-b5c2-4569-98a5-10df6fc911e7",
+      "name": "Google Gemini Chat Model12",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "B1nuN4NhBUU82uuN",
+          "name": "Google Gemini(PaLM) inbound retry"
+        }
+      },
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "jsonSchemaExample": "{\n  \"job_matches\": [\n    {\n      \"fitScore\": 0.85,\n      \"jobId\": \"3fa85f64-5717-4562-b3fc-2c963f66afa6\",\n      \"matchReasons\": [\n        \"Strong technical skills\",\n        \"Relevant experience\"\n      ]\n    },\n     {\n      \"fitScore\": 0.85,\n      \"jobId\": \"3fa85f64-5717-4562-b3fc-2c963f3434a6\",\n      \"matchReasons\": [\n        \"Strong technical skills\",\n        \"Relevant experience\"\n      ]\n    }\n  ]\n}",
+        "autoFix": true,
+        "customizeRetryPrompt": true
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        1872,
+        384
+      ],
+      "id": "f0c895e2-4408-43d5-af67-5b4c05bd1a1f",
+      "name": "Structured Output Parser4",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=<applicant profile>\n{{ $('applicant information').item.json}}\n</applicant profile>\n\n<open_positions>\n{{ $('Filter out applied job').all().toJsonString() }}\n</open_positions>\n",
+        "hasOutputParser": true,
+        "needsFallback": true,
+        "options": {
+          "systemMessage": "<instruction>\nYou are a deterministic AI assistant responsible for scoring how well a applicant fits each job in a list of open positions. Your goal is to analyze the applicant's profile and compute a fit score for each job based on defined criteria.\n\nFollow these steps precisely:\n\n1. **Input Structure:**\n   You will receive two JSON objects:\n   - `applicant_information`: Contains the applicant’s personal details, education, experience, and skills.\n   - `open_positions`: A list of job postings. Each includes:\n     - Job title\n     - Description\n     - Required skills\n     - Experience level\n     - Preferred qualifications\n\n2. **Job Analysis:**\n   For each job in the `open_positions` list, perform the following steps:\n\n   a. **Analyze Job Requirements**\n      - Understand the key competencies, responsibilities, required and preferred skills, and experience level from the job description.\n\n   b. **useing calculate logic that user provide in `matchCriteria`**\n   \n\n3. **Scoring Criteria:**\n4. **Weighting and Calculation:**\n5. **Final Score Output: **\n   - Sum all weighted scores.\n   - Return as a float string between `\"0.00\"` and `\"1.00\"` with two decimal places.\n   - Example: `\"0.78\"`\n\n6. **Match Reasons:**\n   - Each reason must be written as analysis thinking in **clear Thai language** using full sentences with % matched.\n   - Justify the match with specific references to skills, qualifications, or past achievements found in the applicant profile.\n\n7. ** expect output format **\nyou must return specific json output as below format only\n\n<example>\n{\n  \"job_matches\": [\n    {\n      \"fitScore\": 0.85,\n      \"jobId\": \"3fa85f64-5717-4562-b3fc-2c963f66afa6\",\n      \"matchReasons\": [\n        \"1. มีประสบการณ์มากกว่า 25 ปี เป็น in-house legal counsel ให้กับหลากหลายธุรกิจ ได้แก่ Trading, Banking, FMCG, Electronic gadgets และ Food & Beverage ซึ่งมีความเชี่ยวชาญในด้านกฎหมายการกำกับดูแลกิจการ (Corporate Governance), การควบรวมกิจการ (Mergers & Acquisitions), การเจรจาสัญญา (Contract Negotiation) และการระงับข้อพิพาท (Dispute Resolution)(50%)\",\n        \"2. ผู้สมัครเป็นคนมีความมุ่งมั่นสูงและมีวุฒิภาวะในการเป็นผู้นำ อีกทั้งมีบุคลิกและมนุษย์สัมพันธ์ดี มีทักษะด้านการสื่อสารที่เข้าใจง่าย รวมถึงสามารถบริหารจัดการทีมงานได้ดี\"\n      ]\n    },\n    {\n      \"fitScore\": 0.85,\n      \"jobId\": \"3fa85f64-5717-4562-b3fc-2c963f3434a6\",\n      \"matchReasons\": [\n        \"1. จบการศึกษาระดับปริญญาโท สาขา International Legal Studies จาก Golden Gate University (2539) และปริญญาตรี คณะนิติศาสตร์ มหาวิทยาลัยธรรมศาสตร์ (2535) และอนุปริญญา สาขาบริหารธุรกิจ จาก University of California (2540) (50%)\",\n        \"3. ผู้สมัครมีใบอนุญาตทนายความ (Lawyer License) ที่สามารถขึ้นว่าความได้ และมีใบอนุญาตจากสภาทนายความแห่งประเทศไทยให้ทำหน้าที่รับรองลายมือชื่อเอกสารต่างๆได้ (Notarial Services Attorney (50%)\"\n      ]\n    }\n  ]\n}\n\n</example>\n</instruction>\n",
+          "batching": {
+            "batchSize": 10
+          }
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2.1,
+      "position": [
+        1680,
+        0
+      ],
+      "id": "2b5cdf8d-b2de-49f9-917f-897059c74694",
+      "name": "Basic LLM Chain",
+      "alwaysOutputData": true,
+      "retryOnFail": false,
+      "maxTries": 2,
+      "executeOnce": true,
+      "disabled": true,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $('Webhook').item.json.body.inputs.jobId }}",
+        "contextWindowLength": 1
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.3,
+      "position": [
+        1744,
+        384
+      ],
+      "id": "71c96cf9-692b-4a43-92e2-07bf2405c3f4",
+      "name": "Simple Memory2",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "options": {
+          "temperature": 1,
+          "topK": 32,
+          "topP": 1
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        1856,
+        496
+      ],
+      "id": "8b6d401e-c25d-4042-adb8-e59b49b0dab2",
+      "name": "Google Gemini Chat Model2",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "B1nuN4NhBUU82uuN",
+          "name": "Google Gemini(PaLM) inbound retry"
+        }
+      },
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// Loop over input items and add a new field called 'myNewField' to the JSON of each one\nfor (const item of $input.all()) {\n  item.json.myNewField = 1;\n}\n\nreturn $input.all();"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2080,
+        32
+      ],
+      "id": "6b4d5aab-4665-4aea-aba2-4141b339f1bc",
+      "name": "Code1",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $('Webhook').item.json.body.request_type }}",
+                    "rightValue": "create",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "583aabdb-ff19-43f3-be44-5b6981d3667a"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "create"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "fae549f6-118a-43f4-a5a4-9d17af485817",
+                    "leftValue": "={{ $('Webhook').item.json.body.request_type }}",
+                    "rightValue": "update",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "update"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        -3552,
+        624
+      ],
+      "id": "05e857c7-339a-4133-be7b-382c2d6f4aba",
+      "name": "Switch"
+    },
+    {
+      "parameters": {
+        "method": "DELETE",
+        "url": "=https://your-app.example.com/api/v1/applicants/{{ $('Webhook').item.json.body.inputs.applicant_id }}/job-matches",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "accept",
+              "value": "application/json"
+            },
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $('Extract Auth Token').item.json.token }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        896,
+        16
+      ],
+      "id": "eb274242-eafb-4db3-8da7-01dadab351bd",
+      "name": "Delete all job match of applicant",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "df14f0dc-a2da-433a-a207-e7a33ba0de57",
+              "leftValue": "={{ $('Webhook').all().last().json.body.request_type }}",
+              "rightValue": "create",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        288,
+        1168
+      ],
+      "id": "fb747bc1-a8e3-4bed-808f-870718eb796c",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "f1aceb0a-7b9e-429c-b0cd-f04030282d2c",
+              "name": "body.inputs.applicant_id",
+              "value": "={{ $('Create applicant').item.json.data.applicant.id }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        544,
+        1072
+      ],
+      "id": "ed10e55a-778d-4e1a-9849-28d8e0199e61",
+      "name": "Edit Fields1"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "1a07ff36-9b00-4157-a8cd-0b1ad836e4ec",
+              "name": "body.inputs.applicant_id",
+              "value": "={{ $('Webhook').item.json.body.inputs.applicant_id }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        528,
+        1248
+      ],
+      "id": "89e15f79-03d1-44d5-9591-b0e7780e6655",
+      "name": "Edit Fields2"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "df14f0dc-a2da-433a-a207-e7a33ba0de57",
+              "leftValue": "={{ $('Webhook').item.json.body.request_type }}",
+              "rightValue": "create",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        2304,
+        32
+      ],
+      "id": "077a6cef-f81b-4413-85a6-cdee0c3df851",
+      "name": "If1",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "f1aceb0a-7b9e-429c-b0cd-f04030282d2c",
+              "name": "body.inputs.applicant_id",
+              "value": "={{ $('Create applicant').item.json.data.applicant.id }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        2528,
+        -96
+      ],
+      "id": "6a9be782-2c25-4aef-9c51-86e47f6d2c96",
+      "name": "Edit Fields3",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "1a07ff36-9b00-4157-a8cd-0b1ad836e4ec",
+              "name": "body.inputs.applicant_id",
+              "value": "={{ $('Webhook').item.json.body.inputs.applicant_id }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        2528,
+        128
+      ],
+      "id": "7e4b79c8-b9fc-426f-8df3-a8ff4ddca306",
+      "name": "Edit Fields4",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "method": "PUT",
+        "url": "=https://your-app.example.com/api/v1/applicants/{{ $('Create applicant').item.json.data.applicant.id }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $('Login').all().last().json.data.token }}"
+            },
+            {
+              "name": "accept",
+              "value": "application/json"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={  \"recruiterId\": \"{{ $('Get Applied Position info').all().last().json.data.recruiterId }}\"\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -720,
+        464
+      ],
+      "id": "848bd698-fcd7-4e17-b350-7d481e22bec7",
+      "name": "Assign Recruiter",
+      "alwaysOutputData": true,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "method": "PUT",
+        "url": "=https://your-app.example.com/api/v1/applicants/{{ $('Create applicant').item.json.data.applicant.id }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $('Login').all().last().json.data.token }}"
+            },
+            {
+              "name": "accept",
+              "value": "application/json"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={  \"sourceId\": \"{{ $('Webhook').all().last().json.body.inputs.source_id }}\" }",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -720,
+        336
+      ],
+      "id": "e55b43fd-6e0c-4eb1-b557-8fb797fea204",
+      "name": "Assign source",
+      "alwaysOutputData": true,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "options": {
+          "temperature": 0.7,
+          "topK": 32,
+          "topP": 1
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        -192,
+        1392
+      ],
+      "id": "781f75c7-df73-416e-9bb1-0f8933f6680b",
+      "name": "Google Gemini Chat fallback model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "cVpsRqYPDUX4kjfd",
+          "name": "Google Gemini(PaLM) HRI Fallback"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "=https://your-app.example.com/api/v1/applicants/{{ $('Webhook').item.json.body.inputs.applicant_id }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $('Login').all().last().json.data.token }}"
+            },
+            {
+              "name": "accept",
+              "value": "application/json"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -2768,
+        880
+      ],
+      "id": "6acaa572-6f99-414c-9a55-407bf61751eb",
+      "name": "Get applicant detail",
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Get the raw JSON string\nlet rawJson = $input.first().json.applicants[0].content.parts[0].text;\n\n// Clean unwanted characters like triple backticks and markdown tags\nrawJson = rawJson\n  .replace(/```json\\s*/g, '')  // Remove starting ```json\n  .replace(/```/g, '')         // Remove closing ```\n  .trim();                     // Remove extra whitespace\n\nlet parsed;\n\ntry {\n  parsed = JSON.parse(rawJson);\n} catch (error) {\n  throw new Error(\"Failed to parse JSON: \" + error.message);\n}\n\n// Return parsed JSON in n8n format\nreturn [\n  {\n    json: parsed\n  }\n];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1728,
+        256
+      ],
+      "id": "fdbf3cec-6fee-4788-84ff-7e6d095da9fb",
+      "name": "applicant information"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "f1aceb0a-7b9e-429c-b0cd-f04030282d2c",
+              "name": "body.inputs.applicant_info",
+              "value": "={{ $('applicant information').item.json}}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -720,
+        992
+      ],
+      "id": "7d36d51d-8eda-4fbd-8d79-d7c98d9733c3",
+      "name": "applicant_info_fact"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "f1aceb0a-7b9e-429c-b0cd-f04030282d2c",
+              "name": "body.inputs.applicant_info",
+              "value": "={{ $('Get applicant detail').item.json.toJsonString() }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -2304,
+        864
+      ],
+      "id": "4f042dcb-ae2b-4855-8067-3c44b24562f2",
+      "name": "applicant_info_fact1"
+    },
+    {
+      "parameters": {
+        "url": "=https://your-app.example.com/api/v1/job-match-status",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/pdf"
+            },
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $('Login').all().last().json.data.token }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "multipart/form-data"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        592,
+        80
+      ],
+      "id": "89aef598-8c00-4dec-bffe-7a161f17e41f",
+      "name": "check for job-match-status feature",
+      "retryOnFail": false,
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "729b4d42-30c3-4cd4-91fc-91ab998b6120",
+              "leftValue": "={{ $json.data.isJobMatchEnabled }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        736,
+        176
+      ],
+      "id": "7af70671-1df8-4105-a024-e624977a21d8",
+      "name": "If job match enable"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Get the raw JSON string\nlet rawJson = $input.first().json.data\n\n// Clean unwanted characters like triple backticks and markdown tags\nrawJson = rawJson\n  .replace(/```json\\s*/g, '')  // Remove starting ```json\n  .replace(/```/g, '')         // Remove closing ```\n  .trim();                     // Remove extra whitespace\n\nlet parsed;\n\ntry {\n  parsed = JSON.parse(rawJson);\n} catch (error) {\n  throw new Error(\"Failed to parse JSON: \" + error.message);\n}\n\n// Return parsed JSON in n8n format\nreturn [\n  {\n    json: parsed\n  }\n];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        896,
+        1152
+      ],
+      "id": "23d92ca5-11be-40c1-a31a-437a28b1dfd8",
+      "name": "applied job"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Existing attachments array\nlet additionalAttachments = $('Webhook').first().json.body.inputs.additionalAttachments\n\n// Function to add a new attachment\nfunction addAttachment(path, name, size, type) {\n  const newAttachment = { path, name, size, type };\n  additionalAttachments.push(newAttachment);\n}\n\n\nreturn additionalAttachments\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1072,
+        -208
+      ],
+      "id": "69d40424-4674-4608-bbae-d9fd8caf1a45",
+      "name": "Code",
+      "alwaysOutputData": true,
+      "retryOnFail": false
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        -592,
+        -592
+      ],
+      "id": "69693c6d-2342-434d-9cb2-3896597af335",
+      "name": "Loop Over Items"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.noOp",
+      "name": "Replace Me",
+      "typeVersion": 1,
+      "position": [
+        224,
+        -368
+      ],
+      "id": "f0b8dfaf-db96-44c6-9970-e3dd640ca05d"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://your-app.example.com/api/v1/applicants/{{ $('Create applicant').all().last().json.data.applicant.id }}/attachments",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/pdf"
+            },
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $('Login').all().last().json.data.token }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "multipart/form-data"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "multipart-form-data",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "parameterType": "formBinaryData",
+              "name": "attachment",
+              "inputDataFieldName": "data"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -96,
+        -432
+      ],
+      "id": "e0628865-a3d9-4d32-ad34-128f275681c9",
+      "name": "Upload additional file",
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://your-app.example.com/api/v1/applicants/{{ $('Create applicant').all().last().json.data.applicant.id }}/attachments",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "Multipart-Form-Data"
+            },
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $('Login').all().last().json.data.token }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "multipart-form-data",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "parameterType": "formBinaryData",
+              "name": "attachment",
+              "inputDataFieldName": "data"
+            },
+            {
+              "name": "label",
+              "value": "resume"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -464,
+        -144
+      ],
+      "id": "bdbafad0-7c7c-4832-939d-96ce2ae57f94",
+      "name": "Upload Resume",
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "mode": "chooseBranch",
+        "useDataOfInput": 2
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        816,
+        80
+      ],
+      "id": "4344418f-0bf3-4c8e-be26-144f9a27abbc",
+      "name": "Merge1"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "c9d07977-89db-4b11-8e78-547f1b40899a",
+              "leftValue": "={{ $('Code').item.json.isEmpty() }}",
+              "rightValue": 1,
+              "operator": {
+                "type": "boolean",
+                "operation": "false",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -880,
+        -256
+      ],
+      "id": "ca3ec246-61e8-4492-8507-935a25bc24d6",
+      "name": "If2"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $('Webhook').all().last().json.body.request_type }}",
+                    "rightValue": "create",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "583aabdb-ff19-43f3-be44-5b6981d3667a"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "create"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "fae549f6-118a-43f4-a5a4-9d17af485817",
+                    "leftValue": "={{ $('Webhook').all().last().json.body.request_type }}",
+                    "rightValue": "update",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "update"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        1040,
+        1152
+      ],
+      "id": "2ec49bf2-37f1-4603-b7f0-51e8180dd2ef",
+      "name": "Switch1"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Get the raw JSON string\nlet rawJson = $('LLM Applied Job').first().json.output\n\n// Clean unwanted characters like triple backticks and markdown tags\nrawJson = rawJson\n  .replace(/```json\\s*/g, '')  // Remove starting ```json\n  .replace(/```/g, '')         // Remove closing ```\n  .trim();                     // Remove extra whitespace\n\nlet parsed;\n\ntry {\n  parsed = JSON.parse(rawJson);\n} catch (error) {\n  throw new Error(\"Failed to parse JSON: \" + error.message);\n}\n\n// Return parsed JSON in n8n format\nreturn [\n  {\n    json: parsed\n  }\n];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        64,
+        1168
+      ],
+      "id": "cf659097-3fab-44ee-9dc3-1760efbe85d8",
+      "name": "applied job parsed"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\n  \"error\": \"Docuement Analyst error\",\n  \"error_detail\": \"{{ $('Get applicant detail').item.json.error }}\"\n}",
+        "options": {
+          "responseCode": 500
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        -2624,
+        1056
+      ],
+      "id": "1844cab4-c6e9-44d4-9e9b-640858d89db9",
+      "name": "Respond to Webhook8"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\n  \"error\": \"Docuement Analyst error\",\n  \"error_detail\": \"{{ $('Get Applied Position info').item.json.error }}\"\n}",
+        "options": {
+          "responseCode": 500
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        -3568,
+        928
+      ],
+      "id": "abf16ff5-b0a4-4c68-91ae-f013f3109d51",
+      "name": "Error Respond1"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\n  \"error\": \"Docuement Analyst error\",\n  \"error_detail\": \"{{ $('Download a file').item.json.error }}\"\n}",
+        "options": {
+          "responseCode": 500
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        -3024,
+        592
+      ],
+      "id": "9399059f-efd2-4e42-a944-ecaa125c0a48",
+      "name": "Error Respond2"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\n  \"error\": \"Docuement Analyst error\",\n  \"error_detail\": \"{{ $('Analyze document').item.json.error }}\"\n}",
+        "options": {
+          "responseCode": 500
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        -1584,
+        528
+      ],
+      "id": "cbe5ff56-02a3-4407-a488-e1149b70fe51",
+      "name": "Error Respond3"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\n  \"error\": \"Create applicant Error\",\n  \"error_detail\": \"{{ $('Create applicant').item.json.error.message.toJsonString() }}\"\n}",
+        "options": {
+          "responseCode": 500
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        -1344,
+        512
+      ],
+      "id": "fa1c773a-74ab-42b2-9103-d7788ac71ffe",
+      "name": "Error Respond4"
+    },
+    {
+      "parameters": {
+        "bucketName": "hri",
+        "fileKey": "={{ $('Extract Path').item.json.filePath }}"
+      },
+      "type": "n8n-nodes-base.s3",
+      "typeVersion": 1,
+      "position": [
+        -3168,
+        496
+      ],
+      "id": "ef9f3674-1b24-45a3-8058-40c93f4f6f27",
+      "name": "Download a file",
+      "alwaysOutputData": true,
+      "credentials": {
+        "s3": {
+          "id": "YZlcJireOcYBO9lh",
+          "name": "S3 account prod hri"
+        }
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const cvUrl = $('Webhook').item.json.body.inputs.cv_url;\n\n// Extract filePath using string methods\nlet filePath = '';\nif (cvUrl.includes('filePath=')) {\n  filePath = cvUrl.split('filePath=')[1];\n  // Remove any additional query parameters\n  if (filePath.includes('&')) {\n    filePath = filePath.split('&')[0];\n  }\n  // Decode URL encoding\n  filePath = decodeURIComponent(filePath);\n}\n\nreturn [{\n  json: {\n    filePath: filePath,\n    fileName: filePath.split('/').pop()\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -3328,
+        512
+      ],
+      "id": "516b444b-f3d6-4106-8a67-ba8b7e3ed3cb",
+      "name": "Extract Path",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "bucketName": "hri",
+        "fileKey": "={{ $('Extract Path').all().last().json.filePath }}"
+      },
+      "type": "n8n-nodes-base.s3",
+      "typeVersion": 1,
+      "position": [
+        -640,
+        -128
+      ],
+      "id": "4489a42b-9b7b-4d28-ade5-6485c57c2f6b",
+      "name": "Download a file1",
+      "credentials": {
+        "s3": {
+          "id": "YZlcJireOcYBO9lh",
+          "name": "S3 account prod hri"
+        }
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\n  \"error\": \"Create applicant Error\",\n  \"error_detail\": \"{{ $('Download a file1').item.json.error.message.toJsonString() }}\"\n}",
+        "options": {
+          "responseCode": 500
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        -464,
+        16
+      ],
+      "id": "fe8193be-f9a8-4e38-ba97-3dd6ab09b746",
+      "name": "Error Respond5"
+    },
+    {
+      "parameters": {
+        "bucketName": "hri",
+        "fileKey": "={{ $('Extract Path').all().last().json.filePath }}"
+      },
+      "type": "n8n-nodes-base.s3",
+      "typeVersion": 1,
+      "position": [
+        -448,
+        -512
+      ],
+      "id": "13659f5a-360c-4751-96cb-f3debc106d4b",
+      "name": "Get CV Files for upload to attachement",
+      "credentials": {
+        "s3": {
+          "id": "YZlcJireOcYBO9lh",
+          "name": "S3 account prod hri"
+        }
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\n  \"error\": \"Create applicant Error\",\n  \"error_detail\": \"{{ $('Get CV Files for upload to attachement').item.json.error.message.toJsonString() }}\"\n}",
+        "options": {
+          "responseCode": 500
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        -320,
+        -384
+      ],
+      "id": "9cd26067-96fe-4626-83d4-136c37111a2a",
+      "name": "Error Respond6"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://your-app.example.com/api/v1/auth/login",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "email",
+              "value": "admin@example.com"
+            },
+            {
+              "name": "password",
+              "value": "CHANGE_THIS_PASSWORD"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -4048,
+        736
+      ],
+      "id": "442c3643-cde3-4e3d-b394-94d14f9ee3f6",
+      "name": "Login",
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\n  \"error\": \"Create applicant Error\",\n  \"error_detail\": \"{{ $('Upload additional file').item.json.error.message.toJsonString() }}\"\n}",
+        "options": {
+          "responseCode": 500
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        48,
+        -304
+      ],
+      "id": "61cff2b9-0e1c-49c4-b1dc-e1e9edcc1243",
+      "name": "Error Respond7"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\n  \"error\": \"Create applicant Error\",\n  \"error_detail\": \"{{ $('Upload Resume').item.json.error.message.toJsonString() }}\"\n}",
+        "options": {
+          "responseCode": 500
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        -288,
+        -48
+      ],
+      "id": "5eb54f2c-0f4c-4c3d-92f8-8f4627cbd046",
+      "name": "Error Respond8"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\n  \"error\": \"Create applicant Error\",\n  \"error_detail\": \"{{ $('check for job-match-status feature').item.json.error.message.toJsonString() }}\"\n}",
+        "options": {
+          "responseCode": 500
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        736,
+        368
+      ],
+      "id": "43564ab5-1237-4bae-9f30-f08f5f950ed1",
+      "name": "Error Respond9"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $('Download a file').all().last().json.fileName }}",
+                    "rightValue": "docx",
+                    "operator": {
+                      "type": "string",
+                      "operation": "endsWith"
+                    },
+                    "id": "d07f71fe-0760-418c-9cf3-e76f21bd8004"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "docx"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "64545738-4320-441e-af81-da28f5c89c39",
+                    "leftValue": "={{ $('Download a file').all().last().json.fileName }}",
+                    "rightValue": "pdf",
+                    "operator": {
+                      "type": "string",
+                      "operation": "endsWith"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "pdf"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.3,
+      "position": [
+        -2960,
+        400
+      ],
+      "id": "bde88aab-81e0-434a-97e4-ce24ff927e01",
+      "name": "check for file type"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://worker.example.com/api/r/api_script_convert_docx_to_pdf",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "docx_base64",
+              "value": "={{ $json.data }}"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "text"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        -2544,
+        176
+      ],
+      "id": "142856cd-08b9-46a7-8d9e-0b5dcc7e9158",
+      "name": "Convert Docx to PDF"
+    },
+    {
+      "parameters": {
+        "operation": "binaryToPropery",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1,
+      "position": [
+        -2752,
+        304
+      ],
+      "id": "62d7b71f-c73e-43ae-8223-100def901b07",
+      "name": "Extract from File"
+    },
+    {
+      "parameters": {
+        "operation": "toBinary",
+        "sourceProperty": "data",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.convertToFile",
+      "typeVersion": 1.1,
+      "position": [
+        -2336,
+        176
+      ],
+      "id": "f028f0b1-8de0-4bed-991d-950130770bc5",
+      "name": "Convert to File"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\n  \"error\": \"Docuement Analyst error\",\n  \"error_detail\": \"unable to login\"\n}",
+        "options": {
+          "responseCode": 500
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        -3808,
+        896
+      ],
+      "id": "d3647a5f-9a15-49ef-997f-2531fc272a12",
+      "name": "Error Respond"
+    },
+    {
+      "parameters": {
+        "content": "# Alternative job match feature flows",
+        "height": 928,
+        "width": 2400
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        512,
+        -208
+      ],
+      "typeVersion": 1,
+      "id": "01a09dd4-28f4-431e-929b-28314a94a87d",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "content": "# Evaluate job applied",
+        "height": 896,
+        "width": 1856
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -480,
+        960
+      ],
+      "typeVersion": 1,
+      "id": "c158afb7-ccae-4b82-a5d7-566871da1cd4",
+      "name": "Sticky Note1"
+    },
+    {
+      "parameters": {
+        "content": "# Assign source of applicant and recruiter for applied position",
+        "height": 448,
+        "width": 1040
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -768,
+        224
+      ],
+      "typeVersion": 1,
+      "id": "d1b7f60c-9288-411c-aafb-3b5e887b77bb",
+      "name": "Sticky Note2"
+    },
+    {
+      "parameters": {
+        "content": "# Upload  Resume and attachment file",
+        "height": 800,
+        "width": 1056
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -688,
+        -656
+      ],
+      "typeVersion": 1,
+      "id": "456e7e7b-19fd-4a08-8e87-1fc716d2cb24",
+      "name": "Sticky Note3"
+    },
+    {
+      "parameters": {
+        "content": "# Re-process exsiting applicant",
+        "height": 496,
+        "width": 1056
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -2992,
+        784
+      ],
+      "typeVersion": 1,
+      "id": "f0abd54d-62f7-4187-ba8c-847bc8ea3f5e",
+      "name": "Sticky Note4"
+    },
+    {
+      "parameters": {
+        "content": "# Get applicant information from OCR and create applicant if not exsit",
+        "height": 800,
+        "width": 1056
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -2112,
+        -112
+      ],
+      "typeVersion": 1,
+      "id": "39f15d1a-4c43-42b7-8337-03ec40dd5a1f",
+      "name": "Sticky Note5"
+    },
+    {
+      "parameters": {
+        "content": "# Perep for process",
+        "height": 656,
+        "width": 1872
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -4032,
+        80
+      ],
+      "typeVersion": 1,
+      "id": "6173860f-be56-4d19-8c0b-1d1931c5dd4c",
+      "name": "Sticky Note6"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Structured Output Parser": {
+      "ai_outputParser": [
+        []
+      ]
+    },
+    "Google Gemini Chat Retry": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Structured Output Parser",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create applicant": {
+      "main": [
+        [
+          {
+            "node": "Assign source",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Assign Recruiter",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "applicant_info_fact",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "check for job-match-status feature",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Code",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Download a file1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Error Respond4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Open job": {
+      "main": [
+        [
+          {
+            "node": "convert array to json list",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Wait",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "LLM Applied Job",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Applied Position info": {
+      "main": [
+        [
+          {
+            "node": "Switch",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Error Respond1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Inset applied": {
+      "main": [
+        [
+          {
+            "node": "applied job",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter out applied job": {
+      "main": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "convert array to json list": {
+      "main": [
+        [
+          {
+            "node": "Filter out applied job",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Analyze document": {
+      "main": [
+        [
+          {
+            "node": "applicant information",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Error Respond3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait": {
+      "main": [
+        [
+          {
+            "node": "Login",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update job match": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser3": {
+      "ai_outputParser": [
+        []
+      ]
+    },
+    "LLM Applied Job": {
+      "main": [
+        [
+          {
+            "node": "applied job parsed",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model10": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model12": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "ai_languageModel",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser4": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Basic LLM Chain": {
+      "main": [
+        [
+          {
+            "node": "Code1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simple Memory2": {
+      "ai_memory": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model2": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Structured Output Parser4",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code1": {
+      "main": [
+        [
+          {
+            "node": "If1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch": {
+      "main": [
+        [
+          {
+            "node": "Extract Path",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Get applicant detail",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Delete all job match of applicant": {
+      "main": [
+        [
+          {
+            "node": "Get Open job",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Edit Fields2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields1": {
+      "main": [
+        [
+          {
+            "node": "Inset applied",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields2": {
+      "main": [
+        [
+          {
+            "node": "Inset applied",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If1": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields3",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Edit Fields4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields3": {
+      "main": [
+        [
+          {
+            "node": "Update job match",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields4": {
+      "main": [
+        [
+          {
+            "node": "Update job match",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Assign Recruiter": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 3
+          }
+        ]
+      ]
+    },
+    "Assign source": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 2
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat fallback model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "LLM Applied Job",
+            "type": "ai_languageModel",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Get applicant detail": {
+      "main": [
+        [
+          {
+            "node": "applicant_info_fact1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond to Webhook8",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "applicant information": {
+      "main": [
+        [
+          {
+            "node": "Create applicant",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "applicant_info_fact": {
+      "main": [
+        [
+          {
+            "node": "LLM Applied Job",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "applicant_info_fact1": {
+      "main": [
+        [
+          {
+            "node": "LLM Applied Job",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "check for job-match-status feature": {
+      "main": [
+        [
+          {
+            "node": "If job match enable",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Error Respond9",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If job match enable": {
+      "main": [
+        [
+          {
+            "node": "Delete all job match of applicant",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "applied job": {
+      "main": [
+        [
+          {
+            "node": "Switch1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code": {
+      "main": [
+        [
+          {
+            "node": "If2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Items": {
+      "main": [
+        [
+          {
+            "node": "Merge1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Get CV Files for upload to attachement",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Replace Me": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upload additional file": {
+      "main": [
+        [
+          {
+            "node": "Replace Me",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Error Respond7",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upload Resume": {
+      "main": [
+        [
+          {
+            "node": "Merge1",
+            "type": "main",
+            "index": 1
+          }
+        ],
+        [
+          {
+            "node": "Error Respond8",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge1": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "If2": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Merge1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch1": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 4
+          }
+        ],
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 4
+          },
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 3
+          },
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 2
+          },
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          },
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "applied job parsed": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Download a file": {
+      "main": [
+        [
+          {
+            "node": "check for file type",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Error Respond2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Path": {
+      "main": [
+        [
+          {
+            "node": "Download a file",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Download a file1": {
+      "main": [
+        [
+          {
+            "node": "Upload Resume",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Error Respond5",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get CV Files for upload to attachement": {
+      "main": [
+        [
+          {
+            "node": "Upload additional file",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Error Respond6",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Login": {
+      "main": [
+        [
+          {
+            "node": "Get Applied Position info",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Error Respond",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "check for file type": {
+      "main": [
+        [
+          {
+            "node": "Extract from File",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Analyze document",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Convert Docx to PDF": {
+      "main": [
+        [
+          {
+            "node": "Convert to File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract from File": {
+      "main": [
+        [
+          {
+            "node": "Convert Docx to PDF",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Convert to File": {
+      "main": [
+        [
+          {
+            "node": "Analyze document",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "callerPolicy": "workflowsFromSameOwner",
+    "executionTimeout": 600,
+    "saveExecutionProgress": true,
+    "availableInMCP": false
+  },
+  "versionId": "5fa5c66a-dbc8-482e-98ca-fcf051ef6d8a",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "639713264b45d45a157074c1c6154cfb89a68900e30020c36c02bfae640e3409"
+  },
+  "id": "8d2LSxHxy4VWPrAH",
+  "tags": [
+    {
+      "updatedAt": "2025-08-01T08:39:07.923Z",
+      "createdAt": "2025-08-01T08:39:07.923Z",
+      "id": "LeLA1ptq3bUThpIH",
+      "name": "Production"
+    }
+  ]
+}

@@ -1,0 +1,35 @@
+/* Reduced weight and size of all icons globally */
+svg.lucide,
+svg[stroke] {
+  stroke-width: 2;
+  width: 1.15rem;
+  height: 1.15rem;
+}
+
+/* Sidebar icons use normal weight */
+[data-sidebar="sidebar"] svg.lucide,
+[data-sidebar="sidebar"] svg[stroke] {
+  stroke-width: 2;
+}
+
+html {
+  font-size: calc(100% * var(--accessibility-text-scale, 1));
+}
+
+html.a11y-underline-links a:not([role="button"]) {
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+}
+
+html.a11y-contrast {
+  filter: contrast(1.12);
+}
+
+html.a11y-reduced-motion *,
+html.a11y-reduced-motion *::before,
+html.a11y-reduced-motion *::after {
+  scroll-behavior: auto;
+  animation-duration: 0.001ms;
+  animation-iteration-count: 1;
+  transition-duration: 0.001ms;
+}

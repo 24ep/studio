@@ -1,0 +1,647 @@
+Test Case ID,Feature/Module,Page/Route,Device,Scenario,Pre-requisites,Steps,Expected Result,Priority
+TC_AUTH_001,Authentication,Login Page,Desktop,Login with valid credentials,User exists in DB with valid password,"1. Navigate to /login
+2. Enter valid email
+3. Enter valid password
+4. Click Login button",User is redirected to Dashboard,High
+TC_AUTH_002,Authentication,Login Page,Mobile,Login with valid credentials,User exists in DB with valid password,"1. Open app on mobile browser
+2. Enter valid email
+3. Enter valid password
+4. Tap Login button",User is redirected to Dashboard,High
+TC_AUTH_003,Authentication,Login Page,Desktop,Login with invalid password,User exists in DB,"1. Navigate to /login
+2. Enter valid email
+3. Enter wrong password
+4. Click Login button","Error message displayed: 'Invalid credentials'",Medium
+TC_AUTH_004,Authentication,Login Page,Desktop,Login with non-existent email,None,"1. Navigate to /login
+2. Enter non-existent email
+3. Enter any password
+4. Click Login button","Error message displayed: 'User not found' or 'Invalid credentials'",Medium
+TC_AUTH_005,Authentication,Login Page,Desktop,Login with empty fields,None,"1. Navigate to /login
+2. Leave email and password empty
+3. Click Login button",Validation errors shown for required fields,Low
+TC_AUTH_006,Authentication,Login Page,Desktop,Login with Azure AD SSO,Azure AD configured,"1. Navigate to /login
+2. Click 'Sign in with Azure AD' button
+3. Complete Azure AD authentication",User is redirected to Dashboard with session created,High
+TC_AUTH_007,Authentication,Logout,Desktop,Logout from Dashboard,User is logged in,"1. Click User Avatar in header
+2. Click Logout option",User is redirected to Login page; Session is destroyed,Medium
+TC_AUTH_008,Authentication,Logout,Mobile,Logout from Mobile,User is logged in on mobile,"1. Open mobile menu
+2. Tap user profile
+3. Tap Logout option",User is redirected to Login page,Medium
+TC_AUTH_009,Authentication,Session,Desktop,Session Timeout,User is logged in but inactive,"1. Login to application
+2. Wait for session timeout period (configured)
+3. Try to perform any action",User is redirected to Login page with session expired message,Medium
+TC_AUTH_010,Authentication,Protected Routes,Desktop,Access protected route without login,User is not logged in,"1. Navigate directly to /dashboard
+2. Observe behavior",User is redirected to Login page,High
+TC_DASH_001,Dashboard,Dashboard,Desktop,View Dashboard Statistics,User logged in,"1. Navigate to /dashboard
+2. Wait for data to load","Statistics cards (Total applicants, Active Positions, Today's Applications) are displayed with correct numbers",High
+TC_DASH_002,Dashboard,Dashboard,Mobile,View Dashboard Layout,User logged in,"1. Navigate to /dashboard on mobile
+2. Scroll through page",Cards are stacked vertically; Charts are responsive and readable,High
+TC_DASH_003,Dashboard,Dashboard,Desktop,View applicants Per Position Chart,User logged in with applicants data,"1. Navigate to /dashboard
+2. Locate applicants Per Position chart",Bar chart displays correct data for each position,Medium
+TC_DASH_004,Dashboard,Dashboard,Desktop,View New Applications Time Series,User logged in with applications data,"1. Navigate to /dashboard
+2. Locate New Applications chart
+3. Verify date range selector works",Time series chart shows applications over selected period,Medium
+TC_DASH_005,Dashboard,Dashboard,Desktop,View Score Distribution Chart,User logged in with evaluated applicants,"1. Navigate to /dashboard
+2. Locate Score Distribution chart",Distribution chart shows correct score ranges,Medium
+TC_DASH_006,Dashboard,Dashboard,Desktop,View SLA Violations Widget,User logged in; SLA violations exist,"1. Navigate to /dashboard
+2. Locate SLA Violations widget",Widget displays list of SLA breaches with details,Medium
+TC_DASH_007,Dashboard,Dashboard,Desktop,Real-time Updates via SSE,User logged in; SSE enabled,"1. Navigate to /dashboard
+2. Have another user add a applicant
+3. Observe dashboard updates",Dashboard updates in real-time without page refresh,Medium
+TC_DASH_008,Dashboard,Dashboard,Desktop,Navigate to applicants from Dashboard,User logged in,"1. Navigate to /dashboard
+2. Click on any applicant statistics card",Navigates to /applicants with appropriate filters applied,Low
+TC_CAND_001,applicants,applicants List,Desktop,View applicants List,applicants exist in database,"1. Navigate to /applicants
+2. Wait for list to load",applicants table displays with columns: Name; Position; Stage; Source; Recruiter,High
+TC_CAND_002,applicants,applicants List,Desktop,Filter applicants by Position,applicants exist for multiple positions,"1. Navigate to /applicants
+2. Select a Position from dropdown filter
+3. Click Apply",List updates to show only applicants for selected position,High
+TC_CAND_003,applicants,applicants List,Desktop,Filter applicants by Multiple Positions,applicants exist for multiple positions,"1. Navigate to /applicants
+2. Select multiple positions from multi-select filter
+3. Apply filters",List shows applicants matching any of the selected positions,Medium
+TC_CAND_004,applicants,applicants List,Desktop,Filter applicants by Stage,applicants exist in different stages,"1. Navigate to /applicants
+2. Select a recruitment stage filter
+3. Apply filters",List shows only applicants in selected stage,High
+TC_CAND_005,applicants,applicants List,Desktop,Filter applicants by Source,applicants exist from different sources,"1. Navigate to /applicants
+2. Select source filter (e.g. LinkedIn; Referral)
+3. Apply filters",List shows only applicants from selected source,Medium
+TC_CAND_006,applicants,applicants List,Desktop,Filter applicants by Recruiter,applicants assigned to different recruiters,"1. Navigate to /applicants
+2. Select recruiter from filter
+3. Apply filters",List shows only applicants assigned to selected recruiter,Medium
+TC_CAND_007,applicants,applicants List,Desktop,Filter applicants by Fit Score,applicants with fit scores exist,"1. Navigate to /applicants
+2. Click on Fit Score filter tabs (Good Fit; Potential; etc.)
+3. Observe list update",List shows applicants matching selected fit score category,Medium
+TC_CAND_008,applicants,applicants List,Desktop,Search applicant by Name,applicants exist,"1. Navigate to /applicants
+2. Enter applicant name in search bar
+3. Wait for search to complete",List updates to show matching applicants,High
+TC_CAND_009,applicants,applicants List,Mobile,Search applicant by Name,applicants exist,"1. Navigate to /applicants
+2. Tap Search icon
+3. Enter applicant name in search bar",List updates to show matching applicants,High
+TC_CAND_010,applicants,applicants List,Desktop,Advanced Search with Query Syntax,applicants exist,"1. Navigate to /applicants
+2. Open Advanced Query modal
+3. Enter query like 'position:""Developer"" AND stage:""Interview""'",List shows applicants matching query criteria,Medium
+TC_CAND_011,applicants,applicants List,Desktop,Sort applicants by Column,applicants exist,"1. Navigate to /applicants
+2. Click on column header (e.g. Name; Created Date)
+3. Click again to reverse sort",List reorders according to selected column and direction,Medium
+TC_CAND_012,applicants,applicants List,Desktop,Pagination Navigation,More than 25 applicants exist,"1. Navigate to /applicants
+2. Scroll to bottom of list
+3. Click on page 2 or Next button",Second page of applicants is displayed,Medium
+TC_CAND_013,applicants,applicants List,Desktop,Change Page Size,applicants exist,"1. Navigate to /applicants
+2. Select different page size (25; 50; 100)
+3. Observe list",List displays selected number of applicants per page,Low
+TC_CAND_014,applicants,applicants List,Desktop,Bulk Select applicants,Multiple applicants exist,"1. Navigate to /applicants
+2. Check 'Select All' checkbox
+3. Observe selection count",All visible applicants are selected; count displayed,Medium
+TC_CAND_015,applicants,applicants List,Desktop,Bulk Delete applicants,Multiple applicants selected; user has delete permission,"1. Select multiple applicants
+2. Click Bulk Actions button
+3. Select Delete option
+4. Confirm deletion",Selected applicants are deleted; list refreshes,High
+TC_CAND_016,applicants,applicants List,Desktop,Bulk Update Stage,Multiple applicants selected,"1. Select multiple applicants
+2. Click Bulk Actions
+3. Select 'Update Stage'
+4. Choose new stage and confirm",All selected applicants move to new stage,High
+TC_CAND_017,applicants,applicants List,Desktop,View Kanban Board,applicants exist in different stages,"1. Navigate to /applicants
+2. Click Kanban view toggle
+3. View kanban columns",Kanban board displays with columns for each recruitment stage,Medium
+TC_CAND_018,applicants,applicants List,Desktop,Drag-and-Drop Stage Change in Kanban,applicants exist; Kanban view active,"1. Open Kanban view
+2. Drag a applicant card from one column to another
+3. Release card",applicant stage is updated; card moves to new column,Medium
+TC_CAND_019,applicants,applicants List,Mobile,Mobile List View,applicants exist,"1. Open /applicants on mobile device
+2. Scroll through list",applicants displayed in mobile-optimized card layout,High
+TC_CAND_020,applicants,applicants List,Mobile,Pull to Refresh,applicants exist; Mobile view,"1. Pull down on applicants list
+2. Release to refresh",List refreshes with latest data; refresh indicator shown,Medium
+TC_CAND_021,applicants,Add applicant,Desktop,Add New applicant Manually,User has create permission,"1. Navigate to /applicants
+2. Click 'Add applicant' button
+3. Fill required fields (Name; Email; Position)
+4. Click Save",New applicant is created and appears in list,High
+TC_CAND_022,applicants,Add applicant,Desktop,Add applicant with Resume Upload,User has create permission,"1. Click 'Add applicant'
+2. Fill required fields
+3. Upload resume file (PDF/DOC)
+4. Click Save",applicant created with resume attached and parsed,High
+TC_CAND_023,applicants,Add applicant,Desktop,Add applicant with Custom Fields,Custom fields configured; User has create permission,"1. Click 'Add applicant'
+2. Fill required fields
+3. Fill custom field values
+4. Click Save",applicant created with custom field values saved,Medium
+TC_CAND_024,applicants,Add applicant,Mobile,Add New applicant (Mobile),User has create permission; Using mobile,"1. Navigate to /applicants on mobile
+2. Tap Add button
+3. Fill form and submit",New applicant is created; success toast shown,High
+TC_CAND_025,applicants,applicant Detail,Desktop,View applicant Profile,applicant exists,"1. Click on a applicant name in the list
+2. Verify Profile tab is active","applicant details (Name; Email; Phone; Position) displayed correctly",High
+TC_CAND_026,applicants,applicant Detail,Desktop,View applicant Resume,applicant exists with resume,"1. Click on applicant
+2. Navigate to Resume tab/section
+3. Click on resume file",Resume preview opens or downloads correctly,High
+TC_CAND_027,applicants,applicant Detail,Mobile,View applicant Resume (Mobile),applicant exists with resume,"1. Tap on applicant row
+2. Tap 'Resume' tab/section",Resume preview is displayed or download link works,Medium
+TC_CAND_028,applicants,applicant Detail,Desktop,View applicant Education,applicant exists with education data,"1. Click on applicant
+2. Navigate to Education section",Education history displayed with institution; degree; dates,Medium
+TC_CAND_029,applicants,applicant Detail,Desktop,View applicant Experience,applicant exists with work experience,"1. Click on applicant
+2. Navigate to Experience section",Work experience displayed with company; role; duration,Medium
+TC_CAND_030,applicants,applicant Detail,Desktop,View applicant Comments,applicant exists with comments,"1. Click on applicant
+2. Navigate to Comments section",All comments displayed with author; timestamp; content,Medium
+TC_CAND_031,applicants,applicant Detail,Desktop,Add Comment to applicant,User logged in; applicant exists,"1. Open applicant detail
+2. Navigate to Comments section
+3. Type comment and submit",New comment added and displayed in list,Medium
+TC_CAND_032,applicants,applicant Detail,Desktop,Edit applicant Information,User has edit permission; applicant exists,"1. Open applicant detail
+2. Click Edit button
+3. Modify fields
+4. Save changes",Changes saved and displayed in profile,Medium
+TC_CAND_033,applicants,applicant Detail,Desktop,Delete applicant,User has delete permission; applicant exists,"1. Open applicant detail
+2. Click Delete button
+3. Confirm deletion",applicant is deleted; redirected to list,High
+TC_CAND_034,applicants,applicant Detail,Desktop,Assign Recruiter to applicant,applicant exists; Recruiters available,"1. Open applicant detail
+2. Click recruiter dropdown
+3. Select a recruiter",Recruiter assigned and displayed on applicant,Medium
+TC_CAND_035,applicants,applicant Detail,Desktop,Change applicant Source,applicant exists; Sources configured,"1. Open applicant detail
+2. Click source dropdown
+3. Select new source",Source updated and saved,Low
+TC_CAND_036,applicants,applicant Detail,Desktop,View applicant Attachments,applicant exists with attachments,"1. Open applicant detail
+2. Navigate to Attachments section",All attachments listed with name; type; size,Medium
+TC_CAND_037,applicants,applicant Detail,Desktop,Upload Additional Attachment,applicant exists; User has edit permission,"1. Open applicant detail
+2. Navigate to Attachments
+3. Click Upload button
+4. Select file and upload",Attachment uploaded and displayed in list,Medium
+TC_CAND_038,applicants,applicant Detail,Desktop,View Job Matches,applicant exists; AI matching enabled,"1. Open applicant detail
+2. Click Job Matches tab",List of matching positions with fit scores displayed,Medium
+TC_CAND_039,applicants,Stage Transition,Desktop,Change applicant Stage,applicant exists in a stage,"1. Open applicant detail
+2. Click on stage pipeline
+3. Select new stage
+4. Confirm transition",applicant moves to new stage; transition logged,High
+TC_CAND_040,applicants,Stage Transition,Desktop,View Stage Transition History,applicant has stage transitions,"1. Open applicant detail
+2. Navigate to Timeline/History section",All stage transitions displayed with dates and actors,Medium
+TC_CAND_041,applicants,Interview Invitation,Desktop,Send Interview Invitation,applicant exists; Email configured,"1. Open applicant detail
+2. Click 'Send Interview Invitation'
+3. Fill invitation details
+4. Preview and send",Invitation email sent; notification shown,High
+TC_CAND_042,applicants,Interview Invitation,Desktop,Preview Interview Email,applicant exists; Email template exists,"1. Open applicant detail
+2. Click 'Send Interview Invitation'
+3. Fill details
+4. Click Preview","Email preview modal shows formatted HTML email",Medium
+TC_CAND_043,applicants,Interview Invitation,Desktop,Schedule Interview with Calendar,applicant exists; Interview scheduled,"1. Open Send Interview modal
+2. Select interview date and time
+3. Choose interviewers
+4. Send invitation",Calendar event created; invitations sent to all parties,Medium
+TC_CAND_044,applicants,Bulk Upload,Desktop,Bulk Upload CVs,User has upload permission,"1. Navigate to /applicants
+2. Click 'Bulk Upload CVs'
+3. Select multiple CV files
+4. Click Upload",Files queued for processing; progress shown,High
+TC_CAND_045,applicants,Bulk Upload,Desktop,Monitor Upload Queue Progress,Files uploaded and processing,"1. Navigate to Upload Queue status
+2. Observe processing status",Each file shows status (Pending; Processing; Completed; Failed),High
+TC_CAND_046,applicants,Bulk Upload,Desktop,Handle Upload Errors,Some files fail processing,"1. Upload files with issues (corrupt; wrong format)
+2. Wait for processing
+3. View error details","Failed files show error message with reason",Medium
+TC_CAND_047,applicants,Import/Export,Desktop,Export applicants to Excel,applicants exist; User has export permission,"1. Navigate to /applicants
+2. Apply desired filters
+3. Click Export button
+4. Download file",Excel file downloads with applicant data,Medium
+TC_CAND_048,applicants,Import/Export,Desktop,Import applicants from Excel,User has import permission; Template file ready,"1. Navigate to /applicants
+2. Click Import button
+3. Upload Excel file
+4. Map columns and import",applicants imported with success/error summary,Medium
+TC_EVAL_001,Evaluation,Evaluation,Desktop,Score applicant Skills (Expertise),applicant is in evaluation stage,"1. Navigate to /applicants/[id]/evaluate
+2. Locate Skill Assessment section
+3. Adjust sliders for each skill",Score updates in real-time; Average score calculated,High
+TC_EVAL_002,Evaluation,Evaluation,Mobile,Score applicant Skills (Touch),applicant is in evaluation stage,"1. Navigate to /applicants/[id]/evaluate
+2. Scroll to Skill Assessment
+3. Drag slider with finger",Slider moves smoothly; Value updates correctly,High
+TC_EVAL_003,Evaluation,Evaluation,Desktop,Score Personality Traits,applicant is in evaluation stage,"1. Navigate to /applicants/[id]/evaluate
+2. Locate Personality Assessment section
+3. Rate each personality trait",Trait scores saved; Overall personality score calculated,High
+TC_EVAL_004,Evaluation,Evaluation,Desktop,Add Evaluation Comments/Notes,applicant is in evaluation stage,"1. Navigate to evaluate page
+2. Scroll to Comments section
+3. Enter evaluation notes
+4. Save",Comments saved with auto-save confirmation,Medium
+TC_EVAL_005,Evaluation,Evaluation,Desktop,Add Interview Remark,applicant is in evaluation stage; Interviewer assigned,"1. Open evaluation page
+2. Click on Remark section
+3. Enter interview remarks
+4. Save",Remark saved and visible to all interviewers,Medium
+TC_EVAL_006,Evaluation,Evaluation,Desktop,Complete Evaluation,All mandatory fields filled,"1. Navigate to /applicants/[id]/evaluate
+2. Complete all sections
+3. Click 'Complete Evaluation' button
+4. Confirm modal",applicant status changes to 'Evaluated'; Redirect to Result page,High
+TC_EVAL_007,Evaluation,Evaluation,Desktop,Auto-save During Evaluation,Evaluation in progress,"1. Start evaluation
+2. Make changes to scores
+3. Wait 3 seconds without saving",Auto-save indicator shows; Changes persisted,Medium
+TC_EVAL_008,Evaluation,Evaluation,Desktop,Multiple Interviewers Evaluation,Multiple interviewers assigned,"1. Open evaluation page
+2. View interviewer tabs/sections
+3. Switch between interviewers",Each interviewer's evaluation shown separately,Medium
+TC_EVAL_009,Evaluation,Evaluation,Desktop,Reset Interviewer Evaluation,Interviewer has submitted evaluation,"1. Open evaluation page
+2. Click Reset for specific interviewer
+3. Confirm reset",Interviewer's scores cleared; Can re-evaluate,Medium
+TC_EVAL_010,Evaluation,Evaluation,Desktop,Remove Interviewer from Evaluation,Multiple interviewers assigned,"1. Open evaluation page
+2. Click Remove for specific interviewer
+3. Confirm removal",Interviewer removed; Their evaluation deleted,Medium
+TC_EVAL_011,Evaluation,Evaluation Link,Desktop,Access via Evaluation Link (No Login),Evaluation link created with no login required,"1. Generate evaluation link
+2. Open link in incognito browser
+3. Complete evaluation",Evaluation accessible without login; Data saved,High
+TC_EVAL_012,Evaluation,Evaluation Link,Desktop,Access via Evaluation Link (Login Required),Evaluation link created with login required,"1. Generate evaluation link with requireLogin=true
+2. Open link in incognito browser",Redirected to login page before evaluation access,Medium
+TC_EVAL_013,Evaluation,Evaluation Link,Desktop,Expired Evaluation Link,Evaluation link past expiration date,"1. Create evaluation link with 1-day expiry
+2. Wait for expiration
+3. Try to access link",Expired link message displayed; Cannot evaluate,Medium
+TC_EVAL_014,Evaluation,Evaluation,Desktop,Mobile-Responsive Evaluation,Mobile device; Evaluation active,"1. Open evaluation page on mobile
+2. Navigate between sections
+3. Complete evaluation",Mobile-optimized layout; Touch-friendly controls,High
+TC_EVAL_015,Evaluation,Evaluation Waiting,Desktop,Evaluation Waiting Page,applicant assigned for evaluation; Not yet started,"1. Navigate to evaluate page before interview starts
+2. View waiting page",Waiting page with countdown/animation displayed,Low
+TC_EVAL_016,Evaluation,Evaluation Result,Desktop,View Analysis Graph,Evaluation completed,"1. Navigate to /applicants/[id]/evaluate-result
+2. Check 'Detailed Analysis' section",Radar chart or Bar chart displays skill breakdown correctly,Medium
+TC_EVAL_017,Evaluation,Evaluation Result,Desktop,View Executive Summary,Evaluation completed,"1. Navigate to /applicants/[id]/evaluate-result
+2. View top summary section",Overall Score and Recommendation displayed clearly,High
+TC_EVAL_018,Evaluation,Evaluation Result,Mobile,View Executive Summary (Mobile),Evaluation completed,"1. Navigate to /applicants/[id]/evaluate-result on mobile
+2. Check top summary card","Overall Score and Recommendation (Hire/No Hire) are clearly visible",High
+TC_EVAL_019,Evaluation,Evaluation Result,Desktop,View Personality Analysis,Evaluation completed with personality scores,"1. Navigate to evaluation result
+2. Check Personality section",Personality traits displayed with scores and analysis,Medium
+TC_EVAL_020,Evaluation,Evaluation Result,Desktop,View Individual Interviewer Results,Multiple interviewers evaluated,"1. Navigate to evaluation result
+2. View interviewer breakdown section",Each interviewer's scores shown separately,Medium
+TC_EVAL_021,Evaluation,Evaluation Result,Desktop,Generate Evaluation Report (PDF),Evaluation completed,"1. Navigate to evaluation result
+2. Click 'Generate Report'
+3. Download PDF",PDF report generated with all evaluation data,Medium
+TC_EVAL_022,Evaluation,Evaluation Result,Desktop,View Theme-Aware Result Page,Evaluation completed; Dark mode enabled,"1. Enable dark theme
+2. Navigate to evaluation result page",All elements properly styled for dark theme,Low
+TC_POS_001,Positions,Positions List,Desktop,View Positions List,Positions exist,"1. Navigate to /positions
+2. Wait for list to load","Positions table displays with Title; Department; Status; Headcount",High
+TC_POS_002,Positions,Positions List,Desktop,Create New Position,Admin user,"1. Navigate to /positions
+2. Click 'New Position'
+3. Fill Title; Department; Description
+4. Click Save",New position appears in the list,High
+TC_POS_003,Positions,Positions List,Desktop,Edit Position Details,Position exists,"1. Click on a position
+2. Click Edit button
+3. Modify fields
+4. Save changes",Position details updated and saved,Medium
+TC_POS_004,Positions,Positions List,Desktop,Delete Position,Position exists; No applicants assigned,"1. Click on a position
+2. Click Delete button
+3. Confirm deletion",Position is deleted and removed from list,High
+TC_POS_005,Positions,Positions List,Desktop,Search Positions,Multiple positions exist,"1. Navigate to /positions
+2. Enter search term in search box",List filters to show matching positions,Medium
+TC_POS_006,Positions,Positions List,Desktop,Filter Positions by Status,Positions in different statuses,"1. Navigate to /positions
+2. Select status filter (Active/Closed)
+3. Apply filter",List shows only positions with selected status,Medium
+TC_POS_007,Positions,Positions List,Desktop,Filter Positions by Department,Positions in different departments,"1. Navigate to /positions
+2. Select department filter
+3. Apply filter",List shows only positions in selected department,Medium
+TC_POS_008,Positions,Positions List,Desktop,Filter Positions by Recruiter,Positions assigned to different recruiters,"1. Navigate to /positions
+2. Select recruiter from sidebar filter",List shows positions assigned to selected recruiter,Medium
+TC_POS_009,Positions,Positions List,Desktop,Sort Positions by Column,Multiple positions exist,"1. Navigate to /positions
+2. Click column header to sort",Positions reordered by selected column,Low
+TC_POS_010,Positions,Positions List,Desktop,Bulk Select Positions,Multiple positions exist,"1. Navigate to /positions
+2. Check multiple position checkboxes",Selection count displayed; Bulk actions enabled,Medium
+TC_POS_011,Positions,Positions List,Desktop,Bulk Delete Positions,Multiple positions selected,"1. Select multiple positions
+2. Click Bulk Delete
+3. Confirm",Selected positions deleted,Medium
+TC_POS_012,Positions,Positions List,Desktop,Export Positions,Positions exist,"1. Navigate to /positions
+2. Click Export button",Positions exported to Excel file,Medium
+TC_POS_013,Positions,Positions List,Desktop,Import Positions,Admin user; Import file ready,"1. Navigate to /positions
+2. Click Import button
+3. Upload file
+4. Confirm import",Positions imported with summary,Medium
+TC_POS_014,Positions,Positions List,Mobile,View Active Positions (Mobile),Positions exist,"1. Navigate to /positions on mobile
+2. Check list view","Positions listed with status badges (Active/Closed)",Medium
+TC_POS_015,Positions,Position Detail,Desktop,View Position Detail Drawer,Position exists,"1. Click on position row
+2. Drawer opens with details","Position details shown: Description; Requirements; Headcount",Medium
+TC_POS_016,Positions,Position Detail,Desktop,View Position applicants Tab,Position exists with applicants,"1. Open position detail
+2. Click applicants tab","List of applied applicants for position",Medium
+TC_POS_017,Positions,Position Detail,Desktop,View Potential applicants,Position exists; AI matching enabled,"1. Open position detail
+2. Click Potential applicants tab","AI-suggested applicants with fit scores",Medium
+TC_POS_018,Positions,Position Detail,Desktop,Configure Evaluation Criteria,Position exists,"1. Open position detail
+2. Navigate to Evaluation Config tab
+3. Add/edit skills and weights",Evaluation criteria saved for position,High
+TC_POS_019,Positions,Position Detail,Desktop,Configure Position Interviewers,Position exists,"1. Open position detail
+2. Navigate to Interviewers tab
+3. Assign default interviewers",Default interviewers saved for position,Medium
+TC_POS_020,Positions,Headcount,Desktop,Create Headcount Request,Position exists,"1. Open position detail
+2. Navigate to Headcount tab
+3. Click 'Add Headcount'
+4. Fill details and save",Headcount request created,Medium
+TC_POS_021,Positions,Headcount,Desktop,Approve Headcount Request,Headcount request pending; User has approval permission,"1. Open headcount request
+2. Review details
+3. Click Approve",Headcount approved; Position quota updated,Medium
+TC_POS_022,Positions,Headcount,Desktop,View Headcount Summary,Position has headcount data,"1. Open position detail
+2. View headcount summary section","Filled vs Available headcount displayed",Medium
+TC_POS_023,Positions,Position Detail,Desktop,Assign Recruiter to Position,Position exists; Recruiters available,"1. Open position detail
+2. Click recruiter dropdown
+3. Select recruiter",Recruiter assigned to position,Medium
+TC_POS_024,Positions,Recruiter Filter,Desktop,Recruiter Dropdown Shows Only Recruiters,Users with different roles exist (Admin; Recruiter; Hiring Manager),"1. Navigate to /positions
+2. Open Add Position modal
+3. Click recruiter dropdown
+4. Verify user list",Only users with 'Recruiter' role are displayed in dropdown; Admin and Hiring Manager users are not shown,High
+TC_POS_025,Positions,Recruiter Filter,Desktop,Recruiter Sidebar Shows Only Recruiters,Users with different roles exist,"1. Navigate to /positions
+2. View recruiter filter sidebar on the left
+3. Verify recruiter list",Only users with 'Recruiter' role are displayed; Non-recruiter users are excluded,High
+TC_POS_026,Positions,Recruiter Filter,Desktop,Assign Recruiter Cell Shows Only Recruiters,Position exists; Users with different roles exist,"1. Navigate to /positions
+2. Click on recruiter cell for a position
+3. Verify dropdown options",Only users with 'Recruiter' role appear as assignable options,High
+TC_POS_027,Positions,Recruiter Filter,Mobile,Mobile Recruiter Dropdown Shows Only Recruiters,Using mobile device; Users with different roles exist,"1. Open Add Position drawer on mobile
+2. Scroll to recruiter field
+3. Tap to open dropdown",Only users with 'Recruiter' role are displayed in mobile dropdown,Medium
+TC_SET_001,Settings,Settings Page,Desktop,Navigate to Settings,User logged in with settings access,"1. Click on Settings in sidebar
+2. Wait for page load",Settings page displays with navigation tabs,Medium
+TC_SET_002,Settings,Theme,Desktop,Update System Theme to Dark,User logged in,"1. Navigate to /settings/preferences
+2. Select 'Dark Mode' preference
+3. Save",UI switches to Dark Mode immediately,Low
+TC_SET_003,Settings,Theme,Desktop,Update System Theme to Light,User logged in; Dark mode active,"1. Navigate to /settings/preferences
+2. Select 'Light Mode' preference
+3. Save",UI switches to Light Mode immediately,Low
+TC_SET_004,Settings,User Management,Desktop,View Users List,Admin user,"1. Navigate to /settings/users
+2. View user list","All users displayed with Name; Email; Role; Status",High
+TC_SET_005,Settings,User Management,Desktop,Invite New User,Admin user,"1. Navigate to /settings/users
+2. Click 'Invite User'
+3. Enter email and role
+4. Send invite",Invitation email sent; User appears in 'Pending' list,High
+TC_SET_006,Settings,User Management,Desktop,Edit User Role,Admin user; User exists,"1. Navigate to /settings/users
+2. Click Edit on user row
+3. Change role
+4. Save",User role updated,Medium
+TC_SET_007,Settings,User Management,Desktop,Deactivate User,Admin user; Active user exists,"1. Navigate to /settings/users
+2. Click on user
+3. Click Deactivate
+4. Confirm",User marked as inactive; Cannot login,Medium
+TC_SET_008,Settings,User Management,Desktop,Sync Users from Azure AD,Azure AD configured; Admin user,"1. Navigate to /settings/recruiter-sync
+2. Click 'Sync from AD'
+3. Wait for sync",Users synchronized from Azure AD,High
+TC_SET_009,Settings,User Groups,Desktop,Create User Group,Admin user,"1. Navigate to /settings/user-groups
+2. Click 'Add Group'
+3. Enter name and permissions
+4. Save",New user group created,Medium
+TC_SET_010,Settings,User Groups,Desktop,Assign User to Group,User group exists; Users exist,"1. Navigate to /settings/user-groups
+2. Click on group
+3. Add users to group
+4. Save",Users assigned to group; Permissions inherited,Medium
+TC_SET_011,Settings,User Teams,Desktop,Create User Team,Admin user,"1. Navigate to /settings/user-teams
+2. Click 'Add Team'
+3. Enter name and add members
+4. Save",New team created with members,Medium
+TC_SET_012,Settings,Stages,Desktop,View Recruitment Stages,Admin user,"1. Navigate to /settings/stages
+2. View stages list","All recruitment stages displayed with order",High
+TC_SET_013,Settings,Stages,Desktop,Create New Stage,Admin user,"1. Navigate to /settings/stages
+2. Click 'Add Stage'
+3. Enter name and color
+4. Save",New stage created and added to workflow,Medium
+TC_SET_014,Settings,Stages,Desktop,Reorder Stages,Admin user; Multiple stages exist,"1. Navigate to /settings/stages
+2. Drag and drop stages to reorder
+3. Save order",Stage order updated for recruitment workflow,Medium
+TC_SET_015,Settings,applicant Sources,Desktop,Add applicant Source,Admin user,"1. Navigate to /settings/applicant-sources
+2. Click 'Add Source'
+3. Enter name
+4. Save",New source available for applicant assignment,Medium
+TC_SET_016,Settings,Custom Fields,Desktop,Create Custom Field,Admin user,"1. Navigate to /settings/custom-fields
+2. Click 'Add Field'
+3. Configure field type; name; options
+4. Save",Custom field created and available on forms,Medium
+TC_SET_017,Settings,Custom Fields,Desktop,Edit Custom Field Options,Admin user; Dropdown custom field exists,"1. Navigate to /settings/custom-fields
+2. Click on existing field
+3. Add/remove options
+4. Save",Field options updated,Low
+TC_SET_018,Settings,Grades,Desktop,Configure Grades,Admin user,"1. Navigate to /settings/data-configuration
+2. Go to Grades tab
+3. Add/edit grade levels",Grades saved and available for use,Low
+TC_SET_019,Settings,Position Levels,Desktop,Configure Position Levels,Admin user,"1. Navigate to /settings/data-configuration
+2. Go to Position Levels tab
+3. Add/edit levels",Position levels saved and available,Low
+TC_SET_020,Settings,Webhooks,Desktop,Create Webhook,Admin user,"1. Navigate to /settings/webhooks
+2. Click 'Add Webhook'
+3. Enter URL; events; authentication
+4. Save",Webhook created and enabled,High
+TC_SET_021,Settings,Webhooks,Desktop,Test Webhook Connection,Webhook URL configured,"1. Navigate to /settings/webhooks
+2. Click 'Test' on a webhook configuration","System sends test payload; Success/Failure toast displayed",Low
+TC_SET_022,Settings,Webhooks,Desktop,View Webhook Logs,Webhook exists with triggered events,"1. Navigate to /settings/webhooks
+2. Click on webhook
+3. View Logs section",Delivery logs with status; response code; timing,Medium
+TC_SET_023,Settings,Webhooks,Desktop,Customize Webhook Payload,Admin user; Webhook exists,"1. Open webhook configuration
+2. Navigate to Payload Customization
+3. Define field mappings
+4. Save",Webhook sends customized payload format,Medium
+TC_SET_024,Settings,Evaluation Config,Desktop,Configure Expertise Groups,Admin user,"1. Navigate to /settings/evaluation-configuration
+2. Go to Expertise tab
+3. Add/edit groups and skills",Expertise configuration saved,High
+TC_SET_025,Settings,Evaluation Config,Desktop,Configure Personality Traits,Admin user,"1. Navigate to /settings/evaluation-configuration
+2. Go to Personality tab
+3. Add/edit groups and traits",Personality configuration saved,High
+TC_SET_026,Settings,Evaluation Config,Desktop,Create Skill Template,Admin user,"1. Navigate to /settings/evaluation-configuration
+2. Go to Templates tab
+3. Create template with skills
+4. Save",Template available for position configuration,Medium
+TC_SET_027,Settings,System Settings,Desktop,Configure System Preferences,Admin user,"1. Navigate to /settings/system-settings
+2. Update system-wide preferences
+3. Save",Settings applied across system,Medium
+TC_SET_028,Settings,System Preferences,Desktop,Configure Auto-Close Settings,Admin user,"1. Navigate to /settings/system-preferences
+2. Configure auto-close rules for positions
+3. Save",Auto-close rules active,Low
+TC_SET_029,Settings,AI Configuration,Desktop,Configure AI API Keys,Admin user,"1. Navigate to /settings/system-settings
+2. Go to AI tab
+3. Enter API keys for AI providers",AI features enabled with configured provider,High
+TC_SET_030,Settings,System Prompts,Desktop,Configure System Prompts,Admin user,"1. Navigate to /settings/system-prompts
+2. Edit AI system prompts
+3. Save",AI uses updated prompts,Medium
+TC_SET_031,Settings,Warning Config,Desktop,Configure Warning Rules,Admin user,"1. Navigate to /settings/warning-configurations
+2. Create warning rule
+3. Set conditions and actions",Warning rule active and triggering,Medium
+TC_SET_032,Settings,Evaluation Links,Desktop,Manage Evaluation Links,Admin user,"1. Navigate to /settings/evaluation-links
+2. View existing links
+3. Create/edit/delete links",Evaluation links managed successfully,Medium
+TC_WARN_001,Warnings,Warnings,Desktop,View Active Warnings,Warnings exist for applicants,"1. Check warning icon in header
+2. Click to open warnings drawer","List of active warnings with severity; applicant; message",Medium
+TC_WARN_002,Warnings,Warnings,Desktop,Dismiss Warning,Warning exists; User has permission,"1. Open warnings drawer
+2. Click Dismiss on a warning
+3. Confirm",Warning dismissed; Removed from list,Medium
+TC_WARN_003,Warnings,Warnings,Desktop,Auto-Clear Warnings,Warning configured with auto-clear,"1. Trigger warning condition
+2. Resolve condition
+3. Wait for auto-clear interval",Warning automatically cleared,Low
+TC_AI_001,AI Features,AI applicant Search,Desktop,Search applicants with AI,AI configured; applicants exist,"1. Navigate to /applicants
+2. Click AI Search button
+3. Enter natural language query","AI returns relevant applicants based on query",High
+TC_AI_002,AI Features,Job Description Generation,Desktop,Generate Job Description,AI configured; Position exists,"1. Open Add Position modal
+2. Click 'Generate with AI'
+3. Enter key requirements",AI generates job description text,Medium
+TC_AI_003,AI Features,Content Generation,Desktop,Generate Content for applicant,AI configured; applicant exists,"1. Open Generative AI modal on applicant
+2. Select content type
+3. Click Generate",AI generates content (summary; email draft; etc.),Medium
+TC_AI_004,AI Features,Fit Score Calculation,Desktop,Calculate AI Fit Score,AI configured; applicant and position exist,"1. Assign applicant to position
+2. Wait for fit score calculation",AI fit score displayed on applicant card,High
+TC_TASK_001,Task Board,My Tasks,Desktop,View Task Board,Tasks assigned to user,"1. Navigate to /my-tasks
+2. View Kanban board",Tasks displayed in columns by status,Medium
+TC_TASK_002,Task Board,My Tasks,Desktop,Filter Tasks by Position,Tasks exist for multiple positions,"1. Open task filters
+2. Select position
+3. Apply filter",Board shows only tasks for selected position,Medium
+TC_TASK_003,Task Board,My Tasks,Desktop,View Task Detail,Task exists,"1. Click on task card
+2. View detail modal",Task details with applicant; position; action required,Medium
+TC_TASK_004,Task Board,My Tasks,Desktop,Customize Board View,User on task board,"1. Click Customize Board
+2. Change visible fields
+3. Save preferences",Board displays with customized layout,Low
+TC_UPL_001,Upload Queue,Process Queue,Desktop,View Upload Queue,Files queued for processing,"1. Navigate to /process-queue
+2. View job list","Jobs show status (Pending; Processing; Completed; Failed)",High
+TC_UPL_002,Upload Queue,Process Queue,Desktop,View Queue Analytics,Upload queue has history,"1. Navigate to /process-queue
+2. View analytics section","Charts showing success rate; processing time; volumes",Medium
+TC_UPL_003,Upload Queue,Process Queue,Desktop,Retry Failed Upload,Failed upload exists,"1. Find failed upload in queue
+2. Click Retry button",Upload requeued for processing,Medium
+TC_UPL_004,Upload Queue,Process Queue,Desktop,View Error Analysis,Failed uploads exist,"1. Navigate to error analysis section
+2. View error breakdown",Errors categorized by type with counts,Medium
+TC_UPL_005,Upload Queue,Process Queue,Desktop,Process Blocking Queue,Items in blocking queue,"1. Navigate to blocking queue section
+2. View items requiring attention",Items that need manual intervention displayed,Medium
+TC_SLA_001,SLA Monitoring,SLA Dashboard,Desktop,View SLA Dashboard,SLA data exists,"1. Navigate to /sla-monitoring
+2. View dashboard",SLA metrics and violations displayed,Medium
+TC_SLA_002,SLA Monitoring,SLA Dashboard,Desktop,View SLA Breaches,Breached SLA items exist,"1. Navigate to /sla-monitoring
+2. Check 'Breached' tab",List of applicants/processes exceeding SLA time,Medium
+TC_SLA_003,SLA Monitoring,SLA Dashboard,Desktop,Filter by SLA Severity,SLA violations at different severities,"1. Navigate to /sla-monitoring
+2. Filter by Warning/Critical/Breached",Filtered list by severity,Low
+TC_APP_001,Applicants,Public Application,Desktop,Submit Job Application,Position is public with application form,"1. Navigate to public link /applicants/[id]
+2. Fill Name; Email; Phone
+3. Upload Resume
+4. Click Submit",Success message displayed; applicant created in system,High
+TC_APP_002,Applicants,Public Application,Mobile,Submit Job Application (Mobile),Position is public,"1. Open public link on mobile
+2. Fill form
+3. Upload file from mobile storage
+4. Tap Submit",Success message displayed; File uploads correctly,High
+TC_APP_003,Applicants,Public Application,Desktop,Application with Validation Errors,Position is public,"1. Navigate to application page
+2. Submit with missing required fields",Validation errors displayed for required fields,Medium
+TC_APP_004,Applicants,Public Application,Desktop,Application with Custom Fields,Position requires custom fields,"1. Navigate to application page
+2. Fill all fields including custom ones
+3. Submit",Custom field values captured with application,Medium
+TC_INT_001,Interview,Interview Scheduling,Desktop,View Interview Schedule,Interview page accessible,"1. Navigate to /interview
+2. View calendar/schedule",Interview calendar displayed with scheduled interviews,Medium
+TC_SYS_001,System Status,System Status,Desktop,View System Health,Admin user,"1. Navigate to /system-status
+2. View health indicators","Database; Redis; API status indicators shown",Medium
+TC_LOGS_001,Logs,System Logs,Desktop,View System Logs,Admin user,"1. Navigate to /logs
+2. View log entries",Log entries displayed with level; message; timestamp,Medium
+TC_LOGS_002,Logs,Audit Logs,Desktop,View Audit Trail,Admin user; Actions performed,"1. Navigate to /logs or audit section
+2. Filter by action type","Audit entries showing who; what; when",Medium
+TC_PWA_001,PWA,PWA Install,Mobile,Install PWA Prompt,Using mobile browser on supported device,"1. Navigate to app on mobile
+2. Wait for install prompt
+3. Accept installation",App installed on device home screen,Low
+TC_PWA_002,PWA,PWA Offline,Mobile,Use App Offline,PWA installed; Previously loaded pages,"1. Disconnect from internet
+2. Open PWA
+3. Navigate to cached pages",Cached content accessible offline,Low
+TC_RT_001,Real-time,SSE Connection,Desktop,Real-time Updates,SSE enabled; User logged in,"1. Login to application
+2. Check SSE connection status
+3. Verify real-time indicator",SSE connected; Real-time indicator green,Medium
+TC_RT_002,Real-time,Notifications,Desktop,Receive Real-time Notification,User logged in; Notification triggered,"1. Have another user perform action (add applicant)
+2. Observe notification icon",Notification badge updates; Notification visible,Medium
+TC_RT_003,Real-time,Collaboration,Desktop,View Online Users,Multiple users logged in,"1. Click online users indicator
+2. View modal",List of currently online users displayed,Low
+TC_RT_004,Real-time,User Presence,Desktop,View User Presence on applicant,Multiple users viewing same applicant,"1. Open applicant detail
+2. Have another user open same applicant","Presence indicator shows other viewers",Low
+TC_API_001,API,applicants API,N/A,Get applicant List,Valid API Key,"1. Send GET request to /api/v1/applicants
+2. Check response",Returns 200 OK with JSON list of applicants,High
+TC_API_002,API,applicants API,N/A,Get Single applicant,Valid API Key; applicant exists,"1. Send GET request to /api/v1/applicants/[id]
+2. Check response",Returns 200 OK with applicant details,High
+TC_API_003,API,applicants API,N/A,Create applicant via API,Valid API Key,"1. Send POST to /api/v1/applicants with valid payload
+2. Check response",Returns 201 Created with new applicant ID,High
+TC_API_004,API,applicants API,N/A,Update applicant via API,Valid API Key; applicant exists,"1. Send PUT/PATCH to /api/v1/applicants/[id]
+2. Check response",Returns 200 OK with updated data,Medium
+TC_API_005,API,applicants API,N/A,Delete applicant via API,Valid API Key; applicant exists,"1. Send DELETE to /api/v1/applicants/[id]
+2. Check response",Returns 200/204; applicant deleted,Medium
+TC_API_006,API,applicants API,N/A,Upload Resume via API,Valid API Key; applicant exists,"1. Send POST to /api/v1/applicants/[id]/resumes with file
+2. Check response",Returns 200 with resume attached,Medium
+TC_API_007,API,applicants API,N/A,Get applicant Attachments,Valid API Key; applicant with attachments,"1. Send GET to /api/v1/applicants/[id]/attachments
+2. Check response",Returns list of attachments,Medium
+TC_API_008,API,applicants API,N/A,Get applicant Evaluation,Valid API Key; Evaluated applicant,"1. Send GET to /api/v1/applicants/[id]/evaluation
+2. Check response",Returns evaluation data,Medium
+TC_API_009,API,applicants API,N/A,Submit applicant Evaluation,Valid API Key; applicant in evaluation,"1. Send POST to /api/v1/applicants/[id]/evaluation with scores
+2. Check response",Returns 200; Evaluation saved,Medium
+TC_API_010,API,applicants API,N/A,Bulk Upload CVs via API,Valid API Key,"1. Send POST to /api/v1/applicants/bulk-upload-cv with files
+2. Check response",Returns queue IDs for uploaded files,Medium
+TC_API_011,API,applicants API,N/A,Clear Duplicate applicants,Valid API Key; Duplicates exist,"1. Send POST to /api/v1/applicants/clear-duplicates
+2. Check response",Duplicate applicants merged/cleared,Low
+TC_API_012,API,applicants API,N/A,Export applicants,Valid API Key,"1. Send GET to /api/v1/applicants/export
+2. Check response",Returns exportable data or file,Medium
+TC_API_013,API,applicants API,N/A,Import applicants,Valid API Key; Import payload ready,"1. Send POST to /api/v1/applicants/import with data
+2. Check response",Returns import results summary,Medium
+TC_API_014,API,Positions API,N/A,Get Position List,Valid API Key,"1. Send GET to /api/v1/positions
+2. Check response",Returns 200 OK with JSON list of positions,High
+TC_API_015,API,Positions API,N/A,Create Position via API,Valid API Key,"1. Send POST to /api/v1/positions with valid payload
+2. Check response",Returns 201 Created with new position ID,High
+TC_API_016,API,Positions API,N/A,Update Position via API,Valid API Key; Position exists,"1. Send PUT/PATCH to /api/v1/positions/[id]
+2. Check response",Returns 200 OK with updated data,Medium
+TC_API_017,API,Positions API,N/A,Delete Position via API,Valid API Key; Position exists,"1. Send DELETE to /api/v1/positions/[id]
+2. Check response",Returns 200/204; Position deleted,Medium
+TC_API_018,API,Positions API,N/A,Get Position Evaluation Config,Valid API Key; Position with config,"1. Send GET to /api/v1/positions/[id]/evaluation
+2. Check response",Returns evaluation configuration,Medium
+TC_API_019,API,Positions API,N/A,Update Position Evaluation Config,Valid API Key,"1. Send PUT to /api/v1/positions/[id]/evaluation with config
+2. Check response",Configuration updated,Medium
+TC_API_020,API,Users API,N/A,Get Users List,Valid API Key; Admin permission,"1. Send GET to /api/v1/users
+2. Check response",Returns list of users,Medium
+TC_API_021,API,Users API,N/A,Create User via API,Valid API Key; Admin permission,"1. Send POST to /api/v1/users with user data
+2. Check response",Returns 201 with new user,Medium
+TC_API_022,API,Evaluation API,N/A,Get Evaluation Links,Valid API Key,"1. Send GET to /api/v1/evaluation/links
+2. Check response",Returns list of evaluation links,Medium
+TC_API_023,API,Evaluation API,N/A,Create Evaluation Link,Valid API Key,"1. Send POST to /api/v1/evaluation/links
+2. Check response",Returns new evaluation link,Medium
+TC_API_024,API,Evaluation API,N/A,Get Expertise Groups,Valid API Key,"1. Send GET to /api/v1/evaluation/expertise-groups
+2. Check response",Returns expertise groups configuration,Medium
+TC_API_025,API,Evaluation API,N/A,Get Personality Traits,Valid API Key,"1. Send GET to /api/v1/evaluation/personality-traits
+2. Check response",Returns personality traits configuration,Medium
+TC_API_026,API,Health API,N/A,Check API Health,None,"1. Send GET to /api/v1/health
+2. Check response",Returns 200 OK with health status,High
+TC_API_027,API,Auth API,N/A,API Authentication Failure,Invalid or missing API Key,"1. Send request without API key
+2. Check response",Returns 401 Unauthorized,High
+TC_API_028,API,Dashboard API,N/A,Get Dashboard Statistics,Valid API Key,"1. Send GET to /api/v1/dashboard
+2. Check response",Returns dashboard statistics,Medium
+TC_API_029,API,Transitions API,N/A,Get Stage Transitions,Valid API Key,"1. Send GET to /api/v1/transitions
+2. Check response",Returns transition history,Medium
+TC_API_030,API,Upload Queue API,N/A,Get Upload Queue Status,Valid API Key,"1. Send GET to /api/v1/upload-queue
+2. Check response",Returns queue items with status,Medium
+TC_SEC_001,Security,Authorization,Desktop,Access Admin Settings Without Permission,Non-admin user logged in,"1. Navigate to /settings/users
+2. Attempt to access admin area",Access denied; Redirected or error shown,High
+TC_SEC_002,Security,Authorization,Desktop,API Request Without Authorization,No session or API key,"1. Make API request without credentials
+2. Check response",Returns 401 Unauthorized,High
+TC_SEC_003,Security,CSRF,Desktop,Protected Action Request,User logged in,"1. Attempt state-changing action
+2. Verify CSRF token handling",Request succeeds with valid token; Fails without,High
+TC_SEC_004,Security,File Upload,Desktop,Upload Malicious File Type,User with upload permission,"1. Attempt to upload executable file
+2. Check system response",Upload rejected; Security error shown,High
+TC_SEC_005,Security,Input Validation,Desktop,SQL Injection Attempt,User logged in,"1. Enter SQL injection string in search/form field
+2. Submit and check response",Input sanitized; No SQL errors; System unaffected,High
+TC_SEC_006,Security,XSS Prevention,Desktop,XSS Script Injection,User logged in,"1. Enter script tag in form field
+2. Save and view the data",Script not executed; Content sanitized,High
+TC_PERF_001,Performance,Page Load,Desktop,Dashboard Initial Load Time,User logged in; Data exists,"1. Navigate to /dashboard
+2. Measure time to interactive",Page loads in under 3 seconds,Medium
+TC_PERF_002,Performance,Page Load,Desktop,applicants List Load Time,500+ applicants exist,"1. Navigate to /applicants
+2. Measure time to display list",List renders in under 2 seconds,Medium
+TC_PERF_003,Performance,Data Loading,Desktop,Large Data Pagination,1000+ applicants exist,"1. Navigate to /applicants
+2. Scroll through multiple pages",Each page loads quickly; No UI freezing,Medium
+TC_ERR_001,Error Handling,Error Pages,Desktop,View 404 Page,None,"1. Navigate to non-existent route /xyz123
+2. View error page",Custom 404 page displayed with navigation options,Low
+TC_ERR_002,Error Handling,Error Pages,Desktop,View 500 Error,API failure simulated,"1. Trigger server error scenario
+2. View error page",Custom error page displayed; Error logged,Low
+TC_ERR_003,Error Handling,API Errors,Desktop,Handle API Timeout,Slow API response,"1. Perform action during slow API
+2. Observe behavior",Loading indicator shown; Timeout handled gracefully,Medium
+TC_ERR_004,Error Handling,Form Errors,Desktop,Server Validation Error,Submitting data that fails server validation,"1. Submit form with data failing server rules
+2. Observe error display",Server validation error displayed clearly,Medium
+TC_RESP_001,Responsive,Tablet Layout,Tablet,View Dashboard on Tablet,User logged in on tablet,"1. Open /dashboard on tablet (iPad size)
+2. Verify layout",Layout adjusts for tablet; All content accessible,Medium
+TC_RESP_002,Responsive,Tablet Layout,Tablet,View applicants on Tablet,User logged in on tablet,"1. Open /applicants on tablet
+2. Interact with table/list",Optimized tablet layout; Touch-friendly controls,Medium
+TC_RESP_003,Responsive,Mobile Navigation,Mobile,Use Mobile Bottom Navigation,User logged in on mobile,"1. Open app on mobile
+2. Use bottom navigation bar",Navigation works; Icons clear; Current page highlighted,High
+TC_RESP_004,Responsive,Mobile Modals,Mobile,View Modal on Mobile,User logged in on mobile,"1. Trigger modal (add applicant)
+2. View and interact with modal",Modal fits screen; Inputs accessible; Keyboard doesn't obstruct,Medium
+TC_EVAL_023,Evaluation,Evaluate Link,Desktop,View Azure Meeting Rooms,Azure AD configured; Create Link modal open,"1. Click Location input
+2. Verify dropdown appears","Dropdown shows list of available Azure meeting rooms",High
+TC_EVAL_024,Evaluation,Evaluate Link,Desktop,Custom Location with Azure Rooms,Azure AD configured; Rooms available,"1. Click Location input
+2. Type custom location not in list","Dropdown filters; Custom text accepted",Medium
+TC_SET_033,Settings,Role Permissions,Desktop,Seamless Permission Update,Admin user; Permissions drawer open,"1. Toggle a permission
+2. Observe UI","Permission state updates immediately without closing drawer",High
+TC_POS_028,Positions,Recruiter Selection,Desktop,Filter Non-Recruiters,Users with mixed roles exist,"1. Open Recruiter dropdown
+2. Verify list contents","Only users with 'Recruiter' role are listed",High
+TC_SET_034,Settings,Azure AD Sync,Desktop,View Azure AD Sync Progress,Azure AD configured; Admin user,"1. Navigate to /settings/users
+2. Click 'Sync from Azure AD'
+3. Observe toast notifications","Real-time progress updates shown: 'Connecting...', 'Fetching users...', 'Processing X/Y...', 'Completed'",High
+TC_SET_035,Settings,Azure AD Sync,Desktop,Azure AD Sync Error Handling,Azure AD configured; Network issue simulated,"1. Navigate to /settings/users
+2. Click 'Sync from Azure AD'
+3. Interrupt network mid-sync","Error toast displayed with meaningful message; Partial sync state handled gracefully",Medium
+TC_POS_029,Positions,Pagination,Desktop,Change Rows Per Page,Multiple positions exist,"1. Navigate to /positions
+2. Select different 'Rows per page' value (10, 20, 50, 100)
+3. Observe list update","List refreshes immediately with selected number of rows; No page refresh required",High
+TC_POS_030,Positions,Pagination,Desktop,Retain Page Size After Navigation,User changed page size,"1. Change page size to 50
+2. Navigate to another page
+3. Return to /positions","Page size preference retained; Shows 50 rows per page",Medium
+TC_SEC_007,Security,Screen Capture Protection,Desktop,Enable Screen Capture Protection,Admin user,"1. Navigate to /settings/system-settings
+2. Enable 'Screen Capture Protection'
+3. Save settings","Setting saved successfully; Protection activates on page visibility change",Medium
+TC_SEC_008,Security,Screen Capture Protection,Desktop,Screen Capture Protection Behavior,Protection enabled,"1. Open application
+2. Switch to another window/application
+3. Return to application","Page content blurs when tab loses focus; Returns to normal on focus",Medium
+TC_SEC_009,Security,Right-Click Protection,Desktop,Enable Right-Click Protection,Admin user,"1. Navigate to /settings/system-settings
+2. Enable 'Right-Click Protection'
+3. Save settings","Setting saved successfully; Right-click context menu disabled",Medium
+TC_SEC_010,Security,Right-Click Protection,Desktop,Right-Click Protection Behavior,Protection enabled,"1. Right-click anywhere on the application
+2. Observe behavior","Default browser context menu does not appear",Medium
+TC_SET_036,Settings,System Settings,Desktop,Save Settings with Security Toggles,Admin user,"1. Navigate to /settings/system-settings
+2. Toggle screen capture and right-click protection
+3. Click Save","Settings saved without validation errors; Success toast shown",High

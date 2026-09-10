@@ -1,0 +1,43 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: hri-audit-governance
+  namespace: hri
+  labels:
+    app: hri-audit-governance
+spec:
+  schedule: "15 2 * * *"
+  timeZone: "Asia/Bangkok"
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 7
+  failedJobsHistoryLimit: 14
+  jobTemplate:
+    spec:
+      backoffLimit: 3
+      activeDeadlineSeconds: 900
+      template:
+        metadata:
+          labels:
+            app: hri-audit-governance
+        spec:
+          restartPolicy: Never
+          containers:
+            - name: audit-governance
+              image: curlimages/curl:8.12.1
+              args:
+                - --fail-with-body
+                - --silent
+                - --show-error
+                - --request
+                - POST
+                - --header
+                - "Authorization: Bearer $(AUTOMATION_API_KEY)"
+                - "$(HRI_INTERNAL_URL)/api/audit-governance/scheduled"
+              env:
+                - name: HRI_INTERNAL_URL
+                  value: http://hri-app:8021
+                - name: AUTOMATION_API_KEY
+                  valueFrom:
+                    secretKeyRef:
+                      name: hri-secrets
+                      key: AUTOMATION_API_KEY

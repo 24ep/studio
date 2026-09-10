@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+  <title>Company building</title>
+  <path
+    d="M10 57V27L30 17V57M30 57V9L54 23V57M6 57H58"
+    stroke="#42C7A5"
+    stroke-width="4"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+  <path
+    d="M18 31H22M18 40H22M39 25H43M39 35H43M48 30H50M48 40H50"
+    stroke="#A6E8D8"
+    stroke-width="3.5"
+    stroke-linecap="round"
+  />
+  <path d="M37 57V47H47V57" stroke="#42C7A5" stroke-width="4" stroke-linejoin="round" />
+</svg>

@@ -1,0 +1,19 @@
+{
+  "id": "studio-2-env-id",
+  "name": "Studio-2 Local",
+  "values": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:3000/api",
+      "enabled": true
+    },
+    {
+      "key": "token",
+      "value": "your_token_here",
+      "enabled": true
+    }
+  ],
+  "_postman_variable_scope": "environment",
+  "_postman_exported_at": "2026-01-26T18:32:00.000Z",
+  "_postman_exported_using": "Postman/10.0.0"
+}

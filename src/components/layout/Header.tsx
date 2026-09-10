@@ -1,105 +1,167 @@
-
 "use client";
-import { SidebarTrigger, useSidebar } from "@/components/ui/sidebar";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Button } from "@/components/ui/button";
+
+import Link from "next/link";
+import { useEffect, useMemo } from "react";
+import { usePathname, useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
+
+import type { UnifiedUserFormValues } from "@/components/users/UnifiedUserModal";
+import { useAvatarRefresh } from "@/hooks/use-avatar-refresh";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { useTheme } from "@/hooks/use-theme";
+import { cn } from "@/lib/utils";
+import type { UserProfile } from "@/lib/types";
+
+import { HeaderActionsSection } from "./HeaderActionsSection";
+import { HeaderBrandSection } from "./HeaderBrandSection";
+import { HeaderBrandLockup } from "./HeaderBrandLockup";
+import { HeaderProfileModals } from "./HeaderProfileModals";
+import { HeaderPrimaryNavigation } from "./HeaderPrimaryNavigation";
+import type { HeaderProps, HeaderUserMenuSharedProps } from "./HeaderTypes";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Sun, Moon, LogOut, UserCircle, LogIn } from "lucide-react"; 
-import { useSession, signIn, signOut } from "next-auth/react";
-import { useEffect, useState } from "react";
+  isHeaderHiddenOnMobileDetail,
+} from "./header-utils";
+import { useHeaderBranding } from "./use-header-branding";
+import { useHeaderUserActions } from "./use-header-user-actions";
+import { useHeaderUserMenuLabels } from "./use-header-user-menu-labels";
+import { useHeaderLocale } from "./use-header-locale";
+import { useLocalization } from '@/contexts/LocalizationContext';
+import { isAdminUser } from '@/lib/permissions';
 
-export function Header({ pageTitle }: { pageTitle: string }) {
-  const { isMobile } = useSidebar();
-  const { data: session, status } = useSession();
-  const [mounted, setMounted] = useState(false);
-  const [effectivePageTitle, setEffectivePageTitle] = useState(pageTitle);
+export function Header({
+  pageTitle: initialPageTitle,
+  showLogoOnly = false,
+  appLogoUrl: propLogoUrl,
+  currentAppName: propAppName,
+}: HeaderProps) {
+  const isMobile = useIsMobile();
+  const { data: session, status, update: updateSession } = useSession();
+  const router = useRouter();
+  const pathname = usePathname();
+  const { refreshKey, forceRefresh } = useAvatarRefresh();
+  const { currentTheme, themePreference, setTheme } = useTheme();
+  const { t } = useLocalization();
+  const userMenuLabels = useHeaderUserMenuLabels();
+  const { currentLocale, changeLocale } = useHeaderLocale();
+  const {
+    mounted,
+    currentAppName,
+    appLogoUrl,
+  } = useHeaderBranding({
+    initialPageTitle,
+    propAppName,
+    propLogoUrl,
+    isMobile,
+  });
+  const userActions = useHeaderUserActions({
+    session,
+    updateSession,
+    forceRefresh,
+  });
 
-  useEffect(() => setMounted(true), []);
+  const isLoading = !mounted || status === "loading";
+  const supportsHeaderSearch = !pathname?.startsWith("/auth/");
+  const isDetailPage = useMemo(() => isHeaderHiddenOnMobileDetail(pathname), [pathname]);
+  const isAdminPreviewEnabled = isAdminUser(userActions.user) || Boolean(session?.user?.adminId);
 
   useEffect(() => {
-    setEffectivePageTitle(pageTitle); // Update title if prop changes
-  }, [pageTitle]);
+    if (typeof window === "undefined" || !supportsHeaderSearch) {
+      return;
+    }
 
+    const handleHeaderSearchShortcut = (event: KeyboardEvent) => {
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "k") {
+        if (document.documentElement.dataset.keyboardShortcuts === "false") return;
+        event.preventDefault();
+        window.dispatchEvent(new Event("header-search:open"));
+      }
+    };
 
-  // Basic theme toggle example, can be expanded with context
-  const toggleTheme = () => {
-    document.documentElement.classList.toggle('dark');
-  };
+    window.addEventListener("keydown", handleHeaderSearchShortcut);
+    return () => window.removeEventListener("keydown", handleHeaderSearchShortcut);
+  }, [supportsHeaderSearch]);
 
-  // Show skeleton while loading session or not mounted to prevent layout shifts/flicker
-  if (!mounted || status === "loading") { 
-    return (
-      <header className="flex h-16 items-center justify-between border-b bg-card px-4 md:px-6 sticky top-0 z-30">
-        <div className="flex items-center gap-2">
-          {isMobile && <div className="h-8 w-8 rounded-md bg-muted animate-pulse" />}
-          <div className="h-6 w-32 rounded bg-muted animate-pulse" />
-        </div>
-        <div className="flex items-center gap-3">
-          <div className="h-8 w-8 rounded-full bg-muted animate-pulse" /> {/* Theme toggle placeholder */}
-          <div className="h-10 w-10 rounded-full bg-muted animate-pulse" /> {/* Avatar placeholder */}
-        </div>
-      </header>
-    );
+  if (isMobile && isDetailPage) {
+    return null;
   }
 
-  const user = session?.user;
+  const userMenuProps: HeaderUserMenuSharedProps | null = userActions.user
+    ? {
+      labels: userMenuLabels,
+      user: userActions.user,
+      refreshAvatar: refreshKey > 0,
+      currentTheme,
+      themePreference,
+      currentLocale,
+      isAdminPreviewEnabled,
+      previewUsers: userActions.previewUsers,
+      isSearchingUsers: userActions.isSearchingUsers,
+      onOpenProfile: userActions.handleOpenProfileModal,
+      onOpenSecurity: () => userActions.setIsChangePasswordModalOpen(true),
+      onClearCache: userActions.handleClearCache,
+      onThemeChange: setTheme,
+      onLocaleChange: changeLocale,
+      onSignOut: userActions.handleSignOut,
+      onUserSearch: userActions.handleUserSearch,
+      onStartImpersonation: userActions.handleStartImpersonation,
+    }
+    : null;
 
   return (
-    <header className="flex h-16 items-center justify-between border-b bg-card px-4 md:px-6 sticky top-0 z-30">
-      <div className="flex items-center gap-2">
-        {isMobile && <SidebarTrigger />}
-        <h1 className="text-lg font-semibold text-foreground">{effectivePageTitle}</h1>
-      </div>
-      <div className="flex items-center gap-3">
-        <Button variant="ghost" size="icon" onClick={toggleTheme} aria-label="Toggle theme">
-          <Sun className="h-5 w-5 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
-          <Moon className="absolute h-5 w-5 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
-        </Button>
-        {user ? (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="relative h-10 w-10 rounded-full">
-                <Avatar className="h-9 w-9">
-                  <AvatarImage src={user.image || undefined} alt={user.name || "User"} data-ai-hint={user.image ? undefined : "profile person"} />
-                  <AvatarFallback>{user.name ? user.name.charAt(0).toUpperCase() : <UserCircle className="h-5 w-5"/>}</AvatarFallback>
-                </Avatar>
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-56">
-              <DropdownMenuLabel className="font-normal">
-                <div className="flex flex-col space-y-1">
-                  <p className="text-sm font-medium leading-none">{user.name || "User"}</p>
-                  {user.email && (
-                    <p className="text-xs leading-none text-muted-foreground">
-                      {user.email}
-                    </p>
-                  )}
-                </div>
-              </DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              {/* Profile item removed */}
-              {/* Add more items like Settings, etc. */}
-              {/* <DropdownMenuSeparator /> */} {/* Removed separator if profile was the only item before logout */}
-              <DropdownMenuItem onClick={() => signOut()}>
-                <LogOut className="mr-2 h-4 w-4" />
-                Log out
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        ) : (
-          <Button variant="outline" onClick={() => signIn()}>
-            <LogIn className="mr-2 h-4 w-4" />
-            Sign In
-          </Button>
+    <>
+      <header
+        className={cn(
+          "sticky z-50 flex h-16 shrink-0 items-center justify-between border-b border-border/70 bg-transparent px-3 text-foreground shadow-none transition-[background-color,border-color] duration-300 sm:px-4 lg:px-8",
+          (session?.user?.impersonatedUserId || session?.user?.impersonatedRole) ? "top-8" : "top-0"
         )}
-      </div>
-    </header>
+      >
+        {isMobile ? (
+          <HeaderBrandSection
+            currentAppName={currentAppName}
+            appLogoUrl={appLogoUrl}
+            showLogoOnly={showLogoOnly}
+            isMobile={isMobile}
+            pageTitle={initialPageTitle}
+            pathname={pathname}
+            onLogoClick={() => router.push("/")}
+            onMobileBack={() => router.back()}
+          />
+        ) : (
+          <div className="flex min-w-0 items-center gap-4 xl:gap-6">
+            <Link
+              href="/dashboard"
+              aria-label={`${currentAppName} — ${initialPageTitle}`}
+              className="flex h-11 min-w-0 shrink-0 items-center rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              <HeaderBrandLockup
+                appLogoUrl={appLogoUrl}
+                currentAppName={currentAppName}
+              />
+            </Link>
+            <HeaderPrimaryNavigation pathname={pathname || ''} />
+          </div>
+        )}
+
+        <HeaderActionsSection
+          headerSearchLabel={t("layout.searchEverything", "Search everything")}
+          isLoading={isLoading}
+          isMobile={isMobile}
+          pathname={pathname}
+          supportsHeaderSearch={supportsHeaderSearch}
+          userMenuProps={userMenuProps}
+        />
+      </header>
+
+      <HeaderProfileModals
+        user={userActions.user}
+        isChangePasswordModalOpen={userActions.isChangePasswordModalOpen}
+        setIsChangePasswordModalOpen={userActions.setIsChangePasswordModalOpen}
+        isUserModalOpen={userActions.isUserModalOpen}
+        setIsUserModalOpen={userActions.setIsUserModalOpen}
+        fullUserData={userActions.fullUserData}
+        sessionUser={(session?.user as UserProfile | undefined) ?? null}
+        onSaveProfile={userActions.handleEditProfile as (data: UnifiedUserFormValues) => Promise<void>}
+      />
+    </>
   );
 }

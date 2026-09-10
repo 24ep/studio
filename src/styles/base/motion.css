@@ -1,0 +1,178 @@
+/* Animation keyframes for smooth transitions */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+/* Enhanced smooth loading animations */
+@keyframes fadeInUpSmooth {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes dotPulse {
+  0%,
+  60%,
+  100% {
+    transform: scale(1);
+    opacity: 0.5;
+  }
+
+  30% {
+    transform: scale(1.5);
+    opacity: 1;
+  }
+}
+
+/* Content fade-in utility classes */
+.content-fade-in {
+  animation: fadeInUpSmooth var(--motion-duration-slow) var(--motion-ease-standard) forwards;
+  opacity: 0;
+}
+
+/* Stagger fade-in container */
+.stagger-fade-in > * {
+  opacity: 0;
+  animation: fadeInUpSmooth var(--motion-duration-slow) var(--motion-ease-standard) forwards;
+}
+
+/* Stagger delay classes for list items (up to 20 items) */
+.stagger-fade-in > *:nth-child(1) {
+  animation-delay: 0.05s;
+}
+
+.stagger-fade-in > *:nth-child(2) {
+  animation-delay: 0.1s;
+}
+
+.stagger-fade-in > *:nth-child(3) {
+  animation-delay: 0.15s;
+}
+
+.stagger-fade-in > *:nth-child(4) {
+  animation-delay: 0.2s;
+}
+
+.stagger-fade-in > *:nth-child(5) {
+  animation-delay: 0.25s;
+}
+
+.stagger-fade-in > *:nth-child(6) {
+  animation-delay: 0.3s;
+}
+
+.stagger-fade-in > *:nth-child(7) {
+  animation-delay: 0.35s;
+}
+
+.stagger-fade-in > *:nth-child(8) {
+  animation-delay: 0.4s;
+}
+
+.stagger-fade-in > *:nth-child(9) {
+  animation-delay: 0.45s;
+}
+
+.stagger-fade-in > *:nth-child(10) {
+  animation-delay: 0.5s;
+}
+
+.stagger-fade-in > *:nth-child(11) {
+  animation-delay: 0.55s;
+}
+
+.stagger-fade-in > *:nth-child(12) {
+  animation-delay: 0.6s;
+}
+
+.stagger-fade-in > *:nth-child(13) {
+  animation-delay: 0.65s;
+}
+
+.stagger-fade-in > *:nth-child(14) {
+  animation-delay: 0.7s;
+}
+
+.stagger-fade-in > *:nth-child(15) {
+  animation-delay: 0.75s;
+}
+
+.stagger-fade-in > *:nth-child(16) {
+  animation-delay: 0.8s;
+}
+
+.stagger-fade-in > *:nth-child(17) {
+  animation-delay: 0.85s;
+}
+
+.stagger-fade-in > *:nth-child(18) {
+  animation-delay: 0.9s;
+}
+
+.stagger-fade-in > *:nth-child(19) {
+  animation-delay: 0.95s;
+}
+
+.stagger-fade-in > *:nth-child(20) {
+  animation-delay: 1s;
+}
+
+/* Image loading transition */
+.image-fade-in {
+  opacity: 0;
+  transition: opacity var(--motion-duration-base) var(--motion-ease-out);
+}
+
+.image-fade-in.loaded {
+  opacity: 1;
+}
+
+/* Performance optimizations - use will-change sparingly */
+.content-fade-in,
+.stagger-fade-in > * {
+  will-change: opacity, transform;
+}
+
+/* Respect reduced motion preference */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms;
+    animation-iteration-count: 1;
+    scroll-behavior: auto;
+    transition-duration: 0.01ms;
+  }
+
+  .content-fade-in,
+  .stagger-fade-in > *,
+  .image-fade-in {
+    animation: none;
+    transition: opacity 0.1s;
+    opacity: 1;
+  }
+}

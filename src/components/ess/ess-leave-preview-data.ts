@@ -1,0 +1,41 @@
+import type { EssDashboard } from './ess-types';
+
+export const essLeavePreviewData: EssDashboard = {
+  employee: {
+    id: 'preview-employee',
+    name: 'Riya Patel',
+    legalName: 'Riya Patel',
+    preferredName: 'Riya',
+    employeeNumber: 'EMP-1042',
+    email: 'riya.patel@example.com',
+    phone: null,
+    workPhone: null,
+    jobTitle: 'Product Designer',
+    department: 'Design',
+    businessUnit: 'Product',
+    managerName: 'Aarav Sharma',
+    employmentType: 'Full time',
+    status: 'active',
+    hireDate: '2023-02-06',
+    location: 'Bangkok',
+    profilePhotoUrl: null,
+    profileCompletion: 96,
+    profile: { emergencyContacts: [{ name: 'Nina Patel', relationship: 'Sister', phone: '+66 81 555 0104' }] },
+    sensitive: {},
+    fieldPermissions: {},
+  },
+  metrics: { openLeaveRequests: 1, pendingDocuments: 0, activeLearning: 0, latestOnboardingProgress: 100, directReports: 0 },
+  leaveBalances: [
+    { id: 'balance-annual', policy_id: 'policy-annual', name: 'Annual leave', leave_type: 'annual', year: 2026, allocated: 15, accrued: 0, used: 3, pending: 0, reserved: 0, carry_forward: 2, expiring: 1, allow_half_day: true, allow_hourly: false, exclude_weekends: true, exclude_holidays: true },
+    { id: 'balance-sick', policy_id: 'policy-sick', name: 'Sick leave', leave_type: 'sick', year: 2026, allocated: 20, accrued: 0, used: 2, pending: 0, reserved: 0, carry_forward: 0, expiring: 0, allow_half_day: true, allow_hourly: true, exclude_weekends: true, exclude_holidays: true },
+    { id: 'balance-personal', policy_id: 'policy-personal', name: 'Personal leave', leave_type: 'personal', year: 2026, allocated: 10, accrued: 0, used: 0, pending: 0, reserved: 0, carry_forward: 0, expiring: 0, allow_half_day: true, allow_hourly: false, exclude_weekends: true, exclude_holidays: true },
+  ],
+  leaveRequests: [
+    { id: 'request-1', request_id: 'LR-2026-0142', policy_id: 'policy-annual', start_date: '2026-08-24', end_date: '2026-08-28', days: 5, reason: 'Family trip', status: 'pending_approval', request_unit: 'full_day', acting_employee_name: 'Karan Singh', acting_employee_job_title: 'Design Lead', submitted_at: '2026-08-13T09:10:00+07:00', created_at: '2026-08-13T09:10:00+07:00', version: 1 },
+    { id: 'request-2', request_id: 'LR-2026-0138', policy_id: 'policy-personal', start_date: '2026-08-17', end_date: '2026-08-17', days: 1, reason: 'Personal appointment', status: 'approved', request_unit: 'full_day', acting_employee_name: 'Neha Joshi', acting_employee_job_title: 'Product Designer', submitted_at: '2026-08-10T11:30:00+07:00', created_at: '2026-08-10T11:30:00+07:00', version: 2 },
+    { id: 'request-3', request_id: 'LR-2026-0129', policy_id: 'policy-annual', start_date: '2026-09-14', end_date: '2026-09-18', days: 5, reason: 'Annual vacation', status: 'approved', request_unit: 'full_day', acting_employee_name: 'Karan Singh', acting_employee_job_title: 'Design Lead', submitted_at: '2026-08-07T14:45:00+07:00', created_at: '2026-08-07T14:45:00+07:00', version: 2 },
+    { id: 'request-4', request_id: 'LR-2026-0112', policy_id: 'policy-sick', start_date: '2026-07-30', end_date: '2026-07-31', days: 2, reason: 'Medical recovery', status: 'approved', request_unit: 'full_day', submitted_at: '2026-07-29T08:20:00+07:00', created_at: '2026-07-29T08:20:00+07:00', version: 2 },
+    { id: 'request-5', request_id: 'LR-2026-0140', policy_id: 'policy-annual', start_date: '2026-12-21', end_date: '2026-12-24', days: 4, reason: 'Year-end break', status: 'draft', request_unit: 'full_day', created_at: '2026-08-12T16:05:00+07:00', version: 1 },
+  ],
+  documents: [], attendance: [], shifts: [], payslips: [], learning: [], performance: [], goals: [], profileRequests: [], requests: [],
+};

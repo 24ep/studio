@@ -1,21 +1,87 @@
-# Use an official Node.js runtime as a parent image
-FROM node:20-alpine AS base
+# Multi-stage Dockerfile for Next.js application
+FROM node:22-alpine AS base
 
-# Set the working directory in the container
+RUN apk add --no-cache \
+    python3 \
+    make \
+    g++ \
+    git \
+    curl \
+    wget \
+    dos2unix \
+    libc6-compat && \
+    npm install --global npm@11.6.2
+
 WORKDIR /app
 
-# Install dependencies
-# Copy package.json and package-lock.json (if available)
-COPY package*.json ./
+# Dependencies are installed strictly from the committed lockfile and the
+# repository's explicit peer-resolution policy. First-party @outborn packages
+# resolve through .npmrc to the canonical Outborn Registry.
+FROM base AS deps
+COPY package.json package-lock.json .npmrc ./
+COPY prisma ./prisma
+RUN npm config set maxsockets 10 && \
+    npm ci
 
-# Install project dependencies
-RUN npm install
+# Runtime dependencies retain the Prisma CLI because migrations are deployed
+# by entrypoint.sh before the standalone Next.js server starts.
+FROM deps AS prod-deps
+RUN npm prune --omit=dev && \
+    npx prisma generate --generator client
 
-# Copy the rest of the application code into the container
-COPY . .
+FROM base AS builder
+COPY --from=deps /app/node_modules ./node_modules
+COPY --from=deps /app/package*.json ./
+COPY --from=deps /app/.npmrc ./.npmrc
+COPY --from=deps /app/prisma ./prisma
+COPY . ./
 
-# Expose the port the app runs on (as defined in package.json dev script)
-EXPOSE 9002
+RUN dos2unix ./entrypoint.sh ./entrypoint-processor.sh ./entrypoint-local.sh 2>/dev/null || true
+RUN npx prisma generate
+RUN test -f src/lib/db.ts
 
-# Set the default command to run the app in development mode
-CMD ["npm", "run", "dev"]
+ENV NEXT_TELEMETRY_DISABLED=1
+ENV CI=true
+ENV NODE_ENV=production
+
+# Do not bypass TypeScript/lint failures in the deployment image. The same
+# production build must succeed here that succeeds in the Quality Gates.
+RUN set -e && \
+    NEXT_PHASE=phase-production-build npm run build && \
+    echo "=== Build completed successfully ===" && \
+    cp -r .next/static .next/standalone/.next/static && \
+    cp -r public .next/standalone/public
+
+FROM node:22-alpine AS runner
+RUN apk add --no-cache postgresql-client openssl && \
+    npm install --global npm@11.6.2 && \
+    addgroup --system --gid 1001 nodejs && \
+    adduser --system --uid 1001 nextjs
+
+WORKDIR /app
+
+COPY --from=builder /app/.next/standalone ./
+COPY --from=builder /app/.next/static ./.next/static
+COPY --from=builder /app/public ./public
+COPY --from=builder /app/prisma ./prisma
+COPY --from=prod-deps /app/node_modules ./node_modules
+COPY --from=builder /app/entrypoint.sh ./entrypoint.sh
+COPY --from=builder /app/entrypoint-processor.sh ./entrypoint-processor.sh
+COPY --from=builder /app/entrypoint-local.sh ./entrypoint-local.sh
+COPY --from=builder /app/scripts ./scripts
+COPY --from=builder /app/src/scripts ./src/scripts
+COPY --from=builder /app/src/lib/email-template-catalog.ts ./src/lib/email-template-catalog.ts
+COPY --from=builder /app/src/lib/email-template-requirements.ts ./src/lib/email-template-requirements.ts
+
+RUN chmod +x ./entrypoint.sh ./entrypoint-processor.sh ./entrypoint-local.sh && \
+    chown -R nextjs:nodejs /app
+
+ENV NODE_ENV=production
+ENV NEXT_TELEMETRY_DISABLED=1
+ENV PORT=8021
+ENV HOSTNAME="0.0.0.0"
+ENV SKIP_SEED=true
+
+USER nextjs
+EXPOSE 8021
+CMD ["/bin/sh", "/app/entrypoint.sh"]

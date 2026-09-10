@@ -1,147 +1,105 @@
-
 "use client";
-import React, { type ReactNode, useState, useEffect } from "react";
-import {
-  SidebarProvider,
-  Sidebar,
-  SidebarHeader,
-  SidebarContent,
-  SidebarFooter,
-  SidebarInset,
-  SidebarTrigger,
-} from "@/components/ui/sidebar";
-import { SidebarNav } from "./SidebarNav";
-import { Header } from "./Header";
-import Link from "next/link";
-import { Separator } from "@/components/ui/separator";
-import { Package2 } from "lucide-react";
-import { usePathname } from "next/navigation";
-import Image from 'next/image';
-import { SetupFlowHandler } from './SetupFlowHandler';
 
+import { usePathname } from 'next/navigation';
+import { useSession } from 'next-auth/react';
+import React, { useMemo, memo } from 'react';
+import { SplashScreen } from '@/components/ui/SplashScreen';
+import { useFavicon } from '@/hooks/use-favicon';
+import { useSessionValidation } from '@/hooks/use-session-validation';
+import { useTheme } from '@/hooks/use-theme';
+import { useRenderMonitor } from '@/hooks/use-render-monitor';
+import { useAppLayoutState } from '@/hooks/use-app-layout-state';
+import { AdminPlatformSetupOnboarding } from '@/components/onboarding/AdminPlatformSetupOnboarding';
+import { useLocalization } from '@/contexts/LocalizationContext';
+import { isAdminUser } from '@/lib/permissions';
 
-const APP_LOGO_DATA_URL_KEY = 'appLogoDataUrl';
-const APP_CONFIG_APP_NAME_KEY = 'appConfigAppName';
-const DEFAULT_APP_NAME = "CandiTrack";
-const DEFAULT_LOGO_ICON = <Package2 className="h-6 w-6" />;
+import { AppLayoutShell } from './AppLayoutShell';
+import { getAppLayoutPageTitle } from './app-layout-view-utils';
+import { useAppLayoutGlobalSettings } from './use-app-layout-global-settings';
 
-
-function getPageTitle(pathname: string): string {
-  if (pathname === "/") return "Dashboard";
-  if (pathname.startsWith("/candidates")) { 
-    if (pathname.split('/').length === 3 && pathname.split('/')[2] !== '' && !pathname.includes('create-via-n8n')) {
-        return "Candidate Details";
-    }
-    return "Candidates";
-  }
-  if (pathname.startsWith("/positions")) {
-     if (pathname.split('/').length === 3 && pathname.split('/')[2] !== '') {
-        return "Position Details";
-    }
-    return "Job Positions";
-  }
-  if (pathname.startsWith("/users")) return "Manage Users";
-  if (pathname.startsWith("/my-tasks")) return "My Task Board";
-  if (pathname.startsWith("/settings/preferences")) return "Preferences";
-  if (pathname.startsWith("/settings/integrations")) return "Integrations";
-  if (pathname.startsWith("/settings/stages")) return "Recruitment Stages";
-  if (pathname.startsWith("/settings/data-models")) return "Data Model Preferences";
-  if (pathname.startsWith("/settings/custom-fields")) return "Custom Field Definitions";
-  if (pathname.startsWith("/settings/webhook-mapping")) return "Webhook Payload Mapping";
-  if (pathname.startsWith("/settings/user-groups")) return "User Groups"; // New
-  if (pathname.startsWith("/api-docs")) return "API Documentation";
-  if (pathname.startsWith("/logs")) return "Application Logs";
-  if (pathname.startsWith("/auth/signin")) return "Sign In";
-  return DEFAULT_APP_NAME; // Use dynamic app name as fallback for unknown paths
+interface AppLayoutProps {
+  children: React.ReactNode;
 }
 
-
-export function AppLayout({ children }: { children: React.ReactNode }) {
+const AppLayoutComponent = ({ children }: AppLayoutProps) => {
   const pathname = usePathname();
-  const [currentAppName, setCurrentAppName] = useState<string>(DEFAULT_APP_NAME);
-  const pageTitle = pathname === "/auth/signin" ? "Sign In" : getPageTitle(pathname) || currentAppName; // Use currentAppName in title if needed
-  
-  const [appLogoUrl, setAppLogoUrl] = useState<string | null>(null);
-  const [isClient, setIsClient] = useState(false);
+  const { data: session, status } = useSession();
+  const { faviconDataUrl } = useFavicon();
+  const { mounted: themeMounted } = useTheme();
 
-  useEffect(() => {
-    setIsClient(true);
-    const updateAppConfig = () => {
-      if (typeof window !== 'undefined') {
-        const storedLogo = localStorage.getItem(APP_LOGO_DATA_URL_KEY);
-        setAppLogoUrl(storedLogo);
-        const storedAppName = localStorage.getItem(APP_CONFIG_APP_NAME_KEY);
-        setCurrentAppName(storedAppName || DEFAULT_APP_NAME);
-      }
-    };
+  useRenderMonitor('AppLayout', 1000);
 
-    updateAppConfig(); // Initial load
+  const sessionValidationOptions = useMemo(() => ({
+    validateInterval: 30 * 60 * 1000,
+    autoSignOut: true,
+    redirectTo: '/auth/signin'
+  }), []);
 
-    const handleAppConfigChange = (event: Event) => {
-        const customEvent = event as CustomEvent<{ appName?: string; logoUrl?: string | null }>;
-        if (customEvent.detail) {
-            if (customEvent.detail.appName) {
-                setCurrentAppName(customEvent.detail.appName);
-            }
-            // Check for logoUrl specifically, could be null if reset
-            if (customEvent.detail.logoUrl !== undefined) { 
-                 setAppLogoUrl(customEvent.detail.logoUrl);
-            }
-        } else {
-            // Fallback if event detail is not as expected
-            updateAppConfig();
-        }
-    };
-    
-    window.addEventListener('appConfigChanged', handleAppConfigChange);
-    return () => {
-      window.removeEventListener('appConfigChanged', handleAppConfigChange);
-    };
-  }, []);
+  useSessionValidation(sessionValidationOptions);
 
+  const appLayoutState = useAppLayoutState();
+  const { t } = useLocalization();
 
-  if (pathname === "/auth/signin") {
-    return <>{children}</>;
+  useAppLayoutGlobalSettings({
+    appLayoutState,
+    isClient: appLayoutState.isClient,
+    session,
+    status,
+  });
+
+  const pageTitle = useMemo(() => getAppLayoutPageTitle(pathname, (key, fallback) => t(key, fallback)), [pathname, t]);
+
+  const completedBootstrapSteps = [
+    status !== 'loading',
+    themeMounted,
+  ].filter(Boolean).length;
+
+  if (completedBootstrapSteps < 2) {
+    return (
+      <SplashScreen
+        persistent
+        completedSteps={completedBootstrapSteps}
+        totalSteps={2}
+      />
+    );
   }
 
-  const renderLogo = (isCollapsed: boolean) => {
-    if (isClient && appLogoUrl) {
-      return <Image src={appLogoUrl} alt="App Logo" width={isCollapsed ? 32 : 32} height={isCollapsed ? 32 : 32} className={isCollapsed ? "h-8 w-8 object-contain" : "h-8 w-8 object-contain"} data-ai-hint="company logo" />;
-    }
-    return DEFAULT_LOGO_ICON;
-  };
+  // Auth.js can surface a non-null error payload during local setup failures.
+  // Treat any session without a usable user id as unauthenticated so the
+  // shared layout never dereferences a malformed session object.
+  if (!session?.user?.id) {
+    return (
+      <div className="min-h-screen">
+        {children}
+      </div>
+    );
+  }
 
   return (
-    <SetupFlowHandler>
-      <SidebarProvider defaultOpen>
-        <Sidebar collapsible="icon" variant="sidebar" className="border-r" data-sidebar="sidebar">
-          <SidebarHeader className="p-4 flex items-center justify-center h-16">
-            <Link href="/" className="flex items-center gap-2 font-semibold text-primary group-data-[collapsible=icon]:hidden">
-              {renderLogo(false)}
-              <span className="ml-1">{currentAppName}</span>
-            </Link>
-            <div className="hidden items-center justify-center group-data-[collapsible=icon]:flex group-data-[collapsible=icon]:w-full">
-              <Link href="/" className="flex items-center gap-2 font-semibold text-primary">
-                 {renderLogo(true)}
-              </Link>
-            </div>
-            <SidebarTrigger className="hidden md:group-data-[collapsible=icon]:hidden" />
-          </SidebarHeader>
-          <Separator className="my-0" />
-          <SidebarContent className="p-2 pr-1">
-            <SidebarNav />
-          </SidebarContent>
-          <SidebarFooter className="p-4 border-t group-data-[collapsible=icon]:hidden">
-            <p className="text-xs text-muted-foreground">© {new Date().getFullYear()} {currentAppName}</p>
-          </SidebarFooter>
-        </Sidebar>
-        <SidebarInset className="flex flex-col bg-background">
-          <Header pageTitle={pageTitle} />
-          <main className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8">
-            {children}
-          </main>
-        </SidebarInset>
-      </SidebarProvider>
-    </SetupFlowHandler>
+    <>
+      <AppLayoutShell
+        appLogoUrl={appLayoutState.appLogoUrl}
+        contextualLogos={appLayoutState.contextualLogos}
+        currentAppName={appLayoutState.currentAppName}
+        faviconDataUrl={faviconDataUrl}
+        isLogoLoading={appLayoutState.isLogoLoading}
+        pageTitle={pageTitle}
+        showLogoOnly={appLayoutState.showLogoOnly}
+        sidebarLogoSize={appLayoutState.sidebarLogoSize}
+      >
+        {children}
+      </AppLayoutShell>
+      <AdminPlatformSetupOnboarding
+        isAdmin={isAdminUser(session.user)}
+        userId={session.user.id}
+      />
+    </>
   );
-}
+};
+
+AppLayoutComponent.displayName = 'AppLayoutComponent';
+
+export const AppLayout = memo(AppLayoutComponent);
+AppLayout.displayName = 'AppLayout';
+
+

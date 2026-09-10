@@ -1,0 +1,365 @@
+/* Filter bar styling */
+.filter-bar-container .badge {
+  padding: 0.125rem 0.375rem;
+  height: 1.25rem;
+  font-size: 0.75rem;
+  line-height: 1rem;
+}
+
+@media (min-width: 1200px) {
+  .table-content-expandable {
+    table-layout: auto;
+    width: 100%;
+  }
+}
+
+.table-scrollbar::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.table-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.table-scrollbar::-webkit-scrollbar-thumb {
+  background-color: hsl(var(--muted));
+  border-radius: 3px;
+}
+
+.table-scrollbar::-webkit-scrollbar-thumb:hover {
+  background-color: hsl(var(--muted-foreground));
+}
+
+/* Responsive Filter Container */
+.filter-container-responsive {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+@media (max-width: 768px) {
+  .filter-container-responsive {
+    gap: 0.75rem;
+  }
+}
+
+@media (max-width: 640px) {
+  .filter-container-responsive {
+    gap: 0.5rem;
+  }
+}
+
+/* Responsive Filter Bar Styles */
+.responsive-filter-sidebar {
+  transition: all 0.3s ease-in-out;
+  width: var(--sidebar-width);
+  min-width: var(--sidebar-width);
+  max-width: var(--sidebar-width);
+  flex-shrink: 0;
+  overflow: hidden;
+  position: relative;
+}
+
+/* Ensure the filter sidebar content is properly contained */
+.responsive-filter-sidebar > div {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+/* Ensure the filter sidebar doesn't cause layout issues */
+.responsive-filter-sidebar .h-full {
+  height: 100%;
+  max-height: 100%;
+}
+
+.responsive-filter-sidebar .overflow-y-auto {
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+/* Ensure the filter sidebar is properly positioned */
+.responsive-filter-sidebar {
+  position: relative;
+  z-index: 10;
+}
+
+/* Ensure the filter sidebar doesn't interfere with other elements */
+.responsive-filter-sidebar + div {
+  flex: 1;
+  min-width: 0;
+}
+
+/* Ensure the filter sidebar is properly sized on all screen sizes */
+@media (max-width: 1024px) {
+  .responsive-filter-sidebar {
+    width: var(--sidebar-width);
+    min-width: var(--sidebar-width);
+    max-width: var(--sidebar-width);
+  }
+}
+
+@media (max-width: 768px) {
+  .responsive-filter-sidebar {
+    width: var(--sidebar-width);
+    min-width: var(--sidebar-width);
+    max-width: var(--sidebar-width);
+  }
+}
+
+/* Ensure the filter sidebar is properly sized on very small screens */
+@media (max-width: 640px) {
+  .responsive-filter-sidebar {
+    width: 100%;
+    min-width: 100%;
+    max-width: 100%;
+  }
+
+  /* Ensure the filter content is properly sized on mobile */
+  .applicant-filters {
+    padding: 0.5rem;
+  }
+
+  .applicant-filters .px-4 {
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
+  }
+
+  /* Ensure the filter grid is properly sized on mobile */
+  .applicant-filters .grid {
+    grid-template-columns: 1fr;
+  }
+
+  .applicant-filters .col-span-1,
+  .applicant-filters .col-span-2 {
+    grid-column: 1 / -1;
+  }
+}
+
+.filter-bar-container {
+  transition: all 0.2s ease-in-out;
+  min-height: 32px;
+}
+
+/* Mobile responsive adjustments */
+@media (max-width: 640px) {
+  .responsive-filter-sidebar {
+    width: 100%;
+    min-width: 100%;
+    max-width: 100%;
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 50;
+    height: 100vh;
+  }
+
+  .filter-bar-container {
+    padding: 8px 12px;
+    font-size: 11px;
+  }
+}
+
+/* Tablet responsive adjustments */
+@media (min-width: 641px) and (max-width: 1024px) {
+  .responsive-filter-sidebar {
+    width: var(--sidebar-width);
+    min-width: var(--sidebar-width);
+    max-width: var(--sidebar-width);
+  }
+
+  .filter-bar-container {
+    padding: 10px 16px;
+  }
+}
+
+/* Desktop responsive adjustments */
+@media (min-width: 1025px) {
+  .responsive-filter-sidebar {
+    width: var(--sidebar-width);
+    min-width: var(--sidebar-width);
+    max-width: var(--sidebar-width);
+  }
+
+  .filter-bar-container {
+    padding: 12px 20px;
+  }
+}
+
+/* Large desktop adjustments */
+@media (min-width: 1440px) {
+  .responsive-filter-sidebar {
+    width: var(--sidebar-width);
+    min-width: var(--sidebar-width);
+    max-width: var(--sidebar-width);
+  }
+}
+
+/* Ensure filter inputs take full width */
+.applicant-filters .w-full {
+  width: 100%;
+  min-width: 100%;
+}
+
+.applicant-filters button[role="combobox"] {
+  width: 100%;
+  min-width: 100%;
+}
+
+/* applicant filter sidebar sizing improvements */
+.applicant-filters {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
+  box-sizing: border-box;
+}
+
+.applicant-filters .grid {
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+.applicant-filters input,
+.applicant-filters select,
+.applicant-filters button {
+  max-width: 100%;
+  box-sizing: border-box;
+  font-size: 0.875rem;
+}
+
+/* Ensure select dropdowns don't overflow */
+.applicant-filters [role="combobox"] {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Ensure the filter accordion items are properly sized */
+.applicant-filters .accordion-item {
+  width: 100%;
+  max-width: 100%;
+}
+
+.applicant-filters .accordion-trigger {
+  width: 100%;
+  max-width: 100%;
+  padding: 0.75rem 1rem;
+}
+
+/* Ensure the filter content is properly contained */
+.applicant-filters .px-4 {
+  padding-left: 1rem;
+  padding-right: 1rem;
+  max-width: 100%;
+}
+
+/* Ensure the filter inputs are properly sized */
+.applicant-filters .h-8 {
+  height: 2rem;
+  min-height: 2rem;
+}
+
+.applicant-filters .text-xs {
+  font-size: 0.75rem;
+  line-height: 1rem;
+}
+
+.applicant-filters .text-sm {
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+}
+
+/* Ensure the filter inputs don't overflow */
+.applicant-filters input[type="text"],
+.applicant-filters input[type="email"],
+.applicant-filters input[type="tel"] {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Ensure the filter select dropdowns are properly sized */
+.applicant-filters select {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Ensure the filter buttons are properly sized */
+.applicant-filters button {
+  max-width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Ensure the filter accordion content is properly sized */
+.applicant-filters .accordion-content {
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+/* Ensure the filter accordion triggers are properly sized */
+.applicant-filters .accordion-trigger {
+  max-width: 100%;
+  overflow: hidden;
+}
+
+/* Ensure the filter accordion items are properly sized */
+.applicant-filters .accordion-item {
+  max-width: 100%;
+  overflow: hidden;
+  border-bottom: 1px solid hsl(var(--border) / 0.5);
+}
+
+/* Ensure the filter accordion content is properly sized */
+.applicant-filters .accordion-content {
+  max-width: 100%;
+  overflow-x: hidden;
+  padding: 0 1rem;
+}
+
+/* Ensure the filter accordion triggers are properly sized */
+.applicant-filters .accordion-trigger {
+  max-width: 100%;
+  overflow: hidden;
+  padding: 0.75rem 1rem;
+}
+
+/* Ensure the filter tabs are properly sized */
+.applicant-filters .flex.w-full.border-b {
+  width: 100%;
+  max-width: 100%;
+  overflow: hidden;
+}
+
+/* Ensure accordion state is properly sized */
+.applicant-filters [data-state="open"] {
+  max-width: 100%;
+}
+
+/* Ensure the filter container doesn't cause horizontal scroll */
+.applicant-filters .overflow-visible {
+  overflow-x: hidden;
+}
+
+/* Ensure all filter sections are properly sized */
+.applicant-filters .space-y-2,
+.applicant-filters .space-y-3 {
+  width: 100%;
+  max-width: 100%;
+}
+
+/* Responsive adjustments for very small screens */
+@media (max-width: 480px) {
+  .applicant-filters {
+    padding: 0.25rem;
+  }
+
+  .applicant-filters .px-4 {
+    padding-left: 0.25rem;
+    padding-right: 0.25rem;
+  }
+}

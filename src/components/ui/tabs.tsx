@@ -7,14 +7,22 @@ import { cn } from "@/lib/utils"
 
 const Tabs = TabsPrimitive.Root
 
+type TabsListProps = React.ComponentPropsWithoutRef<typeof TabsPrimitive.List> & {
+  variant?: "underline" | "subnav"
+}
+
 const TabsList = React.forwardRef<
   React.ElementRef<typeof TabsPrimitive.List>,
-  React.ComponentPropsWithoutRef<typeof TabsPrimitive.List>
->(({ className, ...props }, ref) => (
+  TabsListProps
+>(({ className, variant = "underline", ...props }, ref) => (
   <TabsPrimitive.List
     ref={ref}
+    data-variant={variant}
     className={cn(
-      "inline-flex h-10 items-center justify-center rounded-md bg-muted p-1 text-muted-foreground",
+      "inline-flex items-center justify-center text-muted-foreground",
+      variant === "underline"
+        ? "h-10 gap-5 border-b border-border bg-transparent p-0"
+        : "h-8 !rounded-md bg-muted p-0.5",
       className
     )}
     {...props}
@@ -29,7 +37,7 @@ const TabsTrigger = React.forwardRef<
   <TabsPrimitive.Trigger
     ref={ref}
     className={cn(
-      "inline-flex items-center justify-center whitespace-nowrap rounded-sm px-3 py-1.5 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm",
+      "relative inline-flex h-9 items-center justify-center whitespace-nowrap rounded-none px-1 py-1 text-[12px] font-medium leading-4 ring-offset-background transition-colors after:pointer-events-none after:absolute after:inset-x-0 after:bottom-0 after:h-0.5 after:scale-x-0 after:bg-primary after:transition-transform focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:text-foreground data-[state=active]:after:scale-x-100 [[data-variant=subnav]_&]:h-7 [[data-variant=subnav]_&]:rounded-md [[data-variant=subnav]_&]:px-2.5 [[data-variant=subnav]_&]:transition-all [[data-variant=subnav]_&]:after:hidden [[data-variant=subnav]_&]:data-[state=active]:bg-background [[data-variant=subnav]_&]:data-[state=active]:shadow-sm",
       className
     )}
     {...props}

@@ -1,0 +1,337 @@
+/* Editor.js Custom Styles */
+.codex-editor {
+  @apply font-sans;
+}
+
+.codex-editor__redactor {
+  @apply min-h-[320px] p-4;
+}
+
+.codex-editor__redactor:focus {
+  @apply outline-none;
+}
+
+/* Block styles */
+.ce-block {
+  @apply mb-4;
+}
+
+.ce-block__content {
+  @apply max-w-full;
+}
+
+.ce-block__content:focus {
+  @apply outline-none;
+}
+
+/* Paragraph block */
+.ce-paragraph {
+  @apply text-base leading-relaxed;
+}
+
+.ce-paragraph[data-placeholder]:empty::before {
+  @apply text-muted-foreground opacity-50;
+  content: attr(data-placeholder);
+}
+
+/* Header blocks */
+.ce-header {
+  @apply font-bold;
+}
+
+.ce-header[data-level="1"] {
+  @apply text-3xl mb-4;
+}
+
+.ce-header[data-level="2"] {
+  @apply text-2xl mb-3;
+}
+
+.ce-header[data-level="3"] {
+  @apply text-xl mb-2;
+}
+
+.ce-header[data-placeholder]:empty::before {
+  @apply text-muted-foreground opacity-50;
+  content: attr(data-placeholder);
+}
+
+/* List blocks */
+.ce-list {
+  @apply my-2;
+}
+
+.ce-list__item {
+  @apply mb-1;
+}
+
+.ce-list--unordered .ce-list__item {
+  @apply list-disc list-inside;
+}
+
+.ce-list--ordered .ce-list__item {
+  @apply list-decimal list-inside;
+}
+
+/* Quote block */
+.ce-quote {
+  @apply border-l-4 border-primary pl-4 py-2 my-4 italic;
+}
+
+.ce-quote__text {
+  @apply text-lg;
+}
+
+.ce-quote__caption {
+  @apply text-sm text-muted-foreground mt-2;
+}
+
+/* Code block */
+.ce-code {
+  @apply bg-muted p-4 rounded-lg font-mono text-sm my-4;
+}
+
+.ce-code__textarea {
+  @apply bg-transparent border-none outline-none w-full resize-none;
+  font-family: "Monaco", "Menlo", "Ubuntu Mono", monospace;
+}
+
+/* Table block */
+.ce-table {
+  @apply w-full border-collapse my-4;
+}
+
+.ce-table__cell {
+  @apply border border-border p-2;
+}
+
+.ce-table__add-row,
+.ce-table__add-column {
+  @apply bg-muted hover:bg-muted/80 p-2 rounded cursor-pointer;
+}
+
+/* Image block */
+.ce-image {
+  @apply my-4;
+}
+
+.ce-image__picture {
+  @apply max-w-full h-auto;
+}
+
+.ce-image__caption {
+  @apply text-sm text-muted-foreground mt-2 text-center;
+}
+
+/* Link tool */
+.ce-link {
+  @apply text-primary hover:underline;
+}
+
+/* Warning block */
+.ce-warning {
+  @apply bg-yellow-50 border-l-4 border-yellow-400 p-4 my-4;
+}
+
+.ce-warning__title {
+  @apply font-bold text-yellow-800 mb-2;
+}
+
+.ce-warning__message {
+  @apply text-yellow-700;
+}
+
+/* Checklist block */
+.ce-checklist {
+  @apply my-2;
+}
+
+.ce-checklist__item {
+  @apply flex items-center gap-2 mb-1;
+}
+
+.ce-checklist__item-checkbox {
+  @apply w-4 h-4;
+}
+
+.ce-checklist__item-text {
+  @apply flex-1;
+}
+
+/* Delimiter block */
+.ce-delimiter {
+  @apply text-center my-8;
+}
+
+.ce-delimiter::before {
+  content: "***";
+  @apply text-2xl text-muted-foreground;
+}
+
+/* Toolbar styles */
+.codex-editor__toolbar {
+  @apply bg-background border-b border-border p-2;
+}
+
+.ce-toolbar__plus {
+  @apply bg-primary text-primary-foreground hover:bg-primary/90;
+}
+
+.ce-toolbar__settings-btn {
+  @apply bg-muted hover:bg-muted/80;
+}
+
+/* Inline toolbar */
+.ce-inline-toolbar {
+  @apply bg-background border border-border rounded-lg shadow-lg;
+}
+
+.ce-inline-toolbar__buttons {
+  @apply flex gap-1 p-1;
+}
+
+.ce-inline-toolbar__button {
+  @apply p-2 rounded hover:bg-muted;
+}
+
+.ce-inline-toolbar__button--active {
+  @apply bg-primary text-primary-foreground;
+}
+
+/* Block tunes menu */
+.ce-tune-toggler {
+  @apply bg-muted hover:bg-muted/80;
+}
+
+.ce-tune-dropdown {
+  @apply bg-background border border-border rounded-lg shadow-lg;
+}
+
+.ce-tune-dropdown__button {
+  @apply w-full text-left px-3 py-2 hover:bg-muted;
+}
+
+/* Toolbox */
+.ce-toolbox {
+  @apply bg-background border border-border rounded-lg shadow-lg;
+}
+
+.ce-toolbox__button {
+  @apply w-full text-left px-3 py-2 hover:bg-muted;
+}
+
+.ce-toolbox__button--active {
+  @apply bg-primary text-primary-foreground;
+}
+
+/* Drag and drop */
+.ce-block--selected .ce-block__content {
+  @apply ring-2 ring-primary ring-opacity-50;
+}
+
+.ce-block--stretched .ce-block__content {
+  @apply max-w-none;
+}
+
+/* Read-only mode */
+.codex-editor--readonly .ce-toolbar,
+.codex-editor--readonly .ce-inline-toolbar,
+.codex-editor--readonly .ce-toolbox {
+  @apply hidden;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .ce-header[data-level="1"] {
+    @apply text-2xl;
+  }
+
+  .ce-header[data-level="2"] {
+    @apply text-xl;
+  }
+
+  .ce-header[data-level="3"] {
+    @apply text-lg;
+  }
+
+  .ce-quote__text {
+    @apply text-base;
+  }
+}
+
+/* Enhanced drag and drop styles */
+.draggable-card {
+  cursor: grab;
+  transition: all 0.2s ease-in-out;
+  user-select: none;
+}
+
+.draggable-card:active {
+  cursor: grabbing;
+}
+
+.draggable-card.dragging {
+  opacity: 0.6;
+  transform: scale(0.95) rotate(2deg);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+  z-index: 50;
+}
+
+.drop-zone {
+  transition: all 0.2s ease-in-out;
+  position: relative;
+}
+
+.drop-zone.drag-over {
+  background-color: hsl(var(--primary) / 0.05);
+  border-color: hsl(var(--primary) / 0.3);
+  transform: scale(1.02);
+}
+
+.drop-zone.drag-over::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border: 2px dashed hsl(var(--primary) / 0.5);
+  border-radius: inherit;
+  pointer-events: none;
+  z-index: 10;
+}
+
+.drop-zone-empty {
+  border: 2px dashed hsl(var(--muted));
+  border-radius: 0.5rem;
+  transition: all 0.2s ease-in-out;
+}
+
+.drop-zone-empty.drag-over {
+  border-color: hsl(var(--primary));
+  background-color: hsl(var(--primary) / 0.05);
+}
+
+/* Drag ghost styles */
+.drag-ghost {
+  opacity: 0.8;
+  transform: rotate(5deg);
+  pointer-events: none;
+  z-index: 50;
+}
+
+/* Smooth animations for drag and drop */
+@keyframes dropPulse {
+  0% {
+    transform: scale(1);
+  }
+
+  50% {
+    transform: scale(1.05);
+  }
+
+  100% {
+    transform: scale(1);
+  }
+}
+
+.drop-success {
+  animation: dropPulse 0.3s ease-in-out;
+}

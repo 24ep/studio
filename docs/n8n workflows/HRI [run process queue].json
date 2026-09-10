@@ -1,0 +1,87 @@
+{
+  "name": "HRI [run process queue] - prod",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 1
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        0
+      ],
+      "id": "e68ad735-ea15-4c9f-a827-3cf094290601",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://your-app.example.com/api/upload-queue/process-all",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        208,
+        0
+      ],
+      "id": "877df837-d5c3-42d6-8bbd-ac21e2bd110e",
+      "name": "HTTP Request",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "eyQ5A2Mg9eQWZ5i2",
+          "name": "Header Auth hri prod process queue"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "## Run process queue\nthis workflows using for schdule run the process CV/Resume every 1 min,",
+        "height": 352,
+        "width": 672
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -96,
+        -144
+      ],
+      "typeVersion": 1,
+      "id": "66b05ad8-abbf-4a33-a4c5-68421180f972",
+      "name": "Sticky Note"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "e665d140-ff6a-4528-be95-629885eee6a1",
+  "meta": {
+    "instanceId": "639713264b45d45a157074c1c6154cfb89a68900e30020c36c02bfae640e3409"
+  },
+  "id": "fDunwdKpSncBLtQ4",
+  "tags": []
+}

@@ -1,0 +1,78 @@
+/*
+ * Compatibility layer for legacy surfaces that still contain literal neutral
+ * palette utilities. Keep this deliberately scoped to `theme-balanced-panel`
+ * so intentionally dark media, charts and branded surfaces are untouched.
+ */
+
+html:not(.dark) .theme-balanced-panel {
+  color-scheme: light;
+}
+
+html:not(.dark) .theme-balanced-panel :is(
+  [class~="bg-slate-950"],
+  [class~="bg-slate-900"],
+  [class~="bg-gray-950"],
+  [class~="bg-gray-900"],
+  [class~="bg-zinc-950"],
+  [class~="bg-zinc-900"],
+  [class~="bg-neutral-950"],
+  [class~="bg-neutral-900"],
+  [class~="bg-[#0f172a]"],
+  [class~="bg-[#111827]"],
+  [class~="bg-[#172033]"],
+  [class~="bg-[#1e293b]"]
+) {
+  background-color: hsl(var(--card));
+}
+
+html:not(.dark) .theme-balanced-panel :is(
+  [class~="bg-slate-800"],
+  [class~="bg-gray-800"],
+  [class~="bg-zinc-800"],
+  [class~="bg-neutral-800"],
+  [class~="bg-[#243044]"],
+  [class~="bg-[#263449]"]
+) {
+  background-color: hsl(var(--muted));
+}
+
+html:not(.dark) .theme-balanced-panel :is(
+  [class~="text-white"],
+  [class~="text-slate-50"],
+  [class~="text-slate-100"],
+  [class~="text-slate-200"],
+  [class~="text-gray-50"],
+  [class~="text-gray-100"],
+  [class~="text-zinc-100"],
+  [class~="text-neutral-100"]
+) {
+  color: hsl(var(--foreground));
+}
+
+html:not(.dark) .theme-balanced-panel :is(
+  [class~="text-slate-300"],
+  [class~="text-slate-400"],
+  [class~="text-gray-300"],
+  [class~="text-gray-400"],
+  [class~="text-zinc-300"],
+  [class~="text-zinc-400"],
+  [class~="text-neutral-300"],
+  [class~="text-neutral-400"]
+) {
+  color: hsl(var(--muted-foreground));
+}
+
+html:not(.dark) .theme-balanced-panel :is(
+  [class~="border-slate-700"],
+  [class~="border-slate-800"],
+  [class~="border-gray-700"],
+  [class~="border-gray-800"],
+  [class~="border-zinc-700"],
+  [class~="border-zinc-800"],
+  [class~="border-neutral-700"],
+  [class~="border-neutral-800"],
+  [class~="border-[#2c3c52]"],
+  [class~="border-[#33465f]"]
+) {
+  border-color: hsl(var(--border));
+}

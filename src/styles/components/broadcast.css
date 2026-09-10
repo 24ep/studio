@@ -1,0 +1,46 @@
+/* Configurable in-app broadcast banners */
+.broadcast-banner-rich-text,
+.broadcast-banner-rich-text > * {
+  display: inline;
+  margin: 0;
+}
+
+.broadcast-banner-rich-text ul,
+.broadcast-banner-rich-text ol {
+  display: inline-flex;
+  gap: 1.25rem;
+  padding-left: 1.25rem;
+}
+
+.broadcast-banner-marquee {
+  animation: broadcast-banner-scroll 22s linear infinite;
+}
+
+.broadcast-banner-marquee[data-speed="slow"] {
+  animation-duration: 34s;
+}
+
+.broadcast-banner-marquee[data-speed="fast"] {
+  animation-duration: 12s;
+}
+
+.broadcast-banner-surface:hover .broadcast-banner-marquee,
+.broadcast-banner-surface:focus-within .broadcast-banner-marquee {
+  animation-play-state: paused;
+}
+
+@keyframes broadcast-banner-scroll {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .broadcast-banner-marquee {
+    animation: none;
+    width: 100%;
+  }
+
+  .broadcast-banner-marquee > [aria-hidden="true"] {
+    display: none;
+  }
+}

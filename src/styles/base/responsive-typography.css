@@ -1,0 +1,29 @@
+/*
+ * Responsive typography should preserve component-defined Tailwind sizes.
+ * Avoid global h1/h2/button/.text-sm overrides here: they make identical
+ * components render at different sizes between desktop, mobile and languages.
+ */
+
+html {
+  font-size: 16px;
+}
+
+body {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+/* Language helpers preserve shaping only; sizing and line-height stay owned by
+ * each component's typography classes. */
+.thai-text,
+.english-text,
+[lang="th"],
+[lang="th-TH"],
+[lang="en"],
+[lang="en-US"],
+[lang="en-GB"] {
+  font-feature-settings:
+    "liga" 1,
+    "kern" 1;
+}

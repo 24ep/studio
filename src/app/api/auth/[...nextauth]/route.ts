@@ -1,144 +1,125 @@
 // src/app/api/auth/[...nextauth]/route.ts
-import NextAuth, { type NextAuthOptions, type User as NextAuthUser } from 'next-auth';
-import AzureADProvider from 'next-auth/providers/azure-ad';
-import CredentialsProvider from 'next-auth/providers/credentials';
-import pool from '../../../../lib/db'; 
-import type { UserProfile, PlatformModuleId } from '@/lib/types';
-import bcrypt from 'bcrypt';
-import { logAudit } from '@/lib/auditLog';
+/**
+ * NextAuth v5 (Auth.js) Route Handler
+ *
+ * Wraps Auth.js with sanitized production diagnostics while preserving normal
+ * OAuth redirects as successful control flow.
+ */
 
-export const authOptions: NextAuthOptions = {
-  providers: [
-    AzureADProvider({
-      clientId: process.env.AZURE_AD_CLIENT_ID!,
-      clientSecret: process.env.AZURE_AD_CLIENT_SECRET!,
-      tenantId: process.env.AZURE_AD_TENANT_ID!,
-      profile(profile) {
-        // Map Azure AD profile claims to NextAuth user object
-        return {
-          id: profile.sub || profile.oid, // 'sub' or 'oid' is typically the unique ID
-          name: profile.name,
-          email: profile.email,
-          image: profile.picture,
-          // role: mapAzureGroupsToRoles(profile.groups) // TODO: Implement if using Azure AD group-based roles
-          // modulePermissions: mapAzureGroupsToModulePermissions(profile.groups) // TODO
-        };
-      }
-    }),
-    CredentialsProvider({
-      name: 'Credentials',
-      credentials: {
-        email: { label: "Email", type: "email", placeholder: "user@example.com" },
-        password: { label: "Password", type: "password" }
-      },
-      async authorize(credentials, req) {
-        if (!credentials?.email || !credentials?.password) {
-          throw new Error("Please enter both email and password.");
-        }
+import { handlers } from '@/auth';
+import { NextRequest, NextResponse } from 'next/server';
 
-        const client = await pool.connect();
-        try {
-          const userQuery = 'SELECT id, name, email, password, role, "avatarUrl" as "image", "modulePermissions" FROM "User" WHERE email = $1';
-          const result = await client.query(userQuery, [credentials.email]);
-          
-          if (result.rows.length === 0) {
-            console.log(`No user found with email: ${credentials.email}`);
-            await logAudit('WARN', `Failed login attempt: User not found for email '${credentials.email}'.`, 'Auth:Credentials', null, { email: credentials.email, ip: req.headers?.['x-forwarded-for'] || req.headers?.['remote_addr'] });
-            throw new Error("Invalid email or password.");
-          }
-          
-          const userFromDb = result.rows[0];
+const SENSITIVE_OAUTH_PARAMS = new Set([
+  'code',
+  'token',
+  'access_token',
+  'refresh_token',
+  'id_token',
+  'session_state',
+  'state',
+  'nonce',
+]);
 
-          const isPasswordValid = await bcrypt.compare(credentials.password, userFromDb.password);
+function getErrorCause(error: unknown): unknown {
+  return error instanceof Error && 'cause' in error
+    ? (error as Error & { cause?: unknown }).cause
+    : undefined;
+}
 
-          if (isPasswordValid) {
-            return {
-              id: userFromDb.id,
-              name: userFromDb.name,
-              email: userFromDb.email,
-              image: userFromDb.image, 
-              role: userFromDb.role as UserProfile['role'],
-              modulePermissions: (userFromDb.modulePermissions || []) as PlatformModuleId[],
-            } as NextAuthUser & { role?: UserProfile['role'], modulePermissions?: PlatformModuleId[] }; 
-          } else {
-            console.log(`Invalid password attempt for email: ${credentials.email}`);
-            await logAudit('WARN', `Failed login attempt: Invalid password for user '${userFromDb.email}' (ID: ${userFromDb.id}).`, 'Auth:Credentials', userFromDb.id, { email: userFromDb.email, ip: req.headers?.['x-forwarded-for'] || req.headers?.['remote_addr'] });
-            throw new Error("Invalid email or password.");
-          }
-        } catch (error) {
-            if (!(error instanceof Error && (error.message === "Invalid email or password." || error.message === "Please enter both email and password."))) {
-              console.error("Error during credentials authorization:", error);
-            }
-            // Do not throw generic error again if it's already one of the specific ones
-            if (error instanceof Error && (error.message === "Invalid email or password." || error.message === "Please enter both email and password.")) {
-                throw error;
-            }
-            // For other errors, log and throw a generic message or the original error
-            await logAudit('ERROR', `Error during credentials authorization for email '${credentials?.email}'. Error: ${(error as Error).message}`, 'Auth:Credentials', null, { email: credentials?.email });
-            throw new Error("An error occurred during login. Please try again.");
-        } finally {
-          client.release();
-        }
-      }
-    })
-  ],
-  session: {
-    strategy: "jwt",
-  },
-  events: {
-    async signIn({ user, account, profile, isNewUser }) {
-      await logAudit('AUDIT', `User '${user.name || user.email}' (ID: ${user.id}) signed in.`, 'Auth', user.id, { provider: account?.provider, isNewUser: isNewUser });
-    },
-    async signOut({ token, session }) {
-      // Token might be more reliable here if session is already cleared
-      const userId = token?.id || (session?.user as any)?.id;
-      const userName = token?.name || token?.email || session?.user?.name || session?.user?.email || 'Unknown User';
-      if (userId) {
-        await logAudit('AUDIT', `User '${userName}' (ID: ${userId}) signed out.`, 'Auth', userId);
-      } else {
-        await logAudit('AUDIT', `User signed out (ID not available in token/session).`, 'Auth');
+function sanitizedSearchParams(url: URL): Record<string, string> {
+  const sanitized: Record<string, string> = {};
+  url.searchParams.forEach((value, key) => {
+    sanitized[key] = SENSITIVE_OAUTH_PARAMS.has(key.toLowerCase()) ? '[REDACTED]' : value;
+  });
+  return sanitized;
+}
+
+function publicRequestUrl(req: NextRequest, parsed: URL): string {
+  const host = req.headers.get('x-forwarded-host') || req.headers.get('host');
+  const proto = req.headers.get('x-forwarded-proto') || 'https';
+  if (!host) return `${parsed.pathname}${parsed.search}`;
+  return `${proto}://${host}${parsed.pathname}${parsed.search}`;
+}
+
+async function handleRequest(
+  handler: (req: NextRequest) => Promise<Response>,
+  req: NextRequest,
+): Promise<Response> {
+  const parsed = new URL(req.url);
+  const diagnosticUrl = publicRequestUrl(req, parsed);
+
+  try {
+    if (parsed.pathname.includes('/callback/')) {
+      console.log('[NEXTAUTH HANDLER] OAuth callback request:', {
+        pathname: parsed.pathname,
+        searchParams: sanitizedSearchParams(parsed),
+        method: req.method,
+        headers: {
+          host: req.headers.get('host'),
+          referer: req.headers.get('referer'),
+          'user-agent': req.headers.get('user-agent'),
+        },
+      });
+    }
+
+    if (parsed.searchParams.has('error')) {
+      console.error('[NEXTAUTH HANDLER] OAuth error returned to application:', {
+        error: parsed.searchParams.get('error'),
+        errorDescription: parsed.searchParams.get('error_description'),
+        errorUri: parsed.searchParams.get('error_uri'),
+        pathname: parsed.pathname,
+        allParams: sanitizedSearchParams(parsed),
+      });
+    }
+
+    const response = await handler(req);
+
+    // Redirects are normal OAuth control flow. Log only actual client/server errors.
+    if (response.status >= 400) {
+      const responseClone = response.clone();
+      try {
+        const responseText = await responseClone.text();
+        console.error('[NEXTAUTH HANDLER] Error response from handler:', {
+          status: response.status,
+          statusText: response.statusText,
+          body: responseText.substring(0, 1000),
+          url: diagnosticUrl,
+        });
+      } catch (error) {
+        console.error('[NEXTAUTH HANDLER] Failed to read error response body:', error);
       }
     }
-  },
-  callbacks: {
-    async jwt({ token, user, account, profile }) {
-      if (user) { 
-        token.id = user.id;
-        token.email = user.email;
-        token.name = user.name;
-        token.picture = user.image;
-        if ((user as any).role) {
-          token.role = (user as any).role as UserProfile['role'];
-        }
-        if ((user as any).modulePermissions) {
-          token.modulePermissions = (user as any).modulePermissions as PlatformModuleId[];
-        }
-      }
-      return token;
-    },
-    async session({ session, token }) {
-      if (token) {
-        session.user.id = token.id as string;
-        session.user.email = token.email as string;
-        session.user.name = token.name as string;
-        session.user.image = token.picture as string | undefined;
-        if (token.role) {
-          session.user.role = token.role as UserProfile['role'];
-        }
-        if (token.modulePermissions) {
-          session.user.modulePermissions = token.modulePermissions as PlatformModuleId[];
-        }
-      }
-      return session;
-    },
-  },
-  pages: {
-    signIn: '/auth/signin',
-    error: '/auth/signin', 
-  },
-  secret: process.env.NEXTAUTH_SECRET,
-};
 
-const handler = NextAuth(authOptions);
+    return response;
+  } catch (error) {
+    console.error('[NEXTAUTH HANDLER] Unhandled error:', error);
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    const errorStack = error instanceof Error ? error.stack : undefined;
+    const errorCause = getErrorCause(error);
 
-export { handler as GET, handler as POST };
+    console.error('[NEXTAUTH HANDLER] Error details:', {
+      message: errorMessage,
+      stack: errorStack,
+      cause: errorCause,
+      url: diagnosticUrl,
+      method: req.method,
+    });
+
+    return NextResponse.json(
+      {
+        error: 'OAuthCallbackError',
+        message: 'An error occurred during authentication. Please try again.',
+        details: process.env.NODE_ENV === 'development' ? errorMessage : undefined,
+      },
+      { status: 500 },
+    );
+  }
+}
+
+export async function GET(req: NextRequest) {
+  return handleRequest(handlers.GET, req);
+}
+
+export async function POST(req: NextRequest) {
+  return handleRequest(handlers.POST, req);
+}

@@ -1,0 +1,48 @@
+/* Mobile Filter Modal Styling */
+@media (max-width: 768px) {
+  /* Remove borders and padding from filter content in mobile modal */
+  .mobile-filter-content {
+    padding: 0;
+  }
+
+  .mobile-filter-content > * {
+    border: none;
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+
+  /* Remove card borders in mobile filter */
+  .mobile-filter-content .border {
+    border: none;
+  }
+
+  /* Remove accordion background in mobile filter */
+  .mobile-filter-content [data-radix-accordion-content] > div {
+    background-color: transparent;
+  }
+
+  /* Ensure dialog overlay is fully opaque on mobile */
+  [data-radix-dialog-overlay] {
+    background-color: hsl(var(--background));
+    backdrop-filter: none;
+  }
+
+  /* Ensure sheet overlay is fully opaque on mobile */
+  [data-radix-sheet-overlay] {
+    background-color: hsl(var(--background));
+    backdrop-filter: none;
+  }
+}
+
+@keyframes wave {
+  0%,
+  100% {
+    height: 20px;
+    opacity: 0.5;
+  }
+
+  50% {
+    height: 40px;
+    opacity: 1;
+  }
+}

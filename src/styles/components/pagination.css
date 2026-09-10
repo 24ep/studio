@@ -1,0 +1,67 @@
+/* Pagination Styles */
+.pagination-container {
+  position: relative;
+  z-index: 10;
+  background: var(--background);
+  border-top: 1px solid var(--border);
+  padding: 1rem 0;
+  margin-top: 1rem;
+}
+
+.pagination-container button {
+  min-width: 2rem;
+  height: 2rem;
+}
+
+.pagination-container button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.pagination-container button:not(:disabled):hover {
+  background-color: var(--accent);
+}
+
+/* Ensure pagination is visible in all states */
+.positions-page-container .pagination-container {
+  display: flex;
+  visibility: visible;
+  opacity: 1;
+}
+
+/* Additional pagination visibility fixes */
+.pagination-container {
+  position: relative;
+  z-index: 10;
+  background: var(--background);
+  border-top: 1px solid var(--border);
+  padding: 1rem 0;
+  margin-top: 1rem;
+  min-height: 60px;
+}
+
+/* Ensure pagination buttons are visible */
+.pagination-container button {
+  min-width: 2rem;
+  height: 2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Ensure pagination text is visible */
+.pagination-container span {
+  color: var(--foreground);
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+}
+
+/* Ensure select dropdown is visible */
+.pagination-container select {
+  background: var(--background);
+  color: var(--foreground);
+  border: 1px solid var(--border);
+  border-radius: 0.375rem;
+  padding: 0.25rem 0.5rem;
+  font-size: 0.875rem;
+}

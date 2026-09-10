@@ -1,92 +1,168 @@
+export const dynamic = 'force-dynamic';
+export const runtime = 'nodejs';
 
 // src/app/api/positions/export/route.ts
-import { NextResponse, type NextRequest } from 'next/server';
-import pool from '../../../../lib/db';
+import { NextResponse } from 'next/server';
+import { hasPermission } from '@/lib/permissions';
+import { getPool, type DbClient } from '@/lib/db';
+import ExcelJS from 'exceljs';
 import { logAudit } from '@/lib/auditLog';
-import { getServerSession } from 'next-auth/next';
-import { authOptions } from '@/app/api/auth/[...nextauth]/route';
-// For actual Excel generation, you would use a library like 'xlsx'
-// import * as XLSX from 'xlsx';
+import { getSystemSetting } from '@/lib/systemSettings';
 
-// Helper function to convert JSON object to CSV row
-function escapeCsvValue(value: any): string {
+import { auth } from '@/auth';
+/**
+ * @openapi
+ * /api/positions/export:
+ *   get:
+ *     summary: Export positions
+ *     description: Export all positions.
+ *     responses:
+ *       200:
+ *         description: Exported positions data
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 ok:
+ *                   type: boolean
+ *             examples:
+ *               success:
+ *                 summary: Example response
+ *                 value:
+ *                   ok: true
+ */
+
+type PositionExportRow = Record<string, unknown>;
+type CleanExcelRow = Record<string, string | number>;
+
+function getErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
+
+function formatExcelValue(value: unknown): string | number {
   if (value === null || value === undefined) {
     return '';
   }
-  const stringValue = String(value);
-  if (stringValue.includes(',')) {
-    return `"${stringValue.replace(/"/g, '""')}"`;
+
+  if (value instanceof Date) {
+    return value.toLocaleDateString();
   }
-  return stringValue;
-}
 
-function convertToCsv(data: any[]): string {
-  if (!data || data.length === 0) {
-    return '';
+  if (typeof value === 'boolean') {
+    return value ? 'Yes' : 'No';
   }
-  const headers = Object.keys(data[0]);
-  const csvRows = [];
-  csvRows.push(headers.map(escapeCsvValue).join(','));
 
-  for (const row of data) {
-    const values = headers.map(header => escapeCsvValue(row[header]));
-    csvRows.push(values.join(','));
+  if (typeof value === 'number') {
+    return value;
   }
-  return csvRows.join('\n');
-}
 
-
-export async function GET(request: NextRequest) {
-  const session = await getServerSession(authOptions);
-  if (!session?.user?.id) {
-    return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+  if (typeof value === 'string') {
+    return value.includes('<') ? value.replace(/<[^>]*>/g, '').trim() : value;
   }
 
   try {
-    const { searchParams } = new URL(request.url);
-    // Implement filtering based on query params if needed for export
-    // Example: const titleFilter = searchParams.get('title');
+    return JSON.stringify(value);
+  } catch {
+    return String(value);
+  }
+}
 
-    const query = `
-      SELECT
-        id, title, department, description, "isOpen", position_level, "createdAt", "updatedAt"
-      FROM "Position"
-      ORDER BY "createdAt" DESC;
-    `;
-    // Add WHERE clause here if implementing filters
+// Helper function to convert data to Excel format
+async function convertToExcel(data: PositionExportRow[]): Promise<Buffer> {
+  const workbook = new ExcelJS.Workbook();
+  const worksheet = workbook.addWorksheet('Positions');
 
-    const result = await pool.query(query);
-    const positions = result.rows;
+  if (!data || data.length === 0) {
+    // Create empty workbook with headers if possible, but here just empty
+    const buffer = await workbook.xlsx.writeBuffer();
+    return Buffer.from(buffer);
+  }
 
-    // Conceptual: Generate Excel file using a library like 'xlsx'
-    // const worksheet = XLSX.utils.json_to_sheet(positions);
-    // const workbook = XLSX.utils.book_new();
-    // XLSX.utils.book_append_sheet(workbook, worksheet, "Positions");
-    // const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'buffer' });
-    //
-    // return new NextResponse(excelBuffer, {
-    //   status: 200,
-    //   headers: {
-    //     'Content-Disposition': `attachment; filename="positions_export.xlsx"`,
-    //     'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-    //   },
-    // });
+  // Clean and format the data for Excel
+  const cleanedData = data.map(row => {
+    const cleanedRow: CleanExcelRow = {};
+    Object.keys(row).forEach(key => {
+      cleanedRow[key] = formatExcelValue(row[key]);
+    });
+    return cleanedRow;
+  });
 
-    // Fallback: Return as CSV (simpler for this prototype without adding new libraries)
-    const csvData = convertToCsv(positions);
-    await logAudit('AUDIT', `User ${session.user.name} (ID: ${session.user.id}) exported ${positions.length} positions.`, 'API:Positions:Export', session.user.id);
+  // Auto-size columns based on headers and content
+  // Since we rely on dynamic keys, let's set columns from the first row keys
+  if (cleanedData.length > 0) {
+    const headers = Object.keys(cleanedData[0]);
+    worksheet.columns = headers.map(header => ({
+      header: header,
+      key: header,
+      width: Math.max(header.length, 15) // Minimum width of 15 characters
+    }));
+  }
 
-    return new NextResponse(csvData, {
-      status: 200,
-      headers: {
-        'Content-Disposition': `attachment; filename="positions_export.csv"`,
-        'Content-Type': 'text/csv',
-      },
+  // Add rows
+  worksheet.addRows(cleanedData);
+
+  // Generate Excel file as buffer
+  const buffer = await workbook.xlsx.writeBuffer();
+  return Buffer.from(buffer);
+}
+
+export async function GET() {
+  const session = await auth();
+  const actingUserId = session?.user?.id;
+  const actingUserName = (session?.user?.name || session?.user?.email || actingUserId || 'System') as string;
+
+  if (!actingUserId) {
+    await logAudit('WARN', 'Unauthorized attempt to export positions', 'API:Positions:Export', null);
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  // Check if user has permission to export positions
+  if (!session?.user || !hasPermission(session.user, 'POSITIONS_EXPORT')) {
+    await logAudit('WARN', `Forbidden attempt to export positions by ${actingUserName}`, 'API:Positions:Export', actingUserId);
+    return NextResponse.json({ error: 'Forbidden: Insufficient permissions to export positions' }, { status: 403 });
+  }
+
+  if (await getSystemSetting('exportImportFeatureEnabled') === 'false') {
+    return NextResponse.json({ error: 'Export/Import feature is disabled' }, { status: 403 });
+  }
+
+  let client: DbClient | null = null;
+  try {
+    client = await getPool().connect();
+    const result = await client.query('SELECT * FROM "Position" ORDER BY "createdAt" DESC');
+
+    const excelBuffer = await convertToExcel(result.rows);
+
+    await logAudit('AUDIT', `Positions exported by ${actingUserName}. ${result.rows.length} positions exported.`, 'API:Positions:Export', actingUserId, {
+      exportCount: result.rows.length,
+      format: 'Excel'
     });
 
+    // Wrap Buffer for Web Response body
+    const body = new Uint8Array(excelBuffer);
+
+    return new NextResponse(body, {
+      status: 200,
+      headers: {
+        'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        'Content-Disposition': 'attachment; filename="positions-export.xlsx"',
+      },
+    });
   } catch (error) {
-    console.error("Failed to export positions:", error);
-    await logAudit('ERROR', `Failed to export positions by ${session.user.name}. Error: ${(error as Error).message}`, 'API:Positions:Export', session.user.id);
-    return NextResponse.json({ message: "Error exporting positions", error: (error as Error).message }, { status: 500 });
+    const errorMessage = getErrorMessage(error);
+    await logAudit('ERROR', `Failed to export positions by ${actingUserName}. Error: ${errorMessage}`, 'API:Positions:Export', actingUserId, {
+      error: errorMessage
+    });
+    return NextResponse.json({ error: 'Failed to export positions' }, { status: 500 });
+  } finally {
+    // ? CRITICAL FIX: Always release the database client
+    if (client) {
+      try {
+        client.release();
+      } catch (releaseError) {
+        console.error('Error releasing database client:', releaseError);
+      }
+    }
   }
 }

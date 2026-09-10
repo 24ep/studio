@@ -1,0 +1,159 @@
+name: Quality gates
+
+on:
+  pull_request:
+  push:
+    branches: [main, master, uat, dev]
+
+jobs:
+  application:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm install --global npm@11.6.2
+      - run: npm ci
+      - run: npm run check:architecture
+      - run: node scripts/frontend-architecture-regression-checks.cjs
+      - run: node scripts/learning-component-decomposition-regression-checks.cjs
+      - run: node scripts/learning-legacy-catalog-reference-check.cjs
+      - run: node scripts/learning-e2e-regression-checks.cjs
+      - run: node scripts/time-e2e-regression-checks.cjs
+      - run: npm run type-check
+      - run: npm run lint
+      - name: Strict lint refactor-owned modules
+        run: >-
+          npx eslint
+          src/app/learning/LearningHomePageClient.tsx
+          src/app/learning/CourseCatalogPageClient.tsx
+          src/app/learning/CourseCatalog.tsx
+          src/app/learning/CourseCreateDialog.tsx
+          src/app/learning/LearningAssignmentDialog.tsx
+          src/app/learning/LearningPathsPageClient.tsx
+          src/app/learning/LearningPathsView.tsx
+          src/app/learning/LearningPathDialog.tsx
+          src/app/learning/EmployeeCertificatesPageClient.tsx
+          src/app/learning/EmployeeCertificateDialog.tsx
+          src/app/learning/LearningManagementPageClient.tsx
+          src/app/learning/LearningReviewQueue.tsx
+          src/app/learning/LearningReportsView.tsx
+          src/app/learning/courses/[id]/LearningAssignmentBlock.tsx
+          src/app/learning/courses/[id]/learning-assignment-view-model.ts
+          src/lib/learning/learning-access.ts
+          src/lib/learning/learning-integrity.ts
+          src/lib/learning/learning-self-service.ts
+          src/lib/learning/learning-assignment-service.ts
+          src/lib/learning/learning-course-authoring.ts
+          src/lib/learning/learning-management-service.ts
+          src/app/learning/LearningOverview.tsx
+          src/app/learning/LegacyCourseCatalog.tsx
+          src/app/learning/LearningUiPrimitives.tsx
+          src/app/learning/LearningJourneyHeader.tsx
+          src/lib/learning/record-utils.ts
+          src/lib/learning/record-utils.test.ts
+          src/lib/payroll/workspace-model.ts
+          src/lib/payroll/workspace-model.test.ts
+          src/lib/hr/employee-profile-model.ts
+          src/lib/hr/employee-profile-model.test.ts
+          src/lib/leaves/leave-allocation-draft.ts
+          src/lib/leaves/leave-allocation-draft.test.ts
+          --max-warnings=0
+      - run: npm run test:run
+      - run: npm run build
+
+  database-schema:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: studio
+          POSTGRES_PASSWORD: studio
+          POSTGRES_DB: studio_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U studio -d studio_ci"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=20
+    env:
+      DATABASE_URL: postgresql://studio:studio@127.0.0.1:5432/studio_ci
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm install --global npm@11.6.2
+      - run: npm ci --ignore-scripts
+      - name: Validate Prisma schema
+        run: npx prisma validate --schema=prisma/schema.prisma
+      - name: Enable required PostgreSQL extensions
+        run: npx prisma db execute --schema=prisma/schema.prisma --file=scripts/ensure-postgresql-extensions.sql
+      - name: Deploy migrations to clean database
+        run: npx prisma migrate deploy --schema=prisma/schema.prisma
+      - name: Verify migration status
+        run: npx prisma migrate status --schema=prisma/schema.prisma
+      - name: Verify Prisma-managed schema drift
+        run: node scripts/check-prisma-schema-drift.cjs
+
+  browser-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm install --global npm@11.6.2
+      - run: npm ci
+      - name: Verify GitHub runner Chrome
+        run: google-chrome --version
+      - run: npm run test:e2e -- --project=chromium
+        env:
+          DATABASE_URL: postgresql://unused:unused@127.0.0.1:5432/unused
+          NEXTAUTH_SECRET: ci-only-not-for-production
+          NEXTAUTH_URL: http://127.0.0.1:8021
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report
+          path: playwright-report
+          retention-days: 7
+
+  container-build:
+    needs: [application, database-schema]
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v5
+      - name: Build production container
+        run: docker build --tag studio-ci:${{ github.sha }} .
+
+  payroll-production-gate:
+    name: Payroll production gate
+    if: ${{ always() }}
+    needs: [application, database-schema, browser-smoke, container-build]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Require every production quality lane
+        env:
+          APPLICATION_RESULT: ${{ needs.application.result }}
+          DATABASE_RESULT: ${{ needs.database-schema.result }}
+          BROWSER_RESULT: ${{ needs.browser-smoke.result }}
+          CONTAINER_RESULT: ${{ needs.container-build.result }}
+        run: |
+          printf 'application=%s\ndatabase-schema=%s\nbrowser-smoke=%s\ncontainer-build=%s\n' \
+            "$APPLICATION_RESULT" "$DATABASE_RESULT" "$BROWSER_RESULT" "$CONTAINER_RESULT"
+          test "$APPLICATION_RESULT" = "success"
+          test "$DATABASE_RESULT" = "success"
+          test "$BROWSER_RESULT" = "success"
+          test "$CONTAINER_RESULT" = "success"
