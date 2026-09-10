@@ -1,0 +1,76 @@
+name: Refresh AppKit SDK 2.1.2
+
+on:
+  push:
+    branches:
+      - fix/canonical-outborn-sdk
+
+permissions:
+  contents: write
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: fix/canonical-outborn-sdk
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Use repository npm version
+        run: npm install --global npm@11.6.2
+
+      - name: Pin patched AppKit SDK and refresh lockfile
+        run: |
+          node <<'NODE'
+          const fs = require('node:fs')
+          const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'))
+          if (pkg.dependencies?.['@alphayard/appkit']) throw new Error('Legacy AppKit alias remains')
+          pkg.dependencies['@outborn/appkit-sdk'] = '2.1.2'
+          fs.writeFileSync('package.json', `${JSON.stringify(pkg, null, 2)}\n`)
+          NODE
+          npm install --package-lock-only --ignore-scripts --no-audit --no-fund
+
+      - name: Verify canonical Outborn Registry resolution
+        run: |
+          node <<'NODE'
+          const fs = require('node:fs')
+          const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'))
+          const lock = JSON.parse(fs.readFileSync('package-lock.json', 'utf8'))
+          const npmrc = fs.readFileSync('.npmrc', 'utf8')
+          if (pkg.dependencies?.['@outborn/appkit-sdk'] !== '2.1.2') throw new Error('AppKit SDK is not pinned to 2.1.2')
+          if (pkg.dependencies?.['@outborn/account-directory'] !== '0.1.4') throw new Error('Account Directory is not pinned to 0.1.4')
+          if (!npmrc.includes('@outborn:registry=https://registry.outborn.co')) throw new Error('Outborn scope is not routed to canonical Registry')
+          const appkit = lock.packages?.['node_modules/@outborn/appkit-sdk']
+          const account = lock.packages?.['node_modules/@outborn/account-directory']
+          if (appkit?.version !== '2.1.2') throw new Error(`Unexpected AppKit lock version: ${appkit?.version}`)
+          if (!String(appkit?.resolved || '').startsWith('https://registry.outborn.co/@outborn/appkit-sdk/')) throw new Error('AppKit is not resolved from Outborn Registry')
+          if (account?.version !== '0.1.4') throw new Error(`Unexpected Account Directory lock version: ${account?.version}`)
+          if (!String(account?.resolved || '').startsWith('https://registry.outborn.co/@outborn/account-directory/')) throw new Error('Account Directory is not resolved from Outborn Registry')
+          const raw = JSON.stringify(lock)
+          if (raw.includes('@alphayard/appkit')) throw new Error('Legacy AppKit alias remains in lockfile')
+          if (raw.includes('account-directory-sdk-release-production.up.railway.app')) throw new Error('Direct Account Directory Railway URL remains')
+          if (raw.includes('appkit-sdk-release-production.up.railway.app')) throw new Error('Direct AppKit Railway URL remains')
+          console.log(JSON.stringify({ event: 'hrive_outborn_registry_sdk_resolution_verified', appkit: appkit.version, accountDirectory: account.version }))
+          NODE
+
+      - name: Install and smoke patched SDK
+        run: |
+          npm ci --no-audit --no-fund
+          node -e "Promise.all([import('@outborn/appkit-sdk'), import('@outborn/appkit-sdk/applications'), import('@outborn/appkit-sdk/payments')]).then(() => console.log('Hrive AppKit SDK ESM smoke passed'))"
+          npx vitest run src/lib/appkit-sdk-client.test.ts src/lib/localization-config.test.ts
+
+      - name: Commit canonical dependency update and remove helper workflow
+        run: |
+          rm .github/workflows/refresh-appkit-sdk-2.1.2.yml
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add package.json package-lock.json .github/workflows/refresh-appkit-sdk-2.1.2.yml
+          git commit -m 'fix(deps): use AppKit SDK 2.1.2 from Outborn Registry'
+          git push origin HEAD:fix/canonical-outborn-sdk
