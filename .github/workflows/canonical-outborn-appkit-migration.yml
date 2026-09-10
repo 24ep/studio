@@ -101,9 +101,10 @@ jobs:
           console.log(JSON.stringify({ event: 'canonical_outborn_registry_dependencies_verified', appkit: '2.1.1', accountDirectory: '0.1.4' }))
           NODE
 
-      - name: Install and type-check
+      - name: Install, generate Prisma, and type-check
         run: |
           npm ci --ignore-scripts --no-audit --no-fund
+          npx prisma generate --schema=prisma/schema.prisma
           npm run type-check
 
       - name: Commit migration result
